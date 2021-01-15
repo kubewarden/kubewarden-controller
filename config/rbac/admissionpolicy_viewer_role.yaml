@@ -1,0 +1,20 @@
+# permissions for end users to view admissionpolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: admissionpolicy-viewer-role
+rules:
+- apiGroups:
+  - chimera.suse.com
+  resources:
+  - admissionpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - chimera.suse.com
+  resources:
+  - admissionpolicies/status
+  verbs:
+  - get

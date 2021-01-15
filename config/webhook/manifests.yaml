@@ -1,0 +1,56 @@
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-chimera-suse-com-v1alpha1-admissionpolicy
+  failurePolicy: Fail
+  name: madmissionpolicy.kb.io
+  rules:
+  - apiGroups:
+    - chimera.suse.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - admissionpolicies
+  sideEffects: None
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-chimera-suse-com-v1alpha1-admissionpolicy
+  failurePolicy: Fail
+  name: madmissionpolicy.kb.io
+  rules:
+  - apiGroups:
+    - chimera.suse.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - admissionpolicies
+  sideEffects: None

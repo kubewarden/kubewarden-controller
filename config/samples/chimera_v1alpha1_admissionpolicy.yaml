@@ -1,0 +1,15 @@
+apiVersion: chimera.suse.com/v1alpha1
+kind: AdmissionPolicy
+metadata:
+  name: admissionpolicy-sample
+spec:
+  module: registry://ghcr.io/chimera-kube/policies/pod-toleration:v0.0.2
+  resources:
+  - pods
+  operations:
+  - CREATE
+  - UPDATE
+  env:
+    TAINT_KEY: dedicated
+    TAINT_VALUE: tenantA
+    ALLOWED_GROUPS: system:masters

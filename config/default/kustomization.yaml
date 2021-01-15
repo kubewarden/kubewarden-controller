@@ -1,0 +1,56 @@
+# Adds namespace to all resources.
+namespace: chimera-controller-system
+
+# Value of this field is prepended to the
+# names of all resources, e.g. a deployment named
+# "wordpress" becomes "alices-wordpress".
+# Note that it should also match with the prefix (text before '-') of the namespace
+# field above.
+namePrefix: chimera-controller-
+
+# Labels to add to all resources and selectors.
+#commonLabels:
+#  someName: someValue
+
+bases:
+- ../crd
+- ../rbac
+- ../manager
+- ../webhook
+- ../certmanager
+# [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
+#- ../prometheus
+
+patchesStrategicMerge:
+- manager_auth_proxy_patch.yaml
+- manager_webhook_patch.yaml
+- webhookcainjection_patch.yaml
+
+# the following config is for teaching kustomize how to do var substitution
+vars:
+- name: CERTIFICATE_NAMESPACE
+  objref:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1alpha2
+    name: serving-cert
+  fieldref:
+    fieldpath: metadata.namespace
+- name: CERTIFICATE_NAME
+  objref:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1alpha2
+    name: serving-cert
+- name: SERVICE_NAMESPACE
+  objref:
+    kind: Service
+    version: v1
+    name: webhook-service
+  fieldref:
+    fieldpath: metadata.namespace
+- name: SERVICE_NAME
+  objref:
+    kind: Service
+    version: v1
+    name: webhook-service

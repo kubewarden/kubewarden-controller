@@ -1,0 +1,445 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: manager
+  name: chimera-controller-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: chimera-controller-system/chimera-controller-serving-cert
+    controller-gen.kubebuilder.io/version: (devel)
+  name: admissionpolicies.chimera.suse.com
+spec:
+  group: chimera.suse.com
+  names:
+    kind: AdmissionPolicy
+    listKind: AdmissionPolicyList
+    plural: admissionpolicies
+    singular: admissionpolicy
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AdmissionPolicy is the Schema for the admissionpolicies API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy
+            properties:
+              apiGroups:
+                description: APIGroups is a list of API groups that this webhook should be registered against. Empty array or "*" means everything.
+                items:
+                  type: string
+                type: array
+              apiVersions:
+                description: APIVersions is a list of API versions that this webhook should be registered against. Empty array or "*" means everything.
+                items:
+                  type: string
+                type: array
+              env:
+                additionalProperties:
+                  type: string
+                description: Env respresents the environment variables exposed to the deployment that will be created for this Admission Policy.
+                type: object
+              module:
+                description: Module is the location of the WASM module to be loaded. Can be a local file (file://), a remote file served by an HTTP server (http://, https://), or an artifact served by an OCI-compatible registry (registry://).
+                type: string
+              operations:
+                description: Operations is a list of operations that this webhook should be registered against. Empty array or "*" means everything.
+                items:
+                  type: string
+                type: array
+              resources:
+                description: Resources is a list of resource types that this webhook should be registered against. Empty array or "*" means everything.
+                items:
+                  type: string
+                type: array
+            type: object
+          status:
+            description: AdmissionPolicyStatus defines the observed state of AdmissionPolicy
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: chimera-controller-leader-election-role
+  namespace: chimera-controller-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: chimera-controller-manager-namespaced-role
+  namespace: chimera-controller-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - services
+  verbs:
+  - get
+  - create
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: chimera-controller-manager-cluster-role
+rules:
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  verbs:
+  - create
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: chimera-controller-manager-role
+rules:
+- apiGroups:
+  - chimera.suse.com
+  resources:
+  - admissionpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - chimera.suse.com
+  resources:
+  - admissionpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chimera-controller-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chimera-controller-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chimera-controller-leader-election-rolebinding
+  namespace: chimera-controller-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: chimera-controller-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: chimera-controller-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: chimera-controller-manager-namespaced-rolebinding
+  namespace: chimera-controller-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: chimera-controller-manager-namespaced-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: chimera-controller-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: chimera-controller-manager-cluster-role
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chimera-controller-manager-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: chimera-controller-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: chimera-controller-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chimera-controller-manager-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: chimera-controller-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: chimera-controller-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chimera-controller-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: chimera-controller-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: manager
+  name: chimera-controller-manager-metrics-service
+  namespace: chimera-controller-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: https
+  selector:
+    control-plane: manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chimera-controller-webhook-service
+  namespace: chimera-controller-system
+spec:
+  ports:
+  - port: 443
+    targetPort: 9443
+  selector:
+    control-plane: manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: manager
+  name: chimera-controller-manager
+  namespace: chimera-controller-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: manager
+  template:
+    metadata:
+      labels:
+        control-plane: manager
+    spec:
+      containers:
+      - args:
+        - --metrics-addr=127.0.0.1:8080
+        - --enable-leader-election
+        - --deployments-namespace=chimera-controller-system
+        command:
+        - /manager
+        image: ghcr.io/chimera-kube/chimera-controller:latest
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: chimera-controller-serving-cert
+  namespace: chimera-controller-system
+spec:
+  dnsNames:
+  - chimera-controller-webhook-service.chimera-controller-system.svc
+  - chimera-controller-webhook-service.chimera-controller-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: chimera-controller-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: chimera-controller-selfsigned-issuer
+  namespace: chimera-controller-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: chimera-controller-system/chimera-controller-serving-cert
+  name: chimera-controller-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: chimera-controller-webhook-service
+      namespace: chimera-controller-system
+      path: /mutate-chimera-suse-com-v1alpha1-admissionpolicy
+  failurePolicy: Fail
+  name: madmissionpolicy.kb.io
+  rules:
+  - apiGroups:
+    - chimera.suse.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - admissionpolicies
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: chimera-controller-system/chimera-controller-serving-cert
+  name: chimera-controller-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      name: chimera-controller-webhook-service
+      namespace: chimera-controller-system
+      path: /validate-chimera-suse-com-v1alpha1-admissionpolicy
+  failurePolicy: Fail
+  name: madmissionpolicy.kb.io
+  rules:
+  - apiGroups:
+    - chimera.suse.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - admissionpolicies
+  sideEffects: None
