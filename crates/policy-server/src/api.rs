@@ -17,7 +17,7 @@ pub(crate) async fn route(
 
 async fn handle_post_validate(
     req: Request<Body>,
-    mut tx: mpsc::Sender<wasm::EvalRequest>,
+    tx: mpsc::Sender<wasm::EvalRequest>,
 ) -> Result<Response<Body>, hyper::Error> {
     let raw = hyper::body::to_bytes(req.into_body()).await?;
     let adm_rev = match AdmissionReview::new(raw) {
