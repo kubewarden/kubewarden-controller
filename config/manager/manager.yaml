@@ -27,7 +27,7 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: ghcr.io/chimera-kube/chimera-controller:latest
+        image: ghcr.io/chimera-kube/chimera-controller:v0.0.1
         name: manager
         resources:
           limits:

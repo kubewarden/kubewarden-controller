@@ -34,7 +34,7 @@ Now that all prerequisites are met, we can go ahead and deploy the
 `chimera-controller`:
 
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/chimera-kube/chimera-controller/main/config/generated/all.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/chimera-kube/chimera-controller/v0.0.1/config/generated/all.yaml
 $ kubectl wait --for=condition=Available deployment --timeout=2m -n chimera-controller-system --all
 ```
 
@@ -43,7 +43,7 @@ $ kubectl wait --for=condition=Available deployment --timeout=2m -n chimera-cont
 Now, create a sample admission policy:
 
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/chimera-kube/chimera-controller/main/config/samples/chimera_v1alpha1_admissionpolicy.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/chimera-kube/chimera-controller/v0.0.1/config/samples/chimera_v1alpha1_admissionpolicy.yaml
 ```
 
 ### Remove your first admission policy

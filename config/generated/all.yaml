@@ -332,7 +332,7 @@ spec:
         - --deployments-namespace=chimera-controller-system
         command:
         - /manager
-        image: ghcr.io/chimera-kube/chimera-controller:latest
+        image: ghcr.io/chimera-kube/chimera-controller:v0.0.1
         name: manager
         ports:
         - containerPort: 9443
