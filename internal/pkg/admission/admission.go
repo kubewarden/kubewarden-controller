@@ -176,14 +176,6 @@ func (r *AdmissionReconciler) deployment(admissionPolicy *chimerav1alpha1.Admiss
 		},
 		Env: []corev1.EnvVar{
 			corev1.EnvVar{
-				Name:  "CHIMERA_ADMISSION_NAME",
-				Value: fmt.Sprintf("%s.admission.rule", admissionPolicy.Name),
-			},
-			corev1.EnvVar{
-				Name:  "CHIMERA_SKIP_ADMISSION_REGISTRATION",
-				Value: "1",
-			},
-			corev1.EnvVar{
 				Name:  "CHIMERA_CALLBACK_PORT",
 				Value: fmt.Sprintf("%d", constants.AdmissionPort),
 			},
@@ -200,28 +192,12 @@ func (r *AdmissionReconciler) deployment(admissionPolicy *chimerav1alpha1.Admiss
 				Value: filepath.Join(secretsContainerPath, "admission-key"),
 			},
 			corev1.EnvVar{
-				Name:  "CHIMERA_CA_BUNDLE",
-				Value: filepath.Join(secretsContainerPath, "admission-ca"),
-			},
-			corev1.EnvVar{
-				Name:  "CHIMERA_API_GROUPS",
-				Value: strings.Join(admissionPolicy.Spec.APIGroups, ","),
-			},
-			corev1.EnvVar{
-				Name:  "CHIMERA_API_VERSIONS",
-				Value: strings.Join(admissionPolicy.Spec.APIVersions, ","),
-			},
-			corev1.EnvVar{
-				Name:  "CHIMERA_RESOURCES",
-				Value: strings.Join(admissionPolicy.Spec.Resources, ","),
-			},
-			corev1.EnvVar{
-				Name:  "CHIMERA_OPERATIONS",
-				Value: strings.Join(admissionPolicy.Spec.Operations, ","),
-			},
-			corev1.EnvVar{
 				Name:  "CHIMERA_WASM_URI",
 				Value: admissionPolicy.Spec.Module,
+			},
+			corev1.EnvVar{
+				Name:  "CHIMERA_SKIP_ADMISSION_REGISTRATION",
+				Value: "1",
 			},
 		},
 	}
