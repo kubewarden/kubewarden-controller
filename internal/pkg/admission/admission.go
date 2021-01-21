@@ -52,11 +52,8 @@ func (r *AdmissionReconciler) ReconcileDeletion(ctx context.Context, admissionPo
 	if err := r.Client.Delete(ctx, r.admissionRegistration(admissionPolicy, admissionSecret)); err != nil && !apierrors.IsNotFound(err) {
 		errors = append(errors, err)
 	}
-	if err := r.reconcileDeletionFinalizer(ctx, admissionPolicy); err != nil && !apierrors.IsNotFound(err) {
-		errors = append(errors, err)
-	}
 	if len(errors) == 0 {
-		return nil
+		return r.reconcileDeletionFinalizer(ctx, admissionPolicy)
 	}
 	return errors
 }
