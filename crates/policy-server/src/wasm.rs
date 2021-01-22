@@ -31,7 +31,7 @@ pub(crate) struct PolicyEvaluator {
 }
 
 impl PolicyEvaluator {
-    pub(crate) fn new(wasm_file: String) -> Result<PolicyEvaluator, anyhow::Error> {
+    pub(crate) fn new(wasm_file: &String) -> Result<PolicyEvaluator, anyhow::Error> {
         let mut f = File::open(wasm_file)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
