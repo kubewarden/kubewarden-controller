@@ -17,22 +17,19 @@ pub(crate) fn parse_wasm_url(
   remote_insecure: bool,
   remote_non_tls: bool,
 ) -> Result<Box<dyn Fetcher>> {
-  let parsed_url = match url.parse::<Uri>() {
+  // we have to use url::Url instead of hyper::Uri because the latter one can't
+  // parse urls like file://
+  let parsed_url = match url::Url::parse(url) {
     Ok(u) => u,
     Err(e) => {
       return Err(anyhow!("Invalid WASI url: {}", e));
     }
   };
 
-  let scheme = match parsed_url.scheme_str() {
-    Some(s) => s,
-    None => return Err(anyhow!("Cannot extract scheme from {}", url)),
-  };
-
-  match scheme {
-    "file" => Ok(Box::new(Local::new(parsed_url)?)),
-    "http" => Ok(Box::new(Https::new(parsed_url, remote_insecure)?)),
-    "https" => Ok(Box::new(Https::new(parsed_url, remote_insecure)?)),
-    _ => Err(anyhow!("unknown scheme: {}", scheme)),
+  match parsed_url.scheme() {
+    "file" => Ok(Box::new(Local::new(parsed_url.path())?)),
+    "http" => Ok(Box::new(Https::new(url.parse::<Uri>()?, remote_insecure)?)),
+    "https" => Ok(Box::new(Https::new(url.parse::<Uri>()?, remote_insecure)?)),
+    _ => Err(anyhow!("unknown scheme: {}", parsed_url.scheme())),
   }
 }
