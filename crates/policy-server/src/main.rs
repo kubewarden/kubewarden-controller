@@ -3,15 +3,17 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use std::{net::SocketAddr, thread};
 use std::process;
-use tokio::{runtime::Runtime, sync::mpsc};
+use tokio::{runtime::Runtime, sync::mpsc::channel};
 
 mod admission_review;
 mod api;
 mod wasm;
 mod wasm_fetcher;
+mod worker;
 
-#[tokio::main]
-async fn main() {
+use crate::wasm::EvalRequest;
+
+fn main() {
     let matches = App::new("policy-server")
         .version("0.0.1")
         .about("Kubernetes admission controller powered by Chimera WASM policies")
@@ -84,6 +86,13 @@ async fn main() {
         }
     };
 
+    let rt = match Runtime::new() {
+        Ok(r) => { r },
+        Err(error) => {
+            return fatal_error(format!("Error initializing tokio runtime: {}", error));
+        }
+    };
+
     let fetcher = match wasm_fetcher::parse_wasm_url(
         matches.value_of("wasm-uri").unwrap(),
         matches.is_present("wasm-remote-insecure"),
@@ -94,42 +103,37 @@ async fn main() {
             return fatal_error(format!("Error parsing arguments: {}", error));
         }
     };
-    let wasm_path = match fetcher.fetch().await {
-        Ok(p) => { p },
-        Err(error) => {
-            return fatal_error(format!("Error fetching WASM module: {}", error));
-        }
+    let wasm_path = match rt.block_on(async { fetcher.fetch().await }) {
+        Ok(p) =>p,
+        Err(error) => { return fatal_error(format!("Error fetching WASM module: {}", error));}
     };
 
-    let (tx, mut rx) = mpsc::channel::<wasm::EvalRequest>(32);
+    let (api_tx, api_rx) = channel::<EvalRequest>(32);
 
-    let rt = Runtime::new().unwrap();
+    let mut wasm_modules = Vec::<String>::new();
+    wasm_modules.push(wasm_path);
+
     let wasm_thread = thread::spawn(move || {
-        let mut policy_evaluator = match wasm::PolicyEvaluator::new(&wasm_path) {
-            Ok(e) => { e },
-            Err(error) => {
-                return fatal_error(format!("Error initializing policy evaluator for {}: {}", wasm_path, error));
-            }
-        };
-        rt.block_on(async move {
-            while let Some(req) = rx.recv().await {
-                let resp = policy_evaluator.validate(req.req);
-                let _ = req.resp_chan.send(resp);
-            }
+        let worker_pool = worker::WorkerPool::new(3, wasm_modules.clone(), api_rx).unwrap();
+
+        worker_pool.run();
+    });
+
+    rt.block_on( async {
+        let make_svc = make_service_fn(|_conn| {
+            let svc_tx = api_tx.clone();
+            async move { 
+                Ok::<_, hyper::Error>(service_fn(move |req| api::route(req, svc_tx.clone()))) }
         });
+
+        let server = Server::bind(&addr).serve(make_svc);
+        println!("Started server on {}", addr);
+
+        if let Err(e) = server.await {
+            eprintln!("server error: {}", e);
+        }
     });
 
-    let make_svc = make_service_fn(|_conn| {
-        let svc_tx = tx.clone();
-        async move { Ok::<_, hyper::Error>(service_fn(move |req| api::route(req, svc_tx.clone()))) }
-    });
-
-    let server = Server::bind(&addr).serve(make_svc);
-    println!("Started server on {}", addr);
-
-    if let Err(e) = server.await {
-        eprintln!("server error: {}", e);
-    }
     wasm_thread.join().unwrap();
 }
 
