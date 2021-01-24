@@ -2,10 +2,11 @@ use anyhow::{anyhow, Result};
 use async_std::fs::File;
 use async_std::prelude::*;
 use async_trait::async_trait;
-use hyper::{client::HttpConnector, Client, StatusCode, Uri};
+use hyper::{client::HttpConnector, Client, StatusCode};
 use hyper_tls::HttpsConnector;
 use native_tls::TlsConnector;
 use std::boxed::Box;
+use url::Url;
 
 use crate::wasm_fetcher::fetcher::Fetcher;
 
@@ -14,7 +15,7 @@ pub(crate) struct Https {
   // full path to the WASM module
   destination: String,
   // url of the remote WASM module
-  wasm_url: Uri,
+  wasm_url: Url,
   // do not verify the remote TLS certificate
   insecure: bool,
 }
@@ -22,12 +23,12 @@ pub(crate) struct Https {
 impl Https {
   // Allocates a LocalWASM instance starting from the user
   // provided URL
-  pub(crate) fn new(url: Uri, remote_insecure: bool) -> Result<Https> {
+  pub(crate) fn new(url: Url, remote_insecure: bool) -> Result<Https> {
     let dest = match url.path().rsplit('/').next() {
       Some(d) => d,
       None => {
         return Err(anyhow!(
-          "Cannot find infer name of the remote file by looking at {}",
+          "Cannot infer name of the remote file by looking at {}",
           url.path()
         ))
       }
@@ -56,7 +57,7 @@ impl Fetcher for Https {
     let client = Client::builder().build::<_, hyper::Body>(https);
 
     // not well: the hyper-tls connector handles both http and https scheme
-    let res = client.get(self.wasm_url.clone()).await?;
+    let res = client.get(self.wasm_url.clone().into_string().parse()?).await?;
     if res.status() != StatusCode::OK {
       return Err(anyhow!(
         "Error while downloading remote WASM module from {}, got HTTP status {}",

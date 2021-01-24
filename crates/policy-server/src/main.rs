@@ -51,7 +51,7 @@ async fn main() {
                 .env("CHIMERA_WASM_URI")
                 .required(true)
                 .help(
-                    "Wasm URI (file:///some/local/program.wasm, 
+                    "Wasm URI (file:///some/local/program.wasm,
                     https://some-host.com/some/remote/program.wasm,
                     registry://localhost:5000/project/artifact:some-version)",
                 ),
