@@ -1,6 +1,5 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use hyper::Uri;
 
 use crate::wasm_fetcher::fetcher::Fetcher;
 
