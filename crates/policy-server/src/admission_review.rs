@@ -19,7 +19,7 @@ impl AdmissionReview {
 
         let request = serde_json::to_string(req)?;
         let uid = match req.get("uid") {
-            Some(uid) => uid.to_string(),
+            Some(uid) => uid.as_str().unwrap().to_string(),
             None => return Err(anyhow!("Cannot parse AdmissionReview: 'uid' not found")),
         };
 
