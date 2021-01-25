@@ -2,6 +2,7 @@ use clap::{App, Arg};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use std::{net::SocketAddr, thread};
+use std::process;
 use tokio::{runtime::Runtime, sync::mpsc};
 
 mod admission_review;
@@ -71,27 +72,45 @@ async fn main() {
         )
         .get_matches();
 
-    let addr: SocketAddr = format!(
+    let addr: SocketAddr = match format!(
         "{}:{}",
         matches.value_of("address").unwrap(),
         matches.value_of("port").unwrap()
     )
-    .parse()
-    .unwrap();
+    .parse() {
+        Ok(a) => { a },
+        Err(error) => {
+            return fatal_error(format!("Error parsing arguments: {}", error));
+        }
+    };
 
-    let fetcher = wasm_fetcher::parse_wasm_url(
+    let fetcher = match wasm_fetcher::parse_wasm_url(
         matches.value_of("wasm-uri").unwrap(),
         matches.is_present("wasm-remote-insecure"),
         matches.is_present("wasm-remote-non-tls"),
-    )
-    .unwrap();
-    let wasm_path = fetcher.fetch().await.unwrap();
+    ) {
+        Ok(f) => { f },
+        Err(error) => {
+            return fatal_error(format!("Error parsing arguments: {}", error));
+        }
+    };
+    let wasm_path = match fetcher.fetch().await {
+        Ok(p) => { p },
+        Err(error) => {
+            return fatal_error(format!("Error fetching WASM module: {}", error));
+        }
+    };
 
     let (tx, mut rx) = mpsc::channel::<wasm::EvalRequest>(32);
 
     let rt = Runtime::new().unwrap();
     let wasm_thread = thread::spawn(move || {
-        let mut policy_evaluator = wasm::PolicyEvaluator::new(wasm_path).unwrap();
+        let mut policy_evaluator = match wasm::PolicyEvaluator::new(&wasm_path) {
+            Ok(e) => { e },
+            Err(error) => {
+                return fatal_error(format!("Error initializing policy evaluator for {}: {}", wasm_path, error));
+            }
+        };
         rt.block_on(async move {
             while let Some(req) = rx.recv().await {
                 let resp = policy_evaluator.validate(req.req);
@@ -112,4 +131,9 @@ async fn main() {
         eprintln!("server error: {}", e);
     }
     wasm_thread.join().unwrap();
+}
+
+fn fatal_error(msg: String) {
+    println!("{}", msg);
+    process::exit(1);
 }
