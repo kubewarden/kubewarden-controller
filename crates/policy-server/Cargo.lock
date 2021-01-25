@@ -1683,6 +1683,7 @@ dependencies = [
  "hyper 0.14.2",
  "hyper-tls 0.5.0",
  "native-tls",
+ "num_cpus",
  "oci-distribution",
  "serde",
  "serde_json",

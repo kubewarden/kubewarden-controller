@@ -36,6 +36,12 @@ fn main() {
                 .help("Listen on PORT"),
         )
         .arg(
+            Arg::with_name("workers")
+                .long("workers")
+                .env("CHIMERA_WORKERS")
+                .help("Number of workers thread to create"),
+        )
+        .arg(
             Arg::with_name("cert-file")
                 .long("cert-file")
                 .env("CHIMERA_CERT_FILE")
@@ -114,7 +120,9 @@ fn main() {
     wasm_modules.push(wasm_path);
 
     let wasm_thread = thread::spawn(move || {
-        let worker_pool = worker::WorkerPool::new(3, wasm_modules.clone(), api_rx).unwrap();
+        let pool_size = matches.value_of("workers").
+            map_or_else(|| num_cpus::get(), |v| usize::from_str_radix(v, 10).expect("error converting the number of workers"));
+        let worker_pool = worker::WorkerPool::new(pool_size, wasm_modules.clone(), api_rx).unwrap();
 
         worker_pool.run();
     });
