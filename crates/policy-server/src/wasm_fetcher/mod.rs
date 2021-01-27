@@ -18,6 +18,7 @@ pub(crate) fn parse_wasm_url(
   url: &str,
   remote_insecure: bool,
   remote_non_tls: bool,
+  docker_config_json_path: Option<String>,
 ) -> Result<Box<dyn Fetcher>> {
   // we have to use url::Url instead of hyper::Uri because the latter one can't
   // parse urls like file://
@@ -31,19 +32,16 @@ pub(crate) fn parse_wasm_url(
   match parsed_url.scheme() {
     "file" => Ok(Box::new(Local::new(parsed_url.path())?)),
     "http" | "https" => Ok(Box::new(Https::new(url.parse::<Url>()?, remote_insecure)?)),
-    "registry" => Ok(Box::new(Registry::new(parsed_url, remote_non_tls)?)),
+    "registry" => Ok(Box::new(Registry::new(parsed_url, remote_non_tls, docker_config_json_path)?)),
     _ => Err(anyhow!("unknown scheme: {}", parsed_url.scheme())),
   }
 }
 
-pub(crate) async fn fetch_wasm_module(url: String) -> Result<String> {
-  let fetcher = match parse_wasm_url(
-    &url, false, //TODO: remote insecure
-    false, //TODO: remote non tls
-  ) {
-    Ok(f) => f,
-    Err(e) => return Err(anyhow!("{}", e)),
-  };
-
-  fetcher.fetch().await
+pub(crate) async fn fetch_wasm_module(
+    url: &str,
+    docker_config_json_path: Option<String>,
+) -> Result<String> {
+    parse_wasm_url(&url, false, false, docker_config_json_path)?
+        .fetch()
+        .await
 }

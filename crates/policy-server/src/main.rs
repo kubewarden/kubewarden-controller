@@ -9,6 +9,7 @@ use tokio::{runtime::Runtime, sync::mpsc::channel};
 
 mod admission_review;
 mod api;
+mod registry;
 mod server;
 mod utils;
 mod wasm_fetcher;
@@ -86,6 +87,13 @@ fn main() {
                 .takes_value(false)
                 .help("Wasm remote endpoint is not using TLS. False by default"),
         )
+        .arg(
+            Arg::with_name("docker-config-json-path")
+                .env("CHIMERA_DOCKER_CONFIG_JSON_PATH")
+                .long("docker-config-json-path")
+                .takes_value(true)
+                .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
+        )
         .get_matches();
 
     let addr: SocketAddr = match format!(
@@ -126,7 +134,12 @@ fn main() {
     };
 
     for (_, policy) in policies.iter_mut() {
-        match rt.block_on(wasm_fetcher::fetch_wasm_module(policy.url.clone())) {
+        match rt.block_on(wasm_fetcher::fetch_wasm_module(
+            &policy.url,
+            matches
+                .value_of("docker-config-json-path")
+                .map(|json_config_path| json_config_path.into()),
+        )) {
             Ok(path) => policy.wasm_module_path = path,
             Err(e) => {
                 return fatal_error(format!("Error while fetching policy {}: {}", policy.url, e));
