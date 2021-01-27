@@ -1,9 +1,19 @@
+use async_stream::stream;
 use clap::{App, Arg};
+use core::task::{Context, Poll};
+use futures_util::{future::TryFutureExt, stream::Stream};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use std::{net::SocketAddr, thread};
-use std::process;
-use tokio::{runtime::Runtime, sync::mpsc::channel};
+use std::{io, process};
+use std::fs::File;
+use std::io::Read;
+use std::pin::Pin;
+use tokio::{net::{TcpListener, TcpStream}, runtime::Runtime, sync::mpsc::channel};
+use tokio_native_tls::{native_tls, TlsAcceptor, TlsStream};
+use openssl::pkcs12::Pkcs12;
+use openssl::pkey::PKey;
+use openssl::x509::X509;
 
 mod admission_review;
 mod api;
@@ -44,14 +54,16 @@ fn main() {
         .arg(
             Arg::with_name("cert-file")
                 .long("cert-file")
+                .default_value("")
                 .env("CHIMERA_CERT_FILE")
-                .help("TLS certificate to use"),
+                .help("Path to an X.509 certificate file for HTTPS"),
         )
         .arg(
-            Arg::with_name("cert-key")
-                .long("cert-key")
-                .env("CHIMERA_CERT_KEY")
-                .help("TLS key to use"),
+            Arg::with_name("key-file")
+                .long("key-file")
+                .default_value("")
+                .env("CHIMERA_KEY_FILE")
+                .help("Path to an X.509 private key file for HTTPS"),
         )
         .arg(
             Arg::with_name("wasm-uri")
@@ -92,6 +104,12 @@ fn main() {
         }
     };
 
+    let cert_file = String::from(matches.value_of("cert-file").unwrap());
+    let key_file = String::from(matches.value_of("key-file").unwrap());
+    if (cert_file == "" && key_file != "") || (cert_file != "" && key_file == "") {
+        return fatal_error(format!("Error parsing arguments: either both --cert-file and --key-file must be provided, or neither."));
+    }
+
     let rt = match Runtime::new() {
         Ok(r) => { r },
         Err(error) => {
@@ -127,20 +145,50 @@ fn main() {
         worker_pool.run();
     });
 
+    macro_rules! mk_svc_fn {
+        ($tx:expr) => {
+            make_service_fn(|_conn| {
+                let svc_tx = $tx.clone();
+                async move {
+                    Ok::<_, hyper::Error>(service_fn(move |req| api::route(req, svc_tx.clone()))) }
+            });
+        };
+    }
+
     rt.block_on( async {
-        let make_svc = make_service_fn(|_conn| {
-            let svc_tx = api_tx.clone();
-            async move { 
-                Ok::<_, hyper::Error>(service_fn(move |req| api::route(req, svc_tx.clone()))) }
-        });
+        if cert_file == "" {
+            let make_svc = mk_svc_fn!(api_tx);
+            let server = Server::bind(&addr).serve(make_svc);
+            println!("Started server on {}", addr);
+            if let Err(e) = server.await {
+                eprintln!("server error: {}", e);
+            }
+        } else {
+            let tls_acceptor = new_tls_acceptor(&cert_file, &key_file).unwrap();
+            let tcp = TcpListener::bind(&addr).await.unwrap();
+            let incoming_tls_stream = stream! {
+                loop {
+                    let (socket, _) = tcp.accept().await?;
+                    let stream = tls_acceptor.accept(socket).map_err(|e| {
+                        println!("[!] Voluntary server halt due to client-connection error...");
+                        error(format!("TLS Error: {:?}", e))
+                    });
+                    yield stream.await;
+                }
+            };
 
-        let server = Server::bind(&addr).serve(make_svc);
-        println!("Started server on {}", addr);
+            let make_svc = mk_svc_fn!(api_tx);
+            let server = Server::builder(HyperAcceptor {
+                acceptor: Box::pin(incoming_tls_stream),
+            }).serve(make_svc);
 
-        if let Err(e) = server.await {
-            eprintln!("server error: {}", e);
+            println!("Started server on {}", addr);
+            if let Err(e) = server.await {
+                eprintln!("server error: {}", e);
+            }
         }
-    });
+    }
+    );
 
     wasm_thread.join().unwrap();
 }
@@ -148,4 +196,40 @@ fn main() {
 fn fatal_error(msg: String) {
     println!("{}", msg);
     process::exit(1);
+}
+
+fn error(err: String) -> io::Error {
+    io::Error::new(io::ErrorKind::Other, err)
+}
+
+struct HyperAcceptor<'a> {
+    acceptor: Pin<Box<dyn Stream<Item = Result<TlsStream<TcpStream>, io::Error>> + 'a>>,
+}
+
+impl hyper::server::accept::Accept for HyperAcceptor<'_> {
+    type Conn = TlsStream<TcpStream>;
+    type Error = io::Error;
+
+    fn poll_accept(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context,
+    ) -> Poll<Option<Result<Self::Conn, Self::Error>>> {
+        Pin::new(&mut self.acceptor).poll_next(cx)
+    }
+}
+
+fn new_tls_acceptor(cert_file: &str, key_file: &str) -> Result<TlsAcceptor, io::Error> {
+    let mut cert_file = File::open(cert_file)?;
+    let mut key_file = File::open(key_file)?;
+    let mut cert = vec![];
+    cert_file.read_to_end(&mut cert)?;
+    let cert = X509::from_pem(&cert)?;
+    let mut key = vec![];
+    key_file.read_to_end(&mut key)?;
+    let key = PKey::private_key_from_pem(&key)?;
+    let pkcs_cert = Pkcs12::builder()
+            .build("", "client", &key, &cert)?;
+    let identity = native_tls::Identity::from_pkcs12(&pkcs_cert.to_der()?, "").unwrap();
+    let tls_acceptor = native_tls::TlsAcceptor::new(identity).unwrap();
+    Ok(TlsAcceptor::from(tls_acceptor))
 }
