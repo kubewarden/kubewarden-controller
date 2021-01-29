@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
-use url::Url;
 use std::boxed::Box;
+use url::Url;
 
 pub mod fetcher;
 mod https;
@@ -34,4 +34,16 @@ pub(crate) fn parse_wasm_url(
     "registry" => Ok(Box::new(Registry::new(parsed_url, remote_non_tls)?)),
     _ => Err(anyhow!("unknown scheme: {}", parsed_url.scheme())),
   }
+}
+
+pub(crate) async fn fetch_wasm_module(url: String) -> Result<String> {
+  let fetcher = match parse_wasm_url(
+    &url, false, //TODO: remote insecure
+    false, //TODO: remote non tls
+  ) {
+    Ok(f) => f,
+    Err(e) => return Err(anyhow!("{}", e)),
+  };
+
+  fetcher.fetch().await
 }

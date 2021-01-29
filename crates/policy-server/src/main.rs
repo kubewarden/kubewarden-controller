@@ -5,10 +5,14 @@ use tokio::{runtime::Runtime, sync::mpsc::channel};
 mod admission_review;
 mod api;
 mod server;
-mod wasm;
+mod utils;
 mod wasm_fetcher;
 mod worker;
 
+mod policies;
+use policies::read_policies_file;
+
+mod wasm;
 use crate::wasm::EvalRequest;
 
 fn main() {
@@ -54,14 +58,13 @@ fn main() {
                 .help("Path to an X.509 private key file for HTTPS"),
         )
         .arg(
-            Arg::with_name("wasm-uri")
-                .long("wasm-uri")
-                .env("CHIMERA_WASM_URI")
-                .required(true)
+            Arg::with_name("policies")
+                .long("policies")
+                .env("CHIMERA_POLICIES")
+                .default_value("policies.yml")
                 .help(
-                    "Wasm URI (file:///some/local/program.wasm,
-                    https://some-host.com/some/remote/program.wasm,
-                    registry://localhost:5000/project/artifact:some-version)",
+                    "YAML file holding the Chimera policies to be loaded and
+                    their settings",
                 ),
         )
         .arg(
@@ -85,8 +88,9 @@ fn main() {
         matches.value_of("address").unwrap(),
         matches.value_of("port").unwrap()
     )
-    .parse() {
-        Ok(a) => { a },
+    .parse()
+    {
+        Ok(a) => a,
         Err(error) => {
             return fatal_error(format!("Error parsing arguments: {}", error));
         }
@@ -95,40 +99,43 @@ fn main() {
     let cert_file = String::from(matches.value_of("cert-file").unwrap());
     let key_file = String::from(matches.value_of("key-file").unwrap());
     if (cert_file == "" && key_file != "") || (cert_file != "" && key_file == "") {
-        return fatal_error(format!("Error parsing arguments: either both --cert-file and --key-file must be provided, or neither."));
+        return fatal_error("Error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
     }
 
     let rt = match Runtime::new() {
-        Ok(r) => { r },
+        Ok(r) => r,
         Err(error) => {
             return fatal_error(format!("Error initializing tokio runtime: {}", error));
         }
     };
 
-    let fetcher = match wasm_fetcher::parse_wasm_url(
-        matches.value_of("wasm-uri").unwrap(),
-        matches.is_present("wasm-remote-insecure"),
-        matches.is_present("wasm-remote-non-tls"),
-    ) {
-        Ok(f) => { f },
-        Err(error) => {
-            return fatal_error(format!("Error parsing arguments: {}", error));
+    let policies_file = matches.value_of("policies").unwrap();
+    let mut policies = match read_policies_file(policies_file) {
+        Ok(ps) => ps,
+        Err(e) => {
+            return fatal_error(format!(
+                "Error while loading policies from {}: {}",
+                policies_file, e
+            ));
         }
     };
-    let wasm_path = match rt.block_on(async { fetcher.fetch().await }) {
-        Ok(p) =>p,
-        Err(error) => { return fatal_error(format!("Error fetching WASM module: {}", error));}
-    };
+
+    for (_, policy) in policies.iter_mut() {
+        match rt.block_on(wasm_fetcher::fetch_wasm_module(policy.url.clone())) {
+            Ok(path) => policy.wasm_module_path = path,
+            Err(e) => {
+                return fatal_error(format!("Error while fetching policy {}: {}", policy.url, e));
+            }
+        };
+    }
 
     let (api_tx, api_rx) = channel::<EvalRequest>(32);
 
-    let mut wasm_modules = Vec::<String>::new();
-    wasm_modules.push(wasm_path);
-
     let wasm_thread = thread::spawn(move || {
-        let pool_size = matches.value_of("workers").
-            map_or_else(|| num_cpus::get(), |v| usize::from_str_radix(v, 10).expect("error converting the number of workers"));
-        let worker_pool = worker::WorkerPool::new(pool_size, wasm_modules.clone(), api_rx).unwrap();
+        let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
+            usize::from_str_radix(v, 10).expect("error converting the number of workers")
+        });
+        let worker_pool = worker::WorkerPool::new(pool_size, policies.clone(), api_rx).unwrap();
 
         worker_pool.run();
     });

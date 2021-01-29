@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 
 pub(crate) struct AdmissionReview {
-    pub request: String,
+    pub request: serde_json::Value,
     pub uid: String,
 }
 
@@ -17,14 +17,13 @@ impl AdmissionReview {
             None => return Err(anyhow!("Cannot parse AdmissionReview: 'request' not found")),
         };
 
-        let request = serde_json::to_string(req)?;
         let uid = match req.get("uid") {
             Some(uid) => uid.as_str().unwrap().to_string(),
             None => return Err(anyhow!("Cannot parse AdmissionReview: 'uid' not found")),
         };
 
         Ok(AdmissionReview {
-            request: request,
+            request: req.clone(),
             uid: uid,
         })
     }
