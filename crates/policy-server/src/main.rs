@@ -1,12 +1,10 @@
 use clap::{App, Arg};
-use hyper::service::{make_service_fn, service_fn};
-use hyper::Server;
-use std::{net::SocketAddr, thread};
-use std::process;
+use std::{net::SocketAddr, process, thread};
 use tokio::{runtime::Runtime, sync::mpsc::channel};
 
 mod admission_review;
 mod api;
+mod server;
 mod wasm;
 mod wasm_fetcher;
 mod worker;
@@ -44,14 +42,16 @@ fn main() {
         .arg(
             Arg::with_name("cert-file")
                 .long("cert-file")
+                .default_value("")
                 .env("CHIMERA_CERT_FILE")
-                .help("TLS certificate to use"),
+                .help("Path to an X.509 certificate file for HTTPS"),
         )
         .arg(
-            Arg::with_name("cert-key")
-                .long("cert-key")
-                .env("CHIMERA_CERT_KEY")
-                .help("TLS key to use"),
+            Arg::with_name("key-file")
+                .long("key-file")
+                .default_value("")
+                .env("CHIMERA_KEY_FILE")
+                .help("Path to an X.509 private key file for HTTPS"),
         )
         .arg(
             Arg::with_name("wasm-uri")
@@ -92,6 +92,12 @@ fn main() {
         }
     };
 
+    let cert_file = String::from(matches.value_of("cert-file").unwrap());
+    let key_file = String::from(matches.value_of("key-file").unwrap());
+    if (cert_file == "" && key_file != "") || (cert_file != "" && key_file == "") {
+        return fatal_error(format!("Error parsing arguments: either both --cert-file and --key-file must be provided, or neither."));
+    }
+
     let rt = match Runtime::new() {
         Ok(r) => { r },
         Err(error) => {
@@ -127,20 +133,11 @@ fn main() {
         worker_pool.run();
     });
 
-    rt.block_on( async {
-        let make_svc = make_service_fn(|_conn| {
-            let svc_tx = api_tx.clone();
-            async move { 
-                Ok::<_, hyper::Error>(service_fn(move |req| api::route(req, svc_tx.clone()))) }
-        });
-
-        let server = Server::bind(&addr).serve(make_svc);
-        println!("Started server on {}", addr);
-
-        if let Err(e) = server.await {
-            eprintln!("server error: {}", e);
-        }
-    });
+    let tls_acceptor = match cert_file != "" {
+        true => Some(server::new_tls_acceptor(&cert_file, &key_file).unwrap()),
+        false => None,
+    };
+    rt.block_on(server::run_server(&addr, tls_acceptor, api_tx));
 
     wasm_thread.join().unwrap();
 }
