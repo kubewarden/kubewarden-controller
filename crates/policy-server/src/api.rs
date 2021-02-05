@@ -9,17 +9,27 @@ pub(crate) async fn route(
     req: hyper::Request<hyper::Body>,
     tx: mpsc::Sender<wasm::EvalRequest>,
 ) -> Result<hyper::Response<hyper::Body>, hyper::Error> {
-    match (req.method(), req.uri().path()) {
-        (&Method::POST, "/validate") => handle_post_validate(req, tx).await,
+    match req.method() {
+        &Method::POST => {
+            let path = String::from(req.uri().path());
+            if path.starts_with("/validate/") {
+                handle_post_validate(req, path.trim_start_matches("/validate/").to_string(), tx)
+                    .await
+            } else {
+                handle_not_found().await
+            }
+        }
         _ => handle_not_found().await,
     }
 }
 
 async fn handle_post_validate(
     req: Request<Body>,
+    policy_id: String,
     tx: mpsc::Sender<wasm::EvalRequest>,
 ) -> Result<Response<Body>, hyper::Error> {
     let raw = hyper::body::to_bytes(req.into_body()).await?;
+
     let adm_rev = match AdmissionReview::new(raw) {
         Ok(ar) => ar,
         Err(e) => {
@@ -34,6 +44,7 @@ async fn handle_post_validate(
     let (resp_tx, resp_rx) = oneshot::channel();
 
     let eval_req = wasm::EvalRequest {
+        policy_id: policy_id,
         req: adm_rev.request,
         resp_chan: resp_tx,
     };
@@ -41,14 +52,21 @@ async fn handle_post_validate(
     let res = resp_rx.await;
 
     match res {
-        Ok(r) => {
-            let json_payload = build_ar_response(adm_rev.uid, r);
-            let builder = Response::builder()
-                .header(hyper::header::CONTENT_TYPE, "application/json")
-                .status(StatusCode::OK)
-                .body(hyper::Body::from(json_payload));
-            Ok(builder.unwrap())
-        }
+        Ok(r) => match r {
+            Some(vr) => {
+                let json_payload = build_ar_response(adm_rev.uid, vr);
+                let builder = Response::builder()
+                    .header(hyper::header::CONTENT_TYPE, "application/json")
+                    .status(StatusCode::OK)
+                    .body(hyper::Body::from(json_payload));
+                Ok(builder.unwrap())
+            }
+            None => {
+                let mut not_found = Response::default();
+                *not_found.status_mut() = StatusCode::NOT_FOUND;
+                Ok(not_found)
+            }
+        },
         Err(e) => {
             println!("Cannot get WASM response from channel: {}", e);
             let mut internl_error = Response::default();

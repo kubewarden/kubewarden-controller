@@ -1,3 +1,4 @@
+use crate::policies::Policy;
 use crate::wasm::{EvalRequest, PolicyEvaluator};
 use anyhow::Result;
 use std::{collections::HashMap, thread, vec::Vec};
@@ -9,13 +10,17 @@ pub(crate) struct Worker {
 }
 
 impl Worker {
-  pub(crate) fn new(rx: Receiver<EvalRequest>, wasm_modules: Vec<String>) -> Result<Worker> {
+  pub(crate) fn new(
+    rx: Receiver<EvalRequest>,
+    policies: HashMap<String, Policy>,
+  ) -> Result<Worker> {
     let mut evs: HashMap<String, PolicyEvaluator> = HashMap::new();
 
-    for w in wasm_modules {
-      let policy_evaluator = PolicyEvaluator::new(&w)?;
-      //TODO: no hard coded value
-      evs.insert("validate".into(), policy_evaluator);
+    for (id, policy) in policies.iter() {
+      let settings = policy.settings();
+
+      let policy_evaluator = PolicyEvaluator::new(policy.wasm_module_path.clone(), settings)?;
+      evs.insert(id.to_string(), policy_evaluator);
     }
 
     Ok(Worker {
@@ -27,13 +32,14 @@ impl Worker {
   pub(crate) fn run(mut self) {
     while let Some(req) = self.channel_rx.blocking_recv() {
       //TODO: handle error
-      let policy_id = "validate".to_string();
-      match self.evaluators.get_mut(&policy_id) {
+      match self.evaluators.get_mut(&req.policy_id) {
         Some(policy_evaluator) => {
           let resp = policy_evaluator.validate(req.req);
-          let _ = req.resp_chan.send(resp);
+          let _ = req.resp_chan.send(Some(resp));
         }
-        None => continue,
+        None => {
+          let _ = req.resp_chan.send(None);
+        }
       }
     }
   }
@@ -48,7 +54,7 @@ pub(crate) struct WorkerPool {
 impl WorkerPool {
   pub(crate) fn new(
     size: usize,
-    wasm_modules: Vec<String>,
+    policies: HashMap<String, Policy>,
     rx: Receiver<EvalRequest>,
   ) -> Result<WorkerPool> {
     let mut tx_chans = Vec::<Sender<EvalRequest>>::new();
@@ -56,10 +62,10 @@ impl WorkerPool {
     for n in 1..=size {
       let (tx, rx) = channel::<EvalRequest>(32);
       tx_chans.push(tx);
-      let wasm_modules = wasm_modules.clone();
+      let ps = policies.clone();
 
       thread::spawn(move || {
-        let worker = Worker::new(rx, wasm_modules).unwrap();
+        let worker = Worker::new(rx, ps).unwrap();
 
         //TODO: better logging
         println!("worker {} loop start", n);
