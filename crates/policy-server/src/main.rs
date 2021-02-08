@@ -1,5 +1,10 @@
 use clap::{App, Arg};
-use std::{net::SocketAddr, process, thread};
+use std::{
+    net::SocketAddr,
+    process,
+    sync::{Arc, Barrier},
+    thread,
+};
 use tokio::{runtime::Runtime, sync::mpsc::channel};
 
 mod admission_review;
@@ -130,15 +135,20 @@ fn main() {
     }
 
     let (api_tx, api_rx) = channel::<EvalRequest>(32);
+    let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
+        usize::from_str_radix(v, 10).expect("error converting the number of workers")
+    });
+
+    let barrier = Arc::new(Barrier::new(pool_size + 1));
+    let main_barrier = barrier.clone();
 
     let wasm_thread = thread::spawn(move || {
-        let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
-            usize::from_str_radix(v, 10).expect("error converting the number of workers")
-        });
-        let worker_pool = worker::WorkerPool::new(pool_size, policies.clone(), api_rx).unwrap();
+        let worker_pool =
+            worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier).unwrap();
 
         worker_pool.run();
     });
+    main_barrier.wait();
 
     let tls_acceptor = match cert_file != "" {
         true => Some(server::new_tls_acceptor(&cert_file, &key_file).unwrap()),
