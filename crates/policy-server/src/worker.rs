@@ -1,7 +1,12 @@
 use crate::policies::Policy;
 use crate::wasm::{EvalRequest, PolicyEvaluator};
 use anyhow::Result;
-use std::{collections::HashMap, thread, vec::Vec};
+use std::{
+  collections::HashMap,
+  sync::{Arc, Barrier},
+  thread,
+  vec::Vec,
+};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub(crate) struct Worker {
@@ -56,6 +61,7 @@ impl WorkerPool {
     size: usize,
     policies: HashMap<String, Policy>,
     rx: Receiver<EvalRequest>,
+    barrier: Arc<Barrier>,
   ) -> Result<WorkerPool> {
     let mut tx_chans = Vec::<Sender<EvalRequest>>::new();
 
@@ -63,9 +69,12 @@ impl WorkerPool {
       let (tx, rx) = channel::<EvalRequest>(32);
       tx_chans.push(tx);
       let ps = policies.clone();
+      let c = barrier.clone();
 
       thread::spawn(move || {
+        println!("spawning worker {}", n);
         let worker = Worker::new(rx, ps).unwrap();
+        c.wait();
 
         //TODO: better logging
         println!("worker {} loop start", n);
