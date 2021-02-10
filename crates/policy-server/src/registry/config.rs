@@ -1,16 +1,13 @@
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    convert::TryFrom,
-};
+use std::{collections::HashMap, convert::TryFrom};
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub(crate) struct RegistryAuthRaw {
     auth: String,
 }
 
-#[derive(Deserialize,Debug)]
+#[derive(Deserialize, Debug)]
 pub(crate) struct DockerConfigRaw {
     auths: HashMap<String, RegistryAuthRaw>,
 }
@@ -27,8 +24,9 @@ pub(crate) struct DockerConfig {
 
 impl From<DockerConfigRaw> for DockerConfig {
     fn from(docker_config: DockerConfigRaw) -> Self {
-        DockerConfig{
-            auths: docker_config.auths
+        DockerConfig {
+            auths: docker_config
+                .auths
                 .into_iter()
                 .filter_map(|(host, auth)| {
                     if let Ok(registry_auth) = RegistryAuth::try_from(auth) {
@@ -37,7 +35,7 @@ impl From<DockerConfigRaw> for DockerConfig {
                         None
                     }
                 })
-                .collect()
+                .collect(),
         }
     }
 }

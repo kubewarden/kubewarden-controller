@@ -15,26 +15,30 @@ use crate::wasm_fetcher::registry::Registry;
 // Helper function, takes the URL of the WASM module and allocates
 // the right struct to interact with it
 pub(crate) fn parse_wasm_url(
-  url: &str,
-  remote_insecure: bool,
-  remote_non_tls: bool,
-  docker_config_json_path: Option<String>,
+    url: &str,
+    remote_insecure: bool,
+    remote_non_tls: bool,
+    docker_config_json_path: Option<String>,
 ) -> Result<Box<dyn Fetcher>> {
-  // we have to use url::Url instead of hyper::Uri because the latter one can't
-  // parse urls like file://
-  let parsed_url: Url = match url::Url::parse(url) {
-    Ok(u) => u,
-    Err(e) => {
-      return Err(anyhow!("Invalid WASI url: {}", e));
-    }
-  };
+    // we have to use url::Url instead of hyper::Uri because the latter one can't
+    // parse urls like file://
+    let parsed_url: Url = match url::Url::parse(url) {
+        Ok(u) => u,
+        Err(e) => {
+            return Err(anyhow!("Invalid WASI url: {}", e));
+        }
+    };
 
-  match parsed_url.scheme() {
-    "file" => Ok(Box::new(Local::new(parsed_url.path())?)),
-    "http" | "https" => Ok(Box::new(Https::new(url.parse::<Url>()?, remote_insecure)?)),
-    "registry" => Ok(Box::new(Registry::new(parsed_url, remote_non_tls, docker_config_json_path)?)),
-    _ => Err(anyhow!("unknown scheme: {}", parsed_url.scheme())),
-  }
+    match parsed_url.scheme() {
+        "file" => Ok(Box::new(Local::new(parsed_url.path())?)),
+        "http" | "https" => Ok(Box::new(Https::new(url.parse::<Url>()?, remote_insecure)?)),
+        "registry" => Ok(Box::new(Registry::new(
+            parsed_url,
+            remote_non_tls,
+            docker_config_json_path,
+        )?)),
+        _ => Err(anyhow!("unknown scheme: {}", parsed_url.scheme())),
+    }
 }
 
 pub(crate) async fn fetch_wasm_module(

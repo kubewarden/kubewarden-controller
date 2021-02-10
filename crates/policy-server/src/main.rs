@@ -156,8 +156,7 @@ fn main() {
     let main_barrier = barrier.clone();
 
     let wasm_thread = thread::spawn(move || {
-        let worker_pool =
-            worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier).unwrap();
+        let worker_pool = worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier);
 
         worker_pool.run();
     });
