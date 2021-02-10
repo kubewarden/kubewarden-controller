@@ -13,10 +13,10 @@ pub(crate) struct Local {
 impl Local {
     // Allocates a LocalWASM instance starting from the user
     // provided URL
-    pub(crate) fn new(path: &str) -> Result<Local> {
-        Ok(Local {
+    pub(crate) fn new(path: &str) -> Local {
+        Local {
             local_path: String::from(path),
-        })
+        }
     }
 }
 

@@ -30,7 +30,7 @@ pub(crate) fn parse_wasm_url(
     };
 
     match parsed_url.scheme() {
-        "file" => Ok(Box::new(Local::new(parsed_url.path())?)),
+        "file" => Ok(Box::new(Local::new(parsed_url.path()))),
         "http" | "https" => Ok(Box::new(Https::new(url.parse::<Url>()?, remote_insecure)?)),
         "registry" => Ok(Box::new(Registry::new(
             parsed_url,

@@ -111,7 +111,7 @@ fn main() {
 
     let cert_file = String::from(matches.value_of("cert-file").unwrap());
     let key_file = String::from(matches.value_of("key-file").unwrap());
-    if (cert_file == "" && key_file != "") || (cert_file != "" && key_file == "") {
+    if cert_file.is_empty() != key_file.is_empty() {
         return fatal_error("Error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
     }
 
@@ -162,9 +162,10 @@ fn main() {
     });
     main_barrier.wait();
 
-    let tls_acceptor = match cert_file != "" {
-        true => Some(server::new_tls_acceptor(&cert_file, &key_file).unwrap()),
-        false => None,
+    let tls_acceptor = if cert_file.is_empty() {
+        None
+    } else {
+        Some(server::new_tls_acceptor(&cert_file, &key_file).unwrap())
     };
     rt.block_on(server::run_server(&addr, tls_acceptor, api_tx));
 

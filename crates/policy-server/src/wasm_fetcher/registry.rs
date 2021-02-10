@@ -42,7 +42,7 @@ impl Registry {
                     wasm_url: wasm_url
                         .strip_prefix("registry://")
                         .map_or(Default::default(), |url| url.into()),
-                    skip_tls: skip_tls,
+                    skip_tls,
                     docker_config: docker_config_json_contents.and_then(|contents| {
                         serde_json::from_str(&contents)
                             .map(|config: DockerConfigRaw| config.into())
@@ -79,16 +79,13 @@ impl Registry {
         self.docker_config
             .as_ref()
             .and_then(|docker_config| {
-                docker_config
-                    .auths
-                    .get(registry.registry())
-                    .and_then(|auth| {
-                        let OwnRegistryAuth::BasicAuth(username, password) = auth;
-                        Some(RegistryAuth::Basic(
-                            String::from_utf8(username.clone()).unwrap_or_default(),
-                            String::from_utf8(password.clone()).unwrap_or_default(),
-                        ))
-                    })
+                docker_config.auths.get(registry.registry()).map(|auth| {
+                    let OwnRegistryAuth::BasicAuth(username, password) = auth;
+                    RegistryAuth::Basic(
+                        String::from_utf8(username.clone()).unwrap_or_default(),
+                        String::from_utf8(password.clone()).unwrap_or_default(),
+                    )
+                })
             })
             .unwrap_or(RegistryAuth::Anonymous)
     }
@@ -113,8 +110,8 @@ impl Fetcher for Registry {
             .await?
             .layers
             .into_iter()
-            .nth(0)
-            .and_then(|layer| Some(layer.data))
+            .next()
+            .map(|layer| layer.data)
             .unwrap_or_default();
 
         let mut file = File::create(self.destination.clone()).await?;

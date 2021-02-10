@@ -24,7 +24,7 @@ impl AdmissionReview {
 
         Ok(AdmissionReview {
             request: req.clone(),
-            uid: uid,
+            uid,
         })
     }
 }
