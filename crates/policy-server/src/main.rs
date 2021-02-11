@@ -74,20 +74,6 @@ fn main() {
                 ),
         )
         .arg(
-            Arg::with_name("wasm-remote-insecure")
-                .env("CHIMERA_WASM_REMOTE_INSECURE")
-                .long("wasm-remote-insecure")
-                .takes_value(false)
-                .help("Do not verify remote TLS certificate. False by default"),
-        )
-        .arg(
-            Arg::with_name("wasm-remote-non-tls")
-                .env("CHIMERA_WASM_REMOTE_NON_TLS")
-                .long("wasm-remote-non-tls")
-                .takes_value(false)
-                .help("Wasm remote endpoint is not using TLS. False by default"),
-        )
-        .arg(
             Arg::with_name("docker-config-json-path")
                 .env("CHIMERA_DOCKER_CONFIG_JSON_PATH")
                 .long("docker-config-json-path")
