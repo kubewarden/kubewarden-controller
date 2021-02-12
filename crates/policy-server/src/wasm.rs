@@ -12,6 +12,7 @@ use tokio::sync::oneshot;
 
 use crate::utils::convert_yaml_map_to_json;
 
+#[allow(clippy::unnecessary_wraps)]
 fn host_callback(
     id: u64,
     bd: &str,

@@ -9,8 +9,8 @@ pub(crate) async fn route(
     req: hyper::Request<hyper::Body>,
     tx: mpsc::Sender<wasm::EvalRequest>,
 ) -> Result<hyper::Response<hyper::Body>, hyper::Error> {
-    match req.method() {
-        &Method::POST => {
+    match *req.method() {
+        Method::POST => {
             let path = String::from(req.uri().path());
             if path.starts_with("/validate/") {
                 handle_post_validate(req, path.trim_start_matches("/validate/").to_string(), tx)
@@ -44,7 +44,7 @@ async fn handle_post_validate(
     let (resp_tx, resp_rx) = oneshot::channel();
 
     let eval_req = wasm::EvalRequest {
-        policy_id: policy_id,
+        policy_id,
         req: adm_rev.request,
         resp_chan: resp_tx,
     };

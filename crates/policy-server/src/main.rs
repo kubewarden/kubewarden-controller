@@ -9,6 +9,7 @@ use tokio::{runtime::Runtime, sync::mpsc::channel};
 
 mod admission_review;
 mod api;
+mod registry;
 mod server;
 mod utils;
 mod wasm_fetcher;
@@ -73,18 +74,11 @@ fn main() {
                 ),
         )
         .arg(
-            Arg::with_name("wasm-remote-insecure")
-                .env("CHIMERA_WASM_REMOTE_INSECURE")
-                .long("wasm-remote-insecure")
-                .takes_value(false)
-                .help("Do not verify remote TLS certificate. False by default"),
-        )
-        .arg(
-            Arg::with_name("wasm-remote-non-tls")
-                .env("CHIMERA_WASM_REMOTE_NON_TLS")
-                .long("wasm-remote-non-tls")
-                .takes_value(false)
-                .help("Wasm remote endpoint is not using TLS. False by default"),
+            Arg::with_name("docker-config-json-path")
+                .env("CHIMERA_DOCKER_CONFIG_JSON_PATH")
+                .long("docker-config-json-path")
+                .takes_value(true)
+                .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
         )
         .get_matches();
 
@@ -103,7 +97,7 @@ fn main() {
 
     let cert_file = String::from(matches.value_of("cert-file").unwrap());
     let key_file = String::from(matches.value_of("key-file").unwrap());
-    if (cert_file == "" && key_file != "") || (cert_file != "" && key_file == "") {
+    if cert_file.is_empty() != key_file.is_empty() {
         return fatal_error("Error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
     }
 
@@ -126,7 +120,12 @@ fn main() {
     };
 
     for (_, policy) in policies.iter_mut() {
-        match rt.block_on(wasm_fetcher::fetch_wasm_module(policy.url.clone())) {
+        match rt.block_on(wasm_fetcher::fetch_wasm_module(
+            &policy.url,
+            matches
+                .value_of("docker-config-json-path")
+                .map(|json_config_path| json_config_path.into()),
+        )) {
             Ok(path) => policy.wasm_module_path = path,
             Err(e) => {
                 return fatal_error(format!("Error while fetching policy {}: {}", policy.url, e));
@@ -143,16 +142,16 @@ fn main() {
     let main_barrier = barrier.clone();
 
     let wasm_thread = thread::spawn(move || {
-        let worker_pool =
-            worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier).unwrap();
+        let worker_pool = worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier);
 
         worker_pool.run();
     });
     main_barrier.wait();
 
-    let tls_acceptor = match cert_file != "" {
-        true => Some(server::new_tls_acceptor(&cert_file, &key_file).unwrap()),
-        false => None,
+    let tls_acceptor = if cert_file.is_empty() {
+        None
+    } else {
+        Some(server::new_tls_acceptor(&cert_file, &key_file).unwrap())
     };
     rt.block_on(server::run_server(&addr, tls_acceptor, api_tx));
 
