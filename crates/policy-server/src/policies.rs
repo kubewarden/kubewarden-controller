@@ -40,7 +40,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_settings_when_data_is_provided() -> std::result::Result<(), std::io::Error> {
+    fn get_settings_when_data_is_provided() {
         let input = r#"
 ---
 example:
@@ -54,12 +54,10 @@ example:
         let policy = policies.get("example").unwrap();
         let settings = policy.settings();
         assert_ne!(settings.is_empty(), true);
-
-        Ok(())
     }
 
     #[test]
-    fn get_settings_when_empty_map_is_provided() -> std::result::Result<(), std::io::Error> {
+    fn get_settings_when_empty_map_is_provided() {
         let input = r#"
 ---
 example:
@@ -73,12 +71,10 @@ example:
         let policy = policies.get("example").unwrap();
         let settings = policy.settings();
         assert!(settings.is_empty());
-
-        Ok(())
     }
 
     #[test]
-    fn get_settings_when_no_settings_are_provided() -> std::result::Result<(), std::io::Error> {
+    fn get_settings_when_no_settings_are_provided() {
         let input = r#"
 ---
 example:
@@ -91,7 +87,5 @@ example:
         let policy = policies.get("example").unwrap();
         let settings = policy.settings();
         assert!(settings.is_empty());
-
-        Ok(())
     }
 }
