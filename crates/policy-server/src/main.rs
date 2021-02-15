@@ -74,6 +74,13 @@ fn main() {
                 ),
         )
         .arg(
+            Arg::with_name("policies-download-dir")
+                .long("policies-download-dir")
+                .default_value(".")
+                .env("CHIMERA_POLICIES_DOWNLOAD_DIR")
+                .help("Download path for the policies"),
+        )
+        .arg(
             Arg::with_name("docker-config-json-path")
                 .env("CHIMERA_DOCKER_CONFIG_JSON_PATH")
                 .long("docker-config-json-path")
@@ -108,7 +115,7 @@ fn main() {
         }
     };
 
-    let policies_file = matches.value_of("policies").unwrap();
+    let policies_file = matches.value_of("policies").unwrap_or_else(|| ".");
     let mut policies = match read_policies_file(policies_file) {
         Ok(ps) => ps,
         Err(e) => {
@@ -119,9 +126,11 @@ fn main() {
         }
     };
 
+    let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
     for (_, policy) in policies.iter_mut() {
         match rt.block_on(wasm_fetcher::fetch_wasm_module(
             &policy.url,
+            policies_download_dir,
             matches
                 .value_of("docker-config-json-path")
                 .map(|json_config_path| json_config_path.into()),

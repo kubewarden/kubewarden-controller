@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use oci_distribution::client::{Client, ClientConfig, ClientProtocol};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
-use std::{fs, str::FromStr};
+use std::{fs, path::Path, str::FromStr};
 use tokio_compat_02::FutureExt;
 use url::Url;
 
@@ -29,6 +29,7 @@ impl Registry {
         url: Url,
         skip_tls: bool,
         docker_config_json_path: Option<String>,
+        download_dir: &str,
     ) -> Result<Registry> {
         match url.path().rsplit('/').next() {
             Some(image_ref) => {
@@ -37,8 +38,14 @@ impl Registry {
                     docker_config_json_path.and_then(|docker_config_json_path| {
                         fs::read_to_string(docker_config_json_path).ok()
                     });
+
+                let dest = Path::new(download_dir).join(image_ref);
+
                 Ok(Registry {
-                    destination: image_ref.into(),
+                    destination: String::from(
+                        dest.to_str()
+                            .ok_or_else(|| anyhow!("Cannot build final path destination"))?,
+                    ),
                     wasm_url: wasm_url
                         .strip_prefix("registry://")
                         .map_or(Default::default(), |url| url.into()),
