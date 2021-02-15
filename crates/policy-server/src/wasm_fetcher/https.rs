@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use hyper::{client::HttpConnector, Client, StatusCode};
 use hyper_tls::HttpsConnector;
 use native_tls::TlsConnector;
-use std::boxed::Box;
+use std::{boxed::Box, path::Path};
 use url::Url;
 
 use crate::wasm_fetcher::fetcher::Fetcher;
@@ -23,9 +23,9 @@ pub(crate) struct Https {
 impl Https {
     // Allocates a LocalWASM instance starting from the user
     // provided URL
-    pub(crate) fn new(url: Url, remote_insecure: bool) -> Result<Https> {
-        let dest = match url.path().rsplit('/').next() {
-            Some(d) => d,
+    pub(crate) fn new(url: Url, remote_insecure: bool, download_dir: &str) -> Result<Https> {
+        let file_name = match url.path().rsplit('/').next() {
+            Some(f) => f,
             None => {
                 return Err(anyhow!(
                     "Cannot infer name of the remote file by looking at {}",
@@ -34,8 +34,13 @@ impl Https {
             }
         };
 
+        let dest = Path::new(download_dir).join(file_name);
+
         Ok(Https {
-            destination: dest.to_string(),
+            destination: String::from(
+                dest.to_str()
+                    .ok_or_else(|| anyhow!("Cannot build final path destination"))?,
+            ),
             wasm_url: url,
             insecure: remote_insecure,
         })
