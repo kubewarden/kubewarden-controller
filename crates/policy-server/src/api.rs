@@ -20,6 +20,14 @@ pub(crate) async fn route(
                 handle_not_found().await
             }
         }
+        Method::GET => {
+            let path = String::from(req.uri().path());
+            if path == "/readiness" {
+                handle_ready().await
+            } else {
+                handle_not_found().await
+            }
+        }
         _ => handle_not_found().await,
     }
 }
@@ -137,4 +145,14 @@ async fn handle_not_found() -> Result<Response<Body>, hyper::Error> {
     let mut not_found = Response::default();
     *not_found.status_mut() = StatusCode::NOT_FOUND;
     Ok(not_found)
+}
+
+async fn handle_ready() -> Result<Response<Body>, hyper::Error> {
+    // Always return HTTP OK
+    // The main has a sync::Barrier that prevents the web server to listen to
+    // incoming requests until all the Workers are ready
+
+    let mut ready = Response::default();
+    *ready.status_mut() = StatusCode::OK;
+    Ok(ready)
 }
