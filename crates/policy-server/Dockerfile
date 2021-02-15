@@ -1,12 +1,12 @@
 # build image
-FROM rust:1.49 as builder
+FROM rust:1.50 as builder
 
 WORKDIR /usr/src/policy-server
 COPY . .
 RUN cargo install --path .
 
 # final image
-FROM rust:1.49-slim
+FROM rust:1.50-slim
 COPY --from=builder /usr/local/cargo/bin/policy-server /usr/local/bin/policy-server
 
 RUN adduser \
