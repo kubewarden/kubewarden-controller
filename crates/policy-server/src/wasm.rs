@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -20,13 +20,11 @@ fn host_callback(
     op: &str,
     payload: &[u8],
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    let payload = ::std::str::from_utf8(payload)
+        .map_err(|e| anyhow!("Error converting payload to UTF8: {:?}", e))?;
     println!(
         "Guest {} invoked '{}->{}:{}' with payload of {}",
-        id,
-        bd,
-        ns,
-        op,
-        ::std::str::from_utf8(payload).unwrap()
+        id, bd, ns, op, payload
     );
     Ok(b"Host result".to_vec())
 }
@@ -71,8 +69,8 @@ impl PolicyEvaluator {
 
         match self.wapc_host.call("validate", validate_str.as_bytes()) {
             Ok(res) => {
-                let val_resp: ValidationResponse = serde_json::from_slice(&res)
-                    .map_err(|e| {
+                let val_resp: ValidationResponse =
+                    serde_json::from_slice(&res).unwrap_or_else(|e| {
                         //TODO: proper logging
                         println!("Cannot deserialize response: {}", e);
                         ValidationResponse {
@@ -80,8 +78,7 @@ impl PolicyEvaluator {
                             message: Some(String::from("internal server error")),
                             code: Some(hyper::StatusCode::INTERNAL_SERVER_ERROR.as_u16()),
                         }
-                    })
-                    .unwrap();
+                    });
                 val_resp
             }
             Err(e) => {

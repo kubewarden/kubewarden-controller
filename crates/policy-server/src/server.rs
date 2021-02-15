@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use async_stream::stream;
 use core::task::{Context, Poll};
 use futures_util::{future::TryFutureExt, stream::Stream};
@@ -16,18 +17,33 @@ use tokio_native_tls::{native_tls, TlsAcceptor, TlsStream};
 use crate::api;
 use crate::wasm::EvalRequest;
 
-pub(crate) fn new_tls_acceptor(cert_file: &str, key_file: &str) -> Result<TlsAcceptor, io::Error> {
-    let mut cert_file = File::open(cert_file)?;
-    let mut key_file = File::open(key_file)?;
+pub(crate) fn new_tls_acceptor(cert_file: &str, key_file: &str) -> Result<TlsAcceptor> {
+    let mut cert_file = File::open(cert_file)
+        .map_err(|e| anyhow!("Error opening certificate file {}: {:?}", cert_file, e))?;
+    let mut key_file = File::open(key_file)
+        .map_err(|e| anyhow!("Error opening key file {}: {:?}", key_file, e))?;
+
     let mut cert = vec![];
-    cert_file.read_to_end(&mut cert)?;
-    let cert = X509::from_pem(&cert)?;
+    cert_file
+        .read_to_end(&mut cert)
+        .map_err(|e| anyhow!("Error reading cert file {:?}", e))?;
+    let cert = X509::from_pem(&cert).map_err(|e| anyhow!("Error creating cert object {:?}", e))?;
+
     let mut key = vec![];
-    key_file.read_to_end(&mut key)?;
-    let key = PKey::private_key_from_pem(&key)?;
-    let pkcs_cert = Pkcs12::builder().build("", "client", &key, &cert)?;
-    let identity = native_tls::Identity::from_pkcs12(&pkcs_cert.to_der()?, "").unwrap();
-    let tls_acceptor = native_tls::TlsAcceptor::new(identity).unwrap();
+    key_file
+        .read_to_end(&mut key)
+        .map_err(|e| anyhow!("Error reading key file {:?}", e))?;
+    let key = PKey::private_key_from_pem(&key)
+        .map_err(|e| anyhow!("Error creating key object {:?}", e))?;
+
+    let pkcs_cert = Pkcs12::builder()
+        .build("", "client", &key, &cert)
+        .map_err(|e| anyhow!("Error creating pkcs_cert object {:?}", e))?;
+    let identity = native_tls::Identity::from_pkcs12(&pkcs_cert.to_der()?, "")
+        .map_err(|e| anyhow!("Error creating tls identity object {:?}", e))?;
+    let tls_acceptor = native_tls::TlsAcceptor::new(identity)
+        .map_err(|e| anyhow!("Error creating tls acceptor object {:?}", e))?;
+
     Ok(TlsAcceptor::from(tls_acceptor))
 }
 

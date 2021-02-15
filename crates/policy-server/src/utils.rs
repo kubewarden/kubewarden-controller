@@ -35,7 +35,7 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn handle_yaml_map_with_data() -> std::result::Result<(), std::io::Error> {
+    fn handle_yaml_map_with_data() {
         let input = r#"
 ---
 example:
@@ -52,12 +52,10 @@ example:
 
         let settings = json_data.unwrap();
         assert_eq!(settings.get("valid_namespace").unwrap(), "valid");
-
-        Ok(())
     }
 
     #[test]
-    fn handle_yaml_map_with_no_data() -> std::result::Result<(), std::io::Error> {
+    fn handle_yaml_map_with_no_data() {
         let input = r#"
 ---
 example:
@@ -73,7 +71,5 @@ example:
 
         let settings = json_data.unwrap();
         assert!(settings.is_empty());
-
-        Ok(())
     }
 }

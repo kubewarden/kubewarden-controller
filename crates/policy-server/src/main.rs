@@ -151,11 +151,18 @@ fn main() {
     let tls_acceptor = if cert_file.is_empty() {
         None
     } else {
-        Some(server::new_tls_acceptor(&cert_file, &key_file).unwrap())
+        match server::new_tls_acceptor(&cert_file, &key_file) {
+            Ok(t) => Some(t),
+            Err(e) => {
+                return fatal_error(format!("Error while creating tls acceptor: {:?}", e));
+            }
+        }
     };
     rt.block_on(server::run_server(&addr, tls_acceptor, api_tx));
 
-    wasm_thread.join().unwrap();
+    if let Err(e) = wasm_thread.join() {
+        return fatal_error(format!("Error while waiting for worker threads: {:?}", e));
+    }
 }
 
 fn fatal_error(msg: String) {

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use hyper::{Body, Method, Request, Response, StatusCode};
 use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
@@ -48,18 +49,39 @@ async fn handle_post_validate(
         req: adm_rev.request,
         resp_chan: resp_tx,
     };
-    tx.send(eval_req).await.unwrap();
+    if tx.send(eval_req).await.is_err() {
+        println!("Error while sending request from API to Worker pool");
+        let mut internal_error = Response::default();
+        *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+        return Ok(internal_error);
+    }
     let res = resp_rx.await;
 
     match res {
         Ok(r) => match r {
             Some(vr) => {
-                let json_payload = build_ar_response(adm_rev.uid, vr);
-                let builder = Response::builder()
+                let json_payload = match build_ar_response(adm_rev.uid, vr) {
+                    Ok(j) => j,
+                    Err(e) => {
+                        println!("Error while building response: {:?}", e);
+                        let mut internal_error = Response::default();
+                        *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                        return Ok(internal_error);
+                    }
+                };
+                match Response::builder()
                     .header(hyper::header::CONTENT_TYPE, "application/json")
                     .status(StatusCode::OK)
-                    .body(hyper::Body::from(json_payload));
-                Ok(builder.unwrap())
+                    .body(hyper::Body::from(json_payload))
+                {
+                    Ok(builder) => Ok(builder),
+                    Err(e) => {
+                        println!("Error while building response: {:?}", e);
+                        let mut internal_error = Response::default();
+                        *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                        Ok(internal_error)
+                    }
+                }
             }
             None => {
                 let mut not_found = Response::default();
@@ -69,14 +91,17 @@ async fn handle_post_validate(
         },
         Err(e) => {
             println!("Cannot get WASM response from channel: {}", e);
-            let mut internl_error = Response::default();
-            *internl_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-            Ok(internl_error)
+            let mut internal_error = Response::default();
+            *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            Ok(internal_error)
         }
     }
 }
 
-fn build_ar_response(review_uid: String, validation_response: wasm::ValidationResponse) -> String {
+fn build_ar_response(
+    review_uid: String,
+    validation_response: wasm::ValidationResponse,
+) -> anyhow::Result<String> {
     let mut base = json!({
         "apiVersion": "admission.k8s.io/v1",
         "kind": "AdmissionReview",
@@ -86,7 +111,9 @@ fn build_ar_response(review_uid: String, validation_response: wasm::ValidationRe
         }
     });
 
-    let reply = base.as_object_mut().unwrap();
+    let reply = base
+        .as_object_mut()
+        .ok_or_else(|| anyhow!("Cannot build json response"))?;
 
     let mut status = serde_json::Map::new();
     if let Some(code) = validation_response.code {
@@ -97,11 +124,13 @@ fn build_ar_response(review_uid: String, validation_response: wasm::ValidationRe
     }
 
     if !status.is_empty() {
-        let response = reply["response"].as_object_mut().unwrap();
+        let response = reply["response"]
+            .as_object_mut()
+            .ok_or_else(|| anyhow!("Cannot response - empty status"))?;
         response.insert(String::from("status"), json!(status));
     }
 
-    serde_json::to_string(&reply).unwrap()
+    serde_json::to_string(&reply).map_err(|e| anyhow!("Error serializing response: {:?}", e))
 }
 
 async fn handle_not_found() -> Result<Response<Body>, hyper::Error> {

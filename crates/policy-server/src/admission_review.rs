@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 
 pub(crate) struct AdmissionReview {
     pub request: serde_json::Value,
@@ -6,7 +6,7 @@ pub(crate) struct AdmissionReview {
 }
 
 impl AdmissionReview {
-    pub(crate) fn new(raw: hyper::body::Bytes) -> Result<AdmissionReview, anyhow::Error> {
+    pub(crate) fn new(raw: hyper::body::Bytes) -> Result<AdmissionReview> {
         let obj: serde_json::Value = match serde_json::from_slice(&raw) {
             Ok(obj) => obj,
             Err(e) => return Err(anyhow!("Error parsing request: {:?}", e)),
@@ -18,13 +18,77 @@ impl AdmissionReview {
         };
 
         let uid = match req.get("uid") {
-            Some(uid) => uid.as_str().unwrap().to_string(),
-            None => return Err(anyhow!("Cannot parse AdmissionReview: 'uid' not found")),
-        };
+            Some(u) => u
+                .as_str()
+                .ok_or_else(|| anyhow!("Cannot convert uid to string")),
+            None => Err(anyhow!("Cannot parse AdmissionReview: 'uid' not found")),
+        }?;
 
         Ok(AdmissionReview {
             request: req.clone(),
-            uid,
+            uid: String::from(uid),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hyper::body::Bytes;
+
+    #[test]
+    fn invalid_input() {
+        let input = Bytes::from("this is not the JSON you're looking for");
+
+        let res = AdmissionReview::new(input);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn missing_request() {
+        let input = Bytes::from(
+            r#"
+            { "foo": "bar" }
+        "#,
+        );
+
+        let res = AdmissionReview::new(input);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn missing_uid() {
+        let input = Bytes::from(
+            r#"
+            { 
+                "request": {
+                    "foo": "bar"
+                }
+            }
+        "#,
+        );
+
+        let res = AdmissionReview::new(input);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn good_input() {
+        let input = Bytes::from(
+            r#"
+            { 
+                "request": {
+                    "uid": "hello",
+                    "foo": "bar"
+                }
+            }
+        "#,
+        );
+
+        let res = AdmissionReview::new(input);
+        assert!(!res.is_err());
+
+        let ar = res.unwrap();
+        assert_eq!(ar.uid, "hello");
     }
 }
