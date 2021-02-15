@@ -1,13 +1,17 @@
 # build image
-FROM rust:1.50 as builder
+FROM rust:1.50-buster as builder
 
 WORKDIR /usr/src/policy-server
 COPY . .
 RUN cargo install --path .
 
 # final image
-FROM rust:1.50-slim
+FROM debian:buster-slim
 COPY --from=builder /usr/local/cargo/bin/policy-server /usr/local/bin/policy-server
+
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN adduser \
   --disabled-password \
