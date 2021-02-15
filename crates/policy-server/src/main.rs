@@ -115,7 +115,7 @@ fn main() {
         }
     };
 
-    let policies_file = matches.value_of("policies").unwrap_or_else(|| ".");
+    let policies_file = matches.value_of("policies").unwrap_or(".");
     let mut policies = match read_policies_file(policies_file) {
         Ok(ps) => ps,
         Err(e) => {
