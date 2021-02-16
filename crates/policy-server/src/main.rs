@@ -21,8 +21,15 @@ mod worker;
 mod policies;
 use policies::read_policies_file;
 
+mod sources;
+use sources::read_sources_file;
+
+use std::fs;
+
 mod wasm;
 use crate::wasm::EvalRequest;
+
+use crate::registry::config::{DockerConfig, DockerConfigRaw};
 
 fn main() {
     let matches = App::new("policy-server")
@@ -86,6 +93,13 @@ fn main() {
                 .help("Download path for the policies"),
         )
         .arg(
+            Arg::with_name("sources")
+                .takes_value(true)
+                .long("sources")
+                .env("CHIMERA_SOURCES")
+                .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
+        )
+        .arg(
             Arg::with_name("docker-config-json-path")
                 .env("CHIMERA_DOCKER_CONFIG_JSON_PATH")
                 .long("docker-config-json-path")
@@ -122,14 +136,42 @@ fn main() {
 
     let policies_file = matches.value_of("policies").unwrap_or(".");
     let mut policies = match read_policies_file(policies_file) {
-        Ok(ps) => ps,
-        Err(e) => {
+        Ok(policies) => policies,
+        Err(err) => {
             return fatal_error(format!(
                 "Error while loading policies from {}: {}",
-                policies_file, e
+                policies_file, err
             ));
         }
     };
+
+    let sources = matches
+        .value_of("sources")
+        .map(|sources_file| match read_sources_file(sources_file) {
+            Ok(sources) => sources,
+            Err(err) => {
+                fatal_error(format!(
+                    "Error while loading sources from {}: {}",
+                    sources_file, err
+                ));
+                unreachable!();
+            }
+        })
+        .unwrap_or_default();
+
+    let docker_config_json_path = matches
+        .value_of("docker-config-json-path")
+        .map(|json_config_path| json_config_path.into());
+
+    let docker_config: Option<DockerConfig> = docker_config_json_path
+        .and_then(|docker_config_json_path: String| {
+            fs::read_to_string(docker_config_json_path).ok()
+        })
+        .and_then(|contents| {
+            serde_json::from_str(&contents)
+                .map(|config: DockerConfigRaw| config.into())
+                .ok()
+        });
 
     let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
     let policies_total = policies.len();
@@ -138,9 +180,8 @@ fn main() {
         match rt.block_on(wasm_fetcher::fetch_wasm_module(
             &policy.url,
             policies_download_dir,
-            matches
-                .value_of("docker-config-json-path")
-                .map(|json_config_path| json_config_path.into()),
+            docker_config.clone(),
+            &sources,
         )) {
             Ok(path) => policy.wasm_module_path = path,
             Err(e) => {
