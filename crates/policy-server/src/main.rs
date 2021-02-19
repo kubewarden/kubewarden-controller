@@ -35,12 +35,14 @@ fn main() {
             Arg::with_name("address")
                 .long("addr")
                 .default_value("0.0.0.0")
+                .env("CHIMERA_BIND_ADDRESS")
                 .help("Bind against ADDRESS"),
         )
         .arg(
             Arg::with_name("port")
                 .long("port")
                 .default_value("3000")
+                .env("CHIMERA_PORT")
                 .help("Listen on PORT"),
         )
         .arg(
