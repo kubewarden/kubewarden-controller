@@ -2,7 +2,10 @@ use clap::{App, Arg};
 use std::{
     net::SocketAddr,
     process,
-    sync::{Arc, Barrier},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Barrier,
+    },
     thread,
 };
 use tokio::{runtime::Runtime, sync::mpsc::channel};
@@ -129,7 +132,9 @@ fn main() {
     };
 
     let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
-    for (_, policy) in policies.iter_mut() {
+    let policies_total = policies.len();
+    for (c, policy) in policies.iter_mut() {
+        println!("Downloading policy {}/{}", c, policies_total);
         match rt.block_on(wasm_fetcher::fetch_wasm_module(
             &policy.url,
             policies_download_dir,
@@ -149,16 +154,33 @@ fn main() {
         usize::from_str_radix(v, 10).expect("error converting the number of workers")
     });
 
+    // Barrier used to wait for all the workers to be ready.
+    // The barrier prevents the web server from starting before the workers are
+    // ready to process the incoming requests send by the Kubernetes.
+    // This mechanism is used to create a Kubernetes HTTP readiness probe
     let barrier = Arc::new(Barrier::new(pool_size + 1));
     let main_barrier = barrier.clone();
 
-    let wasm_thread = thread::spawn(move || {
-        let worker_pool = worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier);
+    // The boot canary is a boolean that is set to false when one of more
+    // workers can't be started. This kind of failures can happen when a
+    // Wasm module is broken.
+    let boot_canary = Arc::new(AtomicBool::new(true));
+    let main_boot_canary = boot_canary.clone();
 
+    let wasm_thread = thread::spawn(move || {
+        let worker_pool =
+            worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier, boot_canary);
         worker_pool.run();
     });
+    // wait for all the workers to be ready, then ensure none of them had issues
+    // at boot time
     main_barrier.wait();
+    if !main_boot_canary.load(Ordering::SeqCst) {
+        return fatal_error(String::from("Couldn't init one of the workers"));
+    }
 
+    // All is good, we can start listening for incoming requests through the
+    // web server
     let tls_acceptor = if cert_file.is_empty() {
         None
     } else {
