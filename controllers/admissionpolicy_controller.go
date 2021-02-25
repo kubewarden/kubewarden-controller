@@ -18,10 +18,12 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,27 +45,47 @@ type AdmissionPolicyReconciler struct {
 // +kubebuilder:rbac:groups=chimera.suse.com,resources=admissionpolicies/status,verbs=get;update;patch
 
 func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	admissionReconciler := admission.AdmissionReconciler{Client: r, DeploymentsNamespace: r.DeploymentsNamespace}
 	ctx := context.Background()
 	log := r.Log.WithValues("admissionpolicy", req.NamespacedName)
+
+	admissionReconciler := admission.AdmissionReconciler{
+		Client:               r,
+		DeploymentsNamespace: r.DeploymentsNamespace,
+		Log:                  log,
+	}
 
 	var admissionPolicy chimerav1alpha1.AdmissionPolicy
 	if err := r.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("admission policy not found")
-			return ctrl.Result{}, nil
+			admissionPolicy = chimerav1alpha1.AdmissionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      req.Name,
+					Namespace: req.Namespace,
+				},
+			}
+			log.Info("Attempting delete", "policy", admissionPolicy)
+			return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &admissionPolicy)
 		}
-		log.Error(err, "could not retrieve admission policy")
+		log.Error(err, "Could not retrieve admission policy")
 		return ctrl.Result{}, err
 	}
 
-	// Reconcile deletion
-	if admissionPolicy.DeletionTimestamp != nil {
-		return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &admissionPolicy)
+	// Reconcile
+	err := admissionReconciler.Reconcile(ctx, &admissionPolicy)
+	if err == nil {
+		return ctrl.Result{}, nil
 	}
 
-	// Reconcile
-	return ctrl.Result{}, admissionReconciler.Reconcile(ctx, &admissionPolicy)
+	if admission.IsPolicyServerNotReady(err) {
+		log.Info("admissionpolicy", "Policy server not yet ready", err.Error())
+		log.Info("admissionpolicy", "Delaying policy registration", req.Name)
+		return ctrl.Result{
+			Requeue:      true,
+			RequeueAfter: time.Second * 5,
+		}, nil
+	}
+
+	return ctrl.Result{}, err
 }
 
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {

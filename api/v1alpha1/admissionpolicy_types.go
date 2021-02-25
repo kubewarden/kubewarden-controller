@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // AdmissionPolicySpec defines the desired state of AdmissionPolicy
@@ -28,11 +29,12 @@ type AdmissionPolicySpec struct {
 	// registry (registry://).
 	Module string `json:"module,omitempty"`
 
-	// Env respresents the environment variables exposed to the
-	// deployment that will be created for this Admission
-	// Policy.
+	// Settings is a free-form object that contains the policy configuration
+	// values.
 	// +optional
-	Env map[string]string `json:"env,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// x-kubernetes-embedded-resource: false
+	Settings runtime.RawExtension `json:"settings"`
 
 	// APIGroups is a list of API groups that this webhook should be
 	// registered against. Empty array or "*" means everything.

@@ -23,7 +23,9 @@ func GenerateCert(ca []byte, commonName string, extraSANs []string, CAPrivateKey
 		return nil, nil, err
 	}
 
-	servingPrivateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	// key size must be higher than 1024, otherwise the PolicyServer
+	// TLS acceptor will refuse to start
+	servingPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, nil, err
 	}
