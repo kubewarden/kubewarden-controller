@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,7 +27,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Contex
 	}
 	r.Log.Info("reconcilePolicyServerDeployment", "Current config version", configMapVersion)
 
-	err = r.Client.Create(ctx, r.deployment(configMapVersion))
+	err = r.Client.Create(ctx, r.deployment(ctx, configMapVersion))
 	if err == nil {
 		return nil
 	}
@@ -134,9 +135,41 @@ func createPatch(configMapVersion string) []byte {
 	return []byte(patch)
 }
 
-func (r *AdmissionReconciler) deployment(configMapVersion string) *appsv1.Deployment {
-	//TODO: make it tunable via ConfigMap by the user
-	var policyServerReplicas int32 = 1
+type PolicyServerDeploymentSettings struct {
+	Replicas int32
+	Image    string
+}
+
+func (r *AdmissionReconciler) policyServerDeploymentSettings(ctx context.Context) PolicyServerDeploymentSettings {
+	settings := PolicyServerDeploymentSettings{
+		Replicas: int32(constants.PolicyServerReplicaSize),
+		Image:    constants.PolicyServerImage,
+	}
+
+	cfg := &corev1.ConfigMap{}
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Namespace: r.DeploymentsNamespace,
+		Name:      constants.PolicyServerConfigMapName,
+	}, cfg); err == nil {
+		buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
+		if found {
+			repSize, err := strconv.Atoi(buf)
+			if err == nil {
+				settings.Replicas = int32(repSize)
+			}
+		}
+
+		buf, found = cfg.Data[constants.PolicyServerImageKey]
+		if found {
+			settings.Image = buf
+		}
+	}
+
+	return settings
+}
+
+func (r *AdmissionReconciler) deployment(ctx context.Context, configMapVersion string) *appsv1.Deployment {
+	settings := r.policyServerDeploymentSettings(ctx)
 
 	const (
 		certsVolumeName             = "certs"
@@ -148,7 +181,7 @@ func (r *AdmissionReconciler) deployment(configMapVersion string) *appsv1.Deploy
 
 	admissionContainer := corev1.Container{
 		Name:  constants.PolicyServerDeploymentName,
-		Image: constants.AdmissionImage,
+		Image: settings.Image,
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      certsVolumeName,
@@ -205,7 +238,7 @@ func (r *AdmissionReconciler) deployment(configMapVersion string) *appsv1.Deploy
 			Labels:    constants.AdmissionLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &policyServerReplicas,
+			Replicas: &settings.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: constants.AdmissionLabels,
 			},

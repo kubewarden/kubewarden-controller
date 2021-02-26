@@ -1,11 +1,14 @@
 package constants
 
 const (
-	AdmissionImage             = "ghcr.io/chimera-kube/policy-server:latest"
 	AdmissionCertSecretKeyName = "admission-cert"
 	AdmissionKeySecretKeyName  = "admission-key"
 	AdmissionCASecretKeyName   = "admission-ca"
 
+	PolicyServerReplicaSizeKey             = "replicas"
+	PolicyServerReplicaSize                = 1
+	PolicyServerImageKey                   = "image"
+	PolicyServerImage                      = "ghcr.io/chimera-kube/policy-server:latest"
 	PolicyServerServiceName                = "policy-server"
 	PolicyServerConfigMapName              = "policy-server"
 	PolicyServerConfigPoliciesEntry        = "policies.yml"
