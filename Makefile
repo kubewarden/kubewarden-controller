@@ -53,6 +53,12 @@ fmt:
 vet:
 	go vet ./...
 
+lint: deps
+	golint -set_exit_status controllers/... internal/
+
+deps:
+	go get -u golang.org/x/lint/golint
+
 # Generate code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
