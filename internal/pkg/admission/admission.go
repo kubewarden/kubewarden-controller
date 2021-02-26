@@ -173,7 +173,7 @@ func (r *AdmissionReconciler) admissionRegistration(admissionPolicy *chimerav1al
 				Name: fmt.Sprintf("%s.chimera.admission", admissionPolicy.Name),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.AdmissionCASecretKeyName],
+					CABundle: admissionSecret.Data[constants.PolicyServerCASecretKeyName],
 				},
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{

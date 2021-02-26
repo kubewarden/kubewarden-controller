@@ -51,9 +51,9 @@ func (r *AdmissionReconciler) buildPolicyServerSecret() (*corev1.Secret, error) 
 		[]string{fmt.Sprintf("%s.%s.svc", constants.PolicyServerServiceName, r.DeploymentsNamespace)},
 		caPrivateKey.Key())
 	secretContents := map[string]string{
-		constants.AdmissionCertSecretKeyName: string(servingCert),
-		constants.AdmissionKeySecretKeyName:  string(servingKey),
-		constants.AdmissionCASecretKeyName:   string(caPEMEncoded),
+		constants.PolicyServerTLSCert:         string(servingCert),
+		constants.PolicyServerTLSKey:          string(servingKey),
+		constants.PolicyServerCASecretKeyName: string(caPEMEncoded),
 	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

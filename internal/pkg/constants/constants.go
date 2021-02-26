@@ -1,24 +1,30 @@
 package constants
 
 const (
-	AdmissionCertSecretKeyName = "admission-cert"
-	AdmissionKeySecretKeyName  = "admission-key"
-	AdmissionCASecretKeyName   = "admission-ca"
+	// PolicyServer Secret
+	PolicyServerTLSCert         = "policy-server-cert"
+	PolicyServerTLSKey          = "policy-server-key"
+	PolicyServerCASecretKeyName = "policy-server-ca"
 
-	PolicyServerReplicaSizeKey             = "replicas"
-	PolicyServerReplicaSize                = 1
-	PolicyServerImageKey                   = "image"
-	PolicyServerImage                      = "ghcr.io/chimera-kube/policy-server:latest"
-	PolicyServerServiceName                = "policy-server"
-	PolicyServerConfigMapName              = "policy-server"
-	PolicyServerConfigPoliciesEntry        = "policies.yml"
-	PolicyServerDeploymentName             = "policy-server"
-	PolicyServerSecretName                 = "policy-server-certs"
+	// PolicyServer Deployment
 	PolicyServerDeploymentConfigAnnotation = "config/version"
+	PolicyServerDeploymentName             = "policy-server"
+	PolicyServerImage                      = "ghcr.io/chimera-kube/policy-server:latest"
+	PolicyServerImageKey                   = "image"
 	PolicyServerPort                       = 8443
 	PolicyServerReadinessProbe             = "/readiness"
+	PolicyServerReplicaSize                = 1
+	PolicyServerReplicaSizeKey             = "replicas"
+	PolicyServerSecretName                 = "policy-server-certs"
+
+	// PolicyServer Service
+	PolicyServerServiceName = "policy-server"
+
+	// PolicyServer ConfigMap
+	PolicyServerConfigMapName       = "policy-server"
+	PolicyServerConfigPoliciesEntry = "policies.yml"
 )
 
 var (
-	AdmissionLabels = map[string]string{"app": "chimera-admission"}
+	PolicyServerLabels = map[string]string{"app": "chimera-policy-server"}
 )

@@ -25,7 +25,6 @@ func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Contex
 	if err != nil {
 		return fmt.Errorf("Cannot get policy-server ConfigMap version: %v", err)
 	}
-	r.Log.Info("reconcilePolicyServerDeployment", "Current config version", configMapVersion)
 
 	err = r.Client.Create(ctx, r.deployment(ctx, configMapVersion))
 	if err == nil {
@@ -197,11 +196,11 @@ func (r *AdmissionReconciler) deployment(ctx context.Context, configMapVersion s
 		Env: []corev1.EnvVar{
 			{
 				Name:  "CHIMERA_CERT_FILE",
-				Value: filepath.Join(secretsContainerPath, "admission-cert"),
+				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
 			},
 			{
 				Name:  "CHIMERA_KEY_FILE",
-				Value: filepath.Join(secretsContainerPath, "admission-key"),
+				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSKey),
 			},
 			{
 				Name:  "CHIMERA_PORT",
@@ -235,19 +234,19 @@ func (r *AdmissionReconciler) deployment(ctx context.Context, configMapVersion s
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.PolicyServerDeploymentName,
 			Namespace: r.DeploymentsNamespace,
-			Labels:    constants.AdmissionLabels,
+			Labels:    constants.PolicyServerLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &settings.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: constants.AdmissionLabels,
+				MatchLabels: constants.PolicyServerLabels,
 			},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      constants.AdmissionLabels,
+					Labels:      constants.PolicyServerLabels,
 					Annotations: templateAnnotations,
 				},
 				Spec: corev1.PodSpec{

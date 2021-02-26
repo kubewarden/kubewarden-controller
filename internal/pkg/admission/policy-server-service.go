@@ -23,7 +23,7 @@ func (r *AdmissionReconciler) service() *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.PolicyServerServiceName,
 			Namespace: r.DeploymentsNamespace,
-			Labels:    constants.AdmissionLabels,
+			Labels:    constants.PolicyServerLabels,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -32,7 +32,7 @@ func (r *AdmissionReconciler) service() *corev1.Service {
 					Protocol: corev1.ProtocolTCP,
 				},
 			},
-			Selector: constants.AdmissionLabels,
+			Selector: constants.PolicyServerLabels,
 		},
 	}
 }
