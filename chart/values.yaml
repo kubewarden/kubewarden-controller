@@ -1,0 +1,27 @@
+# Default values for chimera-controller.
+# This is a YAML-formatted file.
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  # controller image to be used. Leave empty to use
+  # ghcr.io/chimera-kube/chimera-controller
+  repository: ""
+  # image tag, leave empty to use chart's AppVersion
+  tag: ""
+
+policyServer:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/chimera-kube/policy-server
+    tag: "latest"
+
+podAnnotations: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
