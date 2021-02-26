@@ -44,6 +44,7 @@ type AdmissionPolicyReconciler struct {
 // +kubebuilder:rbac:groups=chimera.suse.com,resources=admissionpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=chimera.suse.com,resources=admissionpolicies/status,verbs=get;update;patch
 
+// Reconcile takes care of reconciling AdmissionPolicy resources
 func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("admissionpolicy", req.NamespacedName)
@@ -88,6 +89,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	return ctrl.Result{}, err
 }
 
+// SetupWithManager takes care of setting up the resources to watch
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&chimerav1alpha1.AdmissionPolicy{}).
