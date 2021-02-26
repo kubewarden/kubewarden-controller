@@ -16,7 +16,6 @@ import (
 
 	chimerav1alpha1 "github.com/chimera-kube/chimera-controller/api/v1alpha1"
 	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
-	"github.com/chimera-kube/chimera-controller/internal/pkg/utils"
 )
 
 type AdmissionReconciler struct {
@@ -98,14 +97,6 @@ func (r *AdmissionReconciler) reconcileAdmissionRegistration(ctx context.Context
 		return nil
 	}
 	return err
-}
-
-func (r *AdmissionReconciler) reconcileDeletionFinalizer(ctx context.Context, admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
-	admissionPolicy.Finalizers = utils.RemoveStringFromSlice(
-		constants.AdmissionFinalizer,
-		admissionPolicy.Finalizers,
-	)
-	return r.Client.Update(ctx, admissionPolicy)
 }
 
 func (r *AdmissionReconciler) namespace() *corev1.Namespace {

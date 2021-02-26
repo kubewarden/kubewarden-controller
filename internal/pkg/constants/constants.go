@@ -1,7 +1,6 @@
 package constants
 
 const (
-	AdmissionFinalizer         = "chimera/cleanup"
 	AdmissionImage             = "ghcr.io/chimera-kube/policy-server:latest"
 	AdmissionCertSecretKeyName = "admission-cert"
 	AdmissionKeySecretKeyName  = "admission-key"

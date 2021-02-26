@@ -77,10 +77,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
 		os.Exit(1)
 	}
-	if err = (&chimerav1alpha1.AdmissionPolicy{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "AdmissionPolicy")
-		os.Exit(1)
-	}
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

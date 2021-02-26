@@ -9,8 +9,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: chimera-controller-system/chimera-controller-serving-cert
     controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
   name: admissionpolicies.chimera.suse.com
 spec:
   group: chimera.suse.com
@@ -295,18 +295,6 @@ spec:
   selector:
     control-plane: manager
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: chimera-controller-webhook-service
-  namespace: chimera-controller-system
-spec:
-  ports:
-  - port: 443
-    targetPort: 9443
-  selector:
-    control-plane: manager
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -326,29 +314,6 @@ spec:
     spec:
       containers:
       - args:
-        - --metrics-addr=127.0.0.1:8080
-        - --enable-leader-election
-        - --deployments-namespace=chimera-controller-system
-        command:
-        - /manager
-        image: ghcr.io/chimera-kube/chimera-controller:v0.0.1
-        name: manager
-        ports:
-        - containerPort: 9443
-          name: webhook-server
-          protocol: TCP
-        resources:
-          limits:
-            cpu: 100m
-            memory: 30Mi
-          requests:
-            cpu: 100m
-            memory: 20Mi
-        volumeMounts:
-        - mountPath: /tmp/k8s-webhook-server/serving-certs
-          name: cert
-          readOnly: true
-      - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
@@ -358,87 +323,19 @@ spec:
         ports:
         - containerPort: 8443
           name: https
+      - args:
+        - --metrics-addr=127.0.0.1:8080
+        - --enable-leader-election
+        - --deployments-namespace=$(SERVICE_NAMESPACE)
+        command:
+        - /manager
+        image: ghcr.io/chimera-kube/chimera-controller:v0.0.1
+        name: manager
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
       terminationGracePeriodSeconds: 10
-      volumes:
-      - name: cert
-        secret:
-          defaultMode: 420
-          secretName: webhook-server-cert
----
-apiVersion: cert-manager.io/v1alpha2
-kind: Certificate
-metadata:
-  name: chimera-controller-serving-cert
-  namespace: chimera-controller-system
-spec:
-  dnsNames:
-  - chimera-controller-webhook-service.chimera-controller-system.svc
-  - chimera-controller-webhook-service.chimera-controller-system.svc.cluster.local
-  issuerRef:
-    kind: Issuer
-    name: chimera-controller-selfsigned-issuer
-  secretName: webhook-server-cert
----
-apiVersion: cert-manager.io/v1alpha2
-kind: Issuer
-metadata:
-  name: chimera-controller-selfsigned-issuer
-  namespace: chimera-controller-system
-spec:
-  selfSigned: {}
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: chimera-controller-system/chimera-controller-serving-cert
-  name: chimera-controller-mutating-webhook-configuration
-webhooks:
-- admissionReviewVersions:
-  - v1beta1
-  clientConfig:
-    service:
-      name: chimera-controller-webhook-service
-      namespace: chimera-controller-system
-      path: /mutate-chimera-suse-com-v1alpha1-admissionpolicy
-  failurePolicy: Fail
-  name: madmissionpolicy.kb.io
-  rules:
-  - apiGroups:
-    - chimera.suse.com
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - admissionpolicies
-  sideEffects: None
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: chimera-controller-system/chimera-controller-serving-cert
-  name: chimera-controller-validating-webhook-configuration
-webhooks:
-- admissionReviewVersions:
-  - v1beta1
-  clientConfig:
-    service:
-      name: chimera-controller-webhook-service
-      namespace: chimera-controller-system
-      path: /validate-chimera-suse-com-v1alpha1-admissionpolicy
-  failurePolicy: Fail
-  name: madmissionpolicy.kb.io
-  rules:
-  - apiGroups:
-    - chimera.suse.com
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - admissionpolicies
-  sideEffects: None

@@ -135,7 +135,8 @@ func createPatch(configMapVersion string) []byte {
 }
 
 func (r *AdmissionReconciler) deployment(configMapVersion string) *appsv1.Deployment {
-	var webhookReplicas int32 = 1
+	//TODO: make it tunable via ConfigMap by the user
+	var policyServerReplicas int32 = 1
 
 	const (
 		certsVolumeName             = "certs"
@@ -204,7 +205,7 @@ func (r *AdmissionReconciler) deployment(configMapVersion string) *appsv1.Deploy
 			Labels:    constants.AdmissionLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &webhookReplicas,
+			Replicas: &policyServerReplicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: constants.AdmissionLabels,
 			},
