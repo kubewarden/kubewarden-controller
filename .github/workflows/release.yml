@@ -1,9 +1,11 @@
-name: Release Charts
+name: Release
 
 on:
   push:
     branches:
       - main
+    tags:
+    - 'v*'
 
 jobs:
   release:
