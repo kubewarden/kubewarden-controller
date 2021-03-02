@@ -1,0 +1,85 @@
+// Generated documentation. Please do not edit.
+:anchor_prefix: k8s-api
+
+[id="{p}-api-reference"]
+== API Reference
+
+.Packages
+- xref:{anchor_prefix}-chimera-suse-com-v1alpha1[$$chimera.suse.com/v1alpha1$$]
+
+
+[id="{anchor_prefix}-chimera-suse-com-v1alpha1"]
+=== chimera.suse.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the chimera v1alpha1 API group
+
+.Resource Types
+- xref:{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicy[$$AdmissionPolicy$$]
+- xref:{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicylist[$$AdmissionPolicyList$$]
+
+
+
+[id="{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicy"]
+==== AdmissionPolicy 
+
+AdmissionPolicy is the Schema for the admissionpolicies API
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicylist[$$AdmissionPolicyList$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `chimera.suse.com/v1alpha1`
+| *`kind`* __string__ | `AdmissionPolicy`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`spec`* __xref:{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicyspec[$$AdmissionPolicySpec$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicylist"]
+==== AdmissionPolicyList 
+
+AdmissionPolicyList contains a list of AdmissionPolicy
+
+
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `chimera.suse.com/v1alpha1`
+| *`kind`* __string__ | `AdmissionPolicyList`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`items`* __xref:{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicy[$$AdmissionPolicy$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicyspec"]
+==== AdmissionPolicySpec 
+
+AdmissionPolicySpec defines the desired state of AdmissionPolicy
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-chimera-kube-chimera-controller-api-v1alpha1-admissionpolicy[$$AdmissionPolicy$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`module`* __string__ | Module is the location of the WASM module to be loaded. Can be a local file (file://), a remote file served by an HTTP server (http://, https://), or an artifact served by an OCI-compatible registry (registry://).
+| *`settings`* __xref:{anchor_prefix}-k8s-io-apimachinery-pkg-runtime-rawextension[$$RawExtension$$]__ | Settings is a free-form object that contains the policy configuration values. x-kubernetes-embedded-resource: false
+| *`apiGroups`* __string array__ | APIGroups is a list of API groups that this webhook should be registered against. Empty array or "*" means everything.
+| *`apiVersions`* __string array__ | APIVersions is a list of API versions that this webhook should be registered against. Empty array or "*" means everything.
+| *`resources`* __string array__ | Resources is a list of resource types that this webhook should be registered against. Empty array or "*" means everything.
+| *`operations`* __string array__ | Operations is a list of operations that this webhook should be registered against. Empty array or "*" means everything.
+| *`failurePolicy`* __string__ | FailurePolicy defines how unrecognized errors and timeout errors from the policy are handled. Allowed values are "Ignore" or "Fail". * "Ignore" means that an error calling the webhook is ignored and the API   request is allowed to continue. * "Fail" means that an error calling the webhook causes the admission to   fail and the API request to be rejected. The default behaviour is "Fail"
+|===
+
+
+
+
