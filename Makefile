@@ -74,7 +74,7 @@ docker-push:
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:
-ifeq (, $(shell which controller-gen))
+ifeq (, $(shell which controller-gen 2> /dev/null))
 	@{ \
 	set -e ;\
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
