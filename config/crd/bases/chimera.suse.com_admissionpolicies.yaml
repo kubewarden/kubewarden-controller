@@ -48,6 +48,14 @@ spec:
                 items:
                   type: string
                 type: array
+              failurePolicy:
+                description: FailurePolicy defines how unrecognized errors and timeout
+                  errors from the policy are handled. Allowed values are "Ignore"
+                  or "Fail". * "Ignore" means that an error calling the webhook is
+                  ignored and the API   request is allowed to continue. * "Fail" means
+                  that an error calling the webhook causes the admission to   fail
+                  and the API request to be rejected. The default behaviour is "Fail"
+                type: string
               module:
                 description: Module is the location of the WASM module to be loaded.
                   Can be a local file (file://), a remote file served by an HTTP server

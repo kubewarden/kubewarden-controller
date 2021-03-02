@@ -55,6 +55,16 @@ type AdmissionPolicySpec struct {
 	// registered against. Empty array or "*" means everything.
 	// +optional
 	Operations []string `json:"operations,omitempty"`
+
+	// FailurePolicy defines how unrecognized errors and timeout errors from the
+	// policy are handled. Allowed values are "Ignore" or "Fail".
+	// * "Ignore" means that an error calling the webhook is ignored and the API
+	//   request is allowed to continue.
+	// * "Fail" means that an error calling the webhook causes the admission to
+	//   fail and the API request to be rejected.
+	// The default behaviour is "Fail"
+	// +optional
+	FailurePolicy string `json:"failurePolicy,omitempty"`
 }
 
 // AdmissionPolicyStatus defines the observed state of AdmissionPolicy
