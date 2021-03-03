@@ -1,6 +1,0 @@
-chimera-controller installed.
-
-You can start defining chimera policies by using the `admissionpolicies.chimera.suse.com`
-resource.
-
-For more information checkout https://chimera-kube.github.io/

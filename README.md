@@ -17,7 +17,7 @@ it is deployed.
 The chimera-controller can be deployed using a helm chart:
 
 ```shell
-$ helm repo add chimera-controller https://chimera-kube.github.io/chimera-controller/
+$ helm repo add chimera-controller https://chimera-kube.github.io/helm-charts/
 $ helm install chimera-controller chimera-controller/chimera-controller
 ```
 
@@ -26,7 +26,7 @@ configuration.
 
 The default configuration values should be good enough for the majority of
 deployments, all the options are documented
-[here](https://chimera-kube.github.io/chimera-controller/#configuration).
+[here](https://chimera-kube.github.io/helm-charts/#configuration).
 
 ## Usage
 
