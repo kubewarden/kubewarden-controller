@@ -17,8 +17,8 @@ it is deployed.
 The chimera-controller can be deployed using a helm chart:
 
 ```shell
-$ helm repo add chimera-controller https://chimera-kube.github.io/helm-charts/
-$ helm install chimera-controller chimera-controller/chimera-controller
+$ helm repo add chimera https://chimera-kube.github.io/helm-charts/
+$ helm install chimera-controller chimera/chimera-controller
 ```
 
 This will install chimera-controller on the Kubernetes cluster in the default
