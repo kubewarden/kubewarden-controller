@@ -61,6 +61,9 @@ func (r *AdmissionReconciler) admissionRegistration(admissionPolicy *chimerav1al
 	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: admissionPolicy.Name,
+			Labels: map[string]string{
+				"chimera": "true",
+			},
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
