@@ -5,11 +5,12 @@ use async_trait::async_trait;
 use oci_distribution::client::{Client, ClientConfig, ClientProtocol};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
-use std::{fs, path::Path, str::FromStr};
+use std::{path::Path, str::FromStr};
 use tokio_compat_02::FutureExt;
 use url::Url;
 
-use crate::registry::config::{DockerConfig, DockerConfigRaw, RegistryAuth as OwnRegistryAuth};
+use crate::registry::config::{DockerConfig, RegistryAuth as OwnRegistryAuth};
+use crate::sources::Sources;
 use crate::wasm_fetcher::fetcher::Fetcher;
 
 // Struct used to reference a WASM module that is hosted on an OCI registry
@@ -18,8 +19,8 @@ pub(crate) struct Registry {
     destination: String,
     // url of the remote WASM module
     wasm_url: String,
-    // whether TLS should be skipped
-    skip_tls: bool,
+    // host of the remote WASM module
+    wasm_url_host: String,
     // configuration resembling `~/.docker/config.json` to some extent
     docker_config: Option<DockerConfig>,
 }
@@ -27,18 +28,12 @@ pub(crate) struct Registry {
 impl Registry {
     pub(crate) fn new(
         url: Url,
-        skip_tls: bool,
-        docker_config_json_path: Option<String>,
+        docker_config: Option<DockerConfig>,
         download_dir: &str,
     ) -> Result<Registry> {
         match url.path().rsplit('/').next() {
             Some(image_ref) => {
                 let wasm_url = url.to_string();
-                let docker_config_json_contents =
-                    docker_config_json_path.and_then(|docker_config_json_path| {
-                        fs::read_to_string(docker_config_json_path).ok()
-                    });
-
                 let dest = Path::new(download_dir).join(image_ref);
 
                 Ok(Registry {
@@ -49,12 +44,10 @@ impl Registry {
                     wasm_url: wasm_url
                         .strip_prefix("registry://")
                         .map_or(Default::default(), |url| url.into()),
-                    skip_tls,
-                    docker_config: docker_config_json_contents.and_then(|contents| {
-                        serde_json::from_str(&contents)
-                            .map(|config: DockerConfigRaw| config.into())
-                            .ok()
-                    }),
+                    wasm_url_host: url
+                        .host()
+                        .map_or(Default::default(), |host| format!("{}", host)),
+                    docker_config,
                 })
             }
             _ => Err(anyhow!(
@@ -64,22 +57,10 @@ impl Registry {
         }
     }
 
-    fn client(&self) -> Client {
-        Client::new(self.client_config())
-    }
-
-    fn client_config(&self) -> ClientConfig {
-        ClientConfig {
-            protocol: self.client_protocol(),
-        }
-    }
-
-    fn client_protocol(&self) -> ClientProtocol {
-        if self.skip_tls {
-            ClientProtocol::Http
-        } else {
-            ClientProtocol::Https
-        }
+    fn client(&self, client_protocol: ClientProtocol) -> Client {
+        Client::new(ClientConfig {
+            protocol: client_protocol,
+        })
     }
 
     fn auth(&self, registry: &Reference) -> RegistryAuth {
@@ -98,16 +79,17 @@ impl Registry {
     }
 }
 
-#[async_trait]
-impl Fetcher for Registry {
-    async fn fetch(&self) -> Result<String> {
-        let mut client = self.client();
-        let reference = Reference::from_str(self.wasm_url.as_str())?;
-        let registry_auth = self.auth(&reference);
-        let image_content = client
+impl Registry {
+    async fn do_fetch(
+        &self,
+        mut client: Client,
+        reference: &Reference,
+        registry_auth: &RegistryAuth,
+    ) -> Result<Vec<u8>> {
+        client
             .pull(
-                &reference,
-                &registry_auth,
+                reference,
+                registry_auth,
                 vec!["application/vnd.wasm.content.layer.v1+wasm"],
             )
             // We need to call to `compat()` provided by the `tokio-compat-02` crate
@@ -119,11 +101,53 @@ impl Fetcher for Registry {
             .into_iter()
             .next()
             .map(|layer| layer.data)
-            .unwrap_or_default();
+            .ok_or_else(|| anyhow!("could not download WASM module"))
+    }
 
-        let mut file = File::create(self.destination.clone()).await?;
-        file.write_all(&image_content[..]).await?;
+    async fn fetch_tls(
+        &self,
+        reference: &Reference,
+        registry_auth: &RegistryAuth,
+    ) -> Result<Vec<u8>> {
+        let https_client = self.client(ClientProtocol::Https);
+        self.do_fetch(https_client, reference, registry_auth).await
+    }
 
-        Ok(self.destination.clone())
+    async fn fetch_plain(
+        &self,
+        reference: &Reference,
+        registry_auth: &RegistryAuth,
+    ) -> Result<Vec<u8>> {
+        let http_client = self.client(ClientProtocol::Http);
+        self.do_fetch(http_client, reference, registry_auth).await
+    }
+}
+
+#[async_trait]
+impl Fetcher for Registry {
+    async fn fetch(&self, sources: &Sources) -> Result<String> {
+        let reference = Reference::from_str(self.wasm_url.as_str())?;
+        let registry_auth = self.auth(&reference);
+
+        let mut image_content = self.fetch_tls(&reference, &registry_auth).await;
+        if let Err(err) = image_content {
+            if !sources.is_insecure_source(&self.wasm_url_host) {
+                return Err(anyhow!(
+                    "could not download Wasm module: {}; host is not an insecure source",
+                    err
+                ));
+            }
+            image_content = self.fetch_plain(&reference, &registry_auth).await;
+        }
+
+        match image_content {
+            Ok(image_content) => {
+                let mut file = File::create(self.destination.clone()).await?;
+                file.write_all(&image_content[..]).await?;
+
+                Ok(self.destination.clone())
+            }
+            Err(err) => Err(anyhow!("could not download Wasm module: {}", err)),
+        }
     }
 }

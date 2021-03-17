@@ -12,12 +12,12 @@ pub(crate) struct DockerConfigRaw {
     auths: HashMap<String, RegistryAuthRaw>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum RegistryAuth {
     BasicAuth(Vec<u8>, Vec<u8>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct DockerConfig {
     pub(crate) auths: HashMap<String, RegistryAuth>,
 }

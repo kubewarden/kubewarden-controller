@@ -1,6 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
+use crate::sources::Sources;
 use crate::wasm_fetcher::fetcher::Fetcher;
 
 // Struct used to reference a WASM module that is already on the
@@ -22,7 +23,7 @@ impl Local {
 
 #[async_trait]
 impl Fetcher for Local {
-    async fn fetch(&self) -> Result<String> {
+    async fn fetch(&self, _sources: &Sources) -> Result<String> {
         Ok(self.local_path.clone())
     }
 }
