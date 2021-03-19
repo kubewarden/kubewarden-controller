@@ -12,6 +12,13 @@ issues:
       # Disable 'funlen' linter for test functions.
       # It's common for table-driven tests to be more than 60 characters long
       source: "^func Test"
+    - path: internal/pkg/admission/policy-server-error.go
+      linters:
+        - deadcode
+        - unused
+    - path: internal/pkg/admissionregistration/cert.go
+      linters:
+        - gocritic
 
 linters:
   enable-all: true
@@ -27,7 +34,10 @@ linters:
     - gomnd
     - maligned
     - nlreturn
+    - paralleltest
     - testpackage
     - wsl
     # https://github.com/golangci/golangci-lint/issues/541
     - interfacer
+    # TODO: enable once we can set some exceptions
+    - funlen

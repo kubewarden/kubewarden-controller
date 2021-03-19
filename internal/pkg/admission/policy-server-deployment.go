@@ -50,6 +50,7 @@ func (r *Reconciler) isPolicyServerReady(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
+	// nolint
 	// This code takes inspiration from how `kubectl rollout status deployment <name>`
 	// works. The source code can be found here:
 	// https://github.com/kubernetes/kubectl/blob/ddb56dde55b6b8de6eba1efbd1d435bed7b40ff4/pkg/polymorphichelpers/rollout_status.go#L75-L91
@@ -101,6 +102,8 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMap
 	if err != nil {
 		return fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
+
+	//nolint
 	currentConfigVersion, found := deployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation]
 	if !found || currentConfigVersion != configMapVersion {
 		// the current deployment is using an older version of the configuration

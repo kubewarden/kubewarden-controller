@@ -26,7 +26,10 @@ func (r *Reconciler) reconcileAdmissionRegistration(
 	return fmt.Errorf("cannot reconcile validating webhook: %w", err)
 }
 
-func (r *Reconciler) admissionRegistration(admissionPolicy *chimerav1alpha1.AdmissionPolicy, admissionSecret *corev1.Secret) *admissionregistrationv1.ValidatingWebhookConfiguration {
+func (r *Reconciler) admissionRegistration(
+	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	admissionSecret *corev1.Secret,
+) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", admissionPolicy.Name)
 	admissionPort := int32(constants.PolicyServerPort)
 

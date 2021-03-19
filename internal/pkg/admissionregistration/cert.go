@@ -13,7 +13,11 @@ import (
 	"time"
 )
 
-func GenerateCert(ca []byte, commonName string, extraSANs []string, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
+func GenerateCert(ca []byte,
+	commonName string,
+	extraSANs []string,
+	CAPrivateKey *rsa.PrivateKey,
+) ([]byte, []byte, error) {
 	caCertificate, err := x509.ParseCertificate(ca)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing certificate: %w", err)
