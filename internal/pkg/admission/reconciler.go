@@ -14,7 +14,7 @@ import (
 	chimerav1alpha1 "github.com/chimera-kube/chimera-controller/api/v1alpha1"
 )
 
-type AdmissionReconciler struct {
+type Reconciler struct {
 	Client               client.Client
 	DeploymentsNamespace string
 	Log                  logr.Logger
@@ -30,7 +30,7 @@ func (errorList errorList) Error() string {
 	return strings.Join(errors, ", ")
 }
 
-func (r *AdmissionReconciler) ReconcileDeletion(ctx context.Context,
+func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
 	errors := errorList{}
 	r.Log.Info("Removing deleted policy from PolicyServer ConfigMap")
@@ -61,7 +61,7 @@ func (r *AdmissionReconciler) ReconcileDeletion(ctx context.Context,
 	return errors
 }
 
-func (r *AdmissionReconciler) Reconcile(ctx context.Context, admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
+func (r *Reconciler) Reconcile(ctx context.Context, admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
 	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx)
 	if err != nil {
 		return err

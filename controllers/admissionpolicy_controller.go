@@ -50,7 +50,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 	ctx := context.Background()
 	log := r.Log.WithValues("admissionpolicy", req.NamespacedName)
 
-	admissionReconciler := admission.AdmissionReconciler{
+	admissionReconciler := admission.Reconciler{
 		Client:               r,
 		DeploymentsNamespace: r.DeploymentsNamespace,
 		Log:                  log,

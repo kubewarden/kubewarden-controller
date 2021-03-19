@@ -20,7 +20,7 @@ import (
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
-func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Context) error {
+func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context) error {
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
@@ -40,7 +40,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Contex
 // isPolicyServerReady returns true when the PolicyServer deployment is running only
 // fresh replicas that are reflecting its Spec.
 // This works using the same code of `kubectl rollout status <deployment>`
-func (r *AdmissionReconciler) isPolicyServerReady(ctx context.Context) (bool, error) {
+func (r *Reconciler) isPolicyServerReady(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
@@ -92,7 +92,7 @@ func getProgressingDeploymentCondition(status appsv1.DeploymentStatus) *appsv1.D
 	return nil
 }
 
-func (r *AdmissionReconciler) updatePolicyServerDeployment(ctx context.Context, configMapVersion string) error {
+func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMapVersion string) error {
 	deployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
@@ -139,7 +139,7 @@ type PolicyServerDeploymentSettings struct {
 	Image    string
 }
 
-func (r *AdmissionReconciler) policyServerDeploymentSettings(ctx context.Context) PolicyServerDeploymentSettings {
+func (r *Reconciler) policyServerDeploymentSettings(ctx context.Context) PolicyServerDeploymentSettings {
 	settings := PolicyServerDeploymentSettings{
 		Replicas: int32(constants.PolicyServerReplicaSize),
 		Image:    constants.PolicyServerImage,
@@ -167,7 +167,7 @@ func (r *AdmissionReconciler) policyServerDeploymentSettings(ctx context.Context
 	return settings
 }
 
-func (r *AdmissionReconciler) deployment(ctx context.Context, configMapVersion string) *appsv1.Deployment {
+func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *appsv1.Deployment {
 	settings := r.policyServerDeploymentSettings(ctx)
 
 	const (

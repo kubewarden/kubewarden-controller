@@ -11,7 +11,7 @@ import (
 	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
 )
 
-func (r *AdmissionReconciler) reconcilePolicyServerService(ctx context.Context) error {
+func (r *Reconciler) reconcilePolicyServerService(ctx context.Context) error {
 	err := r.Client.Create(ctx, r.service())
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
@@ -19,7 +19,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerService(ctx context.Context) 
 	return fmt.Errorf("cannot reconcile policy-server service: %w", err)
 }
 
-func (r *AdmissionReconciler) service() *corev1.Service {
+func (r *Reconciler) service() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.PolicyServerServiceName,

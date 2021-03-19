@@ -13,7 +13,7 @@ import (
 	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
 )
 
-func (r *AdmissionReconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret) error {
+func (r *Reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret) error {
 	err := r.Client.Create(ctx, secret)
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
@@ -22,7 +22,7 @@ func (r *AdmissionReconciler) reconcileSecret(ctx context.Context, secret *corev
 	return fmt.Errorf("error reconciling policy-server Secret: %w", err)
 }
 
-func (r *AdmissionReconciler) fetchOrInitializePolicyServerSecret(ctx context.Context) (*corev1.Secret, error) {
+func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context) (*corev1.Secret, error) {
 	policyServerSecret := corev1.Secret{}
 	err := r.Client.Get(
 		ctx,
@@ -38,7 +38,7 @@ func (r *AdmissionReconciler) fetchOrInitializePolicyServerSecret(ctx context.Co
 		fmt.Errorf("cannot fetch or initialize Policy Server secret: %w", err)
 }
 
-func (r *AdmissionReconciler) buildPolicyServerSecret() (*corev1.Secret, error) {
+func (r *Reconciler) buildPolicyServerSecret() (*corev1.Secret, error) {
 	ca, caPrivateKey, err := admissionregistration.GenerateCA()
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate policy-server secret CA: %w", err)

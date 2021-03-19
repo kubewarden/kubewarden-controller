@@ -31,7 +31,7 @@ type policyServerConfigEntry struct {
 }
 
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
-func (r *AdmissionReconciler) reconcilePolicyServerConfigMap(
+func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 	operation policyServerConfigMapOperation,
@@ -54,7 +54,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerConfigMap(
 	return r.reconcilePolicyServerConfigMapPolicies(ctx, cfg, admissionPolicy, operation)
 }
 
-func (r *AdmissionReconciler) createPolicyServerConfigMap(
+func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 ) error {
@@ -85,7 +85,7 @@ func (r *AdmissionReconciler) createPolicyServerConfigMap(
 }
 
 // Reconcile the policies section of the Policy Server configmap
-func (r *AdmissionReconciler) reconcilePolicyServerConfigMapPolicies(
+func (r *Reconciler) reconcilePolicyServerConfigMapPolicies(
 	ctx context.Context,
 	cfg *corev1.ConfigMap,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
@@ -133,7 +133,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerConfigMapPolicies(
 	return nil
 }
 
-func (r *AdmissionReconciler) addPolicyToPolicyServerConfigMap(
+func (r *Reconciler) addPolicyToPolicyServerConfigMap(
 	currentPolicies map[string]policyServerConfigEntry,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 ) (string, bool, error) {
@@ -174,7 +174,7 @@ func (r *AdmissionReconciler) addPolicyToPolicyServerConfigMap(
 	return string(newPoliciesJSON), true, nil
 }
 
-func (r *AdmissionReconciler) removePolicyFromPolicyServerConfigMap(
+func (r *Reconciler) removePolicyFromPolicyServerConfigMap(
 	currentPolicies map[string]policyServerConfigEntry,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 ) (string, bool, error) {
@@ -194,7 +194,7 @@ func (r *AdmissionReconciler) removePolicyFromPolicyServerConfigMap(
 	return string(newPoliciesJSON), true, nil
 }
 
-func (r *AdmissionReconciler) policyServerConfigMapVersion(_ context.Context) (string, error) {
+func (r *Reconciler) policyServerConfigMapVersion(_ context.Context) (string, error) {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
 	u := &unstructured.Unstructured{}

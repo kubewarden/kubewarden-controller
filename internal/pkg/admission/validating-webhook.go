@@ -15,7 +15,7 @@ import (
 	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
 )
 
-func (r *AdmissionReconciler) reconcileAdmissionRegistration(
+func (r *Reconciler) reconcileAdmissionRegistration(
 	ctx context.Context,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 	admissionSecret *corev1.Secret) error {
@@ -26,7 +26,7 @@ func (r *AdmissionReconciler) reconcileAdmissionRegistration(
 	return fmt.Errorf("cannot reconcile validating webhook: %w", err)
 }
 
-func (r *AdmissionReconciler) admissionRegistration(admissionPolicy *chimerav1alpha1.AdmissionPolicy, admissionSecret *corev1.Secret) *admissionregistrationv1.ValidatingWebhookConfiguration {
+func (r *Reconciler) admissionRegistration(admissionPolicy *chimerav1alpha1.AdmissionPolicy, admissionSecret *corev1.Secret) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", admissionPolicy.Name)
 	admissionPort := int32(constants.PolicyServerPort)
 
@@ -93,7 +93,7 @@ func (r *AdmissionReconciler) admissionRegistration(admissionPolicy *chimerav1al
 	}
 }
 
-func (r *AdmissionReconciler) operationTypes(
+func (r *Reconciler) operationTypes(
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 ) []admissionregistrationv1.OperationType {
 	operationTypes := []admissionregistrationv1.OperationType{}
