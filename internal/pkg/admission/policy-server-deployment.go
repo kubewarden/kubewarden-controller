@@ -78,7 +78,7 @@ func (r *AdmissionReconciler) isPolicyServerReady(ctx context.Context) (bool, er
 		return true, nil
 	}
 	return false, &PolicyServerNotReadyError{
-		Message: fmt.Sprintf("Waiting for deployment spec update to be observed")}
+		Message: "Waiting for deployment spec update to be observed"}
 }
 
 // GetDeploymentCondition returns the condition with the provided type.
