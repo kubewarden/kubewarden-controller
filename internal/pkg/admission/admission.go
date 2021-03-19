@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,12 +85,4 @@ func (r *AdmissionReconciler) Reconcile(ctx context.Context, admissionPolicy *ch
 		return r.reconcileAdmissionRegistration(ctx, admissionPolicy, policyServerSecret)
 	}
 	return err
-}
-
-func (r *AdmissionReconciler) namespace() *corev1.Namespace {
-	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: r.DeploymentsNamespace,
-		},
-	}
 }
