@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,7 +16,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerService(ctx context.Context) 
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
 	}
-	return err
+	return fmt.Errorf("cannot reconcile policy-server service: %w", err)
 }
 
 func (r *AdmissionReconciler) service() *corev1.Service {

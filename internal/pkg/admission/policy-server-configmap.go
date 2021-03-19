@@ -26,7 +26,7 @@ const (
 )
 
 type policyServerConfigEntry struct {
-	Url      string               `json:"url"`
+	URL      string               `json:"url"`
 	Settings runtime.RawExtension `json:"settings"`
 }
 
@@ -47,9 +47,8 @@ func (r *AdmissionReconciler) reconcilePolicyServerConfigMap(
 				return nil
 			}
 			return r.createPolicyServerConfigMap(ctx, admissionPolicy)
-		} else {
-			return fmt.Errorf("Cannot lookup policies ConfigMap: %v", err)
 		}
+		return fmt.Errorf("cannot lookup policies ConfigMap: %w", err)
 	}
 
 	return r.reconcilePolicyServerConfigMapPolicies(ctx, cfg, admissionPolicy, operation)
@@ -61,17 +60,17 @@ func (r *AdmissionReconciler) createPolicyServerConfigMap(
 ) error {
 	policies := map[string]policyServerConfigEntry{
 		admissionPolicy.Name: {
-			Url:      admissionPolicy.Spec.Module,
+			URL:      admissionPolicy.Spec.Module,
 			Settings: admissionPolicy.Spec.Settings,
 		},
 	}
-	policies_json, err := json.Marshal(policies)
+	policiesJSON, err := json.Marshal(policies)
 	if err != nil {
-		return fmt.Errorf("Cannot marshal policies to JSON: %v", err)
+		return fmt.Errorf("cannot marshal policies to JSON: %w", err)
 	}
 
 	data := map[string]string{
-		constants.PolicyServerConfigPoliciesEntry: string(policies_json),
+		constants.PolicyServerConfigPoliciesEntry: string(policiesJSON),
 	}
 
 	cfg := &corev1.ConfigMap{
@@ -93,28 +92,28 @@ func (r *AdmissionReconciler) reconcilePolicyServerConfigMapPolicies(
 	operation policyServerConfigMapOperation,
 ) error {
 	// extract the policy settings from the ConfigMap
-	current_policies_json, found := cfg.Data[constants.PolicyServerConfigPoliciesEntry]
+	currentPoliciesJSON, found := cfg.Data[constants.PolicyServerConfigPoliciesEntry]
 	if !found {
-		current_policies_json = "{}"
+		currentPoliciesJSON = "{}"
 	}
-	current_policies := make(map[string]policyServerConfigEntry)
-	err := json.Unmarshal([]byte(current_policies_json), &current_policies)
+	currentPolicies := make(map[string]policyServerConfigEntry)
+	err := json.Unmarshal([]byte(currentPoliciesJSON), &currentPolicies)
 	if err != nil {
-		return fmt.Errorf("Cannot unmarshal policy settings from ConfigMap: %v", err)
+		return fmt.Errorf("cannot unmarshal policy settings from ConfigMap: %w", err)
 	}
 
-	var new_policies_json string
+	var newPoliciesJSON string
 	var update bool
 
 	switch operation {
 	case AddPolicy:
-		new_policies_json, update, err = r.addPolicyToPolicyServerConfigMap(
-			current_policies, admissionPolicy)
+		newPoliciesJSON, update, err = r.addPolicyToPolicyServerConfigMap(
+			currentPolicies, admissionPolicy)
 	case RemovePolicy:
-		new_policies_json, update, err = r.removePolicyFromPolicyServerConfigMap(
-			current_policies, admissionPolicy)
+		newPoliciesJSON, update, err = r.removePolicyFromPolicyServerConfigMap(
+			currentPolicies, admissionPolicy)
 	default:
-		err = fmt.Errorf("Unknown operation type")
+		err = fmt.Errorf("unknown operation type")
 	}
 
 	if err != nil {
@@ -124,78 +123,78 @@ func (r *AdmissionReconciler) reconcilePolicyServerConfigMapPolicies(
 		return nil
 	}
 
-	cfg.Data[constants.PolicyServerConfigPoliciesEntry] = new_policies_json
+	cfg.Data[constants.PolicyServerConfigPoliciesEntry] = newPoliciesJSON
 
 	err = r.Client.Update(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("Cannot update policies ConfigMap: %v", err)
+		return fmt.Errorf("cannot update policies ConfigMap: %w", err)
 	}
 
 	return nil
 }
 
 func (r *AdmissionReconciler) addPolicyToPolicyServerConfigMap(
-	current_policies map[string]policyServerConfigEntry,
+	currentPolicies map[string]policyServerConfigEntry,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 ) (string, bool, error) {
-	update_policies := false
-	current_policy, found := current_policies[admissionPolicy.Name]
+	var updatePolicies bool
+	currentPolicy, found := currentPolicies[admissionPolicy.Name]
 
-	expected_policy := policyServerConfigEntry{
-		Url:      admissionPolicy.Spec.Module,
+	expectedPolicy := policyServerConfigEntry{
+		URL:      admissionPolicy.Spec.Module,
 		Settings: admissionPolicy.Spec.Settings,
 	}
 
 	if !found {
-		update_policies = true
+		updatePolicies = true
 	} else {
 		// check if the policy we're reconciling is already part of the configuration
-		current_policy_json, err := json.Marshal(current_policy)
+		currentPolicyJSON, err := json.Marshal(currentPolicy)
 		if err != nil {
-			return "", false, fmt.Errorf("Cannot marshal current policy: %v", err)
+			return "", false, fmt.Errorf("cannot marshal current policy: %w", err)
 		}
-		expected_policy_json, err := json.Marshal(expected_policy)
+		expectedPolicyJSON, err := json.Marshal(expectedPolicy)
 		if err != nil {
-			return "", false, fmt.Errorf("Cannot marshal expected policy: %v", err)
+			return "", false, fmt.Errorf("cannot marshal expected policy: %w", err)
 		}
-		update_policies = !bytes.Equal(current_policy_json, expected_policy_json)
+		updatePolicies = !bytes.Equal(currentPolicyJSON, expectedPolicyJSON)
 	}
 
-	if !update_policies {
+	if !updatePolicies {
 		return "", false, nil
 	}
 
-	current_policies[admissionPolicy.Name] = expected_policy
+	currentPolicies[admissionPolicy.Name] = expectedPolicy
 
 	// marshal back the updated policies
-	new_policies_json, err := json.Marshal(current_policies)
+	newPoliciesJSON, err := json.Marshal(currentPolicies)
 	if err != nil {
-		return "", false, fmt.Errorf("Cannot marshal policies to JSON: %v", err)
+		return "", false, fmt.Errorf("cannot marshal policies to JSON: %w", err)
 	}
-	return string(new_policies_json), true, nil
+	return string(newPoliciesJSON), true, nil
 }
 
 func (r *AdmissionReconciler) removePolicyFromPolicyServerConfigMap(
-	current_policies map[string]policyServerConfigEntry,
+	currentPolicies map[string]policyServerConfigEntry,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 ) (string, bool, error) {
-	_, found := current_policies[admissionPolicy.Name]
+	_, found := currentPolicies[admissionPolicy.Name]
 
 	if !found {
 		return "", false, nil
 	}
 
-	delete(current_policies, admissionPolicy.Name)
+	delete(currentPolicies, admissionPolicy.Name)
 
 	// marshal back the updated policies
-	new_policies_json, err := json.Marshal(current_policies)
+	newPoliciesJSON, err := json.Marshal(currentPolicies)
 	if err != nil {
-		return "", false, fmt.Errorf("Cannot marshal policies to JSON: %v", err)
+		return "", false, fmt.Errorf("cannot marshal policies to JSON: %w", err)
 	}
-	return string(new_policies_json), true, nil
+	return string(newPoliciesJSON), true, nil
 }
 
-func (r *AdmissionReconciler) policyServerConfigMapVersion(ctx context.Context) (string, error) {
+func (r *AdmissionReconciler) policyServerConfigMapVersion(_ context.Context) (string, error) {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
 	u := &unstructured.Unstructured{}
@@ -209,7 +208,7 @@ func (r *AdmissionReconciler) policyServerConfigMapVersion(ctx context.Context) 
 	}, u)
 
 	if err != nil {
-		return "", fmt.Errorf("Cannot retrieve existing policies ConfigMap: %v", err)
+		return "", fmt.Errorf("cannot retrieve existing policies ConfigMap: %w", err)
 	}
 
 	return u.GetResourceVersion(), nil

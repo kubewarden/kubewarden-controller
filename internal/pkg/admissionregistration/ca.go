@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"math/big"
 	"time"
 )
@@ -11,11 +12,11 @@ import (
 func GenerateCA() ([]byte, *KeyPair, error) {
 	privateKey, err := newPrivateKey(1024)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot create private key: %w", err)
 	}
 	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("cannot init serial number: %w", err)
 	}
 	caCertificate := x509.Certificate{
 		SerialNumber: serialNumber,
@@ -34,9 +35,14 @@ func GenerateCA() ([]byte, *KeyPair, error) {
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
-	caCertificateBytes, err := x509.CreateCertificate(rand.Reader, &caCertificate, &caCertificate, &privateKey.Key().PublicKey, privateKey.Key())
+	caCertificateBytes, err := x509.CreateCertificate(
+		rand.Reader,
+		&caCertificate,
+		&caCertificate,
+		&privateKey.Key().PublicKey,
+		privateKey.Key())
 	if err != nil {
-		return []byte{}, nil, err
+		return []byte{}, nil, fmt.Errorf("cannot create certificate: %w", err)
 	}
 	return caCertificateBytes, privateKey, nil
 }

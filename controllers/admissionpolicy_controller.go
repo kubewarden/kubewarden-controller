@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -67,8 +68,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 			log.Info("Attempting delete", "policy", admissionPolicy)
 			return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &admissionPolicy)
 		}
-		log.Error(err, "Could not retrieve admission policy")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
 	}
 
 	// Reconcile
@@ -86,7 +86,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		}, nil
 	}
 
-	return ctrl.Result{}, err
+	return ctrl.Result{}, fmt.Errorf("reconciliation error: %w", err)
 }
 
 // SetupWithManager takes care of setting up the resources to watch

@@ -18,7 +18,8 @@ func (r *AdmissionReconciler) reconcileSecret(ctx context.Context, secret *corev
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
 	}
-	return err
+
+	return fmt.Errorf("error reconciling policy-server Secret: %w", err)
 }
 
 func (r *AdmissionReconciler) fetchOrInitializePolicyServerSecret(ctx context.Context) (*corev1.Secret, error) {
@@ -33,17 +34,18 @@ func (r *AdmissionReconciler) fetchOrInitializePolicyServerSecret(ctx context.Co
 		return r.buildPolicyServerSecret()
 	}
 	policyServerSecret.ResourceVersion = ""
-	return &policyServerSecret, err
+	return &policyServerSecret,
+		fmt.Errorf("cannot fetch or initialize Policy Server secret: %w", err)
 }
 
 func (r *AdmissionReconciler) buildPolicyServerSecret() (*corev1.Secret, error) {
 	ca, caPrivateKey, err := admissionregistration.GenerateCA()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot generate policy-server secret CA: %w", err)
 	}
 	caPEMEncoded, err := admissionregistration.PemEncodeCertificate(ca)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot encode policy-server secret CA: %w", err)
 	}
 	servingCert, servingKey, err := admissionregistration.GenerateCert(
 		ca,
@@ -51,7 +53,7 @@ func (r *AdmissionReconciler) buildPolicyServerSecret() (*corev1.Secret, error) 
 		[]string{fmt.Sprintf("%s.%s.svc", constants.PolicyServerServiceName, r.DeploymentsNamespace)},
 		caPrivateKey.Key())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot generate policy-server certificate: %w", err)
 	}
 	secretContents := map[string]string{
 		constants.PolicyServerTLSCert:         string(servingCert),

@@ -30,7 +30,8 @@ func (errorList errorList) Error() string {
 	return strings.Join(errors, ", ")
 }
 
-func (r *AdmissionReconciler) ReconcileDeletion(ctx context.Context, admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
+func (r *AdmissionReconciler) ReconcileDeletion(ctx context.Context,
+	admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
 	errors := errorList{}
 	r.Log.Info("Removing deleted policy from PolicyServer ConfigMap")
 	if err := r.reconcilePolicyServerConfigMap(ctx, admissionPolicy, RemovePolicy); err != nil {

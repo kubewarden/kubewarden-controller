@@ -23,7 +23,7 @@ import (
 func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Context) error {
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx)
 	if err != nil {
-		return fmt.Errorf("Cannot get policy-server ConfigMap version: %v", err)
+		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
 	}
 
 	err = r.Client.Create(ctx, r.deployment(ctx, configMapVersion))
@@ -31,7 +31,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Contex
 		return nil
 	}
 	if !apierrors.IsAlreadyExists(err) {
-		return err
+		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
 	}
 
 	return r.updatePolicyServerDeployment(ctx, configMapVersion)
@@ -47,7 +47,7 @@ func (r *AdmissionReconciler) isPolicyServerReady(ctx context.Context) (bool, er
 		Name:      constants.PolicyServerDeploymentName,
 	}, deployment)
 	if err != nil {
-		return false, fmt.Errorf("Cannot retrieve existing policy-server Deployment: %v", err)
+		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
 	// This code takes inspiration from how `kubectl rollout status deployment <name>`
@@ -99,7 +99,7 @@ func (r *AdmissionReconciler) updatePolicyServerDeployment(ctx context.Context, 
 		Name:      constants.PolicyServerDeploymentName,
 	}, deployment)
 	if err != nil {
-		return fmt.Errorf("Cannot retrieve existing policy-server Deployment: %v", err)
+		return fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 	currentConfigVersion, found := deployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation]
 	if !found || currentConfigVersion != configMapVersion {
@@ -107,7 +107,7 @@ func (r *AdmissionReconciler) updatePolicyServerDeployment(ctx context.Context, 
 		patch := createPatch(configMapVersion)
 		err = r.Client.Patch(ctx, deployment, client.RawPatch(types.StrategicMergePatchType, patch))
 		if err != nil {
-			return fmt.Errorf("Cannot patch policy-server Deployment: %v", err)
+			return fmt.Errorf("cannot patch policy-server Deployment: %w", err)
 		}
 		r.Log.Info("deployment patched")
 	}
@@ -152,7 +152,7 @@ func (r *AdmissionReconciler) policyServerDeploymentSettings(ctx context.Context
 	}, cfg); err == nil {
 		buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
 		if found {
-			repSize, err := strconv.Atoi(buf)
+			repSize, err := strconv.ParseInt(buf, 10, 32)
 			if err == nil {
 				settings.Replicas = int32(repSize)
 			}
