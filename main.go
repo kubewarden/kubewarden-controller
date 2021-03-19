@@ -51,7 +51,10 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&deploymentsNamespace, "deployments-namespace", "", "The namespace where the chimera resources will be created.")
+	flag.StringVar(&deploymentsNamespace,
+		"deployments-namespace",
+		"",
+		"The namespace where the chimera resources will be created.")
 	flag.Parse()
 
 	if deploymentsNamespace == "" {

@@ -20,10 +20,10 @@ import (
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
-func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Context) error {
+func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context) error {
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx)
 	if err != nil {
-		return fmt.Errorf("Cannot get policy-server ConfigMap version: %v", err)
+		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
 	}
 
 	err = r.Client.Create(ctx, r.deployment(ctx, configMapVersion))
@@ -31,7 +31,7 @@ func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Contex
 		return nil
 	}
 	if !apierrors.IsAlreadyExists(err) {
-		return err
+		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
 	}
 
 	return r.updatePolicyServerDeployment(ctx, configMapVersion)
@@ -40,16 +40,17 @@ func (r *AdmissionReconciler) reconcilePolicyServerDeployment(ctx context.Contex
 // isPolicyServerReady returns true when the PolicyServer deployment is running only
 // fresh replicas that are reflecting its Spec.
 // This works using the same code of `kubectl rollout status <deployment>`
-func (r *AdmissionReconciler) isPolicyServerReady(ctx context.Context) (bool, error) {
+func (r *Reconciler) isPolicyServerReady(ctx context.Context) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
 		Name:      constants.PolicyServerDeploymentName,
 	}, deployment)
 	if err != nil {
-		return false, fmt.Errorf("Cannot retrieve existing policy-server Deployment: %v", err)
+		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
+	// nolint
 	// This code takes inspiration from how `kubectl rollout status deployment <name>`
 	// works. The source code can be found here:
 	// https://github.com/kubernetes/kubectl/blob/ddb56dde55b6b8de6eba1efbd1d435bed7b40ff4/pkg/polymorphichelpers/rollout_status.go#L75-L91
@@ -92,22 +93,24 @@ func getProgressingDeploymentCondition(status appsv1.DeploymentStatus) *appsv1.D
 	return nil
 }
 
-func (r *AdmissionReconciler) updatePolicyServerDeployment(ctx context.Context, configMapVersion string) error {
+func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMapVersion string) error {
 	deployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
 		Name:      constants.PolicyServerDeploymentName,
 	}, deployment)
 	if err != nil {
-		return fmt.Errorf("Cannot retrieve existing policy-server Deployment: %v", err)
+		return fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
+
+	//nolint
 	currentConfigVersion, found := deployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation]
 	if !found || currentConfigVersion != configMapVersion {
 		// the current deployment is using an older version of the configuration
 		patch := createPatch(configMapVersion)
 		err = r.Client.Patch(ctx, deployment, client.RawPatch(types.StrategicMergePatchType, patch))
 		if err != nil {
-			return fmt.Errorf("Cannot patch policy-server Deployment: %v", err)
+			return fmt.Errorf("cannot patch policy-server Deployment: %w", err)
 		}
 		r.Log.Info("deployment patched")
 	}
@@ -139,7 +142,7 @@ type PolicyServerDeploymentSettings struct {
 	Image    string
 }
 
-func (r *AdmissionReconciler) policyServerDeploymentSettings(ctx context.Context) PolicyServerDeploymentSettings {
+func (r *Reconciler) policyServerDeploymentSettings(ctx context.Context) PolicyServerDeploymentSettings {
 	settings := PolicyServerDeploymentSettings{
 		Replicas: int32(constants.PolicyServerReplicaSize),
 		Image:    constants.PolicyServerImage,
@@ -152,7 +155,7 @@ func (r *AdmissionReconciler) policyServerDeploymentSettings(ctx context.Context
 	}, cfg); err == nil {
 		buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
 		if found {
-			repSize, err := strconv.Atoi(buf)
+			repSize, err := strconv.ParseInt(buf, 10, 32)
 			if err == nil {
 				settings.Replicas = int32(repSize)
 			}
@@ -167,7 +170,7 @@ func (r *AdmissionReconciler) policyServerDeploymentSettings(ctx context.Context
 	return settings
 }
 
-func (r *AdmissionReconciler) deployment(ctx context.Context, configMapVersion string) *appsv1.Deployment {
+func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *appsv1.Deployment {
 	settings := r.policyServerDeploymentSettings(ctx)
 
 	const (

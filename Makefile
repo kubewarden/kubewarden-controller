@@ -54,10 +54,10 @@ vet:
 	go vet ./...
 
 lint: deps
-	golint -set_exit_status controllers/... internal/
+	golangci-lint run
 
 deps:
-	go get -u golang.org/x/lint/golint
+	go get github.com/golangci/golangci-lint/cmd/golangci-lint
 
 # Generate code
 generate: controller-gen

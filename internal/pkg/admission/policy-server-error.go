@@ -1,5 +1,9 @@
 package admission
 
+import (
+	"errors"
+)
+
 type policyServerNotReady interface {
 	PolicyServerNotReady() bool
 }
@@ -23,6 +27,10 @@ func (e *PolicyServerNotReadyError) PolicyServerNotReady() bool {
 // IsPolicyServerNotReady returns true when the given error is of type
 // PolicyServerNotReadyError
 func IsPolicyServerNotReady(err error) bool {
-	t, ok := err.(policyServerNotReady)
-	return ok && t.PolicyServerNotReady()
+	var e *PolicyServerNotReadyError
+	if errors.As(err, &e) {
+		return e.PolicyServerNotReady()
+	}
+
+	return false
 }

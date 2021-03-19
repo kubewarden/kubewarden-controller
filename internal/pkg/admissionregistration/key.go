@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 )
 
 // KeyPair represents a public/private key pair
@@ -23,11 +24,11 @@ func (keyPair *KeyPair) Key() *rsa.PrivateKey {
 func newPrivateKey(keyBitSize int) (*KeyPair, error) {
 	key, err := rsa.GenerateKey(rand.Reader, keyBitSize)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot create private key: %w", err)
 	}
 	publicKey, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot marshal public key: %w", err)
 	}
 	publicKeyPEM := new(bytes.Buffer)
 	err = pem.Encode(publicKeyPEM, &pem.Block{
@@ -35,7 +36,7 @@ func newPrivateKey(keyBitSize int) (*KeyPair, error) {
 		Bytes: publicKey,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot encode public key: %w", err)
 	}
 	privateKeyPEM := new(bytes.Buffer)
 	err = pem.Encode(privateKeyPEM, &pem.Block{
@@ -43,7 +44,7 @@ func newPrivateKey(keyBitSize int) (*KeyPair, error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot encode private key: %w", err)
 	}
 	return &KeyPair{
 		PublicKey:  publicKeyPEM.String(),
