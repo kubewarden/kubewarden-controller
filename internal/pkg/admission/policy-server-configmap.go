@@ -158,7 +158,7 @@ func (r *AdmissionReconciler) addPolicyToPolicyServerConfigMap(
 		if err != nil {
 			return "", false, fmt.Errorf("Cannot marshal expected policy: %v", err)
 		}
-		update_policies = bytes.Compare(current_policy_json, expected_policy_json) != 0
+		update_policies = !bytes.Equal(current_policy_json, expected_policy_json)
 	}
 
 	if !update_policies {
