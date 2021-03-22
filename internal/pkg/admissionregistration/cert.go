@@ -93,7 +93,10 @@ func PemEncodeCertificate(certificate []byte) ([]byte, error) {
 		Type:  "CERTIFICATE",
 		Bytes: certificate,
 	})
-	return certificatePEM.Bytes(), fmt.Errorf("PEM encode failure: %w", err)
+	if err != nil {
+		return []byte{}, fmt.Errorf("PEM encode failure: %w", err)
+	}
+	return certificatePEM.Bytes(), nil
 }
 
 func pemEncodePrivateKey(privateKey []byte) ([]byte, error) {
@@ -103,5 +106,8 @@ func pemEncodePrivateKey(privateKey []byte) ([]byte, error) {
 		Bytes: privateKey,
 	})
 
-	return privateKeyPEM.Bytes(), fmt.Errorf("PEM encode failure: %w", err)
+	if err != nil {
+		return []byte{}, fmt.Errorf("PEM encode failure: %w", err)
+	}
+	return privateKeyPEM.Bytes(), nil
 }

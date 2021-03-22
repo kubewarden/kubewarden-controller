@@ -34,8 +34,12 @@ func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context) (*
 		return r.buildPolicyServerSecret()
 	}
 	policyServerSecret.ResourceVersion = ""
-	return &policyServerSecret,
-		fmt.Errorf("cannot fetch or initialize Policy Server secret: %w", err)
+	if err != nil {
+		return &corev1.Secret{},
+			fmt.Errorf("cannot fetch or initialize Policy Server secret: %w", err)
+	}
+
+	return &policyServerSecret, nil
 }
 
 func (r *Reconciler) buildPolicyServerSecret() (*corev1.Secret, error) {
