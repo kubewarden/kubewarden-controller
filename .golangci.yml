@@ -4,6 +4,7 @@
 # options for analysis running
 run:
   tests: true
+  timeout: 10m
 
 issues:
   exclude-rules:
