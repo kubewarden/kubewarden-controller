@@ -1780,6 +1780,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
+name = "policy-evaluator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chimera-kube-policy-sdk",
+ "hyper 0.14.4",
+ "json-patch",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "wapc",
+ "wasmtime-provider",
+]
+
+[[package]]
 name = "policy-server"
 version = "0.1.0"
 dependencies = [
@@ -1793,11 +1808,11 @@ dependencies = [
  "futures-util",
  "hyper 0.14.4",
  "hyper-tls 0.5.0",
- "json-patch",
  "native-tls",
  "num_cpus",
  "oci-distribution",
  "openssl",
+ "policy-evaluator",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -1805,8 +1820,17 @@ dependencies = [
  "tokio-compat-02",
  "tokio-native-tls",
  "url 2.2.0",
- "wapc",
- "wasmtime-provider",
+]
+
+[[package]]
+name = "policy-testdrive"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "policy-evaluator",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

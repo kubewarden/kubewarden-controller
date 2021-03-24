@@ -33,9 +33,15 @@ url = "2.2.0"
 [workspace]
 members = [
   "crates/policy-evaluator",
+  "crates/policy-testdrive",
 ]
 
 [[bin]]
 name = "policy-server"
 path = "src/main.rs"
+
+[[bin]]
+name = "chimera-policy-testdrive"
+path = "crates/policy-testdrive/src/main.rs"
+
 
