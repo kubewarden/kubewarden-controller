@@ -392,6 +392,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "chimera-kube-policy-sdk"
+version = "0.1.0"
+source = "git+https://github.com/chimera-kube/policy-sdk-rust.git?branch=main#7ada0cd226080e77fc84559d66e1c9e925148d66"
+dependencies = [
+ "anyhow",
+ "jmespatch",
+ "serde",
+ "serde_json",
+ "wapc-guest",
+]
+
+[[package]]
 name = "clap"
 version = "2.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -624,6 +636,12 @@ checksum = "34ac344c7efccb80cd25bc61b2170aec26f2f693fd40e765a539a1243db48c71"
 dependencies = [
  "cfg-if 0.1.10",
 ]
+
+[[package]]
+name = "deunicode"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "850878694b7933ca4c9569d30a34b55031b9b139ee1fc7b94a527c4ef960d690"
 
 [[package]]
 name = "digest"
@@ -1269,6 +1287,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
 
 [[package]]
+name = "jmespatch"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7acf91a732ade34d8eda2dee9500a051833f14f0d3d10d77c149845d6ac6a5f0"
+dependencies = [
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "slug",
+]
+
+[[package]]
 name = "jobserver"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1284,6 +1314,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5cfb73131c35423a367daf8cbd24100af0d077668c8c2943f0e7dd775fef0f65"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "json-patch"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f995a3c8f2bc3dd52a18a583e90f9ec109c047fa1603a853e46bcda14d2e279d"
+dependencies = [
+ "serde",
+ "serde_json",
+ "treediff",
 ]
 
 [[package]]
@@ -1747,10 +1788,12 @@ dependencies = [
  "async-stream",
  "async-trait",
  "base64 0.13.0",
+ "chimera-kube-policy-sdk",
  "clap",
  "futures-util",
  "hyper 0.14.4",
  "hyper-tls 0.5.0",
+ "json-patch",
  "native-tls",
  "num_cpus",
  "oci-distribution",
@@ -2218,6 +2261,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
+name = "slug"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3bc762e6a4b6c6fcaade73e77f9ebc6991b676f88bb2358bddb56560f073373"
+dependencies = [
+ "deunicode",
+]
+
+[[package]]
 name = "smallvec"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2542,6 +2594,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "treediff"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "761e8d5ad7ce14bb82b7e61ccc0ca961005a275a060b9644a2431aa11553c2ff"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "try-lock"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2696,6 +2757,15 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "wapc-guest"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47cbd9d778b9718eda797278936f93f25ce81064fe26f0bb6a710cd51315f00b"
+dependencies = [
+ "lazy_static",
 ]
 
 [[package]]

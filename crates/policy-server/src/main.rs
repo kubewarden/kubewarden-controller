@@ -15,6 +15,7 @@ mod api;
 mod registry;
 mod server;
 mod utils;
+mod validation_response;
 mod wasm_fetcher;
 mod worker;
 

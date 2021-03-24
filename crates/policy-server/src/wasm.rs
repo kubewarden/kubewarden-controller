@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use std::fs::File;
 use std::io::prelude::*;
 
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use wapc::WapcHost;
@@ -11,6 +10,10 @@ use wasmtime_provider::WasmtimeEngineProvider;
 use tokio::sync::oneshot;
 
 use crate::utils::convert_yaml_map_to_json;
+
+use chimera_kube_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+
+use crate::validation_response::ValidationResponse;
 
 #[allow(clippy::unnecessary_wraps)]
 fn host_callback(
@@ -51,6 +54,23 @@ impl PolicyEvaluator {
     }
 
     pub(crate) fn validate(&mut self, request: serde_json::Value) -> ValidationResponse {
+        let uid = request
+            .get("uid")
+            .and_then(|v| v.as_str())
+            .or(Some(""))
+            .map(|s| s.to_owned())
+            .unwrap();
+
+        let req_obj = request.get("object");
+        if req_obj.is_none() {
+            return ValidationResponse::reject(
+                uid,
+                String::from("request doesn't have a 'object' value"),
+                hyper::StatusCode::BAD_REQUEST.as_u16(),
+            );
+        }
+        let req_obj = req_obj.unwrap();
+
         let validate_params = json!({
             "request": request,
             "settings": self.settings,
@@ -59,36 +79,33 @@ impl PolicyEvaluator {
             Ok(s) => s,
             Err(e) => {
                 println!("Cannot serialize validation params: {}", e);
-                return ValidationResponse {
-                    accepted: false,
-                    message: Some(String::from("internal server error")),
-                    code: Some(hyper::StatusCode::INTERNAL_SERVER_ERROR.as_u16()),
-                };
+                return ValidationResponse::reject_internal_server_error(uid);
             }
         };
 
         match self.wapc_host.call("validate", validate_str.as_bytes()) {
             Ok(res) => {
-                let val_resp: ValidationResponse =
-                    serde_json::from_slice(&res).unwrap_or_else(|e| {
+                let pol_val_resp: Result<PolicyValidationResponse> = serde_json::from_slice(&res)
+                    .map_err(|e| anyhow!("cannot deserialize policy validation response: {:?}", e));
+
+                pol_val_resp
+                    .and_then(|pol_val_resp| {
+                        ValidationResponse::from_policy_validation_response(
+                            uid.clone(),
+                            &req_obj,
+                            &pol_val_resp,
+                        )
+                    })
+                    .unwrap_or_else(|e| {
                         //TODO: proper logging
-                        println!("Cannot deserialize response: {}", e);
-                        ValidationResponse {
-                            accepted: false,
-                            message: Some(String::from("internal server error")),
-                            code: Some(hyper::StatusCode::INTERNAL_SERVER_ERROR.as_u16()),
-                        }
-                    });
-                val_resp
+                        println!("Cannot build validation response from policy result: {}", e);
+                        ValidationResponse::reject_internal_server_error(uid)
+                    })
             }
             Err(e) => {
                 //TODO: proper logging
                 println!("Something went wrong with waPC: {}", e);
-                ValidationResponse {
-                    accepted: false,
-                    message: Some(String::from("internal server error")),
-                    code: Some(hyper::StatusCode::INTERNAL_SERVER_ERROR.as_u16()),
-                }
+                ValidationResponse::reject_internal_server_error(uid)
             }
         }
     }
@@ -99,15 +116,4 @@ pub(crate) struct EvalRequest {
     pub policy_id: String,
     pub req: serde_json::Value,
     pub resp_chan: oneshot::Sender<Option<ValidationResponse>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct ValidationResponse {
-    pub accepted: bool,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code: Option<u16>,
 }
