@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+base64 = "0.13.0"
 chimera-kube-policy-sdk = { git = "https://github.com/chimera-kube/policy-sdk-rust.git", branch = "main" }
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
