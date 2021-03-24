@@ -1,6 +1,6 @@
-use crate::policies::Policy;
-use crate::wasm::{EvalRequest, PolicyEvaluator};
+use crate::wasm::EvalRequest;
 use anyhow::{anyhow, Result};
+use policy_evaluator::{policy::Policy, policy_evaluator::PolicyEvaluator};
 use std::{
     collections::HashMap,
     sync::{
@@ -28,7 +28,11 @@ impl Worker {
         for (id, policy) in policies.iter() {
             let settings = policy.settings();
 
-            let policy_evaluator = PolicyEvaluator::new(policy.wasm_module_path.clone(), settings)?;
+            let policy_evaluator = PolicyEvaluator::new(
+                policy.wasm_module_path.clone(),
+                settings,
+                crate::wasm::host_callback,
+            )?;
             evs.insert(id.to_string(), policy_evaluator);
         }
 

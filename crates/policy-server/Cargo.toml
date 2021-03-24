@@ -12,12 +12,12 @@ async-std = "1.9.0"
 async-stream = "0.3.0"
 async-trait = "0.1.42"
 base64 = "0.13.0"
+policy-evaluator = { path = "crates/policy-evaluator" }
 chimera-kube-policy-sdk = { git = "https://github.com/chimera-kube/policy-sdk-rust.git", branch = "main" }
 clap = "2.33.3"
 futures-util = "0.3.12"
 hyper-tls = "0.5.0"
 hyper = { version = "0.14", features = ["full"] }
-json-patch = "0.2.6"
 native-tls = "^0.2.1"
 num_cpus = "1.13.0"
 oci-distribution = "0.5"
@@ -29,5 +29,13 @@ tokio-compat-02 = "0.2.0"
 tokio-native-tls = "0.3.0"
 tokio = { version = "^1", features = ["full"] }
 url = "2.2.0"
-wapc = "0.10.1"
-wasmtime-provider = "0.0.2"
+
+[workspace]
+members = [
+  "crates/policy-evaluator",
+]
+
+[[bin]]
+name = "policy-server"
+path = "src/main.rs"
+

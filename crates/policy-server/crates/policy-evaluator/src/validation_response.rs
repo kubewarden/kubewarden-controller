@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ValidationResponse {
+pub struct ValidationResponse {
     pub uid: String,
 
     pub allowed: bool,
@@ -20,7 +20,7 @@ pub(crate) struct ValidationResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub(crate) struct ValidationResponseStatus {
+pub struct ValidationResponseStatus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
 

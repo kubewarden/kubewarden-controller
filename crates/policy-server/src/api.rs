@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use hyper::{Body, Method, Request, Response, StatusCode};
+use policy_evaluator::validation_response::ValidationResponse;
 use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
 
@@ -107,9 +108,7 @@ async fn handle_post_validate(
     }
 }
 
-fn build_ar_response(
-    validation_response: crate::validation_response::ValidationResponse,
-) -> anyhow::Result<String> {
+fn build_ar_response(validation_response: ValidationResponse) -> anyhow::Result<String> {
     let reply = json!({
         "apiVersion": "admission.k8s.io/v1",
         "kind": "AdmissionReview",
