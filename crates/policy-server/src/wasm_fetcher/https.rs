@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use anyhow::{anyhow, Result};
 use async_std::fs::File;
 use async_std::prelude::*;

@@ -15,6 +15,27 @@ use chimera_kube_policy_sdk::settings::SettingsValidationResponse;
 use crate::utils::convert_yaml_map_to_json;
 use crate::validation_response::ValidationResponse;
 
+use crate::cluster_context::ClusterContext;
+
+pub(crate) fn host_callback(
+    _id: u64,
+    binding: &str,
+    namespace: &str,
+    _operation: &str,
+    _payload: &[u8],
+) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    let cluster_context = ClusterContext::get();
+    if binding != "kubernetes" {
+        return Err(format!("unknown binding: {}", binding).into());
+    }
+    match namespace {
+        "ingresses" => Ok(cluster_context.ingresses().into()),
+        "namespaces" => Ok(cluster_context.namespaces().into()),
+        "services" => Ok(cluster_context.services().into()),
+        _ => Err(format!("unknown namespace name: {}", namespace).into()),
+    }
+}
+
 pub struct PolicyEvaluator {
     wapc_host: WapcHost,
     settings: serde_json::Map<String, serde_json::Value>,
@@ -29,24 +50,14 @@ impl fmt::Debug for PolicyEvaluator {
 }
 
 impl PolicyEvaluator {
-    pub fn new(
-        wasm_file: String,
-        settings: serde_yaml::Mapping,
-        host_callback: impl Fn(
-                u64,
-                &str,
-                &str,
-                &str,
-                &[u8],
-            )
-                -> std::result::Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>
-            + 'static
-            + Sync
-            + Send,
-    ) -> Result<PolicyEvaluator> {
+    pub fn new(wasm_file: String, settings: serde_yaml::Mapping) -> Result<PolicyEvaluator> {
         let mut f = File::open(&wasm_file)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
+
+        if let Err(error) = ClusterContext::init() {
+            println!("non fatal error: could not initialize a cluster context due to error: {}; context sensitive functions will not return any information", error);
+        }
 
         let engine = WasmtimeEngineProvider::new(&buf, None);
         let host = WapcHost::new(Box::new(engine), host_callback)?;

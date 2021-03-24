@@ -8,25 +8,6 @@ use std::process;
 use std::fs::File;
 use std::io::BufReader;
 
-#[allow(clippy::unnecessary_wraps)]
-fn host_callback(
-    id: u64,
-    bd: &str,
-    ns: &str,
-    op: &str,
-    payload: &[u8],
-) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    println!(
-        "Guest {} invoked '{}->{}:{}' with payload of {}",
-        id,
-        bd,
-        ns,
-        op,
-        ::std::str::from_utf8(payload).unwrap()
-    );
-    Ok(b"Host result".to_vec())
-}
-
 fn main() {
     let matches = cli::app().get_matches();
 
@@ -51,7 +32,7 @@ fn main() {
         }
     };
 
-    let mut policy_evaluator = match PolicyEvaluator::new(policy_file, settings, host_callback) {
+    let mut policy_evaluator = match PolicyEvaluator::new(policy_file, settings) {
         Ok(p) => p,
         Err(e) => {
             return fatal_error(format!("Error creating policy evaluator: {:?}", e));

@@ -5,23 +5,6 @@ use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
 use tracing::error;
 
-#[allow(clippy::unnecessary_wraps)]
-pub(crate) fn host_callback(
-    id: u64,
-    bd: &str,
-    ns: &str,
-    op: &str,
-    payload: &[u8],
-) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    let payload = ::std::str::from_utf8(payload)
-        .map_err(|e| anyhow!("Error converting payload to UTF8: {:?}", e))?;
-    println!(
-        "Guest {} invoked '{}->{}:{}' with payload of {}",
-        id, bd, ns, op, payload
-    );
-    Ok(b"Host result".to_vec())
-}
-
 pub(crate) struct Worker {
     evaluators: HashMap<String, PolicyEvaluator>,
     channel_rx: Receiver<EvalRequest>,
@@ -39,7 +22,7 @@ impl Worker {
             let settings = policy.settings();
 
             let mut policy_evaluator =
-                PolicyEvaluator::new(policy.wasm_module_path.clone(), settings, host_callback)?;
+                PolicyEvaluator::new(policy.wasm_module_path.clone(), settings)?;
 
             let set_val_rep = policy_evaluator.validate_settings();
             if !set_val_rep.valid {
