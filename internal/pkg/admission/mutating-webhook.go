@@ -14,21 +14,21 @@ import (
 	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
 )
 
-func (r *Reconciler) reconcileValidatingWebhookRegistration(
+func (r *Reconciler) reconcileMutatingWebhookRegistration(
 	ctx context.Context,
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 	admissionSecret *corev1.Secret) error {
-	err := r.Client.Create(ctx, r.validatingWebhookRegistration(admissionPolicy, admissionSecret))
+	err := r.Client.Create(ctx, r.mutatingWebhookRegistration(admissionPolicy, admissionSecret))
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
 	}
-	return fmt.Errorf("cannot reconcile validating webhook: %w", err)
+	return fmt.Errorf("cannot reconcile mutating webhook: %w", err)
 }
 
-func (r *Reconciler) validatingWebhookRegistration(
+func (r *Reconciler) mutatingWebhookRegistration(
 	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
 	admissionSecret *corev1.Secret,
-) *admissionregistrationv1.ValidatingWebhookConfiguration {
+) *admissionregistrationv1.MutatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", admissionPolicy.Name)
 	admissionPort := int32(constants.PolicyServerPort)
 
@@ -63,14 +63,14 @@ func (r *Reconciler) validatingWebhookRegistration(
 	if len(apiVersions) == 0 {
 		apiVersions = []string{"*"}
 	}
-	return &admissionregistrationv1.ValidatingWebhookConfiguration{
+	return &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: admissionPolicy.Name,
 			Labels: map[string]string{
 				"chimera": "true",
 			},
 		},
-		Webhooks: []admissionregistrationv1.ValidatingWebhook{
+		Webhooks: []admissionregistrationv1.MutatingWebhook{
 			{
 				Name: fmt.Sprintf("%s.chimera.admission", admissionPolicy.Name),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{

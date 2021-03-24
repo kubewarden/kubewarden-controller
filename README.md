@@ -60,6 +60,7 @@ spec:
   settings:
     trusted_users:
     - alice
+  mutating: false
 ```
 
 This `AdmissionPolicy` will evaluate all the `CREATE` and `UPDATE` operations performed

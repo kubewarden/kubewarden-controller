@@ -62,6 +62,10 @@ spec:
                   (http://, https://), or an artifact served by an OCI-compatible
                   registry (registry://).
                 type: string
+              mutating:
+                description: Mutating indicates whether a policy has the ability to
+                  mutate incoming requests or not.
+                type: boolean
               operations:
                 description: Operations is a list of operations that this webhook
                   should be registered against. Empty array or "*" means everything.
@@ -79,6 +83,8 @@ spec:
                   configuration values. x-kubernetes-embedded-resource: false'
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+            required:
+            - mutating
             type: object
           status:
             description: AdmissionPolicyStatus defines the observed state of AdmissionPolicy
