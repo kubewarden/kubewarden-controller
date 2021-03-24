@@ -1784,6 +1784,7 @@ name = "policy-evaluator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.13.0",
  "chimera-kube-policy-sdk",
  "hyper 0.14.4",
  "json-patch",
