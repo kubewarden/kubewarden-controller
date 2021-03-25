@@ -5,11 +5,11 @@ use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::admission_review::AdmissionReview;
-use crate::wasm;
+use crate::communication::EvalRequest;
 
 pub(crate) async fn route(
     req: hyper::Request<hyper::Body>,
-    tx: mpsc::Sender<wasm::EvalRequest>,
+    tx: mpsc::Sender<EvalRequest>,
 ) -> Result<hyper::Response<hyper::Body>, hyper::Error> {
     match *req.method() {
         Method::POST => {
@@ -36,7 +36,7 @@ pub(crate) async fn route(
 async fn handle_post_validate(
     req: Request<Body>,
     policy_id: String,
-    tx: mpsc::Sender<wasm::EvalRequest>,
+    tx: mpsc::Sender<EvalRequest>,
 ) -> Result<Response<Body>, hyper::Error> {
     let raw = hyper::body::to_bytes(req.into_body()).await?;
 
@@ -53,7 +53,7 @@ async fn handle_post_validate(
 
     let (resp_tx, resp_rx) = oneshot::channel();
 
-    let eval_req = wasm::EvalRequest {
+    let eval_req = EvalRequest {
         policy_id,
         req: adm_rev.request,
         resp_chan: resp_tx,

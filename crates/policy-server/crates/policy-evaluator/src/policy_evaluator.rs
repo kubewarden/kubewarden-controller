@@ -153,11 +153,3 @@ impl PolicyEvaluator {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn create_reject_response() {}
-}
