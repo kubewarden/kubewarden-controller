@@ -30,8 +30,10 @@ use crate::wasm::EvalRequest;
 use crate::registry::config::{DockerConfig, DockerConfigRaw};
 
 fn main() {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+
     let matches = App::new("policy-server")
-        .version("0.0.1")
+        .version(VERSION)
         .about("Kubernetes admission controller powered by Chimera WASM policies")
         .arg(
             Arg::with_name("debug")
