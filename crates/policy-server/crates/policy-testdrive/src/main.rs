@@ -41,13 +41,6 @@ fn main() {
         }
     };
 
-    let mut policy_evaluator = match PolicyEvaluator::new(policy_file, settings, host_callback) {
-        Ok(p) => p,
-        Err(e) => {
-            return fatal_error(format!("Error creating policy evaluator: {:?}", e));
-        }
-    };
-
     let request = match read_request_file(request_file) {
         Ok(r) => r,
         Err(e) => {
@@ -58,7 +51,25 @@ fn main() {
         }
     };
 
+    let mut policy_evaluator = match PolicyEvaluator::new(policy_file, settings, host_callback) {
+        Ok(p) => p,
+        Err(e) => {
+            return fatal_error(format!("Error creating policy evaluator: {:?}", e));
+        }
+    };
+
+    let svr = policy_evaluator.validate_settings();
+    println!("Settings validation result: {:?}", svr);
+    if !svr.valid {
+        let msg = svr.message.map_or_else(
+            || String::from("Settings validation failed"),
+            |m| format!("Settings validation failed: {}", m),
+        );
+        return fatal_error(msg);
+    }
+
     let vr = policy_evaluator.validate(request);
+    println!("Policy evaluation results:");
     println!("{:?}", vr);
 }
 
