@@ -27,7 +27,7 @@ const (
 
 type policyServerConfigEntry struct {
 	URL      string               `json:"url"`
-	Settings runtime.RawExtension `json:"settings"`
+	Settings runtime.RawExtension `json:"settings,omitempty"`
 }
 
 // Reconciles the ConfigMap that holds the configuration of the Policy Server

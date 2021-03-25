@@ -34,7 +34,7 @@ type AdmissionPolicySpec struct {
 	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// x-kubernetes-embedded-resource: false
-	Settings runtime.RawExtension `json:"settings"`
+	Settings runtime.RawExtension `json:"settings,omitempty"`
 
 	// APIGroups is a list of API groups that this webhook should be
 	// registered against. Empty array or "*" means everything.
@@ -65,6 +65,10 @@ type AdmissionPolicySpec struct {
 	// The default behaviour is "Fail"
 	// +optional
 	FailurePolicy string `json:"failurePolicy,omitempty"`
+
+	// Mutating indicates whether a policy has the ability to mutate
+	// incoming requests or not.
+	Mutating bool `json:"mutating"`
 }
 
 // AdmissionPolicyStatus defines the observed state of AdmissionPolicy

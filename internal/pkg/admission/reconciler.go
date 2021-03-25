@@ -38,15 +38,26 @@ func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 		r.Log.Error(err, "ReconcileDeletion: cannot update ConfigMap")
 		errors = append(errors, err)
 	}
-	r.Log.Info("Removing ValidatingWebhookConfiguration associated with deleted policy")
 
-	ar := &admissionregistrationv1.ValidatingWebhookConfiguration{
+	r.Log.Info("Removing ValidatingWebhookConfiguration associated with deleted policy")
+	validatingWebhookConf := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: admissionPolicy.Name,
 		},
 	}
-	if err := r.Client.Delete(ctx, ar); err != nil && !apierrors.IsNotFound(err) {
+	if err := r.Client.Delete(ctx, validatingWebhookConf); err != nil && !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot delete ValidatingWebhookConfiguration")
+		errors = append(errors, err)
+	}
+
+	r.Log.Info("Removing MutatingWebhookConfiguration associated with deleted policy")
+	mutatingWebhookConf := &admissionregistrationv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: admissionPolicy.Name,
+		},
+	}
+	if err := r.Client.Delete(ctx, mutatingWebhookConf); err != nil && !apierrors.IsNotFound(err) {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete MutatingWebhookConfiguration")
 		errors = append(errors, err)
 	}
 
@@ -83,7 +94,49 @@ func (r *Reconciler) Reconcile(ctx context.Context, admissionPolicy *chimerav1al
 	if policyServerReady {
 		// register the new dynamic admission controller only once the policy is
 		// served by the PolicyServer deployment
-		return r.reconcileAdmissionRegistration(ctx, admissionPolicy, policyServerSecret)
+		if admissionPolicy.Spec.Mutating {
+			return r.reconcileMutatingWebhookRegistration(ctx, admissionPolicy, policyServerSecret)
+		}
+
+		return r.reconcileValidatingWebhookRegistration(ctx, admissionPolicy, policyServerSecret)
 	}
 	return err
+}
+
+func (r *Reconciler) operationTypes(
+	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+) []admissionregistrationv1.OperationType {
+	operationTypes := []admissionregistrationv1.OperationType{}
+	for _, operation := range admissionPolicy.Spec.Operations {
+		switch strings.ToUpper(operation) {
+		case "*":
+			operationTypes = append(
+				operationTypes,
+				admissionregistrationv1.OperationAll,
+			)
+		case "CREATE":
+			operationTypes = append(
+				operationTypes,
+				admissionregistrationv1.Create,
+			)
+		case "UPDATE":
+			operationTypes = append(
+				operationTypes,
+				admissionregistrationv1.Update,
+			)
+		case "DELETE":
+			operationTypes = append(
+				operationTypes,
+				admissionregistrationv1.Delete,
+			)
+		case "CONNECT":
+			operationTypes = append(
+				operationTypes,
+				admissionregistrationv1.Connect,
+			)
+		default:
+			continue
+		}
+	}
+	return operationTypes
 }
