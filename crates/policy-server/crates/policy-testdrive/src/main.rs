@@ -8,6 +8,7 @@ use std::process;
 use std::fs::File;
 use std::io::BufReader;
 
+#[allow(clippy::unnecessary_wraps)]
 fn host_callback(
     id: u64,
     bd: &str,
