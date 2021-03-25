@@ -64,7 +64,7 @@ impl ValidationResponse {
                     None
                 } else {
                     let diff_str = serde_json::to_string(&diff)
-                        .and_then(|d| Ok(base64::encode(d)))
+                        .map(base64::encode)
                         .map_err(|e| anyhow!("cannot serialize JSONPatch: {:?}", e))?;
                     Some(diff_str)
                 }
