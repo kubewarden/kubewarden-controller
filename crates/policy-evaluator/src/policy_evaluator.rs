@@ -9,6 +9,7 @@ use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
 
 use chimera_kube_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+use chimera_kube_policy_sdk::settings::SettingsValidationResponse;
 
 use crate::utils::convert_yaml_map_to_json;
 use crate::validation_response::ValidationResponse;
@@ -105,4 +106,58 @@ impl PolicyEvaluator {
             }
         }
     }
+
+    pub fn validate_settings(&mut self) -> SettingsValidationResponse {
+        let settings_str = match serde_json::to_string(&self.settings) {
+            Ok(s) => s,
+            Err(e) => {
+                return SettingsValidationResponse {
+                    valid: false,
+                    message: Some(format!("Cannot serialize validation params: {}", e)),
+                }
+            }
+        };
+
+        match self
+            .wapc_host
+            .call("validate_settings", settings_str.as_bytes())
+        {
+            Ok(res) => {
+                let vr: Result<SettingsValidationResponse> = serde_json::from_slice(&res)
+                    .map_err(|e| anyhow!("cannot convert response: {:?}", e));
+                vr.unwrap_or_else(|e| SettingsValidationResponse {
+                    valid: false,
+                    message: Some(format!("error: {:?}", e)),
+                })
+            }
+            Err(err) => {
+                if let wapc::errors::ErrorKind::GuestCallFailure(m) = err.kind() {
+                    // Unfortunately waPC doesn't define a dedicated error
+                    if m.contains("No handler registered") {
+                        return SettingsValidationResponse {
+                            valid: true,
+                            message: Some(String::from(
+                                "This policy doesn't have a settings validation capability",
+                            )),
+                        };
+                    }
+                };
+                SettingsValidationResponse {
+                    valid: false,
+                    message: Some(format!(
+                        "Error invoking settings validation callback: {:?}",
+                        err
+                    )),
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_reject_response() {}
 }
