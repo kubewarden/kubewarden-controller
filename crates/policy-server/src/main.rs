@@ -14,12 +14,10 @@ mod admission_review;
 mod api;
 mod registry;
 mod server;
-mod utils;
 mod wasm_fetcher;
 mod worker;
 
-mod policies;
-use policies::read_policies_file;
+use policy_evaluator::policy::read_policies_file;
 
 mod sources;
 use sources::read_sources_file;

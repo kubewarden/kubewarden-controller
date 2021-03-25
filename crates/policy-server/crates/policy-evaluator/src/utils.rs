@@ -31,7 +31,7 @@ pub(crate) fn convert_yaml_map_to_json(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::policies::Policy;
+    use crate::policy::Policy;
     use std::collections::HashMap;
 
     #[test]

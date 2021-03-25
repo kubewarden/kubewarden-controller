@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use hyper::{Body, Method, Request, Response, StatusCode};
+use policy_evaluator::validation_response::ValidationResponse;
 use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
 
@@ -68,7 +69,7 @@ async fn handle_post_validate(
     match res {
         Ok(r) => match r {
             Some(vr) => {
-                let json_payload = match build_ar_response(adm_rev.uid, vr) {
+                let json_payload = match build_ar_response(vr) {
                     Ok(j) => j,
                     Err(e) => {
                         println!("Error while building response: {:?}", e);
@@ -77,6 +78,7 @@ async fn handle_post_validate(
                         return Ok(internal_error);
                     }
                 };
+
                 match Response::builder()
                     .header(hyper::header::CONTENT_TYPE, "application/json")
                     .status(StatusCode::OK)
@@ -106,37 +108,12 @@ async fn handle_post_validate(
     }
 }
 
-fn build_ar_response(
-    review_uid: String,
-    validation_response: wasm::ValidationResponse,
-) -> anyhow::Result<String> {
-    let mut base = json!({
+fn build_ar_response(validation_response: ValidationResponse) -> anyhow::Result<String> {
+    let reply = json!({
         "apiVersion": "admission.k8s.io/v1",
         "kind": "AdmissionReview",
-        "response": {
-            "uid": review_uid,
-            "allowed": validation_response.accepted
-        }
+        "response": validation_response,
     });
-
-    let reply = base
-        .as_object_mut()
-        .ok_or_else(|| anyhow!("Cannot build json response"))?;
-
-    let mut status = serde_json::Map::new();
-    if let Some(code) = validation_response.code {
-        status.insert(String::from("code"), json!(code));
-    }
-    if let Some(message) = validation_response.message {
-        status.insert(String::from("message"), json!(message));
-    }
-
-    if !status.is_empty() {
-        let response = reply["response"]
-            .as_object_mut()
-            .ok_or_else(|| anyhow!("Cannot response - empty status"))?;
-        response.insert(String::from("status"), json!(status));
-    }
 
     serde_json::to_string(&reply).map_err(|e| anyhow!("Error serializing response: {:?}", e))
 }

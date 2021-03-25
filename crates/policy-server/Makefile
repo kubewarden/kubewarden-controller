@@ -14,7 +14,7 @@ lint:
 
 .PHONY: test
 test: fmt lint
-	cargo test
+	cargo test --workspace
 
 .PHONY: clean
 clean:
