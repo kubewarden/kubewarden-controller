@@ -20,6 +20,12 @@ issues:
     - path: internal/pkg/admissionregistration/cert.go
       linters:
         - gocritic
+    - path: internal/pkg/admission/validating-webhook.go
+      linters:
+        - dupl
+    - path: internal/pkg/admission/mutating-webhook.go
+      linters:
+        - dupl
 
 linters:
   enable-all: true
