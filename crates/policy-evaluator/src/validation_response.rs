@@ -215,8 +215,9 @@ mod tests {
         assert!(response.status.is_none());
         assert_eq!(response.patch_type, Some(String::from("JSONPatch")));
 
+        let patch_decoded_str = base64::decode(response.patch.unwrap()).unwrap();
         let patch: json_patch::Patch =
-            serde_json::from_str(response.patch.unwrap().as_str()).unwrap();
+            serde_json::from_slice(patch_decoded_str.as_slice()).unwrap();
         assert_eq!(patch, expected_diff);
     }
 }
