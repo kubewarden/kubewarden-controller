@@ -3,10 +3,12 @@ use hyper::{Body, Method, Request, Response, StatusCode};
 use policy_evaluator::validation_response::ValidationResponse;
 use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
+use tracing::{debug, error, info, warn};
 
 use crate::admission_review::AdmissionReview;
 use crate::communication::EvalRequest;
 
+#[tracing::instrument]
 pub(crate) async fn route(
     req: hyper::Request<hyper::Body>,
     tx: mpsc::Sender<EvalRequest>,
@@ -33,6 +35,7 @@ pub(crate) async fn route(
     }
 }
 
+#[tracing::instrument]
 async fn handle_post_validate(
     req: Request<Body>,
     policy_id: String,
@@ -43,8 +46,11 @@ async fn handle_post_validate(
     let adm_rev = match AdmissionReview::new(raw) {
         Ok(ar) => ar,
         Err(e) => {
-            //TODO: proper logging
-            println!("Bad AdmissionReview request {}", e);
+            warn!(
+                error = e.to_string().as_str(),
+                "Bad AdmissionReview request"
+            );
+
             let mut bad_req = Response::default();
             *bad_req.status_mut() = StatusCode::BAD_REQUEST;
             return Ok(bad_req);
@@ -59,7 +65,8 @@ async fn handle_post_validate(
         resp_chan: resp_tx,
     };
     if tx.send(eval_req).await.is_err() {
-        println!("Error while sending request from API to Worker pool");
+        error!("error while sending request from API to Worker pool");
+
         let mut internal_error = Response::default();
         *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
         return Ok(internal_error);
@@ -72,12 +79,13 @@ async fn handle_post_validate(
                 let json_payload = match build_ar_response(vr) {
                     Ok(j) => j,
                     Err(e) => {
-                        println!("Error while building response: {:?}", e);
+                        error!(error = e.to_string().as_str(), "error building response");
                         let mut internal_error = Response::default();
                         *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                         return Ok(internal_error);
                     }
                 };
+                debug!(response = json_payload.as_str(), "policy evaluated");
 
                 match Response::builder()
                     .header(hyper::header::CONTENT_TYPE, "application/json")
@@ -86,7 +94,10 @@ async fn handle_post_validate(
                 {
                     Ok(builder) => Ok(builder),
                     Err(e) => {
-                        println!("Error while building response: {:?}", e);
+                        error!(
+                            error = e.to_string().as_str(),
+                            "error while building response"
+                        );
                         let mut internal_error = Response::default();
                         *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
                         Ok(internal_error)
@@ -94,13 +105,17 @@ async fn handle_post_validate(
                 }
             }
             None => {
+                warn!("requested policy not known");
                 let mut not_found = Response::default();
                 *not_found.status_mut() = StatusCode::NOT_FOUND;
                 Ok(not_found)
             }
         },
         Err(e) => {
-            println!("Cannot get WASM response from channel: {}", e);
+            error!(
+                error = e.to_string().as_str(),
+                "cannot get WASM response from channel"
+            );
             let mut internal_error = Response::default();
             *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
             Ok(internal_error)
@@ -118,7 +133,9 @@ fn build_ar_response(validation_response: ValidationResponse) -> anyhow::Result<
     serde_json::to_string(&reply).map_err(|e| anyhow!("Error serializing response: {:?}", e))
 }
 
+#[tracing::instrument]
 async fn handle_not_found() -> Result<Response<Body>, hyper::Error> {
+    info!("request not found");
     let mut not_found = Response::default();
     *not_found.status_mut() = StatusCode::NOT_FOUND;
     Ok(not_found)

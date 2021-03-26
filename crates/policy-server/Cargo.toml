@@ -28,6 +28,9 @@ serde_yaml = "0.8.15"
 tokio-compat-02 = "0.2.0"
 tokio-native-tls = "0.3.0"
 tokio = { version = "^1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version= "0.2", features = ["fmt"] }
+tracing-futures = "0.2"
 url = "2.2.0"
 
 [workspace]

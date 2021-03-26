@@ -12,6 +12,7 @@ use std::{
     vec::Vec,
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tracing::{debug, error, info};
 
 use crate::worker::Worker;
 
@@ -23,6 +24,7 @@ pub(crate) struct WorkerPool {
 }
 
 impl WorkerPool {
+    #[tracing::instrument]
     pub(crate) fn new(
         size: usize,
         policies: HashMap<String, Policy>,
@@ -41,24 +43,21 @@ impl WorkerPool {
             let canary = boot_canary.clone();
 
             let join = thread::spawn(move || -> Result<()> {
-                println!("spawning worker {}", n);
+                info!(spawned = n, total = size, "spawning worker");
                 let worker = match Worker::new(rx, ps) {
                     Ok(w) => w,
                     Err(e) => {
-                        let msg = format!("Worker {} couldn't start: {:?}", n, e);
-                        //TODO: better logging
-                        println!("{}", msg);
+                        error!(error = e.to_string().as_str(), "cannot spawn worker");
                         canary.store(false, Ordering::SeqCst);
                         b.wait();
-                        return Err(anyhow!(msg));
+                        return Err(anyhow!("Worker {} couldn't start: {:?}", n, e));
                     }
                 };
                 b.wait();
 
-                //TODO: better logging
-                println!("worker {} loop start", n);
+                debug!(id = n, "worker loop start");
                 worker.run();
-                println!("worker {} loop exit", n);
+                debug!(id = n, "worker loop exit");
 
                 Ok(())
             });

@@ -9,6 +9,9 @@ use std::{
     thread,
 };
 use tokio::{runtime::Runtime, sync::mpsc::channel};
+use tracing::{debug, error, info};
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::{fmt, EnvFilter};
 
 mod admission_review;
 mod api;
@@ -37,12 +40,20 @@ fn main() {
 
     let matches = App::new("policy-server")
         .version(VERSION)
-        .about("Kubernetes admission controller powered by Chimera WASM policies")
+        .about("Kubernetes admission controller powered by Wasm policies")
         .arg(
             Arg::with_name("debug")
                 .long("debug")
+                .env("CHIMERA_DEBUG")
                 .takes_value(false)
                 .help("Increase verbosity"),
+        )
+        .arg(
+            Arg::with_name("log-fmt")
+                .long("log-fmt")
+                .env("CHIMERA_LOG_FMT")
+                .default_value("text")
+                .help("Log output format. Valid values: 'json', 'text'"),
         )
         .arg(
             Arg::with_name("address")
@@ -111,6 +122,27 @@ fn main() {
         )
         .get_matches();
 
+    // setup logging
+    let level_filter = if matches.is_present("debug") {
+        "debug"
+    } else {
+        "info"
+    };
+    let filter_layer = EnvFilter::new(level_filter)
+        .add_directive("cranelift_codegen=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
+        .add_directive("cranelift_wasm=off".parse().unwrap()); // this crate generates lots of tracing events we don't care about
+    if matches.value_of("log-fmt").unwrap_or_default() == "json" {
+        tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(fmt::layer().json())
+            .init();
+    } else {
+        tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(fmt::layer())
+            .init();
+    };
+
     let addr: SocketAddr = match format!(
         "{}:{}",
         matches.value_of("address").unwrap(),
@@ -176,10 +208,16 @@ fn main() {
                 .ok()
         });
 
+    // Download policies
     let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
     let policies_total = policies.len();
-    for (c, policy) in policies.iter_mut() {
-        println!("Downloading policy {}/{}", c, policies_total);
+    info!(
+        download_dir = policies_download_dir,
+        policies_count = policies_total,
+        "policies download started",
+    );
+    for (name, policy) in policies.iter_mut() {
+        debug!(policy = name.as_str(), "download");
         match rt.block_on(wasm_fetcher::fetch_wasm_module(
             &policy.url,
             policies_download_dir,
@@ -188,10 +226,14 @@ fn main() {
         )) {
             Ok(path) => policy.wasm_module_path = path,
             Err(e) => {
-                return fatal_error(format!("Error while fetching policy {}: {}", policy.url, e));
+                return fatal_error(format!(
+                    "error while fetching policy {} from {}: {}",
+                    name, policy.url, e
+                ));
             }
         };
     }
+    info!("policies download completed");
 
     let (api_tx, api_rx) = channel::<EvalRequest>(32);
     let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
@@ -211,6 +253,7 @@ fn main() {
     let boot_canary = Arc::new(AtomicBool::new(true));
     let main_boot_canary = boot_canary.clone();
 
+    info!(pool_size, "starting workers pool");
     let wasm_thread = thread::spawn(move || {
         let worker_pool =
             WorkerPool::new(pool_size, policies.clone(), api_rx, barrier, boot_canary);
@@ -243,6 +286,6 @@ fn main() {
 }
 
 fn fatal_error(msg: String) {
-    println!("{}", msg);
+    error!("{}", msg);
     process::exit(1);
 }
