@@ -1,17 +1,7 @@
-dedicated_nodes_tenant_A:
-  url: registry://ghcr.io/chimera-kube/policies/pod-toleration:v0.0.2
+psp-apparmor:
+  url: registry://ghcr.io/chimera-kube/policies/psp-apparmor:v0.1.1
+psp-capabilities:
+  url: registry://ghcr.io/chimera-kube/policies/psp-capabilities:v0.1.0
   settings:
-    taint_key: dedicated
-    taint_value: tenantA
-    allowed_groups:
-      - administrators
-      - tenant-a-users
-dedicated_nodes_tenant_B:
-  url: registry://ghcr.io/chimera-kube/policies/pod-toleration:v0.0.2
-  settings:
-    taint_key: dedicated
-    taint_value: tenantB
-    allowed_groups:
-      - administrators
-      - tenant-b-users
-
+    allowed_capabilities: ["*"]
+    required_drop_capabilities: ["KILL"]

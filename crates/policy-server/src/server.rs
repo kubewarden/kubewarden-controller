@@ -15,7 +15,7 @@ use tokio::{
 use tokio_native_tls::{native_tls, TlsAcceptor, TlsStream};
 
 use crate::api;
-use crate::wasm::EvalRequest;
+use crate::communication::EvalRequest;
 
 pub(crate) fn new_tls_acceptor(cert_file: &str, key_file: &str) -> Result<TlsAcceptor> {
     let mut cert_file = File::open(cert_file)

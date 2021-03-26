@@ -17,6 +17,9 @@ mod server;
 mod wasm_fetcher;
 mod worker;
 
+mod worker_pool;
+use worker_pool::WorkerPool;
+
 use policy_evaluator::policy::read_policies_file;
 
 mod sources;
@@ -24,14 +27,16 @@ use sources::read_sources_file;
 
 use std::fs;
 
-mod wasm;
-use crate::wasm::EvalRequest;
+mod communication;
+use communication::EvalRequest;
 
 use crate::registry::config::{DockerConfig, DockerConfigRaw};
 
 fn main() {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+
     let matches = App::new("policy-server")
-        .version("0.0.1")
+        .version(VERSION)
         .about("Kubernetes admission controller powered by Chimera WASM policies")
         .arg(
             Arg::with_name("debug")
@@ -208,7 +213,7 @@ fn main() {
 
     let wasm_thread = thread::spawn(move || {
         let worker_pool =
-            worker::WorkerPool::new(pool_size, policies.clone(), api_rx, barrier, boot_canary);
+            WorkerPool::new(pool_size, policies.clone(), api_rx, barrier, boot_canary);
         worker_pool.run();
     });
     // wait for all the workers to be ready, then ensure none of them had issues
