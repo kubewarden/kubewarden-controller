@@ -19,10 +19,10 @@ pub(crate) struct Https {
     wasm_url: Url,
 }
 
-enum TLSFetchMode {
-    CustomCA(Certificate),
-    SystemCA,
-    NoTLSVerification,
+enum TlsFetchMode {
+    CustomCa(Certificate),
+    SystemCa,
+    NoTlsVerification,
 }
 
 impl Https {
@@ -50,15 +50,15 @@ impl Https {
         })
     }
 
-    async fn fetch_https(&self, fetch_mode: TLSFetchMode) -> Result<String> {
+    async fn fetch_https(&self, fetch_mode: TlsFetchMode) -> Result<String> {
         let mut tls_connector_builder = TlsConnector::builder();
 
         match fetch_mode {
-            TLSFetchMode::CustomCA(certificate) => {
+            TlsFetchMode::CustomCa(certificate) => {
                 tls_connector_builder.add_root_certificate(certificate);
             }
-            TLSFetchMode::SystemCA => (),
-            TLSFetchMode::NoTLSVerification => {
+            TlsFetchMode::SystemCa => (),
+            TlsFetchMode::NoTlsVerification => {
                 tls_connector_builder.danger_accept_invalid_certs(true);
             }
         };
@@ -127,7 +127,7 @@ impl Fetcher for Https {
 
             if let Some(host_ca_certificate) = sources.source_authority(host) {
                 if let Ok(module_contents) = self
-                    .fetch_https(TLSFetchMode::CustomCA(host_ca_certificate))
+                    .fetch_https(TlsFetchMode::CustomCa(host_ca_certificate))
                     .await
                 {
                     return Ok(module_contents);
@@ -135,13 +135,13 @@ impl Fetcher for Https {
                     return Err(anyhow!("could not download Wasm module from {} using provided CA certificate; aborting since host is not set as insecure", self.wasm_url));
                 }
             }
-            if let Ok(module_contents) = self.fetch_https(TLSFetchMode::SystemCA).await {
+            if let Ok(module_contents) = self.fetch_https(TlsFetchMode::SystemCa).await {
                 return Ok(module_contents);
             }
             if !sources.is_insecure_source(host) {
                 return Err(anyhow!("could not download Wasm module from {} using system CA certificates; aborting since host is not set as insecure", self.wasm_url));
             }
-            if let Ok(module_contents) = self.fetch_https(TLSFetchMode::NoTLSVerification).await {
+            if let Ok(module_contents) = self.fetch_https(TlsFetchMode::NoTlsVerification).await {
                 return Ok(module_contents);
             }
         }
