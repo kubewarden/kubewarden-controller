@@ -15,5 +15,7 @@ json-patch = "0.2.6"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8.15"
+tracing = "0.1"
+tracing-futures = "0.2"
 wapc = "0.10.1"
 wasmtime-provider = "0.0.2"
