@@ -3,6 +3,7 @@ use anyhow::{anyhow, Result};
 use policy_evaluator::{policy::Policy, policy_evaluator::PolicyEvaluator};
 use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
+use tracing::error;
 
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn host_callback(
@@ -27,6 +28,7 @@ pub(crate) struct Worker {
 }
 
 impl Worker {
+    #[tracing::instrument]
     pub(crate) fn new(
         rx: Receiver<EvalRequest>,
         policies: HashMap<String, Policy>,
@@ -59,15 +61,15 @@ impl Worker {
 
     pub(crate) fn run(mut self) {
         while let Some(req) = self.channel_rx.blocking_recv() {
-            //TODO: handle error
-            match self.evaluators.get_mut(&req.policy_id) {
+            let res = match self.evaluators.get_mut(&req.policy_id) {
                 Some(policy_evaluator) => {
                     let resp = policy_evaluator.validate(req.req);
-                    let _ = req.resp_chan.send(Some(resp));
+                    req.resp_chan.send(Some(resp))
                 }
-                None => {
-                    let _ = req.resp_chan.send(None);
-                }
+                None => req.resp_chan.send(None),
+            };
+            if res.is_err() {
+                error!("receiver dropped");
             }
         }
     }

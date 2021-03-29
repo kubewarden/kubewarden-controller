@@ -13,6 +13,7 @@ use tokio::{
     sync::mpsc::Sender,
 };
 use tokio_native_tls::{native_tls, TlsAcceptor, TlsStream};
+use tracing::{error, info};
 
 use crate::api;
 use crate::communication::EvalRequest;
@@ -67,9 +68,9 @@ pub(crate) async fn run_server(
         None => {
             let make_svc = mk_svc_fn!(api_tx);
             let server = Server::bind(&addr).serve(make_svc);
-            println!("Started server on {}", addr);
+            info!(address = addr.to_string().as_str(), "started HTTP server");
             if let Err(e) = server.await {
-                eprintln!("server error: {}", e);
+                error!(error = e.to_string().as_str(), "HTTP server error");
             }
         }
         Some(tls_acceptor) => {
@@ -78,7 +79,7 @@ pub(crate) async fn run_server(
                 loop {
                     let (socket, _) = tcp.accept().await?;
                     let stream = tls_acceptor.accept(socket).map_err(|e| {
-                        println!("[!] Voluntary server halt due to client-connection error...");
+                        error!("[!] Voluntary server halt due to client-connection error...");
                         error(format!("TLS Error: {:?}", e))
                     });
                     yield stream.await;
@@ -91,9 +92,9 @@ pub(crate) async fn run_server(
             })
             .serve(make_svc);
 
-            println!("Started server on {}", addr);
+            info!(address = addr.to_string().as_str(), "started HTTPS server");
             if let Err(e) = server.await {
-                eprintln!("server error: {}", e);
+                error!(error = e.to_string().as_str(), "HTTPS server error");
             }
         }
     };

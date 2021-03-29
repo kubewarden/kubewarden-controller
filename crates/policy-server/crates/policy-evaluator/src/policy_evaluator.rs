@@ -2,8 +2,9 @@ use anyhow::{anyhow, Result};
 
 use serde_json::json;
 
-use std::fs::File;
-use std::io::prelude::*;
+use std::{fmt, fs::File, io::prelude::*};
+
+use tracing::error;
 
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
@@ -17,6 +18,14 @@ use crate::validation_response::ValidationResponse;
 pub struct PolicyEvaluator {
     wapc_host: WapcHost,
     settings: serde_json::Map<String, serde_json::Value>,
+}
+
+impl fmt::Debug for PolicyEvaluator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PolicyEvaluator")
+            .field("settings", &self.settings)
+            .finish()
+    }
 }
 
 impl PolicyEvaluator {
@@ -49,6 +58,7 @@ impl PolicyEvaluator {
         })
     }
 
+    #[tracing::instrument]
     pub fn validate(&mut self, request: serde_json::Value) -> ValidationResponse {
         let uid = request
             .get("uid")
@@ -74,8 +84,10 @@ impl PolicyEvaluator {
         let validate_str = match serde_json::to_string(&validate_params) {
             Ok(s) => s,
             Err(e) => {
-                //TODO: proper logging
-                println!("Cannot serialize validation params: {}", e);
+                error!(
+                    error = e.to_string().as_str(),
+                    "cannot serialize validation params"
+                );
                 return ValidationResponse::reject_internal_server_error(uid);
             }
         };
@@ -94,14 +106,16 @@ impl PolicyEvaluator {
                         )
                     })
                     .unwrap_or_else(|e| {
-                        //TODO: proper logging
-                        println!("Cannot build validation response from policy result: {}", e);
+                        error!(
+                            error = e.to_string().as_str(),
+                            "cannot build validation response from policy result"
+                        );
                         ValidationResponse::reject_internal_server_error(uid)
                     })
             }
             Err(e) => {
-                //TODO: proper logging
-                println!("Something went wrong with waPC: {}", e);
+                error!(error = e.to_string().as_str(), "waPC communication error");
+
                 ValidationResponse::reject_internal_server_error(uid)
             }
         }
