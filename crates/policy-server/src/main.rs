@@ -1,3 +1,6 @@
+extern crate k8s_openapi;
+extern crate kube;
+
 use clap::{App, Arg};
 use std::{
     net::SocketAddr,
@@ -152,20 +155,22 @@ fn main() {
     {
         Ok(a) => a,
         Err(error) => {
-            return fatal_error(format!("Error parsing arguments: {}", error));
+            fatal_error(format!("error parsing arguments: {}", error));
+            unreachable!();
         }
     };
 
     let cert_file = String::from(matches.value_of("cert-file").unwrap());
     let key_file = String::from(matches.value_of("key-file").unwrap());
     if cert_file.is_empty() != key_file.is_empty() {
-        return fatal_error("Error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
-    }
+        fatal_error("error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
+    };
 
     let rt = match Runtime::new() {
         Ok(r) => r,
         Err(error) => {
-            return fatal_error(format!("Error initializing tokio runtime: {}", error));
+            fatal_error(format!("error initializing tokio runtime: {}", error));
+            unreachable!();
         }
     };
 
@@ -173,10 +178,11 @@ fn main() {
     let mut policies = match read_policies_file(policies_file) {
         Ok(policies) => policies,
         Err(err) => {
-            return fatal_error(format!(
-                "Error while loading policies from {}: {}",
+            fatal_error(format!(
+                "error while loading policies from {}: {}",
                 policies_file, err
             ));
+            unreachable!();
         }
     };
 
@@ -186,7 +192,7 @@ fn main() {
             Ok(sources) => sources,
             Err(err) => {
                 fatal_error(format!(
-                    "Error while loading sources from {}: {}",
+                    "error while loading sources from {}: {}",
                     sources_file, err
                 ));
                 unreachable!();
@@ -263,7 +269,7 @@ fn main() {
     // at boot time
     main_barrier.wait();
     if !main_boot_canary.load(Ordering::SeqCst) {
-        return fatal_error(String::from("Couldn't init one of the workers"));
+        fatal_error("could not init one of the workers".to_string());
     }
 
     // All is good, we can start listening for incoming requests through the
@@ -274,14 +280,15 @@ fn main() {
         match server::new_tls_acceptor(&cert_file, &key_file) {
             Ok(t) => Some(t),
             Err(e) => {
-                return fatal_error(format!("Error while creating tls acceptor: {:?}", e));
+                fatal_error(format!("error while creating tls acceptor: {:?}", e));
+                unreachable!();
             }
         }
     };
     rt.block_on(server::run_server(&addr, tls_acceptor, api_tx));
 
     if let Err(e) = wasm_thread.join() {
-        return fatal_error(format!("Error while waiting for worker threads: {:?}", e));
+        fatal_error(format!("error while waiting for worker threads: {:?}", e));
     }
 }
 

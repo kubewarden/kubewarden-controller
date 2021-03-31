@@ -12,9 +12,13 @@ base64 = "0.13.0"
 chimera-kube-policy-sdk = { git = "https://github.com/chimera-kube/policy-sdk-rust.git", branch = "main" }
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
+kube = "0.51.0"
+k8s-openapi = { version = "0.11.0", default-features = false, features = ["v1_20"] }
+lazy_static = "1.4.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8.15"
+tokio = { version = "^1" }
 tracing = "0.1"
 tracing-futures = "0.2"
 wapc = "0.10.1"
