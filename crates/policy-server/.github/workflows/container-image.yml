@@ -38,7 +38,7 @@ jobs:
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/chimera-kube/policy-server:latest
+            ghcr.io/kubewarden/policy-server:latest
       -
         name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -54,4 +54,4 @@ jobs:
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/chimera-kube/policy-server:${{ env.TAG_NAME }}
+            ghcr.io/kubewarden/policy-server:${{ env.TAG_NAME }}

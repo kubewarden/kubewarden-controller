@@ -1,7 +1,7 @@
 psp-apparmor:
-  url: registry://ghcr.io/chimera-kube/policies/psp-apparmor:v0.1.1
+  url: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.1
 psp-capabilities:
-  url: registry://ghcr.io/chimera-kube/policies/psp-capabilities:v0.1.0
+  url: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.0
   settings:
     allowed_capabilities: ["*"]
     required_drop_capabilities: ["KILL"]

@@ -8,7 +8,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   BUILD_TARGET: x86_64-unknown-linux-musl
-  BINARY_NAME: chimera-policy-testdrive
+  BINARY_NAME: policy-testdrive
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -1,16 +1,16 @@
 use clap::{App, Arg};
 
 pub(crate) fn app() -> App<'static, 'static> {
-    App::new("chimera-policy-testdrive")
+    App::new("policy-testdrive")
         .version("0.0.1")
-        .about("Quickly test chimera policies")
+        .about("Quickly test Kubewarden policies")
         .arg(
             Arg::with_name("policy")
                 .short("p")
                 .long("policy")
                 .value_name("POLICY.wasm")
                 .required(true)
-                .help("Chimera WASM policy file"),
+                .help("Kubewarden Wasm policy file"),
         )
         .arg(
             Arg::with_name("request-file")

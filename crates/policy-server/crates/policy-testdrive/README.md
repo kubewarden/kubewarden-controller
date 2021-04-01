@@ -1,4 +1,4 @@
-chimera-policy-testdrive is a CLI tool for quickly testing chimera policies.
+policy-testdrive is a CLI tool for quickly testing Kubewarden policies.
 
 The tool takes the following data as input:
 
@@ -14,27 +14,26 @@ the standard output.
 
 ## Example
 
-We want to test this [pod toleration policy](https://github.com/chimera-kube/pod-toleration-policy)
-against a pre-recorded Kubernetes admission request. The admission request is
+We want to test this [psp-capabilities](https://github.com/kubewarden/psp-capabilities)
+policy against a pre-recorded Kubernetes admission request. The admission request is
 saved inside of a file called `test_request.json`.
 
 We want to run the policy with the following settings. Note well, this would
-be the syntax used inside of [policy-server](https://github.com/chimera-kube/policy-server)'s
+be the syntax used inside of [policy-server](https://github.com/kubewarden/policy-server)'s
 `policies.yml` file:
 
 ```yaml
 settings:
-  - taint_key: dedicated
-  - taint_value: tenantA
-  - allowed_groups: tenantA-users
+  allowed_capabilities:
+  - CHOWN
 ```
 
 This command will evaluate the policy against a pre-recorded Kubernetes admission
 request object:
 
 ```shell
-$ chimera-policy-testdrive \
-    --policy pod-toleration-policy.wasm \
+$ policy-testdrive \
+    --policy psp-capabilities.wasm \
     --request-file test_request.json \
-    --settings '{"taint_key": "dedicated", "taint_value": "tenantA", "allowed_groups": "tenantA-users"}'
+    --settings '{"allowed_capabilities": [ "CHOWN" ] }'
 ```
