@@ -47,14 +47,14 @@ fn main() {
         .arg(
             Arg::with_name("debug")
                 .long("debug")
-                .env("CHIMERA_DEBUG")
+                .env("KUBEWARDEN_DEBUG")
                 .takes_value(false)
                 .help("Increase verbosity"),
         )
         .arg(
             Arg::with_name("log-fmt")
                 .long("log-fmt")
-                .env("CHIMERA_LOG_FMT")
+                .env("KUBEWARDEN_LOG_FMT")
                 .default_value("text")
                 .help("Log output format. Valid values: 'json', 'text'"),
         )
@@ -62,43 +62,43 @@ fn main() {
             Arg::with_name("address")
                 .long("addr")
                 .default_value("0.0.0.0")
-                .env("CHIMERA_BIND_ADDRESS")
+                .env("KUBEWARDEN_BIND_ADDRESS")
                 .help("Bind against ADDRESS"),
         )
         .arg(
             Arg::with_name("port")
                 .long("port")
                 .default_value("3000")
-                .env("CHIMERA_PORT")
+                .env("KUBEWARDEN_PORT")
                 .help("Listen on PORT"),
         )
         .arg(
             Arg::with_name("workers")
                 .long("workers")
-                .env("CHIMERA_WORKERS")
+                .env("KUBEWARDEN_WORKERS")
                 .help("Number of workers thread to create"),
         )
         .arg(
             Arg::with_name("cert-file")
                 .long("cert-file")
                 .default_value("")
-                .env("CHIMERA_CERT_FILE")
+                .env("KUBEWARDEN_CERT_FILE")
                 .help("Path to an X.509 certificate file for HTTPS"),
         )
         .arg(
             Arg::with_name("key-file")
                 .long("key-file")
                 .default_value("")
-                .env("CHIMERA_KEY_FILE")
+                .env("KUBEWARDEN_KEY_FILE")
                 .help("Path to an X.509 private key file for HTTPS"),
         )
         .arg(
             Arg::with_name("policies")
                 .long("policies")
-                .env("CHIMERA_POLICIES")
+                .env("KUBEWARDEN_POLICIES")
                 .default_value("policies.yml")
                 .help(
-                    "YAML file holding the Chimera policies to be loaded and
+                    "YAML file holding the policies to be loaded and
                     their settings",
                 ),
         )
@@ -106,19 +106,19 @@ fn main() {
             Arg::with_name("policies-download-dir")
                 .long("policies-download-dir")
                 .default_value(".")
-                .env("CHIMERA_POLICIES_DOWNLOAD_DIR")
+                .env("KUBEWARDEN_POLICIES_DOWNLOAD_DIR")
                 .help("Download path for the policies"),
         )
         .arg(
             Arg::with_name("sources")
                 .takes_value(true)
                 .long("sources")
-                .env("CHIMERA_SOURCES")
+                .env("KUBEWARDEN_SOURCES")
                 .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
         )
         .arg(
             Arg::with_name("docker-config-json-path")
-                .env("CHIMERA_DOCKER_CONFIG_JSON_PATH")
+                .env("KUBEWARDEN_DOCKER_CONFIG_JSON_PATH")
                 .long("docker-config-json-path")
                 .takes_value(true)
                 .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),

@@ -20,8 +20,8 @@ RUN adduser \
   --home "/none" \
   --shell "/sbin/nologin" \
   --uid 2000 \
-  chimera
-USER chimera
+  kubewarden
+USER kubewarden
 
 EXPOSE 3000
 

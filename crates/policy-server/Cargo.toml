@@ -1,7 +1,10 @@
 [package]
 name = "policy-server"
 version = "0.1.0"
-authors = ["Flavio Castelli <fcastelli@suse.com>"]
+authors = [
+  "Flavio Castelli <fcastelli@suse.com>",
+  "Rafael Fernández López <rfernandezlopez@suse.com>"
+]
 edition = "2018"
 
 [dependencies]
@@ -11,7 +14,7 @@ async-stream = "0.3.0"
 async-trait = "0.1.42"
 base64 = "0.13.0"
 policy-evaluator = { path = "crates/policy-evaluator" }
-chimera-kube-policy-sdk = { git = "https://github.com/chimera-kube/policy-sdk-rust.git", branch = "main" }
+kubewarden-policy-sdk = { git = "https://github.com/kubewarden/policy-sdk-rust.git", branch = "main" }
 clap = "2.33.3"
 futures-util = "0.3.12"
 kube = "0.51.0"
@@ -44,5 +47,5 @@ name = "policy-server"
 path = "src/main.rs"
 
 [[bin]]
-name = "chimera-policy-testdrive"
+name = "policy-testdrive"
 path = "crates/policy-testdrive/src/main.rs"
