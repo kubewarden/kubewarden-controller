@@ -1,7 +1,10 @@
 [package]
 name = "policy-evaluator"
 version = "0.1.0"
-authors = ["Flavio Castelli <fcastelli@suse.com>"]
+authors = [
+  "Flavio Castelli <fcastelli@suse.com>",
+  "Rafael Fernández López <rfernandezlopez@suse.com>"
+]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 base64 = "0.13.0"
-kubewarden-policy-sdk = { git = "https://github.com/kubewarden/policy-sdk-rust.git", branch = "main" }
+kubewarden-policy-sdk = "0.1.0"
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
 kube = "0.51.0"
