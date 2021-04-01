@@ -9,8 +9,8 @@ use tracing::error;
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
 
-use chimera_kube_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
-use chimera_kube_policy_sdk::settings::SettingsValidationResponse;
+use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
 use crate::utils::convert_yaml_map_to_json;
 use crate::validation_response::ValidationResponse;
