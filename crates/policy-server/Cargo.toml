@@ -14,7 +14,7 @@ async-stream = "0.3.0"
 async-trait = "0.1.42"
 base64 = "0.13.0"
 policy-evaluator = { path = "crates/policy-evaluator" }
-kubewarden-policy-sdk = { git = "https://github.com/kubewarden/policy-sdk-rust.git", branch = "main" }
+kubewarden-policy-sdk = "0.1.0"
 clap = "2.33.3"
 futures-util = "0.3.12"
 kube = "0.51.0"
