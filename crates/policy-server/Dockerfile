@@ -7,6 +7,8 @@ RUN cargo install --path .
 
 # final image
 FROM debian:buster-slim
+LABEL org.opencontainers.image.source https://github.com/kubewarden/policy-server
+
 COPY --from=builder /usr/local/cargo/bin/policy-server /usr/local/bin/policy-server
 
 RUN apt-get update && \
