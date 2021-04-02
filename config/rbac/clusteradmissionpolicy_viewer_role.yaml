@@ -5,7 +5,7 @@ metadata:
   name: clusteradmissionpolicy-viewer-role
 rules:
 - apiGroups:
-  - kubewarden.suse.com
+  - policies.kubewarden.io
   resources:
   - clusteradmissionpolicies
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - kubewarden.suse.com
+  - policies.kubewarden.io
   resources:
   - clusteradmissionpolicies/status
   verbs:

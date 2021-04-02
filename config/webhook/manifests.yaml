@@ -12,12 +12,12 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-kubewarden-suse-com-v1alpha1-clusteradmissionpolicy
+      path: /mutate-policies-kubewarden-io-v1alpha1-clusteradmissionpolicy
   failurePolicy: Fail
   name: mclusteradmissionpolicy.kb.io
   rules:
   - apiGroups:
-    - kubewarden.suse.com
+    - policies.kubewarden.io
     apiVersions:
     - v1alpha1
     operations:
@@ -40,12 +40,12 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-kubewarden-suse-com-v1alpha1-clusteradmissionpolicy
+      path: /validate-policies-kubewarden-io-v1alpha1-clusteradmissionpolicy
   failurePolicy: Fail
   name: mclusteradmissionpolicy.kb.io
   rules:
   - apiGroups:
-    - kubewarden.suse.com
+    - policies.kubewarden.io
     apiVersions:
     - v1alpha1
     operations:

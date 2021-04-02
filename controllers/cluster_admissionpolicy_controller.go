@@ -43,8 +43,8 @@ type ClusterAdmissionPolicyReconciler struct {
 	DeploymentsNamespace string
 }
 
-// +kubebuilder:rbac:groups=kubewarden.suse.com,resources=clusteradmissionpolicies,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=kubewarden.suse.com,resources=clusteradmissionpolicies/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/status,verbs=get;update;patch
 
 // Reconcile takes care of reconciling ClusterAdmissionPolicy resources
 func (r *ClusterAdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {

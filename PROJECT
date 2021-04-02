@@ -1,4 +1,4 @@
-domain: suse.com
+domain: kubewarden.io
 repo: github.com/kubewarden/kubewarden-controller
 resources:
 - group: kubewarden

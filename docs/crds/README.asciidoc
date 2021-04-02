@@ -5,11 +5,11 @@
 == API Reference
 
 .Packages
-- xref:{anchor_prefix}-kubewarden-suse-com-v1alpha1[$$kubewarden.suse.com/v1alpha1$$]
+- xref:{anchor_prefix}-policies-kubewarden-io-v1alpha1[$$policies.kubewarden.io/v1alpha1$$]
 
 
-[id="{anchor_prefix}-kubewarden-suse-com-v1alpha1"]
-=== kubewarden.suse.com/v1alpha1
+[id="{anchor_prefix}-policies-kubewarden-io-v1alpha1"]
+=== policies.kubewarden.io/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the kubewarden
 v1alpha1 API group
@@ -33,7 +33,7 @@ ClusterAdmissionPolicy is the Schema for the cluster clusteradmissionpolicies AP
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`apiVersion`* __string__ | `kubewarden.suse.com/v1alpha1`
+| *`apiVersion`* __string__ | `policies.kubewarden.io/v1alpha1`
 | *`kind`* __string__ | `ClusterAdmissionPolicy`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
@@ -51,7 +51,7 @@ ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`apiVersion`* __string__ | `kubewarden.suse.com/v1alpha1`
+| *`apiVersion`* __string__ | `policies.kubewarden.io/v1alpha1`
 | *`kind`* __string__ | `ClusterAdmissionPolicyList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 

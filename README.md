@@ -46,7 +46,7 @@ The following snippet defines a Kubewarden Policy based on the
 policy:
 
 ```yaml
-apiVersion: kubewarden.suse.com/v1alpha1
+apiVersion: policies.kubewarden.io/v1alpha1
 kind: ClusterAdmissionPolicy
 metadata:
   name: privileged-pods
