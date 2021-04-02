@@ -70,7 +70,7 @@ be allowed to create privileged Pods.
 Creating the resource inside of Kubernetes is sufficient to enforce the policy:
 
 ```shell
-$ kubectl apply -f https://raw.githubusercontent.com/kubewarden/kubewarden-controller/v0.1.0/config/samples/kubewarden_v1alpha1_clusteradmissionpolicy.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/kubewarden/kubewarden-controller/main/config/samples/kubewarden_v1alpha1_clusteradmissionpolicy.yaml
 ```
 
 ### Remove your first admission policy
