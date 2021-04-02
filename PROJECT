@@ -1,7 +1,7 @@
 domain: suse.com
-repo: github.com/chimera-kube/chimera-controller
+repo: github.com/kubewarden/kubewarden-controller
 resources:
-- group: chimera
-  kind: AdmissionPolicy
+- group: kubewarden
+  kind: ClusterAdmissionPolicy
   version: v1alpha1
 version: "2"

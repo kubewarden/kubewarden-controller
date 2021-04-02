@@ -1,9 +1,9 @@
-apiVersion: chimera.suse.com/v1alpha1
-kind: AdmissionPolicy
+apiVersion: kubewarden.suse.com/v1alpha1
+kind: ClusterAdmissionPolicy
 metadata:
   name: privileged-pods
 spec:
-  module: registry://ghcr.io/chimera-kube/policies/pod-privileged:v0.1.0
+  module: registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.0
   resources:
   - pods
   operations:

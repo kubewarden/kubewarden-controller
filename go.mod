@@ -1,4 +1,4 @@
-module github.com/chimera-kube/chimera-controller
+module github.com/kubewarden/kubewarden-controller
 
 go 1.13
 
@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go v0.46.3 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef // indirect
-	github.com/golangci/golangci-lint v1.38.0 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

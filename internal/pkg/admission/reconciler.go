@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chimerav1alpha1 "github.com/chimera-kube/chimera-controller/api/v1alpha1"
+	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
 )
 
 type Reconciler struct {
@@ -31,10 +31,10 @@ func (errorList errorList) Error() string {
 }
 
 func (r *Reconciler) ReconcileDeletion(ctx context.Context,
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy) error {
 	errors := errorList{}
 	r.Log.Info("Removing deleted policy from PolicyServer ConfigMap")
-	if err := r.reconcilePolicyServerConfigMap(ctx, admissionPolicy, RemovePolicy); err != nil {
+	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, RemovePolicy); err != nil {
 		r.Log.Error(err, "ReconcileDeletion: cannot update ConfigMap")
 		errors = append(errors, err)
 	}
@@ -42,7 +42,7 @@ func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 	r.Log.Info("Removing ValidatingWebhookConfiguration associated with deleted policy")
 	validatingWebhookConf := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: admissionPolicy.Name,
+			Name: clusterAdmissionPolicy.Name,
 		},
 	}
 	if err := r.Client.Delete(ctx, validatingWebhookConf); err != nil && !apierrors.IsNotFound(err) {
@@ -53,7 +53,7 @@ func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 	r.Log.Info("Removing MutatingWebhookConfiguration associated with deleted policy")
 	mutatingWebhookConf := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: admissionPolicy.Name,
+			Name: clusterAdmissionPolicy.Name,
 		},
 	}
 	if err := r.Client.Delete(ctx, mutatingWebhookConf); err != nil && !apierrors.IsNotFound(err) {
@@ -72,7 +72,7 @@ func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 	return errors
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, admissionPolicy *chimerav1alpha1.AdmissionPolicy) error {
+func (r *Reconciler) Reconcile(ctx context.Context, clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy) error {
 	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, admissionPolicy *chimerav1al
 	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
 		return err
 	}
-	if err := r.reconcilePolicyServerConfigMap(ctx, admissionPolicy, AddPolicy); err != nil {
+	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, AddPolicy); err != nil {
 		return err
 	}
 	if err := r.reconcilePolicyServerDeployment(ctx); err != nil {
@@ -94,20 +94,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, admissionPolicy *chimerav1al
 	if policyServerReady {
 		// register the new dynamic admission controller only once the policy is
 		// served by the PolicyServer deployment
-		if admissionPolicy.Spec.Mutating {
-			return r.reconcileMutatingWebhookRegistration(ctx, admissionPolicy, policyServerSecret)
+		if clusterAdmissionPolicy.Spec.Mutating {
+			return r.reconcileMutatingWebhookRegistration(ctx, clusterAdmissionPolicy, policyServerSecret)
 		}
 
-		return r.reconcileValidatingWebhookRegistration(ctx, admissionPolicy, policyServerSecret)
+		return r.reconcileValidatingWebhookRegistration(ctx, clusterAdmissionPolicy, policyServerSecret)
 	}
 	return err
 }
 
 func (r *Reconciler) operationTypes(
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 ) []admissionregistrationv1.OperationType {
 	operationTypes := []admissionregistrationv1.OperationType{}
-	for _, operation := range admissionPolicy.Spec.Operations {
+	for _, operation := range clusterAdmissionPolicy.Spec.Operations {
 		switch strings.ToUpper(operation) {
 		case "*":
 			operationTypes = append(

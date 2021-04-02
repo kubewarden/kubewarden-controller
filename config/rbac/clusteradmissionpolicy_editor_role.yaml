@@ -1,13 +1,13 @@
-# permissions for end users to edit admissionpolicies.
+# permissions for end users to edit clusteradmissionpolicies.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: admissionpolicy-editor-role
+  name: clusteradmissionpolicy-editor-role
 rules:
 - apiGroups:
-  - chimera.suse.com
+  - kubewarden.suse.com
   resources:
-  - admissionpolicies
+  - clusteradmissionpolicies
   verbs:
   - create
   - delete
@@ -17,8 +17,8 @@ rules:
   - update
   - watch
 - apiGroups:
-  - chimera.suse.com
+  - kubewarden.suse.com
   resources:
-  - admissionpolicies/status
+  - clusteradmissionpolicies/status
   verbs:
   - get

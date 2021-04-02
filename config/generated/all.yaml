@@ -3,28 +3,28 @@ kind: Namespace
 metadata:
   labels:
     control-plane: manager
-  name: chimera-controller-system
+  name: kubewarden-controller-system
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
-  name: admissionpolicies.chimera.suse.com
+  name: clusteradmissionpolicies.kubewarden.suse.com
 spec:
-  group: chimera.suse.com
+  group: kubewarden.suse.com
   names:
-    kind: AdmissionPolicy
-    listKind: AdmissionPolicyList
-    plural: admissionpolicies
-    singular: admissionpolicy
+    kind: ClusterAdmissionPolicy
+    listKind: ClusterAdmissionPolicyList
+    plural: clusteradmissionpolicies
+    singular: clusteradmissionpolicy
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AdmissionPolicy is the Schema for the admissionpolicies API
+        description: ClusterAdmissionPolicy is the Schema for the cluster clusteradmissionpolicies API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
@@ -35,7 +35,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy
+            description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
             properties:
               apiGroups:
                 description: APIGroups is a list of API groups that this webhook should be registered against. Empty array or "*" means everything.
@@ -74,7 +74,7 @@ spec:
             - mutating
             type: object
           status:
-            description: AdmissionPolicyStatus defines the observed state of AdmissionPolicy
+            description: ClusterAdmissionPolicyStatus defines the observed state of ClusterAdmissionPolicy
             type: object
         type: object
     served: true
@@ -89,8 +89,8 @@ status:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: chimera-controller-leader-election-role
-  namespace: chimera-controller-system
+  name: kubewarden-controller-leader-election-role
+  namespace: kubewarden-controller-system
 rules:
 - apiGroups:
   - ""
@@ -123,8 +123,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
-  name: chimera-controller-manager-namespaced-role
-  namespace: chimera-controller-system
+  name: kubewarden-controller-manager-namespaced-role
+  namespace: kubewarden-controller-system
 rules:
 - apiGroups:
   - ""
@@ -147,7 +147,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: chimera-controller-manager-cluster-role
+  name: kubewarden-controller-manager-cluster-role
 rules:
 - apiGroups:
   - admissionregistration.k8s.io
@@ -168,12 +168,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: chimera-controller-manager-role
+  name: kubewarden-controller-manager-role
 rules:
 - apiGroups:
-  - chimera.suse.com
+  - kubewarden.suse.com
   resources:
-  - admissionpolicies
+  - clusteradmissionpolicies
   verbs:
   - create
   - delete
@@ -183,9 +183,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - chimera.suse.com
+  - kubewarden.suse.com
   resources:
-  - admissionpolicies/status
+  - clusteradmissionpolicies/status
   verbs:
   - get
   - patch
@@ -194,7 +194,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: chimera-controller-metrics-reader
+  name: kubewarden-controller-metrics-reader
 rules:
 - nonResourceURLs:
   - /metrics
@@ -204,7 +204,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: chimera-controller-proxy-role
+  name: kubewarden-controller-proxy-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -222,79 +222,79 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: chimera-controller-leader-election-rolebinding
-  namespace: chimera-controller-system
+  name: kubewarden-controller-leader-election-rolebinding
+  namespace: kubewarden-controller-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: chimera-controller-leader-election-role
+  name: kubewarden-controller-leader-election-role
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: chimera-controller-system
+  namespace: kubewarden-controller-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   creationTimestamp: null
-  name: chimera-controller-manager-namespaced-rolebinding
-  namespace: chimera-controller-system
+  name: kubewarden-controller-manager-namespaced-rolebinding
+  namespace: kubewarden-controller-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: chimera-controller-manager-namespaced-role
+  name: kubewarden-controller-manager-namespaced-role
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: chimera-controller-system
+  namespace: kubewarden-controller-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
-  name: chimera-controller-manager-cluster-role
+  name: kubewarden-controller-manager-cluster-role
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chimera-controller-manager-cluster-role
+  name: kubewarden-controller-manager-cluster-role
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: chimera-controller-system
+  namespace: kubewarden-controller-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: chimera-controller-manager-rolebinding
+  name: kubewarden-controller-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chimera-controller-manager-role
+  name: kubewarden-controller-manager-role
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: chimera-controller-system
+  namespace: kubewarden-controller-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: chimera-controller-proxy-rolebinding
+  name: kubewarden-controller-proxy-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chimera-controller-proxy-role
+  name: kubewarden-controller-proxy-role
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: chimera-controller-system
+  namespace: kubewarden-controller-system
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     control-plane: manager
-  name: chimera-controller-manager-metrics-service
-  namespace: chimera-controller-system
+  name: kubewarden-controller-manager-metrics-service
+  namespace: kubewarden-controller-system
 spec:
   ports:
   - name: https
@@ -308,8 +308,8 @@ kind: Deployment
 metadata:
   labels:
     control-plane: manager
-  name: chimera-controller-manager
-  namespace: chimera-controller-system
+  name: kubewarden-controller-manager
+  namespace: kubewarden-controller-system
 spec:
   replicas: 1
   selector:
@@ -337,7 +337,7 @@ spec:
         - --deployments-namespace=$(SERVICE_NAMESPACE)
         command:
         - /manager
-        image: ghcr.io/chimera-kube/chimera-controller:v0.0.1
+        image: ghcr.io/kubewarden/kubewarden-controller:v0.0.1
         name: manager
         resources:
           limits:

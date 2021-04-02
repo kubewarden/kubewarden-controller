@@ -12,19 +12,19 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-chimera-suse-com-v1alpha1-admissionpolicy
+      path: /mutate-kubewarden-suse-com-v1alpha1-clusteradmissionpolicy
   failurePolicy: Fail
-  name: madmissionpolicy.kb.io
+  name: mclusteradmissionpolicy.kb.io
   rules:
   - apiGroups:
-    - chimera.suse.com
+    - kubewarden.suse.com
     apiVersions:
     - v1alpha1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - admissionpolicies
+    - clusteradmissionpolicies
   sideEffects: None
 
 ---
@@ -40,17 +40,17 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-chimera-suse-com-v1alpha1-admissionpolicy
+      path: /validate-kubewarden-suse-com-v1alpha1-clusteradmissionpolicy
   failurePolicy: Fail
-  name: madmissionpolicy.kb.io
+  name: mclusteradmissionpolicy.kb.io
   rules:
   - apiGroups:
-    - chimera.suse.com
+    - kubewarden.suse.com
     apiVersions:
     - v1alpha1
     operations:
     - CREATE
     - UPDATE
     resources:
-    - admissionpolicies
+    - clusteradmissionpolicies
   sideEffects: None

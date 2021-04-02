@@ -27,7 +27,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Build and push development container image
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
@@ -38,7 +38,7 @@ jobs:
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/chimera-kube/chimera-controller:latest
+            ghcr.io/kubewarden/kubewarden-controller:latest
       -
         name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -54,4 +54,4 @@ jobs:
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/chimera-kube/chimera-controller:${{ env.TAG_NAME }}
+            ghcr.io/kubewarden/kubewarden-controller:${{ env.TAG_NAME }}

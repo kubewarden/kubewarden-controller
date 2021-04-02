@@ -26,8 +26,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	chimerav1alpha1 "github.com/chimera-kube/chimera-controller/api/v1alpha1"
-	"github.com/chimera-kube/chimera-controller/controllers"
+	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
+	"github.com/kubewarden/kubewarden-controller/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -39,7 +39,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
-	_ = chimerav1alpha1.AddToScheme(scheme)
+	_ = kubewardenv1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -54,7 +54,7 @@ func main() {
 	flag.StringVar(&deploymentsNamespace,
 		"deployments-namespace",
 		"",
-		"The namespace where the chimera resources will be created.")
+		"The namespace where the kubewarden resources will be created.")
 	flag.Parse()
 
 	if deploymentsNamespace == "" {
@@ -75,13 +75,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.AdmissionPolicyReconciler{
+	if err = (&controllers.ClusterAdmissionPolicyReconciler{
 		Client:               mgr.GetClient(),
-		Log:                  ctrl.Log.WithName("controllers").WithName("AdmissionPolicy"),
+		Log:                  ctrl.Log.WithName("controllers").WithName("ClusterAdmissionPolicy"),
 		Scheme:               mgr.GetScheme(),
 		DeploymentsNamespace: deploymentsNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
 		os.Exit(1)
 	}
 

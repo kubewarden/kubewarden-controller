@@ -8,7 +8,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 func (r *Reconciler) reconcilePolicyServerService(ctx context.Context) error {

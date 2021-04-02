@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/chimera-kube/chimera-controller/internal/pkg/admissionregistration"
-	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 func (r *Reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret) error {

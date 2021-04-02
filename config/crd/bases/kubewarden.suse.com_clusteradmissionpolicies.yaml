@@ -4,22 +4,23 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: (devel)
   creationTimestamp: null
-  name: admissionpolicies.chimera.suse.com
+  name: clusteradmissionpolicies.kubewarden.suse.com
 spec:
-  group: chimera.suse.com
+  group: kubewarden.suse.com
   names:
-    kind: AdmissionPolicy
-    listKind: AdmissionPolicyList
-    plural: admissionpolicies
-    singular: admissionpolicy
+    kind: ClusterAdmissionPolicy
+    listKind: ClusterAdmissionPolicyList
+    plural: clusteradmissionpolicies
+    singular: clusteradmissionpolicy
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AdmissionPolicy is the Schema for the admissionpolicies API
+        description: ClusterAdmissionPolicy is the Schema for the cluster clusteradmissionpolicies
+          API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,7 +35,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy
+            description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
             properties:
               apiGroups:
                 description: APIGroups is a list of API groups that this webhook should
@@ -87,7 +88,8 @@ spec:
             - mutating
             type: object
           status:
-            description: AdmissionPolicyStatus defines the observed state of AdmissionPolicy
+            description: ClusterAdmissionPolicyStatus defines the observed state of
+              ClusterAdmissionPolicy
             type: object
         type: object
     served: true
