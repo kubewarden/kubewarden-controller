@@ -10,15 +10,15 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	chimerav1alpha1 "github.com/chimera-kube/chimera-controller/api/v1alpha1"
-	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
+	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 func (r *Reconciler) reconcileValidatingWebhookRegistration(
 	ctx context.Context,
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret) error {
-	err := r.Client.Create(ctx, r.validatingWebhookRegistration(admissionPolicy, admissionSecret))
+	err := r.Client.Create(ctx, r.validatingWebhookRegistration(clusterAdmissionPolicy, admissionSecret))
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
 	}
@@ -26,10 +26,10 @@ func (r *Reconciler) reconcileValidatingWebhookRegistration(
 }
 
 func (r *Reconciler) validatingWebhookRegistration(
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret,
 ) *admissionregistrationv1.ValidatingWebhookConfiguration {
-	admissionPath := filepath.Join("/validate", admissionPolicy.Name)
+	admissionPath := filepath.Join("/validate", clusterAdmissionPolicy.Name)
 	admissionPort := int32(constants.PolicyServerPort)
 
 	service := admissionregistrationv1.ServiceReference{
@@ -38,41 +38,41 @@ func (r *Reconciler) validatingWebhookRegistration(
 		Path:      &admissionPath,
 		Port:      &admissionPort,
 	}
-	operationTypes := r.operationTypes(admissionPolicy)
+	operationTypes := r.operationTypes(clusterAdmissionPolicy)
 
 	var failurePolicy admissionregistrationv1.FailurePolicyType
-	switch admissionPolicy.Spec.FailurePolicy {
+	switch clusterAdmissionPolicy.Spec.FailurePolicy {
 	case string(admissionregistrationv1.Fail):
 		failurePolicy = admissionregistrationv1.Fail
 	case string(admissionregistrationv1.Ignore):
 		failurePolicy = admissionregistrationv1.Ignore
 	default:
 		r.Log.Info("admissionRegistration",
-			"unknown failurePolicy", admissionPolicy.Spec.FailurePolicy,
+			"unknown failurePolicy", clusterAdmissionPolicy.Spec.FailurePolicy,
 			"forcing mode", admissionregistrationv1.Fail,
 		)
 		failurePolicy = admissionregistrationv1.Fail
 	}
 
 	sideEffects := admissionregistrationv1.SideEffectClassNone
-	apiGroups := admissionPolicy.Spec.APIGroups
+	apiGroups := clusterAdmissionPolicy.Spec.APIGroups
 	if len(apiGroups) == 0 {
 		apiGroups = []string{"*"}
 	}
-	apiVersions := admissionPolicy.Spec.APIVersions
+	apiVersions := clusterAdmissionPolicy.Spec.APIVersions
 	if len(apiVersions) == 0 {
 		apiVersions = []string{"*"}
 	}
 	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: admissionPolicy.Name,
+			Name: clusterAdmissionPolicy.Name,
 			Labels: map[string]string{
-				"chimera": "true",
+				"kubewarden": "true",
 			},
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
-				Name: fmt.Sprintf("%s.chimera.admission", admissionPolicy.Name),
+				Name: fmt.Sprintf("%s.kubewarden.admission", clusterAdmissionPolicy.Name),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
 					CABundle: admissionSecret.Data[constants.PolicyServerCASecretKeyName],
@@ -83,7 +83,7 @@ func (r *Reconciler) validatingWebhookRegistration(
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   apiGroups,
 							APIVersions: apiVersions,
-							Resources:   admissionPolicy.Spec.Resources,
+							Resources:   clusterAdmissionPolicy.Spec.Resources,
 						},
 					},
 				},

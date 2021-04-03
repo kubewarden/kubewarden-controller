@@ -1,22 +1,16 @@
-
----
+# permissions for end users to view clusteradmissionpolicies.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: manager-role
+  name: clusteradmissionpolicy-viewer-role
 rules:
 - apiGroups:
   - policies.kubewarden.io
   resources:
   - clusteradmissionpolicies
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - policies.kubewarden.io
@@ -24,5 +18,3 @@ rules:
   - clusteradmissionpolicies/status
   verbs:
   - get
-  - patch
-  - update

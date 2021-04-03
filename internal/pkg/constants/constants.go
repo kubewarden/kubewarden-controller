@@ -9,7 +9,7 @@ const (
 	// PolicyServer Deployment
 	PolicyServerDeploymentConfigAnnotation = "config/version"
 	PolicyServerDeploymentName             = "policy-server"
-	PolicyServerImage                      = "ghcr.io/chimera-kube/policy-server:latest"
+	PolicyServerImage                      = "ghcr.io/kubewarden/policy-server:latest"
 	PolicyServerImageKey                   = "image"
 	PolicyServerPort                       = 8443
 	PolicyServerReadinessProbe             = "/readiness"
@@ -26,5 +26,5 @@ const (
 )
 
 var (
-	PolicyServerLabels = map[string]string{"app": "chimera-policy-server"}
+	PolicyServerLabels = map[string]string{"app": "kubewarden-policy-server"}
 )

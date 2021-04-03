@@ -29,26 +29,27 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chimerav1alpha1 "github.com/chimera-kube/chimera-controller/api/v1alpha1"
+	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
 
-	"github.com/chimera-kube/chimera-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 )
 
-// AdmissionPolicyReconciler reconciles a AdmissionPolicy object
-type AdmissionPolicyReconciler struct {
+// ClusterAdmissionPolicyReconciler reconciles a
+// ClusterAdmissionPolicy object
+type ClusterAdmissionPolicyReconciler struct {
 	client.Client
 	Log                  logr.Logger
 	Scheme               *runtime.Scheme
 	DeploymentsNamespace string
 }
 
-// +kubebuilder:rbac:groups=chimera.suse.com,resources=admissionpolicies,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=chimera.suse.com,resources=admissionpolicies/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/status,verbs=get;update;patch
 
-// Reconcile takes care of reconciling AdmissionPolicy resources
-func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+// Reconcile takes care of reconciling ClusterAdmissionPolicy resources
+func (r *ClusterAdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("admissionpolicy", req.NamespacedName)
+	log := r.Log.WithValues("clusteradmissionpolicy", req.NamespacedName)
 
 	admissionReconciler := admission.Reconciler{
 		Client:               r,
@@ -56,30 +57,30 @@ func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 		Log:                  log,
 	}
 
-	var admissionPolicy chimerav1alpha1.AdmissionPolicy
-	if err := r.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
+	var clusterAdmissionPolicy kubewardenv1alpha1.ClusterAdmissionPolicy
+	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			admissionPolicy = chimerav1alpha1.AdmissionPolicy{
+			clusterAdmissionPolicy = kubewardenv1alpha1.ClusterAdmissionPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      req.Name,
 					Namespace: req.Namespace,
 				},
 			}
-			log.Info("Attempting delete", "policy", admissionPolicy)
-			return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &admissionPolicy)
+			log.Info("Attempting delete", "policy", clusterAdmissionPolicy)
+			return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &clusterAdmissionPolicy)
 		}
 		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
 	}
 
 	// Reconcile
-	err := admissionReconciler.Reconcile(ctx, &admissionPolicy)
+	err := admissionReconciler.Reconcile(ctx, &clusterAdmissionPolicy)
 	if err == nil {
 		return ctrl.Result{}, nil
 	}
 
 	if admission.IsPolicyServerNotReady(err) {
-		log.Info("admissionpolicy", "Policy server not yet ready", err.Error())
-		log.Info("admissionpolicy", "Delaying policy registration", req.Name)
+		log.Info("clusteradmissionpolicy", "Policy server not yet ready", err.Error())
+		log.Info("clusteradmissionpolicy", "Delaying policy registration", req.Name)
 		return ctrl.Result{
 			Requeue:      true,
 			RequeueAfter: time.Second * 5,
@@ -90,8 +91,8 @@ func (r *AdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, er
 }
 
 // SetupWithManager takes care of setting up the resources to watch
-func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&chimerav1alpha1.AdmissionPolicy{}).
+		For(&kubewardenv1alpha1.ClusterAdmissionPolicy{}).
 		Complete(r)
 }

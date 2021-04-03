@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	chimerav1alpha1 "github.com/chimera-kube/chimera-controller/api/v1alpha1"
-	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
+	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 type policyServerConfigMapOperation int
@@ -33,7 +33,7 @@ type policyServerConfigEntry struct {
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
 func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 	operation policyServerConfigMapOperation,
 ) error {
 	cfg := &corev1.ConfigMap{}
@@ -46,22 +46,22 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 			if operation == RemovePolicy {
 				return nil
 			}
-			return r.createPolicyServerConfigMap(ctx, admissionPolicy)
+			return r.createPolicyServerConfigMap(ctx, clusterAdmissionPolicy)
 		}
 		return fmt.Errorf("cannot lookup policies ConfigMap: %w", err)
 	}
 
-	return r.reconcilePolicyServerConfigMapPolicies(ctx, cfg, admissionPolicy, operation)
+	return r.reconcilePolicyServerConfigMapPolicies(ctx, cfg, clusterAdmissionPolicy, operation)
 }
 
 func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 ) error {
 	policies := map[string]policyServerConfigEntry{
-		admissionPolicy.Name: {
-			URL:      admissionPolicy.Spec.Module,
-			Settings: admissionPolicy.Spec.Settings,
+		clusterAdmissionPolicy.Name: {
+			URL:      clusterAdmissionPolicy.Spec.Module,
+			Settings: clusterAdmissionPolicy.Spec.Settings,
 		},
 	}
 	policiesJSON, err := json.Marshal(policies)
@@ -88,7 +88,7 @@ func (r *Reconciler) createPolicyServerConfigMap(
 func (r *Reconciler) reconcilePolicyServerConfigMapPolicies(
 	ctx context.Context,
 	cfg *corev1.ConfigMap,
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 	operation policyServerConfigMapOperation,
 ) error {
 	// extract the policy settings from the ConfigMap
@@ -108,10 +108,10 @@ func (r *Reconciler) reconcilePolicyServerConfigMapPolicies(
 	switch operation {
 	case AddPolicy:
 		newPoliciesJSON, update, err = r.addPolicyToPolicyServerConfigMap(
-			currentPolicies, admissionPolicy)
+			currentPolicies, clusterAdmissionPolicy)
 	case RemovePolicy:
 		newPoliciesJSON, update, err = r.removePolicyFromPolicyServerConfigMap(
-			currentPolicies, admissionPolicy)
+			currentPolicies, clusterAdmissionPolicy)
 	default:
 		err = fmt.Errorf("unknown operation type")
 	}
@@ -135,14 +135,14 @@ func (r *Reconciler) reconcilePolicyServerConfigMapPolicies(
 
 func (r *Reconciler) addPolicyToPolicyServerConfigMap(
 	currentPolicies map[string]policyServerConfigEntry,
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 ) (string, bool, error) {
 	var updatePolicies bool
-	currentPolicy, found := currentPolicies[admissionPolicy.Name]
+	currentPolicy, found := currentPolicies[clusterAdmissionPolicy.Name]
 
 	expectedPolicy := policyServerConfigEntry{
-		URL:      admissionPolicy.Spec.Module,
-		Settings: admissionPolicy.Spec.Settings,
+		URL:      clusterAdmissionPolicy.Spec.Module,
+		Settings: clusterAdmissionPolicy.Spec.Settings,
 	}
 
 	if !found {
@@ -164,7 +164,7 @@ func (r *Reconciler) addPolicyToPolicyServerConfigMap(
 		return "", false, nil
 	}
 
-	currentPolicies[admissionPolicy.Name] = expectedPolicy
+	currentPolicies[clusterAdmissionPolicy.Name] = expectedPolicy
 
 	// marshal back the updated policies
 	newPoliciesJSON, err := json.Marshal(currentPolicies)
@@ -176,15 +176,15 @@ func (r *Reconciler) addPolicyToPolicyServerConfigMap(
 
 func (r *Reconciler) removePolicyFromPolicyServerConfigMap(
 	currentPolicies map[string]policyServerConfigEntry,
-	admissionPolicy *chimerav1alpha1.AdmissionPolicy,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
 ) (string, bool, error) {
-	_, found := currentPolicies[admissionPolicy.Name]
+	_, found := currentPolicies[clusterAdmissionPolicy.Name]
 
 	if !found {
 		return "", false, nil
 	}
 
-	delete(currentPolicies, admissionPolicy.Name)
+	delete(currentPolicies, clusterAdmissionPolicy.Name)
 
 	// marshal back the updated policies
 	newPoliciesJSON, err := json.Marshal(currentPolicies)

@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/chimera-kube/chimera-controller/internal/pkg/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
@@ -198,23 +198,23 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 		},
 		Env: []corev1.EnvVar{
 			{
-				Name:  "CHIMERA_CERT_FILE",
+				Name:  "KUBEWARDEN_CERT_FILE",
 				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
 			},
 			{
-				Name:  "CHIMERA_KEY_FILE",
+				Name:  "KUBEWARDEN_KEY_FILE",
 				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSKey),
 			},
 			{
-				Name:  "CHIMERA_PORT",
+				Name:  "KUBEWARDEN_PORT",
 				Value: fmt.Sprintf("%d", constants.PolicyServerPort),
 			},
 			{
-				Name:  "CHIMERA_POLICIES_DOWNLOAD_DIR",
+				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
 				Value: "/tmp/",
 			},
 			{
-				Name:  "CHIMERA_POLICIES",
+				Name:  "KUBEWARDEN_POLICIES",
 				Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
 			},
 		},

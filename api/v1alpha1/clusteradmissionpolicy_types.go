@@ -21,8 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// AdmissionPolicySpec defines the desired state of AdmissionPolicy
-type AdmissionPolicySpec struct {
+// ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
+type ClusterAdmissionPolicySpec struct {
 	// Module is the location of the WASM module to be loaded. Can be a
 	// local file (file://), a remote file served by an HTTP server
 	// (http://, https://), or an artifact served by an OCI-compatible
@@ -71,31 +71,31 @@ type AdmissionPolicySpec struct {
 	Mutating bool `json:"mutating"`
 }
 
-// AdmissionPolicyStatus defines the observed state of AdmissionPolicy
-type AdmissionPolicyStatus struct {
+// ClusterAdmissionPolicyStatus defines the observed state of ClusterAdmissionPolicy
+type ClusterAdmissionPolicyStatus struct {
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 
-// AdmissionPolicy is the Schema for the admissionpolicies API
-type AdmissionPolicy struct {
+// ClusterAdmissionPolicy is the Schema for the cluster clusteradmissionpolicies API
+type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AdmissionPolicySpec   `json:"spec,omitempty"`
-	Status AdmissionPolicyStatus `json:"status,omitempty"`
+	Spec   ClusterAdmissionPolicySpec   `json:"spec,omitempty"`
+	Status ClusterAdmissionPolicyStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// AdmissionPolicyList contains a list of AdmissionPolicy
-type AdmissionPolicyList struct {
+// ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
+type ClusterAdmissionPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []AdmissionPolicy `json:"items"`
+	Items           []ClusterAdmissionPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&AdmissionPolicy{}, &AdmissionPolicyList{})
+	SchemeBuilder.Register(&ClusterAdmissionPolicy{}, &ClusterAdmissionPolicyList{})
 }
