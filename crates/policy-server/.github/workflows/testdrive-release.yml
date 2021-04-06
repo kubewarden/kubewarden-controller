@@ -9,6 +9,7 @@ env:
   CARGO_TERM_COLOR: always
   BUILD_TARGET: x86_64-unknown-linux-musl
   BINARY_NAME: policy-testdrive
+  BINARY_FULL_NAME: policy-testdrive-linux-amd64
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,6 +20,11 @@ jobs:
       uses: gmiam/rust-musl-action@master
       with:
         args: cargo build --target $BUILD_TARGET --release --bin ${{ env.BINARY_NAME }}
+
+    - name: Compress binary
+      run: |
+        mv target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }} ${{ env.BINARY_FULL_NAME }}
+        zip -9 ${{ env.BINARY_FULL_NAME }}.zip ${{ env.BINARY_FULL_NAME }}
 
     - name: Create Release
       id: create_release
@@ -38,6 +44,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
-        asset_name: policy-testdrive-linux-amd64
+        asset_path: ${{ env.BINARY_NAME }}.zip
+        asset_name: ${{ env.BINARY_NAME }}.zip
         asset_content_type: application/octet-stream
