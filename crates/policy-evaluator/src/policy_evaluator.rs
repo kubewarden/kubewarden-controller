@@ -158,7 +158,8 @@ impl PolicyEvaluator {
             Err(err) => {
                 if let wapc::errors::ErrorKind::GuestCallFailure(m) = err.kind() {
                     // Unfortunately waPC doesn't define a dedicated error
-                    if m.contains("No handler registered") {
+                    if m.contains("No handler registered") || m.contains("Could not find function")
+                    {
                         return SettingsValidationResponse {
                             valid: true,
                             message: Some(String::from(
