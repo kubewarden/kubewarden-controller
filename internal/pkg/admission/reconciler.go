@@ -72,7 +72,10 @@ func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 	return errors
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy) error {
+func (r *Reconciler) Reconcile(
+	ctx context.Context,
+	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
+) error {
 	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx)
 	if err != nil {
 		return err

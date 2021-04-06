@@ -43,6 +43,7 @@ type ClusterAdmissionPolicyReconciler struct {
 	DeploymentsNamespace string
 }
 
+// nolint:lll
 // +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/status,verbs=get;update;patch
 
@@ -67,6 +68,7 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Res
 				},
 			}
 			log.Info("Attempting delete", "policy", clusterAdmissionPolicy)
+			// nolint:wrapcheck
 			return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &clusterAdmissionPolicy)
 		}
 		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
@@ -90,6 +92,7 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Res
 	return ctrl.Result{}, fmt.Errorf("reconciliation error: %w", err)
 }
 
+// nolint:wrapcheck
 // SetupWithManager takes care of setting up the resources to watch
 func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).

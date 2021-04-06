@@ -81,6 +81,7 @@ func (r *Reconciler) createPolicyServerConfigMap(
 		Data: data,
 	}
 
+	//nolint:wrapcheck
 	return r.Client.Create(ctx, cfg)
 }
 
