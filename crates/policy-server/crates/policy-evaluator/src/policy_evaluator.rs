@@ -155,27 +155,13 @@ impl PolicyEvaluator {
                     message: Some(format!("error: {:?}", e)),
                 })
             }
-            Err(err) => {
-                if let wapc::errors::ErrorKind::GuestCallFailure(m) = err.kind() {
-                    // Unfortunately waPC doesn't define a dedicated error
-                    if m.contains("No handler registered") || m.contains("Could not find function")
-                    {
-                        return SettingsValidationResponse {
-                            valid: true,
-                            message: Some(String::from(
-                                "This policy doesn't have a settings validation capability",
-                            )),
-                        };
-                    }
-                };
-                SettingsValidationResponse {
-                    valid: false,
-                    message: Some(format!(
-                        "Error invoking settings validation callback: {:?}",
-                        err
-                    )),
-                }
-            }
+            Err(err) => SettingsValidationResponse {
+                valid: false,
+                message: Some(format!(
+                    "Error invoking settings validation callback: {:?}",
+                    err
+                )),
+            },
         }
     }
 }
