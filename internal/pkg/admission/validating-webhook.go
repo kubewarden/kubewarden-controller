@@ -38,23 +38,7 @@ func (r *Reconciler) validatingWebhookRegistration(
 		Path:      &admissionPath,
 		Port:      &admissionPort,
 	}
-	operationTypes := r.operationTypes(clusterAdmissionPolicy)
 
-	var failurePolicy admissionregistrationv1.FailurePolicyType
-	switch clusterAdmissionPolicy.Spec.FailurePolicy {
-	case string(admissionregistrationv1.Fail):
-		failurePolicy = admissionregistrationv1.Fail
-	case string(admissionregistrationv1.Ignore):
-		failurePolicy = admissionregistrationv1.Ignore
-	default:
-		r.Log.Info("admissionRegistration",
-			"unknown failurePolicy", clusterAdmissionPolicy.Spec.FailurePolicy,
-			"forcing mode", admissionregistrationv1.Fail,
-		)
-		failurePolicy = admissionregistrationv1.Fail
-	}
-
-	sideEffects := admissionregistrationv1.SideEffectClassNone
 	apiGroups := clusterAdmissionPolicy.Spec.APIGroups
 	if len(apiGroups) == 0 {
 		apiGroups = []string{"*"}
@@ -79,7 +63,7 @@ func (r *Reconciler) validatingWebhookRegistration(
 				},
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
-						Operations: operationTypes,
+						Operations: clusterAdmissionPolicy.Spec.Operations,
 						Rule: admissionregistrationv1.Rule{
 							APIGroups:   apiGroups,
 							APIVersions: apiVersions,
@@ -87,8 +71,12 @@ func (r *Reconciler) validatingWebhookRegistration(
 						},
 					},
 				},
-				FailurePolicy:           &failurePolicy,
-				SideEffects:             &sideEffects,
+				FailurePolicy:           clusterAdmissionPolicy.Spec.FailurePolicy,
+				MatchPolicy:             clusterAdmissionPolicy.Spec.MatchPolicy,
+				NamespaceSelector:       clusterAdmissionPolicy.Spec.NamespaceSelector,
+				ObjectSelector:          clusterAdmissionPolicy.Spec.ObjectSelector,
+				SideEffects:             clusterAdmissionPolicy.Spec.SideEffects,
+				TimeoutSeconds:          clusterAdmissionPolicy.Spec.TimeoutSeconds,
 				AdmissionReviewVersions: []string{"v1"},
 			},
 		},

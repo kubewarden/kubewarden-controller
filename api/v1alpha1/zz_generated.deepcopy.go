@@ -21,6 +21,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/api/admissionregistration/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -104,8 +106,38 @@ func (in *ClusterAdmissionPolicySpec) DeepCopyInto(out *ClusterAdmissionPolicySp
 	}
 	if in.Operations != nil {
 		in, out := &in.Operations, &out.Operations
-		*out = make([]string, len(*in))
+		*out = make([]v1.OperationType, len(*in))
 		copy(*out, *in)
+	}
+	if in.FailurePolicy != nil {
+		in, out := &in.FailurePolicy, &out.FailurePolicy
+		*out = new(v1.FailurePolicyType)
+		**out = **in
+	}
+	if in.MatchPolicy != nil {
+		in, out := &in.MatchPolicy, &out.MatchPolicy
+		*out = new(v1.MatchPolicyType)
+		**out = **in
+	}
+	if in.NamespaceSelector != nil {
+		in, out := &in.NamespaceSelector, &out.NamespaceSelector
+		*out = new(metav1.LabelSelector)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ObjectSelector != nil {
+		in, out := &in.ObjectSelector, &out.ObjectSelector
+		*out = new(metav1.LabelSelector)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.SideEffects != nil {
+		in, out := &in.SideEffects, &out.SideEffects
+		*out = new(v1.SideEffectClass)
+		**out = **in
+	}
+	if in.TimeoutSeconds != nil {
+		in, out := &in.TimeoutSeconds, &out.TimeoutSeconds
+		*out = new(int32)
+		**out = **in
 	}
 }
 
