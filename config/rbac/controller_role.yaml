@@ -32,7 +32,7 @@ metadata:
   name: manager-cluster-role
 rules:
 - apiGroups: ["admissionregistration.k8s.io"]
-  resources: ["validatingwebhookconfigurations"]
+  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
   verbs: ["create", "delete"]
 - apiGroups: [""]
   resources: ["secrets"] # (ereslibre) certwatcher ??????
