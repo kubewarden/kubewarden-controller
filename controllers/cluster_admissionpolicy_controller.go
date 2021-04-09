@@ -38,9 +38,10 @@ import (
 // ClusterAdmissionPolicy object
 type ClusterAdmissionPolicyReconciler struct {
 	client.Client
-	Log                  logr.Logger
-	Scheme               *runtime.Scheme
-	DeploymentsNamespace string
+	Log                           logr.Logger
+	Scheme                        *runtime.Scheme
+	DeploymentsNamespace          string
+	DeploymentsServiceAccountName string
 }
 
 // nolint:lll

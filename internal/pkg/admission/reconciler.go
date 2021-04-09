@@ -15,9 +15,10 @@ import (
 )
 
 type Reconciler struct {
-	Client               client.Client
-	DeploymentsNamespace string
-	Log                  logr.Logger
+	Client                        client.Client
+	DeploymentsNamespace          string
+	DeploymentsServiceAccountName string
+	Log                           logr.Logger
 }
 
 type errorList []error
