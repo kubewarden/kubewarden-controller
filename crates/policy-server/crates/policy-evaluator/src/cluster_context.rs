@@ -72,7 +72,7 @@ impl ClusterContext {
             let kubernetes_client = match rt.block_on(Client::try_default()) {
                 Ok(kubernetes_client) => Some(kubernetes_client),
                 Err(error) => {
-                    println!("could not initialize a Kubernetes client due to error: {}; contextual policies might misbehave since they will lack cluster information", error);
+                    eprintln!("could not initialize a Kubernetes client due to error: {}; contextual policies might misbehave since they will lack cluster information", error);
                     None
                 }
             };
