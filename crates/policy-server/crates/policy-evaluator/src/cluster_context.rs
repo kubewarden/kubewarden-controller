@@ -69,13 +69,18 @@ impl ClusterContext {
                     panic!("error initializing tokio runtime: {}", error);
                 }
             };
-            let client = match rt.block_on(Client::try_default()) {
-                Ok(client) => client,
-                Err(error) => panic!("could not initialize Kubernetes client: {}", error),
+            let kubernetes_client = match rt.block_on(Client::try_default()) {
+                Ok(kubernetes_client) => Some(kubernetes_client),
+                Err(error) => {
+                    eprintln!("could not initialize a Kubernetes client due to error: {}; contextual policies might misbehave since they will lack cluster information", error);
+                    None
+                }
             };
-            loop {
-                rt.block_on(ClusterContext::get().refresh(&client));
-                thread::sleep(std::time::Duration::from_secs(5));
+            if let Some(kubernetes_client) = kubernetes_client {
+                loop {
+                    rt.block_on(ClusterContext::get().refresh(&kubernetes_client));
+                    thread::sleep(std::time::Duration::from_secs(5));
+                }
             }
         });
         Ok(())
@@ -97,26 +102,26 @@ impl ClusterContext {
         (*self.services.read().unwrap()).clone()
     }
 
-    pub async fn refresh(&self, client: &Client) -> kube::Result<()> {
+    pub async fn refresh(&self, kubernetes_client: &Client) -> kube::Result<()> {
         // TODO (ereslibre): use macros to remove duplication and then
         // generalize
         {
             let ingress_list_req = Resource::all::<Ingress>().list(&ListParams::default())?;
-            let ingress_list = client.request_text(ingress_list_req).await?;
+            let ingress_list = kubernetes_client.request_text(ingress_list_req).await?;
             if let Ok(mut ingresses) = self.ingresses.write() {
                 *ingresses = ingress_list
             };
         };
         {
             let namespace_list_req = Resource::all::<Namespace>().list(&ListParams::default())?;
-            let namespace_list = client.request_text(namespace_list_req).await?;
+            let namespace_list = kubernetes_client.request_text(namespace_list_req).await?;
             if let Ok(mut namespaces) = self.namespaces.write() {
                 *namespaces = namespace_list
             };
         };
         {
             let service_list_req = Resource::all::<Service>().list(&ListParams::default())?;
-            let service_list = client.request_text(service_list_req).await?;
+            let service_list = kubernetes_client.request_text(service_list_req).await?;
             if let Ok(mut services) = self.services.write() {
                 *services = service_list
             };
