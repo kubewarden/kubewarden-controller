@@ -253,7 +253,8 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 					Annotations: templateAnnotations,
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{admissionContainer},
+					Containers:         []corev1.Container{admissionContainer},
+					ServiceAccountName: r.DeploymentsServiceAccountName,
 					Volumes: []corev1.Volume{
 						{
 							Name: certsVolumeName,

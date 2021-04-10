@@ -46,7 +46,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
-	var deploymentsNamespace string
+	var deploymentsNamespace, deploymentsServiceAccountName string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
@@ -55,6 +55,10 @@ func main() {
 		"deployments-namespace",
 		"",
 		"The namespace where the kubewarden resources will be created.")
+	flag.StringVar(&deploymentsServiceAccountName,
+		"deployments-service-account-name",
+		"default",
+		"The service account name that kubewarden policy-server deployment will use.")
 	flag.Parse()
 
 	if deploymentsNamespace == "" {
@@ -76,10 +80,11 @@ func main() {
 	}
 
 	if err = (&controllers.ClusterAdmissionPolicyReconciler{
-		Client:               mgr.GetClient(),
-		Log:                  ctrl.Log.WithName("controllers").WithName("ClusterAdmissionPolicy"),
-		Scheme:               mgr.GetScheme(),
-		DeploymentsNamespace: deploymentsNamespace,
+		Client:                        mgr.GetClient(),
+		Log:                           ctrl.Log.WithName("controllers").WithName("ClusterAdmissionPolicy"),
+		Scheme:                        mgr.GetScheme(),
+		DeploymentsNamespace:          deploymentsNamespace,
+		DeploymentsServiceAccountName: deploymentsServiceAccountName,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
 		os.Exit(1)
