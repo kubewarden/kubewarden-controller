@@ -54,9 +54,10 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Res
 	log := r.Log.WithValues("clusteradmissionpolicy", req.NamespacedName)
 
 	admissionReconciler := admission.Reconciler{
-		Client:               r,
-		DeploymentsNamespace: r.DeploymentsNamespace,
-		Log:                  log,
+		Client:                        r,
+		DeploymentsNamespace:          r.DeploymentsNamespace,
+		DeploymentsServiceAccountName: r.DeploymentsServiceAccountName,
+		Log:                           log,
 	}
 
 	var clusterAdmissionPolicy kubewardenv1alpha1.ClusterAdmissionPolicy
