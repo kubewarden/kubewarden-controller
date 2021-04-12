@@ -47,6 +47,11 @@ func (r *Reconciler) validatingWebhookRegistration(
 	if len(apiVersions) == 0 {
 		apiVersions = []string{"*"}
 	}
+	sideEffects := clusterAdmissionPolicy.Spec.SideEffects
+	if sideEffects == nil {
+		noneSideEffects := admissionregistrationv1.SideEffectClassNone
+		sideEffects = &noneSideEffects
+	}
 	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: clusterAdmissionPolicy.Name,
@@ -75,7 +80,7 @@ func (r *Reconciler) validatingWebhookRegistration(
 				MatchPolicy:             clusterAdmissionPolicy.Spec.MatchPolicy,
 				NamespaceSelector:       clusterAdmissionPolicy.Spec.NamespaceSelector,
 				ObjectSelector:          clusterAdmissionPolicy.Spec.ObjectSelector,
-				SideEffects:             clusterAdmissionPolicy.Spec.SideEffects,
+				SideEffects:             sideEffects,
 				TimeoutSeconds:          clusterAdmissionPolicy.Spec.TimeoutSeconds,
 				AdmissionReviewVersions: []string{"v1"},
 			},
