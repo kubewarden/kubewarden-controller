@@ -1,7 +1,7 @@
 Kubewarden is a Kubernetes Dynamic Admission Controller that uses policies written
 in WebAssembly.
 
-For more information refer to the [official Kubewarden website](https://kubewarden.github.io/).
+For more information refer to the [official Kubewarden website](https://kubewarden.io/).
 
 # kubewarden-controller
 
@@ -17,16 +17,16 @@ it is deployed.
 The kubewarden-controller can be deployed using a helm chart:
 
 ```shell
-$ helm repo add kubewarden https://kubewarden.github.io/helm-charts/
-$ helm install kubewarden-controller kubewarden/kubewarden-controller
+$ helm repo add kubewarden https://charts.kubewarden.io
+$ helm install --create-namespace -n kubewarden kubewarden-controller kubewarden/kubewarden-controller
 ```
 
 This will install kubewarden-controller on the Kubernetes cluster in the default
 configuration.
 
-The default configuration values should be good enough for the majority of
-deployments, all the options are documented
-[here](https://kubewarden.github.io/helm-charts/#configuration).
+The default configuration values should be good enough for the
+majority of deployments, all the options are documented
+[here](https://charts.kubewarden.io/#configuration).
 
 ## Usage
 
