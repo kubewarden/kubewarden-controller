@@ -9,9 +9,11 @@ use std::{path::Path, str::FromStr};
 use tokio_compat_02::FutureExt;
 use url::Url;
 
+use crate::fetcher::Fetcher;
 use crate::registry::config::{DockerConfig, RegistryAuth as OwnRegistryAuth};
 use crate::sources::Sources;
-use crate::wasm_fetcher::fetcher::Fetcher;
+
+pub mod config;
 
 // Struct used to reference a WASM module that is hosted on an OCI registry
 pub(crate) struct Registry {

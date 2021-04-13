@@ -8,7 +8,7 @@ pub(crate) struct RegistryAuthRaw {
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct DockerConfigRaw {
+pub struct DockerConfigRaw {
     auths: HashMap<String, RegistryAuthRaw>,
 }
 
@@ -18,7 +18,7 @@ pub(crate) enum RegistryAuth {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct DockerConfig {
+pub struct DockerConfig {
     pub(crate) auths: HashMap<String, RegistryAuth>,
 }
 

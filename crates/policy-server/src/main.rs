@@ -18,25 +18,20 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 mod admission_review;
 mod api;
-mod registry;
 mod server;
-mod wasm_fetcher;
 mod worker;
 
 mod worker_pool;
 use worker_pool::WorkerPool;
 
 use policy_evaluator::policy::read_policies_file;
-
-mod sources;
-use sources::read_sources_file;
+use policy_fetcher::registry::config::{DockerConfig, DockerConfigRaw};
+use policy_fetcher::sources::read_sources_file;
 
 use std::fs;
 
 mod communication;
 use communication::EvalRequest;
-
-use crate::registry::config::{DockerConfig, DockerConfigRaw};
 
 fn main() {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -224,7 +219,7 @@ fn main() {
     );
     for (name, policy) in policies.iter_mut() {
         debug!(policy = name.as_str(), "download");
-        match rt.block_on(wasm_fetcher::fetch_wasm_module(
+        match rt.block_on(policy_fetcher::fetch_wasm_module(
             &policy.url,
             policies_download_dir,
             docker_config.clone(),

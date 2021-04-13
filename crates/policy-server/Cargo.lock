@@ -1970,14 +1970,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "policy-server"
-version = "0.1.2"
+name = "policy-fetcher"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-std",
  "async-stream",
  "async-trait",
  "base64 0.13.0",
+ "hyper 0.14.4",
+ "hyper-tls 0.5.0",
+ "native-tls",
+ "oci-distribution",
+ "serde",
+ "serde_yaml",
+ "tokio-compat-02",
+ "url 2.2.1",
+]
+
+[[package]]
+name = "policy-server"
+version = "0.1.2"
+dependencies = [
+ "anyhow",
+ "async-stream",
  "clap",
  "futures-util",
  "hyper 0.14.4",
@@ -1985,21 +2001,17 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "kubewarden-policy-sdk",
- "native-tls",
  "num_cpus",
- "oci-distribution",
  "openssl",
  "policy-evaluator",
- "serde",
+ "policy-fetcher",
  "serde_json",
- "serde_yaml",
  "tokio 1.4.0",
  "tokio-compat-02",
  "tokio-native-tls",
  "tracing",
  "tracing-futures",
  "tracing-subscriber",
- "url 2.2.1",
 ]
 
 [[package]]

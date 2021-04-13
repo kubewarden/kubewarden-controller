@@ -5,16 +5,16 @@ use url::Url;
 pub mod fetcher;
 mod https;
 mod local;
-mod registry;
+pub mod registry;
+pub mod sources;
 
 use crate::registry::config::DockerConfig;
 
+use crate::fetcher::Fetcher;
+use crate::https::Https;
+use crate::local::Local;
+use crate::registry::Registry;
 use crate::sources::Sources;
-
-use crate::wasm_fetcher::fetcher::Fetcher;
-use crate::wasm_fetcher::https::Https;
-use crate::wasm_fetcher::local::Local;
-use crate::wasm_fetcher::registry::Registry;
 
 // Helper function, takes the URL of the WASM module and allocates
 // the right struct to interact with it
@@ -44,7 +44,7 @@ pub(crate) fn parse_wasm_url(
     }
 }
 
-pub(crate) async fn fetch_wasm_module(
+pub async fn fetch_wasm_module(
     url: &str,
     download_dir: &str,
     docker_config: Option<DockerConfig>,

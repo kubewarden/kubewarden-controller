@@ -1,8 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
+use crate::fetcher::Fetcher;
 use crate::sources::Sources;
-use crate::wasm_fetcher::fetcher::Fetcher;
 
 // Struct used to reference a WASM module that is already on the
 // local file system

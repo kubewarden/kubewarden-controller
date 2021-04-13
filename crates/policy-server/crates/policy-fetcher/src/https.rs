@@ -10,8 +10,8 @@ use native_tls::{Certificate, TlsConnector};
 use std::{boxed::Box, path::Path};
 use url::Url;
 
+use crate::fetcher::Fetcher;
 use crate::sources::Sources;
-use crate::wasm_fetcher::fetcher::Fetcher;
 
 // Struct used to reference a WASM module that is hosted on a HTTP(s) server
 pub(crate) struct Https {
