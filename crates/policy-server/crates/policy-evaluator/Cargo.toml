@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 base64 = "0.13.0"
-kubewarden-policy-sdk = "0.1.0"
+kubewarden-policy-sdk = "0.2.0"
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
 kube = "0.51.0"

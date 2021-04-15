@@ -55,9 +55,7 @@ impl ValidationResponse {
         pol_val_resp: &PolicyValidationResponse,
     ) -> Result<ValidationResponse> {
         let patch = match pol_val_resp.mutated_object.clone() {
-            Some(mut_obj_str) => {
-                let mut_obj = serde_json::from_str(mut_obj_str.as_str())
-                    .map_err(|e| anyhow!("cannot deserialize mutated object: {:?}", e))?;
+            Some(mut_obj) => {
                 let diff = json_patch::diff(req_obj, &mut_obj);
                 let empty_patch = json_patch::Patch(Vec::<json_patch::PatchOperation>::new());
                 if diff == empty_patch {
@@ -167,7 +165,7 @@ mod tests {
             accepted: true,
             message: None,
             code: None,
-            mutated_object: Some(serde_json::to_string(&req_obj).unwrap()),
+            mutated_object: Some(req_obj.clone()),
         };
 
         let response = ValidationResponse::from_policy_validation_response(
@@ -199,7 +197,7 @@ mod tests {
             accepted: true,
             message: None,
             code: None,
-            mutated_object: Some(serde_json::to_string(&mutated_obj).unwrap()),
+            mutated_object: Some(mutated_obj),
         };
 
         let response = ValidationResponse::from_policy_validation_response(
