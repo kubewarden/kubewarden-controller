@@ -23,8 +23,7 @@ jobs:
 
     - name: Compress binary
       run: |
-        mv target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }} ${{ env.BINARY_FULL_NAME }}
-        zip -9 ${{ env.BINARY_FULL_NAME }}.zip ${{ env.BINARY_FULL_NAME }}
+        zip -9j ${{ env.BINARY_NAME }}.zip target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
 
     - name: Create Release
       id: create_release
