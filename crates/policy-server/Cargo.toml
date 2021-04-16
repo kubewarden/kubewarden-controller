@@ -9,11 +9,9 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-async-std = "1.9.0"
 async-stream = "0.3.0"
-async-trait = "0.1.42"
-base64 = "0.13.0"
 policy-evaluator = { path = "crates/policy-evaluator" }
+policy-fetcher = { path = "crates/policy-fetcher" }
 kubewarden-policy-sdk = "0.2.0"
 clap = "2.33.3"
 futures-util = "0.3.12"
@@ -21,24 +19,20 @@ kube = "0.51.0"
 k8s-openapi = { version = "0.11.0", default-features = false, features = ["v1_20"] }
 hyper-tls = "0.5.0"
 hyper = { version = "0.14", features = ["full"] }
-native-tls = "^0.2.1"
 num_cpus = "1.13.0"
-oci-distribution = "0.5"
 openssl = "0.10.32"
 serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8.15"
 tokio-compat-02 = "0.2.0"
 tokio-native-tls = "0.3.0"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version= "0.2", features = ["fmt"] }
 tracing-futures = "0.2"
-url = "2.2.0"
 
 [workspace]
 members = [
   "crates/policy-evaluator",
+  "crates/policy-fetcher",
   "crates/policy-testdrive",
 ]
 

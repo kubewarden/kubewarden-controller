@@ -10,7 +10,7 @@ use std::{fs, fs::File};
 
 #[derive(Default, Deserialize, Debug)]
 #[serde(default)]
-pub(crate) struct Sources {
+pub struct Sources {
     insecure_sources: HashSet<String>,
     source_authorities: HashMap<String, CertificateAuthority>,
 }
@@ -37,6 +37,6 @@ impl Sources {
     }
 }
 
-pub(crate) fn read_sources_file(path: &str) -> Result<Sources> {
+pub fn read_sources_file(path: &str) -> Result<Sources> {
     Ok(serde_yaml::from_reader::<_, Sources>(File::open(path)?)?)
 }
