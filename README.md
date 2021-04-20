@@ -51,7 +51,7 @@ kind: ClusterAdmissionPolicy
 metadata:
   name: privileged-pods
 spec:
-  module: registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.0
+  module: registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
   resources:
   - pods
   operations:
