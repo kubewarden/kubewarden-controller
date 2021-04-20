@@ -103,7 +103,7 @@ example:
         let input = r#"
 {
     "privileged-pods": {
-        "url": "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.2",
+        "url": "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5",
         "settings": null
     }
 }
