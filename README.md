@@ -78,5 +78,5 @@ $ kubectl apply -f https://raw.githubusercontent.com/kubewarden/kubewarden-contr
 You can delete the admission policy you just created:
 
 ```
-$ kubectl delete clusteradmissionpolicy privileged-pod
+$ kubectl delete clusteradmissionpolicy privileged-pods
 ```
