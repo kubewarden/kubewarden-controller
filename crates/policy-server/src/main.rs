@@ -29,6 +29,7 @@ use policy_fetcher::registry::config::{DockerConfig, DockerConfigRaw};
 use policy_fetcher::sources::read_sources_file;
 
 use std::fs;
+use std::path::Path;
 
 mod communication;
 use communication::EvalRequest;
@@ -169,12 +170,12 @@ fn main() {
         }
     };
 
-    let policies_file = matches.value_of("policies").unwrap_or(".");
+    let policies_file = Path::new(matches.value_of("policies").unwrap_or("."));
     let mut policies = match read_policies_file(policies_file) {
         Ok(policies) => policies,
         Err(err) => {
             fatal_error(format!(
-                "error while loading policies from {}: {}",
+                "error while loading policies from {:?}: {}",
                 policies_file, err
             ));
             unreachable!();
@@ -221,7 +222,7 @@ fn main() {
         debug!(policy = name.as_str(), "download");
         match rt.block_on(policy_fetcher::fetch_wasm_module(
             &policy.url,
-            policies_download_dir,
+            Path::new(policies_download_dir),
             docker_config.clone(),
             &sources,
         )) {
