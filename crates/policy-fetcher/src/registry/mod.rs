@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use oci_distribution::client::{Client, ClientConfig, ClientProtocol};
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
-use std::{path::Path, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 use tokio_compat_02::FutureExt;
 use url::Url;
 
@@ -18,7 +18,7 @@ pub mod config;
 // Struct used to reference a WASM module that is hosted on an OCI registry
 pub(crate) struct Registry {
     // full path to the WASM module
-    destination: String,
+    destination: PathBuf,
     // url of the remote WASM module
     wasm_url: String,
     // host of the remote WASM module
@@ -31,18 +31,13 @@ impl Registry {
     pub(crate) fn new(
         url: Url,
         docker_config: Option<DockerConfig>,
-        download_dir: &str,
+        download_dir: PathBuf,
     ) -> Result<Registry> {
         match url.path().rsplit('/').next() {
             Some(image_ref) => {
                 let wasm_url = url.to_string();
-                let dest = Path::new(download_dir).join(image_ref);
-
                 Ok(Registry {
-                    destination: String::from(
-                        dest.to_str()
-                            .ok_or_else(|| anyhow!("Cannot build final path destination"))?,
-                    ),
+                    destination: download_dir.join(image_ref),
                     wasm_url: wasm_url
                         .strip_prefix("registry://")
                         .map_or(Default::default(), |url| url.into()),
@@ -127,7 +122,7 @@ impl Registry {
 
 #[async_trait]
 impl Fetcher for Registry {
-    async fn fetch(&self, sources: &Sources) -> Result<String> {
+    async fn fetch(&self, sources: &Sources) -> Result<PathBuf> {
         let reference = Reference::from_str(self.wasm_url.as_str())?;
         let registry_auth = self.auth(&reference);
 
@@ -146,7 +141,6 @@ impl Fetcher for Registry {
             Ok(image_content) => {
                 let mut file = File::create(self.destination.clone()).await?;
                 file.write_all(&image_content[..]).await?;
-
                 Ok(self.destination.clone())
             }
             Err(err) => Err(anyhow!("could not download Wasm module: {}", err)),

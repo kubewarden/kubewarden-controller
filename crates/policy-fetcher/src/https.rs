@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use hyper::{client::HttpConnector, Client, StatusCode};
 use hyper_tls::HttpsConnector;
 use native_tls::{Certificate, TlsConnector};
-use std::{boxed::Box, path::Path};
+use std::{boxed::Box, path::PathBuf};
 use url::Url;
 
 use crate::fetcher::Fetcher;
@@ -16,7 +16,7 @@ use crate::sources::Sources;
 // Struct used to reference a WASM module that is hosted on a HTTP(s) server
 pub(crate) struct Https {
     // full path to the WASM module
-    destination: String,
+    destination: PathBuf,
     // url of the remote WASM module
     wasm_url: Url,
 }
@@ -30,7 +30,7 @@ enum TlsFetchMode {
 impl Https {
     // Allocates a LocalWASM instance starting from the user
     // provided URL
-    pub(crate) fn new(url: Url, download_dir: &str) -> Result<Https> {
+    pub(crate) fn new(url: Url, download_dir: PathBuf) -> Result<Https> {
         let file_name = match url.path().rsplit('/').next() {
             Some(f) => f,
             None => {
@@ -41,18 +41,13 @@ impl Https {
             }
         };
 
-        let dest = Path::new(download_dir).join(file_name);
-
         Ok(Https {
-            destination: String::from(
-                dest.to_str()
-                    .ok_or_else(|| anyhow!("Cannot build final path destination"))?,
-            ),
+            destination: download_dir.join(file_name),
             wasm_url: url,
         })
     }
 
-    async fn fetch_https(&self, fetch_mode: TlsFetchMode) -> Result<String> {
+    async fn fetch_https(&self, fetch_mode: TlsFetchMode) -> Result<PathBuf> {
         let mut tls_connector_builder = TlsConnector::builder();
 
         match fetch_mode {
@@ -89,7 +84,7 @@ impl Https {
         Ok(self.destination.clone())
     }
 
-    async fn fetch_http(&self) -> Result<String> {
+    async fn fetch_http(&self) -> Result<PathBuf> {
         let http = HttpConnector::new();
         let client = Client::builder().build::<_, hyper::Body>(http);
 
@@ -114,7 +109,7 @@ impl Https {
 
 #[async_trait]
 impl Fetcher for Https {
-    async fn fetch(&self, sources: &Sources) -> Result<String> {
+    async fn fetch(&self, sources: &Sources) -> Result<PathBuf> {
         // 1. If CA's provided, download with provided CA's
         // 2. If no CA's provided, download with system CA's
         //   2.1. If it fails and if insecure is enabled for that host,
