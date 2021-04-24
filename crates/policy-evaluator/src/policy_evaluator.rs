@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 
 use serde_json::json;
 
-use std::{fmt, fs::File, io::prelude::*};
+use std::{fmt, fs::File, io::prelude::*, path::Path};
 
 use tracing::error;
 
@@ -50,7 +50,7 @@ impl fmt::Debug for PolicyEvaluator {
 }
 
 impl PolicyEvaluator {
-    pub fn new(wasm_file: String, settings: serde_yaml::Mapping) -> Result<PolicyEvaluator> {
+    pub fn new(wasm_file: &Path, settings: serde_yaml::Mapping) -> Result<PolicyEvaluator> {
         let mut f = File::open(&wasm_file)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;

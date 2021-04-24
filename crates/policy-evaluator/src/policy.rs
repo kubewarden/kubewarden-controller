@@ -5,13 +5,14 @@ use serde_yaml::{Mapping, Value};
 use std::collections::HashMap;
 
 use std::fs::File;
+use std::path::{Path, PathBuf};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Policy {
     pub url: String,
 
     #[serde(skip)]
-    pub wasm_module_path: String,
+    pub wasm_module_path: PathBuf,
 
     #[serde(flatten)]
     extra_fields: HashMap<String, Value>,
@@ -38,7 +39,7 @@ impl Policy {
 // and Policy as values. The key is the name of the policy as provided by the user
 // inside of the configuration file. This name is used to build the API path
 // exposing the policy.
-pub fn read_policies_file(path: &str) -> Result<HashMap<String, Policy>> {
+pub fn read_policies_file(path: &Path) -> Result<HashMap<String, Policy>> {
     let settings_file = File::open(path)?;
     let ps: HashMap<String, Policy> = serde_yaml::from_reader(&settings_file)?;
     Ok(ps)
