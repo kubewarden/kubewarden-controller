@@ -10,8 +10,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 async-stream = "0.3.0"
-policy-evaluator = { path = "crates/policy-evaluator" }
-policy-fetcher = { path = "crates/policy-fetcher" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.1.0" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.0" }
 kubewarden-policy-sdk = "0.2.0"
 clap = "2.33.3"
 futures-util = "0.3.12"
@@ -28,18 +28,3 @@ tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version= "0.2", features = ["fmt"] }
 tracing-futures = "0.2"
-
-[workspace]
-members = [
-  "crates/policy-evaluator",
-  "crates/policy-fetcher",
-  "crates/policy-testdrive",
-]
-
-[[bin]]
-name = "policy-server"
-path = "src/main.rs"
-
-[[bin]]
-name = "policy-testdrive"
-path = "crates/policy-testdrive/src/main.rs"

@@ -21,8 +21,7 @@ impl Worker {
         for (id, policy) in policies.iter() {
             let settings = policy.settings();
 
-            let mut policy_evaluator =
-                PolicyEvaluator::new(policy.wasm_module_path.clone(), settings)?;
+            let mut policy_evaluator = PolicyEvaluator::new(&policy.wasm_module_path, settings)?;
 
             let set_val_rep = policy_evaluator.validate_settings();
             if !set_val_rep.valid {
