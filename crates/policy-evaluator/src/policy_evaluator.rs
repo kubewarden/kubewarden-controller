@@ -38,7 +38,7 @@ pub(crate) fn host_callback(
 
 pub struct PolicyEvaluator {
     wapc_host: WapcHost,
-    settings: serde_json::Map<String, serde_json::Value>,
+    settings: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 impl fmt::Debug for PolicyEvaluator {
@@ -50,7 +50,7 @@ impl fmt::Debug for PolicyEvaluator {
 }
 
 impl PolicyEvaluator {
-    pub fn new(wasm_file: &Path, settings: serde_yaml::Mapping) -> Result<PolicyEvaluator> {
+    pub fn new(wasm_file: &Path, settings: Option<serde_yaml::Mapping>) -> Result<PolicyEvaluator> {
         let mut f = File::open(&wasm_file)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
@@ -61,7 +61,17 @@ impl PolicyEvaluator {
 
         let engine = WasmtimeEngineProvider::new(&buf, None);
         let host = WapcHost::new(Box::new(engine), host_callback)?;
-        let settings_json = convert_yaml_map_to_json(settings)?;
+        let settings_json =
+            settings.and_then(|settings| match convert_yaml_map_to_json(settings) {
+                Ok(settings) => Some(settings),
+                Err(err) => {
+                    error!(
+                        error = err.to_string().as_str(),
+                        "cannot convert YAML settings to JSON"
+                    );
+                    None
+                }
+            });
 
         Ok(PolicyEvaluator {
             wapc_host: host,

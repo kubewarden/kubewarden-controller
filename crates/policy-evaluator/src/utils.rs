@@ -47,7 +47,7 @@ example:
         assert_eq!(policies.is_empty(), false);
 
         let policy = policies.get("example").unwrap();
-        let json_data = convert_yaml_map_to_json(policy.settings());
+        let json_data = convert_yaml_map_to_json(policy.settings().unwrap());
         assert!(json_data.is_ok());
 
         let settings = json_data.unwrap();
@@ -66,7 +66,7 @@ example:
         assert_eq!(policies.is_empty(), false);
 
         let policy = policies.get("example").unwrap();
-        let json_data = convert_yaml_map_to_json(policy.settings());
+        let json_data = convert_yaml_map_to_json(policy.settings().unwrap());
         assert!(json_data.is_ok());
 
         let settings = json_data.unwrap();
