@@ -23,7 +23,7 @@ pub(crate) async fn pull_and_run(
         serde_json::to_string(
             &PolicyEvaluator::new(
                 policy_path.as_path(),
-                serde_yaml::from_str(settings.unwrap_or_default())?,
+                settings.map_or(Ok(None), serde_yaml::from_str)?,
             )?
             .validate(request.into())
         )?
