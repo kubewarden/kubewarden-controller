@@ -61,7 +61,11 @@ pub async fn fetch_wasm_module(
     sources: &Sources,
 ) -> Result<PathBuf> {
     let url = Url::parse(url)?;
-    let scheme = url.scheme();
+    let scheme = match url.scheme() {
+        "registry" | "http" | "https" => Ok(url.scheme()),
+        "file" => return Ok(PathBuf::from(url.path())),
+        _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
+    }?;
     let host = url.host_str().unwrap_or_default();
     let element_count = url.path().split(std::path::MAIN_SEPARATOR).count();
     let elements = url.path().split(std::path::MAIN_SEPARATOR);
