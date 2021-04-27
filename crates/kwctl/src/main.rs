@@ -1,4 +1,6 @@
 extern crate anyhow;
+extern crate clap;
+extern crate directories;
 extern crate policy_evaluator;
 extern crate policy_fetcher;
 extern crate serde_yaml;
@@ -7,10 +9,16 @@ use anyhow::{anyhow, Result};
 use clap::{
     clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings, ArgMatches,
 };
-use std::{fs, path::PathBuf, str::FromStr};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use policy_fetcher::registry::config::{DockerConfig, DockerConfigRaw};
 use policy_fetcher::sources::{read_sources_file, Sources};
+use policy_fetcher::store::DEFAULT_ROOT;
+use policy_fetcher::PullDestination;
 
 mod policies;
 mod pull;
@@ -31,7 +39,7 @@ async fn main() -> Result<()> {
              (@arg ("docker-config-json-path"): --("docker-config-json-path") +takes_value "Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
              (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
              (@arg ("output-path"): -o --("output-path") +takes_value "Output file. If not provided will be downloaded to the Kubewarden store")
-             (@arg ("uri"): * +takes_value "Policy URI. Supported schemes: registry://, https://, file://")
+             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
             )
             (@subcommand run =>
              (about: "Runs a Kubewarden policy from a given URI")
@@ -39,7 +47,7 @@ async fn main() -> Result<()> {
              (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
              (@arg ("request-path"): * -r --("request-path") +takes_value "File containing the Kubernetes admission request object in JSON format")
              (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
-             (@arg ("uri"): * +takes_value "Policy URI. Supported schemes: registry://, https://, file://")
+             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
             )
     )
     .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -47,7 +55,7 @@ async fn main() -> Result<()> {
 
     match matches.subcommand_name() {
         Some("policies") => {
-            for policy in policies::list() {
+            for policy in policies::list()? {
                 println!("{}", policy);
             }
             Ok(())
@@ -59,10 +67,10 @@ async fn main() -> Result<()> {
                     .value_of("output-path")
                     .map(|output| PathBuf::from_str(output).unwrap());
                 let destination = match destination {
-                    Some(destination) => pull::PullDestination::LocalFile(destination),
-                    None => pull::PullDestination::MainStorage,
+                    Some(destination) => PullDestination::LocalFile(destination),
+                    None => PullDestination::MainStore,
                 };
-                let (sources, docker_config) = pull_options(matches)?;
+                let (sources, docker_config) = pull_options(matches);
                 pull::pull(uri, docker_config, sources, destination).await?;
             };
             Ok(())
@@ -72,7 +80,7 @@ async fn main() -> Result<()> {
                 let uri = matches.value_of("uri").unwrap();
                 let request = matches.value_of("request-path").unwrap();
                 let settings = matches.value_of("settings-path");
-                let (sources, docker_config) = pull_options(matches)?;
+                let (sources, docker_config) = pull_options(matches);
                 run::pull_and_run(uri, docker_config, sources, request, settings).await?;
             }
             Ok(())
@@ -86,24 +94,20 @@ async fn main() -> Result<()> {
     }
 }
 
-fn pull_options(matches: &ArgMatches) -> Result<(Option<Sources>, Option<DockerConfig>)> {
-    let sources = if let Some(sources_file) = matches.value_of("sources-path") {
-        Some(read_sources_file(sources_file)?)
-    } else {
-        None
-    };
+fn pull_options(matches: &ArgMatches) -> (Option<Sources>, Option<DockerConfig>) {
+    let sources = matches
+        .value_of("sources-path")
+        .and_then(|sources_path| read_sources_file(Path::new(sources_path)).ok())
+        .or_else(|| read_sources_file(DEFAULT_ROOT.config_dir()).ok());
 
     let docker_config = matches
         .value_of("docker-config-json-path")
-        .map(|json_config_path| json_config_path.into())
-        .and_then(|docker_config_json_path: String| {
-            fs::read_to_string(docker_config_json_path).ok()
-        })
+        .and_then(|docker_config_json_path| fs::read_to_string(&*docker_config_json_path).ok())
         .and_then(|contents| {
             serde_json::from_str(&contents)
                 .map(|config: DockerConfigRaw| config.into())
                 .ok()
         });
 
-    Ok((sources, docker_config))
+    (sources, docker_config)
 }

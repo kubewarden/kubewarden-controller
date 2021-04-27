@@ -1,13 +1,8 @@
 use anyhow::Result;
 use policy_fetcher::registry::config::DockerConfig;
-use policy_fetcher::{fetch_wasm_module, sources::Sources, storage::Storage};
+use policy_fetcher::{fetch_policy, sources::Sources, PullDestination};
 
 use std::path::PathBuf;
-
-pub(crate) enum PullDestination {
-    MainStorage,
-    LocalFile(PathBuf),
-}
 
 pub(crate) async fn pull(
     uri: &str,
@@ -15,13 +10,9 @@ pub(crate) async fn pull(
     sources: Option<Sources>,
     destination: PullDestination,
 ) -> Result<PathBuf> {
-    let destination = match destination {
-        PullDestination::MainStorage => Storage::default().root,
-        PullDestination::LocalFile(destination) => destination,
-    };
-    fetch_wasm_module(
+    fetch_policy(
         uri,
-        &destination,
+        destination,
         docker_config,
         &sources.unwrap_or_default(),
     )
