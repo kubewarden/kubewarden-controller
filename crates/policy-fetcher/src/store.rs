@@ -6,9 +6,9 @@ use walkdir::WalkDir;
 
 use crate::policy::Policy;
 
-const DEFAULT_STORAGE_ROOT: &str = ".kubewarden";
+const DEFAULT_STORE_ROOT: &str = ".kubewarden/store";
 
-// Storage represents a structure that is able to save and retrieve
+// Store represents a structure that is able to save and retrieve
 // WebAssembly modules from a central and local location.
 //
 // In the local filesystem, the structure of the directory is the
@@ -44,13 +44,13 @@ const DEFAULT_STORAGE_ROOT: &str = ".kubewarden";
 //         - path
 //           - to
 //             - wasm-module.wasm:1.0.0
-pub struct Storage {
+pub struct Store {
     pub root: PathBuf,
 }
 
-impl Storage {
+impl Store {
     pub fn new(root: &Path) -> Self {
-        Storage {
+        Store {
             root: root.to_path_buf(),
         }
     }
@@ -89,12 +89,12 @@ impl Storage {
     }
 }
 
-impl Default for Storage {
+impl Default for Store {
     fn default() -> Self {
         Self {
             root: home::home_dir()
                 .unwrap_or_else(|| PathBuf::from_str(".").unwrap())
-                .join(DEFAULT_STORAGE_ROOT),
+                .join(DEFAULT_STORE_ROOT),
         }
     }
 }

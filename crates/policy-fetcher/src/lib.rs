@@ -11,7 +11,7 @@ mod local;
 pub mod policy;
 pub mod registry;
 pub mod sources;
-pub mod storage;
+pub mod store;
 
 use crate::registry::config::DockerConfig;
 
