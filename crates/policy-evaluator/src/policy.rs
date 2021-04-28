@@ -19,19 +19,10 @@ pub struct Policy {
 }
 
 impl Policy {
-    pub fn settings(&self) -> Mapping {
+    pub fn settings(&self) -> Option<Mapping> {
         self.extra_fields
             .get("settings")
-            .map(|v| {
-                if v.is_null() || !v.is_mapping() {
-                    None
-                } else {
-                    v.as_mapping()
-                }
-            })
-            .flatten()
-            .unwrap_or(&Mapping::new())
-            .clone()
+            .and_then(|settings| serde_yaml::from_value(settings.clone()).ok())
     }
 }
 
@@ -59,11 +50,11 @@ example:
     valid_namespace: valid
 "#;
         let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
-        assert_eq!(policies.is_empty(), false);
+        assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
         let settings = policy.settings();
-        assert_ne!(settings.is_empty(), true);
+        assert!(settings.is_some());
     }
 
     #[test]
@@ -76,11 +67,11 @@ example:
 "#;
 
         let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
-        assert_eq!(policies.is_empty(), false);
+        assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
         let settings = policy.settings();
-        assert!(settings.is_empty());
+        assert!(settings.is_some());
     }
 
     #[test]
@@ -92,11 +83,11 @@ example:
 "#;
 
         let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
-        assert_eq!(policies.is_empty(), false);
+        assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
         let settings = policy.settings();
-        assert!(settings.is_empty());
+        assert!(settings.is_none());
     }
 
     #[test]
@@ -111,10 +102,10 @@ example:
 "#;
 
         let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
-        assert_eq!(policies.is_empty(), false);
+        assert!(!policies.is_empty());
 
         let policy = policies.get("privileged-pods").unwrap();
         let settings = policy.settings();
-        assert!(settings.is_empty());
+        assert!(settings.is_none());
     }
 }
