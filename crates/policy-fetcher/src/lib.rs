@@ -75,6 +75,7 @@ pub async fn fetch_wasm_module(
         .collect::<Vec<&str>>()
         .join("/");
     let download_dir = download_dir.join(scheme).join(host).join(path);
+    std::fs::create_dir_all(&download_dir)?;
     url_fetcher(url.as_str(), docker_config, &download_dir)?
         .fetch(sources)
         .await
