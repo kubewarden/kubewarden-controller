@@ -1,10 +1,11 @@
 use anyhow::Result;
 
-use native_tls::Certificate;
+use rustls::Certificate;
 
 use serde::Deserialize;
 
 use std::collections::{HashMap, HashSet};
+use std::io::BufReader;
 use std::path::PathBuf;
 use std::{fs, fs::File};
 
@@ -25,14 +26,15 @@ impl Sources {
         self.insecure_sources.contains(&host.into())
     }
 
-    pub(crate) fn source_authority<S: Into<String>>(&self, host: S) -> Option<Certificate> {
+    pub(crate) fn source_authority<S: Into<String>>(&self, host: S) -> Option<Vec<Certificate>> {
         self.source_authorities
             .get(&host.into())
-            .and_then(|ca_path| fs::read_to_string(ca_path.ca_path.clone()).ok())
+            .and_then(|ca_path| fs::read(ca_path.ca_path.clone()).ok())
             .and_then(|pem_certificate| {
                 // TODO (ereslibre): avoid parsing every time --
                 // initialize parsed certs, or warm-up cache
-                Certificate::from_pem(pem_certificate.as_bytes()).ok()
+                rustls::internal::pemfile::certs(&mut BufReader::new(pem_certificate.as_slice()))
+                    .ok()
             })
     }
 }
