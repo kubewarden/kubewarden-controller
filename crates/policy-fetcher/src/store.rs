@@ -6,6 +6,7 @@ use walkdir::WalkDir;
 
 use crate::policy::Policy;
 
+static KNOWN_SCHEMES: &[&str] = &["file", "http", "https", "registry"];
 const DEFAULT_STORE_ROOT: &str = ".kubewarden/store";
 
 // Store represents a structure that is able to save and retrieve
@@ -63,6 +64,14 @@ impl Store {
         let mut policies = Vec::new();
         for scheme in std::fs::read_dir(self.root.as_path())? {
             let scheme = scheme?;
+            match scheme.file_name().to_str() {
+                Some(scheme) => {
+                    if !is_known_scheme(scheme) {
+                        continue;
+                    }
+                }
+                None => continue,
+            }
             for host in std::fs::read_dir(scheme.path())? {
                 let host = host?;
                 for policy in WalkDir::new(host.path()) {
@@ -101,4 +110,8 @@ impl Default for Store {
                 .join(DEFAULT_STORE_ROOT),
         }
     }
+}
+
+fn is_known_scheme(scheme: &str) -> bool {
+    KNOWN_SCHEMES.contains(&scheme)
 }
