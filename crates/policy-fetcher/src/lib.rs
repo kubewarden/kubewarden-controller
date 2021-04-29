@@ -67,8 +67,8 @@ pub async fn fetch_wasm_module(
         _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
     }?;
     let host = url.host_str().unwrap_or_default();
-    let element_count = url.path().split("/").count();
-    let elements = url.path().split("/");
+    let element_count = url.path().split('/').count();
+    let elements = url.path().split('/');
     let path = elements
         .skip(1)
         .take(element_count - 2)
