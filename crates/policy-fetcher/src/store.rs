@@ -6,7 +6,7 @@ use walkdir::WalkDir;
 
 use crate::policy::Policy;
 
-static KNOWN_SCHEMES: &[&str] = &["file", "http", "https", "registry"];
+static KNOWN_REMOTE_SCHEMES: &[&str] = &["http", "https", "registry"];
 const DEFAULT_STORE_ROOT: &str = ".kubewarden/store";
 
 // Store represents a structure that is able to save and retrieve
@@ -66,7 +66,7 @@ impl Store {
             let scheme = scheme?;
             match scheme.file_name().to_str() {
                 Some(scheme) => {
-                    if !is_known_scheme(scheme) {
+                    if !is_known_remote_scheme(scheme) {
                         continue;
                     }
                 }
@@ -112,6 +112,6 @@ impl Default for Store {
     }
 }
 
-fn is_known_scheme(scheme: &str) -> bool {
-    KNOWN_SCHEMES.contains(&scheme)
+fn is_known_remote_scheme(scheme: &str) -> bool {
+    KNOWN_REMOTE_SCHEMES.contains(&scheme)
 }
