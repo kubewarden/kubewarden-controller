@@ -55,6 +55,10 @@ impl Store {
         }
     }
 
+    pub fn ensure(&self) -> Result<()> {
+        std::fs::create_dir_all(&self.root).map_err(|e| e.into())
+    }
+
     pub fn list(&self) -> Result<Vec<Policy>> {
         let mut policies = Vec::new();
         for scheme in std::fs::read_dir(self.root.as_path())? {
