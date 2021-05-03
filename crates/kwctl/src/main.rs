@@ -98,7 +98,7 @@ fn pull_options(matches: &ArgMatches) -> (Option<Sources>, Option<DockerConfig>)
     let sources = matches
         .value_of("sources-path")
         .and_then(|sources_path| read_sources_file(Path::new(sources_path)).ok())
-        .or_else(|| read_sources_file(DEFAULT_ROOT.config_dir()).ok());
+        .or_else(|| read_sources_file(&DEFAULT_ROOT.config_dir().join("sources.yaml")).ok());
 
     let docker_config = matches
         .value_of("docker-config-json-path")
