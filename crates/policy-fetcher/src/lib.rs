@@ -1,4 +1,4 @@
-extern crate home;
+extern crate directories;
 extern crate reqwest;
 extern crate rustls;
 extern crate walkdir;
@@ -28,6 +28,7 @@ use std::path::{Path, PathBuf};
 
 pub enum PullDestination {
     MainStore,
+    Store(PathBuf),
     LocalFile(PathBuf),
 }
 
@@ -61,39 +62,42 @@ pub async fn fetch_policy(
 }
 
 fn pull_destination(url: &Url, destination: &PullDestination) -> Result<PathBuf> {
-    let filename = url.path().split('/').last().unwrap();
     Ok(match destination {
-        PullDestination::MainStore => {
-            let host_and_port = url
-                .host_str()
-                .map(|host| {
-                    if let Some(port) = url.port() {
-                        format!("{}:{}", host, port)
-                    } else {
-                        host.into()
-                    }
-                })
-                .unwrap_or_default();
-            let element_count = url.path().split('/').count();
-            let elements = url.path().split('/');
-            let path = elements
-                .skip(1)
-                .take(element_count - 2)
-                .collect::<Vec<&str>>()
-                .join("/");
-            let main_store = Store::default();
-            let policy_path = Path::new(url.scheme()).join(&host_and_port).join(&path);
-            main_store.ensure(&policy_path)?;
-            main_store.root.join(policy_path).join(filename)
-        }
+        PullDestination::MainStore => store_filename_path(&Store::default(), url)?,
+        PullDestination::Store(root) => store_filename_path(&Store::new(root), url)?,
         PullDestination::LocalFile(destination) => {
             if Path::is_dir(&destination) {
+                let filename = url.path().split('/').last().unwrap();
                 destination.join(filename)
             } else {
                 PathBuf::from(destination)
             }
         }
     })
+}
+
+fn store_filename_path(store: &Store, url: &Url) -> Result<PathBuf> {
+    let filename = url.path().split('/').last().unwrap();
+    let host_and_port = url
+        .host_str()
+        .map(|host| {
+            if let Some(port) = url.port() {
+                format!("{}:{}", host, port)
+            } else {
+                host.into()
+            }
+        })
+        .unwrap_or_default();
+    let element_count = url.path().split('/').count();
+    let elements = url.path().split('/');
+    let path = elements
+        .skip(1)
+        .take(element_count - 2)
+        .collect::<Vec<&str>>()
+        .join("/");
+    let policy_path = Path::new(url.scheme()).join(&host_and_port).join(&path);
+    store.ensure(&policy_path)?;
+    Ok(store.root.join(policy_path).join(filename))
 }
 
 // Helper function, takes the URL of the policy and allocates the
