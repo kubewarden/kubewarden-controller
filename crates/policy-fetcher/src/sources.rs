@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use std::collections::{HashMap, HashSet};
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{fs, fs::File};
 
 #[derive(Default, Deserialize, Debug)]
@@ -39,6 +39,6 @@ impl Sources {
     }
 }
 
-pub fn read_sources_file(path: &str) -> Result<Sources> {
+pub fn read_sources_file(path: &Path) -> Result<Sources> {
     Ok(serde_yaml::from_reader::<_, Sources>(File::open(path)?)?)
 }

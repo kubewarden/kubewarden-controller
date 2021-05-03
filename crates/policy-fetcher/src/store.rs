@@ -1,13 +1,18 @@
 use anyhow::Result;
-
+use directories::ProjectDirs;
+use lazy_static::lazy_static;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use walkdir::WalkDir;
 
 use crate::policy::Policy;
 
 static KNOWN_REMOTE_SCHEMES: &[&str] = &["http", "https", "registry"];
-const DEFAULT_STORE_ROOT: &str = ".kubewarden/store";
+
+lazy_static! {
+    pub static ref DEFAULT_ROOT: ProjectDirs =
+        ProjectDirs::from("io.kubewarden", "", "policy-fetcher").unwrap();
+    pub static ref DEFAULT_STORE_ROOT: PathBuf = DEFAULT_ROOT.cache_dir().join("store");
+}
 
 // Store represents a structure that is able to save and retrieve
 // WebAssembly modules from a central and local location.
@@ -111,9 +116,7 @@ impl Store {
 impl Default for Store {
     fn default() -> Self {
         Self {
-            root: home::home_dir()
-                .unwrap_or_else(|| PathBuf::from_str(".").unwrap())
-                .join(DEFAULT_STORE_ROOT),
+            root: DEFAULT_STORE_ROOT.clone(),
         }
     }
 }
