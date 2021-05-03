@@ -106,10 +106,10 @@ fn main() {
                 .help("Download path for the policies"),
         )
         .arg(
-            Arg::with_name("sources")
+            Arg::with_name("sources-path")
                 .takes_value(true)
-                .long("sources")
-                .env("KUBEWARDEN_SOURCES")
+                .long("sources-path")
+                .env("KUBEWARDEN_SOURCES_PATH")
                 .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
         )
         .arg(
@@ -183,7 +183,7 @@ fn main() {
     };
 
     let sources = matches
-        .value_of("sources")
+        .value_of("sources-path")
         .map(
             |sources_file| match read_sources_file(Path::new(sources_file)) {
                 Ok(sources) => sources,
