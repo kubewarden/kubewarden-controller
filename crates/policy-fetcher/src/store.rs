@@ -10,7 +10,7 @@ static KNOWN_REMOTE_SCHEMES: &[&str] = &["http", "https", "registry"];
 
 lazy_static! {
     pub static ref DEFAULT_ROOT: ProjectDirs =
-        ProjectDirs::from("io.kubewarden", "", "policy-fetcher").unwrap();
+        ProjectDirs::from("io.kubewarden", "", "kubewarden").unwrap();
     pub static ref DEFAULT_STORE_ROOT: PathBuf = DEFAULT_ROOT.cache_dir().join("store");
 }
 
