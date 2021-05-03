@@ -15,7 +15,7 @@ pub(crate) async fn pull_and_run(
         uri,
         docker_config,
         sources,
-        pull::PullDestination::MainStorage,
+        policy_fetcher::PullDestination::MainStore,
     )
     .await?;
     println!(
