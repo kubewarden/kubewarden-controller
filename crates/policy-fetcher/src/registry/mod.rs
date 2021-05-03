@@ -20,9 +20,7 @@ pub(crate) struct Registry {
     // full path to the WASM module
     destination: PathBuf,
     // url of the remote WASM module
-    wasm_url: String,
-    // host of the remote WASM module
-    wasm_url_host: String,
+    url: Url,
     // configuration resembling `~/.docker/config.json` to some extent
     docker_config: Option<DockerConfig>,
 }
@@ -31,26 +29,12 @@ impl Registry {
     pub(crate) fn new(
         url: Url,
         docker_config: Option<DockerConfig>,
-        download_dir: PathBuf,
-    ) -> Result<Registry> {
-        match url.path().rsplit('/').next() {
-            Some(image_ref) => {
-                let wasm_url = url.to_string();
-                Ok(Registry {
-                    destination: download_dir.join(image_ref),
-                    wasm_url: wasm_url
-                        .strip_prefix("registry://")
-                        .map_or(Default::default(), |url| url.into()),
-                    wasm_url_host: url
-                        .host()
-                        .map_or(Default::default(), |host| format!("{}", host)),
-                    docker_config,
-                })
-            }
-            _ => Err(anyhow!(
-                "Cannot infer name of the remote file by looking at {}",
-                url.path()
-            )),
+        destination: PathBuf,
+    ) -> Registry {
+        Registry {
+            destination,
+            url,
+            docker_config,
         }
     }
 
@@ -123,12 +107,19 @@ impl Registry {
 #[async_trait]
 impl Fetcher for Registry {
     async fn fetch(&self, sources: &Sources) -> Result<PathBuf> {
-        let reference = Reference::from_str(self.wasm_url.as_str())?;
+        let reference = Reference::from_str(
+            self.url
+                .as_ref()
+                .strip_prefix("registry://")
+                .unwrap_or_default(),
+        )?;
         let registry_auth = self.auth(&reference);
 
         let mut image_content = self.fetch_tls(&reference, &registry_auth).await;
         if let Err(err) = image_content {
-            if !sources.is_insecure_source(&self.wasm_url_host) {
+            if !sources
+                .is_insecure_source(self.url.host_str().ok_or_else(|| anyhow!("invalid host"))?)
+            {
                 return Err(anyhow!(
                     "could not download Wasm module: {}; host is not an insecure source",
                     err

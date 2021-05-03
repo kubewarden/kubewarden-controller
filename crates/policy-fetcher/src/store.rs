@@ -56,8 +56,14 @@ impl Store {
         }
     }
 
-    pub fn ensure(&self) -> Result<()> {
-        std::fs::create_dir_all(&self.root).map_err(|e| e.into())
+    #[cfg(not(test))]
+    pub fn ensure(&self, path: &Path) -> Result<()> {
+        std::fs::create_dir_all(&self.root.join(path)).map_err(|e| e.into())
+    }
+
+    #[cfg(test)]
+    pub fn ensure(&self, _path: &Path) -> Result<()> {
+        Ok(())
     }
 
     pub fn list(&self) -> std::io::Result<Vec<Policy>> {
