@@ -199,17 +199,17 @@ mod tests {
     fn store_pull_destination_from_registry() -> Result<()> {
         assert_eq!(
             pull_destination(
-                &Url::parse("registry://host.example.com/path/to/policy.wasm:tag")?,
+                &Url::parse("registry://host.example.com/path/to/policy:tag")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("registry/host.example.com/path/to/policy.wasm:tag"),
+            store_path("registry/host.example.com/path/to/policy:tag"),
         );
         assert_eq!(
             pull_destination(
-                &Url::parse("registry://host.example.com/policy.wasm:tag")?,
+                &Url::parse("registry://host.example.com/policy:tag")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("registry/host.example.com/policy.wasm:tag"),
+            store_path("registry/host.example.com/policy:tag"),
         );
         Ok(())
     }
@@ -218,10 +218,10 @@ mod tests {
     fn store_pull_destination_from_registry_with_port() -> Result<()> {
         assert_eq!(
             pull_destination(
-                &Url::parse("registry://host.example.com:1234/path/to/policy.wasm:tag")?,
+                &Url::parse("registry://host.example.com:1234/path/to/policy:tag")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("registry/host.example.com:1234/path/to/policy.wasm:tag"),
+            store_path("registry/host.example.com:1234/path/to/policy:tag"),
         );
         Ok(())
     }
