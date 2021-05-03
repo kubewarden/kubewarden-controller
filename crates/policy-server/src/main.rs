@@ -29,7 +29,7 @@ use policy_fetcher::registry::config::{DockerConfig, DockerConfigRaw};
 use policy_fetcher::sources::read_sources_file;
 
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 mod communication;
 use communication::EvalRequest;
@@ -184,16 +184,18 @@ fn main() {
 
     let sources = matches
         .value_of("sources")
-        .map(|sources_file| match read_sources_file(sources_file) {
-            Ok(sources) => sources,
-            Err(err) => {
-                fatal_error(format!(
-                    "error while loading sources from {}: {}",
-                    sources_file, err
-                ));
-                unreachable!();
-            }
-        })
+        .map(
+            |sources_file| match read_sources_file(Path::new(sources_file)) {
+                Ok(sources) => sources,
+                Err(err) => {
+                    fatal_error(format!(
+                        "error while loading sources from {}: {}",
+                        sources_file, err
+                    ));
+                    unreachable!();
+                }
+            },
+        )
         .unwrap_or_default();
 
     let docker_config_json_path = matches
@@ -220,9 +222,9 @@ fn main() {
     );
     for (name, policy) in policies.iter_mut() {
         debug!(policy = name.as_str(), "download");
-        match rt.block_on(policy_fetcher::fetch_wasm_module(
+        match rt.block_on(policy_fetcher::fetch_policy(
             &policy.url,
-            Path::new(policies_download_dir),
+            policy_fetcher::PullDestination::Store(PathBuf::from(policies_download_dir)),
             docker_config.clone(),
             &sources,
         )) {
