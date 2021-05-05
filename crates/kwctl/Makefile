@@ -16,6 +16,10 @@ lint:
 test: fmt lint
 	cargo test --workspace
 
+.PHONY: e2e-test
+e2e-test:
+	sh -c 'cd e2e-tests; bats .'
+
 .PHONY: clean
 clean:
 	cargo clean
