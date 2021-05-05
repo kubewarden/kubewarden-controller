@@ -9,7 +9,7 @@ pub(crate) async fn pull_and_run(
     docker_config: Option<DockerConfig>,
     sources: Option<Sources>,
     request: &str,
-    settings: Option<&str>,
+    settings: Option<String>,
 ) -> Result<()> {
     let policy_path = pull::pull(
         uri,
@@ -23,9 +23,9 @@ pub(crate) async fn pull_and_run(
         serde_json::to_string(
             &PolicyEvaluator::new(
                 policy_path.as_path(),
-                settings.map_or(Ok(None), serde_yaml::from_str)?,
+                settings.map_or(Ok(None), |settings| serde_yaml::from_str(&settings))?,
             )?
-            .validate(request.into())
+            .validate(serde_json::from_str(&request)?)
         )?
     );
     Ok(())
