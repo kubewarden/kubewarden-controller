@@ -79,7 +79,8 @@ async fn main() -> Result<()> {
             if let Some(ref matches) = matches.subcommand_matches("run") {
                 let uri = matches.value_of("uri").unwrap();
                 let request = fs::read_to_string(matches.value_of("request-path").unwrap())?;
-                let settings = matches.value_of("settings-path")
+                let settings = matches
+                    .value_of("settings-path")
                     .map(|settings| fs::read_to_string(settings).unwrap());
                 let (sources, docker_config) = pull_options(matches);
                 run::pull_and_run(uri, docker_config, sources, &request, settings).await?;

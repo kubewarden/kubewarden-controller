@@ -63,3 +63,15 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  e2e:
+    name: e2e tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup BATS
+        uses: mig4/setup-bats@v1
+        with:
+          bats-version: 1.2.1
+      - name: run e2e tests
+        run: make e2e-test
