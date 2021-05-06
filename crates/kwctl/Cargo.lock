@@ -1923,7 +1923,7 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 [[package]]
 name = "policy-evaluator"
 version = "0.1.0"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.1#377d6c6849902e29a58506118442b6bda2099020"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.2#b62659b8b338c9bda1941626fd19d47d25a33f3b"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -1946,7 +1946,7 @@ dependencies = [
 [[package]]
 name = "policy-fetcher"
 version = "0.1.0"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.4#a08c3ec9ae034169cf97920db04422cfd441b9f0"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.5#85816e518155ffbc802319af10dbde3a2c012915"
 dependencies = [
  "anyhow",
  "async-std",

@@ -14,8 +14,8 @@ edition = "2018"
 anyhow = "1.0"
 clap = "2.33.3"
 directories = "3.0.2"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.1.1" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.4" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.1.2" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.5" }
 serde_json = "1.0"
 serde_yaml = "0.8.17"
 serde = { version = "1.0", features = ["derive"] }
