@@ -81,7 +81,8 @@ async fn main() -> Result<()> {
                 let request = fs::read_to_string(matches.value_of("request-path").unwrap())?;
                 let settings = matches
                     .value_of("settings-path")
-                    .map(|settings| fs::read_to_string(settings).unwrap());
+                    .map(|settings| -> Result<String> { Ok(fs::read_to_string(settings)?) })
+                    .transpose()?;
                 let (sources, docker_config) = pull_options(matches);
                 run::pull_and_run(uri, docker_config, sources, &request, settings).await?;
             }
