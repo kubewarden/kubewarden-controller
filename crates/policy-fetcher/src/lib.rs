@@ -53,9 +53,9 @@ pub async fn fetch_policy(
     // TODO (ereslibre): add special meaning for certain tags if they
     // exist: e.g. the `latest` tag should always be pulled
     if Path::exists(&destination) {
-        println!("policy exists in the store; not pulling");
         return Ok(destination);
     }
+    eprintln!("pulling policy...");
     url_fetcher(&url, docker_config, destination)?
         .fetch(sources)
         .await
