@@ -56,7 +56,7 @@ impl PolicyEvaluator {
         f.read_to_end(&mut buf)?;
 
         if let Err(error) = ClusterContext::init() {
-            println!("non fatal error: could not initialize a cluster context due to error: {}; context sensitive functions will not return any information", error);
+            eprintln!("non fatal error: could not initialize a cluster context due to error: {}; context sensitive functions will not return any information", error);
         }
 
         let engine = WasmtimeEngineProvider::new(&buf, None);
