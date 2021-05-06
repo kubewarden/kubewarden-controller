@@ -33,7 +33,7 @@ kwctl() {
 }
 
 @test "pull a policy from HTTPS to a file" {
-    kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm -o /tmp/my-policy.wasm
+    kwctl pull -o /tmp/my-policy.wasm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm
     [ "$status" -eq 0 ]
     kwctl policies
     [ "$status" -eq 0 ]
@@ -44,13 +44,13 @@ kwctl() {
 }
 
 @test "execute a remote policy that is allowed" {
-    kwctl run registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5 --request-path test-data/unprivileged-pod.json
+    kwctl run --request-path test-data/unprivileged-pod.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
 }
 
 @test "execute a remote policy that is rejected" {
-    kwctl run registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5 --request-path test-data/privileged-pod.json
+    kwctl run --request-path test-data/privileged-pod.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
 }
