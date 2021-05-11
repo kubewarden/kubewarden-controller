@@ -120,10 +120,7 @@ impl Fetcher for Registry {
             if !sources
                 .is_insecure_source(self.url.host_str().ok_or_else(|| anyhow!("invalid host"))?)
             {
-                return Err(anyhow!(
-                    "could not download Wasm module: {}; host is not an insecure source",
-                    err
-                ));
+                return Err(anyhow!("could not download Wasm module: {}", err));
             }
             image_content = self.fetch_plain(&reference, &registry_auth).await;
         }
