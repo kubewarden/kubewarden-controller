@@ -1949,7 +1949,7 @@ dependencies = [
 [[package]]
 name = "policy-fetcher"
 version = "0.1.0"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.5#85816e518155ffbc802319af10dbde3a2c012915"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.6#f2ff41b51e05d46ea14fb74deaa30e1d41cca5ce"
 dependencies = [
  "anyhow",
  "async-std",
