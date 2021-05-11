@@ -54,3 +54,19 @@ kwctl() {
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
 }
+
+@test "remove a policy from the policy store" {
+    kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
+    kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm
+    kwctl policies
+    [[ $(echo "$output" | wc -l) -eq 2 ]]
+    [[ ${lines[0]} =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5" ]]
+    [[ ${lines[1]} =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
+    kwctl rm registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
+    kwctl policies
+    [[ $(echo "$output" | wc -l) -eq 1 ]]
+    [[ ${lines[0]} =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
+    kwctl rm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm
+    kwctl policies
+    [ "$output" = "" ]
+}
