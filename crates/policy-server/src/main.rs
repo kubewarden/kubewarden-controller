@@ -241,7 +241,8 @@ fn main() {
 
     let (api_tx, api_rx) = channel::<EvalRequest>(32);
     let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
-        usize::from_str_radix(v, 10).expect("error converting the number of workers")
+        v.parse::<usize>()
+            .expect("error parsing the number of workers")
     });
 
     // Barrier used to wait for all the workers to be ready.
