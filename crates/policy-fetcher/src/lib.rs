@@ -49,7 +49,10 @@ pub async fn fetch_policy(
         "http" | "https" | "registry" => Ok(()),
         _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
     }?;
-    let destination = pull_destination(&url, &destination)?;
+    let (store, destination) = pull_destination(&url, &destination)?;
+    if let Some(store) = store {
+        store.ensure(&store.policy_full_path(url.as_str(), store::PolicyPath::PrefixOnly)?)?;
+    }
     // TODO (ereslibre): add special meaning for certain tags if they
     // exist: e.g. the `latest` tag should always be pulled
     if Path::exists(&destination) {
@@ -61,43 +64,29 @@ pub async fn fetch_policy(
         .await
 }
 
-fn pull_destination(url: &Url, destination: &PullDestination) -> Result<PathBuf> {
+fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<Store>, PathBuf)> {
     Ok(match destination {
-        PullDestination::MainStore => store_filename_path(&Store::default(), url)?,
-        PullDestination::Store(root) => store_filename_path(&Store::new(root), url)?,
+        PullDestination::MainStore => {
+            let store = Store::default();
+            let policy_path =
+                store.policy_full_path(url.as_str(), store::PolicyPath::PrefixAndFilename)?;
+            (Some(store), policy_path)
+        }
+        PullDestination::Store(root) => {
+            let store = Store::new(root);
+            let policy_path =
+                store.policy_full_path(url.as_str(), store::PolicyPath::PrefixAndFilename)?;
+            (Some(store), policy_path)
+        }
         PullDestination::LocalFile(destination) => {
             if Path::is_dir(&destination) {
                 let filename = url.path().split('/').last().unwrap();
-                destination.join(filename)
+                (None, destination.join(filename))
             } else {
-                PathBuf::from(destination)
+                (None, PathBuf::from(destination))
             }
         }
     })
-}
-
-fn store_filename_path(store: &Store, url: &Url) -> Result<PathBuf> {
-    let filename = url.path().split('/').last().unwrap();
-    let host_and_port = url
-        .host_str()
-        .map(|host| {
-            if let Some(port) = url.port() {
-                format!("{}:{}", host, port)
-            } else {
-                host.into()
-            }
-        })
-        .unwrap_or_default();
-    let element_count = url.path().split('/').count();
-    let elements = url.path().split('/');
-    let path = elements
-        .skip(1)
-        .take(element_count - 2)
-        .collect::<Vec<&str>>()
-        .join("/");
-    let policy_path = Path::new(url.scheme()).join(&host_and_port).join(&path);
-    store.ensure(&policy_path)?;
-    Ok(store.root.join(policy_path).join(filename))
 }
 
 // Helper function, takes the URL of the policy and allocates the
@@ -134,7 +123,7 @@ mod tests {
                 &Url::parse("https://host.example.com:1234/path/to/policy.wasm")?,
                 &PullDestination::LocalFile(std::env::current_dir()?),
             )?,
-            std::env::current_dir()?.join("policy.wasm"),
+            (None, std::env::current_dir()?.join("policy.wasm"),),
         );
         Ok(())
     }
@@ -146,7 +135,7 @@ mod tests {
                 &Url::parse("https://host.example.com:1234/path/to/policy.wasm")?,
                 &PullDestination::LocalFile(std::env::current_dir()?.join("named-policy.wasm")),
             )?,
-            std::env::current_dir()?.join("named-policy.wasm"),
+            (None, std::env::current_dir()?.join("named-policy.wasm"),),
         );
         Ok(())
     }
@@ -158,7 +147,10 @@ mod tests {
                 &Url::parse("http://host.example.com:1234/path/to/policy.wasm")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("http/host.example.com:1234/path/to/policy.wasm"),
+            (
+                Some(Store::default()),
+                store_path("http/host.example.com:1234/path/to/policy.wasm"),
+            ),
         );
         Ok(())
     }
@@ -170,7 +162,10 @@ mod tests {
                 &Url::parse("http://host.example.com/path/to/policy.wasm")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("http/host.example.com/path/to/policy.wasm"),
+            (
+                Some(Store::default()),
+                store_path("http/host.example.com/path/to/policy.wasm"),
+            ),
         );
         Ok(())
     }
@@ -182,7 +177,10 @@ mod tests {
                 &Url::parse("https://host.example.com/path/to/policy.wasm")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("https/host.example.com/path/to/policy.wasm"),
+            (
+                Some(Store::default()),
+                store_path("https/host.example.com/path/to/policy.wasm"),
+            ),
         );
         Ok(())
     }
@@ -194,7 +192,10 @@ mod tests {
                 &Url::parse("https://host.example.com:1234/path/to/policy.wasm")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("https/host.example.com:1234/path/to/policy.wasm"),
+            (
+                Some(Store::default()),
+                store_path("https/host.example.com:1234/path/to/policy.wasm"),
+            ),
         );
         Ok(())
     }
@@ -206,14 +207,20 @@ mod tests {
                 &Url::parse("registry://host.example.com/path/to/policy:tag")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("registry/host.example.com/path/to/policy:tag"),
+            (
+                Some(Store::default()),
+                store_path("registry/host.example.com/path/to/policy:tag"),
+            ),
         );
         assert_eq!(
             pull_destination(
                 &Url::parse("registry://host.example.com/policy:tag")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("registry/host.example.com/policy:tag"),
+            (
+                Some(Store::default()),
+                store_path("registry/host.example.com/policy:tag"),
+            ),
         );
         Ok(())
     }
@@ -225,7 +232,10 @@ mod tests {
                 &Url::parse("registry://host.example.com:1234/path/to/policy:tag")?,
                 &PullDestination::MainStore,
             )?,
-            store_path("registry/host.example.com:1234/path/to/policy:tag"),
+            (
+                Some(Store::default()),
+                store_path("registry/host.example.com:1234/path/to/policy:tag"),
+            ),
         );
         Ok(())
     }

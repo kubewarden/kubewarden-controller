@@ -2,6 +2,7 @@ use anyhow::Result;
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use std::path::{Path, PathBuf};
+use url::Url;
 use walkdir::WalkDir;
 
 use crate::policy::Policy;
@@ -12,6 +13,11 @@ lazy_static! {
     pub static ref DEFAULT_ROOT: ProjectDirs =
         ProjectDirs::from("io.kubewarden", "", "kubewarden").unwrap();
     pub static ref DEFAULT_STORE_ROOT: PathBuf = DEFAULT_ROOT.cache_dir().join("store");
+}
+
+pub enum PolicyPath {
+    PrefixOnly,
+    PrefixAndFilename,
 }
 
 // Store represents a structure that is able to save and retrieve
@@ -50,6 +56,7 @@ lazy_static! {
 //         - path
 //           - to
 //             - wasm-module.wasm:1.0.0
+#[derive(Debug, PartialEq)]
 pub struct Store {
     pub root: PathBuf,
 }
@@ -61,14 +68,39 @@ impl Store {
         }
     }
 
-    #[cfg(not(test))]
     pub fn ensure(&self, path: &Path) -> Result<()> {
         std::fs::create_dir_all(&self.root.join(path)).map_err(|e| e.into())
     }
 
-    #[cfg(test)]
-    pub fn ensure(&self, _path: &Path) -> Result<()> {
-        Ok(())
+    pub fn policy_full_path(&self, url: &str, policy_path: PolicyPath) -> Result<PathBuf> {
+        let url = Url::parse(url)?;
+        let filename = url.path().split('/').last().unwrap();
+        let policy_prefix = self.policy_prefix(&url);
+        Ok(match policy_path {
+            PolicyPath::PrefixOnly => self.root.join(policy_prefix),
+            PolicyPath::PrefixAndFilename => self.root.join(policy_prefix).join(filename),
+        })
+    }
+
+    pub(crate) fn policy_prefix(&self, url: &Url) -> PathBuf {
+        let host_and_port = url
+            .host_str()
+            .map(|host| {
+                if let Some(port) = url.port() {
+                    format!("{}:{}", host, port)
+                } else {
+                    host.into()
+                }
+            })
+            .unwrap_or_default();
+        let element_count = url.path().split('/').count();
+        let elements = url.path().split('/');
+        let path = elements
+            .skip(1)
+            .take(element_count - 2)
+            .collect::<Vec<&str>>()
+            .join("/");
+        Path::new(url.scheme()).join(&host_and_port).join(&path)
     }
 
     pub fn list(&self) -> std::io::Result<Vec<Policy>> {
