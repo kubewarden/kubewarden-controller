@@ -22,6 +22,7 @@ use policy_fetcher::PullDestination;
 
 mod policies;
 mod pull;
+mod rm;
 mod run;
 
 #[tokio::main]
@@ -40,6 +41,10 @@ async fn main() -> Result<()> {
              (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
              (@arg ("output-path"): -o --("output-path") +takes_value "Output file. If not provided will be downloaded to the Kubewarden store")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
+            )
+            (@subcommand rm =>
+             (about: "Removes a Kubewarden policy from the store")
+             (@arg ("uri"): * "Policy URI")
             )
             (@subcommand run =>
              (about: "Runs a Kubewarden policy from a given URI")
@@ -73,6 +78,13 @@ async fn main() -> Result<()> {
                 let (sources, docker_config) = pull_options(matches);
                 pull::pull(uri, docker_config, sources, destination).await?;
             };
+            Ok(())
+        }
+        Some("rm") => {
+            if let Some(ref matches) = matches.subcommand_matches("rm") {
+                let uri = matches.value_of("uri").unwrap();
+                rm::rm(uri)?;
+            }
             Ok(())
         }
         Some("run") => {
