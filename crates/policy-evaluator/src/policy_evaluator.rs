@@ -80,7 +80,7 @@ impl PolicyEvaluator {
     }
 
     #[tracing::instrument]
-    pub fn validate(&mut self, request: serde_json::Value) -> ValidationResponse {
+    pub fn validate(&self, request: serde_json::Value) -> ValidationResponse {
         let uid = request
             .get("uid")
             .and_then(|v| v.as_str())
@@ -142,7 +142,7 @@ impl PolicyEvaluator {
         }
     }
 
-    pub fn validate_settings(&mut self) -> SettingsValidationResponse {
+    pub fn validate_settings(&self) -> SettingsValidationResponse {
         let settings_str = match serde_json::to_string(&self.settings) {
             Ok(s) => s,
             Err(e) => {
