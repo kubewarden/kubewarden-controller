@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 
 use serde_json::json;
 
-use std::{fmt, fs::File, io::prelude::*, path::Path};
+use std::{convert::TryFrom, fmt, fs::File, io::prelude::*, path::Path};
 
 use tracing::error;
 
@@ -12,7 +12,6 @@ use wasmtime_provider::WasmtimeEngineProvider;
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
-use crate::utils::convert_yaml_map_to_json;
 use crate::validation_response::ValidationResponse;
 
 use crate::cluster_context::ClusterContext;
@@ -50,7 +49,10 @@ impl fmt::Debug for PolicyEvaluator {
 }
 
 impl PolicyEvaluator {
-    pub fn new(wasm_file: &Path, settings: Option<serde_yaml::Mapping>) -> Result<PolicyEvaluator> {
+    pub fn new(
+        wasm_file: &Path,
+        settings: Option<serde_json::Map<String, serde_json::Value>>,
+    ) -> Result<PolicyEvaluator> {
         let mut f = File::open(&wasm_file)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
@@ -60,22 +62,11 @@ impl PolicyEvaluator {
         }
 
         let engine = WasmtimeEngineProvider::new(&buf, None);
-        let host = WapcHost::new(Box::new(engine), host_callback)?;
-        let settings_json =
-            settings.and_then(|settings| match convert_yaml_map_to_json(settings) {
-                Ok(settings) => Some(settings),
-                Err(err) => {
-                    error!(
-                        error = err.to_string().as_str(),
-                        "cannot convert YAML settings to JSON"
-                    );
-                    None
-                }
-            });
+        let wapc_host = WapcHost::new(Box::new(engine), host_callback)?;
 
         Ok(PolicyEvaluator {
-            wapc_host: host,
-            settings: settings_json,
+            wapc_host,
+            settings,
         })
     }
 
