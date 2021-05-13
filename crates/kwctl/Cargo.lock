@@ -1923,7 +1923,7 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 [[package]]
 name = "policy-evaluator"
 version = "0.1.0"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.2#b62659b8b338c9bda1941626fd19d47d25a33f3b"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.3#46b01aa009c1839645eecd6c0a1ee269068ca53d"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
