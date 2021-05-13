@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use policy_evaluator::policy_evaluator::PolicyEvaluator;
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 
@@ -18,6 +18,9 @@ pub(crate) async fn pull_and_run(
         policy_fetcher::PullDestination::MainStore,
     )
     .await?;
+
+    let request = serde_json::from_str::<serde_json::Value>(&request)?;
+
     println!(
         "{}",
         serde_json::to_string(
@@ -25,7 +28,25 @@ pub(crate) async fn pull_and_run(
                 policy_path.as_path(),
                 settings.map_or(Ok(None), |settings| serde_yaml::from_str(&settings))?,
             )?
-            .validate(serde_json::from_str(&request)?)
+            .validate(
+                {
+                    match request {
+                        serde_json::Value::Object(ref object) => {
+                            if object.get("kind").and_then(serde_json::Value::as_str)
+                                == Some("AdmissionReview")
+                            {
+                                object
+                                    .get("request")
+                                    .ok_or_else(|| anyhow!("invalid admission review object"))
+                            } else {
+                                Ok(&request)
+                            }
+                        }
+                        _ => Err(anyhow!("request to evaluate is invalid")),
+                    }
+                }?
+                .clone()
+            )
         )?
     );
     Ok(())

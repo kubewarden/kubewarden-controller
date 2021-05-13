@@ -55,6 +55,18 @@ kwctl() {
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
 }
 
+@test "execute a remote policy that is allowed with AdmissionReview object as the root document" {
+    kwctl run --request-path test-data/unprivileged-pod-admission-review.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+}
+
+@test "execute a remote policy that is rejected with AdmissionReview object as the root document" {
+    kwctl run --request-path test-data/privileged-pod-admission-review.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+}
+
 @test "remove a policy from the policy store" {
     kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
     kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm
