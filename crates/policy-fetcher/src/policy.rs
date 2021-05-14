@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Policy {
-    pub(crate) uri: String,
-    pub(crate) local_path: PathBuf,
+    pub uri: String,
+    pub local_path: PathBuf,
 }
 
 impl Display for Policy {
