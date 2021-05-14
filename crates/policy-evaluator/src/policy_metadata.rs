@@ -118,14 +118,32 @@ fn validate_resources(data: &[String]) -> Result<(), ValidationError> {
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {
     #[serde(default = "protocol_version_unspecified")]
+    #[validate(custom = "validate_protocol_version")]
     pub protocol_version: ProtocolVersion,
     #[validate]
     pub rules: Vec<Rule>,
     pub labels: HashMap<String, String>,
 }
 
+impl Default for Metadata {
+    fn default() -> Self {
+        Self {
+            protocol_version: ProtocolVersion::V0,
+            rules: vec![],
+            labels: HashMap::new(),
+        }
+    }
+}
+
 fn protocol_version_unspecified() -> ProtocolVersion {
     ProtocolVersion::V0
+}
+
+fn validate_protocol_version(protocol: &ProtocolVersion) -> Result<(), ValidationError> {
+    match protocol {
+        ProtocolVersion::V0 => Err(ValidationError::new("Must specifify a protocol version")),
+        _ => Ok(()),
+    }
 }
 
 #[cfg(test)]
@@ -162,12 +180,11 @@ mod tests {
             resources: vec![String::from("pods")],
             operations: vec![Operation::Create],
         };
-        let labels: HashMap<String, String> = HashMap::new();
         let protocol_version = ProtocolVersion::V1;
 
         let mut metadata = Metadata {
             protocol_version,
-            labels,
+            labels: HashMap::new(),
             rules: vec![pod_rule],
         };
         assert!(metadata.validate().is_err());
@@ -190,6 +207,20 @@ mod tests {
             operations: vec![Operation::All, Operation::Create],
         };
         metadata.rules = vec![pod_rule];
+        assert!(metadata.validate().is_err());
+
+        // faile because there's no valid protocol version defined
+        pod_rule = Rule {
+            api_groups: vec![String::from("")],
+            api_versions: vec![String::from("v1")],
+            resources: vec![String::from("pods")],
+            operations: vec![Operation::Create],
+        };
+        metadata = Metadata {
+            rules: vec![pod_rule],
+            labels: HashMap::new(),
+            ..Default::default()
+        };
         assert!(metadata.validate().is_err());
 
         Ok(())
