@@ -2,9 +2,12 @@ use anyhow::{anyhow, Result};
 use async_std::fs::File;
 use async_std::prelude::*;
 use async_trait::async_trait;
-use oci_distribution::client::{Client, ClientConfig, ClientProtocol};
-use oci_distribution::secrets::RegistryAuth;
-use oci_distribution::Reference;
+use oci_distribution::{
+    client::{Client, ClientConfig, ClientProtocol},
+    manifest,
+    secrets::RegistryAuth,
+    Reference,
+};
 use std::{path::PathBuf, str::FromStr};
 use tokio_compat_02::FutureExt;
 use url::Url;
@@ -71,7 +74,7 @@ impl Registry {
             .pull(
                 reference,
                 registry_auth,
-                vec!["application/vnd.wasm.content.layer.v1+wasm"],
+                vec![manifest::WASM_LAYER_MEDIA_TYPE],
             )
             // We need to call to `compat()` provided by the `tokio-compat-02` crate
             // so that the Future returned by the `oci-distribution` crate can be
