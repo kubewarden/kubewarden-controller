@@ -26,6 +26,7 @@ use crate::store::Store;
 
 use std::path::{Path, PathBuf};
 
+#[derive(Debug)]
 pub enum PullDestination {
     MainStore,
     Store(PathBuf),
