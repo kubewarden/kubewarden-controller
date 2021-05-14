@@ -20,6 +20,7 @@ use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 
+mod constants;
 mod policies;
 mod pull;
 mod rm;
