@@ -20,6 +20,7 @@ use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 
+mod annotate;
 mod constants;
 mod policies;
 mod pull;
@@ -55,6 +56,13 @@ async fn main() -> Result<()> {
              (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
             )
+            (@subcommand annotate =>
+             (about: "Add Kubewarden metadata to a WebAssembly module")
+             (@arg ("metadata-path"): * -m --("metadata-path") +takes_value "File containing the metadata")
+             (@arg ("wasm-path"): * "Path to WebAssembly module to be annotated")
+             (@arg ("output-path"): * -o --("output-path") +takes_value "Output file")
+            )
+
     )
     .setting(AppSettings::SubcommandRequiredElseHelp)
     .get_matches();
@@ -98,6 +106,24 @@ async fn main() -> Result<()> {
                     .transpose()?;
                 let (sources, docker_config) = pull_options(matches);
                 run::pull_and_run(uri, docker_config, sources, &request, settings).await?;
+            }
+            Ok(())
+        }
+        Some("annotate") => {
+            if let Some(ref matches) = matches.subcommand_matches("annotate") {
+                let wasm_path = matches
+                    .value_of("wasm-path")
+                    .map(|output| PathBuf::from_str(output).unwrap())
+                    .unwrap();
+                let metadata_file = matches
+                    .value_of("metadata-path")
+                    .map(|output| PathBuf::from_str(output).unwrap())
+                    .unwrap();
+                let destination = matches
+                    .value_of("output-path")
+                    .map(|output| PathBuf::from_str(output).unwrap())
+                    .unwrap();
+                annotate::write_annotation(wasm_path, metadata_file, destination)?;
             }
             Ok(())
         }
