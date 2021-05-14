@@ -117,9 +117,8 @@ fn validate_resources(data: &[String]) -> Result<(), ValidationError> {
 #[derive(Deserialize, Serialize, Debug, Clone, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct Metadata {
-    #[serde(default = "protocol_version_unspecified")]
-    #[validate(custom = "validate_protocol_version")]
-    pub protocol_version: ProtocolVersion,
+    #[validate(required, custom = "validate_protocol_version")]
+    pub protocol_version: Option<ProtocolVersion>,
     #[validate]
     pub rules: Vec<Rule>,
     pub labels: HashMap<String, String>,
@@ -128,20 +127,18 @@ pub struct Metadata {
 impl Default for Metadata {
     fn default() -> Self {
         Self {
-            protocol_version: ProtocolVersion::V0,
+            protocol_version: None,
             rules: vec![],
             labels: HashMap::new(),
         }
     }
 }
 
-fn protocol_version_unspecified() -> ProtocolVersion {
-    ProtocolVersion::V0
-}
-
 fn validate_protocol_version(protocol: &ProtocolVersion) -> Result<(), ValidationError> {
     match protocol {
-        ProtocolVersion::V0 => Err(ValidationError::new("Must specifify a protocol version")),
+        ProtocolVersion::Unknown => Err(ValidationError::new(
+            "Must specifify a valid protocol version",
+        )),
         _ => Ok(()),
     }
 }
@@ -162,7 +159,7 @@ mod tests {
         };
         let labels: HashMap<String, String> = HashMap::new();
         let metadata = Metadata {
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             labels,
         };
@@ -180,7 +177,7 @@ mod tests {
             resources: vec![String::from("pods")],
             operations: vec![Operation::Create],
         };
-        let protocol_version = ProtocolVersion::V1;
+        let protocol_version = Some(ProtocolVersion::V1);
 
         let mut metadata = Metadata {
             protocol_version,
@@ -223,6 +220,19 @@ mod tests {
         };
         assert!(metadata.validate().is_err());
 
+        pod_rule = Rule {
+            api_groups: vec![String::from("")],
+            api_versions: vec![String::from("v1")],
+            resources: vec![String::from("pods")],
+            operations: vec![Operation::Create],
+        };
+        metadata = Metadata {
+            rules: vec![pod_rule],
+            labels: HashMap::new(),
+            protocol_version: None,
+        };
+        assert!(metadata.validate().is_err());
+
         Ok(())
     }
 
@@ -230,7 +240,7 @@ mod tests {
     fn metadata_without_rules() -> Result<(), ()> {
         let metadata = Metadata {
             rules: vec![],
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             labels: HashMap::new(),
         };
 
@@ -258,7 +268,7 @@ mod tests {
 
         let metadata = Metadata {
             labels,
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
         };
 
@@ -302,7 +312,7 @@ mod tests {
 
         let metadata = Metadata {
             labels,
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
         };
 
@@ -324,7 +334,7 @@ mod tests {
 
         let metadata = Metadata {
             labels,
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
         };
 
@@ -346,7 +356,7 @@ mod tests {
 
         let metadata = Metadata {
             labels,
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
         };
 
@@ -367,7 +377,7 @@ mod tests {
 
         let metadata = Metadata {
             labels,
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
         };
 
@@ -388,7 +398,7 @@ mod tests {
 
         let metadata = Metadata {
             labels,
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
         };
 
@@ -409,7 +419,7 @@ mod tests {
 
         let metadata = Metadata {
             labels,
-            protocol_version: ProtocolVersion::V1,
+            protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
         };
 
