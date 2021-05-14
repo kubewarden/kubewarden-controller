@@ -9,6 +9,7 @@ use tracing::error;
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
 
+use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
@@ -163,6 +164,22 @@ impl PolicyEvaluator {
                     err
                 )),
             },
+        }
+    }
+
+    pub fn protocol_version(&self) -> Result<ProtocolVersion> {
+        match self.wapc_host.call("protocol_version", &[0; 0]) {
+            Ok(res) => ProtocolVersion::try_from(res.clone()).map_err(|e| {
+                anyhow!(
+                    "Cannot create ProtocolVersion object from '{:?}': {:?}",
+                    res,
+                    e
+                )
+            }),
+            Err(err) => Err(anyhow!(
+                "Cannot invoke 'protocol_version' waPC function: {:?}",
+                err
+            )),
         }
     }
 }
