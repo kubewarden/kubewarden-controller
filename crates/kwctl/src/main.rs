@@ -22,6 +22,7 @@ use policy_fetcher::PullDestination;
 
 mod annotate;
 mod constants;
+mod inspect;
 mod policies;
 mod pull;
 mod rm;
@@ -61,6 +62,10 @@ async fn main() -> Result<()> {
              (@arg ("metadata-path"): * -m --("metadata-path") +takes_value "File containing the metadata")
              (@arg ("wasm-path"): * "Path to WebAssembly module to be annotated")
              (@arg ("output-path"): * -o --("output-path") +takes_value "Output file")
+            )
+            (@subcommand inspect =>
+             (about: "Inspect Kubewarden policy")
+             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
             )
 
     )
@@ -125,6 +130,13 @@ async fn main() -> Result<()> {
                     .unwrap();
                 annotate::write_annotation(wasm_path, metadata_file, destination)?;
             }
+            Ok(())
+        }
+        Some("inspect") => {
+            if let Some(ref matches) = matches.subcommand_matches("inspect") {
+                let uri = matches.value_of("uri").unwrap();
+                inspect::inspect(uri)?;
+            };
             Ok(())
         }
         Some(command) => Err(anyhow!("unknown subcommand: {}", command)),
