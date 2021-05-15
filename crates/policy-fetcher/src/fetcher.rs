@@ -1,14 +1,21 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use std::path::PathBuf;
+use std::path::Path;
+use url::Url;
 
+use crate::registry::config::DockerConfig;
 use crate::sources::Sources;
 
 // Generic interface for all the operations related with obtaining
 // a WASM module
 #[async_trait]
 pub(crate) trait Fetcher {
-    // Download, if needed, the WASM module and return the path to the
-    // file on the local disk
-    async fn fetch(&self, sources: &Sources) -> Result<PathBuf>;
+    // Download the WASM module to the provided destination
+    async fn fetch(
+        &self,
+        url: &Url,
+        destination: &Path,
+        sources: Option<&Sources>,
+        docker_config: Option<&DockerConfig>,
+    ) -> Result<()>;
 }

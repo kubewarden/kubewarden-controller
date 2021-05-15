@@ -5,19 +5,15 @@ use async_std::fs::File;
 use async_std::prelude::*;
 use async_trait::async_trait;
 use rustls::Certificate;
-use std::{boxed::Box, path::PathBuf};
+use std::{boxed::Box, path::Path};
 use url::Url;
 
 use crate::fetcher::Fetcher;
+use crate::registry::config::DockerConfig;
 use crate::sources::Sources;
 
 // Struct used to reference a WASM module that is hosted on a HTTP(s) server
-pub(crate) struct Https {
-    // full path to the WASM module
-    destination: PathBuf,
-    // url of the remote WASM module
-    wasm_url: Url,
-}
+pub(crate) struct Https;
 
 enum TlsFetchMode {
     CustomCa(Vec<Certificate>),
@@ -26,16 +22,12 @@ enum TlsFetchMode {
 }
 
 impl Https {
-    // Allocates a LocalWASM instance starting from the user
-    // provided URL
-    pub(crate) fn new(wasm_url: Url, destination: PathBuf) -> Https {
-        Https {
-            destination,
-            wasm_url,
-        }
-    }
-
-    async fn fetch_https(&self, tls_fetch_mode: TlsFetchMode) -> Result<PathBuf> {
+    async fn fetch_https(
+        &self,
+        url: &Url,
+        tls_fetch_mode: TlsFetchMode,
+        destination: &Path,
+    ) -> Result<()> {
         let mut client_builder = reqwest::Client::builder().https_only(true);
 
         match tls_fetch_mode {
@@ -54,63 +46,78 @@ impl Https {
         }
 
         let client = client_builder.build()?;
-        let buf = client
-            .get(self.wasm_url.as_ref())
-            .send()
-            .await?
-            .bytes()
-            .await?;
-        let mut file = File::create(self.destination.clone()).await?;
+        let buf = client.get(url.as_ref()).send().await?.bytes().await?;
+        let mut file = File::create(destination).await?;
         file.write_all(&buf).await?;
 
-        Ok(self.destination.clone())
+        Ok(())
     }
 
-    async fn fetch_http(&self) -> Result<PathBuf> {
-        let buf = reqwest::get(self.wasm_url.as_ref()).await?.bytes().await?;
-        let mut file = File::create(self.destination.clone()).await?;
+    async fn fetch_http(&self, url: &Url, destination: &Path) -> Result<()> {
+        let buf = reqwest::get(url.as_ref()).await?.bytes().await?;
+        let mut file = File::create(destination).await?;
         file.write_all(&buf).await?;
 
-        Ok(self.destination.clone())
+        Ok(())
     }
 }
 
 #[async_trait]
 impl Fetcher for Https {
-    async fn fetch(&self, sources: &Sources) -> Result<PathBuf> {
+    async fn fetch(
+        &self,
+        url: &Url,
+        destination: &Path,
+        sources: Option<&Sources>,
+        _docker_config: Option<&DockerConfig>,
+    ) -> Result<()> {
         // 1. If CA's provided, download with provided CA's
         // 2. If no CA's provided, download with system CA's
         //   2.1. If it fails and if insecure is enabled for that host,
         //     2.1.1. Download from HTTPs ignoring certificate errors
         //     2.1.2. Download from HTTP
 
-        if self.wasm_url.scheme() == "https" {
-            let host = match self.wasm_url.host_str() {
-                Some(host) => Ok(host),
-                None => Err(anyhow!("cannot parse URI {}", self.wasm_url)),
-            }?;
+        if url.scheme() == "https" {
+            let host_and_port = crate::host_and_port(&url)?;
 
-            if let Some(host_ca_certificate) = sources.source_authority(host) {
+            if let Some(host_ca_certificate) =
+                sources.and_then(|sources| sources.source_authority(&host_and_port))
+            {
                 if let Ok(module_contents) = self
-                    .fetch_https(TlsFetchMode::CustomCa(host_ca_certificate))
+                    .fetch_https(
+                        url,
+                        TlsFetchMode::CustomCa(host_ca_certificate),
+                        destination,
+                    )
                     .await
                 {
                     return Ok(module_contents);
-                } else if !sources.is_insecure_source(host) {
-                    return Err(anyhow!("could not download Wasm module from {} using provided CA certificate; aborting since host is not set as insecure", self.wasm_url));
+                } else if sources.map(|sources| sources.is_insecure_source(&host_and_port))
+                    != Some(true)
+                {
+                    return Err(anyhow!("could not download Wasm module from {} using provided CA certificate; aborting since host is not set as insecure", url));
                 }
             }
-            if let Ok(module_contents) = self.fetch_https(TlsFetchMode::SystemCa).await {
+
+            if let Ok(module_contents) = self
+                .fetch_https(url, TlsFetchMode::SystemCa, destination)
+                .await
+            {
                 return Ok(module_contents);
             }
-            if !sources.is_insecure_source(host) {
-                return Err(anyhow!("could not download Wasm module from {} using system CA certificates; aborting since host is not set as insecure", self.wasm_url));
+
+            if sources.map(|sources| sources.is_insecure_source(&host_and_port)) != Some(true) {
+                return Err(anyhow!("could not download Wasm module from {} using system CA certificates; aborting since host is not set as insecure", url));
             }
-            if let Ok(module_contents) = self.fetch_https(TlsFetchMode::NoTlsVerification).await {
+
+            if let Ok(module_contents) = self
+                .fetch_https(url, TlsFetchMode::NoTlsVerification, destination)
+                .await
+            {
                 return Ok(module_contents);
             }
         }
 
-        self.fetch_http().await
+        self.fetch_http(url, destination).await
     }
 }

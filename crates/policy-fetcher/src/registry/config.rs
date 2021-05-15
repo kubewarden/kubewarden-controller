@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
-use std::{collections::HashMap, convert::TryFrom};
+use std::{collections::HashMap, convert::TryFrom, convert::TryInto, fs::File, path::Path};
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct RegistryAuthRaw {
@@ -22,21 +22,17 @@ pub struct DockerConfig {
     pub(crate) auths: HashMap<String, RegistryAuth>,
 }
 
-impl From<DockerConfigRaw> for DockerConfig {
-    fn from(docker_config: DockerConfigRaw) -> Self {
-        DockerConfig {
+impl TryFrom<DockerConfigRaw> for DockerConfig {
+    type Error = anyhow::Error;
+
+    fn try_from(docker_config: DockerConfigRaw) -> Result<Self> {
+        Ok(DockerConfig {
             auths: docker_config
                 .auths
                 .into_iter()
-                .filter_map(|(host, auth)| {
-                    if let Ok(registry_auth) = RegistryAuth::try_from(auth) {
-                        Some((host, registry_auth))
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-        }
+                .map(|(host, auth)| Ok((host, RegistryAuth::try_from(auth)?)))
+                .collect::<Result<_>>()?,
+        })
     }
 }
 
@@ -56,4 +52,8 @@ impl TryFrom<RegistryAuthRaw> for RegistryAuth {
             Err(anyhow!("invalid base64 encoding"))
         }
     }
+}
+
+pub fn read_docker_config_json_file(path: &Path) -> Result<DockerConfig> {
+    serde_json::from_reader::<_, DockerConfigRaw>(File::open(path)?)?.try_into()
 }

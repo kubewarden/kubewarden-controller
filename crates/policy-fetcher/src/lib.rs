@@ -36,8 +36,8 @@ pub enum PullDestination {
 pub async fn fetch_policy(
     url: &str,
     destination: PullDestination,
-    docker_config: Option<DockerConfig>,
-    sources: &Sources,
+    docker_config: Option<&DockerConfig>,
+    sources: Option<&Sources>,
 ) -> Result<PathBuf> {
     let url = Url::parse(url)?;
     match url.scheme() {
@@ -60,9 +60,11 @@ pub async fn fetch_policy(
         return Ok(destination);
     }
     eprintln!("pulling policy...");
-    url_fetcher(&url, docker_config, destination)?
-        .fetch(sources)
-        .await
+    url_fetcher(url.scheme())?
+        .fetch(&url, &destination, sources, docker_config)
+        .await?;
+
+    Ok(destination)
 }
 
 fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<Store>, PathBuf)> {
@@ -92,21 +94,24 @@ fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<
 
 // Helper function, takes the URL of the policy and allocates the
 // right struct to interact with it
-fn url_fetcher(
-    url: &Url,
-    docker_config: Option<DockerConfig>,
-    destination: PathBuf,
-) -> Result<Box<dyn Fetcher>> {
-    match url.scheme() {
-        "file" => Ok(Box::new(Local::new(PathBuf::from(url.path())))),
-        "http" | "https" => Ok(Box::new(Https::new(url.clone(), destination))),
-        "registry" => Ok(Box::new(Registry::new(
-            url.clone(),
-            docker_config,
-            destination,
-        ))),
-        _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
+fn url_fetcher(scheme: &str) -> Result<Box<dyn Fetcher>> {
+    match scheme {
+        "file" => Ok(Box::new(Local {})),
+        "http" | "https" => Ok(Box::new(Https {})),
+        "registry" => Ok(Box::new(Registry {})),
+        _ => return Err(anyhow!("unknown scheme: {}", scheme)),
     }
+}
+
+pub(crate) fn host_and_port(url: &Url) -> Result<String> {
+    Ok(format!(
+        "{}{}",
+        url.host_str()
+            .ok_or_else(|| anyhow!("invalid URL {}", url))?,
+        url.port()
+            .map(|port| format!(":{}", port))
+            .unwrap_or_default(),
+    ))
 }
 
 #[cfg(test)]
