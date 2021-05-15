@@ -25,10 +25,9 @@ mod worker_pool;
 use worker_pool::WorkerPool;
 
 use policy_evaluator::policy::read_policies_file;
-use policy_fetcher::registry::config::{DockerConfig, DockerConfigRaw};
+use policy_fetcher::registry::config::read_docker_config_json_file;
 use policy_fetcher::sources::read_sources_file;
 
-use std::fs;
 use std::path::{Path, PathBuf};
 
 mod communication;
@@ -182,35 +181,34 @@ fn main() {
         }
     };
 
-    let sources = matches
-        .value_of("sources-path")
-        .map(
-            |sources_file| match read_sources_file(Path::new(sources_file)) {
-                Ok(sources) => sources,
-                Err(err) => {
-                    fatal_error(format!(
-                        "error while loading sources from {}: {}",
-                        sources_file, err
-                    ));
-                    unreachable!();
+    let sources = matches.value_of("sources-path").map(|sources_file| {
+        match read_sources_file(Path::new(sources_file)) {
+            Ok(sources) => sources,
+            Err(err) => {
+                fatal_error(format!(
+                    "error while loading sources from {}: {}",
+                    sources_file, err
+                ));
+                unreachable!();
+            }
+        }
+    });
+
+    let docker_config =
+        matches
+            .value_of("docker-config-json-path")
+            .map(|docker_config_json_path_file| {
+                match read_docker_config_json_file(Path::new(docker_config_json_path_file)) {
+                    Ok(docker_config_json) => docker_config_json,
+                    Err(err) => {
+                        fatal_error(format!(
+                            "error while loading docker-config-json-like path from {}: {}",
+                            docker_config_json_path_file, err
+                        ));
+                        unreachable!();
+                    }
                 }
-            },
-        )
-        .unwrap_or_default();
-
-    let docker_config_json_path = matches
-        .value_of("docker-config-json-path")
-        .map(|json_config_path| json_config_path.into());
-
-    let docker_config: Option<DockerConfig> = docker_config_json_path
-        .and_then(|docker_config_json_path: String| {
-            fs::read_to_string(docker_config_json_path).ok()
-        })
-        .and_then(|contents| {
-            serde_json::from_str(&contents)
-                .map(|config: DockerConfigRaw| config.into())
-                .ok()
-        });
+            });
 
     // Download policies
     let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
@@ -225,8 +223,8 @@ fn main() {
         match rt.block_on(policy_fetcher::fetch_policy(
             &policy.url,
             policy_fetcher::PullDestination::Store(PathBuf::from(policies_download_dir)),
-            docker_config.clone(),
-            &sources,
+            docker_config.as_ref(),
+            sources.as_ref(),
         )) {
             Ok(path) => policy.wasm_module_path = path,
             Err(e) => {
