@@ -23,6 +23,7 @@ use policy_fetcher::PullDestination;
 mod annotate;
 mod constants;
 mod inspect;
+mod manifest;
 mod metadata;
 mod policies;
 mod pull;
@@ -75,6 +76,11 @@ async fn main() -> Result<()> {
             )
             (@subcommand inspect =>
              (about: "Inspect Kubewarden policy")
+             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
+            )
+            (@subcommand manifest =>
+             (about: "Scaffold a Kubernetes resource")
+             (@arg ("type"): * -t --("type") +takes_value "Kubewarden Custom Resource type. Valid values: ClusterAdmissionPolicy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
             )
 
@@ -155,6 +161,14 @@ async fn main() -> Result<()> {
             if let Some(ref matches) = matches.subcommand_matches("inspect") {
                 let uri = matches.value_of("uri").unwrap();
                 inspect::inspect(uri)?;
+            };
+            Ok(())
+        }
+        Some("manifest") => {
+            if let Some(ref matches) = matches.subcommand_matches("manifest") {
+                let uri = matches.value_of("uri").unwrap();
+                let resource_type = matches.value_of("type").unwrap();
+                manifest::manifest(uri, resource_type)?;
             };
             Ok(())
         }
