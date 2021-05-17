@@ -23,11 +23,13 @@ use policy_fetcher::PullDestination;
 mod annotate;
 mod constants;
 mod inspect;
+mod metadata;
 mod policies;
 mod pull;
 mod push;
 mod rm;
 mod run;
+mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
