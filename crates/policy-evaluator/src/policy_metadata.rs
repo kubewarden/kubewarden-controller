@@ -121,7 +121,8 @@ pub struct Metadata {
     pub protocol_version: Option<ProtocolVersion>,
     #[validate]
     pub rules: Vec<Rule>,
-    pub labels: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub labels: Option<HashMap<String, String>>,
     pub mutating: bool,
 }
 
@@ -130,7 +131,7 @@ impl Default for Metadata {
         Self {
             protocol_version: None,
             rules: vec![],
-            labels: HashMap::new(),
+            labels: Some(HashMap::new()),
             mutating: false,
         }
     }
@@ -159,11 +160,10 @@ mod tests {
             resources: vec![String::from("pods")],
             operations: vec![Operation::Create],
         };
-        let labels: HashMap<String, String> = HashMap::new();
         let metadata = Metadata {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
-            labels,
+            labels: None,
             mutating: false,
         };
         assert!(metadata.validate().is_ok());
@@ -184,7 +184,7 @@ mod tests {
 
         let mut metadata = Metadata {
             protocol_version,
-            labels: HashMap::new(),
+            labels: None,
             rules: vec![pod_rule],
             mutating: false,
         };
@@ -219,7 +219,7 @@ mod tests {
         };
         metadata = Metadata {
             rules: vec![pod_rule],
-            labels: HashMap::new(),
+            labels: None,
             ..Default::default()
         };
         assert!(metadata.validate().is_err());
@@ -232,7 +232,7 @@ mod tests {
         };
         metadata = Metadata {
             rules: vec![pod_rule],
-            labels: HashMap::new(),
+            labels: None,
             protocol_version: None,
             mutating: false,
         };
@@ -246,14 +246,13 @@ mod tests {
         let metadata = Metadata {
             rules: vec![],
             protocol_version: Some(ProtocolVersion::V1),
-            labels: HashMap::new(),
+            labels: None,
             mutating: false,
         };
 
         let expected = json!({
             "protocolVersion": "v1",
             "rules": [ ],
-            "labels": { },
             "mutating": false
         });
 
@@ -274,7 +273,7 @@ mod tests {
         labels.insert(String::from("author"), String::from("Flavio Castelli"));
 
         let metadata = Metadata {
-            labels,
+            labels: Some(labels),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -320,7 +319,7 @@ mod tests {
         labels.insert(String::from("author"), String::from("Flavio Castelli"));
 
         let metadata = Metadata {
-            labels,
+            labels: Some(labels),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -343,7 +342,7 @@ mod tests {
         labels.insert(String::from("author"), String::from("Flavio Castelli"));
 
         let metadata = Metadata {
-            labels,
+            labels: Some(labels),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -366,7 +365,7 @@ mod tests {
         labels.insert(String::from("author"), String::from("Flavio Castelli"));
 
         let metadata = Metadata {
-            labels,
+            labels: Some(labels),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -388,7 +387,7 @@ mod tests {
         labels.insert(String::from("author"), String::from("Flavio Castelli"));
 
         let metadata = Metadata {
-            labels,
+            labels: Some(labels),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -410,7 +409,7 @@ mod tests {
         labels.insert(String::from("author"), String::from("Flavio Castelli"));
 
         let metadata = Metadata {
-            labels,
+            labels: Some(labels),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -432,7 +431,7 @@ mod tests {
         labels.insert(String::from("author"), String::from("Flavio Castelli"));
 
         let metadata = Metadata {
-            labels,
+            labels: Some(labels),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
