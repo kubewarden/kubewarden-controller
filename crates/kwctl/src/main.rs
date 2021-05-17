@@ -15,7 +15,7 @@ use std::{
     str::FromStr,
 };
 
-use policy_fetcher::registry::config::{DockerConfig, DockerConfigRaw};
+use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
@@ -25,6 +25,7 @@ mod constants;
 mod inspect;
 mod policies;
 mod pull;
+mod push;
 mod rm;
 mod run;
 
@@ -44,6 +45,13 @@ async fn main() -> Result<()> {
              (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
              (@arg ("output-path"): -o --("output-path") +takes_value "Output file. If not provided will be downloaded to the Kubewarden store")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
+            )
+            (@subcommand push =>
+             (about: "Pushes a Kubewarden policy to an OCI registry")
+             (@arg ("docker-config-json-path"): --("docker-config-json-path") +takes_value "Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
+             (@arg ("policy-path"): * -p --("policy-path") +takes_value "Policy file to push")
+             (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
+             (@arg ("uri"): * "Policy URI. Supported schemes: registry://")
             )
             (@subcommand rm =>
              (about: "Removes a Kubewarden policy from the store")
@@ -89,8 +97,17 @@ async fn main() -> Result<()> {
                     Some(destination) => PullDestination::LocalFile(destination),
                     None => PullDestination::MainStore,
                 };
-                let (sources, docker_config) = pull_options(matches);
+                let (sources, docker_config) = remote_server_options(matches)?;
                 pull::pull(uri, docker_config, sources, destination).await?;
+            };
+            Ok(())
+        }
+        Some("push") => {
+            if let Some(ref matches) = matches.subcommand_matches("push") {
+                let (sources, docker_config) = remote_server_options(matches)?;
+                let policy = fs::read(matches.value_of("policy-path").unwrap())?;
+                let uri = matches.value_of("uri").unwrap();
+                push::push(&policy, uri, docker_config, sources).await?;
             };
             Ok(())
         }
@@ -109,7 +126,7 @@ async fn main() -> Result<()> {
                     .value_of("settings-path")
                     .map(|settings| -> Result<String> { Ok(fs::read_to_string(settings)?) })
                     .transpose()?;
-                let (sources, docker_config) = pull_options(matches);
+                let (sources, docker_config) = remote_server_options(matches)?;
                 run::pull_and_run(uri, docker_config, sources, &request, settings).await?;
             }
             Ok(())
@@ -148,20 +165,31 @@ async fn main() -> Result<()> {
     }
 }
 
-fn pull_options(matches: &ArgMatches) -> (Option<Sources>, Option<DockerConfig>) {
-    let sources = matches
-        .value_of("sources-path")
-        .and_then(|sources_path| read_sources_file(Path::new(sources_path)).ok())
-        .or_else(|| read_sources_file(&DEFAULT_ROOT.config_dir().join("sources.yaml")).ok());
+fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Option<DockerConfig>)> {
+    let sources = if let Some(sources_path) = matches.value_of("sources-path") {
+        Some(read_sources_file(Path::new(sources_path))?)
+    } else {
+        let sources_path = DEFAULT_ROOT.config_dir().join("sources.yaml");
+        if Path::exists(&sources_path) {
+            Some(read_sources_file(&sources_path)?)
+        } else {
+            None
+        }
+    };
 
-    let docker_config = matches
-        .value_of("docker-config-json-path")
-        .and_then(|docker_config_json_path| fs::read_to_string(&*docker_config_json_path).ok())
-        .and_then(|contents| {
-            serde_json::from_str(&contents)
-                .map(|config: DockerConfigRaw| config.into())
-                .ok()
-        });
+    let docker_config =
+        if let Some(docker_config_json_path) = matches.value_of("docker-config-json-path") {
+            Some(read_docker_config_json_file(Path::new(
+                docker_config_json_path,
+            ))?)
+        } else {
+            let docker_config_json_path = DEFAULT_ROOT.config_dir().join("config.json");
+            if Path::exists(&docker_config_json_path) {
+                Some(read_docker_config_json_file(&docker_config_json_path)?)
+            } else {
+                None
+            }
+        };
 
-    (sources, docker_config)
+    Ok((sources, docker_config))
 }
