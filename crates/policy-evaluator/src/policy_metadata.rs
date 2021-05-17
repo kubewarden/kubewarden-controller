@@ -122,6 +122,7 @@ pub struct Metadata {
     #[validate]
     pub rules: Vec<Rule>,
     pub labels: HashMap<String, String>,
+    pub mutating: bool,
 }
 
 impl Default for Metadata {
@@ -130,6 +131,7 @@ impl Default for Metadata {
             protocol_version: None,
             rules: vec![],
             labels: HashMap::new(),
+            mutating: false,
         }
     }
 }
@@ -162,6 +164,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             labels,
+            mutating: false,
         };
         assert!(metadata.validate().is_ok());
 
@@ -183,6 +186,7 @@ mod tests {
             protocol_version,
             labels: HashMap::new(),
             rules: vec![pod_rule],
+            mutating: false,
         };
         assert!(metadata.validate().is_err());
 
@@ -230,6 +234,7 @@ mod tests {
             rules: vec![pod_rule],
             labels: HashMap::new(),
             protocol_version: None,
+            mutating: false,
         };
         assert!(metadata.validate().is_err());
 
@@ -242,12 +247,14 @@ mod tests {
             rules: vec![],
             protocol_version: Some(ProtocolVersion::V1),
             labels: HashMap::new(),
+            mutating: false,
         };
 
         let expected = json!({
             "protocolVersion": "v1",
             "rules": [ ],
-            "labels": { }
+            "labels": { },
+            "mutating": false
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -270,6 +277,7 @@ mod tests {
             labels,
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
+            mutating: false,
         };
 
         let expected = json!(
@@ -285,7 +293,8 @@ mod tests {
             ],
             "labels": {
                 "author": "Flavio Castelli"
-            }
+            },
+            "mutating": false
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -314,6 +323,7 @@ mod tests {
             labels,
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
+            mutating: false,
         };
 
         assert!(metadata.validate().is_ok());
@@ -336,6 +346,7 @@ mod tests {
             labels,
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
+            mutating: false,
         };
 
         assert!(metadata.validate().is_err());
@@ -358,6 +369,7 @@ mod tests {
             labels,
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
+            mutating: false,
         };
 
         assert!(metadata.validate().is_err());
@@ -379,6 +391,7 @@ mod tests {
             labels,
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
+            mutating: false,
         };
 
         assert!(metadata.validate().is_ok());
@@ -400,6 +413,7 @@ mod tests {
             labels,
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
+            mutating: false,
         };
 
         assert!(metadata.validate().is_err());
@@ -421,6 +435,7 @@ mod tests {
             labels,
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
+            mutating: false,
         };
 
         assert!(metadata.validate().is_err());
