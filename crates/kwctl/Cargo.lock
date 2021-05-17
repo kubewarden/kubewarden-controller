@@ -1490,6 +1490,7 @@ dependencies = [
  "anyhow",
  "clap",
  "directories 3.0.2",
+ "k8s-openapi",
  "policy-evaluator",
  "policy-fetcher",
  "serde",
@@ -1957,8 +1958,8 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
 name = "policy-evaluator"
-version = "0.1.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.4#8a7aee1963194fc234fa460402bc661264726d7e"
+version = "0.1.5"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.5#b6a846fe692b4bed7a03b2cc5dac1e0236d93c2f"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
