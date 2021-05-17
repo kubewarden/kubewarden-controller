@@ -58,10 +58,6 @@ impl PolicyEvaluator {
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
 
-        if let Err(error) = ClusterContext::init() {
-            eprintln!("non fatal error: could not initialize a cluster context due to error: {}; context sensitive functions will not return any information", error);
-        }
-
         let engine = WasmtimeEngineProvider::new(&buf, None);
         let wapc_host = WapcHost::new(Box::new(engine), host_callback)?;
 
@@ -79,6 +75,10 @@ impl PolicyEvaluator {
             .or(Some(""))
             .map(|s| s.to_owned())
             .unwrap();
+
+        if let Err(error) = ClusterContext::init() {
+            eprintln!("non fatal error: could not initialize a cluster context due to error: {}; context sensitive functions will not return any information", error);
+        }
 
         let req_obj = request.get("object");
         if req_obj.is_none() {
