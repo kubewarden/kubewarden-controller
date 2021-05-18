@@ -20,7 +20,7 @@ kwctl() {
     [ "$output" = "pulling policy..." ]
     kwctl policies
     [ "$status" -eq 0 ]
-    [[ "$output" = *"https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
+    [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
 }
 
 @test "pull a policy from an OCI registry" {
@@ -29,7 +29,7 @@ kwctl() {
     [ "$output" = "pulling policy..." ]
     kwctl policies
     [ "$status" -eq 0 ]
-    [[ "$output" = *"registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5" ]]
+    [[ "$output" =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5" ]]
 }
 
 @test "pull a policy from HTTPS to a file" {
@@ -71,13 +71,13 @@ kwctl() {
     kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
     kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm
     kwctl policies
-    [[ $(echo "$output" | wc -l) -eq 2 ]]
-    [[ ${lines[0]} =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5" ]]
-    [[ ${lines[1]} =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
+    [[ $(echo "$output" | wc -l) -eq 6 ]]
+    [[ "$output" =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5" ]]
+    [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
     kwctl rm registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
     kwctl policies
-    [[ $(echo "$output" | wc -l) -eq 1 ]]
-    [[ ${lines[0]} =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
+    [[ $(echo "$output" | wc -l) -eq 5 ]]
+    [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
     kwctl rm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm
     kwctl policies
     [ "$output" = "" ]

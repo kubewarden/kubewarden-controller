@@ -3,10 +3,10 @@ use std::fs::File;
 use std::path::PathBuf;
 use validator::Validate;
 
-use policy_evaluator::policy_evaluator::PolicyEvaluator;
-use policy_evaluator::policy_metadata::Metadata;
-
-use crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA;
+use policy_evaluator::{
+    constants::KUBEWARDEN_CUSTOM_SECTION_METADATA, policy_evaluator::PolicyEvaluator,
+    policy_metadata::Metadata,
+};
 
 pub(crate) fn write_annotation(
     wasm_path: PathBuf,

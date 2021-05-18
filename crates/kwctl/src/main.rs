@@ -3,7 +3,10 @@ extern crate clap;
 extern crate directories;
 extern crate policy_evaluator;
 extern crate policy_fetcher;
+#[macro_use]
+extern crate prettytable;
 extern crate serde_yaml;
+extern crate sha2;
 
 use anyhow::{anyhow, Result};
 use clap::{
@@ -21,10 +24,8 @@ use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 
 mod annotate;
-mod constants;
 mod inspect;
 mod manifest;
-mod metadata;
 mod policies;
 mod pull;
 mod push;
@@ -89,12 +90,7 @@ async fn main() -> Result<()> {
     .get_matches();
 
     match matches.subcommand_name() {
-        Some("policies") => {
-            for policy in policies::list()? {
-                println!("{}", policy);
-            }
-            Ok(())
-        }
+        Some("policies") => policies::list(),
         Some("pull") => {
             if let Some(ref matches) = matches.subcommand_matches("pull") {
                 let uri = matches.value_of("uri").unwrap();
