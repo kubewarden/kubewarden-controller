@@ -19,7 +19,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterAdmissionPolicy is the Schema for the cluster clusteradmissionpolicies
+        description: ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies
           API
         properties:
           apiVersion:
@@ -240,6 +240,8 @@ spec:
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

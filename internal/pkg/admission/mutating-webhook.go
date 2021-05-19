@@ -10,13 +10,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
+	policiesv1alpha1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 func (r *Reconciler) reconcileMutatingWebhookRegistration(
 	ctx context.Context,
-	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret) error {
 	err := r.Client.Create(ctx, r.mutatingWebhookRegistration(clusterAdmissionPolicy, admissionSecret))
 	if err == nil || apierrors.IsAlreadyExists(err) {
@@ -26,7 +26,7 @@ func (r *Reconciler) reconcileMutatingWebhookRegistration(
 }
 
 func (r *Reconciler) mutatingWebhookRegistration(
-	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret,
 ) *admissionregistrationv1.MutatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", clusterAdmissionPolicy.Name)

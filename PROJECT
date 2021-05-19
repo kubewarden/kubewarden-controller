@@ -1,7 +1,17 @@
 domain: kubewarden.io
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: kubewarden-controller
 repo: github.com/kubewarden/kubewarden-controller
 resources:
-- group: kubewarden
+- api:
+    crdVersion: v1
+    namespaced: false
+  controller: true
+  domain: kubewarden.io
+  group: policies
   kind: ClusterAdmissionPolicy
+  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1
   version: v1alpha1
-version: "2"
+version: "3"
