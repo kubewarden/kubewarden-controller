@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use policy_evaluator::policy_metadata::Metadata as PolicyMetadata;
 use policy_fetcher::policy::Policy;
 use policy_fetcher::store::Store;
+use pretty_bytes::converter::convert;
 use prettytable::{format, Table};
 use sha2::{Digest, Sha256};
 
@@ -35,7 +36,7 @@ pub(crate) fn list() -> Result<()> {
             format!("{}", policy),
             mutating,
             sha256sum,
-            policy_filesystem_metadata.len()
+            convert(policy_filesystem_metadata.len() as f64),
         ]);
     }
     table.printstd();

@@ -3,6 +3,7 @@ extern crate clap;
 extern crate directories;
 extern crate policy_evaluator;
 extern crate policy_fetcher;
+extern crate pretty_bytes;
 #[macro_use]
 extern crate prettytable;
 extern crate serde_yaml;
