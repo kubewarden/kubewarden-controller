@@ -11,13 +11,13 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+all: manager
+
 tag:
 	@git tag "${TAG}" || (echo "Tag ${TAG} already exists. If you want to retag, delete it manually and re-run this command" && exit 1)
 	@git-chglog --output CHANGELOG.md
 	@git commit -m 'Update CHANGELOG.md' -- CHANGELOG.md
 	@git tag -f "${TAG}"
-
-all: manager
 
 # Run tests
 test: generate fmt vet manifests
