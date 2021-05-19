@@ -1273,6 +1273,7 @@ dependencies = [
  "tracing-futures",
  "validator",
  "wapc",
+ "wasmparser 0.78.1",
  "wasmtime-provider",
 ]
 
@@ -2102,6 +2103,12 @@ name = "wasmparser"
 version = "0.59.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a950e6a618f62147fd514ff445b2a0b53120d382751960797f85f058c7eda9b9"
+
+[[package]]
+name = "wasmparser"
+version = "0.78.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f9255225d0124a59dd44def5cf98b62d70a27aed921f2c51e28035f08a73b0c"
 
 [[package]]
 name = "wasmtime"

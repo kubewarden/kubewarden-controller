@@ -2,7 +2,9 @@ use anyhow::Result;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use validator::{Validate, ValidationError};
+use wasmparser::{Parser, Payload};
 
 #[derive(Deserialize, Serialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Operation {
@@ -134,6 +136,20 @@ impl Default for Metadata {
             labels: Some(HashMap::new()),
             mutating: false,
         }
+    }
+}
+
+impl Metadata {
+    pub fn from_path(path: &Path) -> Result<Option<Metadata>> {
+        let policy = std::fs::read(path)?;
+        for payload in Parser::new(0).parse_all(&policy) {
+            if let Payload::CustomSection { name, data, .. } = payload? {
+                if name == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
+                    return Ok(Some(serde_json::from_slice(data)?));
+                }
+            }
+        }
+        Ok(None)
     }
 }
 
