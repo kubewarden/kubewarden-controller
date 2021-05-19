@@ -1,0 +1,17 @@
+apiVersion: policies.kubewarden.io/v1alpha1
+kind: ClusterAdmissionPolicy
+metadata:
+  name: psp-capabilities
+spec:
+  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.2
+  resources:
+  - pods
+  operations:
+  - CREATE
+  - UPDATE
+  mutating: true
+  settings:
+    allowed_capabilities:
+    - CHOWN
+    required_drop_capabilities:
+    - NET_ADMIN

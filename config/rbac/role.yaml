@@ -21,6 +21,12 @@ rules:
 - apiGroups:
   - policies.kubewarden.io
   resources:
+  - clusteradmissionpolicies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
   - clusteradmissionpolicies/status
   verbs:
   - get

@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package policies
 
 import (
 	"context"
@@ -29,41 +29,35 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
+	policiesv1alpha1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 )
 
-// ClusterAdmissionPolicyReconciler reconciles a
-// ClusterAdmissionPolicy object
+// ClusterAdmissionPolicyReconciler reconciles a ClusterAdmissionPolicy object
 type ClusterAdmissionPolicyReconciler struct {
 	client.Client
-	Log                           logr.Logger
-	Scheme                        *runtime.Scheme
-	DeploymentsNamespace          string
-	DeploymentsServiceAccountName string
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	Reconciler admission.Reconciler
 }
 
-// nolint:lll
-// +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/status,verbs=get;update;patch
+//nolint:lll
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/finalizers,verbs=update
 
 // Reconcile takes care of reconciling ClusterAdmissionPolicy resources
-func (r *ClusterAdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("clusteradmissionpolicy", req.NamespacedName)
 
-	admissionReconciler := admission.Reconciler{
-		Client:                        r,
-		DeploymentsNamespace:          r.DeploymentsNamespace,
-		DeploymentsServiceAccountName: r.DeploymentsServiceAccountName,
-		Log:                           log,
-	}
+	admissionReconciler := r.Reconciler
+	admissionReconciler.Log = log
 
-	var clusterAdmissionPolicy kubewardenv1alpha1.ClusterAdmissionPolicy
+	var clusterAdmissionPolicy policiesv1alpha1.ClusterAdmissionPolicy
 	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			clusterAdmissionPolicy = kubewardenv1alpha1.ClusterAdmissionPolicy{
+			clusterAdmissionPolicy = policiesv1alpha1.ClusterAdmissionPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      req.Name,
 					Namespace: req.Namespace,
@@ -94,10 +88,10 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(req ctrl.Request) (ctrl.Res
 	return ctrl.Result{}, fmt.Errorf("reconciliation error: %w", err)
 }
 
+// SetupWithManager sets up the controller with the Manager.
 // nolint:wrapcheck
-// SetupWithManager takes care of setting up the resources to watch
 func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&kubewardenv1alpha1.ClusterAdmissionPolicy{}).
+		For(&policiesv1alpha1.ClusterAdmissionPolicy{}).
 		Complete(r)
 }

@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -169,10 +169,11 @@ type ClusterAdmissionPolicySpec struct {
 type ClusterAdmissionPolicyStatus struct {
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
-// ClusterAdmissionPolicy is the Schema for the cluster clusteradmissionpolicies API
+// ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
 type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -181,7 +182,7 @@ type ClusterAdmissionPolicy struct {
 	Status ClusterAdmissionPolicyStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
 type ClusterAdmissionPolicyList struct {
