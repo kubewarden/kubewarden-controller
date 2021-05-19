@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	policiesv1alpha1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
@@ -33,7 +33,7 @@ type policyServerConfigEntry struct {
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
 func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	operation policyServerConfigMapOperation,
 ) error {
 	cfg := &corev1.ConfigMap{}
@@ -56,7 +56,7 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 
 func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
 	policies := map[string]policyServerConfigEntry{
 		clusterAdmissionPolicy.Name: {
@@ -89,7 +89,7 @@ func (r *Reconciler) createPolicyServerConfigMap(
 func (r *Reconciler) reconcilePolicyServerConfigMapPolicies(
 	ctx context.Context,
 	cfg *corev1.ConfigMap,
-	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	operation policyServerConfigMapOperation,
 ) error {
 	// extract the policy settings from the ConfigMap
@@ -136,7 +136,7 @@ func (r *Reconciler) reconcilePolicyServerConfigMapPolicies(
 
 func (r *Reconciler) addPolicyToPolicyServerConfigMap(
 	currentPolicies map[string]policyServerConfigEntry,
-	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) (string, bool, error) {
 	var updatePolicies bool
 	currentPolicy, found := currentPolicies[clusterAdmissionPolicy.Name]
@@ -177,7 +177,7 @@ func (r *Reconciler) addPolicyToPolicyServerConfigMap(
 
 func (r *Reconciler) removePolicyFromPolicyServerConfigMap(
 	currentPolicies map[string]policyServerConfigEntry,
-	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) (string, bool, error) {
 	_, found := currentPolicies[clusterAdmissionPolicy.Name]
 

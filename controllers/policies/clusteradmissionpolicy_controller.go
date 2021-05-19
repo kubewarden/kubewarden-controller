@@ -29,7 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	policiesv1alpha1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 )
@@ -54,10 +54,10 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 	admissionReconciler := r.Reconciler
 	admissionReconciler.Log = log
 
-	var clusterAdmissionPolicy policiesv1alpha1.ClusterAdmissionPolicy
+	var clusterAdmissionPolicy policiesv1alpha2.ClusterAdmissionPolicy
 	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			clusterAdmissionPolicy = policiesv1alpha1.ClusterAdmissionPolicy{
+			clusterAdmissionPolicy = policiesv1alpha2.ClusterAdmissionPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      req.Name,
 					Namespace: req.Namespace,
@@ -92,6 +92,6 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 // nolint:wrapcheck
 func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&policiesv1alpha1.ClusterAdmissionPolicy{}).
+		For(&policiesv1alpha2.ClusterAdmissionPolicy{}).
 		Complete(r)
 }
