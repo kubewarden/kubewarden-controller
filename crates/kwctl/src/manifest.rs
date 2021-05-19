@@ -53,7 +53,7 @@ struct ScaffoldData {
 
 pub(crate) fn manifest(uri: &str, resource_type: &str) -> Result<()> {
     let wasm_path = crate::utils::wasm_path(uri)?;
-    let metadata = crate::metadata::get_metadata(wasm_path)?
+    let metadata = Metadata::from_path(&wasm_path)?
         .ok_or_else(||
             anyhow!(
                 "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
