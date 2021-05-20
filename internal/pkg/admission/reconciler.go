@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kubewardenv1alpha1 "github.com/kubewarden/kubewarden-controller/api/v1alpha1"
+	policiesv1alpha1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1"
 )
 
 type Reconciler struct {
@@ -32,7 +32,7 @@ func (errorList errorList) Error() string {
 }
 
 func (r *Reconciler) ReconcileDeletion(ctx context.Context,
-	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy) error {
+	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy) error {
 	errors := errorList{}
 	r.Log.Info("Removing deleted policy from PolicyServer ConfigMap")
 	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, RemovePolicy); err != nil {
@@ -75,7 +75,7 @@ func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 
 func (r *Reconciler) Reconcile(
 	ctx context.Context,
-	clusterAdmissionPolicy *kubewardenv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
 ) error {
 	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx)
 	if err != nil {

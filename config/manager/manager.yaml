@@ -2,33 +2,49 @@ apiVersion: v1
 kind: Namespace
 metadata:
   labels:
-    control-plane: manager
+    control-plane: controller-manager
   name: system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: manager
+  name: controller-manager
   namespace: system
   labels:
-    control-plane: manager
+    control-plane: controller-manager
 spec:
   selector:
     matchLabels:
-      control-plane: manager
+      control-plane: controller-manager
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: manager
+        control-plane: controller-manager
     spec:
+      securityContext:
+        runAsNonRoot: true
       containers:
       - command:
         - /manager
         args:
-        - --enable-leader-election
-        image: ghcr.io/kubewarden/kubewarden-controller:v0.0.1
+        - --leader-elect
+        image: controller:latest
         name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
             cpu: 100m
@@ -36,4 +52,5 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+      serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
