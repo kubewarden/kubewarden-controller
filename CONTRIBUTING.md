@@ -1,8 +1,38 @@
 # Contributing
 
+## Commit titles
+
+Commit titles matter when a release is tagged and the changelog is
+generated.
+
+The changelog will skip all commits that do not follow a specific
+structure. The structure of the commit title is as follows:
+
+- `type(scope): subject`
+
+Scope is optional. Some commit title examples that would be included
+in the changelog:
+
+- `feat: this is a feature that involves several components`
+- `feat(docs): allow users to report documentation errors`
+- `perf(policy-server): cache policy results`
+- `fix(controller): properly update ClusterAdmissionPolicy statu subresource`
+- `refactor(policy-server): move common code to external crates`
+
 ## Tagging a new release
 
 ### Create a new tag
+
+#### Requirements
+
+It is required to have the
+[`git-chglog`](https://github.com/git-chglog/git-chglog) project
+installed for automatic changelog generation to work. Install it like
+so:
+
+```console
+$ go get -u github.com/git-chglog/git-chglog/cmd/git-chglog@v0.14.2
+```
 
 For creating a new release, first create a new tag:
 
@@ -10,8 +40,12 @@ For creating a new release, first create a new tag:
 $ TAG=vX.Y.Z make tag
 ```
 
-This will also update the `CHANGELOG.md` file on a separate commit,
-and tag that commit as the release.
+This will also update the `CHANGELOG.md` file on a separate
+commit. Tag that commit as the release.
+
+```console
+$ git tag -m "Release X.Y.Z" -s vX.Y.Z
+```
 
 ### Push new tag to the upstream repository
 
