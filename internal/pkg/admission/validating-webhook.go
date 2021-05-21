@@ -10,13 +10,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	policiesv1alpha1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 func (r *Reconciler) reconcileValidatingWebhookRegistration(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret) error {
 	err := r.Client.Create(ctx, r.validatingWebhookRegistration(clusterAdmissionPolicy, admissionSecret))
 	if err == nil || apierrors.IsAlreadyExists(err) {
@@ -26,7 +26,7 @@ func (r *Reconciler) reconcileValidatingWebhookRegistration(
 }
 
 func (r *Reconciler) validatingWebhookRegistration(
-	clusterAdmissionPolicy *policiesv1alpha1.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret,
 ) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", clusterAdmissionPolicy.Name)
@@ -39,14 +39,6 @@ func (r *Reconciler) validatingWebhookRegistration(
 		Port:      &admissionPort,
 	}
 
-	apiGroups := clusterAdmissionPolicy.Spec.APIGroups
-	if len(apiGroups) == 0 {
-		apiGroups = []string{"*"}
-	}
-	apiVersions := clusterAdmissionPolicy.Spec.APIVersions
-	if len(apiVersions) == 0 {
-		apiVersions = []string{"*"}
-	}
 	sideEffects := clusterAdmissionPolicy.Spec.SideEffects
 	if sideEffects == nil {
 		noneSideEffects := admissionregistrationv1.SideEffectClassNone
@@ -66,16 +58,7 @@ func (r *Reconciler) validatingWebhookRegistration(
 					Service:  &service,
 					CABundle: admissionSecret.Data[constants.PolicyServerCASecretKeyName],
 				},
-				Rules: []admissionregistrationv1.RuleWithOperations{
-					{
-						Operations: clusterAdmissionPolicy.Spec.Operations,
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   apiGroups,
-							APIVersions: apiVersions,
-							Resources:   clusterAdmissionPolicy.Spec.Resources,
-						},
-					},
-				},
+				Rules:                   clusterAdmissionPolicy.Spec.Rules,
 				FailurePolicy:           clusterAdmissionPolicy.Spec.FailurePolicy,
 				MatchPolicy:             clusterAdmissionPolicy.Spec.MatchPolicy,
 				NamespaceSelector:       clusterAdmissionPolicy.Spec.NamespaceSelector,
