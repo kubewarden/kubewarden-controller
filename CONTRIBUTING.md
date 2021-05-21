@@ -16,7 +16,7 @@ in the changelog:
 - `feat: this is a feature that involves several components`
 - `feat(docs): allow users to report documentation errors`
 - `perf(policy-server): cache policy results`
-- `fix(controller): properly update ClusterAdmissionPolicy statu subresource`
+- `fix(controller): properly update ClusterAdmissionPolicy status subresource`
 - `refactor(policy-server): move common code to external crates`
 
 ## Tagging a new release
