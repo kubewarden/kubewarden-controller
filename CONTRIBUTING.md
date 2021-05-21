@@ -41,11 +41,7 @@ $ TAG=vX.Y.Z make tag
 ```
 
 This will also update the `CHANGELOG.md` file on a separate
-commit. Tag that commit as the release.
-
-```console
-$ git tag -m "Release X.Y.Z" -s vX.Y.Z
-```
+commit.
 
 ### Push new tag to the upstream repository
 
