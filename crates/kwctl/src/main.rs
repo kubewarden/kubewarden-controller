@@ -19,6 +19,9 @@ use std::{
     str::FromStr,
 };
 
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::{fmt, EnvFilter};
+
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
@@ -41,6 +44,7 @@ async fn main() -> Result<()> {
             (version: crate_version!())
             (author: crate_authors!(",\n"))
             (about: crate_description!())
+            (@arg verbose: -v "Increase verbosity")
             (@subcommand policies =>
              (about: "Lists all downloaded policies")
             )
@@ -89,6 +93,20 @@ async fn main() -> Result<()> {
     )
     .setting(AppSettings::SubcommandRequiredElseHelp)
     .get_matches();
+
+    // setup logging
+    let level_filter = if matches.is_present("verbose") {
+        "debug"
+    } else {
+        "info"
+    };
+    let filter_layer = EnvFilter::new(level_filter)
+        .add_directive("cranelift_codegen=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
+        .add_directive("cranelift_wasm=off".parse().unwrap()); // this crate generates lots of tracing events we don't care about
+    tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(fmt::layer().with_writer(std::io::stderr))
+        .init();
 
     match matches.subcommand_name() {
         Some("policies") => policies::list(),
