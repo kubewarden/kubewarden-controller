@@ -31,7 +31,7 @@ This is an example of the policies file:
 psp-apparmor:
   url: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.3
 psp-capabilities:
-  url: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.2
+  url: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.3
 namespace_simple:
   url: file:///tmp/namespace-validate-policy.wasm
   settings:
@@ -48,7 +48,7 @@ would be created:
 
   * `/validate/psp-apparmor`: this exposes the `psp-apparmor:v0.1.3`
     policy. The Wasm module is downloaded from the OCI registry of GitHub.
-  * `/validate/psp-capabilities`: this exposes the `psp-capabilities:v0.1.2`
+  * `/validate/psp-capabilities`: this exposes the `psp-capabilities:v0.1.3`
     policy. The Wasm module is downloaded from the OCI registry of GitHub.
   * `/validate/namespace_simple`: this exposes the `namespace-validate-policy`
     policy. The Wasm module is loaded from a local file located under `/tmp/namespace-validate-policy.wasm`.
