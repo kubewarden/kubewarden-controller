@@ -67,7 +67,7 @@ impl PolicyEvaluator {
         })
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(request = request.to_string().as_str()))]
     pub fn validate(&self, request: serde_json::Value) -> ValidationResponse {
         let uid = request
             .get("uid")
