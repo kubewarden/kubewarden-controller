@@ -3,7 +3,7 @@ kind: ClusterAdmissionPolicy
 metadata:
   name: psp-capabilities
 spec:
-  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.2
+  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.3
   resources:
   - pods
   operations:
