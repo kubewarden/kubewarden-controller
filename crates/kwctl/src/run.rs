@@ -17,7 +17,8 @@ pub(crate) async fn pull_and_run(
         sources,
         policy_fetcher::PullDestination::MainStore,
     )
-    .await?;
+    .await
+    .map_err(|e| anyhow!("Error pulling policy {}: {}", uri, e))?;
 
     let request = serde_json::from_str::<serde_json::Value>(&request)?;
 
