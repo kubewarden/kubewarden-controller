@@ -126,12 +126,23 @@ async fn main() -> Result<()> {
         Some("run") => {
             if let Some(ref matches) = matches.subcommand_matches("run") {
                 let uri = matches.value_of("uri").unwrap();
-                let request = fs::read_to_string(matches.value_of("request-path").unwrap())?;
+                let request = fs::read_to_string(matches.value_of("request-path").unwrap())
+                    .map_err(|e| {
+                        anyhow!(
+                            "Error opening request file {}; {}",
+                            matches.value_of("request-path").unwrap(),
+                            e
+                        )
+                    })?;
                 let settings = matches
                     .value_of("settings-path")
-                    .map(|settings| -> Result<String> { Ok(fs::read_to_string(settings)?) })
+                    .map(|settings| -> Result<String> {
+                        fs::read_to_string(settings)
+                            .map_err(|e| anyhow!("Error reading settings from {}: {}", settings, e))
+                    })
                     .transpose()?;
-                let (sources, docker_config) = remote_server_options(matches)?;
+                let (sources, docker_config) = remote_server_options(matches)
+                    .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
                 run::pull_and_run(uri, docker_config, sources, &request, settings).await?;
             }
             Ok(())
