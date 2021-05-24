@@ -2,6 +2,16 @@
 ## [Unreleased]
 
 
+<a name="v0.2.0"></a>
+## [v0.2.0] - 2021-05-24
+### Features
+- Introduce new version of ClusterAdmissionPolicy
+- Upgrade from kubebuilder v2 -> v3
+
+### Pull Requests
+- Merge pull request [#29](https://github.com/kubewarden/kubewarden-controller/issues/29) from ereslibre/main
+
+
 <a name="v0.1.4"></a>
 ## [v0.1.4] - 2021-04-14
 ### Bug Fixes
@@ -28,6 +38,11 @@
 - Merge pull request [#25](https://github.com/kubewarden/kubewarden-controller/issues/25) from ereslibre/service-account
 - Merge pull request [#24](https://github.com/kubewarden/kubewarden-controller/issues/24) from ereslibre/add-mutating-webhook-config-rights
 - Merge pull request [#21](https://github.com/kubewarden/kubewarden-controller/issues/21) from ereslibre/expose-all-webhook-settings
+
+
+<a name="v0.1.0"></a>
+## [v0.1.0] - 2021-04-06
+### Pull Requests
 - Merge pull request [#17](https://github.com/kubewarden/kubewarden-controller/issues/17) from kubewarden/remove-pat
 - Merge pull request [#18](https://github.com/kubewarden/kubewarden-controller/issues/18) from kubewarden/rename
 - Merge pull request [#16](https://github.com/kubewarden/kubewarden-controller/issues/16) from flavio/mutating-policies
@@ -42,9 +57,11 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.0...HEAD
+[v0.2.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.4...v0.2.0
 [v0.1.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.1...v0.1.2
-[v0.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.0-rc1...v0.1.1
+[v0.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.0...v0.1.1
+[v0.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.0-rc1...v0.1.0
 [v0.1.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.0.1...v0.1.0-rc1
