@@ -19,14 +19,16 @@ use tracing_subscriber::{fmt, EnvFilter};
 mod admission_review;
 mod api;
 mod server;
+mod settings;
+mod utils;
 mod worker;
 
 mod worker_pool;
 use worker_pool::WorkerPool;
 
-use policy_evaluator::policy::read_policies_file;
 use policy_fetcher::registry::config::read_docker_config_json_file;
 use policy_fetcher::sources::read_sources_file;
+use settings::read_policies_file;
 
 use std::path::{Path, PathBuf};
 
