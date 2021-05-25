@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
              (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
              (@arg ("request-path"): * -r --("request-path") +takes_value "File containing the Kubernetes admission request object in JSON format")
              (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
-             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
+             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
             )
             (@subcommand annotate =>
              (about: "Add Kubewarden metadata to a WebAssembly module")
