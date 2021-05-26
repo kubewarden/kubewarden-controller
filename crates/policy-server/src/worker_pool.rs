@@ -1,6 +1,6 @@
 use crate::communication::EvalRequest;
+use crate::settings::Policy;
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy::Policy;
 use std::{
     collections::HashMap,
     sync::{
