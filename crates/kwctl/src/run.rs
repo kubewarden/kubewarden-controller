@@ -11,20 +11,29 @@ pub(crate) async fn pull_and_run(
     request: &str,
     settings: Option<String>,
 ) -> Result<()> {
+    let uri = crate::utils::map_path_to_uri(uri)?;
+
     let policy_path = pull::pull(
-        uri,
+        &uri,
         docker_config,
         sources,
         policy_fetcher::PullDestination::MainStore,
     )
     .await
-    .map_err(|e| anyhow!("Error pulling policy {}: {}", uri, e))?;
+    .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
 
     let request = serde_json::from_str::<serde_json::Value>(&request)?;
     let policy_evaluator = PolicyEvaluator::new(
         policy_path.as_path(),
         settings.map_or(Ok(None), |settings| serde_yaml::from_str(&settings))?,
-    )?;
+    )
+    .map_err(|err| {
+        anyhow!(
+            "error creating policy evaluator for policy {}: {}",
+            uri,
+            err
+        )
+    })?;
     let req_obj = match request {
         serde_json::Value::Object(ref object) => {
             if object.get("kind").and_then(serde_json::Value::as_str) == Some("AdmissionReview") {

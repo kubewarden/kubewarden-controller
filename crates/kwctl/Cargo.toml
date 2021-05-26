@@ -19,6 +19,7 @@ policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.9" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.8"
+regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8.17"

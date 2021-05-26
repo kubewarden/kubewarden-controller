@@ -1593,6 +1593,7 @@ dependencies = [
  "policy-fetcher",
  "pretty-bytes",
  "prettytable-rs",
+ "regex",
  "serde",
  "serde_json",
  "serde_yaml",
