@@ -83,6 +83,7 @@ async fn main() -> Result<()> {
             (@subcommand inspect =>
              (about: "Inspect Kubewarden policy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
+             (@arg ("output"): -o --("output") +takes_value "output format. One of: yaml")
             )
             (@subcommand manifest =>
              (about: "Scaffold a Kubernetes resource")
@@ -186,7 +187,7 @@ async fn main() -> Result<()> {
         Some("inspect") => {
             if let Some(ref matches) = matches.subcommand_matches("inspect") {
                 let uri = matches.value_of("uri").unwrap();
-                inspect::inspect(uri)?;
+                inspect::inspect(uri, matches.value_of("output"))?;
             };
             Ok(())
         }
