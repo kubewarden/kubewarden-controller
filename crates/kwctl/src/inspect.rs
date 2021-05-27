@@ -1,16 +1,16 @@
-use std::convert::TryFrom;
-
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
 use policy_evaluator::policy_metadata::Metadata;
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
+use std::convert::TryFrom;
 use syntect::parsing::SyntaxSet;
 
-pub(crate) fn inspect(uri: &str, output: Option<&str>) -> Result<()> {
-    let wasm_path = crate::utils::wasm_path(uri)?;
-    let printer = get_printer(OutputType::try_from(output)?);
+pub(crate) fn inspect(uri: &str, output: OutputType) -> Result<()> {
+    let uri = crate::utils::map_path_to_uri(uri)?;
+    let wasm_path = crate::utils::wasm_path(uri.as_str())?;
+    let printer = get_printer(output);
 
     match Metadata::from_path(&wasm_path)? {
         Some(metadata) => printer.print(&metadata),
@@ -21,7 +21,7 @@ pub(crate) fn inspect(uri: &str, output: Option<&str>) -> Result<()> {
     }
 }
 
-enum OutputType {
+pub(crate) enum OutputType {
     Yaml,
     Pretty,
 }
@@ -139,10 +139,9 @@ impl MetadataPrettyPrinter {
     fn print_metadata_usage(&self, metadata: &Metadata) -> Result<()> {
         let usage = match metadata.annotations.clone() {
             None => None,
-            Some(annotations) => match annotations.get("io.kubewarden.policy.usage") {
-                Some(usage) => Some(String::from(usage)),
-                None => None,
-            },
+            Some(annotations) => annotations
+                .get("io.kubewarden.policy.usage")
+                .map(String::from),
         };
 
         if usage.is_none() {

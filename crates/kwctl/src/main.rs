@@ -14,6 +14,7 @@ use clap::{
     clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings, ArgMatches,
 };
 use std::{
+    convert::TryFrom,
     fs,
     path::{Path, PathBuf},
     str::FromStr,
@@ -187,7 +188,9 @@ async fn main() -> Result<()> {
         Some("inspect") => {
             if let Some(ref matches) = matches.subcommand_matches("inspect") {
                 let uri = matches.value_of("uri").unwrap();
-                inspect::inspect(uri, matches.value_of("output"))?;
+                let output = inspect::OutputType::try_from(matches.value_of("output"))?;
+
+                inspect::inspect(uri, output)?;
             };
             Ok(())
         }
