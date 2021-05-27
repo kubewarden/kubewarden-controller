@@ -125,6 +125,8 @@ pub struct Metadata {
     pub rules: Vec<Rule>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub annotations: Option<HashMap<String, String>>,
     pub mutating: bool,
 }
 
@@ -134,6 +136,7 @@ impl Default for Metadata {
             protocol_version: None,
             rules: vec![],
             labels: Some(HashMap::new()),
+            annotations: Some(HashMap::new()),
             mutating: false,
         }
     }
@@ -180,6 +183,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             labels: None,
+            annotations: None,
             mutating: false,
         };
         assert!(metadata.validate().is_ok());
@@ -201,6 +205,7 @@ mod tests {
         let mut metadata = Metadata {
             protocol_version,
             labels: None,
+            annotations: None,
             rules: vec![pod_rule],
             mutating: false,
         };
@@ -248,6 +253,7 @@ mod tests {
         };
         metadata = Metadata {
             rules: vec![pod_rule],
+            annotations: None,
             labels: None,
             protocol_version: None,
             mutating: false,
@@ -262,6 +268,7 @@ mod tests {
         let metadata = Metadata {
             rules: vec![],
             protocol_version: Some(ProtocolVersion::V1),
+            annotations: None,
             labels: None,
             mutating: false,
         };
@@ -286,10 +293,17 @@ mod tests {
             operations: vec![Operation::Create],
         };
         let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("author"), String::from("Flavio Castelli"));
+        labels.insert(String::from("env"), String::from("production"));
+
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
 
         let metadata = Metadata {
             labels: Some(labels),
+            annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -307,7 +321,10 @@ mod tests {
                 }
             ],
             "labels": {
-                "author": "Flavio Castelli"
+                "env": "production"
+            },
+            "annotations": {
+                "io.kubewarden.policy.author": "Flavio Castelli"
             },
             "mutating": false
         });
@@ -332,10 +349,17 @@ mod tests {
             operations: vec![Operation::Create],
         };
         let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("author"), String::from("Flavio Castelli"));
+        labels.insert(String::from("env"), String::from("production"));
+
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
 
         let metadata = Metadata {
             labels: Some(labels),
+            annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -355,10 +379,17 @@ mod tests {
             operations: vec![Operation::Create],
         };
         let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("author"), String::from("Flavio Castelli"));
+        labels.insert(String::from("env"), String::from("production"));
+
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
 
         let metadata = Metadata {
             labels: Some(labels),
+            annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -378,10 +409,17 @@ mod tests {
             operations: vec![Operation::Create],
         };
         let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("author"), String::from("Flavio Castelli"));
+        labels.insert(String::from("env"), String::from("production"));
+
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
 
         let metadata = Metadata {
             labels: Some(labels),
+            annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -400,10 +438,17 @@ mod tests {
             operations: vec![Operation::Create],
         };
         let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("author"), String::from("Flavio Castelli"));
+        labels.insert(String::from("env"), String::from("production"));
+
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
 
         let metadata = Metadata {
             labels: Some(labels),
+            annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -422,10 +467,17 @@ mod tests {
             operations: vec![Operation::Create],
         };
         let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("author"), String::from("Flavio Castelli"));
+        labels.insert(String::from("env"), String::from("production"));
+
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
 
         let metadata = Metadata {
             labels: Some(labels),
+            annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
@@ -444,10 +496,17 @@ mod tests {
             operations: vec![Operation::Create],
         };
         let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("author"), String::from("Flavio Castelli"));
+        labels.insert(String::from("env"), String::from("production"));
+
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
 
         let metadata = Metadata {
             labels: Some(labels),
+            annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
