@@ -14,6 +14,7 @@ use clap::{
     clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings, ArgMatches,
 };
 use std::{
+    convert::TryFrom,
     fs,
     path::{Path, PathBuf},
     str::FromStr,
@@ -83,6 +84,7 @@ async fn main() -> Result<()> {
             (@subcommand inspect =>
              (about: "Inspect Kubewarden policy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
+             (@arg ("output"): -o --("output") +takes_value "output format. One of: yaml")
             )
             (@subcommand manifest =>
              (about: "Scaffold a Kubernetes resource")
@@ -186,7 +188,9 @@ async fn main() -> Result<()> {
         Some("inspect") => {
             if let Some(ref matches) = matches.subcommand_matches("inspect") {
                 let uri = matches.value_of("uri").unwrap();
-                inspect::inspect(uri)?;
+                let output = inspect::OutputType::try_from(matches.value_of("output"))?;
+
+                inspect::inspect(uri, output)?;
             };
             Ok(())
         }
