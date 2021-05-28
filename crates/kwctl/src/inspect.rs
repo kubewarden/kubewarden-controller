@@ -108,15 +108,6 @@ impl MetadataPrettyPrinter {
                 table.add_row(row![Fgbl -> annotation, d -> value]);
             }
         }
-
-        let labels = metadata.labels.clone().unwrap_or_default();
-        if !labels.is_empty() {
-            table.add_row(row![]);
-            table.add_row(row![Fmbl -> "Labels"]);
-            for (label, value) in labels.iter() {
-                table.add_row(row![Fgbl -> label, d -> value]);
-            }
-        }
         table.printstd();
 
         Ok(())
