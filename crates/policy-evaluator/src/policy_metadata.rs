@@ -124,8 +124,6 @@ pub struct Metadata {
     #[validate]
     pub rules: Vec<Rule>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub labels: Option<HashMap<String, String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<HashMap<String, String>>,
     pub mutating: bool,
 }
@@ -135,7 +133,6 @@ impl Default for Metadata {
         Self {
             protocol_version: None,
             rules: vec![],
-            labels: Some(HashMap::new()),
             annotations: Some(HashMap::new()),
             mutating: false,
         }
@@ -182,7 +179,6 @@ mod tests {
         let metadata = Metadata {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
-            labels: None,
             annotations: None,
             mutating: false,
         };
@@ -204,7 +200,6 @@ mod tests {
 
         let mut metadata = Metadata {
             protocol_version,
-            labels: None,
             annotations: None,
             rules: vec![pod_rule],
             mutating: false,
@@ -240,7 +235,6 @@ mod tests {
         };
         metadata = Metadata {
             rules: vec![pod_rule],
-            labels: None,
             ..Default::default()
         };
         assert!(metadata.validate().is_err());
@@ -254,7 +248,6 @@ mod tests {
         metadata = Metadata {
             rules: vec![pod_rule],
             annotations: None,
-            labels: None,
             protocol_version: None,
             mutating: false,
         };
@@ -269,7 +262,6 @@ mod tests {
             rules: vec![],
             protocol_version: Some(ProtocolVersion::V1),
             annotations: None,
-            labels: None,
             mutating: false,
         };
 
@@ -292,8 +284,6 @@ mod tests {
             resources: vec![String::from("pods")],
             operations: vec![Operation::Create],
         };
-        let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("env"), String::from("production"));
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert(
@@ -302,7 +292,6 @@ mod tests {
         );
 
         let metadata = Metadata {
-            labels: Some(labels),
             annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
@@ -320,9 +309,6 @@ mod tests {
                     "operations":["CREATE"]
                 }
             ],
-            "labels": {
-                "env": "production"
-            },
             "annotations": {
                 "io.kubewarden.policy.author": "Flavio Castelli"
             },
@@ -348,8 +334,6 @@ mod tests {
             ],
             operations: vec![Operation::Create],
         };
-        let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("env"), String::from("production"));
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert(
@@ -358,7 +342,6 @@ mod tests {
         );
 
         let metadata = Metadata {
-            labels: Some(labels),
             annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
@@ -378,8 +361,6 @@ mod tests {
             resources: vec![String::from("*"), String::from("a")],
             operations: vec![Operation::Create],
         };
-        let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("env"), String::from("production"));
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert(
@@ -388,7 +369,6 @@ mod tests {
         );
 
         let metadata = Metadata {
-            labels: Some(labels),
             annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
@@ -408,8 +388,6 @@ mod tests {
             resources: vec![String::from("a/*"), String::from("a/x")],
             operations: vec![Operation::Create],
         };
-        let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("env"), String::from("production"));
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert(
@@ -418,7 +396,6 @@ mod tests {
         );
 
         let metadata = Metadata {
-            labels: Some(labels),
             annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
@@ -437,8 +414,6 @@ mod tests {
             resources: vec![String::from("a/*"), String::from("a")],
             operations: vec![Operation::Create],
         };
-        let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("env"), String::from("production"));
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert(
@@ -447,7 +422,6 @@ mod tests {
         );
 
         let metadata = Metadata {
-            labels: Some(labels),
             annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
@@ -466,8 +440,6 @@ mod tests {
             resources: vec![String::from("*/a"), String::from("x/a")],
             operations: vec![Operation::Create],
         };
-        let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("env"), String::from("production"));
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert(
@@ -476,7 +448,6 @@ mod tests {
         );
 
         let metadata = Metadata {
-            labels: Some(labels),
             annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
@@ -495,8 +466,6 @@ mod tests {
             resources: vec![String::from("*/*"), String::from("a")],
             operations: vec![Operation::Create],
         };
-        let mut labels: HashMap<String, String> = HashMap::new();
-        labels.insert(String::from("env"), String::from("production"));
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert(
@@ -505,7 +474,6 @@ mod tests {
         );
 
         let metadata = Metadata {
-            labels: Some(labels),
             annotations: Some(annotations),
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
