@@ -126,6 +126,8 @@ pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<HashMap<String, String>>,
     pub mutating: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub annotated_by: Option<String>,
 }
 
 impl Default for Metadata {
@@ -135,6 +137,7 @@ impl Default for Metadata {
             rules: vec![],
             annotations: Some(HashMap::new()),
             mutating: false,
+            annotated_by: None,
         }
     }
 }
@@ -181,6 +184,7 @@ mod tests {
             rules: vec![pod_rule],
             annotations: None,
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
         assert!(metadata.validate().is_ok());
 
@@ -203,6 +207,7 @@ mod tests {
             annotations: None,
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
         assert!(metadata.validate().is_err());
 
@@ -250,6 +255,7 @@ mod tests {
             annotations: None,
             protocol_version: None,
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
         assert!(metadata.validate().is_err());
 
@@ -263,12 +269,14 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             annotations: None,
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         let expected = json!({
             "protocolVersion": "v1",
             "rules": [ ],
-            "mutating": false
+            "mutating": false,
+            "annotatedBy": "test-suite"
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -296,6 +304,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         let expected = json!(
@@ -312,7 +321,8 @@ mod tests {
             "annotations": {
                 "io.kubewarden.policy.author": "Flavio Castelli"
             },
-            "mutating": false
+            "mutating": false,
+            "annotatedBy": "test-suite"
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -346,6 +356,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         assert!(metadata.validate().is_ok());
@@ -373,6 +384,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         assert!(metadata.validate().is_err());
@@ -400,6 +412,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         assert!(metadata.validate().is_err());
@@ -426,6 +439,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         assert!(metadata.validate().is_ok());
@@ -452,6 +466,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         assert!(metadata.validate().is_err());
@@ -478,6 +493,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             rules: vec![pod_rule],
             mutating: false,
+            annotated_by: Some(String::from("test-suite")),
         };
 
         assert!(metadata.validate().is_err());
