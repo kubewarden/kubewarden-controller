@@ -9,21 +9,116 @@ env:
   CARGO_TERM_COLOR: always
   BUILD_TARGET: x86_64-unknown-linux-musl
   BINARY_NAME: kwctl
-  BINARY_FULL_NAME: kwctl-amd64
+  BINARY_FULL_NAME: kwctl-linux-amd64
 jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      # Speed-up runs by using GH cache
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys: |
+            index-${{ runner.os }}-
+      - uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/cache
+          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fetch
+      - uses: actions/cache@v1
+        with:
+          path: target
+          key: target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+
   build:
+    name: Build Release
+    needs: test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
+    # Speed-up runs by using GH cache
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry/index
+        key: index-${{ runner.os }}-${{ github.run_number }}
+        restore-keys: |
+          index-${{ runner.os }}-
+    - uses: actions-rs/cargo@v1
+      with:
+        command: generate-lockfile
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry/cache
+        key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+    - uses: actions-rs/cargo@v1
+      with:
+        command: fetch
+    - uses: actions/cache@v1
+      with:
+        path: target
+        key: target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
 
     - name: Build-musl
       uses: gmiam/rust-musl-action@master
       with:
         args: cargo build --target $BUILD_TARGET --release --bin ${{ env.BINARY_NAME }}
 
+    - name: upload kwctl as an artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.BINARY_NAME }}
+        path: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
+        if-no-files-found: error
+
+  e2e:
+    name: Run e2e tests against release binary
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ env.BINARY_NAME }}
+
+    - name: Run e2e tests
+      run: |
+        chmod 755 ${{ env.BINARY_NAME }}
+        PATH=${PWD}:${PATH} make e2e-tests
+
+  release:
+    name: Release
+    needs: e2e
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ env.BINARY_NAME }}
+
     - name: Compress binary
       run: |
-        zip -9j ${{ env.BINARY_NAME }}.zip target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
+        zip -9j ${{ env.BINARY_FULL_NAME }}.zip ${{ env.BINARY_NAME }}
 
     - name: Create Release
       id: create_release
@@ -43,6 +138,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ env.BINARY_NAME }}.zip
-        asset_name: ${{ env.BINARY_NAME }}.zip
+        asset_path: ${{ env.BINARY_FULL_NAME }}.zip
+        asset_name: ${{ env.BINARY_FULL_NAME }}.zip
         asset_content_type: application/octet-stream
