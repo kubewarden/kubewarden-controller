@@ -23,6 +23,7 @@ use std::{
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
+use policy_evaluator::policy_metadata::Metadata;
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
@@ -62,6 +63,7 @@ async fn main() -> Result<()> {
              (@arg ("policy-path"): * -p --("policy-path") +takes_value "Policy file to push")
              (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://")
+             (@arg ("force"): -f --("force") "push also a policy that is not annotated")
             )
             (@subcommand rm =>
              (about: "Removes a Kubewarden policy from the store")
@@ -132,8 +134,20 @@ async fn main() -> Result<()> {
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let policy = fs::read(matches.value_of("policy-path").unwrap())?;
                 let uri = matches.value_of("uri").unwrap();
+                let force = matches.is_present("force");
+                let metadata =
+                    Metadata::from_path(Path::new(matches.value_of("policy-path").unwrap()))?;
+                if metadata.is_none() {
+                    if force {
+                        eprintln!("Warning: pushing a non-annotated policy!");
+                    } else {
+                        return Err(anyhow!("Cannot push a policy that is not annotated. Use `annotate` command or `push --force`"));
+                    }
+                }
+
                 push::push(&policy, uri, docker_config, sources).await?;
             };
+            println!("Policy successfully pushed");
             Ok(())
         }
         Some("rm") => {
