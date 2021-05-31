@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use validator::Validate;
 
-use crate::constants;
+use crate::constants::*;
 
 pub(crate) fn write_annotation(
     wasm_path: PathBuf,
@@ -40,7 +40,7 @@ fn prepare_metadata(
 
     let mut annotations = metadata.annotations.unwrap_or_default();
     annotations.insert(
-        String::from(constants::ANNOTATION_KWCTL_VERSION),
+        String::from(ANNOTATION_KWCTL_VERSION),
         String::from(env!("CARGO_PKG_VERSION")),
     );
     metadata.annotations = Some(annotations);
@@ -113,12 +113,12 @@ mod tests {
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
-            annotations.get(crate::constants::ANNOTATION_POLICY_TITLE),
+            annotations.get(ANNOTATION_POLICY_TITLE),
             Some(&String::from(expected_policy_title))
         );
 
         assert_eq!(
-            annotations.get(crate::constants::ANNOTATION_KWCTL_VERSION),
+            annotations.get(ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
         );
 
@@ -145,8 +145,7 @@ mod tests {
           io.kubewarden.policy.title: {}
           {}: NOT_VALID
         "#,
-            expected_policy_title,
-            crate::constants::ANNOTATION_KWCTL_VERSION,
+            expected_policy_title, ANNOTATION_KWCTL_VERSION,
         );
 
         write!(file, "{}", raw_metadata)?;
@@ -159,12 +158,12 @@ mod tests {
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
-            annotations.get(crate::constants::ANNOTATION_POLICY_TITLE),
+            annotations.get(ANNOTATION_POLICY_TITLE),
             Some(&String::from(expected_policy_title))
         );
 
         assert_eq!(
-            annotations.get(crate::constants::ANNOTATION_KWCTL_VERSION),
+            annotations.get(ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
         );
 
@@ -199,7 +198,7 @@ mod tests {
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
-            annotations.get(crate::constants::ANNOTATION_KWCTL_VERSION),
+            annotations.get(ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
         );
 
