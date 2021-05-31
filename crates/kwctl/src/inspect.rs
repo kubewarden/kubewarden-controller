@@ -7,6 +7,8 @@ use pulldown_cmark::{Options, Parser};
 use std::convert::TryFrom;
 use syntect::parsing::SyntaxSet;
 
+use crate::constants::*;
+
 pub(crate) fn inspect(uri: &str, output: OutputType) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
     let wasm_path = crate::utils::wasm_path(uri.as_str())?;
@@ -78,12 +80,12 @@ impl MetadataPrettyPrinter {
         }
 
         let pretty_annotations = vec![
-            "io.kubewarden.policy.title",
-            "io.kubewarden.policy.description",
-            "io.kubewarden.policy.author",
-            "io.kubewarden.policy.url",
-            "io.kubewarden.policy.source",
-            "io.kubewarden.policy.license",
+            ANNOTATION_POLICY_TITLE,
+            ANNOTATION_POLICY_DESCRIPTION,
+            ANNOTATION_POLICY_AUTHOR,
+            ANNOTATION_POLICY_URL,
+            ANNOTATION_POLICY_SOURCE,
+            ANNOTATION_POLICY_LICENSE,
         ];
         let mut annotations = metadata.annotations.clone().unwrap_or_default();
 
@@ -100,7 +102,7 @@ impl MetadataPrettyPrinter {
         table.add_row(row![Fgbl -> "mutating:", metadata.mutating]);
         table.add_row(row![Fgbl -> "protocol version:", protocol_version]);
 
-        let _usage = annotations.remove("io.kubewarden.policy.usage");
+        let _usage = annotations.remove(ANNOTATION_POLICY_USAGE);
         if !annotations.is_empty() {
             table.add_row(row![]);
             table.add_row(row![Fmbl -> "Annotations"]);
@@ -130,9 +132,7 @@ impl MetadataPrettyPrinter {
     fn print_metadata_usage(&self, metadata: &Metadata) -> Result<()> {
         let usage = match metadata.annotations.clone() {
             None => None,
-            Some(annotations) => annotations
-                .get("io.kubewarden.policy.usage")
-                .map(String::from),
+            Some(annotations) => annotations.get(ANNOTATION_POLICY_USAGE).map(String::from),
         };
 
         if usage.is_none() {

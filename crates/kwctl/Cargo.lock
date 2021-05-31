@@ -1752,6 +1752,7 @@ dependencies = [
  "serde_yaml",
  "sha2 0.9.5",
  "syntect",
+ "tempfile",
  "tokio 1.6.0",
  "tokio-compat-02",
  "tracing",
@@ -2389,8 +2390,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.1.11"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.11#d521aad21ac79e8fe431d384772e225f27a0ddc6"
+version = "0.1.13"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.13#1a81978a76ae4b39c105f7fb0838a67a2947071b"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
