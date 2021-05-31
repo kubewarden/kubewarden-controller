@@ -13,6 +13,7 @@ use anyhow::{anyhow, Result};
 use clap::{
     clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings, ArgMatches,
 };
+use directories::UserDirs;
 use std::{
     convert::TryFrom,
     fs,
@@ -243,13 +244,15 @@ fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Optio
             Some(read_docker_config_json_file(Path::new(
                 docker_config_json_path,
             ))?)
-        } else {
-            let docker_config_json_path = DEFAULT_ROOT.config_dir().join("config.json");
-            if Path::exists(&docker_config_json_path) {
-                Some(read_docker_config_json_file(&docker_config_json_path)?)
+        } else if let Some(user_dir) = UserDirs::new() {
+            let config_json_path = user_dir.home_dir().join(".docker").join("config.json");
+            if Path::exists(&config_json_path) {
+                Some(read_docker_config_json_file(&config_json_path)?)
             } else {
                 None
             }
+        } else {
+            None
         };
 
     Ok((sources, docker_config))
