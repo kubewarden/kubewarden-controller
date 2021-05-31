@@ -148,16 +148,62 @@ type ClusterAdmissionPolicySpec struct {
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
+type ReconciliationTransitionReason string
+
+const (
+	// ReconciliationFailed represents a reconciliation failure
+	ReconciliationFailed ReconciliationTransitionReason = "ReconciliationFailed"
+	// ReconciliationSucceeded represents a reconciliation success
+	ReconciliationSucceeded ReconciliationTransitionReason = "ReconciliationSucceeded"
+)
+
+type PolicyConditionType string
+
+const (
+	// PolicyServerSecretReconciled represents the condition of the
+	// Policy Server Secret reconciliation
+	PolicyServerSecretReconciled PolicyConditionType = "PolicyServerSecretReconciled"
+	// PolicyServerConfigMapReconciled represents the condition of the
+	// Policy Server ConfigMap reconciliation
+	PolicyServerConfigMapReconciled PolicyConditionType = "PolicyServerConfigMapReconciled"
+	// PolicyServerDeploymentReconciled represents the condition of the
+	// Policy Server Deployment reconciliation
+	PolicyServerDeploymentReconciled PolicyConditionType = "PolicyServerDeploymentReconciled"
+	// PolicyServerServiceReconciled represents the condition of the
+	// Policy Server Service reconciliation
+	PolicyServerServiceReconciled PolicyConditionType = "PolicyServerServiceReconciled"
+	// PolicyServerWebhookConfigurationReconciled represents the
+	// condition of the Policy Server WebhookConfiguration
+	// reconciliation
+	PolicyServerWebhookConfigurationReconciled PolicyConditionType = "PolicyServerWebhookConfigurationReconciled"
+)
+
 // ClusterAdmissionPolicyStatus defines the observed state of ClusterAdmissionPolicy
 type ClusterAdmissionPolicyStatus struct {
+	// PolicyActive represents whether this AdmissionPolicy is active,
+	// such that the Kubernetes API server should be forwarding
+	// admission review objects to the policy
+	PolicyActive bool `json:"policyActive"`
+	// Conditions represent the observed conditions of the
+	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
+	// are: "PolicyServerSecretReconciled",
+	// "PolicyServerConfigMapReconciled",
+	// "PolicyServerDeploymentReconciled",
+	// "PolicyServerServiceReconciled" and
+	// "PolicyServerWebhookRegistered"
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
+// ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:storageversion
-
-// ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
+//+kubebuilder:printcolumn:name="Active",type=boolean,JSONPath=`.status.policyActive`,description="Whether the policy is active and receiving admission reviews"
 type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -166,9 +212,8 @@ type ClusterAdmissionPolicy struct {
 	Status ClusterAdmissionPolicyStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-
 // ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
+//+kubebuilder:object:root=true
 type ClusterAdmissionPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

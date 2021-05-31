@@ -14,18 +14,18 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
-func (r *Reconciler) reconcileValidatingWebhookRegistration(
+func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret) error {
-	err := r.Client.Create(ctx, r.validatingWebhookRegistration(clusterAdmissionPolicy, admissionSecret))
+	err := r.Client.Create(ctx, r.validatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret))
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
 	}
 	return fmt.Errorf("cannot reconcile validating webhook: %w", err)
 }
 
-func (r *Reconciler) validatingWebhookRegistration(
+func (r *Reconciler) validatingWebhookConfiguration(
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret,
 ) *admissionregistrationv1.ValidatingWebhookConfiguration {
