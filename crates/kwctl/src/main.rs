@@ -29,6 +29,7 @@ use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 
 mod annotate;
+mod constants;
 mod inspect;
 mod manifest;
 mod policies;

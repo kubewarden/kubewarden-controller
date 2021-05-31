@@ -1,12 +1,13 @@
 use anyhow::{anyhow, Result};
-use std::fs::File;
-use std::path::PathBuf;
-use validator::Validate;
-
 use policy_evaluator::{
     constants::KUBEWARDEN_CUSTOM_SECTION_METADATA, policy_evaluator::PolicyEvaluator,
     policy_metadata::Metadata,
 };
+use std::fs::File;
+use std::path::PathBuf;
+use validator::Validate;
+
+use crate::constants;
 
 pub(crate) fn write_annotation(
     wasm_path: PathBuf,
