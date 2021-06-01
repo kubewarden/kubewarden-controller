@@ -25,6 +25,7 @@ impl Registry {
     fn client(client_protocol: ClientProtocol) -> Client {
         Client::new(ClientConfig {
             protocol: client_protocol,
+            ..Default::default()
         })
     }
 
@@ -114,7 +115,6 @@ impl Registry {
                 registry_auth,
                 None,
             )
-            .compat()
             .await?;
 
         Ok(())
