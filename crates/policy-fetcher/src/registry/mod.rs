@@ -9,7 +9,6 @@ use oci_distribution::{
     Reference,
 };
 use std::{path::Path, str::FromStr};
-use tokio_compat_02::FutureExt;
 use url::Url;
 
 use crate::fetcher::Fetcher;
@@ -139,10 +138,6 @@ impl Registry {
                 registry_auth,
                 vec![manifest::WASM_LAYER_MEDIA_TYPE],
             )
-            // We need to call to `compat()` provided by the `tokio-compat-02` crate
-            // so that the Future returned by the `oci-distribution` crate can be
-            // executed by a newer Tokio runtime.
-            .compat()
             .await?
             .layers
             .into_iter()
