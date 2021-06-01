@@ -203,6 +203,7 @@ type ClusterAdmissionPolicyStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:storageversion
+//+kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
 //+kubebuilder:printcolumn:name="Active",type=boolean,JSONPath=`.status.policyActive`,description="Whether the policy is active and receiving admission reviews"
 type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`

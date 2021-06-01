@@ -243,6 +243,10 @@ spec:
     subresources:
       status: {}
   - additionalPrinterColumns:
+    - description: Whether the policy is mutating
+      jsonPath: .spec.mutating
+      name: Mutating
+      type: boolean
     - description: Whether the policy is active and receiving admission reviews
       jsonPath: .status.policyActive
       name: Active
