@@ -55,13 +55,21 @@ impl Registry {
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
         let registry_auth = Registry::auth(reference.registry(), docker_config);
 
+        // First we try to push to the registry using TLS
         if let Err(err) = Registry::push_tls(policy, &reference, &registry_auth).await {
             let host_and_port = crate::host_and_port(&url)?;
             if sources.map(|sources| sources.is_insecure_source(host_and_port)) != Some(true) {
+                // Push failed, plus the registry is not marked as "insecure" -> time to bubble up
+                // the error
                 return Err(anyhow!("could not push Wasm module: {}", err));
             }
+        } else {
+            return Ok(());
         }
 
+        // We are here because pushing to the registry using TLS didn't work,
+        // but the registry is marked as insecure. We will do one last attempt
+        // and push over plain HTTP
         Registry::push_plain(policy, &reference, &registry_auth).await
     }
 
