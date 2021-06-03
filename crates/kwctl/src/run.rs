@@ -47,6 +47,17 @@ pub(crate) async fn pull_and_run(
         _ => Err(anyhow!("request to evaluate is invalid")),
     }?;
 
+    // validate the settings given by the user
+    let settings_validation_response = policy_evaluator.validate_settings();
+    if !settings_validation_response.valid {
+        println!("{}", serde_json::to_string(&settings_validation_response)?);
+        return Err(anyhow!(
+            "Provided settings are not valid: {:?}",
+            settings_validation_response.message
+        ));
+    }
+
+    // evaluate request
     let response = policy_evaluator.validate(req_obj.clone());
     println!("{}", serde_json::to_string(&response)?);
 
