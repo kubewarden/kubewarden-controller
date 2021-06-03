@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +64,7 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 					Namespace: req.Namespace,
 				},
 			}
-			log.Info("Attempting delete", "policy", clusterAdmissionPolicy)
+			log.Info("attempting delete")
 			// nolint:wrapcheck
 			return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &clusterAdmissionPolicy)
 		}
@@ -73,12 +74,19 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 	// Reconcile
 	err := admissionReconciler.Reconcile(ctx, &clusterAdmissionPolicy)
 	if err == nil {
-		return ctrl.Result{}, nil
+		clusterAdmissionPolicy.Status.PolicyActive = true
+		if err := r.updateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err == nil {
+			return ctrl.Result{}, nil
+		}
+	}
+
+	clusterAdmissionPolicy.Status.PolicyActive = false
+	if err := r.updateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not update cluster admission policy status: %w", err)
 	}
 
 	if admission.IsPolicyServerNotReady(err) {
-		log.Info("clusteradmissionpolicy", "Policy server not yet ready", err.Error())
-		log.Info("clusteradmissionpolicy", "Delaying policy registration", req.Name)
+		log.Error(err, "delaying policy registration since policy server is not yet ready")
 		return ctrl.Result{
 			Requeue:      true,
 			RequeueAfter: time.Second * 5,
@@ -86,6 +94,16 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	return ctrl.Result{}, fmt.Errorf("reconciliation error: %w", err)
+}
+
+func (r *ClusterAdmissionPolicyReconciler) updateAdmissionPolicyStatus(
+	ctx context.Context,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+) error {
+	return errors.Wrapf(
+		r.Client.Status().Update(ctx, clusterAdmissionPolicy),
+		"failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta,
+	)
 }
 
 // SetupWithManager sets up the controller with the Manager.

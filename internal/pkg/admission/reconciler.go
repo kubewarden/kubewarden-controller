@@ -2,12 +2,16 @@ package admission
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -31,8 +35,10 @@ func (errorList errorList) Error() string {
 	return strings.Join(errors, ", ")
 }
 
-func (r *Reconciler) ReconcileDeletion(ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy) error {
+func (r *Reconciler) ReconcileDeletion(
+	ctx context.Context,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+) error {
 	errors := errorList{}
 	r.Log.Info("Removing deleted policy from PolicyServer ConfigMap")
 	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, RemovePolicy); err != nil {
@@ -73,36 +79,152 @@ func (r *Reconciler) ReconcileDeletion(ctx context.Context,
 	return errors
 }
 
+func setFalseConditionType(
+	conditions *[]metav1.Condition,
+	conditionType policiesv1alpha2.PolicyConditionType,
+	message string,
+) {
+	apimeta.SetStatusCondition(
+		conditions,
+		metav1.Condition{
+			Type:    string(conditionType),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(policiesv1alpha2.ReconciliationFailed),
+			Message: message,
+		},
+	)
+}
+
+func setTrueConditionType(conditions *[]metav1.Condition, conditionType policiesv1alpha2.PolicyConditionType) {
+	apimeta.SetStatusCondition(
+		conditions,
+		metav1.Condition{
+			Type:   string(conditionType),
+			Status: metav1.ConditionTrue,
+			Reason: string(policiesv1alpha2.ReconciliationSucceeded),
+		},
+	)
+}
+
 func (r *Reconciler) Reconcile(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
 	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx)
 	if err != nil {
-		return err
-	}
-	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
-		return err
-	}
-	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, AddPolicy); err != nil {
-		return err
-	}
-	if err := r.reconcilePolicyServerDeployment(ctx); err != nil {
-		return err
-	}
-	if err := r.reconcilePolicyServerService(ctx); err != nil {
+		setFalseConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerSecretReconciled,
+			fmt.Sprintf("error reconciling secret: %v", err),
+		)
 		return err
 	}
 
+	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
+		setFalseConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerSecretReconciled,
+			fmt.Sprintf("error reconciling secret: %v", err),
+		)
+		return err
+	}
+
+	setTrueConditionType(
+		&clusterAdmissionPolicy.Status.Conditions,
+		policiesv1alpha2.PolicyServerSecretReconciled,
+	)
+
+	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, AddPolicy); err != nil {
+		setFalseConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerConfigMapReconciled,
+			fmt.Sprintf("error reconciling configmap: %v", err),
+		)
+		return err
+	}
+
+	setTrueConditionType(
+		&clusterAdmissionPolicy.Status.Conditions,
+		policiesv1alpha2.PolicyServerConfigMapReconciled,
+	)
+
+	if err := r.reconcilePolicyServerDeployment(ctx); err != nil {
+		setFalseConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerDeploymentReconciled,
+			fmt.Sprintf("error reconciling deployment: %v", err),
+		)
+		return err
+	}
+
+	setTrueConditionType(
+		&clusterAdmissionPolicy.Status.Conditions,
+		policiesv1alpha2.PolicyServerDeploymentReconciled,
+	)
+
+	if err := r.reconcilePolicyServerService(ctx); err != nil {
+		setFalseConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerServiceReconciled,
+			fmt.Sprintf("error reconciling service: %v", err),
+		)
+		return err
+	}
+
+	setTrueConditionType(
+		&clusterAdmissionPolicy.Status.Conditions,
+		policiesv1alpha2.PolicyServerServiceReconciled,
+	)
+
+	return r.enablePolicyWebhook(ctx, clusterAdmissionPolicy, policyServerSecret)
+}
+
+func (r *Reconciler) enablePolicyWebhook(
+	ctx context.Context,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policyServerSecret *corev1.Secret,
+) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx)
-	if policyServerReady {
-		// register the new dynamic admission controller only once the policy is
-		// served by the PolicyServer deployment
-		if clusterAdmissionPolicy.Spec.Mutating {
-			return r.reconcileMutatingWebhookRegistration(ctx, clusterAdmissionPolicy, policyServerSecret)
+
+	if err != nil {
+		return err
+	}
+
+	if !policyServerReady {
+		return errors.New("policy server not yet ready")
+	}
+
+	// register the new dynamic admission controller only once the policy is
+	// served by the PolicyServer deployment
+	if clusterAdmissionPolicy.Spec.Mutating {
+		if err := r.reconcileMutatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret); err != nil {
+			setFalseConditionType(
+				&clusterAdmissionPolicy.Status.Conditions,
+				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+				fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
+			)
+			return err
 		}
 
-		return r.reconcileValidatingWebhookRegistration(ctx, clusterAdmissionPolicy, policyServerSecret)
+		setTrueConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+		)
+	} else {
+		if err := r.reconcileValidatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret); err != nil {
+			setFalseConditionType(
+				&clusterAdmissionPolicy.Status.Conditions,
+				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+				fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
+			)
+			return err
+		}
+
+		setTrueConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+		)
 	}
-	return err
+
+	return nil
 }
