@@ -198,6 +198,7 @@ type ClusterAdmissionPolicyStatus struct {
 	Conditions []metav1.Condition `json:"conditions"`
 }
 
+//nolint:lll
 // ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
