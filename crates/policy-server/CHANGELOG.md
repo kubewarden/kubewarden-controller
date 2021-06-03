@@ -2,6 +2,33 @@
 ## [Unreleased]
 
 
+<a name="v0.1.5"></a>
+## [v0.1.5] - 2021-06-03
+### Code Refactoring
+- due to dependency refactor
+- split crates to repositories of their own
+
+### Pull Requests
+- Merge pull request [#66](https://github.com/kubewarden/policy-server/issues/66) from ereslibre/image-rebase
+- Merge pull request [#65](https://github.com/kubewarden/policy-server/issues/65) from flavio/update-policy-fetcher
+- Merge pull request [#63](https://github.com/kubewarden/policy-server/issues/63) from flavio/update-to-latest-policy-evaluator
+- Merge pull request [#62](https://github.com/kubewarden/policy-server/issues/62) from kubewarden/bump-policy-fetcher
+- Merge pull request [#60](https://github.com/kubewarden/policy-server/issues/60) from kubewarden/bump-dependencies
+- Merge pull request [#58](https://github.com/kubewarden/policy-server/issues/58) from kubewarden/refactor
+- Merge pull request [#57](https://github.com/kubewarden/policy-server/issues/57) from ereslibre/crates-split
+
+
+<a name="v0.1.4"></a>
+## [v0.1.4] - 2021-04-16
+### Code Refactoring
+- split internal crates
+
+### Pull Requests
+- Merge pull request [#56](https://github.com/kubewarden/policy-server/issues/56) from ereslibre/split-crates
+- Merge pull request [#55](https://github.com/kubewarden/policy-server/issues/55) from flavio/fix-testdrive-release
+- Merge pull request [#54](https://github.com/kubewarden/policy-server/issues/54) from flavio/update-to-latest-kubewarden-client-sdk
+
+
 <a name="v0.1.3"></a>
 ## [v0.1.3] - 2021-04-14
 ### Features
@@ -46,7 +73,9 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.1.5...HEAD
+[v0.1.5]: https://github.com/kubewarden/policy-server/compare/v0.1.4...v0.1.5
+[v0.1.4]: https://github.com/kubewarden/policy-server/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/kubewarden/policy-server/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/kubewarden/policy-server/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/kubewarden/policy-server/compare/v0.1.0...v0.1.1
