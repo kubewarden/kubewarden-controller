@@ -77,6 +77,7 @@ async fn main() -> Result<()> {
              (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
              (@arg ("request-path"): * -r --("request-path") +takes_value "File containing the Kubernetes admission request object in JSON format")
              (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
+             (@arg ("settings-json"): --("settings-json") +takes_value "JSON string containing the settings for this policy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
             )
             (@subcommand annotate =>
@@ -170,13 +171,25 @@ async fn main() -> Result<()> {
                             e
                         )
                     })?;
-                let settings = matches
-                    .value_of("settings-path")
-                    .map(|settings| -> Result<String> {
-                        fs::read_to_string(settings)
-                            .map_err(|e| anyhow!("Error reading settings from {}: {}", settings, e))
-                    })
-                    .transpose()?;
+                if matches.is_present("settings-path") && matches.is_present("settings-json") {
+                    return Err(anyhow!(
+                        "'settings-path' and 'settings-json' cannot be used at the same time"
+                    ));
+                }
+                let settings = if matches.is_present("settings-path") {
+                    matches
+                        .value_of("settings-path")
+                        .map(|settings| -> Result<String> {
+                            fs::read_to_string(settings).map_err(|e| {
+                                anyhow!("Error reading settings from {}: {}", settings, e)
+                            })
+                        })
+                        .transpose()?
+                } else if matches.is_present("settings-json") {
+                    Some(String::from(matches.value_of("settings-json").unwrap()))
+                } else {
+                    None
+                };
                 let (sources, docker_config) = remote_server_options(matches)
                     .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
                 run::pull_and_run(uri, docker_config, sources, &request, settings).await?;
