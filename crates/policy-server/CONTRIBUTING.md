@@ -1,5 +1,32 @@
 # Contributing
 
+## Commit subjects
+
+Commit subjects are used to determine whether a commit will show up in
+the `CHANGELOG.md`, and under what section.
+
+Commit subjects that don't follow the following pattern will not be
+included in the `CHANGELOG.md`:
+
+- `type: free form subject`
+
+Where `type` can be:
+
+* `feat`: used by commits introducing a new feature
+* `fix`: used by commits fix an issue
+* `perf`: used by commits improving performance
+* `refactor`: used by commits doing some code refactoring
+
+Some examples:
+
+- `feat: this is a new feature`
+- `fix: this is fixing a reported bug`
+
+It's also possible to specify a component if this commit targets one
+component specifically.
+
+- `feat(resolver): this adds a new solver strategy`
+
 ## Tagging a new release
 
 ### Create a new tag
