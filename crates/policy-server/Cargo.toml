@@ -29,3 +29,11 @@ tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version= "0.2", features = ["fmt"] }
 tracing-futures = "0.2"
+
+[dependencies.cranelift-codegen]
+# Report: https://github.com/kubewarden/policy-server/issues/67
+version = "^0.73.1"
+
+[dependencies.raw-cpuid]
+# Report: https://github.com/kubewarden/policy-server/issues/68
+version = "^9.0.0"
