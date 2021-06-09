@@ -21,6 +21,7 @@ use std::{
     str::FromStr,
 };
 
+use tracing::debug;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -62,10 +63,10 @@ async fn main() -> Result<()> {
             (@subcommand push =>
              (about: "Pushes a Kubewarden policy to an OCI registry")
              (@arg ("docker-config-json-path"): --("docker-config-json-path") +takes_value "Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
-             (@arg ("policy-path"): * -p --("policy-path") +takes_value "Policy file to push")
-             (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
-             (@arg ("uri"): * "Policy URI. Supported schemes: registry://")
              (@arg ("force"): -f --("force") "push also a policy that is not annotated")
+             (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
+             (@arg ("policy"): * "Policy to push. Can be the path to a local file, or a policy URI")
+             (@arg ("uri"): * "Policy URI. Supported schemes: registry://")
             )
             (@subcommand rm =>
              (about: "Removes a Kubewarden policy from the store")
@@ -136,11 +137,28 @@ async fn main() -> Result<()> {
         Some("push") => {
             if let Some(ref matches) = matches.subcommand_matches("push") {
                 let (sources, docker_config) = remote_server_options(matches)?;
-                let policy = fs::read(matches.value_of("policy-path").unwrap())?;
-                let uri = matches.value_of("uri").unwrap();
+                let wasm_uri = crate::utils::map_path_to_uri(matches.value_of("policy").unwrap())?;
+                let wasm_path = crate::utils::wasm_path(wasm_uri.as_str())?;
+                let uri = matches
+                    .value_of("uri")
+                    .map(|u| {
+                        if u.starts_with("registry://") {
+                            String::from(u)
+                        } else {
+                            format!("registry://{}", u)
+                        }
+                    })
+                    .unwrap();
+
+                debug!(
+                    policy = wasm_path.to_string_lossy().to_string().as_str(),
+                    destination = uri.as_str(),
+                    "policy push"
+                );
+
+                let policy = fs::read(&wasm_path)?;
                 let force = matches.is_present("force");
-                let metadata =
-                    Metadata::from_path(Path::new(matches.value_of("policy-path").unwrap()))?;
+                let metadata = Metadata::from_path(&wasm_path)?;
                 if metadata.is_none() {
                     if force {
                         eprintln!("Warning: pushing a non-annotated policy!");
@@ -149,7 +167,7 @@ async fn main() -> Result<()> {
                     }
                 }
 
-                push::push(&policy, uri, docker_config, sources).await?;
+                push::push(&policy, &uri, docker_config, sources).await?;
             };
             println!("Policy successfully pushed");
             Ok(())
