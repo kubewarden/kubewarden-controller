@@ -109,7 +109,8 @@ async fn main() -> Result<()> {
     };
     let filter_layer = EnvFilter::new(level_filter)
         .add_directive("cranelift_codegen=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
-        .add_directive("cranelift_wasm=off".parse().unwrap()); // this crate generates lots of tracing events we don't care about
+        .add_directive("cranelift_wasm=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
+        .add_directive("regalloc=off".parse().unwrap()); // this crate generates lots of tracing events we don't care about
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt::layer().with_writer(std::io::stderr))
