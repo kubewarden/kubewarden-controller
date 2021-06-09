@@ -76,10 +76,6 @@ impl PolicyEvaluator {
             .map(|s| s.to_owned())
             .unwrap();
 
-        if let Err(error) = ClusterContext::init() {
-            eprintln!("non fatal error: could not initialize a cluster context due to error: {}; context sensitive functions will not return any information", error);
-        }
-
         let req_obj = request.get("object");
         if req_obj.is_none() {
             return ValidationResponse::reject(
