@@ -1598,9 +1598,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23e8d71498a7ffad69a26cabb39715e490fba2a6878e96fae87cef283f2ff74a"
+checksum = "0ea0e3e0339064b89993411f766f0c5ce4a0df513310792eef7008934aceceb2"
 dependencies = [
  "anyhow",
  "k8s-openapi",
@@ -2221,7 +2221,7 @@ dependencies = [
 [[package]]
 name = "policy-evaluator"
 version = "0.1.15"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.15#f715c69e00369df41c7303e4eef5b146400762b4"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.16#2436278fffcddd3fa9cc726c7c0134b51e347531"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
