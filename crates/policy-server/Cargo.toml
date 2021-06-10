@@ -10,7 +10,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 async-stream = "0.3.0"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.1.14" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.1.16" }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.10" }
 kubewarden-policy-sdk = "0.2.0"
 clap = "2.33.3"
