@@ -25,7 +25,16 @@ pub(crate) async fn pull_and_run(
     let request = serde_json::from_str::<serde_json::Value>(&request)?;
     let policy_evaluator = PolicyEvaluator::new(
         policy_path.as_path(),
-        settings.map_or(Ok(None), |settings| serde_yaml::from_str(&settings))?,
+        settings.map_or(
+            Ok(None),
+            |settings| {
+                if settings.is_empty(){
+                    Ok(None)
+                } else {
+                    serde_yaml::from_str(&settings)
+                }
+            }
+        )?,
     )
     .map_err(|err| {
         anyhow!(
