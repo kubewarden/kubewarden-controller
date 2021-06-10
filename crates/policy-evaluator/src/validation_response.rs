@@ -41,10 +41,10 @@ impl ValidationResponse {
         }
     }
 
-    pub fn reject_internal_server_error(uid: String) -> ValidationResponse {
+    pub fn reject_internal_server_error(uid: String, message: String) -> ValidationResponse {
         ValidationResponse::reject(
             uid,
-            String::from("internal server error"),
+            format!("internal server error: {}", message),
             hyper::StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
         )
     }

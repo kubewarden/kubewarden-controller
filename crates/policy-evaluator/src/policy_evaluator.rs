@@ -97,7 +97,7 @@ impl PolicyEvaluator {
                     error = e.to_string().as_str(),
                     "cannot serialize validation params"
                 );
-                return ValidationResponse::reject_internal_server_error(uid);
+                return ValidationResponse::reject_internal_server_error(uid, e.to_string());
             }
         };
 
@@ -119,13 +119,13 @@ impl PolicyEvaluator {
                             error = e.to_string().as_str(),
                             "cannot build validation response from policy result"
                         );
-                        ValidationResponse::reject_internal_server_error(uid)
+                        ValidationResponse::reject_internal_server_error(uid, e.to_string())
                     })
             }
             Err(e) => {
                 error!(error = e.to_string().as_str(), "waPC communication error");
 
-                ValidationResponse::reject_internal_server_error(uid)
+                ValidationResponse::reject_internal_server_error(uid, e.to_string())
             }
         }
     }
