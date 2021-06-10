@@ -17,6 +17,7 @@ use directories::UserDirs;
 use std::{
     convert::TryFrom,
     fs,
+    io::{self, Read},
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -182,14 +183,22 @@ async fn main() -> Result<()> {
         Some("run") => {
             if let Some(ref matches) = matches.subcommand_matches("run") {
                 let uri = matches.value_of("uri").unwrap();
-                let request = fs::read_to_string(matches.value_of("request-path").unwrap())
-                    .map_err(|e| {
+                let request = match matches.value_of("request-path").unwrap() {
+                    "-" => {
+                        let mut buffer = String::new();
+                        io::stdin()
+                            .read_to_string(&mut buffer)
+                            .map_err(|e| anyhow!("Error reading request from stdin: {}", e))?;
+                        buffer
+                    }
+                    request_path => fs::read_to_string(request_path).map_err(|e| {
                         anyhow!(
                             "Error opening request file {}; {}",
                             matches.value_of("request-path").unwrap(),
                             e
                         )
-                    })?;
+                    })?,
+                };
                 if matches.is_present("settings-path") && matches.is_present("settings-json") {
                     return Err(anyhow!(
                         "'settings-path' and 'settings-json' cannot be used at the same time"
