@@ -76,19 +76,19 @@ impl PolicyEvaluator {
             .map(|s| s.to_owned())
             .unwrap();
 
-        let req_obj = request.get("object");
-        if req_obj.is_none() {
-            return ValidationResponse::reject(
-                uid,
-                String::from("request doesn't have a 'object' value"),
-                hyper::StatusCode::BAD_REQUEST.as_u16(),
-            );
-        }
-        let req_obj = req_obj.unwrap();
-
+        let req_obj = match request.get("object") {
+            Some(req_obj) => req_obj,
+            None => {
+                return ValidationResponse::reject(
+                    uid,
+                    String::from("request doesn't have an 'object' value"),
+                    hyper::StatusCode::BAD_REQUEST.as_u16(),
+                );
+            }
+        };
         let validate_params = json!({
             "request": request,
-            "settings": self.settings,
+            "settings": self.settings.clone().unwrap_or_default(),
         });
         let validate_str = match serde_json::to_string(&validate_params) {
             Ok(s) => s,
@@ -131,14 +131,20 @@ impl PolicyEvaluator {
     }
 
     pub fn validate_settings(&self) -> SettingsValidationResponse {
-        let settings_str = match serde_json::to_string(&self.settings) {
-            Ok(s) => s,
-            Err(e) => {
-                return SettingsValidationResponse {
-                    valid: false,
-                    message: Some(format!("Cannot serialize validation params: {}", e)),
+        let settings_str = match &self.settings {
+            Some(settings) => match serde_json::to_string(settings) {
+                Ok(s) => s,
+                Err(e) => {
+                    return SettingsValidationResponse {
+                        valid: false,
+                        message: Some(format!("Cannot serialize validation params: {}", e)),
+                    }
                 }
-            }
+            },
+            // By sending an empty object we allow the logic of the
+            // guest SDK or the guest program to default inner
+            // attributes as desired.
+            None => "{}".to_string(),
         };
 
         match self
