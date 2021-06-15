@@ -1,0 +1,13 @@
+{
+  "auths": {
+    "https://index.docker.io/v1/": {
+      "auth": "invalid-base64"
+    },
+    "valid-base64.registry.com": {
+      "auth": "dXNlcm5hbWU6dG9rZW4="
+    }
+  },
+  "HttpHeaders": {
+    "User-Agent": "Docker-Client/19.03.15 (linux)"
+  }
+}

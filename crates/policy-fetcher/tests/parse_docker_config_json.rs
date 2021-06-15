@@ -37,3 +37,29 @@ fn parses_with_some_auth_missing() {
         }
     )
 }
+
+#[test]
+fn parses_with_invalid_base64() {
+    assert_eq!(
+        docker_config("auth-with-invalid-base64.json"),
+        DockerConfig {
+            auths: HashMap::from_iter(vec![(
+                "valid-base64.registry.com".to_string(),
+                RegistryAuth::BasicAuth("username".into(), "token".into())
+            ),])
+        }
+    )
+}
+
+#[test]
+fn parses_with_invalid_username_password() {
+    assert_eq!(
+        docker_config("auth-with-invalid-username-password.json"),
+        DockerConfig {
+            auths: HashMap::from_iter(vec![(
+                "valid-username-password.registry.com".to_string(),
+                RegistryAuth::BasicAuth("username".into(), "token".into())
+            ),])
+        }
+    )
+}
