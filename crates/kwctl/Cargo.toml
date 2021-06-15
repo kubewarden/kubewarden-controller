@@ -39,3 +39,9 @@ walrus = "0.19.0"
 
 [dev-dependencies]
 tempfile = "3.2.0"
+
+[patch."https://github.com/kubewarden/policy-fetcher"]
+policy-fetcher = { path = "../policy-fetcher" }
+
+[patch."https://github.com/kubewarden/policy-evaluator"]
+policy-evaluator = { path = "../policy-evaluator" }
