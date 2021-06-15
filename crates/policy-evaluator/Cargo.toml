@@ -20,7 +20,6 @@ kubewarden-policy-sdk = "0.2.2"
 lazy_static = "1.4.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tokio = { version = "^1" }
 tracing = "0.1"
 tracing-futures = "0.2"
 validator = { version = "0.13", features = ["derive"] }
