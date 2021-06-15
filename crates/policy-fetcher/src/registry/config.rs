@@ -17,14 +17,14 @@ pub struct DockerConfigRaw {
     auths: HashMap<String, RegistryAuthRaw>,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum RegistryAuth {
+#[derive(Clone, Debug, PartialEq)]
+pub enum RegistryAuth {
     BasicAuth(Vec<u8>, Vec<u8>),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DockerConfig {
-    pub(crate) auths: HashMap<String, RegistryAuth>,
+    pub auths: HashMap<String, RegistryAuth>,
 }
 
 impl TryFrom<DockerConfigRaw> for DockerConfig {
@@ -36,9 +36,7 @@ impl TryFrom<DockerConfigRaw> for DockerConfig {
                 .auths
                 .into_iter()
                 .filter_map(|(host, auth)| match OptionalRegistryAuth::try_from(auth) {
-                    Ok(registry_auth) => {
-                        registry_auth.map(|registry_auth| Ok((host, registry_auth)))
-                    }
+                    Ok(registry_auth) => registry_auth.map(|registry_auth| (host, registry_auth)),
                     Err(e) => {
                         eprintln!(
                             "error parsing host {} configuration: {}; host ignored",
@@ -47,7 +45,7 @@ impl TryFrom<DockerConfigRaw> for DockerConfig {
                         None
                     }
                 })
-                .collect::<Result<_>>()?,
+                .collect(),
         })
     }
 }
