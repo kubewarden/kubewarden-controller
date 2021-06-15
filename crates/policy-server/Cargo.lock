@@ -1822,8 +1822,8 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
 name = "policy-evaluator"
-version = "0.1.15"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.16#2436278fffcddd3fa9cc726c7c0134b51e347531"
+version = "0.1.17"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.17#5f3bfbbfc0f80abfdc8a4562645f0b84d8a78c18"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -1835,7 +1835,6 @@ dependencies = [
  "lazy_static",
  "serde",
  "serde_json",
- "tokio",
  "tracing",
  "tracing-futures",
  "validator",

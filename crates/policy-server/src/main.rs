@@ -1,7 +1,9 @@
 extern crate k8s_openapi;
 extern crate kube;
 
+use anyhow::{anyhow, Result};
 use clap::{App, Arg};
+use kube::Client;
 use std::{
     net::SocketAddr,
     process,
@@ -11,7 +13,7 @@ use std::{
     },
     thread,
 };
-use tokio::{runtime::Runtime, sync::mpsc::channel};
+use tokio::sync::mpsc::channel;
 use tracing::{debug, error, info};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -26,6 +28,7 @@ mod worker;
 mod worker_pool;
 use worker_pool::WorkerPool;
 
+use policy_evaluator::cluster_context::ClusterContext;
 use policy_fetcher::registry::config::read_docker_config_json_file;
 use policy_fetcher::sources::read_sources_file;
 use settings::read_policies_file;
@@ -35,7 +38,8 @@ use std::path::{Path, PathBuf};
 mod communication;
 use communication::EvalRequest;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<()> {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
     let matches = App::new("policy-server")
@@ -163,14 +167,6 @@ fn main() {
         fatal_error("error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
     };
 
-    let rt = match Runtime::new() {
-        Ok(r) => r,
-        Err(error) => {
-            fatal_error(format!("error initializing tokio runtime: {}", error));
-            unreachable!();
-        }
-    };
-
     let policies_file = Path::new(matches.value_of("policies").unwrap_or("."));
     let mut policies = match read_policies_file(policies_file) {
         Ok(policies) => policies,
@@ -222,15 +218,17 @@ fn main() {
     );
     for (name, policy) in policies.iter_mut() {
         debug!(policy = name.as_str(), "download");
-        match rt.block_on(policy_fetcher::fetch_policy(
+        let policy_path = policy_fetcher::fetch_policy(
             &policy.url,
             policy_fetcher::PullDestination::Store(PathBuf::from(policies_download_dir)),
             docker_config.as_ref(),
             sources.as_ref(),
-        )) {
+        )
+        .await;
+        match policy_path {
             Ok(path) => policy.wasm_module_path = path,
             Err(e) => {
-                return fatal_error(format!(
+                fatal_error(format!(
                     "error while fetching policy {} from {}: {}",
                     name, policy.url, e
                 ));
@@ -238,6 +236,48 @@ fn main() {
         };
     }
     info!("policies download completed");
+
+    let kubernetes_client = Client::try_default()
+       .await
+       .map_err(|e| anyhow!("could not initialize a cluster context because a Kubernetes client could not be created: {}", e));
+    if let Ok(kubernetes_client) = kubernetes_client {
+        // Ensure that we do an initial refresh before starting any policy
+        let refresh = ClusterContext::get().refresh(&kubernetes_client).await;
+
+        if let Err(err) = refresh {
+            info!("error when refreshing the cluster context: {}", err);
+        }
+
+        info!("cluster context initialized");
+    };
+    thread::spawn(|| async {
+        info!("spawning cluster context refresh loop");
+        loop {
+            let kubernetes_client = Client::try_default()
+                .await
+                .map_err(|e| anyhow!("could not initialize a cluster context because a Kubernetes client could not be created: {}", e));
+
+            match kubernetes_client {
+                Ok(kubernetes_client) => loop {
+                    let refresh = ClusterContext::get().refresh(&kubernetes_client).await;
+
+                    if let Err(err) = refresh {
+                        info!("error when refreshing the cluster context: {}", err);
+                    }
+
+                    thread::sleep(std::time::Duration::from_secs(5));
+                },
+                Err(err) => {
+                    info!(
+                        "error when initializing the cluster context client: {}",
+                        err
+                    );
+                    thread::sleep(std::time::Duration::from_secs(5));
+                    continue;
+                }
+            }
+        }
+    });
 
     let (api_tx, api_rx) = channel::<EvalRequest>(32);
     let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
@@ -284,11 +324,13 @@ fn main() {
             }
         }
     };
-    rt.block_on(server::run_server(&addr, tls_acceptor, api_tx));
+    server::run_server(&addr, tls_acceptor, api_tx).await;
 
     if let Err(e) = wasm_thread.join() {
         fatal_error(format!("error while waiting for worker threads: {:?}", e));
-    }
+    };
+
+    Ok(())
 }
 
 fn fatal_error(msg: String) {
