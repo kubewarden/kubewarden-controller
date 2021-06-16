@@ -54,10 +54,20 @@ pub async fn fetch_policy(
     if let Some(store) = store {
         store.ensure(&store.policy_full_path(url.as_str(), store::PolicyPath::PrefixOnly)?)?;
     }
-    // TODO (ereslibre): add special meaning for certain tags if they
-    // exist: e.g. the `latest` tag should always be pulled
-    if Path::exists(&destination) {
-        return Ok(destination);
+    match url.scheme() {
+        "registry" => {
+            // On a registry, the `latest` tag always pulls the latest version
+            let tag = url.as_str().split(':').last();
+            if tag != Some("latest") && Path::exists(&destination) {
+                return Ok(destination);
+            }
+        }
+        "http" | "https" => {
+            if Path::exists(&destination) {
+                return Ok(destination);
+            }
+        }
+        _ => unreachable!(),
     }
     eprintln!("pulling policy...");
     url_fetcher(url.scheme())?
