@@ -100,6 +100,7 @@ impl MetadataPrettyPrinter {
             }
         }
         table.add_row(row![Fgbl -> "mutating:", metadata.mutating]);
+        table.add_row(row![Fgbl -> "context aware:", metadata.context_aware]);
         table.add_row(row![Fgbl -> "protocol version:", protocol_version]);
 
         let _usage = annotations.remove(ANNOTATION_POLICY_USAGE);
