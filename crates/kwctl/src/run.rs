@@ -1,5 +1,8 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_evaluator::PolicyEvaluator;
+use kube::Client;
+use policy_evaluator::{
+    cluster_context::ClusterContext, policy_evaluator::PolicyEvaluator, policy_metadata::Metadata,
+};
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 
 use crate::pull;
@@ -21,10 +24,26 @@ pub(crate) async fn pull_and_run(
     )
     .await
     .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
+    let policy_path = policy_path.as_path();
+
+    if let Some(metadata) = Metadata::from_path(policy_path)? {
+        if metadata.context_aware {
+            println!("Fetching Kubernetes context since this policy is context-aware");
+
+            let kubernetes_client = Client::try_default()
+                .await
+                .map_err(|e| anyhow!("could not initialize a cluster context because a Kubernetes client could not be created: {}", e))?;
+
+            ClusterContext::get()
+                .refresh(&kubernetes_client)
+                .await
+                .map_err(|e| anyhow!("could not initialize a cluster context: {}", e))?;
+        }
+    }
 
     let request = serde_json::from_str::<serde_json::Value>(&request)?;
     let policy_evaluator = PolicyEvaluator::new(
-        policy_path.as_path(),
+        policy_path,
         settings.map_or(Ok(None), |settings| {
             if settings.is_empty() {
                 Ok(None)
