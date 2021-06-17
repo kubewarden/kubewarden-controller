@@ -1,0 +1,127 @@
+name: burrego release
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+  BUILD_TARGET: x86_64-unknown-linux-musl
+  BINARY_NAME: burrego
+  BINARY_FULL_NAME: burrego-linux-amd64
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      # Speed-up runs by using GH cache
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/index
+          key: index-${{ runner.os }}-${{ github.run_number }}
+          restore-keys: |
+            index-${{ runner.os }}-
+      - uses: actions-rs/cargo@v1
+        with:
+          command: generate-lockfile
+      - uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry/cache
+          key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fetch
+      - uses: actions/cache@v1
+        with:
+          path: target
+          key: target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+
+  build:
+    name: Build Release
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # Speed-up runs by using GH cache
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry/index
+        key: index-${{ runner.os }}-${{ github.run_number }}
+        restore-keys: |
+          index-${{ runner.os }}-
+    - uses: actions-rs/cargo@v1
+      with:
+        command: generate-lockfile
+    - uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry/cache
+        key: registry-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+    - uses: actions-rs/cargo@v1
+      with:
+        command: fetch
+    - uses: actions/cache@v1
+      with:
+        path: target
+        key: target-${{ runner.os }}-${{ steps.rust-version.outputs.version }}-${{ hashFiles('Cargo.lock') }}
+
+    - name: Build-musl
+      uses: gmiam/rust-musl-action@master
+      with:
+        args: cargo build --target $BUILD_TARGET --release --bin ${{ env.BINARY_NAME }}
+
+    - name: upload burrego as an artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.BINARY_NAME }}
+        path: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
+        if-no-files-found: error
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: ${{ env.BINARY_NAME }}
+
+    - name: Compress binary
+      run: |
+        zip -9j ${{ env.BINARY_FULL_NAME }}.zip ${{ env.BINARY_NAME }}
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release burrego ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ env.BINARY_FULL_NAME }}.zip
+        asset_name: ${{ env.BINARY_FULL_NAME }}.zip
+        asset_content_type: application/octet-stream
