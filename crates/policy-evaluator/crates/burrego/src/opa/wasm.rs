@@ -7,6 +7,8 @@ use wasmtime::{
 use crate::opa::{builtins, Policy, StackHelper};
 use std::sync::RwLock;
 
+use tracing::{debug, error};
+
 type LookupTable = HashMap<i64, String>;
 
 struct BuiltinsHelper {
@@ -31,10 +33,17 @@ impl BuiltinsHelper {
                 builtin_id
             )
         })?;
+
         let builtin_fn = self
             .builtins
             .get(builtin_name.as_str())
             .ok_or_else(|| anyhow!("Cannot find builtin function with name {}", builtin_name))?;
+
+        debug!(
+            builtin = builtin_name.as_str(),
+            args = serde_json::to_string(&args)?.as_str(),
+            "invoking builtin"
+        );
         builtin_fn(args)
     }
 }
@@ -133,7 +142,7 @@ impl Evaluator {
         let opa_builtin0 = Func::wrap(
             &mut store,
             move |mut caller: Caller<'_, Option<StackHelper>>, builtin_id: i32, _ctx: i32| -> i32 {
-                println!("opa_builtin0 with builtin_id: {}", builtin_id);
+                debug!(builtin_id, "opa_builtin0");
 
                 let stack_helper = caller.data().unwrap();
                 let args = vec![];
@@ -144,7 +153,7 @@ impl Evaluator {
                     .invoke(stack_helper.policy_id, builtin_id, &args)
                     .map(|res| stack_helper.push_json(caller.as_context_mut(), &memory, &res))
                     .unwrap_or_else(|e| {
-                        println!("something went wrong: {:?}", e);
+                        error!(error = e.to_string().as_str(), "something went wrong");
                         Ok(0)
                     })
                     .unwrap()
@@ -161,7 +170,7 @@ impl Evaluator {
                   _ctx: i32,
                   p1: i32|
                   -> i32 {
-                println!("opa_builtin1 with builtin_id: {}  -  p1 {}", builtin_id, p1);
+                debug!(builtin_id, p1, "opa_builtin1");
 
                 let stack_helper = caller.data().unwrap();
 
@@ -176,7 +185,7 @@ impl Evaluator {
                     .invoke(stack_helper.policy_id, builtin_id, &args)
                     .map(|res| stack_helper.push_json(caller.as_context_mut(), &memory, &res))
                     .unwrap_or_else(|e| {
-                        println!("something went wrong: {:?}", e);
+                        error!(error = e.to_string().as_str(), "something went wrong");
                         Ok(0)
                     })
                     .unwrap()
@@ -194,10 +203,7 @@ impl Evaluator {
                   p1: i32,
                   p2: i32|
                   -> i32 {
-                println!(
-                    "opa_builtin2 with builtin_id: {}  -  p1 {}  -  p2 {}",
-                    builtin_id, p1, p2
-                );
+                debug!(builtin_id, p1, p2, "opa_builtin2");
 
                 let stack_helper = caller.data().unwrap();
 
@@ -215,7 +221,7 @@ impl Evaluator {
                     .invoke(stack_helper.policy_id, builtin_id, &args)
                     .map(|res| stack_helper.push_json(caller.as_context_mut(), &memory, &res))
                     .unwrap_or_else(|e| {
-                        println!("something went wrong: {:?}", e);
+                        error!(error = e.to_string().as_str(), "something went wrong");
                         Ok(0)
                     })
                     .unwrap()
@@ -234,10 +240,7 @@ impl Evaluator {
                   p2: i32,
                   p3: i32|
                   -> i32 {
-                println!(
-                    "opa_builtin3 with builtin_id: {}  -  p1 {}  -  p2 {} - p3 {}",
-                    builtin_id, p1, p2, p3
-                );
+                debug!(builtin_id, p1, p2, p3, "opa_builtin3");
 
                 let stack_helper = caller.data().unwrap();
 
@@ -258,7 +261,7 @@ impl Evaluator {
                     .invoke(stack_helper.policy_id, builtin_id, &args)
                     .map(|res| stack_helper.push_json(caller.as_context_mut(), &memory, &res))
                     .unwrap_or_else(|e| {
-                        println!("something went wrong: {:?}", e);
+                        error!(error = e.to_string().as_str(), "something went wrong");
                         Ok(0)
                     })
                     .unwrap()
@@ -278,10 +281,7 @@ impl Evaluator {
                   p3: i32,
                   p4: i32|
                   -> i32 {
-                println!(
-                    "opa_builtin3 with builtin_id: {}  -  p1 {}  -  p2 {} - p3 {} - p4 {}",
-                    builtin_id, p1, p2, p3, p4
-                );
+                debug!(builtin_id, p1, p2, p3, p4, "opa_builtin3");
                 let stack_helper = caller.data().unwrap();
 
                 let p1 = stack_helper
@@ -305,7 +305,7 @@ impl Evaluator {
                     .invoke(stack_helper.policy_id, builtin_id, &args)
                     .map(|res| stack_helper.push_json(caller.as_context_mut(), &memory, &res))
                     .unwrap_or_else(|e| {
-                        println!("something went wrong: {:?}", e);
+                        error!(error = e.to_string().as_str(), "something went wrong");
                         Ok(0)
                     })
                     .unwrap()
@@ -331,6 +331,14 @@ impl Evaluator {
             .lookup_tables
             .insert(policy_id, policy_lookup_table);
 
+        let used_builtins: String = policy
+            .builtins(&mut store, &memory)?
+            .keys()
+            .cloned()
+            .collect::<Vec<String>>()
+            .join(", ");
+        debug!(builtins = used_builtins.as_str(), "builtins used by policy");
+
         Ok(Evaluator {
             engine,
             linker,
@@ -354,6 +362,13 @@ impl Evaluator {
             .ok_or_else(|| anyhow!("Cannot find OPA Wasm ABI minor version"))?;
 
         Ok((major, minor))
+    }
+
+    pub fn implemented_builtins() -> HashSet<String> {
+        builtins::get_builtins()
+            .keys()
+            .map(|v| String::from(*v))
+            .collect()
     }
 
     pub fn not_implemented_builtins(&mut self) -> Result<HashSet<String>> {
@@ -406,10 +421,16 @@ impl Evaluator {
                 )
             })?;
 
-        println!("\nsetting policy data: {:?}", data);
+        debug!(
+            data = serde_json::to_string(&data)?.as_str(),
+            "setting policy data"
+        );
         self.policy.set_data(&mut self.store, &self.memory, &data)?;
 
-        println!("\nattempting evaluation with input: {:?}", input);
+        debug!(
+            input = serde_json::to_string(&input)?.as_str(),
+            "attempting evaluation"
+        );
         self.policy
             .evaluate(entrypoint_id, &mut self.store, &self.memory, &input)
             .map_err(|e| anyhow!("Cannot convert evaluation result back to JSON: {:?}", e))

@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 
 pub fn sprintf(args: &[serde_json::Value]) -> Result<serde_json::Value> {
-    println!("sprintf invoked with: {:?}", args);
     if args.len() != 2 {
         return Err(anyhow!("Wrong number of arguments given to sprintf"));
     }
