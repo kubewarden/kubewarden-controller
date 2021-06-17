@@ -40,6 +40,16 @@ $ burrego eval \
 
 More examples can be found [here](/examples/README.md).
 
+## Installation
+
+burrego can be built from sources using:
+
+```
+cargo install --git https://github.com/flavio/burrego.git --branch main
+```
+
+Pre-built Linux binaries can be found [here](https://github.com/flavio/burrego/releases).
+
 ## Limitations
 
 The OPA provides a series of that can be used by policy authors.
