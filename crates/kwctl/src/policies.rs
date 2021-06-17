@@ -12,25 +12,32 @@ pub(crate) fn list() -> Result<()> {
     }
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
-    table.set_titles(row!["Policy", "Mutating", "Context aware", "SHA-256", "Size"]);
+    table.set_titles(row![
+        "Policy",
+        "Mutating",
+        "Context aware",
+        "SHA-256",
+        "Size"
+    ]);
     for policy in policy_list()? {
-        let (mutating, context_aware) = if let Some(policy_metadata) = PolicyMetadata::from_path(&policy.local_path)? {
-            let mutating = if policy_metadata.mutating {
-                "yes"
-            } else {
-                "no"
-            };
+        let (mutating, context_aware) =
+            if let Some(policy_metadata) = PolicyMetadata::from_path(&policy.local_path)? {
+                let mutating = if policy_metadata.mutating {
+                    "yes"
+                } else {
+                    "no"
+                };
 
-            let context_aware = if policy_metadata.context_aware {
-                "yes"
-            } else {
-                "no"
-            };
+                let context_aware = if policy_metadata.context_aware {
+                    "yes"
+                } else {
+                    "no"
+                };
 
-            (mutating, context_aware)
-        } else {
-            ("unknown", "no")
-        };
+                (mutating, context_aware)
+            } else {
+                ("unknown", "no")
+            };
 
         let sha256sum = format!(
             "{:.12x}",
