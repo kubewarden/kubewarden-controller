@@ -14,6 +14,8 @@ OPA policies can be compiled to WebAssembly module (aka Wasm) using the
 Read [here](https://www.openpolicyagent.org/docs/latest/wasm/) for more
 information about OPA and WebAssembly.
 
+[![demo](/demo.gif "demo")(https://asciinema.org/a/420933)]
+
 ## Usage
 
 A policy can be evaluated in this way:
