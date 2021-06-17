@@ -17,13 +17,13 @@ fn main() -> Result<()> {
 
     let input: serde_json::Value = matches
         .value_of("input")
-        .or_else(|| Some("{}"))
+        .or(Some("{}"))
         .map(|i| serde_json::from_str(i).map_err(|e| anyhow!("Cannot parse input: {:?}", e)))
         .unwrap()?;
 
     let data: serde_json::Value = matches
         .value_of("data")
-        .or_else(|| Some("{}"))
+        .or(Some("{}"))
         .map(|d| serde_json::from_str(d).map_err(|e| anyhow!("Cannot parse data: {:?}", e)))
         .unwrap()?;
 
@@ -40,10 +40,7 @@ fn main() -> Result<()> {
         process::exit(1);
     }
 
-    let entrypoint = matches
-        .value_of("entrypoint")
-        .or_else(|| Some("0"))
-        .unwrap();
+    let entrypoint = matches.value_of("entrypoint").or(Some("0")).unwrap();
     let entrypoint_id = match entrypoint.parse() {
         Ok(id) => id,
         _ => evaluator.entrypoint_id(&String::from(entrypoint))?,

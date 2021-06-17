@@ -33,10 +33,10 @@ impl StackHelper {
             .map_err(|e| anyhow!("Cannot access opa_json_parse fuction: {:?}", e))?;
 
         Ok(StackHelper {
-            policy_id,
             opa_json_dump_fn,
-            opa_json_parse_fn,
             opa_malloc_fn,
+            opa_json_parse_fn,
+            policy_id,
         })
     }
 
@@ -191,7 +191,7 @@ impl Policy {
             .stack_helper
             .pull_json(store.as_context_mut(), &memory, addr)?
             .as_object()
-            .ok_or(anyhow!("OPA builtins didn't return a dictionary"))?
+            .ok_or_else(|| anyhow!("OPA builtins didn't return a dictionary"))?
             .iter()
             .map(|(k, v)| {
                 let id = v.as_i64().unwrap();
@@ -210,7 +210,7 @@ impl Policy {
         Ok(self
             .builtins(store.as_context_mut(), &memory)?
             .iter()
-            .map(|(k, v)| (v.clone(), k.clone()))
+            .map(|(k, v)| (*v, k.clone()))
             .collect())
     }
 
@@ -224,7 +224,7 @@ impl Policy {
             .stack_helper
             .pull_json(store.as_context_mut(), &memory, addr)?
             .as_object()
-            .ok_or(anyhow!("OPA entrypoints didn't return a dictionary"))?
+            .ok_or_else(|| anyhow!("OPA entrypoints didn't return a dictionary"))?
             .iter()
             .map(|(k, v)| {
                 let id = v.as_i64().unwrap();

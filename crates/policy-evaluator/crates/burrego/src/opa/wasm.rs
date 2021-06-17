@@ -10,7 +10,7 @@ use std::sync::RwLock;
 type LookupTable = HashMap<i64, String>;
 
 struct BuiltinsHelper {
-    builtins: HashMap<&'static str, fn(&Vec<serde_json::Value>) -> Result<serde_json::Value>>,
+    builtins: builtins::BuiltinFunctionsMap,
     pub lookup_tables: HashMap<usize, LookupTable>,
 }
 
@@ -19,20 +19,22 @@ impl BuiltinsHelper {
         &self,
         policy_id: usize,
         builtin_id: i32,
-        args: &Vec<serde_json::Value>,
+        args: &[serde_json::Value],
     ) -> Result<serde_json::Value> {
         let lookup_table = self.lookup_tables.get(&policy_id).ok_or_else(|| {
             let policy = LOADED_POLICIES.read().unwrap().policy(&policy_id).unwrap();
             anyhow!("Cannot find lookup table for policy {}", policy)
         })?;
-        let builtin_name = lookup_table.get(&builtin_id.into()).ok_or(anyhow!(
-            "Cannot find builtin with id {} inside of builtins_lookup table",
-            builtin_id
-        ))?;
-        let builtin_fn = self.builtins.get(builtin_name.as_str()).ok_or(anyhow!(
-            "Cannot find builtin function with name {}",
-            builtin_name
-        ))?;
+        let builtin_name = lookup_table.get(&builtin_id.into()).ok_or_else(|| {
+            anyhow!(
+                "Cannot find builtin with id {} inside of builtins_lookup table",
+                builtin_id
+            )
+        })?;
+        let builtin_fn = self
+            .builtins
+            .get(builtin_name.as_str())
+            .ok_or_else(|| anyhow!("Cannot find builtin function with name {}", builtin_name))?;
         builtin_fn(args)
     }
 }
@@ -54,10 +56,7 @@ impl LoadedPolicies {
     }
 
     fn policy(&self, policy_id: &usize) -> Option<String> {
-        match self.policies.get(policy_id) {
-            Some(s) => Some(s.clone()),
-            None => None,
-        }
+        self.policies.get(policy_id).cloned()
     }
 }
 
@@ -103,7 +102,7 @@ impl Evaluator {
         let opa_abort = Func::wrap(
             &mut store,
             move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
-                let stack_helper = caller.data().unwrap().clone();
+                let stack_helper = caller.data().unwrap();
                 let msg = stack_helper
                     .pull_json(caller.as_context_mut(), &memory, addr)
                     .unwrap();
@@ -119,7 +118,7 @@ impl Evaluator {
         let opa_println = Func::wrap(
             &mut store,
             move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
-                let stack_helper = caller.data().unwrap().clone();
+                let stack_helper = caller.data().unwrap();
                 let msg = stack_helper
                     .pull_json(caller.as_context_mut(), &memory, addr)
                     .unwrap();
@@ -136,7 +135,7 @@ impl Evaluator {
             move |mut caller: Caller<'_, Option<StackHelper>>, builtin_id: i32, _ctx: i32| -> i32 {
                 println!("opa_builtin0 with builtin_id: {}", builtin_id);
 
-                let stack_helper = caller.data().unwrap().clone();
+                let stack_helper = caller.data().unwrap();
                 let args = vec![];
 
                 BUILTINS_HELPER
@@ -164,7 +163,7 @@ impl Evaluator {
                   -> i32 {
                 println!("opa_builtin1 with builtin_id: {}  -  p1 {}", builtin_id, p1);
 
-                let stack_helper = caller.data().unwrap().clone();
+                let stack_helper = caller.data().unwrap();
 
                 let p1 = stack_helper
                     .pull_json(caller.as_context_mut(), &memory, p1)
@@ -200,7 +199,7 @@ impl Evaluator {
                     builtin_id, p1, p2
                 );
 
-                let stack_helper = caller.data().unwrap().clone();
+                let stack_helper = caller.data().unwrap();
 
                 let p1 = stack_helper
                     .pull_json(caller.as_context_mut(), &memory, p1)
@@ -240,7 +239,7 @@ impl Evaluator {
                     builtin_id, p1, p2, p3
                 );
 
-                let stack_helper = caller.data().unwrap().clone();
+                let stack_helper = caller.data().unwrap();
 
                 let p1 = stack_helper
                     .pull_json(caller.as_context_mut(), &memory, p1)
@@ -283,7 +282,7 @@ impl Evaluator {
                     "opa_builtin3 with builtin_id: {}  -  p1 {}  -  p2 {} - p3 {} - p4 {}",
                     builtin_id, p1, p2, p3, p4
                 );
-                let stack_helper = caller.data().unwrap().clone();
+                let stack_helper = caller.data().unwrap();
 
                 let p1 = stack_helper
                     .pull_json(caller.as_context_mut(), &memory, p1)
@@ -332,14 +331,14 @@ impl Evaluator {
             .lookup_tables
             .insert(policy_id, policy_lookup_table);
 
-        return Ok(Evaluator {
+        Ok(Evaluator {
             engine,
             linker,
             store,
             instance,
-            policy,
             memory,
-        });
+            policy,
+        })
     }
 
     pub fn opa_abi_version(&mut self) -> Result<(i32, i32)> {
@@ -347,12 +346,12 @@ impl Evaluator {
             .instance
             .get_global(&mut self.store, "opa_wasm_abi_version")
             .and_then(|g| g.get(&mut self.store).i32())
-            .ok_or(anyhow!("Cannot find OPA Wasm ABI major version"))?;
+            .ok_or_else(|| anyhow!("Cannot find OPA Wasm ABI major version"))?;
         let minor = self
             .instance
             .get_global(&mut self.store, "opa_wasm_abi_minor_version")
             .and_then(|g| g.get(&mut self.store).i32())
-            .ok_or(anyhow!("Cannot find OPA Wasm ABI minor version"))?;
+            .ok_or_else(|| anyhow!("Cannot find OPA Wasm ABI minor version"))?;
 
         Ok((major, minor))
     }
@@ -374,17 +373,19 @@ impl Evaluator {
             .collect())
     }
 
-    pub fn entrypoint_id(&mut self, entrypoint: &String) -> Result<i32> {
+    pub fn entrypoint_id(&mut self, entrypoint: &str) -> Result<i32> {
         let entrypoints = self.policy.entrypoints(&mut self.store, &self.memory)?;
         entrypoints
             .iter()
             .find(|(k, _v)| k == &entrypoint)
-            .map(|(_k, v)| v.clone())
-            .ok_or(anyhow!(
-                "Cannot find the specified entrypoint {} inside of {:?}",
-                entrypoint,
-                entrypoints
-            ))
+            .map(|(_k, v)| *v)
+            .ok_or_else(|| {
+                anyhow!(
+                    "Cannot find the specified entrypoint {} inside of {:?}",
+                    entrypoint,
+                    entrypoints
+                )
+            })
     }
 
     pub fn evaluate(
@@ -397,11 +398,13 @@ impl Evaluator {
         entrypoints
             .iter()
             .find(|(_k, &v)| v == entrypoint_id)
-            .ok_or(anyhow!(
-                "Cannot find the specified entrypoint {} inside of {:?}",
-                entrypoint_id,
-                entrypoints
-            ))?;
+            .ok_or_else(|| {
+                anyhow!(
+                    "Cannot find the specified entrypoint {} inside of {:?}",
+                    entrypoint_id,
+                    entrypoints
+                )
+            })?;
 
         println!("\nsetting policy data: {:?}", data);
         self.policy.set_data(&mut self.store, &self.memory, &data)?;

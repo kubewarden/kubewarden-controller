@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 
-pub fn sprintf(args: &Vec<serde_json::Value>) -> Result<serde_json::Value> {
+pub fn sprintf(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     println!("sprintf invoked with: {:?}", args);
     if args.len() != 2 {
         return Err(anyhow!("Wrong number of arguments given to sprintf"));
@@ -8,10 +8,10 @@ pub fn sprintf(args: &Vec<serde_json::Value>) -> Result<serde_json::Value> {
 
     let fmt_str = args[0]
         .as_str()
-        .ok_or(anyhow!("sprintf: 1st parameter is not a string"))?;
+        .ok_or_else(|| anyhow!("sprintf: 1st parameter is not a string"))?;
     let fmt_args: Vec<String> = args[1]
         .as_array()
-        .ok_or(anyhow!("sprintf: 2nd parameter is not an array"))?
+        .ok_or_else(|| anyhow!("sprintf: 2nd parameter is not an array"))?
         .iter()
         .map(|i| match i {
             serde_json::Value::String(v) => format!(r#""{}""#, v),
