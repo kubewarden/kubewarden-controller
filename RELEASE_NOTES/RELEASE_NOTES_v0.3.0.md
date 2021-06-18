@@ -1,4 +1,4 @@
-The `v0.2.4` release of kubewarden-controller has dropped support for
+The `v0.3.0` release of kubewarden-controller has dropped support for
 `v1alpha1` `ClusterAdmissionPolicy` custom resource as described on
 the `v0.2.0` release notes.
 
