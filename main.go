@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	policiesv1alpha1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha1"
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	policiescontrollers "github.com/kubewarden/kubewarden-controller/controllers/policies"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
@@ -46,7 +45,6 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(policiesv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(policiesv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
