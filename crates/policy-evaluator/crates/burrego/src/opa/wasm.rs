@@ -337,7 +337,7 @@ impl Evaluator {
             .cloned()
             .collect::<Vec<String>>()
             .join(", ");
-        debug!(builtins = used_builtins.as_str(), "builtins used by policy");
+        debug!(used = used_builtins.as_str(), "policy builtins");
 
         Ok(Evaluator {
             engine,
