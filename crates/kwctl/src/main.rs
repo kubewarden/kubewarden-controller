@@ -95,6 +95,8 @@ async fn main() -> Result<()> {
             )
             (@subcommand manifest =>
              (about: "Scaffold a Kubernetes resource")
+             (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
+             (@arg ("settings-json"): --("settings-json") +takes_value "JSON string containing the settings for this policy")
              (@arg ("type"): * -t --("type") +takes_value "Kubewarden Custom Resource type. Valid values: ClusterAdmissionPolicy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
             )
@@ -255,7 +257,27 @@ async fn main() -> Result<()> {
             if let Some(ref matches) = matches.subcommand_matches("manifest") {
                 let uri = matches.value_of("uri").unwrap();
                 let resource_type = matches.value_of("type").unwrap();
-                manifest::manifest(uri, resource_type)?;
+                if matches.is_present("settings-path") && matches.is_present("settings-json") {
+                    return Err(anyhow!(
+                        "'settings-path' and 'settings-json' cannot be used at the same time"
+                    ));
+                }
+                let settings = if matches.is_present("settings-path") {
+                    matches
+                        .value_of("settings-path")
+                        .map(|settings| -> Result<String> {
+                            fs::read_to_string(settings).map_err(|e| {
+                                anyhow!("Error reading settings from {}: {}", settings, e)
+                            })
+                        })
+                        .transpose()?
+                } else if matches.is_present("settings-json") {
+                    Some(String::from(matches.value_of("settings-json").unwrap()))
+                } else {
+                    None
+                };
+
+                manifest::manifest(uri, resource_type, settings)?;
             };
             Ok(())
         }

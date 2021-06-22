@@ -38,7 +38,7 @@ impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
             },
             spec: ClusterAdmissionPolicySpec {
                 module: data.uri,
-                settings: serde_yaml::Mapping::new(),
+                settings: data.settings,
                 rules: data.metadata.rules.clone(),
                 mutating: data.metadata.mutating,
             },
@@ -49,9 +49,10 @@ impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
 struct ScaffoldData {
     pub uri: String,
     metadata: Metadata,
+    settings: serde_yaml::Mapping,
 }
 
-pub(crate) fn manifest(uri: &str, resource_type: &str) -> Result<()> {
+pub(crate) fn manifest(uri: &str, resource_type: &str, settings: Option<String>) -> Result<()> {
     let wasm_path = crate::utils::wasm_path(uri)?;
     let metadata = Metadata::from_path(&wasm_path)?
         .ok_or_else(||
@@ -59,9 +60,14 @@ pub(crate) fn manifest(uri: &str, resource_type: &str) -> Result<()> {
                 "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
                 uri)
         )?;
+
+    let settings_yml: serde_yaml::Mapping =
+        serde_yaml::from_str(&settings.unwrap_or_else(|| String::from("{}")))?;
+
     let scaffold_data = ScaffoldData {
         uri: String::from(uri),
         metadata,
+        settings: settings_yml,
     };
     let resource = match resource_type {
         "ClusterAdmissionPolicy" => ClusterAdmissionPolicy::try_from(scaffold_data),
