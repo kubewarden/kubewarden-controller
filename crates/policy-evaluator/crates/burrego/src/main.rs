@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::{clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings};
-use std::process;
+use serde_json::json;
+use std::{fs::File, io::BufReader, process};
 
 use tracing::debug;
 use tracing_subscriber::prelude::*;
@@ -19,6 +20,7 @@ fn main() -> Result<()> {
         (@subcommand eval =>
             (about: "evaluate a OPA policy")
             (@arg ("input"): -i --("input") +takes_value "JSON string with the input")
+            (@arg ("input-path"): --("input-path") +takes_value "path to the file containing the JSON input")
             (@arg ("data"): -d --("data") +takes_value "JSON string with the data")
             (@arg ("entrypoint"): -e --("entrypoint") +takes_value "OPA entrypoint to evaluate")
             (@arg ("policy"): * "Path to the wasm file containing the policy")
@@ -55,13 +57,22 @@ fn main() -> Result<()> {
         }
         Some("eval") => {
             if let Some(ref matches) = matches.subcommand_matches("eval") {
-                let input: serde_json::Value = matches
-                    .value_of("input")
-                    .or(Some("{}"))
-                    .map(|i| {
-                        serde_json::from_str(i).map_err(|e| anyhow!("Cannot parse input: {:?}", e))
-                    })
-                    .unwrap()?;
+                if matches.is_present("input") && matches.is_present("input-path") {
+                    return Err(anyhow!(
+                        "Cannot use 'input' and 'input-path' at the same time"
+                    ));
+                }
+                let input: serde_json::Value = if matches.is_present("input") {
+                    serde_json::from_str(matches.value_of("input").unwrap())
+                        .map_err(|e| anyhow!("Cannot parse input: {:?}", e))?
+                } else if matches.is_present("input-path") {
+                    let file = File::open(matches.value_of("input-path").unwrap())
+                        .map_err(|e| anyhow!("Cannot read input file: {:?}", e))?;
+                    let reader = BufReader::new(file);
+                    serde_json::from_reader(reader)?
+                } else {
+                    json!({})
+                };
 
                 let data: serde_json::Value = matches
                     .value_of("data")
