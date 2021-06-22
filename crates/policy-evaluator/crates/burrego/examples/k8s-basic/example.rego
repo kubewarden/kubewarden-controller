@@ -1,5 +1,4 @@
 package kubernetes.admission                                                # line 1
-#package example
 
 deny[msg] {                                                                 # line 2
   input.request.kind.kind == "Pod"                                          # line 3
