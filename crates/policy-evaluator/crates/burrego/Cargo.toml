@@ -11,7 +11,8 @@ wasmtime = "0.28.0"
 anyhow = "1.0.40"
 serde_json = "1.0.64"
 clap = "2.33.3"
-gtmpl = "0.7.0"
+gtmpl = { git = "https://github.com/flavio/gtmpl-rust.git", branch = "printf-handle-array-and-map" }
+gtmpl_value = "0.5.1"
 lazy_static = "1.4.0"
 tracing = "0.1"
 tracing-subscriber = { version= "0.2", features = ["fmt"] }

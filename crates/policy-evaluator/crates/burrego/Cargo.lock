@@ -117,6 +117,7 @@ dependencies = [
  "anyhow",
  "clap",
  "gtmpl",
+ "gtmpl_value",
  "lazy_static",
  "serde_json",
  "tracing",
@@ -465,8 +466,7 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 [[package]]
 name = "gtmpl"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1155260abe7fda8790f287b9f1800e3293f97ac7bd7f5df1c6c3f753773d8760"
+source = "git+https://github.com/flavio/gtmpl-rust.git?branch=printf-handle-array-and-map#b3b582386afaf6e88fa73616454899b9c544a404"
 dependencies = [
  "anyhow",
  "gtmpl_value",
