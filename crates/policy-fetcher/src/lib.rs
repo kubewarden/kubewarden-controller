@@ -17,7 +17,7 @@ pub mod store;
 
 use crate::registry::config::DockerConfig;
 
-use crate::fetcher::Fetcher;
+use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
 use crate::local::Local;
 use crate::registry::Registry;
@@ -36,7 +36,7 @@ pub enum PullDestination {
 pub async fn fetch_policy(
     url: &str,
     destination: PullDestination,
-    docker_config: Option<&DockerConfig>,
+    docker_config: Option<DockerConfig>,
     sources: Option<&Sources>,
 ) -> Result<PathBuf> {
     let url = Url::parse(url)?;
@@ -70,11 +70,53 @@ pub async fn fetch_policy(
         _ => unreachable!(),
     }
     eprintln!("pulling policy...");
-    url_fetcher(url.scheme())?
-        .fetch(&url, &destination, sources, docker_config)
-        .await?;
+    let policy_fetcher = url_fetcher(url.scheme(), docker_config)?;
+    let sources_default = Sources::default();
+    let sources = sources.unwrap_or(&sources_default);
 
-    Ok(destination)
+    if let Err(err) = policy_fetcher
+        .fetch(&url, client_protocol(&url, &sources)?, &destination)
+        .await
+    {
+        if !sources.is_insecure_source(&host_and_port(&url)?) {
+            return Err(anyhow!(
+                "the policy {} could not be downloaded due to error: {}",
+                url,
+                err
+            ));
+        }
+    }
+
+    if policy_fetcher
+        .fetch(
+            &url,
+            ClientProtocol::Https(TlsVerificationMode::NoTlsVerification),
+            &destination,
+        )
+        .await
+        .is_ok()
+    {
+        return Ok(destination);
+    }
+
+    if policy_fetcher
+        .fetch(&url, ClientProtocol::Http, &destination)
+        .await
+        .is_ok()
+    {
+        return Ok(destination);
+    }
+
+    Err(anyhow!("could not pull policy {}", url))
+}
+
+fn client_protocol(url: &Url, sources: &Sources) -> Result<ClientProtocol> {
+    if let Some(certificates) = sources.source_authority(&host_and_port(&url)?) {
+        return Ok(ClientProtocol::Https(
+            TlsVerificationMode::CustomCaCertificates(certificates),
+        ));
+    }
+    Ok(ClientProtocol::Https(TlsVerificationMode::SystemCa))
 }
 
 fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<Store>, PathBuf)> {
@@ -104,11 +146,14 @@ fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<
 
 // Helper function, takes the URL of the policy and allocates the
 // right struct to interact with it
-fn url_fetcher(scheme: &str) -> Result<Box<dyn Fetcher>> {
+fn url_fetcher(
+    scheme: &str,
+    docker_config: Option<DockerConfig>,
+) -> Result<Box<dyn PolicyFetcher>> {
     match scheme {
-        "file" => Ok(Box::new(Local {})),
-        "http" | "https" => Ok(Box::new(Https {})),
-        "registry" => Ok(Box::new(Registry {})),
+        "file" => Ok(Box::new(Local::default())),
+        "http" | "https" => Ok(Box::new(Https::default())),
+        "registry" => Ok(Box::new(Registry::new(&docker_config))),
         _ => return Err(anyhow!("unknown scheme: {}", scheme)),
     }
 }
