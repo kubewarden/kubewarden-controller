@@ -1,44 +1,98 @@
-use anyhow::Result;
-
-use rustls::Certificate;
+use anyhow::{anyhow, Result};
 
 use serde::Deserialize;
 
 use std::collections::{HashMap, HashSet};
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
-use std::{fs, fs::File};
+use std::convert::{TryFrom, TryInto};
+use std::fs::File;
+use std::path::Path;
 
-#[derive(Default, Deserialize, Debug)]
+#[derive(Clone, Default, Deserialize, Debug)]
+struct RawSourceAuthorities(HashMap<String, Vec<RawCertificate>>);
+
+#[derive(Clone, Default, Deserialize, Debug)]
 #[serde(default)]
-pub struct Sources {
+struct RawSources {
     insecure_sources: HashSet<String>,
-    source_authorities: HashMap<String, CertificateAuthority>,
+    source_authorities: RawSourceAuthorities,
 }
 
-#[derive(Deserialize, Debug)]
-pub(crate) struct CertificateAuthority {
-    ca_path: PathBuf,
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+struct RawCertificate(pub Vec<u8>);
+
+#[derive(Clone, Debug, Default)]
+struct SourceAuthorities(HashMap<String, Vec<Certificate>>);
+
+impl From<RawSourceAuthorities> for SourceAuthorities {
+    fn from(source_authorities: RawSourceAuthorities) -> SourceAuthorities {
+        SourceAuthorities(
+            source_authorities
+                .0
+                .iter()
+                .map(|(host, certificates)| {
+                    (
+                        host.clone(),
+                        certificates
+                            .iter()
+                            .filter_map(|certificate| Certificate::try_from(certificate).ok())
+                            .collect(),
+                    )
+                })
+                .collect(),
+        )
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Sources {
+    insecure_sources: HashSet<String>,
+    source_authorities: SourceAuthorities,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Certificate {
+    Der(Vec<u8>),
+    Pem(Vec<u8>),
+}
+
+impl TryFrom<RawSources> for Sources {
+    type Error = anyhow::Error;
+
+    fn try_from(sources: RawSources) -> Result<Sources> {
+        Ok(Sources {
+            insecure_sources: sources.insecure_sources.clone(),
+            source_authorities: sources.source_authorities.try_into()?,
+        })
+    }
+}
+
+impl TryFrom<&RawCertificate> for Certificate {
+    type Error = anyhow::Error;
+
+    fn try_from(raw_certificate: &RawCertificate) -> Result<Certificate> {
+        if reqwest::Certificate::from_pem(&raw_certificate.0).is_ok() {
+            Ok(Certificate::Pem(raw_certificate.0.clone()))
+        } else if reqwest::Certificate::from_der(&raw_certificate.0).is_ok() {
+            Ok(Certificate::Der(raw_certificate.0.clone()))
+        } else {
+            Err(anyhow!(
+                "certificate {:?} is not in PEM nor in DER encoding",
+                raw_certificate
+            ))
+        }
+    }
 }
 
 impl Sources {
-    pub(crate) fn is_insecure_source<S: Into<String>>(&self, host: S) -> bool {
-        self.insecure_sources.contains(&host.into())
+    pub(crate) fn is_insecure_source(&self, host: &str) -> bool {
+        self.insecure_sources.contains(host)
     }
 
-    pub(crate) fn source_authority<S: Into<String>>(&self, host: S) -> Option<Vec<Certificate>> {
-        self.source_authorities
-            .get(&host.into())
-            .and_then(|ca_path| fs::read(ca_path.ca_path.clone()).ok())
-            .and_then(|pem_certificate| {
-                // TODO (ereslibre): avoid parsing every time --
-                // initialize parsed certs, or warm-up cache
-                rustls::internal::pemfile::certs(&mut BufReader::new(pem_certificate.as_slice()))
-                    .ok()
-            })
+    pub(crate) fn source_authority(&self, host: &str) -> Option<Vec<Certificate>> {
+        self.source_authorities.0.get(host).map(Clone::clone)
     }
 }
 
 pub fn read_sources_file(path: &Path) -> Result<Sources> {
-    Ok(serde_yaml::from_reader::<_, Sources>(File::open(path)?)?)
+    serde_yaml::from_reader::<_, RawSources>(File::open(path)?)?.try_into()
 }

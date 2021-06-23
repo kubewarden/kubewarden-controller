@@ -1,25 +1,22 @@
 use anyhow::Result;
 use async_trait::async_trait;
-
 use std::path::Path;
 use url::Url;
 
-use crate::fetcher::Fetcher;
-use crate::registry::config::DockerConfig;
-use crate::sources::Sources;
+use crate::fetcher::{ClientProtocol, PolicyFetcher};
 
 // Struct used to reference a WASM module that is already on the
 // local file system
+#[derive(Default)]
 pub(crate) struct Local;
 
 #[async_trait]
-impl Fetcher for Local {
+impl PolicyFetcher for Local {
     async fn fetch(
         &self,
         _url: &Url,
+        _client_protocol: ClientProtocol,
         _destination: &Path,
-        _sources: Option<&Sources>,
-        _docker_config: Option<&DockerConfig>,
     ) -> Result<()> {
         Ok(())
     }

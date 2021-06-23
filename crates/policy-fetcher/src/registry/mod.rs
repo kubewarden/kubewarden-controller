@@ -3,29 +3,93 @@ use async_std::fs::File;
 use async_std::prelude::*;
 use async_trait::async_trait;
 use oci_distribution::{
-    client::{Client, ClientConfig, ClientProtocol, ImageData, ImageLayer},
+    client::{
+        Certificate as OciCertificate, CertificateEncoding, Client, ClientConfig,
+        ClientProtocol as OciClientProtocol, ImageData, ImageLayer,
+    },
     manifest,
     secrets::RegistryAuth,
     Reference,
 };
-use std::{path::Path, str::FromStr};
+use std::{convert::From, path::Path, str::FromStr};
 use url::Url;
 
-use crate::fetcher::Fetcher;
+use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::registry::config::{DockerConfig, RegistryAuth as OwnRegistryAuth};
-use crate::sources::Sources;
+use crate::sources::{Certificate, Sources};
 
 pub mod config;
 
 // Struct used to reference a WASM module that is hosted on an OCI registry
-pub struct Registry;
+#[derive(Default)]
+pub struct Registry {
+    docker_config: Option<DockerConfig>,
+}
+
+impl From<&Certificate> for OciCertificate {
+    fn from(certificate: &Certificate) -> OciCertificate {
+        match certificate {
+            Certificate::Der(certificate) => OciCertificate {
+                encoding: CertificateEncoding::Der,
+                data: certificate.clone(),
+            },
+            Certificate::Pem(certificate) => OciCertificate {
+                encoding: CertificateEncoding::Pem,
+                data: certificate.clone(),
+            },
+        }
+    }
+}
+
+impl From<ClientProtocol> for OciClientProtocol {
+    fn from(client_protocol: ClientProtocol) -> OciClientProtocol {
+        match client_protocol {
+            ClientProtocol::Http => OciClientProtocol::Http,
+            ClientProtocol::Https(_) => OciClientProtocol::Https,
+        }
+    }
+}
+
+impl From<ClientProtocol> for ClientConfig {
+    fn from(client_protocol: ClientProtocol) -> ClientConfig {
+        match client_protocol {
+            ClientProtocol::Http => ClientConfig {
+                protocol: client_protocol.into(),
+                ..Default::default()
+            },
+            ClientProtocol::Https(ref tls_fetch_mode) => {
+                let mut client_config = ClientConfig {
+                    protocol: client_protocol.clone().into(),
+                    ..Default::default()
+                };
+
+                match tls_fetch_mode {
+                    TlsVerificationMode::SystemCa => {}
+                    TlsVerificationMode::CustomCaCertificates(certificates) => {
+                        client_config.extra_root_certificates =
+                            certificates.iter().map(OciCertificate::from).collect();
+                    }
+                    TlsVerificationMode::NoTlsVerification => {
+                        client_config.accept_invalid_certificates = true;
+                        client_config.accept_invalid_hostnames = true;
+                    }
+                };
+
+                client_config
+            }
+        }
+    }
+}
 
 impl Registry {
+    pub fn new(docker_config: &Option<DockerConfig>) -> Registry {
+        Registry {
+            docker_config: docker_config.clone(),
+        }
+    }
+
     fn client(client_protocol: ClientProtocol) -> Client {
-        Client::new(ClientConfig {
-            protocol: client_protocol,
-            ..Default::default()
-        })
+        Client::new(client_protocol.into())
     }
 
     fn auth(registry: &str, docker_config: Option<&DockerConfig>) -> RegistryAuth {
@@ -43,73 +107,60 @@ impl Registry {
             .unwrap_or(RegistryAuth::Anonymous)
     }
 
-    pub async fn push(
-        policy: &[u8],
-        url: &str,
-        docker_config: Option<&DockerConfig>,
-        sources: Option<&Sources>,
-    ) -> Result<()> {
-        let url = Url::parse(url)?;
-        let reference =
-            Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
-        let registry_auth = Registry::auth(reference.registry(), docker_config);
+    pub async fn push(&self, policy: &[u8], url: &str, sources: &Option<Sources>) -> Result<()> {
+        let url = Url::parse(url).map_err(|_| anyhow!("invalid URL: {}", url))?;
 
-        // First we try to push to the registry using TLS
-        if let Err(err) = Registry::push_tls(policy, &reference, &registry_auth).await {
-            let host_and_port = crate::host_and_port(&url)?;
-            if sources.map(|sources| sources.is_insecure_source(host_and_port)) != Some(true) {
-                // Push failed, plus the registry is not marked as "insecure" -> time to bubble up
-                // the error
-                return Err(anyhow!("could not push Wasm module: {}", err));
+        match self
+            .do_push(
+                policy,
+                &url,
+                crate::client_protocol(&url, &sources.clone().unwrap_or_default())?,
+            )
+            .await
+        {
+            Ok(_) => return Ok(()),
+            Err(err) => {
+                if !sources
+                    .clone()
+                    .unwrap_or_default()
+                    .is_insecure_source(url.host_str().unwrap_or_default())
+                {
+                    return Err(anyhow!("could not push policy: {}", err,));
+                }
             }
-        } else {
+        }
+
+        if self
+            .do_push(
+                policy,
+                &url,
+                ClientProtocol::Https(TlsVerificationMode::NoTlsVerification),
+            )
+            .await
+            .is_ok()
+        {
             return Ok(());
         }
 
-        // We are here because pushing to the registry using TLS didn't work,
-        // but the registry is marked as insecure. We will do one last attempt
-        // and push over plain HTTP
-        Registry::push_plain(policy, &reference, &registry_auth).await
-    }
-
-    pub async fn pull(
-        url: &Url,
-        destination: &Path,
-        docker_config: Option<&DockerConfig>,
-        sources: Option<&Sources>,
-    ) -> Result<()> {
-        let reference =
-            Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
-        let registry_auth = Registry::auth(reference.registry(), docker_config);
-
-        let mut image_content = Registry::fetch_tls(&reference, &registry_auth).await;
-        if let Err(err) = image_content {
-            let host_and_port = crate::host_and_port(&url)?;
-            if sources.map(|sources| sources.is_insecure_source(host_and_port)) != Some(true) {
-                return Err(anyhow!("could not download Wasm module: {}", err));
-            }
-            image_content = Registry::fetch_plain(&reference, &registry_auth).await;
-        }
-
-        match image_content {
-            Ok(image_content) => {
-                let mut file = File::create(destination).await?;
-                file.write_all(&image_content[..]).await?;
-                Ok(())
-            }
-            Err(err) => Err(anyhow!("could not download Wasm module: {}", err)),
-        }
+        self.do_push(policy, &url, ClientProtocol::Http)
+            .await
+            .map_err(|_| anyhow!("could not push policy"))
     }
 
     async fn do_push(
-        mut client: Client,
+        &self,
         policy: &[u8],
-        reference: &Reference,
-        registry_auth: &RegistryAuth,
+        url: &Url,
+        client_protocol: ClientProtocol,
     ) -> Result<()> {
-        client
+        let reference =
+            Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
+
+        let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
+
+        Registry::client(client_protocol)
             .push(
-                reference,
+                &reference,
                 &ImageData {
                     layers: vec![ImageLayer::new(
                         policy.to_vec(),
@@ -119,71 +170,45 @@ impl Registry {
                 },
                 &b"{}".to_vec(),
                 manifest::WASM_CONFIG_MEDIA_TYPE,
-                registry_auth,
+                &registry_auth,
                 None,
             )
-            .await?;
-
-        Ok(())
+            .await
+            .map(|_| ())
+            .map_err(|e| anyhow!("could not push policy: {}", e))
     }
+}
 
-    async fn do_fetch(
-        mut client: Client,
-        reference: &Reference,
-        registry_auth: &RegistryAuth,
-    ) -> Result<Vec<u8>> {
-        client
+#[async_trait]
+impl PolicyFetcher for Registry {
+    async fn fetch(
+        &self,
+        url: &Url,
+        client_protocol: ClientProtocol,
+        destination: &Path,
+    ) -> Result<()> {
+        let reference =
+            Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
+
+        let image_content = Registry::client(client_protocol)
             .pull(
-                reference,
-                registry_auth,
+                &reference,
+                &Registry::auth(&crate::host_and_port(url)?, self.docker_config.as_ref()),
                 vec![manifest::WASM_LAYER_MEDIA_TYPE],
             )
             .await?
             .layers
             .into_iter()
             .next()
-            .map(|layer| layer.data)
-            .ok_or_else(|| anyhow!("could not download WASM module"))
-    }
+            .map(|layer| layer.data);
 
-    async fn push_tls(
-        policy: &[u8],
-        reference: &Reference,
-        registry_auth: &RegistryAuth,
-    ) -> Result<()> {
-        let https_client = Registry::client(ClientProtocol::Https);
-        Registry::do_push(https_client, policy, reference, registry_auth).await
-    }
-
-    async fn push_plain(
-        policy: &[u8],
-        reference: &Reference,
-        registry_auth: &RegistryAuth,
-    ) -> Result<()> {
-        let http_client = Registry::client(ClientProtocol::Http);
-        Registry::do_push(http_client, policy, reference, registry_auth).await
-    }
-
-    async fn fetch_tls(reference: &Reference, registry_auth: &RegistryAuth) -> Result<Vec<u8>> {
-        let https_client = Registry::client(ClientProtocol::Https);
-        Registry::do_fetch(https_client, reference, registry_auth).await
-    }
-
-    async fn fetch_plain(reference: &Reference, registry_auth: &RegistryAuth) -> Result<Vec<u8>> {
-        let http_client = Registry::client(ClientProtocol::Http);
-        Registry::do_fetch(http_client, reference, registry_auth).await
-    }
-}
-
-#[async_trait]
-impl Fetcher for Registry {
-    async fn fetch(
-        &self,
-        url: &Url,
-        destination: &Path,
-        sources: Option<&Sources>,
-        docker_config: Option<&DockerConfig>,
-    ) -> Result<()> {
-        Registry::pull(url, destination, docker_config, sources).await
+        match image_content {
+            Some(image_content) => {
+                let mut file = File::create(destination).await?;
+                file.write_all(&image_content[..]).await?;
+                Ok(())
+            }
+            None => Err(anyhow!("could not pull policy {}", url)),
+        }
     }
 }
