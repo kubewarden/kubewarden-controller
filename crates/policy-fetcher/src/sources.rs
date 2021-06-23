@@ -18,7 +18,7 @@ struct RawSources {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
-struct RawCertificate(pub Vec<u8>);
+struct RawCertificate(String);
 
 #[derive(Clone, Debug, Default)]
 struct SourceAuthorities(HashMap<String, Vec<Certificate>>);
@@ -70,10 +70,10 @@ impl TryFrom<&RawCertificate> for Certificate {
     type Error = anyhow::Error;
 
     fn try_from(raw_certificate: &RawCertificate) -> Result<Certificate> {
-        if reqwest::Certificate::from_pem(&raw_certificate.0).is_ok() {
-            Ok(Certificate::Pem(raw_certificate.0.clone()))
-        } else if reqwest::Certificate::from_der(&raw_certificate.0).is_ok() {
-            Ok(Certificate::Der(raw_certificate.0.clone()))
+        if reqwest::Certificate::from_pem(raw_certificate.0.as_bytes()).is_ok() {
+            Ok(Certificate::Pem(raw_certificate.0.clone().into_bytes()))
+        } else if reqwest::Certificate::from_der(&raw_certificate.0.clone().into_bytes()).is_ok() {
+            Ok(Certificate::Der(raw_certificate.0.clone().into_bytes()))
         } else {
             Err(anyhow!(
                 "certificate {:?} is not in PEM nor in DER encoding",
