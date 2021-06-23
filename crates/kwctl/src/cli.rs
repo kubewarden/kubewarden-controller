@@ -56,6 +56,10 @@ pub fn build_cli() -> clap::App<'static, 'static> {
              (@arg ("type"): * -t --("type") +takes_value "Kubewarden Custom Resource type. Valid values: ClusterAdmissionPolicy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
             )
+            (@subcommand completions =>
+             (about: "Generate shell completions")
+             (@arg ("shell"): * -s --("shell") +takes_value "Shell type: bash, fish, zsh, elvish, powershell")
+            )
     )
     .setting(AppSettings::SubcommandRequiredElseHelp)
 }

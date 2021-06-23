@@ -32,6 +32,7 @@ use policy_fetcher::PullDestination;
 
 mod annotate;
 mod cli;
+mod completions;
 mod constants;
 mod inspect;
 mod manifest;
@@ -220,6 +221,23 @@ async fn main() -> Result<()> {
 
                 manifest::manifest(uri, resource_type, settings)?;
             };
+            Ok(())
+        }
+        Some("completions") => {
+            if let Some(ref matches) = matches.subcommand_matches("completions") {
+                let shell = match matches.value_of("shell").unwrap() {
+                    "bash" => clap::Shell::Bash,
+                    "fish" => clap::Shell::Fish,
+                    "zsh" => clap::Shell::Zsh,
+                    "elvish" => clap::Shell::Elvish,
+                    "powershell" => clap::Shell::PowerShell,
+                    unknown => {
+                        eprintln!("Unknown shell '{}'", unknown);
+                        std::process::exit(1);
+                    }
+                };
+                completions::completions(&shell)?;
+            }
             Ok(())
         }
         Some(command) => Err(anyhow!("unknown subcommand: {}", command)),
