@@ -221,7 +221,7 @@ async fn main() -> Result<()> {
         let policy_path = policy_fetcher::fetch_policy(
             &policy.url,
             policy_fetcher::PullDestination::Store(PathBuf::from(policies_download_dir)),
-            docker_config.as_ref(),
+            docker_config.clone(),
             sources.as_ref(),
         )
         .await;
