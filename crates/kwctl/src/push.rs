@@ -8,5 +8,7 @@ pub(crate) async fn push(
     docker_config: Option<DockerConfig>,
     sources: Option<Sources>,
 ) -> Result<()> {
-    Registry::push(&policy, uri, docker_config.as_ref(), sources.as_ref()).await
+    Registry::new(&docker_config)
+        .push(&policy, uri, &sources)
+        .await
 }

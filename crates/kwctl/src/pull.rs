@@ -10,5 +10,5 @@ pub(crate) async fn pull(
     sources: Option<Sources>,
     destination: PullDestination,
 ) -> Result<PathBuf> {
-    fetch_policy(uri, destination, docker_config.as_ref(), sources.as_ref()).await
+    fetch_policy(uri, destination, docker_config, sources.as_ref()).await
 }
