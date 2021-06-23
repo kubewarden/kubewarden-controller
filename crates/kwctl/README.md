@@ -40,3 +40,66 @@ containers.
 
 - The UX of this tool is intended to be as easy and intuitive as
   possible.
+
+## Completion
+
+`kwctl` can generate autocompletion scripts for the following shells:
+
+* bash
+* elvish
+* fish
+* powershell
+* zsh
+
+The completion script can be generated with the following command:
+
+```console
+$ kwctl completions -s <SHELL>
+```
+
+The command will print to the stdout the completion script.
+
+### Bash
+
+To load completions in your current shell session:
+
+```console
+$ source <(kwctl completions -s bash)
+```
+
+To load completions for every new session, execute once:
+
+* Linux: `$ kwctl completions -s bash > /etc/bash_completion.d/kwctl`
+* MacOS: `$ kwctl completions -s bash > /usr/local/etc/bash_completion.d/kwctl`
+
+You will need to start a new shell for this setup to take effect.
+
+### Fish
+
+To load completions in your current shell session:
+
+```console
+$ kwctl completions -s fish | source
+```
+
+To load completions for every new session, execute once:
+
+```console
+$ kwctl completions -s fish > ~/.config/fish/completions/kwctl.fish
+```
+
+You will need to start a new shell for this setup to take effect.
+
+### Zsh
+
+To load completions in your current shell session:
+
+```console
+$ source <(kwctl completions -s zsh)
+```
+
+To load completions for every new session, execute once:
+
+```console
+$ kwctl completions -s zsh > "${fpath[1]}/_kwctl"
+```
