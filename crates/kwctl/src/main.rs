@@ -10,9 +10,7 @@ extern crate serde_yaml;
 extern crate sha2;
 
 use anyhow::{anyhow, Result};
-use clap::{
-    clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings, ArgMatches,
-};
+use clap::ArgMatches;
 use directories::UserDirs;
 use std::{
     convert::TryFrom,
@@ -33,6 +31,8 @@ use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 
 mod annotate;
+mod cli;
+mod completions;
 mod constants;
 mod inspect;
 mod manifest;
@@ -45,65 +45,7 @@ mod utils;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let matches = clap_app!(
-        (crate_name!()) =>
-            (version: crate_version!())
-            (author: crate_authors!(",\n"))
-            (about: crate_description!())
-            (@arg verbose: -v "Increase verbosity")
-            (@subcommand policies =>
-             (about: "Lists all downloaded policies")
-            )
-            (@subcommand pull =>
-             (about: "Pulls a Kubewarden policy from a given URI")
-             (@arg ("docker-config-json-path"): --("docker-config-json-path") +takes_value "Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
-             (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
-             (@arg ("output-path"): -o --("output-path") +takes_value "Output file. If not provided will be downloaded to the Kubewarden store")
-             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
-            )
-            (@subcommand push =>
-             (about: "Pushes a Kubewarden policy to an OCI registry")
-             (@arg ("docker-config-json-path"): --("docker-config-json-path") +takes_value "Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
-             (@arg ("force"): -f --("force") "push also a policy that is not annotated")
-             (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
-             (@arg ("policy"): * "Policy to push. Can be the path to a local file, or a policy URI")
-             (@arg ("uri"): * "Policy URI. Supported schemes: registry://")
-            )
-            (@subcommand rm =>
-             (about: "Removes a Kubewarden policy from the store")
-             (@arg ("uri"): * "Policy URI")
-            )
-            (@subcommand run =>
-             (about: "Runs a Kubewarden policy from a given URI")
-             (@arg ("docker-config-json-path"): --("docker-config-json-path") +takes_value "Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
-             (@arg ("sources-path"): --("sources-path") +takes_value "YAML file holding source information (https, registry insecure hosts, custom CA's...)")
-             (@arg ("request-path"): * -r --("request-path") +takes_value "File containing the Kubernetes admission request object in JSON format")
-             (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
-             (@arg ("settings-json"): --("settings-json") +takes_value "JSON string containing the settings for this policy")
-             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
-            )
-            (@subcommand annotate =>
-             (about: "Add Kubewarden metadata to a WebAssembly module")
-             (@arg ("metadata-path"): * -m --("metadata-path") +takes_value "File containing the metadata")
-             (@arg ("wasm-path"): * "Path to WebAssembly module to be annotated")
-             (@arg ("output-path"): * -o --("output-path") +takes_value "Output file")
-            )
-            (@subcommand inspect =>
-             (about: "Inspect Kubewarden policy")
-             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
-             (@arg ("output"): -o --("output") +takes_value "output format. One of: yaml")
-            )
-            (@subcommand manifest =>
-             (about: "Scaffold a Kubernetes resource")
-             (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
-             (@arg ("settings-json"): --("settings-json") +takes_value "JSON string containing the settings for this policy")
-             (@arg ("type"): * -t --("type") +takes_value "Kubewarden Custom Resource type. Valid values: ClusterAdmissionPolicy")
-             (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://")
-            )
-
-    )
-    .setting(AppSettings::SubcommandRequiredElseHelp)
-    .get_matches();
+    let matches = cli::build_cli().get_matches();
 
     // setup logging
     let level_filter = if matches.is_present("verbose") {
@@ -279,6 +221,23 @@ async fn main() -> Result<()> {
 
                 manifest::manifest(uri, resource_type, settings)?;
             };
+            Ok(())
+        }
+        Some("completions") => {
+            if let Some(ref matches) = matches.subcommand_matches("completions") {
+                let shell = match matches.value_of("shell").unwrap() {
+                    "bash" => clap::Shell::Bash,
+                    "fish" => clap::Shell::Fish,
+                    "zsh" => clap::Shell::Zsh,
+                    "elvish" => clap::Shell::Elvish,
+                    "powershell" => clap::Shell::PowerShell,
+                    unknown => {
+                        eprintln!("Unknown shell '{}'", unknown);
+                        std::process::exit(1);
+                    }
+                };
+                completions::completions(&shell)?;
+            }
             Ok(())
         }
         Some(command) => Err(anyhow!("unknown subcommand: {}", command)),
