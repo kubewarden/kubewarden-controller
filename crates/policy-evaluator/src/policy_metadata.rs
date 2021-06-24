@@ -144,7 +144,10 @@ impl Default for Metadata {
 
 impl Metadata {
     pub fn from_path(path: &Path) -> Result<Option<Metadata>> {
-        let policy = std::fs::read(path)?;
+        Metadata::from_contents(std::fs::read(path)?)
+    }
+
+    pub fn from_contents(policy: Vec<u8>) -> Result<Option<Metadata>> {
         for payload in Parser::new(0).parse_all(&policy) {
             if let Payload::CustomSection { name, data, .. } = payload? {
                 if name == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
