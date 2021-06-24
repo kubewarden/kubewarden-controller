@@ -4,11 +4,11 @@ use serde::Deserialize;
 
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
-use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::{fs, fs::File};
 
 #[derive(Clone, Default, Deserialize, Debug)]
-struct RawSourceAuthorities(HashMap<String, Vec<RawCertificate>>);
+struct RawSourceAuthorities(HashMap<String, Vec<PathBuf>>);
 
 #[derive(Clone, Default, Deserialize, Debug)]
 #[serde(default)]
@@ -18,7 +18,7 @@ struct RawSources {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
-struct RawCertificate(String);
+struct RawCertificate(Vec<u8>);
 
 #[derive(Clone, Debug, Default)]
 struct SourceAuthorities(HashMap<String, Vec<Certificate>>);
@@ -34,6 +34,9 @@ impl From<RawSourceAuthorities> for SourceAuthorities {
                         host.clone(),
                         certificates
                             .iter()
+                            .filter_map(|certificate_path| {
+                                fs::read(certificate_path).ok().map(RawCertificate)
+                            })
                             .filter_map(|certificate| Certificate::try_from(certificate).ok())
                             .collect(),
                     )
@@ -66,14 +69,14 @@ impl TryFrom<RawSources> for Sources {
     }
 }
 
-impl TryFrom<&RawCertificate> for Certificate {
+impl TryFrom<RawCertificate> for Certificate {
     type Error = anyhow::Error;
 
-    fn try_from(raw_certificate: &RawCertificate) -> Result<Certificate> {
-        if reqwest::Certificate::from_pem(raw_certificate.0.as_bytes()).is_ok() {
-            Ok(Certificate::Pem(raw_certificate.0.clone().into_bytes()))
-        } else if reqwest::Certificate::from_der(&raw_certificate.0.clone().into_bytes()).is_ok() {
-            Ok(Certificate::Der(raw_certificate.0.clone().into_bytes()))
+    fn try_from(raw_certificate: RawCertificate) -> Result<Certificate> {
+        if reqwest::Certificate::from_pem(&raw_certificate.0).is_ok() {
+            Ok(Certificate::Pem(raw_certificate.0))
+        } else if reqwest::Certificate::from_der(&raw_certificate.0).is_ok() {
+            Ok(Certificate::Der(raw_certificate.0))
         } else {
             Err(anyhow!(
                 "certificate {:?} is not in PEM nor in DER encoding",
