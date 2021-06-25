@@ -33,7 +33,6 @@ use policy_fetcher::PullDestination;
 mod annotate;
 mod cli;
 mod completions;
-mod constants;
 mod inspect;
 mod manifest;
 mod policies;

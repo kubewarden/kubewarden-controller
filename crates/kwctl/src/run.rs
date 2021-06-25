@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Result};
 use kube::Client;
 use policy_evaluator::{
-    cluster_context::ClusterContext, policy_evaluator::PolicyEvaluator, policy_metadata::Metadata,
+    cluster_context::ClusterContext,
+    policy_evaluator::{PolicyEvaluator, ValidateRequest},
+    policy_metadata::Metadata,
 };
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 
@@ -42,7 +44,7 @@ pub(crate) async fn pull_and_run(
     }
 
     let request = serde_json::from_str::<serde_json::Value>(&request)?;
-    let policy_evaluator = PolicyEvaluator::new(
+    let policy_evaluator = PolicyEvaluator::from_file(
         policy_path,
         settings.map_or(Ok(None), |settings| {
             if settings.is_empty() {
@@ -83,7 +85,7 @@ pub(crate) async fn pull_and_run(
     }
 
     // evaluate request
-    let response = policy_evaluator.validate(req_obj.clone());
+    let response = policy_evaluator.validate(ValidateRequest::new(req_obj.clone()));
     println!("{}", serde_json::to_string(&response)?);
 
     Ok(())
