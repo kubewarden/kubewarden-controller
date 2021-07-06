@@ -103,3 +103,16 @@ To load completions for every new session, execute once:
 ```console
 $ kwctl completions -s zsh > "${fpath[1]}/_kwctl"
 ```
+
+#### Oh My Zsh users
+
+These steps are required by [oh-my-zsh](https://ohmyz.sh/) users:
+
+```console
+$ print -l $fpath | grep '.oh-my-zsh/completions'
+$ mkdir ~/.oh-my-zsh/completions
+$ kwctl completions -s zsh > ~/.oh-my-zsh/completions/_kwctl
+rm ~/.zcompdump*
+```
+
+Then start a new shell or run `source ~/.zshrc` once.
