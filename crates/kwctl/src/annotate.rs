@@ -1,14 +1,11 @@
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use policy_evaluator::{
-    constants::KUBEWARDEN_CUSTOM_SECTION_METADATA, policy_evaluator::PolicyEvaluator,
-    policy_metadata::Metadata,
+    constants::*, policy_evaluator::PolicyEvaluator, policy_metadata::Metadata,
 };
 use std::fs::File;
 use std::path::PathBuf;
 use validator::Validate;
-
-use crate::constants::*;
 
 pub(crate) fn write_annotation(
     wasm_path: PathBuf,
@@ -20,7 +17,7 @@ pub(crate) fn write_annotation(
 }
 
 fn protocol_detector(wasm_path: PathBuf) -> Result<ProtocolVersion> {
-    let policy_evaluator = PolicyEvaluator::new(wasm_path.as_path(), None)?;
+    let policy_evaluator = PolicyEvaluator::from_file(wasm_path.as_path(), None)?;
     policy_evaluator
         .protocol_version()
         .map_err(|e| anyhow!("Cannot compute ProtocolVersion used by the policy: {:?}", e))
@@ -40,7 +37,7 @@ fn prepare_metadata(
 
     let mut annotations = metadata.annotations.unwrap_or_default();
     annotations.insert(
-        String::from(ANNOTATION_KWCTL_VERSION),
+        String::from(KUBEWARDEN_ANNOTATION_KWCTL_VERSION),
         String::from(env!("CARGO_PKG_VERSION")),
     );
     metadata.annotations = Some(annotations);
@@ -113,12 +110,12 @@ mod tests {
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
-            annotations.get(ANNOTATION_POLICY_TITLE),
+            annotations.get(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
             Some(&String::from(expected_policy_title))
         );
 
         assert_eq!(
-            annotations.get(ANNOTATION_KWCTL_VERSION),
+            annotations.get(KUBEWARDEN_ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
         );
 
@@ -145,7 +142,7 @@ mod tests {
           io.kubewarden.policy.title: {}
           {}: NOT_VALID
         "#,
-            expected_policy_title, ANNOTATION_KWCTL_VERSION,
+            expected_policy_title, KUBEWARDEN_ANNOTATION_KWCTL_VERSION,
         );
 
         write!(file, "{}", raw_metadata)?;
@@ -158,12 +155,12 @@ mod tests {
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
-            annotations.get(ANNOTATION_POLICY_TITLE),
+            annotations.get(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
             Some(&String::from(expected_policy_title))
         );
 
         assert_eq!(
-            annotations.get(ANNOTATION_KWCTL_VERSION),
+            annotations.get(KUBEWARDEN_ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
         );
 
@@ -198,7 +195,7 @@ mod tests {
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
-            annotations.get(ANNOTATION_KWCTL_VERSION),
+            annotations.get(KUBEWARDEN_ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
         );
 

@@ -1,13 +1,11 @@
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
-use policy_evaluator::policy_metadata::Metadata;
+use policy_evaluator::{constants::*, policy_metadata::Metadata};
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
 use std::convert::TryFrom;
 use syntect::parsing::SyntaxSet;
-
-use crate::constants::*;
 
 pub(crate) fn inspect(uri: &str, output: OutputType) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
@@ -80,12 +78,12 @@ impl MetadataPrettyPrinter {
         }
 
         let pretty_annotations = vec![
-            ANNOTATION_POLICY_TITLE,
-            ANNOTATION_POLICY_DESCRIPTION,
-            ANNOTATION_POLICY_AUTHOR,
-            ANNOTATION_POLICY_URL,
-            ANNOTATION_POLICY_SOURCE,
-            ANNOTATION_POLICY_LICENSE,
+            KUBEWARDEN_ANNOTATION_POLICY_TITLE,
+            KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION,
+            KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
+            KUBEWARDEN_ANNOTATION_POLICY_URL,
+            KUBEWARDEN_ANNOTATION_POLICY_SOURCE,
+            KUBEWARDEN_ANNOTATION_POLICY_LICENSE,
         ];
         let mut annotations = metadata.annotations.clone().unwrap_or_default();
 
@@ -103,7 +101,7 @@ impl MetadataPrettyPrinter {
         table.add_row(row![Fgbl -> "context aware:", metadata.context_aware]);
         table.add_row(row![Fgbl -> "protocol version:", protocol_version]);
 
-        let _usage = annotations.remove(ANNOTATION_POLICY_USAGE);
+        let _usage = annotations.remove(KUBEWARDEN_ANNOTATION_POLICY_USAGE);
         if !annotations.is_empty() {
             table.add_row(row![]);
             table.add_row(row![Fmbl -> "Annotations"]);
@@ -133,7 +131,9 @@ impl MetadataPrettyPrinter {
     fn print_metadata_usage(&self, metadata: &Metadata) -> Result<()> {
         let usage = match metadata.annotations.clone() {
             None => None,
-            Some(annotations) => annotations.get(ANNOTATION_POLICY_USAGE).map(String::from),
+            Some(annotations) => annotations
+                .get(KUBEWARDEN_ANNOTATION_POLICY_USAGE)
+                .map(String::from),
         };
 
         if usage.is_none() {
