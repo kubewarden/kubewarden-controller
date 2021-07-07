@@ -2,10 +2,10 @@ use crate::communication::EvalRequest;
 use crate::settings::Policy;
 use crate::utils::convert_yaml_map_to_json;
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_evaluator::PolicyEvaluator;
+use policy_evaluator::policy_evaluator::{PolicyEvaluator, ValidateRequest};
 use std::collections::HashMap;
 use tokio::sync::mpsc::Receiver;
-use tracing::error;
+use tracing::{error, info_span};
 
 pub(crate) struct Worker {
     evaluators: HashMap<String, PolicyEvaluator>,
@@ -13,7 +13,7 @@ pub(crate) struct Worker {
 }
 
 impl Worker {
-    #[tracing::instrument]
+    #[tracing::instrument(name = "worker_new", skip(rx, policies))]
     pub(crate) fn new(
         rx: Receiver<EvalRequest>,
         policies: HashMap<String, Policy>,
@@ -35,7 +35,11 @@ impl Worker {
                     }
                 });
 
-            let policy_evaluator = PolicyEvaluator::new(&policy.wasm_module_path, settings_json)?;
+            let policy_evaluator = PolicyEvaluator::from_file(
+                id.to_string(),
+                &policy.wasm_module_path,
+                settings_json,
+            )?;
 
             let set_val_rep = policy_evaluator.validate_settings();
             if !set_val_rep.valid {
@@ -57,9 +61,12 @@ impl Worker {
 
     pub(crate) fn run(mut self) {
         while let Some(req) = self.channel_rx.blocking_recv() {
+            let span = info_span!(parent: &req.parent_span, "policy_eval");
+            let _enter = span.enter();
+
             let res = match self.evaluators.get_mut(&req.policy_id) {
                 Some(policy_evaluator) => {
-                    let resp = policy_evaluator.validate(req.req);
+                    let resp = policy_evaluator.validate(ValidateRequest::new(req.req));
                     req.resp_chan.send(Some(resp))
                 }
                 None => req.resp_chan.send(None),

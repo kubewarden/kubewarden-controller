@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 
+#[derive(Debug, serde::Serialize)]
 pub(crate) struct AdmissionReview {
     pub request: serde_json::Value,
     pub uid: String,

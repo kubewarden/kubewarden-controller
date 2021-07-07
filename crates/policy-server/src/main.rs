@@ -29,8 +29,9 @@ mod worker_pool;
 use worker_pool::WorkerPool;
 
 use policy_evaluator::cluster_context::ClusterContext;
-use policy_fetcher::registry::config::read_docker_config_json_file;
-use policy_fetcher::sources::read_sources_file;
+use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
+use policy_fetcher::sources::{read_sources_file, Sources};
+
 use settings::read_policies_file;
 
 use std::path::{Path, PathBuf};
@@ -46,18 +47,20 @@ async fn main() -> Result<()> {
         .version(VERSION)
         .about("Kubernetes admission controller powered by Wasm policies")
         .arg(
-            Arg::with_name("debug")
-                .long("debug")
-                .env("KUBEWARDEN_DEBUG")
-                .takes_value(false)
-                .help("Increase verbosity"),
+            Arg::with_name("log-level")
+                .long("log-level")
+                .env("KUBEWARDEN_LOG_LEVEL")
+                .default_value("info")
+                .possible_values(&["trace", "debug", "info", "warn", "error"])
+                .help("Log level"),
         )
         .arg(
             Arg::with_name("log-fmt")
                 .long("log-fmt")
                 .env("KUBEWARDEN_LOG_FMT")
                 .default_value("text")
-                .help("Log output format. Valid values: 'json', 'text'"),
+                .possible_values(&["text", "json", "jaeger", "otlp"])
+                .help("Log output format"),
         )
         .arg(
             Arg::with_name("address")
@@ -127,26 +130,61 @@ async fn main() -> Result<()> {
         .get_matches();
 
     // setup logging
-    let level_filter = if matches.is_present("debug") {
-        "debug"
-    } else {
-        "info"
-    };
-    let filter_layer = EnvFilter::new(level_filter)
-        .add_directive("cranelift_codegen=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
-        .add_directive("cranelift_wasm=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
-        .add_directive("regalloc=off".parse().unwrap()); // this crate generates lots of tracing events we don't care about
+    let filter_layer = EnvFilter::new(matches.value_of("log-level").unwrap_or_default())
+        // some of our dependencies generate trace events too, but we don't care about them ->
+        // let's filter them
+        .add_directive("cranelift_codegen=off".parse().unwrap())
+        .add_directive("cranelift_wasm=off".parse().unwrap())
+        .add_directive("regalloc=off".parse().unwrap())
+        .add_directive("hyper::proto=off".parse().unwrap());
 
-    if matches.value_of("log-fmt").unwrap_or_default() == "json" {
-        tracing_subscriber::registry()
+    match matches.value_of("log-fmt").unwrap_or_default() {
+        "json" => tracing_subscriber::registry()
             .with(filter_layer)
             .with(fmt::layer().json())
-            .init();
-    } else {
-        tracing_subscriber::registry()
+            .init(),
+        "text" => tracing_subscriber::registry()
             .with(filter_layer)
             .with(fmt::layer())
-            .init();
+            .init(),
+        "jaeger" => {
+            // Create a new OpenTelemetry pipeline sending events
+            // to a jaeger instance
+            // The Jaeger exporter can be configerd via environment
+            // variables (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter)
+            let tracer = opentelemetry_jaeger::new_pipeline()
+                .with_service_name("kubewarden-policy-server")
+                .install_simple()
+                .unwrap();
+
+            // Create a tracing layer with the configured tracer
+            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(telemetry)
+                .with(fmt::layer())
+                .init()
+        }
+        "otlp" => {
+            // Create a new OpenTelemetry pipeline sending events to a
+            // OpenTelemetry collector using the OTLP format.
+            // The collector must run on localhost (eg: use a sidecar inside of k8s)
+            // using GRPC
+            let tracer = opentelemetry_otlp::new_pipeline()
+                .with_tonic()
+                .install_simple()
+                .unwrap();
+
+            // Create a tracing layer with the configured tracer
+            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(telemetry)
+                .with(fmt::layer())
+                .init()
+        }
+
+        _ => fatal_error("Unknown log message format".to_string()),
     };
 
     let addr: SocketAddr = match format!(
@@ -181,34 +219,7 @@ async fn main() -> Result<()> {
         }
     };
 
-    let sources = matches.value_of("sources-path").map(|sources_file| {
-        match read_sources_file(Path::new(sources_file)) {
-            Ok(sources) => sources,
-            Err(err) => {
-                fatal_error(format!(
-                    "error while loading sources from {}: {}",
-                    sources_file, err
-                ));
-                unreachable!();
-            }
-        }
-    });
-
-    let docker_config =
-        matches
-            .value_of("docker-config-json-path")
-            .map(|docker_config_json_path_file| {
-                match read_docker_config_json_file(Path::new(docker_config_json_path_file)) {
-                    Ok(docker_config_json) => docker_config_json,
-                    Err(err) => {
-                        fatal_error(format!(
-                            "error while loading docker-config-json-like path from {}: {}",
-                            docker_config_json_path_file, err
-                        ));
-                        unreachable!();
-                    }
-                }
-            });
+    let (sources, docker_config) = remote_server_options(&matches);
 
     // Download policies
     let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
@@ -333,6 +344,39 @@ async fn main() -> Result<()> {
     };
 
     Ok(())
+}
+
+fn remote_server_options(matches: &clap::ArgMatches) -> (Option<Sources>, Option<DockerConfig>) {
+    let sources = matches.value_of("sources-path").map(|sources_file| {
+        match read_sources_file(Path::new(sources_file)) {
+            Ok(sources) => sources,
+            Err(err) => {
+                fatal_error(format!(
+                    "error while loading sources from {}: {}",
+                    sources_file, err
+                ));
+                unreachable!();
+            }
+        }
+    });
+
+    let docker_config =
+        matches
+            .value_of("docker-config-json-path")
+            .map(|docker_config_json_path_file| {
+                match read_docker_config_json_file(Path::new(docker_config_json_path_file)) {
+                    Ok(docker_config_json) => docker_config_json,
+                    Err(err) => {
+                        fatal_error(format!(
+                            "error while loading docker-config-json-like path from {}: {}",
+                            docker_config_json_path_file, err
+                        ));
+                        unreachable!();
+                    }
+                }
+            });
+
+    (sources, docker_config)
 }
 
 fn fatal_error(msg: String) {

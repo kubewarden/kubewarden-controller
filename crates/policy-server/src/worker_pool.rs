@@ -24,7 +24,7 @@ pub(crate) struct WorkerPool {
 }
 
 impl WorkerPool {
-    #[tracing::instrument]
+    #[tracing::instrument(name = "worker_pool_new", skip(rx, barrier, boot_canary))]
     pub(crate) fn new(
         size: usize,
         policies: HashMap<String, Policy>,
