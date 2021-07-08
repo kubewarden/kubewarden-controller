@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use tracing::{event, span, Level};
+use tracing::{event, Level};
 
 use crate::policy::Policy;
 
@@ -39,28 +39,17 @@ struct PolicyLogEntry {
 }
 
 impl Policy {
+    #[tracing::instrument(name = "policy_log", skip(contents))]
     pub(crate) fn log(&self, contents: &[u8]) -> Result<()> {
         let log_entry: PolicyLogEntry = serde_json::from_slice(&contents)?;
-        let span = span!(
-            parent: &self.span,
-            Level::INFO,
-            "policy",
-            request_uid = tracing::field::Empty,
-            data = %&serde_json::to_string(&log_entry.data.clone().unwrap())?.as_str(),
-        );
-
-        if let Some(request_uid) = &self.request_uid {
-            span.record("request_uid", &request_uid.as_str());
-        }
-
         macro_rules! log {
             ($level:path) => {
                 event!(
                     target: "policy_log",
-                    parent: &span,
                     $level,
+                    data = %&serde_json::to_string(&log_entry.data.clone().unwrap())?.as_str(),
                     "{}",
-                    log_entry.message.clone().unwrap_or_default()
+                    log_entry.message.clone().unwrap_or_default(),
                 );
             };
         }
