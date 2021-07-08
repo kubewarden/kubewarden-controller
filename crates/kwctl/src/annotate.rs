@@ -17,7 +17,11 @@ pub(crate) fn write_annotation(
 }
 
 fn protocol_detector(wasm_path: PathBuf) -> Result<ProtocolVersion> {
-    let policy_evaluator = PolicyEvaluator::from_file(wasm_path.as_path(), None)?;
+    let policy_evaluator = PolicyEvaluator::from_file(
+        String::from(wasm_path.to_string_lossy()),
+        wasm_path.as_path(),
+        None,
+    )?;
     policy_evaluator
         .protocol_version()
         .map_err(|e| anyhow!("Cannot compute ProtocolVersion used by the policy: {:?}", e))

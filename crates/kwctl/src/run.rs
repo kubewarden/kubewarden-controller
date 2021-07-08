@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use kube::Client;
 use policy_evaluator::{
     cluster_context::ClusterContext,
+    constants::*,
     policy_evaluator::{PolicyEvaluator, ValidateRequest},
     policy_metadata::Metadata,
 };
@@ -28,7 +29,8 @@ pub(crate) async fn pull_and_run(
     .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
     let policy_path = policy_path.as_path();
 
-    if let Some(metadata) = Metadata::from_path(policy_path)? {
+    let metadata = Metadata::from_path(policy_path)?;
+    if let Some(ref metadata) = metadata {
         if metadata.context_aware {
             println!("Fetching Kubernetes context since this policy is context-aware");
 
@@ -42,9 +44,11 @@ pub(crate) async fn pull_and_run(
                 .map_err(|e| anyhow!("could not initialize a cluster context: {}", e))?;
         }
     }
+    let policy_id = read_policy_title_from_metadata(metadata).unwrap_or_else(|| uri.clone());
 
     let request = serde_json::from_str::<serde_json::Value>(&request)?;
     let policy_evaluator = PolicyEvaluator::from_file(
+        policy_id,
         policy_path,
         settings.map_or(Ok(None), |settings| {
             if settings.is_empty() {
@@ -89,4 +93,16 @@ pub(crate) async fn pull_and_run(
     println!("{}", serde_json::to_string(&response)?);
 
     Ok(())
+}
+
+fn read_policy_title_from_metadata(metadata: Option<Metadata>) -> Option<String> {
+    match metadata {
+        Some(ref metadata) => match metadata.annotations {
+            Some(ref annotations) => annotations
+                .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
+                .map(Clone::clone),
+            None => None,
+        },
+        None => None,
+    }
 }

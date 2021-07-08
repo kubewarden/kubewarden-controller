@@ -2231,8 +2231,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.1.18"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.18#5ddf21c053112e3f9eb6acd86574cdf5d8d7906f"
+version = "0.1.19"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.1.19#a56be60fd4ec479e14dfaba31a406cffe0095939"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
