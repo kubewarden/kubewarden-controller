@@ -70,7 +70,7 @@ async fn handle_post_validate(
         policy_id,
         req: adm_rev.request,
         resp_chan: resp_tx,
-        parent_span: Span::current().clone(),
+        parent_span: Span::current(),
     };
     if tx.send(eval_req).await.is_err() {
         error!("error while sending request from API to Worker pool");
