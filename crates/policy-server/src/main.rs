@@ -1,8 +1,11 @@
 extern crate k8s_openapi;
 extern crate kube;
 
+use anyhow::{anyhow, Result};
 use kube::Client;
+use opentelemetry::global::shutdown_tracer_provider;
 use std::{
+    collections::HashMap,
     net::SocketAddr,
     process,
     sync::{
@@ -31,7 +34,7 @@ use policy_evaluator::cluster_context::ClusterContext;
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 
-use settings::read_policies_file;
+use settings::{read_policies_file, Policy};
 
 use std::path::{Path, PathBuf};
 
@@ -41,97 +44,22 @@ use communication::EvalRequest;
 fn main() {
     let matches = cli::build_cli().get_matches();
 
-    // setup logging
-    let filter_layer = EnvFilter::new(matches.value_of("log-level").unwrap_or_default())
-        // some of our dependencies generate trace events too, but we don't care about them ->
-        // let's filter them
-        .add_directive("cranelift_codegen=off".parse().unwrap())
-        .add_directive("cranelift_wasm=off".parse().unwrap())
-        .add_directive("regalloc=off".parse().unwrap())
-        .add_directive("hyper::proto=off".parse().unwrap());
-
-    match matches.value_of("log-fmt").unwrap_or_default() {
-        "json" => tracing_subscriber::registry()
-            .with(filter_layer)
-            .with(fmt::layer().json())
-            .init(),
-        "text" => tracing_subscriber::registry()
-            .with(filter_layer)
-            .with(fmt::layer())
-            .init(),
-        "jaeger" => {
-            // Create a new OpenTelemetry pipeline sending events
-            // to a jaeger instance
-            // The Jaeger exporter can be configerd via environment
-            // variables (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter)
-            let tracer = opentelemetry_jaeger::new_pipeline()
-                .with_service_name("kubewarden-policy-server")
-                .install_simple()
-                .unwrap();
-
-            // Create a tracing layer with the configured tracer
-            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-            tracing_subscriber::registry()
-                .with(filter_layer)
-                .with(telemetry)
-                .with(fmt::layer())
-                .init()
-        }
-        "otlp" => {
-            // Create a new OpenTelemetry pipeline sending events to a
-            // OpenTelemetry collector using the OTLP format.
-            // The collector must run on localhost (eg: use a sidecar inside of k8s)
-            // using GRPC
-            let tracer = opentelemetry_otlp::new_pipeline()
-                .with_tonic()
-                .install_simple()
-                .unwrap();
-
-            // Create a tracing layer with the configured tracer
-            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-            tracing_subscriber::registry()
-                .with(filter_layer)
-                .with(telemetry)
-                .with(fmt::layer())
-                .init()
-        }
-
-        _ => fatal_error("Unknown log message format".to_string()),
-    };
-
-    let addr: SocketAddr = match format!(
-        "{}:{}",
-        matches.value_of("address").unwrap(),
-        matches.value_of("port").unwrap()
-    )
-    .parse()
-    {
-        Ok(a) => a,
-        Err(error) => {
-            fatal_error(format!("error parsing arguments: {}", error));
-            unreachable!();
-        }
-    };
-
-    let cert_file = String::from(matches.value_of("cert-file").unwrap());
-    let key_file = String::from(matches.value_of("key-file").unwrap());
-    if cert_file.is_empty() != key_file.is_empty() {
-        fatal_error("error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
-    };
-
-    let policies_file = Path::new(matches.value_of("policies").unwrap_or("."));
-    let mut policies = match read_policies_file(policies_file) {
-        Ok(policies) => policies,
-        Err(err) => {
-            fatal_error(format!(
-                "error while loading policies from {:?}: {}",
-                policies_file, err
-            ));
-            unreachable!();
-        }
-    };
-
+    let addr = api_bind_address(&matches);
+    let (cert_file, key_file) = tls_files(&matches);
+    let mut policies = policies(&matches);
     let (sources, docker_config) = remote_server_options(&matches);
+
+    let rt = match Runtime::new() {
+        Ok(r) => r,
+        Err(error) => {
+            fatal_error(format!("error initializing tokio runtime: {}", error));
+            unreachable!();
+        }
+    };
+
+    if let Err(err) = setup_tracing(&matches) {
+        fatal_error(err.to_string());
+    }
 
     // Download policies
     let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
@@ -258,6 +186,66 @@ fn main() {
     Ok(())
 }
 
+fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
+    // setup logging
+    let filter_layer = EnvFilter::new(matches.value_of("log-level").unwrap_or_default())
+        // some of our dependencies generate trace events too, but we don't care about them ->
+        // let's filter them
+        .add_directive("cranelift_codegen=off".parse().unwrap())
+        .add_directive("cranelift_wasm=off".parse().unwrap())
+        .add_directive("regalloc=off".parse().unwrap())
+        .add_directive("hyper::proto=off".parse().unwrap());
+
+    match matches.value_of("log-fmt").unwrap_or_default() {
+        "json" => tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(fmt::layer().json())
+            .init(),
+        "text" => tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(fmt::layer())
+            .init(),
+        "jaeger" => {
+            // Create a new OpenTelemetry pipeline sending events
+            // to a jaeger instance
+            // The Jaeger exporter can be configerd via environment
+            // variables (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter)
+            let tracer = opentelemetry_jaeger::new_pipeline()
+                .with_service_name("kubewarden-policy-server")
+                .install_simple()?;
+
+            // Create a tracing layer with the configured tracer
+            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(telemetry)
+                .with(fmt::layer())
+                .init()
+        }
+        "otlp" => {
+            // Create a new OpenTelemetry pipeline sending events to a
+            // OpenTelemetry collector using the OTLP format.
+            // The collector must run on localhost (eg: use a sidecar inside of k8s)
+            // using GRPC
+            let tracer = opentelemetry_otlp::new_pipeline()
+                .with_tonic()
+                .install_simple()?;
+
+            // Create a tracing layer with the configured tracer
+            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(telemetry)
+                .with(fmt::layer())
+                .init()
+        }
+
+        _ => return Err(anyhow!("Unknown log message format")),
+    };
+
+    Ok(())
+}
+
 fn remote_server_options(matches: &clap::ArgMatches) -> (Option<Sources>, Option<DockerConfig>) {
     let sources = matches.value_of("sources-path").map(|sources_file| {
         match read_sources_file(Path::new(sources_file)) {
@@ -291,7 +279,48 @@ fn remote_server_options(matches: &clap::ArgMatches) -> (Option<Sources>, Option
     (sources, docker_config)
 }
 
+fn api_bind_address(matches: &clap::ArgMatches) -> SocketAddr {
+    match format!(
+        "{}:{}",
+        matches.value_of("address").unwrap(),
+        matches.value_of("port").unwrap()
+    )
+    .parse()
+    {
+        Ok(a) => a,
+        Err(error) => {
+            fatal_error(format!("error parsing arguments: {}", error));
+            unreachable!();
+        }
+    }
+}
+
+fn tls_files(matches: &clap::ArgMatches) -> (String, String) {
+    let cert_file = String::from(matches.value_of("cert-file").unwrap());
+    let key_file = String::from(matches.value_of("key-file").unwrap());
+    if cert_file.is_empty() != key_file.is_empty() {
+        fatal_error("error parsing arguments: either both --cert-file and --key-file must be provided, or neither.".to_string());
+    };
+    (cert_file, key_file)
+}
+
+fn policies(matches: &clap::ArgMatches) -> HashMap<String, Policy> {
+    let policies_file = Path::new(matches.value_of("policies").unwrap_or("."));
+    match read_policies_file(policies_file) {
+        Ok(policies) => policies,
+        Err(err) => {
+            fatal_error(format!(
+                "error while loading policies from {:?}: {}",
+                policies_file, err
+            ));
+            unreachable!();
+        }
+    }
+}
+
 fn fatal_error(msg: String) {
     error!("{}", msg);
+    shutdown_tracer_provider();
+
     process::exit(1);
 }
