@@ -260,7 +260,7 @@ fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
             // variables (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter)
             let tracer = opentelemetry_jaeger::new_pipeline()
                 .with_service_name("kubewarden-policy-server")
-                .install_simple()?;
+                .install_batch(opentelemetry::runtime::Tokio)?;
 
             // Create a tracing layer with the configured tracer
             let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);

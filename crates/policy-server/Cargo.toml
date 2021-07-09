@@ -32,8 +32,8 @@ tracing-futures = "0.2"
 # TODO tracing-opentelemetry: once a new release is tagged check if we can update all the other telemetry crates
 tracing-opentelemetry = "0.13.0"
 # opentelemetry-jaeger: we have to stick with 0.13 because it's the last release that builds against opentelemetry 0.14
-opentelemetry-jaeger = { version = "0.13.0", features = ["collector_client", "reqwest_blocking_collector_client"] }
+opentelemetry-jaeger = { version = "0.13.0", features = ["collector_client", "reqwest_collector_client"] }
 # opentelemetry: we have to stick with 0.14 because tracing-opentelemetry is built against it
-opentelemetry = { version = "0.14", default-features = false, features = ["trace"] }
+opentelemetry = { version = "0.14", default-features = false, features = ["trace", "rt-tokio"] }
 # opentelemetry-otlp: we have to stick with 0.7.0 because it's the last version building against opentelemetry 0.14
 opentelemetry-otlp = "0.7.0"
