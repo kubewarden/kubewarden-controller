@@ -52,7 +52,7 @@ Pre-built Linux binaries can be found [here](https://github.com/flavio/burrego/r
 
 ## Limitations
 
-The OPA provides a series of that can be used by policy authors.
+The Rego languge provides a series of functions that can be used by policy authors, these are called "built-ins".
 
 Some of these built-ins are automatically "bundled" with the final
 Wasm file, others have to be provided by the WebAssembly execution host
