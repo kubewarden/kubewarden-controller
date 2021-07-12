@@ -6,7 +6,7 @@ use tokio::{
     sync::oneshot,
     time::{sleep, Duration},
 };
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 pub(crate) struct Poller {
     bootstrap_rx: oneshot::Receiver<KubePollerBootRequest>,
@@ -59,12 +59,12 @@ impl Poller {
                         let refresh = ClusterContext::get().refresh(&kubernetes_client).await;
 
                         if let Err(err) = refresh {
-                            info!("error when refreshing the cluster context: {}", err);
+                            warn!("error when refreshing the cluster context: {}", err);
                         }
                         sleep(Duration::from_secs(5)).await;
                     },
                     Err(err) => {
-                        info!(
+                        warn!(
                             "error when initializing the cluster context client: {}",
                             err
                         );

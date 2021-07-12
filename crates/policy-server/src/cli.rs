@@ -136,7 +136,8 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
         .add_directive("cranelift_codegen=off".parse().unwrap())
         .add_directive("cranelift_wasm=off".parse().unwrap())
         .add_directive("regalloc=off".parse().unwrap())
-        .add_directive("hyper::proto=off".parse().unwrap());
+        .add_directive("hyper=off".parse().unwrap())
+        .add_directive("tower=off".parse().unwrap());
 
     match matches.value_of("log-fmt").unwrap_or_default() {
         "json" => tracing_subscriber::registry()
