@@ -3,12 +3,11 @@ use hyper::{Body, Method, Request, Response, StatusCode};
 use policy_evaluator::validation_response::ValidationResponse;
 use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, span::Span, warn};
 
 use crate::admission_review::AdmissionReview;
 use crate::communication::EvalRequest;
 
-#[tracing::instrument]
 pub(crate) async fn route(
     req: hyper::Request<hyper::Body>,
     tx: mpsc::Sender<EvalRequest>,
@@ -35,18 +34,24 @@ pub(crate) async fn route(
     }
 }
 
-#[tracing::instrument]
+#[tracing::instrument(name = "validation", fields(request_uid=tracing::field::Empty), skip(req, tx))]
 async fn handle_post_validate(
     req: Request<Body>,
     policy_id: String,
     tx: mpsc::Sender<EvalRequest>,
 ) -> Result<Response<Body>, hyper::Error> {
     let raw = hyper::body::to_bytes(req.into_body()).await?;
+    let raw_str = String::from_utf8(raw.to_vec())
+        .unwrap_or_else(|_| String::from("cannot convert raw request into utf8"));
 
     let adm_rev = match AdmissionReview::new(raw) {
-        Ok(ar) => ar,
+        Ok(ar) => {
+            debug!(admission_review = %serde_json::to_string(&ar).unwrap().as_str());
+            ar
+        }
         Err(e) => {
             warn!(
+                req = raw_str.as_str(),
                 error = e.to_string().as_str(),
                 "Bad AdmissionReview request"
             );
@@ -57,12 +62,15 @@ async fn handle_post_validate(
         }
     };
 
-    let (resp_tx, resp_rx) = oneshot::channel();
+    // add request UID to the span context as one of its fields
+    Span::current().record("request_uid", &adm_rev.uid.as_str());
 
+    let (resp_tx, resp_rx) = oneshot::channel();
     let eval_req = EvalRequest {
         policy_id,
         req: adm_rev.request,
         resp_chan: resp_tx,
+        parent_span: Span::current(),
     };
     if tx.send(eval_req).await.is_err() {
         error!("error while sending request from API to Worker pool");
