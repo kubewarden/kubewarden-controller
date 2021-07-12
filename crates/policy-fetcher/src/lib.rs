@@ -25,6 +25,7 @@ use crate::sources::Sources;
 use crate::store::Store;
 
 use std::path::{Path, PathBuf};
+use url::ParseError;
 
 #[derive(Debug)]
 pub enum PullDestination {
@@ -39,7 +40,13 @@ pub async fn fetch_policy(
     docker_config: Option<DockerConfig>,
     sources: Option<&Sources>,
 ) -> Result<PathBuf> {
-    let url = Url::parse(url)?;
+    let url = match Url::parse(url) {
+        Ok(u) => Ok(u),
+        Err(ParseError::RelativeUrlWithoutBase) => {
+            Url::parse(format!("registry://{}", url).as_str())
+        }
+        Err(e) => Err(e),
+    }?;
     match url.scheme() {
         "file" => {
             // no-op: return early
