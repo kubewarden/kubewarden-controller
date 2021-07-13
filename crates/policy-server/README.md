@@ -72,8 +72,76 @@ depends on the URL format provided by the user:
 * `registry://localhost:5000/project/artifact:some-version` download the policy
   from a OCI registry. The policy must have been pushed as an OCI artifact
 
+## Logging and distributed tracing
 
-## Building
+The verbosity of policy-server can be configured via the `--log-level` flag.
+The default log level used is `info`, but `trace`, `debug`, `warn` and `error`
+levels are availble too.
+
+Policy server can produce logs events using different formats. The `--log-fmt`
+flag is used to choose the format to be used.
+
+### Standard output
+
+By default, log messages are printed on the standard output using the
+`text` format. Logs can be printed as JSON objects using the `json` format type.
+
+### Jaeger
+
+[Jaeger](https://www.jaegertracing.io/) is an open souce distributed tracing
+solution.
+
+Policy server can send trace events directly to a Jaeger collector using the
+`--log-fmt jaeger` flag.
+
+Underneat, policy server relies on [Open Telemetry](https://github.com/open-telemetry/opentelemetry-rust)
+to send events to the Jaeger collector.
+
+By default, events are sent to a collector listening on localhost. However, 
+additional Jaeger settings can be specified via [these environment variables](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter):
+
+| Name                            | Description                                                      | Default                                                                                          |
+|---------------------------------|------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| OTEL_EXPORTER_JAEGER_AGENT_HOST | Hostname for the Jaeger agent                                    | "localhost"                                                                                      |
+| OTEL_EXPORTER_JAEGER_AGENT_PORT | Port for the Jaeger agent                                        | 6832                                                                                             |
+| OTEL_EXPORTER_JAEGER_ENDPOINT   | HTTP endpoint for Jaeger traces                                  | <!-- markdown-link-check-disable --> "http://localhost:14250"<!-- markdown-link-check-enable --> |
+| OTEL_EXPORTER_JAEGER_TIMEOUT    | Maximum time the Jaeger exporter will wait for each batch export | 10s                                                                                              |
+| OTEL_EXPORTER_JAEGER_USER       | Username to be used for HTTP basic authentication                | -                                                                                                |
+| OTEL_EXPORTER_JAEGER_PASSWORD   | Password to be used for HTTP basic authentication                | -                                                                                                |
+
+A quick evaluation of Jaeger can be done using its "all-in-one" container
+image.
+
+The image can be started via:
+```console
+docker run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 -p14268:14268 jaegertracing/all-in-one:latest
+```
+
+**Note well:** this Jaeger deployment is not meant for production. Please
+take a look at [Jaeger's official documentation](https://www.jaegertracing.io/docs/)
+for more details.
+
+### Open Telemetry Collector
+
+The open Telemetry project provides a [collector](https://opentelemetry.io/docs/collector/)
+component that can be used to receive, process and export telemetry data
+in a vendor agnostic way.
+
+Policy server can send trace events to the Open Telemetry Collector using the
+`--log-fmt otlp` flag.
+
+Current limitations:
+
+  * Traces can be sent to the collector only via grpc. The HTTP transport
+    layer is not supported.
+  * The Open Telemetry Collector must be listening on localhost. When deployed
+    on Kubernetes, policy-server must have the Open Telemetry Collector
+    running as a sidecar.
+  * Policy server doesn't expose any configuration setting for Open Telemetry
+    (e.g.: endpoint URL, encryption, authentication,...). All of the tuning
+    has to be done on the collector process that runs as a sidecar.
+
+# Building
 
 You can either build `kubewarden-admission` from sources (see below) or you can
 use the container image we maintain inside of our
