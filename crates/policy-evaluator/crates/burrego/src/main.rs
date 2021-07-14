@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::{clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings};
 use serde_json::json;
-use std::{fs::File, io::BufReader, process};
+use std::{fs::File, io::BufReader, path::PathBuf, process};
 
 use tracing::debug;
 use tracing_subscriber::prelude::*;
@@ -82,7 +82,9 @@ fn main() -> Result<()> {
                     })
                     .unwrap()?;
 
-                let mut evaluator = Evaluator::new(matches.value_of("policy").unwrap())?;
+                let policy = matches.value_of("policy").unwrap();
+                let mut evaluator =
+                    Evaluator::from_path(policy.to_string(), &PathBuf::from(policy))?;
 
                 let (major, minor) = evaluator.opa_abi_version()?;
                 debug!(major, minor, "OPA Wasm ABI");

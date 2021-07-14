@@ -5,6 +5,7 @@ use wasmtime::{
 };
 
 use crate::opa::{builtins, Policy, StackHelper};
+use std::path::Path;
 use std::sync::RwLock;
 
 use tracing::{debug, error};
@@ -24,7 +25,7 @@ impl BuiltinsHelper {
         args: &[serde_json::Value],
     ) -> Result<serde_json::Value> {
         let lookup_table = self.lookup_tables.get(&policy_id).ok_or_else(|| {
-            let policy = LOADED_POLICIES.read().unwrap().policy(&policy_id).unwrap();
+            let policy = LOADED_POLICIES.read().unwrap().policy(policy_id).unwrap();
             anyhow!("Cannot find lookup table for policy {}", policy)
         })?;
         let builtin_name = lookup_table.get(&builtin_id.into()).ok_or_else(|| {
@@ -49,22 +50,22 @@ impl BuiltinsHelper {
 }
 
 struct LoadedPolicies {
-    policies: HashMap<usize, String>,
+    policies: Vec<String>,
 }
 
 impl LoadedPolicies {
     fn new() -> LoadedPolicies {
-        let policies: HashMap<usize, String> = HashMap::new();
-        LoadedPolicies { policies }
+        LoadedPolicies {
+            policies: Vec::new(),
+        }
     }
 
-    fn register(&mut self, policy: String) -> usize {
-        let policy_id = self.policies.len();
-        self.policies.insert(policy_id, policy);
-        policy_id
+    fn register(&mut self, policy_name: String) -> usize {
+        self.policies.push(policy_name);
+        self.policies.len() - 1
     }
 
-    fn policy(&self, policy_id: &usize) -> Option<String> {
+    fn policy(&self, policy_id: usize) -> Option<String> {
         self.policies.get(policy_id).cloned()
     }
 }
@@ -94,7 +95,11 @@ pub struct Evaluator {
 }
 
 impl Evaluator {
-    pub fn new(policy_path: &str) -> Result<Evaluator> {
+    pub fn from_path(policy_name: String, policy_path: &Path) -> Result<Evaluator> {
+        Evaluator::new(policy_name, &std::fs::read(&policy_path)?)
+    }
+
+    pub fn new(policy_name: String, policy_contents: &[u8]) -> Result<Evaluator> {
         let engine = Engine::default();
         let mut linker = Linker::<Option<StackHelper>>::new(&engine);
 
@@ -313,13 +318,10 @@ impl Evaluator {
         );
         linker.define("env", "opa_builtin4", opa_builtin4)?;
 
-        let module = Module::from_file(&engine, policy_path)?;
+        let module = Module::from_binary(&engine, policy_contents)?;
         let instance = linker.instantiate(&mut store, &module)?;
 
-        let policy_id = LOADED_POLICIES
-            .write()
-            .unwrap()
-            .register(String::from(policy_path));
+        let policy_id = LOADED_POLICIES.write().unwrap().register(policy_name);
         let stack_helper = StackHelper::new(policy_id, &instance, &mut store)?;
         let policy = Policy::new(&instance, &mut store, &memory, stack_helper)?;
         store.data_mut().get_or_insert(stack_helper);

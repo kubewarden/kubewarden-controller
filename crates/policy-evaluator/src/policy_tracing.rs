@@ -41,7 +41,7 @@ struct PolicyLogEntry {
 impl Policy {
     #[tracing::instrument(name = "policy_log", skip(contents))]
     pub(crate) fn log(&self, contents: &[u8]) -> Result<()> {
-        let log_entry: PolicyLogEntry = serde_json::from_slice(&contents)?;
+        let log_entry: PolicyLogEntry = serde_json::from_slice(contents)?;
         macro_rules! log {
             ($level:path) => {
                 event!(

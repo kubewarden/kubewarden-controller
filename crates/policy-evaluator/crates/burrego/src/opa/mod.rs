@@ -283,6 +283,7 @@ impl Policy {
         let res_addr = self
             .opa_eval_ctx_get_result_fn
             .call(store.as_context_mut(), ctx_addr)?;
+
         self.stack_helper
             .pull_json(store.as_context_mut(), &memory, res_addr)
     }
