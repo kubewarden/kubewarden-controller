@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use policy_evaluator::{
-    constants::*, policy_evaluator::PolicyEvaluator, policy_metadata::Metadata,
+    constants::*,
+    policy_evaluator::{PolicyEvaluator, PolicyExecutionMode},
+    policy_metadata::Metadata,
 };
 use std::fs::File;
 use std::path::PathBuf;
@@ -20,6 +22,7 @@ fn protocol_detector(wasm_path: PathBuf) -> Result<ProtocolVersion> {
     let policy_evaluator = PolicyEvaluator::from_file(
         String::from(wasm_path.to_string_lossy()),
         wasm_path.as_path(),
+        PolicyExecutionMode::KubewardenWapc,
         None,
     )?;
     policy_evaluator

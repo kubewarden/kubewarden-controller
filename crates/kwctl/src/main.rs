@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
     match matches.subcommand_name() {
         Some("policies") => policies::list(),
         Some("pull") => {
-            if let Some(ref matches) = matches.subcommand_matches("pull") {
+            if let Some(matches) = matches.subcommand_matches("pull") {
                 let uri = matches.value_of("uri").unwrap();
                 let destination = matches
                     .value_of("output-path")
@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("push") => {
-            if let Some(ref matches) = matches.subcommand_matches("push") {
+            if let Some(matches) = matches.subcommand_matches("push") {
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let wasm_uri = crate::utils::map_path_to_uri(matches.value_of("policy").unwrap())?;
                 let wasm_path = crate::utils::wasm_path(wasm_uri.as_str())?;
@@ -117,14 +117,14 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("rm") => {
-            if let Some(ref matches) = matches.subcommand_matches("rm") {
+            if let Some(matches) = matches.subcommand_matches("rm") {
                 let uri = matches.value_of("uri").unwrap();
                 rm::rm(uri)?;
             }
             Ok(())
         }
         Some("run") => {
-            if let Some(ref matches) = matches.subcommand_matches("run") {
+            if let Some(matches) = matches.subcommand_matches("run") {
                 let uri = matches.value_of("uri").unwrap();
                 let request = match matches.value_of("request-path").unwrap() {
                     "-" => {
@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("annotate") => {
-            if let Some(ref matches) = matches.subcommand_matches("annotate") {
+            if let Some(matches) = matches.subcommand_matches("annotate") {
                 let wasm_path = matches
                     .value_of("wasm-path")
                     .map(|output| PathBuf::from_str(output).unwrap())
@@ -186,7 +186,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("inspect") => {
-            if let Some(ref matches) = matches.subcommand_matches("inspect") {
+            if let Some(matches) = matches.subcommand_matches("inspect") {
                 let uri = matches.value_of("uri").unwrap();
                 let output = inspect::OutputType::try_from(matches.value_of("output"))?;
 
@@ -195,7 +195,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("manifest") => {
-            if let Some(ref matches) = matches.subcommand_matches("manifest") {
+            if let Some(matches) = matches.subcommand_matches("manifest") {
                 let uri = matches.value_of("uri").unwrap();
                 let resource_type = matches.value_of("type").unwrap();
                 if matches.is_present("settings-path") && matches.is_present("settings-json") {
@@ -223,7 +223,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("completions") => {
-            if let Some(ref matches) = matches.subcommand_matches("completions") {
+            if let Some(matches) = matches.subcommand_matches("completions") {
                 let shell = match matches.value_of("shell").unwrap() {
                     "bash" => clap::Shell::Bash,
                     "fish" => clap::Shell::Fish,
