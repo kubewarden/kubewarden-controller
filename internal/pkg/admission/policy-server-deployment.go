@@ -143,16 +143,18 @@ func createPatch(configMapVersion string) []byte {
 }
 
 type PolicyServerDeploymentSettings struct {
-	Replicas int32
-	Image    string
-	EnvVars  map[string]string
+	Replicas    int32
+	Image       string
+	EnvVars     map[string]string
+	Annotations map[string]string
 }
 
 func policyServerDeploymentSettings(cfg *corev1.ConfigMap) PolicyServerDeploymentSettings {
 	settings := PolicyServerDeploymentSettings{
-		Replicas: int32(constants.PolicyServerReplicaSize),
-		Image:    constants.PolicyServerImage,
-		EnvVars:  make(map[string]string),
+		Replicas:    int32(constants.PolicyServerReplicaSize),
+		Image:       constants.PolicyServerImage,
+		EnvVars:     make(map[string]string),
+		Annotations: make(map[string]string),
 	}
 
 	buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
@@ -182,6 +184,19 @@ func policyServerDeploymentSettings(cfg *corev1.ConfigMap) PolicyServerDeploymen
 		if relevant {
 			settings.EnvVars[k] = v
 		}
+	}
+
+	// setup distributed tracing
+	buf, found = cfg.Data[constants.PolicyServerJaegerSidecar]
+	if found {
+		settings.Annotations[constants.PolicyServerJaegerSidecar] = buf
+		settings.EnvVars[constants.PolicyServerLogFormat] = "jaeger"
+	}
+
+	buf, found = cfg.Data[constants.PolicyServerOpenTelemetrySidecar]
+	if found {
+		settings.Annotations[constants.PolicyServerOpenTelemetrySidecar] = buf
+		settings.EnvVars[constants.PolicyServerLogFormat] = "otlp"
 	}
 
 	return settings
@@ -256,6 +271,9 @@ func buildDeploymentFromConfigMap(namespace, serviceAccountName string, cfg *cor
 
 	templateAnnotations := map[string]string{
 		constants.PolicyServerDeploymentConfigAnnotation: cfg.GetResourceVersion(),
+	}
+	for k, v := range settings.Annotations {
+		templateAnnotations[k] = v
 	}
 
 	return &appsv1.Deployment{

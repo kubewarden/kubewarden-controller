@@ -3,6 +3,7 @@ package admission
 import (
 	"testing"
 
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -29,6 +30,7 @@ data:
   image: registry.testing.org/policy-server:testing
   KUBEWARDEN_LOG_LEVEL: debug
   OTEL_EXPORTER_JAEGER_AGENT_HOST: localhost
+  sidecar.jaegertracing.io/inject: kubewarden
 `
 	cfg, err := createConfigMapFromYaml(rawCfg)
 	if err != nil {
@@ -62,6 +64,23 @@ data:
 				settings.EnvVars[expectedKey])
 		}
 	}
+
+	// check tracing values
+	value, found := settings.Annotations[constants.PolicyServerJaegerSidecar]
+	if !found {
+		t.Errorf("didn't find the jaeger sidecar annotation")
+	}
+	if value != "kubewarden" {
+		t.Errorf("unexpected value for the jaeger sidecar: %v", value)
+	}
+
+	value, found = settings.EnvVars[constants.PolicyServerLogFormat]
+	if !found {
+		t.Errorf("didn't find the KUBEWARDEN_LOG_FMT env variable")
+	}
+	if value != "jaeger" {
+		t.Errorf("unexpected value for the log format")
+	}
 }
 
 func TestBuildDeployment(t *testing.T) {
@@ -74,6 +93,7 @@ data:
   replicas: "4"
   image: registry.testing.org/policy-server:testing
   KUBEWARDEN_LOG_LEVEL: debug
+  sidecar.opentelemetry.io/inject: kubewarden
 `
 	cfg, err := createConfigMapFromYaml(rawCfg)
 	if err != nil {
@@ -96,20 +116,38 @@ data:
 		t.Fatalf("unexpected image used %v", container.Image)
 	}
 
-	found := false
-	var logEnvVar corev1.EnvVar
+	expectedEnvVars := map[string]string{
+		"KUBEWARDEN_LOG_LEVEL": "debug",
+		"KUBEWARDEN_LOG_FMT":   "otlp",
+	}
 
-	for _, env := range container.Env {
-		if env.Name == "KUBEWARDEN_LOG_LEVEL" {
-			found = true
-			logEnvVar = env
-			break
+	for k, expectedV := range expectedEnvVars {
+		actualV, found := findEnvVar(k, container.Env)
+		if !found {
+			t.Errorf("Cannot find env variable %s", k)
+		}
+		if actualV != expectedV {
+			t.Errorf("Wrong value for env variable %s, expected %s - got %s",
+				k, expectedV, actualV)
 		}
 	}
+
+	annotations := deployment.Spec.Template.ObjectMeta.Annotations
+	sidecar, found := annotations[constants.PolicyServerOpenTelemetrySidecar]
 	if !found {
-		t.Fatalf("cound not find KUBEWARDEN_LOG_LEVEL env variable among %#v", container.Env)
+		t.Errorf("Couldn't find otel sidecar annotation")
 	}
-	if logEnvVar.Value != "debug" {
-		t.Fatalf("unexpected log level: %#v", logEnvVar.Value)
+	if sidecar != "kubewarden" {
+		t.Errorf("Wrong value for the otel sidecar: %s", sidecar)
 	}
+}
+
+func findEnvVar(key string, envVars []corev1.EnvVar) (string, bool) {
+	for _, env := range envVars {
+		if env.Name == key {
+			return env.Value, true
+		}
+	}
+
+	return "", false
 }

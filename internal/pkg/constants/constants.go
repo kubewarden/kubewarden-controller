@@ -17,7 +17,9 @@ const (
 	PolicyServerReplicaSize                = 1
 	PolicyServerReplicaSizeKey             = "replicas"
 	PolicyServerSecretName                 = "policy-server-certs"
-	PolicyServerLogLevel                   = "logLevel"
+	PolicyServerLogFormat                  = "KUBEWARDEN_LOG_FMT"
+	PolicyServerJaegerSidecar              = "sidecar.jaegertracing.io/inject"
+	PolicyServerOpenTelemetrySidecar       = "sidecar.opentelemetry.io/inject"
 
 	// PolicyServer Service
 	PolicyServerServiceName = "policy-server"
