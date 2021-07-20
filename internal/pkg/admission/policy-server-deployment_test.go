@@ -27,7 +27,8 @@ metadata:
 data:
   replicas: "4"
   image: registry.testing.org/policy-server:testing
-  logLevel: debug
+  KUBEWARDEN_LOG_LEVEL: debug
+  OTEL_EXPORTER_JAEGER_AGENT_HOST: localhost
 `
 	cfg, err := createConfigMapFromYaml(rawCfg)
 	if err != nil {
@@ -44,16 +45,22 @@ data:
 		t.Errorf("unexpected value for replicas: %v", settings.Replicas)
 	}
 
-	if len(settings.EnvVars) != 1 {
-		t.Errorf("unexpected number of entries inside of envVars: %v", len(settings.EnvVars))
+	expectedEnvVars := map[string]string{
+		"KUBEWARDEN_LOG_LEVEL":            "debug",
+		"OTEL_EXPORTER_JAEGER_AGENT_HOST": "localhost",
 	}
 
-	value, found := settings.EnvVars["KUBEWARDEN_LOG_LEVEL"]
-	if !found {
-		t.Errorf("did not find KUBEWARDEN_LOG_LEVEL")
-	}
-	if value != "debug" {
-		t.Errorf("unexpected log level: %v", settings.EnvVars["KUBEWARDEN_LOG_LEVEL"])
+	for expectedKey, expectedValue := range expectedEnvVars {
+		value, found := settings.EnvVars[expectedKey]
+		if !found {
+			t.Errorf("did not find %s", expectedKey)
+		}
+		if value != expectedValue {
+			t.Errorf("unexpected value for key %s, expected %s - got %s",
+				expectedKey,
+				expectedValue,
+				settings.EnvVars[expectedKey])
+		}
 	}
 }
 
@@ -66,7 +73,7 @@ metadata:
 data:
   replicas: "4"
   image: registry.testing.org/policy-server:testing
-  logLevel: debug
+  KUBEWARDEN_LOG_LEVEL: debug
 `
 	cfg, err := createConfigMapFromYaml(rawCfg)
 	if err != nil {

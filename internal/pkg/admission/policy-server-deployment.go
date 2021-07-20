@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -167,9 +168,20 @@ func policyServerDeploymentSettings(cfg *corev1.ConfigMap) PolicyServerDeploymen
 		settings.Image = buf
 	}
 
-	buf, found = cfg.Data[constants.PolicyServerLogLevel]
-	if found {
-		settings.EnvVars["KUBEWARDEN_LOG_LEVEL"] = buf
+	relevantEnvVarPrefixes := []string{
+		"KUBEWARDEN_", "OTEL_",
+	}
+	for k, v := range cfg.Data {
+		relevant := false
+		for _, prefix := range relevantEnvVarPrefixes {
+			if strings.HasPrefix(k, prefix) {
+				relevant = true
+				break
+			}
+		}
+		if relevant {
+			settings.EnvVars[k] = v
+		}
 	}
 
 	return settings
