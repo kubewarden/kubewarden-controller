@@ -21,12 +21,16 @@ import (
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
 func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context) error {
-	configMapVersion, err := r.policyServerConfigMapVersion(ctx)
+	cfg, err := r.policyServerConfigMapNotCached(ctx)
+	if err != nil {
+		return err
+	}
+	configMapVersion := cfg.GetResourceVersion()
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
 	}
 
-	err = r.Client.Create(ctx, r.deployment(ctx, configMapVersion))
+	err = r.Client.Create(ctx, r.deployment(ctx, cfg))
 	if err == nil {
 		return nil
 	}
@@ -142,36 +146,32 @@ type PolicyServerDeploymentSettings struct {
 	Image    string
 }
 
-func (r *Reconciler) policyServerDeploymentSettings(ctx context.Context) PolicyServerDeploymentSettings {
+func policyServerDeploymentSettings(cfg *corev1.ConfigMap) PolicyServerDeploymentSettings {
 	settings := PolicyServerDeploymentSettings{
 		Replicas: int32(constants.PolicyServerReplicaSize),
 		Image:    constants.PolicyServerImage,
 	}
 
-	cfg := &corev1.ConfigMap{}
-	if err := r.Client.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerConfigMapName,
-	}, cfg); err == nil {
-		buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
-		if found {
-			repSize, err := strconv.ParseInt(buf, 10, 32)
-			if err == nil {
-				settings.Replicas = int32(repSize)
-			}
+	buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
+	if found {
+		repSize, err := strconv.ParseInt(buf, 10, 32)
+		if err == nil {
+			settings.Replicas = int32(repSize)
 		}
+	}
 
-		buf, found = cfg.Data[constants.PolicyServerImageKey]
-		if found {
-			settings.Image = buf
-		}
+	buf, found = cfg.Data[constants.PolicyServerImageKey]
+	if found {
+		settings.Image = buf
+	}
+
 	}
 
 	return settings
 }
 
-func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *appsv1.Deployment {
-	settings := r.policyServerDeploymentSettings(ctx)
+func buildDeploymentFromConfigMap(namespace, serviceAccountName string, cfg *corev1.ConfigMap) *appsv1.Deployment {
+	settings := policyServerDeploymentSettings(cfg)
 
 	const (
 		certsVolumeName             = "certs"
@@ -180,6 +180,29 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 		policiesVolumeName          = "policies"
 		secretsContainerPath        = "/pki"
 	)
+
+	envVars := []corev1.EnvVar{
+		{
+			Name:  "KUBEWARDEN_CERT_FILE",
+			Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
+		},
+		{
+			Name:  "KUBEWARDEN_KEY_FILE",
+			Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSKey),
+		},
+		{
+			Name:  "KUBEWARDEN_PORT",
+			Value: fmt.Sprintf("%d", constants.PolicyServerPort),
+		},
+		{
+			Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
+			Value: "/tmp/",
+		},
+		{
+			Name:  "KUBEWARDEN_POLICIES",
+			Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
+		},
+	}
 
 	admissionContainer := corev1.Container{
 		Name:  constants.PolicyServerDeploymentName,
@@ -196,28 +219,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				MountPath: policiesConfigContainerPath,
 			},
 		},
-		Env: []corev1.EnvVar{
-			{
-				Name:  "KUBEWARDEN_CERT_FILE",
-				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
-			},
-			{
-				Name:  "KUBEWARDEN_KEY_FILE",
-				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSKey),
-			},
-			{
-				Name:  "KUBEWARDEN_PORT",
-				Value: fmt.Sprintf("%d", constants.PolicyServerPort),
-			},
-			{
-				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
-				Value: "/tmp/",
-			},
-			{
-				Name:  "KUBEWARDEN_POLICIES",
-				Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
-			},
-		},
+		Env: envVars,
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
@@ -230,13 +232,13 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 	}
 
 	templateAnnotations := map[string]string{
-		constants.PolicyServerDeploymentConfigAnnotation: configMapVersion,
+		constants.PolicyServerDeploymentConfigAnnotation: cfg.GetResourceVersion(),
 	}
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.PolicyServerDeploymentName,
-			Namespace: r.DeploymentsNamespace,
+			Namespace: namespace,
 			Labels:    constants.PolicyServerLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -254,7 +256,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				},
 				Spec: corev1.PodSpec{
 					Containers:         []corev1.Container{admissionContainer},
-					ServiceAccountName: r.DeploymentsServiceAccountName,
+					ServiceAccountName: serviceAccountName,
 					Volumes: []corev1.Volume{
 						{
 							Name: certsVolumeName,
@@ -285,4 +287,8 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 			},
 		},
 	}
+}
+
+func (r *Reconciler) deployment(ctx context.Context, cfg *corev1.ConfigMap) *appsv1.Deployment {
+	return buildDeploymentFromConfigMap(r.DeploymentsNamespace, r.DeploymentsServiceAccountName, cfg)
 }
