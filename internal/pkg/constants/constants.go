@@ -17,6 +17,7 @@ const (
 	PolicyServerReplicaSize                = 1
 	PolicyServerReplicaSizeKey             = "replicas"
 	PolicyServerSecretName                 = "policy-server-certs"
+	PolicyServerLogLevel                   = "logLevel"
 
 	// PolicyServer Service
 	PolicyServerServiceName = "policy-server"

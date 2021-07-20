@@ -144,12 +144,14 @@ func createPatch(configMapVersion string) []byte {
 type PolicyServerDeploymentSettings struct {
 	Replicas int32
 	Image    string
+	EnvVars  map[string]string
 }
 
 func policyServerDeploymentSettings(cfg *corev1.ConfigMap) PolicyServerDeploymentSettings {
 	settings := PolicyServerDeploymentSettings{
 		Replicas: int32(constants.PolicyServerReplicaSize),
 		Image:    constants.PolicyServerImage,
+		EnvVars:  make(map[string]string),
 	}
 
 	buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
@@ -165,6 +167,9 @@ func policyServerDeploymentSettings(cfg *corev1.ConfigMap) PolicyServerDeploymen
 		settings.Image = buf
 	}
 
+	buf, found = cfg.Data[constants.PolicyServerLogLevel]
+	if found {
+		settings.EnvVars["KUBEWARDEN_LOG_LEVEL"] = buf
 	}
 
 	return settings
@@ -202,6 +207,12 @@ func buildDeploymentFromConfigMap(namespace, serviceAccountName string, cfg *cor
 			Name:  "KUBEWARDEN_POLICIES",
 			Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
 		},
+	}
+	for k, v := range settings.EnvVars {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  k,
+			Value: v,
+		})
 	}
 
 	admissionContainer := corev1.Container{
