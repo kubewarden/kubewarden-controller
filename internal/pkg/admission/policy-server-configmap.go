@@ -195,7 +195,7 @@ func (r *Reconciler) removePolicyFromPolicyServerConfigMap(
 	return string(newPoliciesJSON), true, nil
 }
 
-func (r *Reconciler) policyServerConfigMapVersion(_ context.Context) (string, error) {
+func (r *Reconciler) policyServerConfigMapNotCached(ctx context.Context) (*corev1.ConfigMap, error) {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
 	u := &unstructured.Unstructured{}
@@ -203,14 +203,24 @@ func (r *Reconciler) policyServerConfigMapVersion(_ context.Context) (string, er
 		Kind:    "ConfigMap",
 		Version: "v1",
 	})
-	err := r.Client.Get(context.Background(), client.ObjectKey{
+	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
 		Name:      constants.PolicyServerConfigMapName,
 	}, u)
 
 	if err != nil {
-		return "", fmt.Errorf("cannot retrieve existing policies ConfigMap: %w", err)
+		if apierrors.IsNotFound(err) {
+			return &corev1.ConfigMap{}, nil
+		}
+		return nil, fmt.Errorf("cannot retrieve existing policies ConfigMap: %w", err)
 	}
 
-	return u.GetResourceVersion(), nil
+	cfg := &corev1.ConfigMap{}
+	contents := u.UnstructuredContent()
+	err = runtime.DefaultUnstructuredConverter.FromUnstructured(contents, &cfg)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get policy-server uncached ConfigMap: %w", err)
+	}
+
+	return cfg, nil
 }
