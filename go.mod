@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	cloud.google.com/go v0.60.0 // indirect
-	github.com/evanphx/json-patch/v5 v5.5.0
 	github.com/go-logr/logr v0.3.0
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
