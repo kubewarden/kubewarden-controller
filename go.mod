@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	cloud.google.com/go v0.60.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.5.0
 	github.com/go-logr/logr v0.3.0
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -12,7 +13,6 @@ require (
 	github.com/onsi/ginkgo v1.15.0
 	github.com/onsi/gomega v1.10.5
 	github.com/stretchr/testify v1.7.0 // indirect
-	go.etcd.io/etcd v3.3.25+incompatible // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/text v0.3.5 // indirect
 	golang.org/x/tools v0.1.2-0.20210512205948-8287d5da45e4 // indirect

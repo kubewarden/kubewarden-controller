@@ -1,9 +1,11 @@
 package admission
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -17,6 +19,17 @@ func createConfigMapFromYaml(yaml string) (*corev1.ConfigMap, error) {
 	}
 
 	return obj.(*corev1.ConfigMap), nil
+}
+
+func createDeploymentFromYaml(yaml string) (*appsv1.Deployment, error) {
+	decode := scheme.Codecs.UniversalDeserializer().Decode
+
+	obj, _, err := decode([]byte(yaml), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return obj.(*appsv1.Deployment), nil
 }
 
 func TestPolicyServerDeploymentSettings(t *testing.T) {
@@ -150,4 +163,104 @@ func findEnvVar(key string, envVars []corev1.EnvVar) (string, bool) {
 	}
 
 	return "", false
+}
+
+func TestBuildDeploymentPatch(t *testing.T) {
+	rawCfg := `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: policy-server
+  resourceVersion: "1928"
+data:
+  replicas: "4"
+  image: registry.testing.org/policy-server:testing
+  KUBEWARDEN_LOG_LEVEL: debug
+  sidecar.opentelemetry.io/inject: kubewarden
+`
+	cfg, err := createConfigMapFromYaml(rawCfg)
+	if err != nil {
+		t.Errorf("unexpected error creating the ConfigMap: %v", err)
+	}
+
+	rawDeployment := `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: kubewarden-policy-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubewarden-policy-server
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        config/version: "1761"
+        kubectl.kubernetes.io/restartedAt: "2021-07-21T09:00:01+02:00"
+      labels:
+        app: kubewarden-policy-server
+    spec:
+      containers:
+      - env:
+        - name: KUBEWARDEN_CERT_FILE
+          value: /pki/policy-server-cert
+        - name: KUBEWARDEN_KEY_FILE
+          value: /pki/policy-server-key
+        - name: KUBEWARDEN_PORT
+          value: "8443"
+        - name: KUBEWARDEN_POLICIES_DOWNLOAD_DIR
+          value: /tmp/
+        - name: KUBEWARDEN_POLICIES
+          value: /config/policies.yml
+        image: ghcr.io/kubewarden/policy-server:latest
+        name: policy-server
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readiness
+            port: 8443
+            scheme: HTTPS
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /pki
+          name: certs
+          readOnly: true
+        - mountPath: /config
+          name: policies
+          readOnly: true
+      serviceAccount: default
+      serviceAccountName: default
+      volumes:
+      - name: certs
+        secret:
+          defaultMode: 420
+          secretName: policy-server-certs
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: policies.yml
+            path: policies.yml
+          name: policy-server
+        name: policies
+`
+
+	deployment, err := createDeploymentFromYaml(rawDeployment)
+	if err != nil {
+		t.Errorf("unexpected error creating the Deployment: %v", err)
+	}
+
+	patch, err := createPatch(deployment, cfg)
+	if err != nil {
+		t.Errorf("unexpected error creating the patch: %v", err)
+	}
+	fmt.Printf("PATCH IS: %s\n", string(patch))
 }

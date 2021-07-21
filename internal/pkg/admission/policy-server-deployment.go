@@ -1,6 +1,7 @@
 package admission
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"path/filepath"
@@ -8,15 +9,26 @@ import (
 	"strings"
 	"time"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+)
+
+const (
+	certsVolumeName             = "certs"
+	policiesConfigContainerPath = "/config"
+	policiesFilename            = "policies.yml"
+	policiesVolumeName          = "policies"
+	secretsContainerPath        = "/pki"
 )
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
@@ -26,7 +38,6 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context) error 
 	if err != nil {
 		return err
 	}
-	configMapVersion := cfg.GetResourceVersion()
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
 	}
@@ -39,7 +50,7 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context) error 
 		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
 	}
 
-	return r.updatePolicyServerDeployment(ctx, configMapVersion)
+	return r.updatePolicyServerDeployment(ctx, cfg)
 }
 
 // isPolicyServerReady returns true when the PolicyServer deployment is running only
@@ -98,7 +109,7 @@ func getProgressingDeploymentCondition(status appsv1.DeploymentStatus) *appsv1.D
 	return nil
 }
 
-func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMapVersion string) error {
+func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, cfg *corev1.ConfigMap) error {
 	deployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
@@ -110,9 +121,13 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMap
 
 	//nolint
 	currentConfigVersion, found := deployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation]
-	if !found || currentConfigVersion != configMapVersion {
+	if !found || currentConfigVersion != cfg.GetResourceVersion() {
 		// the current deployment is using an older version of the configuration
-		patch := createPatch(configMapVersion)
+		patch, err := createPatch(deployment, cfg)
+		if err != nil {
+			return fmt.Errorf("cannot create patch for policy-server Deployment: %w", err)
+		}
+		fmt.Printf("GOT THIS PATCH: %s\n", string(patch))
 		err = r.Client.Patch(ctx, deployment, client.RawPatch(types.StrategicMergePatchType, patch))
 		if err != nil {
 			return fmt.Errorf("cannot patch policy-server Deployment: %w", err)
@@ -122,24 +137,85 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMap
 	return nil
 }
 
-func createPatch(configMapVersion string) []byte {
-	patch := fmt.Sprintf(`
-{
-	"apiVersion": "apps/v1",
-	"kind": "Deployment",
-	"spec": {
-		"template": {
-			"metadata": {
-				"annotations": {
-					"kubectl.kubernetes.io/restartedAt": "%s",
-					"%s": "%s"
-				}
-			}
+func createPatch(deployment *appsv1.Deployment, cfg *corev1.ConfigMap) ([]byte, error) {
+	settings := policyServerDeploymentSettings(cfg)
+	targetDeployment := deployment.DeepCopy()
+
+	// Change the policy-server container
+	found := false
+	for i := 0; i < len(targetDeployment.Spec.Template.Spec.Containers); i++ {
+		c := targetDeployment.Spec.Template.Spec.Containers[i]
+		if c.Name == constants.PolicyServerDeploymentName {
+			found = true
+
+			// ensure env vars are the ones defined in the ConfigMap
+			c.Env = buildDeploymentPolicyServerContainerEnvVars(settings)
+
+			// ensure the image to be used is the defined in the ConfigMap
+			c.Image = settings.Image
+
+			targetDeployment.Spec.Template.Spec.Containers[i] = c
+			break
 		}
 	}
-}`, time.Now().Format(time.RFC3339),
-		constants.PolicyServerDeploymentConfigAnnotation, configMapVersion)
-	return []byte(patch)
+	if !found {
+		return []byte{},
+			fmt.Errorf("Cannot find %s container inside of policy-server Deployment",
+				constants.PolicyServerDeploymentName)
+	}
+
+	// Update deployment.spec.template.metadata.annotations
+	for k, v := range settings.Annotations {
+		targetDeployment.Spec.Template.ObjectMeta.Annotations[k] = v
+	}
+	targetDeployment.Spec.Template.ObjectMeta.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
+	targetDeployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation] = cfg.GetResourceVersion()
+
+	// Set the number of replicas
+	targetDeployment.Spec.Replicas = &settings.Replicas
+
+	var buff bytes.Buffer
+
+	s := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
+		json.SerializerOptions{Yaml: false, Pretty: false, Strict: false})
+
+	if err := s.Encode(deployment, &buff); err != nil {
+		return []byte{}, fmt.Errorf("Error marshalling current deployment: %w", err)
+	}
+	original := buff.Bytes()
+
+	buff.Reset()
+	if err := s.Encode(targetDeployment, &buff); err != nil {
+		return []byte{}, fmt.Errorf("Error marshalling target deployment: %w", err)
+	}
+	target := buff.Bytes()
+
+	fmt.Printf("ori: %s\n", string(original))
+	fmt.Printf("target: %s\n", string(target))
+
+	patch, err := jsonpatch.CreateMergePatch(original, target)
+	if err != nil {
+		return []byte{}, fmt.Errorf("error while building patch %w", err)
+	}
+	return patch, nil
+
+	//  patch := fmt.Sprintf(`
+	//{
+	//  "apiVersion": "apps/v1",
+	//  "kind": "Deployment",
+	//  "spec": {
+	//    "template": {
+	//      "metadata": {
+	//        "annotations": {
+	//          "kubectl.kubernetes.io/restartedAt": "%s",
+	//          "%s": "%s"
+	//        }
+	//      }
+	//    }
+	//  }
+	//}`, time.Now().Format(time.RFC3339),
+	//    constants.PolicyServerDeploymentConfigAnnotation, cfg.GetResourceVersion())
+	//  return []byte(patch)
 }
 
 type PolicyServerDeploymentSettings struct {
@@ -205,43 +281,6 @@ func policyServerDeploymentSettings(cfg *corev1.ConfigMap) PolicyServerDeploymen
 func buildDeploymentFromConfigMap(namespace, serviceAccountName string, cfg *corev1.ConfigMap) *appsv1.Deployment {
 	settings := policyServerDeploymentSettings(cfg)
 
-	const (
-		certsVolumeName             = "certs"
-		policiesConfigContainerPath = "/config"
-		policiesFilename            = "policies.yml"
-		policiesVolumeName          = "policies"
-		secretsContainerPath        = "/pki"
-	)
-
-	envVars := []corev1.EnvVar{
-		{
-			Name:  "KUBEWARDEN_CERT_FILE",
-			Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
-		},
-		{
-			Name:  "KUBEWARDEN_KEY_FILE",
-			Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSKey),
-		},
-		{
-			Name:  "KUBEWARDEN_PORT",
-			Value: fmt.Sprintf("%d", constants.PolicyServerPort),
-		},
-		{
-			Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
-			Value: "/tmp/",
-		},
-		{
-			Name:  "KUBEWARDEN_POLICIES",
-			Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
-		},
-	}
-	for k, v := range settings.EnvVars {
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  k,
-			Value: v,
-		})
-	}
-
 	admissionContainer := corev1.Container{
 		Name:  constants.PolicyServerDeploymentName,
 		Image: settings.Image,
@@ -257,7 +296,7 @@ func buildDeploymentFromConfigMap(namespace, serviceAccountName string, cfg *cor
 				MountPath: policiesConfigContainerPath,
 			},
 		},
-		Env: envVars,
+		Env: buildDeploymentPolicyServerContainerEnvVars(settings),
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
@@ -328,6 +367,39 @@ func buildDeploymentFromConfigMap(namespace, serviceAccountName string, cfg *cor
 			},
 		},
 	}
+}
+
+func buildDeploymentPolicyServerContainerEnvVars(settings PolicyServerDeploymentSettings) []corev1.EnvVar {
+	envVars := []corev1.EnvVar{
+		{
+			Name:  "KUBEWARDEN_CERT_FILE",
+			Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
+		},
+		{
+			Name:  "KUBEWARDEN_KEY_FILE",
+			Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSKey),
+		},
+		{
+			Name:  "KUBEWARDEN_PORT",
+			Value: fmt.Sprintf("%d", constants.PolicyServerPort),
+		},
+		{
+			Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
+			Value: "/tmp/",
+		},
+		{
+			Name:  "KUBEWARDEN_POLICIES",
+			Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
+		},
+	}
+	for k, v := range settings.EnvVars {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  k,
+			Value: v,
+		})
+	}
+
+	return envVars
 }
 
 func (r *Reconciler) deployment(ctx context.Context, cfg *corev1.ConfigMap) *appsv1.Deployment {
