@@ -1,23 +1,17 @@
 package admission
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
-	jsonpatch "github.com/evanphx/json-patch/v5"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
@@ -123,99 +117,15 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, cfg *core
 	currentConfigVersion, found := deployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation]
 	if !found || currentConfigVersion != cfg.GetResourceVersion() {
 		// the current deployment is using an older version of the configuration
-		patch, err := createPatch(deployment, cfg)
-		if err != nil {
-			return fmt.Errorf("cannot create patch for policy-server Deployment: %w", err)
-		}
-		fmt.Printf("GOT THIS PATCH: %s\n", string(patch))
-		err = r.Client.Patch(ctx, deployment, client.RawPatch(types.StrategicMergePatchType, patch))
-		if err != nil {
-			return fmt.Errorf("cannot patch policy-server Deployment: %w", err)
-		}
-		r.Log.Info("deployment patched")
+
+		currentDeploymentVersion := deployment.GetResourceVersion()
+		newDeployment := buildDeploymentFromConfigMap(r.DeploymentsNamespace, r.DeploymentsServiceAccountName, cfg)
+		newDeployment.SetResourceVersion(currentDeploymentVersion)
+		r.Log.Info("deployment updated")
+
+		return r.Client.Update(ctx, newDeployment)
 	}
 	return nil
-}
-
-func createPatch(deployment *appsv1.Deployment, cfg *corev1.ConfigMap) ([]byte, error) {
-	settings := policyServerDeploymentSettings(cfg)
-	targetDeployment := deployment.DeepCopy()
-
-	// Change the policy-server container
-	found := false
-	for i := 0; i < len(targetDeployment.Spec.Template.Spec.Containers); i++ {
-		c := targetDeployment.Spec.Template.Spec.Containers[i]
-		if c.Name == constants.PolicyServerDeploymentName {
-			found = true
-
-			// ensure env vars are the ones defined in the ConfigMap
-			c.Env = buildDeploymentPolicyServerContainerEnvVars(settings)
-
-			// ensure the image to be used is the defined in the ConfigMap
-			c.Image = settings.Image
-
-			targetDeployment.Spec.Template.Spec.Containers[i] = c
-			break
-		}
-	}
-	if !found {
-		return []byte{},
-			fmt.Errorf("Cannot find %s container inside of policy-server Deployment",
-				constants.PolicyServerDeploymentName)
-	}
-
-	// Update deployment.spec.template.metadata.annotations
-	for k, v := range settings.Annotations {
-		targetDeployment.Spec.Template.ObjectMeta.Annotations[k] = v
-	}
-	targetDeployment.Spec.Template.ObjectMeta.Annotations["kubectl.kubernetes.io/restartedAt"] = time.Now().Format(time.RFC3339)
-	targetDeployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation] = cfg.GetResourceVersion()
-
-	// Set the number of replicas
-	targetDeployment.Spec.Replicas = &settings.Replicas
-
-	var buff bytes.Buffer
-
-	s := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
-		json.SerializerOptions{Yaml: false, Pretty: false, Strict: false})
-
-	if err := s.Encode(deployment, &buff); err != nil {
-		return []byte{}, fmt.Errorf("Error marshalling current deployment: %w", err)
-	}
-	original := buff.Bytes()
-
-	buff.Reset()
-	if err := s.Encode(targetDeployment, &buff); err != nil {
-		return []byte{}, fmt.Errorf("Error marshalling target deployment: %w", err)
-	}
-	target := buff.Bytes()
-
-	fmt.Printf("ori: %s\n", string(original))
-	fmt.Printf("target: %s\n", string(target))
-
-	patch, err := jsonpatch.CreateMergePatch(original, target)
-	if err != nil {
-		return []byte{}, fmt.Errorf("error while building patch %w", err)
-	}
-	return patch, nil
-
-	//  patch := fmt.Sprintf(`
-	//{
-	//  "apiVersion": "apps/v1",
-	//  "kind": "Deployment",
-	//  "spec": {
-	//    "template": {
-	//      "metadata": {
-	//        "annotations": {
-	//          "kubectl.kubernetes.io/restartedAt": "%s",
-	//          "%s": "%s"
-	//        }
-	//      }
-	//    }
-	//  }
-	//}`, time.Now().Format(time.RFC3339),
-	//    constants.PolicyServerDeploymentConfigAnnotation, cfg.GetResourceVersion())
-	//  return []byte(patch)
 }
 
 type PolicyServerDeploymentSettings struct {
