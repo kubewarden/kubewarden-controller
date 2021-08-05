@@ -368,7 +368,7 @@ create the certificates used by the Policy Server instances.
 Right now, to develop the controller, we just run `make run` and that's it.
 
 If we bring the webhook endpoint back, the local development might become more cumbersome.
-This needs more research, but it's not a blocking point IMHO.
+This needs more research, but it's not a blocking point.
 
 # Alternatives
 [alternatives]: #alternatives
