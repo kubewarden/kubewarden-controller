@@ -156,7 +156,7 @@ spec:
 The `PolicyServer` CR will be a cluster-wide resource. Take makes each
 `PolicyServer` resource identifiable by its unique `name`.
 
-The `ClusterAdmissionPolicy` CR will be extended to have a new attribute: `policy_server`:
+The `ClusterAdmissionPolicy` CR will be extended to have a new attribute: `policyServer`:
 
 ```yaml
 apiVersion: policies.kubewarden.io/v1alpha2
@@ -179,9 +179,9 @@ spec:
     - CHOWN
 ```
 
-The `policy_server` name identifies an existing PolicyServer object. The policy will
+The `policyServer` name identifies an existing PolicyServer object. The policy will
 be served only by this PolicyServer instance.
-A `ClusterAdmissionPolicy` that doesn't have an explicit `policy_server`, will
+A `ClusterAdmissionPolicy` that doesn't have an explicit `policyServer`, will
 be served by the `default` one.
 
 
@@ -257,7 +257,7 @@ This will perform the following operations:
 
   * `ClusterAdmissionPolicy`:
     - Set our finalizer
-    - When the user specifies a value for the `policy_server` attribute, ensure
+    - When the user specifies a value for the `policyServer` attribute, ensure
       there's actually a `PolicyServer` object with that name.
   * `PolicyServer`:
     - Set our finalizer
