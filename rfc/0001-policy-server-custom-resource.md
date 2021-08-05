@@ -386,10 +386,16 @@ By doing that we will have one single place where we can maintain all the Policy
 configurations: the helm chart. Doing changes to the helm chart is definitely faster
 than writing code inside of the controller.
 
-This will potentially solve the 1st problem we have: provide a nice UX to configure
+This will potentially solve the 1st problem we have: provide a familiar UX to configure
 Policy Server, plus it would reduce the maintenance efforts on our side.
 
-This wouldn't however solve the scalability and resiliency problems of Policy Server.
+Note well: changing the configuration of Kubewarden would require to update the helm
+chart release with a new set of configuration values. While this is something familiar
+to Kubernetes users, the design illustrated inside of the RFC would provide a
+better experience.
+
+More important, this alternative design wouldn't solve the scalability and
+resiliency problems of Policy Server.
 
 Last but not least, from past experience (Cloud Foundry work at SUSE, other community
 projects), moving things on helm is tempting (you can go faster), but over a certain
