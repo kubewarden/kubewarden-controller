@@ -164,7 +164,7 @@ kind: ClusterAdmissionPolicy
 metadata:
   name: psp-capabilities
 spec:
-  policy_server: reserved-instance-for-tenant-a
+  policyServer: reserved-instance-for-tenant-a
   module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.3
   rules:
     - apiGroups: [""]
@@ -412,4 +412,3 @@ On the other hand, we are about to start working on a Rancher integration. We sh
 the UI on a solid foundation. Which translates to: if we build the UI to manage the
 Custom Resources defined inside of this proposal we will have a something future proof. Instead,
 if we design on the current architecture we might have to change **also** the external UI code!
-
