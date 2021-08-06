@@ -241,12 +241,18 @@ Deletion of a `PolicyServer`:
 
   * Thanks to the finalizer, the `PolicyServer` resource is not yet deleted
     from etcd.
-  * Go through all the policies that are owned by the `PolicyServer` instance,
-    for each one of them:
-    * Delete the `ValidatingWebhookConfiguration` or the `MutatingWebhookConfiguration`
-      resource associated with the policy
-    * Delete the `ClusterAdmissionPolicy` from etcd.
-  * Delete the `PolicyServer` object from etcd
+  * Ensure these operations take place. Note well: the order of execution
+    matters
+    * For each policy owned by the `PolicyServer` instance:
+      - Delete the `ValidatingWebhookConfiguration` or the `MutatingWebhookConfiguration`
+        resource associated with the policy
+      - Delete the `ClusterAdmissionPolicy` from etcd
+    * Delete the `PolicyServer` object from etcd
+
+We have to research whether this can be done by the Kubernetes Garbage Collector
+by setting the [owner references](https://kubernetes.io/blog/2021/05/14/using-finalizers-to-control-deletion/#owner-references)
+or whether this has to be handled by us to ensure the right ordering takes place.
+
 
 ## Validation and mutation of our own Custom Resources
 
