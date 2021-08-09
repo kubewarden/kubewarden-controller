@@ -385,7 +385,7 @@ impl Evaluator {
             .map(|v| String::from(*v))
             .collect();
         Ok(used_builtins
-            .difference(&&supported_builtins)
+            .difference(&supported_builtins)
             .cloned()
             .collect())
     }
@@ -427,14 +427,14 @@ impl Evaluator {
             data = serde_json::to_string(&data)?.as_str(),
             "setting policy data"
         );
-        self.policy.set_data(&mut self.store, &self.memory, &data)?;
+        self.policy.set_data(&mut self.store, &self.memory, data)?;
 
         debug!(
             input = serde_json::to_string(&input)?.as_str(),
             "attempting evaluation"
         );
         self.policy
-            .evaluate(entrypoint_id, &mut self.store, &self.memory, &input)
+            .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
             .map_err(|e| anyhow!("Cannot convert evaluation result back to JSON: {:?}", e))
     }
 }

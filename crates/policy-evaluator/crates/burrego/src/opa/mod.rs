@@ -172,7 +172,7 @@ impl Policy {
         policy.data_addr =
             policy
                 .stack_helper
-                .push_json(store.as_context_mut(), &memory, &initial_data)?;
+                .push_json(store.as_context_mut(), memory, &initial_data)?;
         policy.base_heap_ptr = policy
             .opa_heap_ptr_get_fn
             .call(store.as_context_mut(), ())?;
@@ -189,7 +189,7 @@ impl Policy {
         let addr = self.builtins_fn.call(store.as_context_mut(), ())?;
         let builtins: HashMap<String, i64> = self
             .stack_helper
-            .pull_json(store.as_context_mut(), &memory, addr)?
+            .pull_json(store.as_context_mut(), memory, addr)?
             .as_object()
             .ok_or_else(|| anyhow!("OPA builtins didn't return a dictionary"))?
             .iter()
@@ -208,7 +208,7 @@ impl Policy {
         memory: &Memory,
     ) -> Result<HashMap<i64, String>> {
         Ok(self
-            .builtins(store.as_context_mut(), &memory)?
+            .builtins(store.as_context_mut(), memory)?
             .iter()
             .map(|(k, v)| (*v, k.clone()))
             .collect())
@@ -222,7 +222,7 @@ impl Policy {
         let addr = self.entrypoints_fn.call(store.as_context_mut(), ())?;
         let res = self
             .stack_helper
-            .pull_json(store.as_context_mut(), &memory, addr)?
+            .pull_json(store.as_context_mut(), memory, addr)?
             .as_object()
             .ok_or_else(|| anyhow!("OPA entrypoints didn't return a dictionary"))?
             .iter()
@@ -245,7 +245,7 @@ impl Policy {
             .call(store.as_context_mut(), self.base_heap_ptr)?;
         self.data_addr = self
             .stack_helper
-            .push_json(store.as_context_mut(), &memory, data)?;
+            .push_json(store.as_context_mut(), memory, data)?;
         self.data_heap_ptr = self.opa_heap_ptr_get_fn.call(store.as_context_mut(), ())?;
 
         Ok(())
@@ -265,7 +265,7 @@ impl Policy {
         // Load the input data
         let input_addr = self
             .stack_helper
-            .push_json(store.as_context_mut(), &memory, input)?;
+            .push_json(store.as_context_mut(), memory, input)?;
 
         // Setup the evaluation context
         let ctx_addr = self.opa_eval_ctx_new_fn.call(store.as_context_mut(), ())?;
@@ -285,6 +285,6 @@ impl Policy {
             .call(store.as_context_mut(), ctx_addr)?;
 
         self.stack_helper
-            .pull_json(store.as_context_mut(), &memory, res_addr)
+            .pull_json(store.as_context_mut(), memory, res_addr)
     }
 }
