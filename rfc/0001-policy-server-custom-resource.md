@@ -3,7 +3,7 @@
 | Feature Name | policy-server custom resource    |
 | Start Date   | Jul 22nd 2021                    |
 | Category     | Architecture                     |
-| RFC PR       | [fill this in after opening PR]  |
+| RFC PR       | [PR46](https://github.com/kubewarden/kubewarden-controller/pull/46)  |
 
 # Summary
 [summary]: #summary
@@ -72,9 +72,9 @@ This RFC aims to solve both problems.
 The proposed solution is to:
 
   * Introduce a new Custom Resource Definition describing a PolicyServer deployment
-  * Create a parent-child relationship between a PolicyServer CR and the ClusterAdmissionPolicies
-    CR: one PolicyServer can have many ClusterAdmissionPolicies; a ClusterAdmissionPolicy
-    belongs to one PolicyServer.
+  * Bind the ClusterAdmissionPolicies CR to the PolicyServer CR: one PolicyServer
+    can own many ClusterAdmissionPolicies; a ClusterAdmissionPolicy
+    is bound to one PolicyServer.
 
 By creating a PolicyServer object we can move all the configuration details of the
 Policy Server Deployment in a nicely structured place. Providing to the end
@@ -368,6 +368,12 @@ Maybe we can extend our helm chart to have these configuration knobs:
 However, if we introduce the cert-manager dependency, we could also leverage that to
 create the certificates used by the Policy Server instances.
 
+Finally, we could also avoid the usage of cert-manager by having the Kubewarden controller
+generate its own CA authority and secrets. This is similar to what we are
+currently doing.
+
+The right approach needs more discussion, but this can be done after this RFC
+is approved.
 
 ## Kubewarden controller developer experience
 
