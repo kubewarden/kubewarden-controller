@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	policiesv1alpha3 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha3"
 	policiescontrollers "github.com/kubewarden/kubewarden-controller/controllers/policies"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	//+kubebuilder:scaffold:imports
@@ -46,6 +47,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(policiesv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(policiesv1alpha3.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -103,6 +105,13 @@ func main() {
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
+		os.Exit(1)
+	}
+	if err = (&policiescontrollers.PolicyServerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

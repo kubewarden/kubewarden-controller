@@ -1,0 +1,20 @@
+# permissions for end users to view policyservers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: policyserver-viewer-role
+rules:
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - policyservers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - policyservers/status
+  verbs:
+  - get
