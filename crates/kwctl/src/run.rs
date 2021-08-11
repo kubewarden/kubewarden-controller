@@ -3,7 +3,7 @@ use kube::Client;
 use policy_evaluator::{
     cluster_context::ClusterContext,
     constants::*,
-    policy_evaluator::{PolicyEvaluator, ValidateRequest},
+    policy_evaluator::{PolicyEvaluator, PolicyExecutionMode, ValidateRequest},
     policy_metadata::Metadata,
 };
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
@@ -46,10 +46,11 @@ pub(crate) async fn pull_and_run(
     }
     let policy_id = read_policy_title_from_metadata(metadata).unwrap_or_else(|| uri.clone());
 
-    let request = serde_json::from_str::<serde_json::Value>(&request)?;
-    let policy_evaluator = PolicyEvaluator::from_file(
+    let request = serde_json::from_str::<serde_json::Value>(request)?;
+    let mut policy_evaluator = PolicyEvaluator::from_file(
         policy_id,
         policy_path,
+        PolicyExecutionMode::KubewardenWapc,
         settings.map_or(Ok(None), |settings| {
             if settings.is_empty() {
                 Ok(None)
