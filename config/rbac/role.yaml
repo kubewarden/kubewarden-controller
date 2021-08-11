@@ -32,3 +32,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - policyservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - policyservers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - policyservers/status
+  verbs:
+  - get
+  - patch
+  - update
