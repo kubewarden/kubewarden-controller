@@ -16,10 +16,74 @@ use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::validation_response::ValidationResponse;
 
+#[derive(Clone, PartialEq)]
 pub enum PolicyExecutionMode {
     KubewardenWapc,
     Opa,
     OpaGatekeeper,
+}
+
+impl serde::ser::Serialize for PolicyExecutionMode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        let mode = match self {
+            PolicyExecutionMode::KubewardenWapc => "kubewarden",
+            PolicyExecutionMode::Opa => "opa",
+            PolicyExecutionMode::OpaGatekeeper => "gatekeeper",
+        };
+        serializer.serialize_str(mode)
+    }
+}
+
+struct StringVisitor;
+
+impl<'de> serde::de::Visitor<'de> for StringVisitor {
+    type Value = String;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "a string")
+    }
+
+    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(s.to_owned())
+    }
+}
+
+impl<'de> serde::de::Deserialize<'de> for PolicyExecutionMode {
+    fn deserialize<D>(deserializer: D) -> Result<PolicyExecutionMode, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let mode = deserializer.deserialize_str(StringVisitor)?;
+        match mode.as_str() {
+            "kubewarden" => Ok(PolicyExecutionMode::KubewardenWapc),
+            "opa" => Ok(PolicyExecutionMode::Opa),
+            "gatekeeper" => Ok(PolicyExecutionMode::OpaGatekeeper),
+            _ => Err(serde::de::Error::custom(format!(
+                "{} is not a valid execution mode",
+                mode
+            ))),
+        }
+    }
+}
+
+impl fmt::Debug for PolicyExecutionMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mode = match self {
+            PolicyExecutionMode::KubewardenWapc => "kubewarden",
+            PolicyExecutionMode::Opa => "opa",
+            PolicyExecutionMode::OpaGatekeeper => "gatekeeper",
+        };
+
+        f.debug_struct("PolicyExecutionMode")
+            .field("mode", &mode)
+            .finish()
+    }
 }
 
 lazy_static! {
@@ -412,5 +476,56 @@ mod tests {
         assert_eq!(policy_mapping[&policy_id], policy);
 
         Ok(())
+    }
+
+    #[test]
+    fn serialize_policy_execution_mode() {
+        let mut test_data: HashMap<String, PolicyExecutionMode> = HashMap::new();
+        test_data.insert(
+            serde_json::to_string(&json!("kubewarden")).unwrap(),
+            PolicyExecutionMode::KubewardenWapc,
+        );
+        test_data.insert(
+            serde_json::to_string(&json!("opa")).unwrap(),
+            PolicyExecutionMode::Opa,
+        );
+        test_data.insert(
+            serde_json::to_string(&json!("gatekeeper")).unwrap(),
+            PolicyExecutionMode::OpaGatekeeper,
+        );
+
+        for (expected, mode) in &test_data {
+            let actual = serde_json::to_string(&mode);
+            assert!(actual.is_ok());
+            assert_eq!(expected, &actual.unwrap());
+        }
+    }
+
+    #[test]
+    fn deserialize_policy_execution_mode() {
+        let mut test_data: HashMap<String, PolicyExecutionMode> = HashMap::new();
+        test_data.insert(
+            serde_json::to_string(&json!("kubewarden")).unwrap(),
+            PolicyExecutionMode::KubewardenWapc,
+        );
+        test_data.insert(
+            serde_json::to_string(&json!("opa")).unwrap(),
+            PolicyExecutionMode::Opa,
+        );
+        test_data.insert(
+            serde_json::to_string(&json!("gatekeeper")).unwrap(),
+            PolicyExecutionMode::OpaGatekeeper,
+        );
+
+        for (mode_str, expected) in &test_data {
+            let actual: std::result::Result<PolicyExecutionMode, serde_json::Error> =
+                serde_json::from_str(&mode_str);
+            assert_eq!(expected, &actual.unwrap());
+        }
+
+        // an unknown policy mode should not be deserializable
+        let actual: std::result::Result<PolicyExecutionMode, serde_json::Error> =
+            serde_json::from_str("hello world");
+        assert!(actual.is_err());
     }
 }
