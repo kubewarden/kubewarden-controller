@@ -6,6 +6,8 @@ use std::path::Path;
 use validator::{Validate, ValidationError};
 use wasmparser::{Parser, Payload};
 
+use crate::policy_evaluator::PolicyExecutionMode;
+
 #[derive(Deserialize, Serialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Operation {
     #[serde(rename = "CREATE")]
@@ -128,6 +130,7 @@ pub struct Metadata {
     pub mutating: bool,
     #[serde(default)]
     pub context_aware: bool,
+    pub execution_mode: PolicyExecutionMode,
 }
 
 impl Default for Metadata {
@@ -138,6 +141,7 @@ impl Default for Metadata {
             annotations: Some(HashMap::new()),
             mutating: false,
             context_aware: false,
+            execution_mode: PolicyExecutionMode::KubewardenWapc,
         }
     }
 }
@@ -273,6 +277,7 @@ mod tests {
             "rules": [ ],
             "mutating": false,
             "contextAware": false,
+            "executionMode": "kubewarden",
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -318,6 +323,7 @@ mod tests {
             },
             "mutating": false,
             "contextAware": false,
+            "executionMode": "kubewarden",
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
