@@ -277,7 +277,7 @@ mod tests {
             "rules": [ ],
             "mutating": false,
             "contextAware": false,
-            "executionMode": "kubewarden",
+            "executionMode": "kubewarden-wapc",
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -323,7 +323,7 @@ mod tests {
             },
             "mutating": false,
             "contextAware": false,
-            "executionMode": "kubewarden",
+            "executionMode": "kubewarden-wapc",
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();

@@ -16,74 +16,14 @@ use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::validation_response::ValidationResponse;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, serde::Deserialize, serde::Serialize, Debug)]
 pub enum PolicyExecutionMode {
+    #[serde(rename = "kubewarden-wapc")]
     KubewardenWapc,
+    #[serde(rename = "opa")]
     Opa,
+    #[serde(rename = "gatekeeper")]
     OpaGatekeeper,
-}
-
-impl serde::ser::Serialize for PolicyExecutionMode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        let mode = match self {
-            PolicyExecutionMode::KubewardenWapc => "kubewarden",
-            PolicyExecutionMode::Opa => "opa",
-            PolicyExecutionMode::OpaGatekeeper => "gatekeeper",
-        };
-        serializer.serialize_str(mode)
-    }
-}
-
-struct StringVisitor;
-
-impl<'de> serde::de::Visitor<'de> for StringVisitor {
-    type Value = String;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "a string")
-    }
-
-    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-    where
-        E: serde::de::Error,
-    {
-        Ok(s.to_owned())
-    }
-}
-
-impl<'de> serde::de::Deserialize<'de> for PolicyExecutionMode {
-    fn deserialize<D>(deserializer: D) -> Result<PolicyExecutionMode, D::Error>
-    where
-        D: serde::de::Deserializer<'de>,
-    {
-        let mode = deserializer.deserialize_str(StringVisitor)?;
-        match mode.as_str() {
-            "kubewarden" => Ok(PolicyExecutionMode::KubewardenWapc),
-            "opa" => Ok(PolicyExecutionMode::Opa),
-            "gatekeeper" => Ok(PolicyExecutionMode::OpaGatekeeper),
-            _ => Err(serde::de::Error::custom(format!(
-                "{} is not a valid execution mode",
-                mode
-            ))),
-        }
-    }
-}
-
-impl fmt::Debug for PolicyExecutionMode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mode = match self {
-            PolicyExecutionMode::KubewardenWapc => "kubewarden",
-            PolicyExecutionMode::Opa => "opa",
-            PolicyExecutionMode::OpaGatekeeper => "gatekeeper",
-        };
-
-        f.debug_struct("PolicyExecutionMode")
-            .field("mode", &mode)
-            .finish()
-    }
 }
 
 lazy_static! {
@@ -482,7 +422,7 @@ mod tests {
     fn serialize_policy_execution_mode() {
         let mut test_data: HashMap<String, PolicyExecutionMode> = HashMap::new();
         test_data.insert(
-            serde_json::to_string(&json!("kubewarden")).unwrap(),
+            serde_json::to_string(&json!("kubewarden-wapc")).unwrap(),
             PolicyExecutionMode::KubewardenWapc,
         );
         test_data.insert(
@@ -505,7 +445,7 @@ mod tests {
     fn deserialize_policy_execution_mode() {
         let mut test_data: HashMap<String, PolicyExecutionMode> = HashMap::new();
         test_data.insert(
-            serde_json::to_string(&json!("kubewarden")).unwrap(),
+            serde_json::to_string(&json!("kubewarden-wapc")).unwrap(),
             PolicyExecutionMode::KubewardenWapc,
         );
         test_data.insert(
