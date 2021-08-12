@@ -26,6 +26,12 @@ pub enum PolicyExecutionMode {
     OpaGatekeeper,
 }
 
+impl Default for PolicyExecutionMode {
+    fn default() -> Self {
+        PolicyExecutionMode::KubewardenWapc
+    }
+}
+
 lazy_static! {
     static ref WAPC_POLICY_MAPPING: RwLock<HashMap<u64, Policy>> =
         RwLock::new(HashMap::with_capacity(64));
