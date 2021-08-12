@@ -130,6 +130,7 @@ pub struct Metadata {
     pub mutating: bool,
     #[serde(default)]
     pub context_aware: bool,
+    #[serde(default)]
     pub execution_mode: PolicyExecutionMode,
 }
 
