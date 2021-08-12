@@ -116,21 +116,7 @@ struct BurregoRuntime<'a>(&'a mut BurregoEvaluator);
 
 type PolicySettings = serde_json::Map<String, serde_json::Value>;
 
-trait RuntimeBackend {
-    fn validate(
-        &mut self,
-        settings: &PolicySettings,
-        request: &ValidateRequest,
-    ) -> ValidationResponse;
-    fn validate_settings(&mut self, settings: String) -> SettingsValidationResponse;
-    fn protocol_version(&self) -> Result<ProtocolVersion> {
-        Err(anyhow!(
-            "protocol_version is not applicable to this policy runtime"
-        ))
-    }
-}
-
-impl<'a> RuntimeBackend for WapcRuntime<'a> {
+impl<'a> WapcRuntime<'a> {
     fn validate(
         &mut self,
         settings: &PolicySettings,
@@ -235,7 +221,7 @@ impl<'a> RuntimeBackend for WapcRuntime<'a> {
     }
 }
 
-impl<'a> RuntimeBackend for BurregoRuntime<'a> {
+impl<'a> BurregoRuntime<'a> {
     fn validate(
         &mut self,
         _settings: &PolicySettings,
