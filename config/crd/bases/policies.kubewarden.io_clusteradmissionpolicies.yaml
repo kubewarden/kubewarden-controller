@@ -25,7 +25,7 @@ spec:
       jsonPath: .status.policyActive
       name: Active
       type: boolean
-    name: v1alpha3
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies

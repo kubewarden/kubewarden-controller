@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha3
+package v1alpha2
 
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"

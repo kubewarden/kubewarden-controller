@@ -1,4 +1,4 @@
-apiVersion: policies.kubewarden.io/v1alpha3
+apiVersion: policies.kubewarden.io/v1alpha2
 kind: PolicyServer
 metadata:
   name: reserved-instance-for-tenant-a
@@ -13,7 +13,7 @@ spec:
   annotations:
     sidecar.jaegertracing.io/inject: default
 ---
-apiVersion: policies.kubewarden.io/v1alpha3
+apiVersion: policies.kubewarden.io/v1alpha2
 kind: ClusterAdmissionPolicy
 metadata:
   name: psp-capabilities

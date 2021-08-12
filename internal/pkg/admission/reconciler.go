@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	policiesv1alpha3 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha3"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
 
 type Reconciler struct {
@@ -37,7 +37,7 @@ func (errorList errorList) Error() string {
 
 func (r *Reconciler) ReconcileDeletion(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha3.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
 	errors := errorList{}
 	r.Log.Info("Removing deleted policy from PolicyServer ConfigMap")
@@ -81,7 +81,7 @@ func (r *Reconciler) ReconcileDeletion(
 
 func setFalseConditionType(
 	conditions *[]metav1.Condition,
-	conditionType policiesv1alpha3.PolicyConditionType,
+	conditionType policiesv1alpha2.PolicyConditionType,
 	message string,
 ) {
 	apimeta.SetStatusCondition(
@@ -89,32 +89,32 @@ func setFalseConditionType(
 		metav1.Condition{
 			Type:    string(conditionType),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(policiesv1alpha3.ReconciliationFailed),
+			Reason:  string(policiesv1alpha2.ReconciliationFailed),
 			Message: message,
 		},
 	)
 }
 
-func setTrueConditionType(conditions *[]metav1.Condition, conditionType policiesv1alpha3.PolicyConditionType) {
+func setTrueConditionType(conditions *[]metav1.Condition, conditionType policiesv1alpha2.PolicyConditionType) {
 	apimeta.SetStatusCondition(
 		conditions,
 		metav1.Condition{
 			Type:   string(conditionType),
 			Status: metav1.ConditionTrue,
-			Reason: string(policiesv1alpha3.ReconciliationSucceeded),
+			Reason: string(policiesv1alpha2.ReconciliationSucceeded),
 		},
 	)
 }
 
 func (r *Reconciler) Reconcile(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha3.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
 	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx)
 	if err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha3.PolicyServerSecretReconciled,
+			policiesv1alpha2.PolicyServerSecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -123,7 +123,7 @@ func (r *Reconciler) Reconcile(
 	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha3.PolicyServerSecretReconciled,
+			policiesv1alpha2.PolicyServerSecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -131,13 +131,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&clusterAdmissionPolicy.Status.Conditions,
-		policiesv1alpha3.PolicyServerSecretReconciled,
+		policiesv1alpha2.PolicyServerSecretReconciled,
 	)
 
 	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, AddPolicy); err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha3.PolicyServerConfigMapReconciled,
+			policiesv1alpha2.PolicyServerConfigMapReconciled,
 			fmt.Sprintf("error reconciling configmap: %v", err),
 		)
 		return err
@@ -145,13 +145,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&clusterAdmissionPolicy.Status.Conditions,
-		policiesv1alpha3.PolicyServerConfigMapReconciled,
+		policiesv1alpha2.PolicyServerConfigMapReconciled,
 	)
 
 	if err := r.reconcilePolicyServerDeployment(ctx); err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha3.PolicyServerDeploymentReconciled,
+			policiesv1alpha2.PolicyServerDeploymentReconciled,
 			fmt.Sprintf("error reconciling deployment: %v", err),
 		)
 		return err
@@ -159,13 +159,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&clusterAdmissionPolicy.Status.Conditions,
-		policiesv1alpha3.PolicyServerDeploymentReconciled,
+		policiesv1alpha2.PolicyServerDeploymentReconciled,
 	)
 
 	if err := r.reconcilePolicyServerService(ctx); err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha3.PolicyServerServiceReconciled,
+			policiesv1alpha2.PolicyServerServiceReconciled,
 			fmt.Sprintf("error reconciling service: %v", err),
 		)
 		return err
@@ -173,7 +173,7 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&clusterAdmissionPolicy.Status.Conditions,
-		policiesv1alpha3.PolicyServerServiceReconciled,
+		policiesv1alpha2.PolicyServerServiceReconciled,
 	)
 
 	return r.enablePolicyWebhook(ctx, clusterAdmissionPolicy, policyServerSecret)
@@ -181,7 +181,7 @@ func (r *Reconciler) Reconcile(
 
 func (r *Reconciler) enablePolicyWebhook(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha3.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	policyServerSecret *corev1.Secret,
 ) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx)
@@ -200,7 +200,7 @@ func (r *Reconciler) enablePolicyWebhook(
 		if err := r.reconcileMutatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret); err != nil {
 			setFalseConditionType(
 				&clusterAdmissionPolicy.Status.Conditions,
-				policiesv1alpha3.PolicyServerWebhookConfigurationReconciled,
+				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
 				fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
 			)
 			return err
@@ -208,13 +208,13 @@ func (r *Reconciler) enablePolicyWebhook(
 
 		setTrueConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha3.PolicyServerWebhookConfigurationReconciled,
+			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
 		)
 	} else {
 		if err := r.reconcileValidatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret); err != nil {
 			setFalseConditionType(
 				&clusterAdmissionPolicy.Status.Conditions,
-				policiesv1alpha3.PolicyServerWebhookConfigurationReconciled,
+				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
 				fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
 			)
 			return err
@@ -222,7 +222,7 @@ func (r *Reconciler) enablePolicyWebhook(
 
 		setTrueConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha3.PolicyServerWebhookConfigurationReconciled,
+			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
 		)
 	}
 

@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	policiesv1alpha3 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha3"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
 
 // PolicyServerReconciler reconciles a PolicyServer object
@@ -57,6 +57,6 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // SetupWithManager sets up the controller with the Manager.
 func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&policiesv1alpha3.PolicyServer{}).
+		For(&policiesv1alpha2.PolicyServer{}).
 		Complete(r)
 }

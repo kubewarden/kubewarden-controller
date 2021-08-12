@@ -19,7 +19,7 @@ package policies
 import (
 	"context"
 	"fmt"
-	policiesv1alpha3 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha3"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -54,10 +54,10 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 	admissionReconciler := r.Reconciler
 	admissionReconciler.Log = log
 
-	var clusterAdmissionPolicy policiesv1alpha3.ClusterAdmissionPolicy
+	var clusterAdmissionPolicy policiesv1alpha2.ClusterAdmissionPolicy
 	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
-			clusterAdmissionPolicy = policiesv1alpha3.ClusterAdmissionPolicy{
+			clusterAdmissionPolicy = policiesv1alpha2.ClusterAdmissionPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      req.Name,
 					Namespace: req.Namespace,
@@ -97,7 +97,7 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 
 func (r *ClusterAdmissionPolicyReconciler) updateAdmissionPolicyStatus(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha3.ClusterAdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
 	return errors.Wrapf(
 		r.Client.Status().Update(ctx, clusterAdmissionPolicy),
@@ -109,6 +109,6 @@ func (r *ClusterAdmissionPolicyReconciler) updateAdmissionPolicyStatus(
 // nolint:wrapcheck
 func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&policiesv1alpha3.ClusterAdmissionPolicy{}).
+		For(&policiesv1alpha2.ClusterAdmissionPolicy{}).
 		Complete(r)
 }
