@@ -194,6 +194,10 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+              policyServer:
+                default: default
+                description: PolicyServer identifies an existing PolicyServer resource.
+                type: string
               rules:
                 description: Rules describes what operations on what resources/subresources
                   the webhook cares about. The webhook cares about an operation if

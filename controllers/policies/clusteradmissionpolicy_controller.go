@@ -19,6 +19,7 @@ package policies
 import (
 	"context"
 	"fmt"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -29,8 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 )

@@ -3,7 +3,7 @@ kind: ServiceAccount
 metadata:
   name: sa
 ---
-apiVersion: policies.kubewarden.io/v1alpha3
+apiVersion: policies.kubewarden.io/v1alpha2
 kind: PolicyServer
 metadata:
   name: policyserver

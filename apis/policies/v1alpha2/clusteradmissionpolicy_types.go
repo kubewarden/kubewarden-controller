@@ -23,6 +23,11 @@ import (
 
 // ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
 type ClusterAdmissionPolicySpec struct {
+	// PolicyServer identifies an existing PolicyServer resource.
+	// +kubebuilder:default:=default
+	// +optional
+	PolicyServer string `json:"policyServer"`
+
 	// Module is the location of the WASM module to be loaded. Can be a
 	// local file (file://), a remote file served by an HTTP server
 	// (http://, https://), or an artifact served by an OCI-compatible
@@ -148,30 +153,10 @@ type ClusterAdmissionPolicySpec struct {
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
-type ReconciliationTransitionReason string
-
 const (
-	// ReconciliationFailed represents a reconciliation failure
-	ReconciliationFailed ReconciliationTransitionReason = "ReconciliationFailed"
-	// ReconciliationSucceeded represents a reconciliation success
-	ReconciliationSucceeded ReconciliationTransitionReason = "ReconciliationSucceeded"
-)
-
-type PolicyConditionType string
-
-const (
-	// PolicyServerSecretReconciled represents the condition of the
-	// Policy Server Secret reconciliation
-	PolicyServerSecretReconciled PolicyConditionType = "PolicyServerSecretReconciled"
 	// PolicyServerConfigMapReconciled represents the condition of the
 	// Policy Server ConfigMap reconciliation
 	PolicyServerConfigMapReconciled PolicyConditionType = "PolicyServerConfigMapReconciled"
-	// PolicyServerDeploymentReconciled represents the condition of the
-	// Policy Server Deployment reconciliation
-	PolicyServerDeploymentReconciled PolicyConditionType = "PolicyServerDeploymentReconciled"
-	// PolicyServerServiceReconciled represents the condition of the
-	// Policy Server Service reconciliation
-	PolicyServerServiceReconciled PolicyConditionType = "PolicyServerServiceReconciled"
 	// PolicyServerWebhookConfigurationReconciled represents the
 	// condition of the Policy Server WebhookConfiguration
 	// reconciliation
