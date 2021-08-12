@@ -22,16 +22,16 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret)
 	return fmt.Errorf("error reconciling policy-server Secret: %w", err)
 }
 
-func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context) (*corev1.Secret, error) {
+func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Context) (*corev1.Secret, error) {
 	policyServerSecret := corev1.Secret{}
 	err := r.Client.Get(
 		ctx,
 		client.ObjectKey{
 			Namespace: r.DeploymentsNamespace,
-			Name:      constants.PolicyServerSecretName},
+			Name:      constants.PolicyServerCARootSecretName},
 		&policyServerSecret)
 	if err != nil && apierrors.IsNotFound(err) {
-		return r.buildPolicyServerSecret()
+		return r.buildPolicyServerCARootSecret()
 	}
 	policyServerSecret.ResourceVersion = ""
 	if err != nil {
@@ -42,31 +42,22 @@ func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context) (*
 	return &policyServerSecret, nil
 }
 
-func (r *Reconciler) buildPolicyServerSecret() (*corev1.Secret, error) {
-	ca, caPrivateKey, err := admissionregistration.GenerateCA()
+var generateCA = admissionregistration.GenerateCA
+var pemEncodeCertificate = admissionregistration.PemEncodeCertificate
+
+func (r *Reconciler) buildPolicyServerCARootSecret() (*corev1.Secret, error) {
+	ca, caPrivateKey, err := generateCA()
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate policy-server secret CA: %w", err)
 	}
-	caPEMEncoded, err := admissionregistration.PemEncodeCertificate(ca)
-	if err != nil {
-		return nil, fmt.Errorf("cannot encode policy-server secret CA: %w", err)
-	}
-	servingCert, servingKey, err := admissionregistration.GenerateCert(
-		ca,
-		fmt.Sprintf("%s.%s.svc", constants.PolicyServerServiceName, r.DeploymentsNamespace),
-		[]string{fmt.Sprintf("%s.%s.svc", constants.PolicyServerServiceName, r.DeploymentsNamespace)},
-		caPrivateKey.Key())
-	if err != nil {
-		return nil, fmt.Errorf("cannot generate policy-server certificate: %w", err)
-	}
+	caPEMEncoded, err := pemEncodeCertificate(ca)
 	secretContents := map[string]string{
-		constants.PolicyServerTLSCert:         string(servingCert),
-		constants.PolicyServerTLSKey:          string(servingKey),
-		constants.PolicyServerCASecretKeyName: string(caPEMEncoded),
+		constants.PolicyServerCARootPemName:            string(caPEMEncoded),
+		constants.PolicyServerCARootPrivateKeyCertName: caPrivateKey.PrivateKey,
 	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.PolicyServerSecretName,
+			Name:      constants.PolicyServerCARootSecretName,
 			Namespace: r.DeploymentsNamespace,
 		},
 		StringData: secretContents,
