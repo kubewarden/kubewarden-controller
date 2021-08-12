@@ -25,7 +25,7 @@ spec:
       jsonPath: .status.policyActive
       name: Active
       type: boolean
-    name: v1alpha2
+    name: v1alpha3
     schema:
       openAPIV3Schema:
         description: ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies
@@ -194,6 +194,10 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+              policyServer:
+                default: default
+                description: PolicyServer identifies an existing PolicyServer resource.
+                type: string
               rules:
                 description: Rules describes what operations on what resources/subresources
                   the webhook cares about. The webhook cares about an operation if
