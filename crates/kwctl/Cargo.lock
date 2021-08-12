@@ -315,9 +315,9 @@ checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
 
 [[package]]
 name = "bitflags"
-version = "1.2.1"
+version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
+checksum = "2da1976d75adbe5fbc88130ecd119529cf1cc6a93ae1546d8696ee66f0d21af1"
 
 [[package]]
 name = "blake2b_simd"
@@ -374,7 +374,7 @@ checksum = "9c59e7af012c713f529e7a3ee57ce9b31ddd858d4b512923602f74608b009631"
 [[package]]
 name = "burrego"
 version = "0.1.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#0240b3a10f380fc341784623aa49f7d7099c69a1"
+source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#27bb30c46b98fe749d0b2a535941f33a4a434018"
 dependencies = [
  "anyhow",
  "clap",
@@ -1740,9 +1740,9 @@ checksum = "3576a87f2ba00f6f106fdfcd16db1d698d648a26ad8e0573cad8537c3c362d2a"
 
 [[package]]
 name = "libc"
-version = "0.2.98"
+version = "0.2.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "320cfe77175da3a483efed4bc0adc1968ca050b098ce4f2f1c13a56626128790"
+checksum = "a7f823d141fe0a24df1e23b4af4e3c7ba9e5966ec514ea068c93024aa7deb765"
 
 [[package]]
 name = "line-wrap"
@@ -1902,9 +1902,9 @@ checksum = "0debeb9fcf88823ea64d64e4a815ab1643f33127d995978e099942ce38f25238"
 
 [[package]]
 name = "native-tls"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8d96b2e1c8da3957d58100b09f102c6d9cfdfced01b7ec5a8974044bb09dbd4"
+checksum = "48ba9f7719b5a0f42f338907614285fb5fd70e53858141f69898a1fb7203b24d"
 dependencies = [
  "lazy_static",
  "libc",
@@ -2292,7 +2292,7 @@ dependencies = [
 [[package]]
 name = "policy-evaluator"
 version = "0.1.19"
-source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#0240b3a10f380fc341784623aa49f7d7099c69a1"
+source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#27bb30c46b98fe749d0b2a535941f33a4a434018"
 dependencies = [
  "anyhow",
  "base64 0.13.0",

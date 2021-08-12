@@ -19,7 +19,7 @@ pub(crate) fn write_annotation(
 }
 
 fn protocol_detector(wasm_path: PathBuf) -> Result<ProtocolVersion> {
-    let policy_evaluator = PolicyEvaluator::from_file(
+    let mut policy_evaluator = PolicyEvaluator::from_file(
         String::from(wasm_path.to_string_lossy()),
         wasm_path.as_path(),
         PolicyExecutionMode::KubewardenWapc,
