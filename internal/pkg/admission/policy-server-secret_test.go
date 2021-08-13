@@ -17,16 +17,14 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	caBytes := []byte{}
 	b, ca, err := admissionregistration.GenerateCA()
 	generateCACalled := false
-	old := generateCA
-	defer func() { generateCA = old }()
 
-	generateCA = func() ([]byte, *admissionregistration.KeyPair, error) {
+	generateCAFunc := func() ([]byte, *admissionregistration.KeyPair, error) {
 		generateCACalled = true
 		return b, ca, err
 	}
 
-	pemEncodeCertificate = func(certificate []byte) ([]byte, error) {
-		if bytes.Compare(certificate, caBytes) != 0 {
+	pemEncodeCertificateFunc := func(certificate []byte) ([]byte, error) {
+		if bytes.Compare(certificate, b) != 0 {
 			return nil, fmt.Errorf("certificate received should be the one returned by generateCA")
 		}
 		return caBytes, nil
@@ -50,7 +48,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			secret, err := test.r.fetchOrInitializePolicyServerCARootSecret(context.Background())
+			secret, err := test.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
 			if diff := cmp.Diff(secret.StringData, test.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
@@ -62,6 +60,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 			if generateCACalled != test.generateCACalled {
 				t.Errorf("got %t, want %t", generateCACalled, test.generateCACalled)
 			}
+			generateCACalled = false
 		})
 	}
 

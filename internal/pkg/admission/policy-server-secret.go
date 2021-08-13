@@ -22,7 +22,10 @@ func (r *Reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret)
 	return fmt.Errorf("error reconciling policy-server Secret: %w", err)
 }
 
-func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Context) (*corev1.Secret, error) {
+type generateCAFunc = func() ([]byte, *admissionregistration.KeyPair, error)
+type pemEncodeCertificateFunc = func(certificate []byte) ([]byte, error)
+
+func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Context, generateCA generateCAFunc, pemEncodeCertificate pemEncodeCertificateFunc) (*corev1.Secret, error) {
 	policyServerSecret := corev1.Secret{}
 	err := r.Client.Get(
 		ctx,
@@ -31,7 +34,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Conte
 			Name:      constants.PolicyServerCARootSecretName},
 		&policyServerSecret)
 	if err != nil && apierrors.IsNotFound(err) {
-		return r.buildPolicyServerCARootSecret()
+		return r.buildPolicyServerCARootSecret(generateCA, pemEncodeCertificate)
 	}
 	policyServerSecret.ResourceVersion = ""
 	if err != nil {
@@ -42,10 +45,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Conte
 	return &policyServerSecret, nil
 }
 
-var generateCA = admissionregistration.GenerateCA
-var pemEncodeCertificate = admissionregistration.PemEncodeCertificate
-
-func (r *Reconciler) buildPolicyServerCARootSecret() (*corev1.Secret, error) {
+func (r *Reconciler) buildPolicyServerCARootSecret(generateCA generateCAFunc, pemEncodeCertificate pemEncodeCertificateFunc) (*corev1.Secret, error) {
 	ca, caPrivateKey, err := generateCA()
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate policy-server secret CA: %w", err)
