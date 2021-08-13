@@ -260,7 +260,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 							Name: certsVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: constants.PolicyServerSecretName,
+									SecretName: constants.PolicyServerSecretNamePrefix,
 								},
 							},
 						},

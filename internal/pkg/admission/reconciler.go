@@ -135,6 +135,25 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerSecretReconciled,
 	)
 
+	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx, "psp-policies", policyServerCARootSecret, admissionregistration.GenerateCert)
+	if err != nil {
+		setFalseConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerSecretReconciled,
+			fmt.Sprintf("error reconciling secret: %v", err),
+		)
+		return err
+	}
+
+	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
+		setFalseConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerSecretReconciled,
+			fmt.Sprintf("error reconciling secret: %v", err),
+		)
+		return err
+	}
+
 	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, AddPolicy); err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,

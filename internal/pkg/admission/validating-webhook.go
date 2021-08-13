@@ -34,7 +34,7 @@ func (r *Reconciler) validatingWebhookConfiguration(
 
 	service := admissionregistrationv1.ServiceReference{
 		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerServiceName,
+		Name:      constants.PolicyServerServiceNamePrefix,
 		Path:      &admissionPath,
 		Port:      &admissionPort,
 	}
