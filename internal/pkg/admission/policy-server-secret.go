@@ -51,6 +51,9 @@ func (r *Reconciler) buildPolicyServerCARootSecret() (*corev1.Secret, error) {
 		return nil, fmt.Errorf("cannot generate policy-server secret CA: %w", err)
 	}
 	caPEMEncoded, err := pemEncodeCertificate(ca)
+	if err != nil {
+		return nil, fmt.Errorf("cannot encode policy-server secret CA: %w", err)
+	}
 	secretContents := map[string]string{
 		constants.PolicyServerCARootPemName:            string(caPEMEncoded),
 		constants.PolicyServerCARootPrivateKeyCertName: caPrivateKey.PrivateKey,
