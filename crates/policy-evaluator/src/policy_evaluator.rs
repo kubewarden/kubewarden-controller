@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use burrego::opa::host_callbacks;
 use lazy_static::lazy_static;
 use serde::Serialize;
 use serde_json::{json, value};
@@ -181,7 +182,11 @@ impl PolicyEvaluator {
                     Policy::new,
                     policy_execution_mode,
                 )?;
-                let evaluator = burrego::opa::wasm::Evaluator::new(id, &policy_contents)?;
+                let evaluator = burrego::opa::wasm::Evaluator::new(
+                    id,
+                    &policy_contents,
+                    &host_callbacks::DEFAULT_HOST_CALLBACKS,
+                )?;
                 let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
                     evaluator,
                     entrypoint_id: 0, // This is fixed for now to the first entry point
