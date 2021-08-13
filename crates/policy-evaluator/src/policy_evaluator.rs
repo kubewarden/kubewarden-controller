@@ -32,6 +32,13 @@ impl Default for PolicyExecutionMode {
     }
 }
 
+impl fmt::Display for PolicyExecutionMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let json = serde_json::to_string(self).map_err(|_| fmt::Error {})?;
+        write!(f, "{}", json.replace("\"", ""))
+    }
+}
+
 lazy_static! {
     static ref WAPC_POLICY_MAPPING: RwLock<HashMap<u64, Policy>> =
         RwLock::new(HashMap::with_capacity(64));
