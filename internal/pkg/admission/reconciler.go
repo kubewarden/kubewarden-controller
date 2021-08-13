@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -110,7 +111,7 @@ func (r *Reconciler) Reconcile(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
-	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx)
+	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
@@ -120,7 +121,7 @@ func (r *Reconciler) Reconcile(
 		return err
 	}
 
-	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
+	if err := r.reconcileSecret(ctx, policyServerCARootSecret); err != nil {
 		setFalseConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
 			policiesv1alpha2.PolicyServerSecretReconciled,
@@ -176,7 +177,7 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerServiceReconciled,
 	)
 
-	return r.enablePolicyWebhook(ctx, clusterAdmissionPolicy, policyServerSecret)
+	return r.enablePolicyWebhook(ctx, clusterAdmissionPolicy, policyServerCARootSecret)
 }
 
 func (r *Reconciler) enablePolicyWebhook(

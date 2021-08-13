@@ -3,9 +3,11 @@ package constants
 
 const (
 	// PolicyServer Secret
-	PolicyServerTLSCert         = "policy-server-cert"
-	PolicyServerTLSKey          = "policy-server-key"
-	PolicyServerCASecretKeyName = "policy-server-ca"
+	PolicyServerTLSCert                  = "policy-server-cert"
+	PolicyServerTLSKey                   = "policy-server-key"
+	PolicyServerCARootSecretName         = "policy-server-root-ca"
+	PolicyServerCARootPemName            = "policy-server-root-ca-pem"
+	PolicyServerCARootPrivateKeyCertName = "policy-server-root-ca-privatekey-cert"
 
 	// PolicyServer Deployment
 	PolicyServerDeploymentConfigAnnotation = "config/version"

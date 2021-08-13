@@ -56,7 +56,7 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 				Name: fmt.Sprintf("%s.kubewarden.admission", clusterAdmissionPolicy.Name),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.PolicyServerCASecretKeyName],
+					CABundle: admissionSecret.Data[constants.PolicyServerCARootSecretName],
 				},
 				Rules:                   clusterAdmissionPolicy.Spec.Rules,
 				FailurePolicy:           clusterAdmissionPolicy.Spec.FailurePolicy,
