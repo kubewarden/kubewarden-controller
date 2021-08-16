@@ -39,11 +39,12 @@ func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context, po
 	if err != nil && apierrors.IsNotFound(err) {
 		return r.buildPolicyServerSecret(policyServerName, caSecret, generateCert)
 	}
-	policyServerSecret.ResourceVersion = ""
 	if err != nil {
 		return &corev1.Secret{},
 			fmt.Errorf("cannot fetch or initialize Policy Server secret: %w", err)
 	}
+
+	policyServerSecret.ResourceVersion = ""
 
 	return &policyServerSecret, nil
 }
