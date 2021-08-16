@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use burrego::opa::host_callbacks as opa_callbacks;
 use serde::Serialize;
 use serde_json::{json, value};
 use std::{fmt, fs, path::Path};
@@ -127,7 +126,7 @@ impl PolicyEvaluator {
                 let evaluator = burrego::opa::wasm::Evaluator::new(
                     id,
                     &policy_contents,
-                    &opa_callbacks::DEFAULT_HOST_CALLBACKS,
+                    &crate::runtimes::burrego::DEFAULT_HOST_CALLBACKS,
                 )?;
                 let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
                     evaluator,
