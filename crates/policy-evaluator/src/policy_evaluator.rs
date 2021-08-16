@@ -1,10 +1,8 @@
 use anyhow::{anyhow, Result};
-use burrego::opa::host_callbacks;
-use lazy_static::lazy_static;
+use burrego::opa::host_callbacks as opa_callbacks;
 use serde::Serialize;
 use serde_json::{json, value};
-use std::{collections::HashMap, fmt, fs, path::Path, sync::RwLock};
-use tracing::error;
+use std::{fmt, fs, path::Path};
 
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
@@ -12,9 +10,11 @@ use wasmtime_provider::WasmtimeEngineProvider;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
-use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
-use crate::runtimes::{burrego::Runtime as BurregoRuntime, wapc::Runtime as WapcRuntime};
+use crate::runtimes::burrego::Runtime as BurregoRuntime;
+use crate::runtimes::{
+    wapc::host_callback as wapc_callback, wapc::Runtime as WapcRuntime, wapc::WAPC_POLICY_MAPPING,
+};
 use crate::validation_response::ValidationResponse;
 
 #[derive(Clone, PartialEq, serde::Deserialize, serde::Serialize, Debug)]
@@ -40,11 +40,6 @@ impl fmt::Display for PolicyExecutionMode {
     }
 }
 
-lazy_static! {
-    static ref WAPC_POLICY_MAPPING: RwLock<HashMap<u64, Policy>> =
-        RwLock::new(HashMap::with_capacity(64));
-}
-
 #[derive(Serialize)]
 pub struct ValidateRequest(pub(crate) serde_json::Value);
 
@@ -58,59 +53,6 @@ impl ValidateRequest {
             uid
         } else {
             ""
-        }
-    }
-}
-
-pub(crate) fn host_callback(
-    policy_id: u64,
-    binding: &str,
-    namespace: &str,
-    operation: &str,
-    payload: &[u8],
-) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    match binding {
-        "kubewarden" => match namespace {
-            "tracing" => match operation {
-                "log" => {
-                    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-                    let policy = policy_mapping.get(&policy_id).unwrap();
-                    if let Err(e) = policy.log(payload) {
-                        let p =
-                            String::from_utf8(payload.to_vec()).unwrap_or_else(|e| e.to_string());
-                        error!(
-                            payload = p.as_str(),
-                            error = e.to_string().as_str(),
-                            "Cannot log event"
-                        );
-                    }
-                    Ok(Vec::new())
-                }
-                _ => {
-                    error!("unknown operation: {}", operation);
-                    Err(format!("unknown operation: {}", operation).into())
-                }
-            },
-            _ => {
-                error!("unknown namespace: {}", namespace);
-                Err(format!("unknown namespace: {}", namespace).into())
-            }
-        },
-        "kubernetes" => {
-            let cluster_context = ClusterContext::get();
-            match namespace {
-                "ingresses" => Ok(cluster_context.ingresses().into()),
-                "namespaces" => Ok(cluster_context.namespaces().into()),
-                "services" => Ok(cluster_context.services().into()),
-                _ => {
-                    error!("unknown namespace: {}", namespace);
-                    Err(format!("unknown namespace: {}", namespace).into())
-                }
-            }
-        }
-        _ => {
-            error!("unknown binding: {}", binding);
-            Err(format!("unknown binding: {}", binding).into())
         }
     }
 }
@@ -165,7 +107,7 @@ impl PolicyEvaluator {
         let (policy, runtime) = match policy_execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
                 let engine = WasmtimeEngineProvider::new(&policy_contents, None);
-                let wapc_host = WapcHost::new(Box::new(engine), host_callback)?;
+                let wapc_host = WapcHost::new(Box::new(engine), wapc_callback)?;
                 let policy = PolicyEvaluator::from_contents_internal(
                     id,
                     |_| Ok(wapc_host.id()),
@@ -185,7 +127,7 @@ impl PolicyEvaluator {
                 let evaluator = burrego::opa::wasm::Evaluator::new(
                     id,
                     &policy_contents,
-                    &host_callbacks::DEFAULT_HOST_CALLBACKS,
+                    &opa_callbacks::DEFAULT_HOST_CALLBACKS,
                 )?;
                 let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
                     evaluator,
@@ -272,6 +214,8 @@ impl PolicyEvaluator {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::collections::HashMap;
 
     #[test]
     fn policy_is_registered_in_the_mapping() -> Result<()> {

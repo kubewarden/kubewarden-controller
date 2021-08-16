@@ -4,7 +4,7 @@ extern crate wasmparser;
 
 pub mod cluster_context;
 pub mod constants;
-mod policy;
+pub(crate) mod policy;
 pub mod policy_evaluator;
 pub mod policy_metadata;
 mod policy_tracing;
