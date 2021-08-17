@@ -83,8 +83,11 @@ fn main() -> Result<()> {
                     .unwrap()?;
 
                 let policy = matches.value_of("policy").unwrap();
-                let mut evaluator =
-                    Evaluator::from_path(policy.to_string(), &PathBuf::from(policy))?;
+                let mut evaluator = Evaluator::from_path(
+                    policy.to_string(),
+                    &PathBuf::from(policy),
+                    &opa::host_callbacks::DEFAULT_HOST_CALLBACKS,
+                )?;
 
                 let (major, minor) = evaluator.opa_abi_version()?;
                 debug!(major, minor, "OPA Wasm ABI");

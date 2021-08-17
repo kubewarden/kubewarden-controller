@@ -4,7 +4,7 @@ use wasmtime::{
     AsContextMut, Caller, Engine, Func, Instance, Limits, Linker, Memory, MemoryType, Module, Store,
 };
 
-use crate::opa::{builtins, Policy, StackHelper};
+use crate::opa::{builtins, host_callbacks::HostCallbacks, Policy, StackHelper};
 use std::path::Path;
 use std::sync::RwLock;
 
@@ -95,11 +95,19 @@ pub struct Evaluator {
 }
 
 impl Evaluator {
-    pub fn from_path(policy_name: String, policy_path: &Path) -> Result<Evaluator> {
-        Evaluator::new(policy_name, &std::fs::read(&policy_path)?)
+    pub fn from_path(
+        policy_name: String,
+        policy_path: &Path,
+        host_callbacks: &'static HostCallbacks,
+    ) -> Result<Evaluator> {
+        Evaluator::new(policy_name, &std::fs::read(&policy_path)?, host_callbacks)
     }
 
-    pub fn new(policy_name: String, policy_contents: &[u8]) -> Result<Evaluator> {
+    pub fn new(
+        policy_name: String,
+        policy_contents: &[u8],
+        host_callbacks: &'static HostCallbacks,
+    ) -> Result<Evaluator> {
         let engine = Engine::default();
         let mut linker = Linker::<Option<StackHelper>>::new(&engine);
 
@@ -110,36 +118,25 @@ impl Evaluator {
         let memory = Memory::new(&mut store, memory_ty)?;
         linker.define("env", "memory", memory)?;
 
-        // env.opa_abort(addr) void
-        // Called if an internal error occurs.
-        // The addr refers to a null-terminated string in the shared memory buffer.
-        let opa_abort = Func::wrap(
-            &mut store,
-            move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
-                let stack_helper = caller.data().unwrap();
-                let msg = stack_helper
-                    .pull_json(caller.as_context_mut(), &memory, addr)
-                    .unwrap();
-                println!("OPA abort with message: {:?}", msg);
-                std::process::exit(1);
-            },
-        );
-        linker.define("env", "opa_abort", opa_abort)?;
+        macro_rules! opa_callback {
+            ($name: ident) => {
+                let $name = Func::wrap(
+                    &mut store,
+                    move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
+                        let stack_helper = caller.data().unwrap();
+                        let msg = stack_helper
+                            .pull_json(caller.as_context_mut(), &memory, addr)
+                            .unwrap();
+                        (host_callbacks.$name)(msg.to_string());
+                    },
+                );
+                linker.define("env", stringify!($name), $name)?;
+            };
+        }
 
-        //env.opa_println (addr) void
-        //Called to emit a message from the policy evaluation.
-        //The addr refers to a null-terminated string in the shared memory buffer.
-        let opa_println = Func::wrap(
-            &mut store,
-            move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
-                let stack_helper = caller.data().unwrap();
-                let msg = stack_helper
-                    .pull_json(caller.as_context_mut(), &memory, addr)
-                    .unwrap();
-                println!("Message coming from the policy: {:?}", msg);
-            },
-        );
-        linker.define("env", "opa_println", opa_println)?;
+        // OPA host callbacks. Listed at https://www.openpolicyagent.org/docs/latest/wasm/#imports
+        opa_callback!(opa_abort);
+        opa_callback!(opa_println);
 
         //env.opa_builtin0 (builtin_id, ctx) addr
         //Called to dispatch the built-in function identified by the builtin_id.

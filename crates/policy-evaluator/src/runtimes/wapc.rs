@@ -1,16 +1,77 @@
 use anyhow::{anyhow, Result};
+use lazy_static::lazy_static;
 use serde_json::json;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom, sync::RwLock};
 use tracing::error;
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
 
+use crate::cluster_context::ClusterContext;
+use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::validation_response::ValidationResponse;
 
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
+
+lazy_static! {
+    pub(crate) static ref WAPC_POLICY_MAPPING: RwLock<HashMap<u64, Policy>> =
+        RwLock::new(HashMap::with_capacity(64));
+}
+
+pub(crate) fn host_callback(
+    policy_id: u64,
+    binding: &str,
+    namespace: &str,
+    operation: &str,
+    payload: &[u8],
+) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    match binding {
+        "kubewarden" => match namespace {
+            "tracing" => match operation {
+                "log" => {
+                    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
+                    let policy = policy_mapping.get(&policy_id).unwrap();
+                    if let Err(e) = policy.log(payload) {
+                        let p =
+                            String::from_utf8(payload.to_vec()).unwrap_or_else(|e| e.to_string());
+                        error!(
+                            payload = p.as_str(),
+                            error = e.to_string().as_str(),
+                            "Cannot log event"
+                        );
+                    }
+                    Ok(Vec::new())
+                }
+                _ => {
+                    error!("unknown operation: {}", operation);
+                    Err(format!("unknown operation: {}", operation).into())
+                }
+            },
+            _ => {
+                error!("unknown namespace: {}", namespace);
+                Err(format!("unknown namespace: {}", namespace).into())
+            }
+        },
+        "kubernetes" => {
+            let cluster_context = ClusterContext::get();
+            match namespace {
+                "ingresses" => Ok(cluster_context.ingresses().into()),
+                "namespaces" => Ok(cluster_context.namespaces().into()),
+                "services" => Ok(cluster_context.services().into()),
+                _ => {
+                    error!("unknown namespace: {}", namespace);
+                    Err(format!("unknown namespace: {}", namespace).into())
+                }
+            }
+        }
+        _ => {
+            error!("unknown binding: {}", binding);
+            Err(format!("unknown binding: {}", binding).into())
+        }
+    }
+}
 
 impl<'a> Runtime<'a> {
     pub fn validate(

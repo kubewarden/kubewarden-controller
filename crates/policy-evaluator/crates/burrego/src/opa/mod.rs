@@ -4,6 +4,8 @@ use std::{collections::HashMap, convert::TryFrom, convert::TryInto};
 use wasmtime::*;
 
 pub mod builtins;
+pub mod default_host_callbacks;
+pub mod host_callbacks;
 pub mod wasm;
 
 /// StackHelper provides a set of helper methods to share data
