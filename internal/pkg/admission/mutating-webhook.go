@@ -34,7 +34,7 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 
 	service := admissionregistrationv1.ServiceReference{
 		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerServiceName,
+		Name:      constants.PolicyServerServiceNamePrefix,
 		Path:      &admissionPath,
 		Port:      &admissionPort,
 	}

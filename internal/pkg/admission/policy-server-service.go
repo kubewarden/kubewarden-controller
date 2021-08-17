@@ -22,7 +22,7 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context) error {
 func (r *Reconciler) service() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.PolicyServerServiceName,
+			Name:      constants.PolicyServerServiceNamePrefix,
 			Namespace: r.DeploymentsNamespace,
 			Labels:    constants.PolicyServerLabels,
 		},

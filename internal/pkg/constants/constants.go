@@ -7,6 +7,7 @@ const (
 	PolicyServerTLSKey                   = "policy-server-key"
 	PolicyServerCARootSecretName         = "policy-server-root-ca"
 	PolicyServerCARootPemName            = "policy-server-root-ca-pem"
+	PolicyServerCARootCACert             = "policy-server-root-ca-cert"
 	PolicyServerCARootPrivateKeyCertName = "policy-server-root-ca-privatekey-cert"
 
 	// PolicyServer Deployment
@@ -18,10 +19,10 @@ const (
 	PolicyServerReadinessProbe             = "/readiness"
 	PolicyServerReplicaSize                = 1
 	PolicyServerReplicaSizeKey             = "replicas"
-	PolicyServerSecretName                 = "policy-server-certs"
+	PolicyServerSecretNamePrefix           = "policy-server-"
 
 	// PolicyServer Service
-	PolicyServerServiceName = "policy-server"
+	PolicyServerServiceNamePrefix = "policy-server-"
 
 	// PolicyServer ConfigMap
 	PolicyServerConfigMapName       = "policy-server"

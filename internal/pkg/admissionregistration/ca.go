@@ -2,6 +2,7 @@ package admissionregistration
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -9,14 +10,19 @@ import (
 	"time"
 )
 
-func GenerateCA() ([]byte, *KeyPair, error) {
+type CA struct {
+	CaCert       []byte
+	CaPrivateKey *rsa.PrivateKey
+}
+
+func GenerateCA() (*CA, error) {
 	privateKey, err := newPrivateKey(1024)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot create private key: %w", err)
+		return nil, fmt.Errorf("cannot create private key: %w", err)
 	}
 	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot init serial number: %w", err)
+		return nil, fmt.Errorf("cannot init serial number: %w", err)
 	}
 	caCertificate := x509.Certificate{
 		SerialNumber: serialNumber,
@@ -42,7 +48,7 @@ func GenerateCA() ([]byte, *KeyPair, error) {
 		&privateKey.Key().PublicKey,
 		privateKey.Key())
 	if err != nil {
-		return []byte{}, nil, fmt.Errorf("cannot create certificate: %w", err)
+		return nil, fmt.Errorf("cannot create certificate: %w", err)
 	}
-	return caCertificateBytes, privateKey, nil
+	return &CA{caCertificateBytes, privateKey.Key()}, nil
 }
