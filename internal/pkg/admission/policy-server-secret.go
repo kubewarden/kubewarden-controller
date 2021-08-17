@@ -34,7 +34,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context, po
 		ctx,
 		client.ObjectKey{
 			Namespace: r.DeploymentsNamespace,
-			Name:      constants.PolicyServerSecretNamePrefix + policyServerName},
+			Name:      policyServerName},
 		&policyServerSecret)
 	if err != nil && apierrors.IsNotFound(err) {
 		return r.buildPolicyServerSecret(policyServerName, caSecret, generateCert)
@@ -53,8 +53,8 @@ func (r *Reconciler) buildPolicyServerSecret(policyServerName string, caSecret *
 	ca, err := extractCaFromSecret(caSecret)
 	servingCert, servingKey, err := generateCert(
 		ca.CaCert,
-		fmt.Sprintf("%s.%s.svc", constants.PolicyServerServiceNamePrefix+policyServerName, r.DeploymentsNamespace),
-		[]string{fmt.Sprintf("%s.%s.svc", constants.PolicyServerServiceNamePrefix+policyServerName, r.DeploymentsNamespace)},
+		fmt.Sprintf("%s.%s.svc", policyServerName, r.DeploymentsNamespace),
+		[]string{fmt.Sprintf("%s.%s.svc", policyServerName, r.DeploymentsNamespace)},
 		ca.CaPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate policy-server %s certificate: %w", policyServerName, err)
@@ -65,7 +65,7 @@ func (r *Reconciler) buildPolicyServerSecret(policyServerName string, caSecret *
 	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.PolicyServerSecretNamePrefix + policyServerName,
+			Name:      policyServerName,
 			Namespace: r.DeploymentsNamespace,
 		},
 		StringData: secretContents,

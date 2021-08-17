@@ -17,8 +17,9 @@ import (
 func (r *Reconciler) reconcileMutatingWebhookConfiguration(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
-	admissionSecret *corev1.Secret) error {
-	err := r.Client.Create(ctx, r.mutatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret))
+	admissionSecret *corev1.Secret,
+	policyServerName string) error {
+	err := r.Client.Create(ctx, r.mutatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret, policyServerName))
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
 	}
@@ -28,13 +29,13 @@ func (r *Reconciler) reconcileMutatingWebhookConfiguration(
 func (r *Reconciler) mutatingWebhookConfiguration(
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret,
-) *admissionregistrationv1.MutatingWebhookConfiguration {
+	policyServerName string) *admissionregistrationv1.MutatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", clusterAdmissionPolicy.Name)
 	admissionPort := int32(constants.PolicyServerPort)
 
 	service := admissionregistrationv1.ServiceReference{
 		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerServiceNamePrefix,
+		Name:      policyServerName,
 		Path:      &admissionPath,
 		Port:      &admissionPort,
 	}

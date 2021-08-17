@@ -153,6 +153,7 @@ spec:
                 type: string
               replicas:
                 description: Replicas is the number of desired replicas.
+                format: int32
                 type: integer
               serviceAccountName:
                 description: Name of the service account associated with the policy

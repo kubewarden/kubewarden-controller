@@ -13,20 +13,13 @@ const (
 	// PolicyServer Deployment
 	PolicyServerDeploymentConfigAnnotation = "config/version"
 	PolicyServerDeploymentName             = "policy-server"
-	PolicyServerImage                      = "ghcr.io/kubewarden/policy-server:latest"
-	PolicyServerImageKey                   = "image"
 	PolicyServerPort                       = 8443
 	PolicyServerReadinessProbe             = "/readiness"
-	PolicyServerReplicaSize                = 1
-	PolicyServerReplicaSizeKey             = "replicas"
-	PolicyServerSecretNamePrefix           = "policy-server-"
-
-	// PolicyServer Service
-	PolicyServerServiceNamePrefix = "policy-server-"
 
 	// PolicyServer ConfigMap
-	PolicyServerConfigMapName       = "policy-server"
-	PolicyServerConfigPoliciesEntry = "policies.yml"
+	PolicyServerConfigMapName               = "policy-server"
+	PolicyServerConfigPoliciesEntry         = "policies.yml"
+	PolicyServerDeploymentRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
 )
 
 var (
