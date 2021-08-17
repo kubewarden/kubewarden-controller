@@ -3,14 +3,14 @@ use tracing::error;
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut crate::policy_evaluator::BurregoEvaluator);
 
-use burrego::opa::host_callbacks::HostCallbacks;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::validation_response::ValidationResponse;
+use burrego::opa::host_callbacks::HostCallbacks;
 
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
 lazy_static! {
-    pub static ref DEFAULT_HOST_CALLBACKS: HostCallbacks = HostCallbacks{
+    pub static ref DEFAULT_HOST_CALLBACKS: HostCallbacks = HostCallbacks {
         opa_abort: Box::new(BurregoHostCallbacks::opa_abort),
         opa_println: Box::new(BurregoHostCallbacks::opa_println),
     };
@@ -19,11 +19,11 @@ lazy_static! {
 struct BurregoHostCallbacks;
 
 impl BurregoHostCallbacks {
-    fn opa_abort(msg: serde_json::Value) {
+    fn opa_abort(_msg: String) {
         // TODO (ereslibre)
     }
 
-    fn opa_println(msg: serde_json::Value) {
+    fn opa_println(_msg: String) {
         // TODO (ereslibre)
     }
 }

@@ -127,7 +127,7 @@ impl Evaluator {
                         let msg = stack_helper
                             .pull_json(caller.as_context_mut(), &memory, addr)
                             .unwrap();
-                        (host_callbacks.$name)(msg);
+                        (host_callbacks.$name)(msg.to_string());
                     },
                 );
                 linker.define("env", stringify!($name), $name)?;
