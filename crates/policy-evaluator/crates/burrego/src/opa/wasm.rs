@@ -118,25 +118,32 @@ impl Evaluator {
         let memory = Memory::new(&mut store, memory_ty)?;
         linker.define("env", "memory", memory)?;
 
-        macro_rules! opa_callback {
-            ($name: ident) => {
-                let $name = Func::wrap(
-                    &mut store,
-                    move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
-                        let stack_helper = caller.data().unwrap();
-                        let msg = stack_helper
-                            .pull_json(caller.as_context_mut(), &memory, addr)
-                            .unwrap();
-                        (host_callbacks.$name)(msg.to_string());
-                    },
-                );
-                linker.define("env", stringify!($name), $name)?;
-            };
-        }
-
         // OPA host callbacks. Listed at https://www.openpolicyagent.org/docs/latest/wasm/#imports
-        opa_callback!(opa_abort);
-        opa_callback!(opa_println);
+
+        let opa_abort = Func::wrap(
+            &mut store,
+            move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
+                let mut stack_helper = caller.data_mut().unwrap();
+                stack_helper.policy_aborted_execution = true;
+                let msg = stack_helper
+                    .pull_json(caller.as_context_mut(), &memory, addr)
+                    .unwrap();
+                (host_callbacks.opa_abort)(msg.to_string());
+            },
+        );
+        linker.define("env", "opa_abort", opa_abort)?;
+
+        let opa_println = Func::wrap(
+            &mut store,
+            move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
+                let stack_helper = caller.data_mut().unwrap();
+                let msg = stack_helper
+                    .pull_json(caller.as_context_mut(), &memory, addr)
+                    .unwrap();
+                (host_callbacks.opa_println)(msg.to_string());
+            },
+        );
+        linker.define("env", "opa_println", opa_println)?;
 
         //env.opa_builtin0 (builtin_id, ctx) addr
         //Called to dispatch the built-in function identified by the builtin_id.
@@ -430,8 +437,15 @@ impl Evaluator {
             input = serde_json::to_string(&input)?.as_str(),
             "attempting evaluation"
         );
-        self.policy
+        let res = self
+            .policy
             .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
-            .map_err(|e| anyhow!("Cannot convert evaluation result back to JSON: {:?}", e))
+            .map_err(|e| anyhow!("Cannot convert evaluation result back to JSON: {:?}", e));
+
+        if self.store.data().unwrap().policy_aborted_execution {
+            return Err(anyhow!("The OPA policy aborted execution"));
+        }
+
+        res
     }
 }

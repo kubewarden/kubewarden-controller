@@ -16,6 +16,18 @@ pub struct StackHelper {
     opa_malloc_fn: TypedFunc<i32, i32>,
     opa_json_parse_fn: TypedFunc<(i32, i32), i32>,
     policy_id: usize,
+    // This signals whether the policy invoked the `opa_abort`
+    // import. Right now, we continue execution and don't abort it as
+    // the expectation is, but we use this information to know whether
+    // to return an error result. If `opa_abort` was called, we want
+    // to return an error from the policy execution. We should abort
+    // the execution, but given Rego is not turing-complete, we might
+    // not enter in endless loop due to the the lack of really
+    // aborting the execution.
+    //
+    // TODO (ereslibre): abort execution when `opa_abort` is
+    // called.
+    pub policy_aborted_execution: bool,
 }
 
 impl StackHelper {
@@ -39,6 +51,7 @@ impl StackHelper {
             opa_malloc_fn,
             opa_json_parse_fn,
             policy_id,
+            policy_aborted_execution: false,
         })
     }
 
