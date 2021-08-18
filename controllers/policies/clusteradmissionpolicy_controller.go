@@ -30,6 +30,8 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 )
 
+// TODO ClusterAdmissionPolicyReconciler is not in use anymore and will be removed in https://github.com/kubewarden/kubewarden-controller/issues/59
+
 // ClusterAdmissionPolicyReconciler reconciles a ClusterAdmissionPolicy object
 type ClusterAdmissionPolicyReconciler struct {
 	client.Client

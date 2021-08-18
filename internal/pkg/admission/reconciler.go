@@ -65,6 +65,8 @@ func (r *Reconciler) ReconcileDeletion(
 		errors = append(errors, err)
 	}
 
+	// TODO delete webhooks, configmap and service
+
 	if len(errors) == 0 {
 		return nil
 	}
