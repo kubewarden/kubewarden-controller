@@ -25,7 +25,9 @@ func (r *Reconciler) service(policyServer *policiesv1alpha2.PolicyServer) *corev
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
-			Labels:    policyServer.AppLabel(),
+			Labels: map[string]string{
+				constants.AppLabelKey: policyServer.AppLabel(),
+			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -34,7 +36,9 @@ func (r *Reconciler) service(policyServer *policiesv1alpha2.PolicyServer) *corev
 					Protocol: corev1.ProtocolTCP,
 				},
 			},
-			Selector: policyServer.AppLabel(),
+			Selector: map[string]string{
+				constants.AppLabelKey: policyServer.AppLabel(),
+			},
 		},
 	}
 }
