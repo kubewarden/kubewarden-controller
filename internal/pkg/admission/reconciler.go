@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
+	appsv1 "k8s.io/api/apps/v1"
 	"strings"
 
 	"github.com/go-logr/logr"
 
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,10 +19,9 @@ import (
 )
 
 type Reconciler struct {
-	Client                        client.Client
-	DeploymentsNamespace          string
-	DeploymentsServiceAccountName string
-	Log                           logr.Logger
+	Client               client.Client
+	DeploymentsNamespace string
+	Log                  logr.Logger
 }
 
 type errorList []error
@@ -38,41 +36,37 @@ func (errorList errorList) Error() string {
 
 func (r *Reconciler) ReconcileDeletion(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policyServer *policiesv1alpha2.PolicyServer,
 ) error {
 	errors := errorList{}
-	r.Log.Info("Removing deleted policy from PolicyServer ConfigMap")
-	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, RemovePolicy); err != nil {
-		r.Log.Error(err, "ReconcileDeletion: cannot update ConfigMap")
-		errors = append(errors, err)
-	}
 
-	r.Log.Info("Removing ValidatingWebhookConfiguration associated with deleted policy")
-	validatingWebhookConf := &admissionregistrationv1.ValidatingWebhookConfiguration{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterAdmissionPolicy.Name,
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
 		},
 	}
-	if err := r.Client.Delete(ctx, validatingWebhookConf); err != nil && !apierrors.IsNotFound(err) {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete ValidatingWebhookConfiguration")
+	err := r.Client.Delete(ctx, deployment)
+	if err != nil {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Deployment %s", policyServer.Name)
 		errors = append(errors, err)
 	}
 
-	r.Log.Info("Removing MutatingWebhookConfiguration associated with deleted policy")
-	mutatingWebhookConf := &admissionregistrationv1.MutatingWebhookConfiguration{
+	certificateSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterAdmissionPolicy.Name,
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
 		},
 	}
-	if err := r.Client.Delete(ctx, mutatingWebhookConf); err != nil && !apierrors.IsNotFound(err) {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete MutatingWebhookConfiguration")
+
+	err = r.Client.Delete(ctx, certificateSecret)
+	if err != nil {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Certificate Secret %s", policyServer.Name)
 		errors = append(errors, err)
 	}
 
-	if err := r.reconcilePolicyServerDeployment(ctx); err != nil {
-		r.Log.Error(err, "ReconcileDeletion: cannot reconcile PolicyServer deployment")
-		errors = append(errors, err)
-	}
+	// TODO delete webhooks, configmap and service
+
 	if len(errors) == 0 {
 		return nil
 	}
@@ -109,13 +103,13 @@ func setTrueConditionType(conditions *[]metav1.Condition, conditionType policies
 
 func (r *Reconciler) Reconcile(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policyServer *policiesv1alpha2.PolicyServer,
 ) error {
 	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
 		setFalseConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha2.PolicyServerSecretReconciled,
+			&policyServer.Status.Conditions,
+			policiesv1alpha2.PolicyServerCARootSecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -123,22 +117,22 @@ func (r *Reconciler) Reconcile(
 
 	if err := r.reconcileSecret(ctx, policyServerCARootSecret); err != nil {
 		setFalseConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha2.PolicyServerSecretReconciled,
+			&policyServer.Status.Conditions,
+			policiesv1alpha2.PolicyServerCARootSecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
 	}
 
 	setTrueConditionType(
-		&clusterAdmissionPolicy.Status.Conditions,
-		policiesv1alpha2.PolicyServerSecretReconciled,
+		&policyServer.Status.Conditions,
+		policiesv1alpha2.PolicyServerCARootSecretReconciled,
 	)
 
-	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx, "psp-policies", policyServerCARootSecret, admissionregistration.GenerateCert)
+	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
 	if err != nil {
 		setFalseConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
+			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerSecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
@@ -147,16 +141,16 @@ func (r *Reconciler) Reconcile(
 
 	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
 		setFalseConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
+			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerSecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
 	}
 
-	if err := r.reconcilePolicyServerConfigMap(ctx, clusterAdmissionPolicy, AddPolicy); err != nil {
+	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, AddPolicy); err != nil {
 		setFalseConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
+			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerConfigMapReconciled,
 			fmt.Sprintf("error reconciling configmap: %v", err),
 		)
@@ -164,13 +158,13 @@ func (r *Reconciler) Reconcile(
 	}
 
 	setTrueConditionType(
-		&clusterAdmissionPolicy.Status.Conditions,
+		&policyServer.Status.Conditions,
 		policiesv1alpha2.PolicyServerConfigMapReconciled,
 	)
 
-	if err := r.reconcilePolicyServerDeployment(ctx); err != nil {
+	if err := r.reconcilePolicyServerDeployment(ctx, policyServer); err != nil {
 		setFalseConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
+			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerDeploymentReconciled,
 			fmt.Sprintf("error reconciling deployment: %v", err),
 		)
@@ -178,32 +172,19 @@ func (r *Reconciler) Reconcile(
 	}
 
 	setTrueConditionType(
-		&clusterAdmissionPolicy.Status.Conditions,
+		&policyServer.Status.Conditions,
 		policiesv1alpha2.PolicyServerDeploymentReconciled,
 	)
+	// TODO reconcile service and webhook
 
-	if err := r.reconcilePolicyServerService(ctx); err != nil {
-		setFalseConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha2.PolicyServerServiceReconciled,
-			fmt.Sprintf("error reconciling service: %v", err),
-		)
-		return err
-	}
-
-	setTrueConditionType(
-		&clusterAdmissionPolicy.Status.Conditions,
-		policiesv1alpha2.PolicyServerServiceReconciled,
-	)
-
-	return r.enablePolicyWebhook(ctx, clusterAdmissionPolicy, policyServerCARootSecret)
+	return nil
 }
 
 func (r *Reconciler) enablePolicyWebhook(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	policyServerSecret *corev1.Secret,
-) error {
+	policyServerName string) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx)
 
 	if err != nil {
@@ -217,7 +198,7 @@ func (r *Reconciler) enablePolicyWebhook(
 	// register the new dynamic admission controller only once the policy is
 	// served by the PolicyServer deployment
 	if clusterAdmissionPolicy.Spec.Mutating {
-		if err := r.reconcileMutatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret); err != nil {
+		if err := r.reconcileMutatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret, policyServerName); err != nil {
 			setFalseConditionType(
 				&clusterAdmissionPolicy.Status.Conditions,
 				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
@@ -231,7 +212,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
 		)
 	} else {
-		if err := r.reconcileValidatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret); err != nil {
+		if err := r.reconcileValidatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret, policyServerName); err != nil {
 			setFalseConditionType(
 				&clusterAdmissionPolicy.Status.Conditions,
 				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,

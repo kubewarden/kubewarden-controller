@@ -134,9 +134,8 @@ func createReconcilerWithExistingCA() Reconciler {
 	// Create a fake client to mock API calls. It will return the mock secret
 	cl := fake.NewClientBuilder().WithObjects(mockSecret).Build()
 	return Reconciler{
-		Client:                        cl,
-		DeploymentsNamespace:          namespace,
-		DeploymentsServiceAccountName: "",
+		Client:               cl,
+		DeploymentsNamespace: namespace,
 	}
 }
 
@@ -145,7 +144,7 @@ var mockSecretCert = map[string]string{"cert": "certString"}
 func createReconcilerWithExistingCert() Reconciler {
 	mockSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.PolicyServerSecretNamePrefix + "policyServer",
+			Name:      "policyServer",
 			Namespace: namespace,
 		},
 		StringData: mockSecretCert,
@@ -155,9 +154,8 @@ func createReconcilerWithExistingCert() Reconciler {
 	// Create a fake client to mock API calls. It will return the mock secret
 	cl := fake.NewClientBuilder().WithObjects(mockSecret).Build()
 	return Reconciler{
-		Client:                        cl,
-		DeploymentsNamespace:          namespace,
-		DeploymentsServiceAccountName: "",
+		Client:               cl,
+		DeploymentsNamespace: namespace,
 	}
 }
 
@@ -165,8 +163,7 @@ func createReconcilerWithEmptyClient() Reconciler {
 	// Create a fake client to mock API calls.
 	cl := fake.NewClientBuilder().WithObjects().Build()
 	return Reconciler{
-		Client:                        cl,
-		DeploymentsNamespace:          namespace,
-		DeploymentsServiceAccountName: "",
+		Client:               cl,
+		DeploymentsNamespace: namespace,
 	}
 }

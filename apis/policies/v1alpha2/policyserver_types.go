@@ -27,7 +27,7 @@ type PolicyServerSpec struct {
 	Image string `json:"image"`
 
 	// Replicas is the number of desired replicas.
-	Replicas int `json:"replicas"`
+	Replicas int32 `json:"replicas"`
 
 	// Annotations is an unstructured key value map stored with a resource that may be
 	// set by external tools to store and retrieve arbitrary metadata. They are not
@@ -62,6 +62,9 @@ const (
 	// PolicyServerSecretReconciled represents the condition of the
 	// Policy Server Secret reconciliation
 	PolicyServerSecretReconciled PolicyConditionType = "PolicyServerSecretReconciled"
+	// PolicyServerCARootSecretReconciled represents the condition of the
+	// Policy Server CA Root Secret reconciliation
+	PolicyServerCARootSecretReconciled PolicyConditionType = "PolicyCARootServerSecretReconciled"
 	// PolicyServerDeploymentReconciled represents the condition of the
 	// Policy Server Deployment reconciliation
 	PolicyServerDeploymentReconciled PolicyConditionType = "PolicyServerDeploymentReconciled"
@@ -95,6 +98,10 @@ type PolicyServer struct {
 
 	Spec   PolicyServerSpec   `json:"spec,omitempty"`
 	Status PolicyServerStatus `json:"status,omitempty"`
+}
+
+func (ps *PolicyServer) NameWithPrefix() string {
+	return "policy-server-" + ps.Name
 }
 
 //+kubebuilder:object:root=true

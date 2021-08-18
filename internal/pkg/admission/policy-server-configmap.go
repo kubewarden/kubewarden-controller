@@ -33,7 +33,7 @@ type policyServerConfigEntry struct {
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
 func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policyServer *policiesv1alpha2.PolicyServer,
 	operation policyServerConfigMapOperation,
 ) error {
 	cfg := &corev1.ConfigMap{}
@@ -46,31 +46,21 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 			if operation == RemovePolicy {
 				return nil
 			}
-			return r.createPolicyServerConfigMap(ctx, clusterAdmissionPolicy)
+			return r.createPolicyServerConfigMap(ctx, policyServer)
 		}
 		return fmt.Errorf("cannot lookup policies ConfigMap: %w", err)
 	}
 
-	return r.reconcilePolicyServerConfigMapPolicies(ctx, cfg, clusterAdmissionPolicy, operation)
+	return nil
 }
 
 func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policyServer *policiesv1alpha2.PolicyServer,
 ) error {
-	policies := map[string]policyServerConfigEntry{
-		clusterAdmissionPolicy.Name: {
-			URL:      clusterAdmissionPolicy.Spec.Module,
-			Settings: clusterAdmissionPolicy.Spec.Settings,
-		},
-	}
-	policiesJSON, err := json.Marshal(policies)
-	if err != nil {
-		return fmt.Errorf("cannot marshal policies to JSON: %w", err)
-	}
-
+	//TODO retrieve all ClusterAdmissionPolicies bounded to this PolicyServer and create policiesJSON
 	data := map[string]string{
-		constants.PolicyServerConfigPoliciesEntry: string(policiesJSON),
+		constants.PolicyServerConfigPoliciesEntry: "{}",
 	}
 
 	cfg := &corev1.ConfigMap{
