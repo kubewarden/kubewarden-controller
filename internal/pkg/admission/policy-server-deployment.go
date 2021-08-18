@@ -205,19 +205,19 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
-			Labels:    constants.PolicyServerLabels,
+			Labels:    policyServer.AppLabel(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &policyServer.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: constants.PolicyServerLabels,
+				MatchLabels: policyServer.AppLabel(),
 			},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      constants.PolicyServerLabels,
+					Labels:      policyServer.AppLabel(),
 					Annotations: templateAnnotations,
 				},
 				Spec: corev1.PodSpec{

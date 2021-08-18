@@ -65,7 +65,19 @@ func (r *Reconciler) ReconcileDeletion(
 		errors = append(errors, err)
 	}
 
-	// TODO delete webhooks, configmap and service
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
+		},
+	}
+	err = r.Client.Delete(ctx, service)
+	if err != nil {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Service %s", policyServer.Name)
+		errors = append(errors, err)
+	}
+
+	// TODO delete webhooks and configmap
 
 	if len(errors) == 0 {
 		return nil
@@ -175,7 +187,16 @@ func (r *Reconciler) Reconcile(
 		&policyServer.Status.Conditions,
 		policiesv1alpha2.PolicyServerDeploymentReconciled,
 	)
-	// TODO reconcile service and webhook
+
+	if err := r.reconcilePolicyServerService(ctx, policyServer); err != nil {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			policiesv1alpha2.PolicyServerServiceReconciled,
+			fmt.Sprintf("error reconciling service: %v", err),
+		)
+		return err
+	}
+	// TODO reconcile webhook
 
 	return nil
 }

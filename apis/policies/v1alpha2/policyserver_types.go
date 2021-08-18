@@ -104,6 +104,10 @@ func (ps *PolicyServer) NameWithPrefix() string {
 	return "policy-server-" + ps.Name
 }
 
+func (ps *PolicyServer) AppLabel() map[string]string {
+	return map[string]string{"app": "kubewarden-" + ps.NameWithPrefix()}
+}
+
 //+kubebuilder:object:root=true
 
 // PolicyServerList contains a list of PolicyServer
