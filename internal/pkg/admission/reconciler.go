@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -47,8 +48,8 @@ func (r *Reconciler) ReconcileDeletion(
 		},
 	}
 	err := r.Client.Delete(ctx, deployment)
-	if err != nil {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Deployment %s", policyServer.Name)
+	if err != nil && !apierrors.IsNotFound(err) {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Deployment "+policyServer.Name)
 		errors = append(errors, err)
 	}
 
@@ -60,12 +61,24 @@ func (r *Reconciler) ReconcileDeletion(
 	}
 
 	err = r.Client.Delete(ctx, certificateSecret)
-	if err != nil {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Certificate Secret %s", policyServer.Name)
+	if err != nil && !apierrors.IsNotFound(err) {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Certificate Secret "+policyServer.Name)
 		errors = append(errors, err)
 	}
 
-	// TODO delete webhooks, configmap and service
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
+		},
+	}
+	err = r.Client.Delete(ctx, service)
+	if err != nil && !apierrors.IsNotFound(err) {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Service "+policyServer.Name)
+		errors = append(errors, err)
+	}
+
+	// TODO delete webhooks and configmap
 
 	if len(errors) == 0 {
 		return nil
@@ -175,7 +188,22 @@ func (r *Reconciler) Reconcile(
 		&policyServer.Status.Conditions,
 		policiesv1alpha2.PolicyServerDeploymentReconciled,
 	)
-	// TODO reconcile service and webhook
+
+	if err := r.reconcilePolicyServerService(ctx, policyServer); err != nil {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			policiesv1alpha2.PolicyServerServiceReconciled,
+			fmt.Sprintf("error reconciling service: %v", err),
+		)
+		return err
+	}
+
+	setTrueConditionType(
+		&policyServer.Status.Conditions,
+		policiesv1alpha2.PolicyServerServiceReconciled,
+	)
+
+	// TODO reconcile webhook
 
 	return nil
 }

@@ -20,8 +20,6 @@ const (
 	PolicyServerConfigMapName               = "policy-server"
 	PolicyServerConfigPoliciesEntry         = "policies.yml"
 	PolicyServerDeploymentRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
-)
 
-var (
-	PolicyServerLabels = map[string]string{"app": "kubewarden-policy-server"}
+	AppLabelKey = "app"
 )
