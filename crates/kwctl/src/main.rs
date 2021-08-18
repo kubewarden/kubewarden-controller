@@ -24,11 +24,13 @@ use tracing::debug;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use policy_evaluator::policy_metadata::Metadata;
+use policy_evaluator::{policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata};
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
+
+use crate::utils::new_policy_execution_mode_from_str;
 
 mod annotate;
 mod backend;
@@ -164,7 +166,21 @@ async fn main() -> Result<()> {
                 };
                 let (sources, docker_config) = remote_server_options(matches)
                     .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
-                run::pull_and_run(uri, docker_config, sources, &request, settings).await?;
+                let execution_mode: Option<PolicyExecutionMode> =
+                    if let Some(mode_name) = matches.value_of("execution-mode") {
+                        Some(new_policy_execution_mode_from_str(mode_name)?)
+                    } else {
+                        None
+                    };
+                run::pull_and_run(
+                    uri,
+                    execution_mode,
+                    docker_config,
+                    sources,
+                    &request,
+                    settings,
+                )
+                .await?;
             }
             Ok(())
         }

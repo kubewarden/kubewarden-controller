@@ -4,7 +4,7 @@ use policy_evaluator::{
     policy_evaluator::{PolicyEvaluator, PolicyExecutionMode},
     policy_metadata::Metadata,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub(crate) enum Backend {
     Opa,
@@ -75,13 +75,17 @@ impl BackendDetector {
         }
     }
 
-    pub(crate) fn detect(&self, wasm_path: PathBuf, metadata: &Metadata) -> Result<Backend> {
-        let is_rego_policy = (self.rego_detector_func)(wasm_path.clone()).map_err(|e| {
+    pub(crate) fn is_rego_policy(&self, wasm_path: &Path) -> Result<bool> {
+        (self.rego_detector_func)(wasm_path.to_path_buf()).map_err(|e| {
             anyhow!(
                 "Error while checking if the policy has been created using Opa/Gatekeeper: {}",
                 e
             )
-        })?;
+        })
+    }
+
+    pub(crate) fn detect(&self, wasm_path: PathBuf, metadata: &Metadata) -> Result<Backend> {
+        let is_rego_policy = self.is_rego_policy(&wasm_path)?;
         match metadata.execution_mode {
             PolicyExecutionMode::Opa => {
                 if is_rego_policy {

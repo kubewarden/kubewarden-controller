@@ -36,6 +36,7 @@ pub fn build_cli() -> clap::App<'static, 'static> {
              (@arg ("request-path"): * -r --("request-path") +takes_value "File containing the Kubernetes admission request object in JSON format")
              (@arg ("settings-path"): -s --("settings-path") +takes_value "File containing the settings for this policy")
              (@arg ("settings-json"): --("settings-json") +takes_value "JSON string containing the settings for this policy")
+             (@arg ("execution-mode"): -e --("execution-mode") +takes_value "The runtime to use to execute this policy")
              (@arg ("uri"): * "Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
             )
             (@subcommand annotate =>
