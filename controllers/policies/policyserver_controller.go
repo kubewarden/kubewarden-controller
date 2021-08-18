@@ -68,14 +68,15 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Reconcile
-	err := admissionReconciler.Reconcile(ctx, &policyServer)
-	if err == nil {
-		if err := r.updatePolicyServerStatus(ctx, &policyServer); err == nil {
-			return ctrl.Result{}, nil
-		}
+	if err := admissionReconciler.Reconcile(ctx, &policyServer); err != nil {
+		return ctrl.Result{}, fmt.Errorf("reconciliation error: %w", err)
+	}
+	if err := r.updatePolicyServerStatus(ctx, &policyServer); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update policy server status error: %w", err)
 	}
 
-	return ctrl.Result{}, fmt.Errorf("reconciliation error: %w", err)
+	return ctrl.Result{}, nil
+
 }
 
 func (r *PolicyServerReconciler) updatePolicyServerStatus(
