@@ -442,11 +442,8 @@ impl Evaluator {
             input = serde_json::to_string(&input)?.as_str(),
             "attempting evaluation"
         );
-        let res = self
-            .policy
+        self.policy
             .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
-            .map_err(|e| anyhow!("Evaluation error: {:?}", e));
-
-        res
+            .map_err(|e| anyhow!("Evaluation error: {:?}", e))
     }
 }

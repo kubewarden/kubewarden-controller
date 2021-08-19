@@ -51,7 +51,7 @@ impl StackHelper {
     /// * The data read
     pub fn read_string(
         &self,
-        store: impl AsContextMut,
+        store: impl AsContext,
         memory: &Memory,
         addr: i32,
     ) -> Result<Vec<u8>> {
