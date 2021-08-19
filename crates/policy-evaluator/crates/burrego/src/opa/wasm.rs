@@ -127,8 +127,8 @@ impl Evaluator {
                 let msg = stack_helper
                     .read_string(caller.as_context_mut(), &memory, addr)
                     .map_or_else(
-                        |e| format!("cannot decode abort message: {:?}", e),
-                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode abort message: didn't read a valid string from memory - {:?}", e)),
+                        |e| format!("cannot decode opa_abort message: {:?}", e),
+                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_abort message: didn't read a valid string from memory - {:?}", e)),
                     );
                 (host_callbacks.opa_abort)(msg);
             },
@@ -140,9 +140,12 @@ impl Evaluator {
             move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
                 let stack_helper = caller.data_mut().unwrap();
                 let msg = stack_helper
-                    .pull_json(caller.as_context_mut(), &memory, addr)
-                    .unwrap();
-                (host_callbacks.opa_println)(msg.to_string());
+                    .read_string(caller.as_context_mut(), &memory, addr)
+                    .map_or_else(
+                        |e| format!("cannot decode opa_println message: {:?}", e),
+                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_println message: didn't read a valid string from memory - {:?}", e)),
+                    );
+                (host_callbacks.opa_println)(msg);
             },
         );
         linker.define("env", "opa_println", opa_println)?;
