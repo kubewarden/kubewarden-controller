@@ -171,7 +171,8 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
             // The collector must run on localhost (eg: use a sidecar inside of k8s)
             // using GRPC
             let tracer = opentelemetry_otlp::new_pipeline()
-                .with_tonic()
+                .tracing()
+                .with_exporter(opentelemetry_otlp::new_exporter().tonic())
                 .install_simple()?;
 
             // Create a tracing layer with the configured tracer
