@@ -56,7 +56,7 @@ fn main() -> Result<()> {
             Ok(())
         }
         Some("eval") => {
-            if let Some(ref matches) = matches.subcommand_matches("eval") {
+            if let Some(matches) = matches.subcommand_matches("eval") {
                 if matches.is_present("input") && matches.is_present("input-path") {
                     return Err(anyhow!(
                         "Cannot use 'input' and 'input-path' at the same time"

@@ -118,25 +118,37 @@ impl Evaluator {
         let memory = Memory::new(&mut store, memory_ty)?;
         linker.define("env", "memory", memory)?;
 
-        macro_rules! opa_callback {
-            ($name: ident) => {
-                let $name = Func::wrap(
-                    &mut store,
-                    move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
-                        let stack_helper = caller.data().unwrap();
-                        let msg = stack_helper
-                            .pull_json(caller.as_context_mut(), &memory, addr)
-                            .unwrap();
-                        (host_callbacks.$name)(msg.to_string());
-                    },
-                );
-                linker.define("env", stringify!($name), $name)?;
-            };
-        }
-
         // OPA host callbacks. Listed at https://www.openpolicyagent.org/docs/latest/wasm/#imports
-        opa_callback!(opa_abort);
-        opa_callback!(opa_println);
+
+        let opa_abort = Func::wrap(
+            &mut store,
+            move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
+                let stack_helper = caller.data().unwrap();
+                let msg = stack_helper
+                    .read_string(caller.as_context_mut(), &memory, addr)
+                    .map_or_else(
+                        |e| format!("cannot decode opa_abort message: {:?}", e),
+                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_abort message: didn't read a valid string from memory - {:?}", e)),
+                    );
+                (host_callbacks.opa_abort)(msg);
+            },
+        );
+        linker.define("env", "opa_abort", opa_abort)?;
+
+        let opa_println = Func::wrap(
+            &mut store,
+            move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
+                let stack_helper = caller.data_mut().unwrap();
+                let msg = stack_helper
+                    .read_string(caller.as_context_mut(), &memory, addr)
+                    .map_or_else(
+                        |e| format!("cannot decode opa_println message: {:?}", e),
+                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_println message: didn't read a valid string from memory - {:?}", e)),
+                    );
+                (host_callbacks.opa_println)(msg);
+            },
+        );
+        linker.define("env", "opa_println", opa_println)?;
 
         //env.opa_builtin0 (builtin_id, ctx) addr
         //Called to dispatch the built-in function identified by the builtin_id.
@@ -432,6 +444,6 @@ impl Evaluator {
         );
         self.policy
             .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
-            .map_err(|e| anyhow!("Cannot convert evaluation result back to JSON: {:?}", e))
+            .map_err(|e| anyhow!("Evaluation error: {:?}", e))
     }
 }

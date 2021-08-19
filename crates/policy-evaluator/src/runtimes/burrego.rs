@@ -19,13 +19,11 @@ lazy_static! {
 struct BurregoHostCallbacks;
 
 impl BurregoHostCallbacks {
-    fn opa_abort(_msg: String) {
-        // TODO (ereslibre)
-    }
+    #[tracing::instrument(level = "error")]
+    fn opa_abort(msg: String) {}
 
-    fn opa_println(_msg: String) {
-        // TODO (ereslibre)
-    }
+    #[tracing::instrument(level = "info")]
+    fn opa_println(msg: String) {}
 }
 
 impl<'a> Runtime<'a> {

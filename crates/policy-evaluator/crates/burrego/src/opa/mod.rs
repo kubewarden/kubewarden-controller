@@ -42,6 +42,34 @@ impl StackHelper {
         })
     }
 
+    /// Read a string from the Wasm guest into the host
+    /// # Arguments
+    /// * `store` - the Store associated with the Wasm instance
+    /// * `memory` - the Wasm linear memory used by the Wasm Instance
+    /// * `addr` - address inside of the Wasm linear memory where the value is stored
+    /// # Returns
+    /// * The data read
+    pub fn read_string(
+        &self,
+        store: impl AsContext,
+        memory: &Memory,
+        addr: i32,
+    ) -> Result<Vec<u8>> {
+        let mut buffer: [u8; 1] = [0u8];
+        let mut data: Vec<u8> = vec![];
+        let mut raw_addr = addr;
+
+        loop {
+            memory.read(&store, raw_addr.try_into().unwrap(), &mut buffer)?;
+            if buffer[0] == 0 {
+                break;
+            }
+            data.push(buffer[0]);
+            raw_addr += 1;
+        }
+        Ok(data)
+    }
+
     /// Pull a JSON data from the Wasm guest into the host
     /// # Arguments
     /// * `store` - the Store associated with the Wasm instance
@@ -55,18 +83,8 @@ impl StackHelper {
         memory: &Memory,
         addr: i32,
     ) -> Result<serde_json::Value> {
-        let mut raw_addr = self.opa_json_dump_fn.call(store.as_context_mut(), addr)?;
-        let mut buffer: [u8; 1] = [0u8];
-        let mut data: Vec<u8> = vec![];
-
-        loop {
-            memory.read(&store, raw_addr.try_into().unwrap(), &mut buffer)?;
-            if buffer[0] == 0 {
-                break;
-            }
-            data.push(buffer[0]);
-            raw_addr += 1;
-        }
+        let raw_addr = self.opa_json_dump_fn.call(store.as_context_mut(), addr)?;
+        let data = self.read_string(store, memory, raw_addr)?;
 
         serde_json::from_slice(&data).map_err(|e| {
             anyhow!(
