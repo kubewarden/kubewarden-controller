@@ -123,8 +123,7 @@ impl Evaluator {
         let opa_abort = Func::wrap(
             &mut store,
             move |mut caller: Caller<'_, Option<StackHelper>>, addr: i32| {
-                let mut stack_helper = caller.data_mut().unwrap();
-                stack_helper.policy_aborted_execution = true;
+                let stack_helper = caller.data().unwrap();
                 let msg = stack_helper
                     .read_string(caller.as_context_mut(), &memory, addr)
                     .map_or_else(
@@ -443,11 +442,7 @@ impl Evaluator {
         let res = self
             .policy
             .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
-            .map_err(|e| anyhow!("Cannot convert evaluation result back to JSON: {:?}", e));
-
-        if self.store.data().unwrap().policy_aborted_execution {
-            return Err(anyhow!("The OPA policy aborted execution"));
-        }
+            .map_err(|e| anyhow!("Evaluation error: {:?}", e));
 
         res
     }
