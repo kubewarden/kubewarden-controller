@@ -67,7 +67,7 @@ pub(crate) async fn run_server(
     match tls_acceptor {
         None => {
             let make_svc = mk_svc_fn!(api_tx);
-            let server = Server::bind(&addr).serve(make_svc);
+            let server = Server::bind(addr).serve(make_svc);
             info!(address = addr.to_string().as_str(), "started HTTP server");
             if let Err(e) = server.await {
                 error!(error = e.to_string().as_str(), "HTTP server error");
