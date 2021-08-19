@@ -24,7 +24,7 @@ use tracing::debug;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use policy_evaluator::{policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata};
+use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
@@ -103,18 +103,9 @@ async fn main() -> Result<()> {
                     "policy push"
                 );
 
-                let policy = fs::read(&wasm_path)?;
                 let force = matches.is_present("force");
-                let metadata = Metadata::from_path(&wasm_path)?;
-                if metadata.is_none() {
-                    if force {
-                        eprintln!("Warning: pushing a non-annotated policy!");
-                    } else {
-                        return Err(anyhow!("Cannot push a policy that is not annotated. Use `annotate` command or `push --force`"));
-                    }
-                }
 
-                push::push(&policy, &uri, docker_config, sources).await?;
+                push::push(wasm_path, &uri, docker_config, sources, force).await?;
             };
             println!("Policy successfully pushed");
             Ok(())
