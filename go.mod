@@ -24,3 +24,8 @@ require (
 	k8s.io/client-go v0.20.2
 	sigs.k8s.io/controller-runtime v0.7.2
 )
+
+replace (
+	// Get rid of CVE-2021-3121. Replacement to be removed.
+	github.com/gogo/protobuf v1.3.1 => github.com/gogo/protobuf v1.3.2
+)
