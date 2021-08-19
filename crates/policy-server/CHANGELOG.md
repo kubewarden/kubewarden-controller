@@ -2,6 +2,33 @@
 ## [Unreleased]
 
 
+<a name="v0.1.9"></a>
+## [v0.1.9] - 2021-08-19
+
+<a name="v0.1.8"></a>
+## [v0.1.8] - 2021-07-13
+### Features
+- improve logging story
+
+### Pull Requests
+- Merge pull request [#75](https://github.com/kubewarden/policy-server/issues/75) from flavio/distributed-tracing
+
+
+<a name="v0.1.7"></a>
+## [v0.1.7] - 2021-06-16
+
+<a name="v0.1.6"></a>
+## [v0.1.6] - 2021-06-16
+### Reverts
+- Bump dependencies in security report
+
+### Pull Requests
+- Merge pull request [#74](https://github.com/kubewarden/policy-server/issues/74) from kubewarden/context-aware
+- Merge pull request [#72](https://github.com/kubewarden/policy-server/issues/72) from kubewarden/commit-subjects
+- Merge pull request [#71](https://github.com/kubewarden/policy-server/issues/71) from flavio/fix-wasmtime-security-warning
+- Merge pull request [#69](https://github.com/kubewarden/policy-server/issues/69) from kubewarden/bump-security-dependencies
+
+
 <a name="v0.1.5"></a>
 ## [v0.1.5] - 2021-06-03
 ### Code Refactoring
@@ -73,7 +100,11 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.1.9...HEAD
+[v0.1.9]: https://github.com/kubewarden/policy-server/compare/v0.1.8...v0.1.9
+[v0.1.8]: https://github.com/kubewarden/policy-server/compare/v0.1.7...v0.1.8
+[v0.1.7]: https://github.com/kubewarden/policy-server/compare/v0.1.6...v0.1.7
+[v0.1.6]: https://github.com/kubewarden/policy-server/compare/v0.1.5...v0.1.6
 [v0.1.5]: https://github.com/kubewarden/policy-server/compare/v0.1.4...v0.1.5
 [v0.1.4]: https://github.com/kubewarden/policy-server/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/kubewarden/policy-server/compare/v0.1.2...v0.1.3
