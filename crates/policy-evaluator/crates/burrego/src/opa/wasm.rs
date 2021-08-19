@@ -126,9 +126,12 @@ impl Evaluator {
                 let mut stack_helper = caller.data_mut().unwrap();
                 stack_helper.policy_aborted_execution = true;
                 let msg = stack_helper
-                    .pull_json(caller.as_context_mut(), &memory, addr)
-                    .unwrap();
-                (host_callbacks.opa_abort)(msg.to_string());
+                    .read_string(caller.as_context_mut(), &memory, addr)
+                    .map_or_else(
+                        |e| format!("cannot decode abort message: {:?}", e),
+                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode abort message: didn't read a valid string from memory - {:?}", e)),
+                    );
+                (host_callbacks.opa_abort)(msg);
             },
         );
         linker.define("env", "opa_abort", opa_abort)?;
