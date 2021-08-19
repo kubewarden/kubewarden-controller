@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="v0.1.10"></a>
+## [v0.1.10] - 2021-08-19
+### Pull Requests
+- Merge pull request [#84](https://github.com/kubewarden/policy-server/issues/84) from ereslibre/bump-dependencies
+
+
 <a name="v0.1.9"></a>
 ## [v0.1.9] - 2021-08-19
 
@@ -100,7 +106,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.1.10...HEAD
+[v0.1.10]: https://github.com/kubewarden/policy-server/compare/v0.1.9...v0.1.10
 [v0.1.9]: https://github.com/kubewarden/policy-server/compare/v0.1.8...v0.1.9
 [v0.1.8]: https://github.com/kubewarden/policy-server/compare/v0.1.7...v0.1.8
 [v0.1.7]: https://github.com/kubewarden/policy-server/compare/v0.1.6...v0.1.7
