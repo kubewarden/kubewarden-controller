@@ -175,7 +175,7 @@ func (r *Reconciler) Reconcile(
 
 	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
 	if err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
-		return fmt.Errorf("cannot retrieve cluster admin policies: %w", err)
+		return fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
 	}
 
 	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, &clusterAdmissionPolicies); err != nil {
