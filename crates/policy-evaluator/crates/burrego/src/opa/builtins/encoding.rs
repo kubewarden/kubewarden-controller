@@ -313,6 +313,26 @@ pub mod yaml {
             .map_err(|e| anyhow!("yaml.marshal: cannot convert result into JSON: {:?}", e))
     }
 
+    pub fn unmarshal(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("yaml.unmarshal: wrong number of arguments"));
+        }
+
+        let input = args[0]
+            .as_str()
+            .ok_or_else(|| anyhow!("yaml.unmarshal: 1st parameter is not a string"))?;
+
+        let res: serde_json::Value = serde_yaml::from_str(input).map_err(|e| {
+            anyhow!(
+                "yaml.unmarshal: cannot convert input object to json - {:?}",
+                e
+            )
+        })?;
+
+        serde_json::to_value(res)
+            .map_err(|e| anyhow!("yaml.unmarshal: cannot convert result into JSON: {:?}", e))
+    }
+
     #[cfg(test)]
     mod test {
         use super::*;
@@ -338,6 +358,33 @@ list:
   - 3
 number: 42
 "#;
+
+            let actual = actual.unwrap();
+            assert_eq!(json!(expected), actual);
+        }
+
+        #[test]
+        fn test_unmarshal() {
+            let input_str = r#"---
+hello: world
+list:
+  - 1
+  - 2
+  - 3
+number: 42
+"#;
+
+            let input = json!(input_str);
+
+            let expected = json!({
+                "hello": "world",
+                "number": 42,
+                "list": [1,2,3]
+            });
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = unmarshal(&args);
+            assert!(actual.is_ok());
 
             let actual = actual.unwrap();
             assert_eq!(json!(expected), actual);
