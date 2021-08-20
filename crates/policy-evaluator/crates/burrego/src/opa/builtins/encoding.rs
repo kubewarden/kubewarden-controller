@@ -391,3 +391,44 @@ number: 42
         }
     }
 }
+
+pub mod hex {
+    use anyhow::{anyhow, Result};
+
+    pub fn encode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("hex.encode: wrong number of arguments"));
+        }
+
+        let input = args[0]
+            .as_str()
+            .ok_or_else(|| anyhow!("hex.encode: 1st parameter is not a string"))?;
+
+        let res: Vec<String> = input
+            .as_bytes()
+            .iter()
+            .map(|v| format!("{:x?}", v))
+            .collect();
+        let res = res.join("");
+
+        serde_json::to_value(res)
+            .map_err(|e| anyhow!("hex.encode: cannot convert value into JSON: {:?}", e))
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use serde_json::json;
+
+        #[test]
+        fn test_encode() {
+            let input = "hello";
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = encode(&args);
+
+            assert!(actual.is_ok());
+            assert_eq!(json!("68656c6c6f"), actual.unwrap());
+        }
+    }
+}
