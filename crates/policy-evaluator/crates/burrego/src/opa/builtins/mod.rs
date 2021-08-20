@@ -21,6 +21,7 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
     functions.insert("urlquery.encode_object", encoding::urlquery::encode_object);
     functions.insert("urlquery.decode_object", encoding::urlquery::decode_object);
     functions.insert("json.is_valid", encoding::json::is_valid);
+    functions.insert("yaml.marshal", encoding::yaml::marshal);
 
     functions
 }

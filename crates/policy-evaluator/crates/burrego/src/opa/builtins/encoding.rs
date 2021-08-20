@@ -286,3 +286,61 @@ pub mod json {
         }
     }
 }
+
+pub mod yaml {
+    use anyhow::{anyhow, Result};
+
+    pub fn marshal(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("yaml.marshal: wrong number of arguments"));
+        }
+
+        let input: serde_json::Value = args[0].clone();
+
+        // convert the generic input json value into a generic yaml value
+        let value: serde_yaml::Value = serde_json::from_value(input).map_err(|e| {
+            anyhow!(
+                "yaml.marshal: cannot convert input object to yaml - {:?}",
+                e
+            )
+        })?;
+
+        // marshal from yaml to string
+        let res = serde_yaml::to_string(&value)
+            .map_err(|e| anyhow!("yaml.marshal: marshal error - {:?}", e))?;
+
+        serde_json::to_value(res)
+            .map_err(|e| anyhow!("yaml.marshal: cannot convert result into JSON: {:?}", e))
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use serde_json::json;
+
+        #[test]
+        fn test_marshal() {
+            let input = json!({
+                "hello": "world",
+                "number": 42,
+                "list": [1,2,3]
+            });
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = marshal(&args);
+            assert!(actual.is_ok());
+
+            let expected = r#"---
+hello: world
+list:
+  - 1
+  - 2
+  - 3
+number: 42
+"#;
+
+            let actual = actual.unwrap();
+            assert_eq!(json!(expected), actual);
+        }
+    }
+}
