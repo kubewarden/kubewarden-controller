@@ -16,6 +16,7 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
         "base64url.encode_no_pad",
         encoding::base64url::encode_no_pad,
     );
+    functions.insert("urlquery.encode", encoding::urlquery::encode);
 
     functions
 }

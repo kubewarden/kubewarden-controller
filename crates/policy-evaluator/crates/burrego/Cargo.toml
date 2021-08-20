@@ -18,3 +18,4 @@ serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version= "0.2", features = ["fmt"] }
 wasmtime = "0.28.0"
+url = "2.2.2"

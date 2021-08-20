@@ -47,3 +47,50 @@ pub mod base64url {
         }
     }
 }
+
+pub mod urlquery {
+    use anyhow::{anyhow, Result};
+    use url::Url;
+
+    pub fn encode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("urlquery.encode: wrong number of arguments"));
+        }
+
+        let input = args[0]
+            .as_str()
+            .ok_or_else(|| anyhow!("urlquery.encode: 1st parameter is not a string"))?;
+
+        let mut url = Url::parse("https://example.com/")
+            .map_err(|e| anyhow!("urlquery.encode: internal error 1 - {:?}", e))?;
+        url.set_query(Some(format!("input={}", input).as_str()));
+
+        let res = url
+            .query()
+            .ok_or(anyhow!("urlquery.encode: internal error 2"))?;
+        let res = res
+            .strip_prefix("input=")
+            .ok_or(anyhow!("urlquery.encode: internal error 3"))?;
+
+        serde_json::to_value(res)
+            .map_err(|e| anyhow!("urlquery.encode: Cannot convert value into JSON: {:?}", e))
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use serde_json::json;
+
+        #[test]
+        fn test_encode() {
+            let input = "español";
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = encode(&args);
+            assert!(actual.is_ok());
+
+            let actual = actual.unwrap();
+            assert_eq!(json!("espa%C3%B1ol"), actual);
+        }
+    }
+}
