@@ -101,6 +101,43 @@ pub mod urlquery {
         Err(anyhow!("urlquery.decode: unreachable!"))
     }
 
+    pub fn encode_object(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("urlquery.encode_object: wrong number of arguments"));
+        }
+
+        let obj = args[0]
+            .as_object()
+            .ok_or_else(|| anyhow!("urlquery.encode_object: 1st parameter is not an object"))?;
+
+        let mut url = Url::parse("https://example.com/")
+            .map_err(|e| anyhow!("urlquery.encode_object: internal error 1 - {:?}", e))?;
+
+        let mut queries: Vec<String> = Vec::new();
+        for (key, value) in obj.iter() {
+            let value_str = value.as_str();
+            if value_str.is_none() {
+                return Err(anyhow!(
+                    "urlquery.encode_object: the value of key {} is not a string",
+                    key
+                ));
+            }
+            queries.push(format!("{}={}", key, value_str.unwrap()));
+        }
+        url.set_query(Some(queries.join("&").as_str()));
+
+        let res = url
+            .query()
+            .ok_or(anyhow!("urlquery.encode_object: internal error 2"))?;
+
+        serde_json::to_value(res).map_err(|e| {
+            anyhow!(
+                "urlquery.encode_object: Cannot convert value into JSON: {:?}",
+                e
+            )
+        })
+    }
+
     #[cfg(test)]
     mod test {
         use super::*;
@@ -128,6 +165,38 @@ pub mod urlquery {
 
             let actual = actual.unwrap();
             assert_eq!(json!("español"), actual);
+        }
+
+        #[test]
+        fn test_encode_object() {
+            let input = json!(
+            {
+                "language": "español",
+                "name": "Rafael Fernández López"
+            });
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = encode_object(&args);
+            assert!(actual.is_ok());
+
+            assert_eq!(
+                json!("language=espa%C3%B1ol&name=Rafael%20Fern%C3%A1ndez%20L%C3%B3pez"),
+                actual.unwrap()
+            );
+        }
+
+        #[test]
+        fn test_encode_object_does_not_have_string_values() {
+            let input = json!(
+            {
+                "language": "español",
+                "name": "Rafael Fernández López",
+                "awesomeness": 100,
+            });
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = encode_object(&args);
+            assert!(actual.is_err());
         }
     }
 }
