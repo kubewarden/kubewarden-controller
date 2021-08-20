@@ -68,10 +68,10 @@ pub mod urlquery {
 
         let res = url
             .query()
-            .ok_or(anyhow!("urlquery.encode: internal error 2"))?;
+            .ok_or_else(|| anyhow!("urlquery.encode: internal error 2"))?;
         let res = res
             .strip_prefix("input=")
-            .ok_or(anyhow!("urlquery.encode: internal error 3"))?;
+            .ok_or_else(|| anyhow!("urlquery.encode: internal error 3"))?;
 
         serde_json::to_value(res)
             .map_err(|e| anyhow!("urlquery.encode: Cannot convert value into JSON: {:?}", e))
@@ -90,16 +90,13 @@ pub mod urlquery {
             .map_err(|e| anyhow!("urlquery.decode: internal error 1 - {:?}", e))?;
         url.set_query(Some(format!("input={}", input).as_str()));
 
-        let pairs = url.query_pairs();
+        let mut pairs = url.query_pairs();
         if pairs.count() != 1 {
             return Err(anyhow!("urlquery.decode: internal error 2"));
         }
-        for (_, value) in pairs {
-            return serde_json::to_value(&value)
-                .map_err(|e| anyhow!("urlquery.decode: Cannot convert value into JSON: {:?}", e));
-        }
-
-        Err(anyhow!("urlquery.decode: unreachable!"))
+        let (_, value) = pairs.next().unwrap();
+        serde_json::to_value(&value)
+            .map_err(|e| anyhow!("urlquery.decode: Cannot convert value into JSON: {:?}", e))
     }
 
     pub fn encode_object(args: &[serde_json::Value]) -> Result<serde_json::Value> {
@@ -129,7 +126,7 @@ pub mod urlquery {
 
         let res = url
             .query()
-            .ok_or(anyhow!("urlquery.encode_object: internal error 2"))?;
+            .ok_or_else(|| anyhow!("urlquery.encode_object: internal error 2"))?;
 
         serde_json::to_value(res).map_err(|e| {
             anyhow!(
