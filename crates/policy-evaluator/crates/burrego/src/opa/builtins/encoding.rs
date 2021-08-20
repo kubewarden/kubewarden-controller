@@ -243,3 +243,46 @@ pub mod urlquery {
         }
     }
 }
+
+pub mod json {
+    use anyhow::{anyhow, Result};
+
+    pub fn is_valid(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("json.is_valid: wrong number of arguments"));
+        }
+
+        let input = args[0]
+            .as_str()
+            .ok_or_else(|| anyhow!("json.is_valid: 1st parameter is not a string"))?;
+
+        let v: serde_json::Result<serde_json::Value> = serde_json::from_str(input);
+        let res = v.is_ok();
+
+        serde_json::to_value(res)
+            .map_err(|e| anyhow!("json.is_valid: cannot convert value into JSON: {:?}", e))
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use serde_json::json;
+        use std::collections::HashMap;
+
+        #[test]
+        fn test_is_valid() {
+            let mut cases: HashMap<String, bool> = HashMap::new();
+            cases.insert(String::from("[1,2]"), true);
+            cases.insert(String::from("[1,2"), false);
+
+            for (input, expected) in cases.iter() {
+                let args: Vec<serde_json::Value> = vec![json!(input)];
+                let actual = is_valid(&args);
+                assert!(actual.is_ok());
+
+                let actual = actual.unwrap();
+                assert_eq!(json!(expected), actual);
+            }
+        }
+    }
+}
