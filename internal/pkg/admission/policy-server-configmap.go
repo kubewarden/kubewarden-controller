@@ -25,7 +25,7 @@ type policyServerConfigEntry struct {
 func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
-	clusterAdminPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
+	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
 ) error {
 
 	cfg := &corev1.ConfigMap{}
@@ -35,12 +35,12 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 	}, cfg)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return r.createPolicyServerConfigMap(ctx, policyServer, clusterAdminPolicies)
+			return r.createPolicyServerConfigMap(ctx, policyServer, clusterAdmissionPolicies)
 		}
 		return fmt.Errorf("cannot lookup policies ConfigMap: %w", err)
 	}
 
-	newPoliciesYML, err := r.createPoliciesYML(clusterAdminPolicies)
+	newPoliciesYML, err := r.createPoliciesYML(clusterAdmissionPolicies)
 	if err != nil {
 		return fmt.Errorf("cannot create policies: %w", err)
 	}
@@ -60,9 +60,9 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
-	clusterAdminPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
+	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
 ) error {
-	policiesYML, err := r.createPoliciesYML(clusterAdminPolicies)
+	policiesYML, err := r.createPoliciesYML(clusterAdmissionPolicies)
 	if err != nil {
 		return fmt.Errorf("cannot create policies: %w", err)
 	}
@@ -83,10 +83,10 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	return r.Client.Create(ctx, cfg)
 }
 
-func (r *Reconciler) createPoliciesYML(clusterAdminPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) (string, error) {
+func (r *Reconciler) createPoliciesYML(clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) (string, error) {
 	policies := make(map[string]policyServerConfigEntry)
 
-	for _, clusterAdmissionPolicy := range clusterAdminPolicies.Items {
+	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		policies[clusterAdmissionPolicy.Name] = policyServerConfigEntry{
 			URL:      clusterAdmissionPolicy.Spec.Module,
 			Settings: clusterAdmissionPolicy.Spec.Settings,

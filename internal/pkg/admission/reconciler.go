@@ -173,12 +173,12 @@ func (r *Reconciler) Reconcile(
 		return err
 	}
 
-	var clusterAdminPolicies policiesv1alpha2.ClusterAdmissionPolicyList
-	if err := r.Client.List(ctx, &clusterAdminPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
+	if err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
 		return fmt.Errorf("cannot retrieve cluster admin policies: %w", err)
 	}
 
-	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, &clusterAdminPolicies); err != nil {
+	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, &clusterAdmissionPolicies); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerConfigMapReconciled,
@@ -220,14 +220,14 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerServiceReconciled,
 	)
 
-	return r.enablePolicyWebhook(ctx, policyServer, policyServerCARootSecret, &clusterAdminPolicies)
+	return r.enablePolicyWebhook(ctx, policyServer, policyServerCARootSecret, &clusterAdmissionPolicies)
 }
 
 func (r *Reconciler) enablePolicyWebhook(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
 	policyServerSecret *corev1.Secret,
-	clusterAdminPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
+	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
 
 	if err != nil {
@@ -238,7 +238,7 @@ func (r *Reconciler) enablePolicyWebhook(
 		return errors.New("policy server not yet ready")
 	}
 
-	for _, clusterAdmissionPolicy := range clusterAdminPolicies.Items {
+	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		// register the new dynamic admission controller only once the policy is
 		// served by the PolicyServer deployment
 		if clusterAdmissionPolicy.Spec.Mutating {
