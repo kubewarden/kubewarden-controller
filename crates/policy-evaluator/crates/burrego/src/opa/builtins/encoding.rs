@@ -50,6 +50,7 @@ pub mod base64url {
 
 pub mod urlquery {
     use anyhow::{anyhow, Result};
+    use std::collections::HashMap;
     use url::Url;
 
     pub fn encode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
@@ -138,6 +139,33 @@ pub mod urlquery {
         })
     }
 
+    pub fn decode_object(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("urlquery.decode_object: wrong number of arguments"));
+        }
+
+        let input = args[0]
+            .as_str()
+            .ok_or_else(|| anyhow!("urlquery.decode: 1st parameter is not a string"))?;
+
+        let mut url = Url::parse("https://example.com/")
+            .map_err(|e| anyhow!("urlquery.decode_object: internal error 1 - {:?}", e))?;
+        url.set_query(Some(input));
+
+        let mut res: HashMap<String, String> = HashMap::new();
+        let pairs = url.query_pairs();
+        for (key, value) in pairs {
+            res.insert(String::from(key), String::from(value));
+        }
+
+        serde_json::to_value(&res).map_err(|e| {
+            anyhow!(
+                "urlquery.decode_object: Cannot convert value into JSON: {:?}",
+                e
+            )
+        })
+    }
+
     #[cfg(test)]
     mod test {
         use super::*;
@@ -197,6 +225,21 @@ pub mod urlquery {
             let args: Vec<serde_json::Value> = vec![json!(input)];
             let actual = encode_object(&args);
             assert!(actual.is_err());
+        }
+
+        #[test]
+        fn test_decode_object() {
+            let expected = json!(
+            {
+                "language": "español",
+                "name": "Rafael Fernández López"
+            });
+            let input = json!("language=espa%C3%B1ol&name=Rafael%20Fern%C3%A1ndez%20L%C3%B3pez");
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = decode_object(&args);
+            assert!(actual.is_ok());
+            assert_eq!(expected, actual.unwrap());
         }
     }
 }
