@@ -166,6 +166,7 @@ pub mod urlquery {
     #[cfg(test)]
     mod test {
         use super::*;
+        use assert_json_diff::assert_json_eq;
         use serde_json::json;
 
         #[test]
@@ -204,7 +205,7 @@ pub mod urlquery {
             let actual = encode_object(&args);
             assert!(actual.is_ok());
 
-            assert_eq!(
+            assert_json_eq!(
                 json!("language=espa%C3%B1ol&name=Rafael%20Fern%C3%A1ndez%20L%C3%B3pez"),
                 actual.unwrap()
             );
@@ -236,7 +237,7 @@ pub mod urlquery {
             let args: Vec<serde_json::Value> = vec![json!(input)];
             let actual = decode_object(&args);
             assert!(actual.is_ok());
-            assert_eq!(expected, actual.unwrap());
+            assert_json_eq!(expected, actual.unwrap());
         }
     }
 }
@@ -263,6 +264,7 @@ pub mod json {
     #[cfg(test)]
     mod test {
         use super::*;
+        use assert_json_diff::assert_json_eq;
         use serde_json::json;
         use std::collections::HashMap;
 
@@ -278,7 +280,7 @@ pub mod json {
                 assert!(actual.is_ok());
 
                 let actual = actual.unwrap();
-                assert_eq!(json!(expected), actual);
+                assert_json_eq!(json!(expected), actual);
             }
         }
     }
@@ -333,6 +335,7 @@ pub mod yaml {
     #[cfg(test)]
     mod test {
         use super::*;
+        use assert_json_diff::assert_json_eq;
         use serde_json::json;
 
         #[test]
@@ -357,7 +360,7 @@ number: 42
 "#;
 
             let actual = actual.unwrap();
-            assert_eq!(json!(expected), actual);
+            assert_json_eq!(json!(expected), actual);
         }
 
         #[test]
@@ -384,7 +387,7 @@ number: 42
             assert!(actual.is_ok());
 
             let actual = actual.unwrap();
-            assert_eq!(json!(expected), actual);
+            assert_json_eq!(json!(expected), actual);
         }
     }
 }
