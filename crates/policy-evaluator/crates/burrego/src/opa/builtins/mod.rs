@@ -24,6 +24,7 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
     functions.insert("yaml.marshal", encoding::yaml::marshal);
     functions.insert("yaml.unmarshal", encoding::yaml::unmarshal);
     functions.insert("hex.encode", encoding::hex::encode);
+    functions.insert("hex.decode", encoding::hex::decode);
 
     functions
 }

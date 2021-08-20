@@ -394,6 +394,7 @@ number: 42
 
 pub mod hex {
     use anyhow::{anyhow, Result};
+    use core::num;
 
     pub fn encode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
@@ -415,6 +416,28 @@ pub mod hex {
             .map_err(|e| anyhow!("hex.encode: cannot convert value into JSON: {:?}", e))
     }
 
+    pub fn decode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("hex.decode: wrong number of arguments"));
+        }
+
+        let input = args[0]
+            .as_str()
+            .ok_or_else(|| anyhow!("hex.decode: 1st parameter is not a string"))?;
+
+        let value: std::result::Result<Vec<u8>, num::ParseIntError> = (0..input.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&input[i..i + 2], 16))
+            .collect();
+        let value = value.map_err(|e| anyhow!("hex.decode: cannot parse input - {:?}", e))?;
+
+        let res = String::from_utf8(value)
+            .map_err(|e| anyhow!("hex.decode: cannot parse string - {:?}", e))?;
+
+        serde_json::to_value(res)
+            .map_err(|e| anyhow!("hex.decode: cannot convert value into JSON: {:?}", e))
+    }
+
     #[cfg(test)]
     mod test {
         use super::*;
@@ -429,6 +452,17 @@ pub mod hex {
 
             assert!(actual.is_ok());
             assert_eq!(json!("68656c6c6f"), actual.unwrap());
+        }
+
+        #[test]
+        fn test_decode() {
+            let input = "68656c6c6f";
+
+            let args: Vec<serde_json::Value> = vec![json!(input)];
+            let actual = decode(&args);
+
+            assert!(actual.is_ok());
+            assert_eq!(json!("hello"), actual.unwrap());
         }
     }
 }
