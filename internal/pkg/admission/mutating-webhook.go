@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,11 +21,40 @@ func (r *Reconciler) reconcileMutatingWebhookConfiguration(
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) error {
-	err := r.Client.Create(ctx, r.mutatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret, policyServerName))
-	if err == nil || apierrors.IsAlreadyExists(err) {
+	webhook := r.mutatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret, policyServerName)
+	err := r.Client.Create(ctx, webhook)
+	if err == nil {
 		return nil
 	}
+	if apierrors.IsAlreadyExists(err) {
+		return r.updateMutatingWebhook(ctx, clusterAdmissionPolicy, webhook)
+	}
 	return fmt.Errorf("cannot reconcile mutating webhook: %w", err)
+}
+
+func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	newWebhook *admissionregistrationv1.MutatingWebhookConfiguration) error {
+
+	var originalWebhook admissionregistrationv1.MutatingWebhookConfiguration
+
+	err := r.Client.Get(ctx, client.ObjectKey{
+		Name: clusterAdmissionPolicy.Name,
+	}, &originalWebhook)
+	if err != nil && apierrors.IsNotFound(err) {
+		return fmt.Errorf("cannot retrieve mutating webhook: %w", err)
+	}
+
+	if !reflect.DeepEqual(originalWebhook.Webhooks, newWebhook.Webhooks) {
+		patch := originalWebhook.DeepCopy()
+		patch.Webhooks = newWebhook.Webhooks
+		err = r.Client.Patch(ctx, patch, client.MergeFrom(&originalWebhook))
+		if err != nil {
+			return fmt.Errorf("cannot patch mutating webhook: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *Reconciler) mutatingWebhookConfiguration(
@@ -57,7 +88,7 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 				Name: fmt.Sprintf("%s.kubewarden.admission", clusterAdmissionPolicy.Name),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.PolicyServerCARootSecretName],
+					CABundle: admissionSecret.Data[constants.PolicyServerCARootPemName],
 				},
 				Rules:                   clusterAdmissionPolicy.Spec.Rules,
 				FailurePolicy:           clusterAdmissionPolicy.Spec.FailurePolicy,

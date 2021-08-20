@@ -20,7 +20,7 @@ import (
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
 func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
-	configMapVersion, err := r.policyServerConfigMapVersion(ctx)
+	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
 	}
@@ -40,11 +40,11 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 // isPolicyServerReady returns true when the PolicyServer deployment is running only
 // fresh replicas that are reflecting its Spec.
 // This works using the same code of `kubectl rollout status <deployment>`
-func (r *Reconciler) isPolicyServerReady(ctx context.Context) (bool, error) {
+func (r *Reconciler) isPolicyServerReady(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerDeploymentName,
+		Name:      policyServer.NameWithPrefix(),
 	}, deployment)
 	if err != nil {
 		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
@@ -243,7 +243,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: constants.PolicyServerConfigMapName,
+										Name: policyServer.NameWithPrefix(),
 									},
 									Items: []corev1.KeyToPath{
 										{
