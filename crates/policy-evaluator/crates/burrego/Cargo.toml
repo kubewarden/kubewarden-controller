@@ -8,12 +8,13 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.40"
+base64 = "0.13.0"
 clap = "2.33.3"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.64"
 gtmpl = "0.7.1"
 gtmpl_value = "0.5.1"
 lazy_static = "1.4.0"
+serde_json = "1.0.64"
+serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version= "0.2", features = ["fmt"] }
 wasmtime = "0.28.0"
