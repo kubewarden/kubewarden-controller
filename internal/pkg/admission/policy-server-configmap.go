@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
@@ -40,21 +41,41 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 		return fmt.Errorf("cannot lookup policies ConfigMap: %w", err)
 	}
 
-	newPoliciesYML, err := r.createPoliciesYML(clusterAdmissionPolicies)
+	return r.updateIfNeeded(ctx, cfg, clusterAdmissionPolicies)
+}
+
+func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap, clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
+	newPoliciesMap, err := r.createPoliciesMap(clusterAdmissionPolicies)
 	if err != nil {
 		return fmt.Errorf("cannot create policies: %w", err)
 	}
-	currentPoliciesYML := cfg.Data[constants.PolicyServerConfigPoliciesEntry]
 
-	if currentPoliciesYML != newPoliciesYML {
+	if shouldUpdate, err := shouldUpdatePolicyMap(cfg.Data[constants.PolicyServerConfigPoliciesEntry], newPoliciesMap); err != nil {
+		return fmt.Errorf("cannot compare policies: %w", err)
+	} else if shouldUpdate {
+		newPoliciesYML, err := json.Marshal(newPoliciesMap)
+		if err != nil {
+			return fmt.Errorf("cannot marshal policies: %w", err)
+		}
 		patch := cfg.DeepCopy()
-		patch.Data[constants.PolicyServerConfigPoliciesEntry] = newPoliciesYML
+		patch.Data[constants.PolicyServerConfigPoliciesEntry] = string(newPoliciesYML)
 		err = r.Client.Patch(ctx, patch, client.MergeFrom(cfg))
 		if err != nil {
 			return fmt.Errorf("cannot patching policies: %w", err)
 		}
 	}
+
 	return nil
+}
+
+func shouldUpdatePolicyMap(currentPoliciesYML string, newPoliciesMap map[string]policyServerConfigEntry) (bool, error) {
+	var currentPoliciesMap map[string]policyServerConfigEntry
+
+	if err := json.Unmarshal([]byte(currentPoliciesYML), &currentPoliciesMap); err != nil {
+		return false, fmt.Errorf("cannot unmarshal policies: %w", err)
+	}
+
+	return !reflect.DeepEqual(currentPoliciesMap, newPoliciesMap), nil
 }
 
 func (r *Reconciler) createPolicyServerConfigMap(
@@ -62,13 +83,18 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	policyServer *policiesv1alpha2.PolicyServer,
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
 ) error {
-	policiesYML, err := r.createPoliciesYML(clusterAdmissionPolicies)
+	policies, err := r.createPoliciesMap(clusterAdmissionPolicies)
 	if err != nil {
 		return fmt.Errorf("cannot create policies: %w", err)
 	}
 
+	policiesYML, err := json.Marshal(policies)
+	if err != nil {
+		return fmt.Errorf("cannot marshal policies: %w", err)
+	}
+
 	data := map[string]string{
-		constants.PolicyServerConfigPoliciesEntry: policiesYML,
+		constants.PolicyServerConfigPoliciesEntry: string(policiesYML),
 	}
 
 	cfg := &corev1.ConfigMap{
@@ -83,7 +109,7 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	return r.Client.Create(ctx, cfg)
 }
 
-func (r *Reconciler) createPoliciesYML(clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) (string, error) {
+func (r *Reconciler) createPoliciesMap(clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) (map[string]policyServerConfigEntry, error) {
 	policies := make(map[string]policyServerConfigEntry)
 
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
@@ -92,12 +118,8 @@ func (r *Reconciler) createPoliciesYML(clusterAdmissionPolicies *policiesv1alpha
 			Settings: clusterAdmissionPolicy.Spec.Settings,
 		}
 	}
-	policiesYML, err := json.Marshal(policies)
-	if err != nil {
-		return "", fmt.Errorf("cannot marshal policies: %w", err)
-	}
 
-	return string(policiesYML), nil
+	return policies, nil
 }
 
 func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (string, error) {
