@@ -12,14 +12,16 @@ const (
 
 	// PolicyServer Deployment
 	PolicyServerDeploymentConfigAnnotation = "config/version"
-	PolicyServerDeploymentName             = "policy-server"
 	PolicyServerPort                       = 8443
 	PolicyServerReadinessProbe             = "/readiness"
 
 	// PolicyServer ConfigMap
-	PolicyServerConfigMapName               = "policy-server"
 	PolicyServerConfigPoliciesEntry         = "policies.yml"
 	PolicyServerDeploymentRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
 
+	// Label
 	AppLabelKey = "app"
+
+	// Index
+	PolicyServerIndexKey = "policyServer"
 )

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"strings"
@@ -78,7 +79,18 @@ func (r *Reconciler) ReconcileDeletion(
 		errors = append(errors, err)
 	}
 
-	// TODO delete webhooks and configmap
+	cfg := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
+		},
+	}
+
+	err = r.Client.Delete(ctx, cfg)
+	if err != nil && !apierrors.IsNotFound(err) {
+		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer ConfigMap "+policyServer.Name)
+		errors = append(errors, err)
+	}
 
 	if len(errors) == 0 {
 		return nil
@@ -161,7 +173,12 @@ func (r *Reconciler) Reconcile(
 		return err
 	}
 
-	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, AddPolicy); err != nil {
+	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
+	if err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
+	}
+
+	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, &clusterAdmissionPolicies); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerConfigMapReconciled,
@@ -203,17 +220,15 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerServiceReconciled,
 	)
 
-	// TODO reconcile webhook
-
-	return nil
+	return r.enablePolicyWebhook(ctx, policyServer, policyServerCARootSecret, &clusterAdmissionPolicies)
 }
 
 func (r *Reconciler) enablePolicyWebhook(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policyServer *policiesv1alpha2.PolicyServer,
 	policyServerSecret *corev1.Secret,
-	policyServerName string) error {
-	policyServerReady, err := r.isPolicyServerReady(ctx)
+	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
+	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
 
 	if err != nil {
 		return err
@@ -223,36 +238,38 @@ func (r *Reconciler) enablePolicyWebhook(
 		return errors.New("policy server not yet ready")
 	}
 
-	// register the new dynamic admission controller only once the policy is
-	// served by the PolicyServer deployment
-	if clusterAdmissionPolicy.Spec.Mutating {
-		if err := r.reconcileMutatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret, policyServerName); err != nil {
-			setFalseConditionType(
+	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
+		// register the new dynamic admission controller only once the policy is
+		// served by the PolicyServer deployment
+		if clusterAdmissionPolicy.Spec.Mutating {
+			if err := r.reconcileMutatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
+				setFalseConditionType(
+					&clusterAdmissionPolicy.Status.Conditions,
+					policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+					fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
+				)
+				return err
+			}
+
+			setTrueConditionType(
 				&clusterAdmissionPolicy.Status.Conditions,
 				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
-				fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
 			)
-			return err
-		}
+		} else {
+			if err := r.reconcileValidatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
+				setFalseConditionType(
+					&clusterAdmissionPolicy.Status.Conditions,
+					policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+					fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
+				)
+				return err
+			}
 
-		setTrueConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
-		)
-	} else {
-		if err := r.reconcileValidatingWebhookConfiguration(ctx, clusterAdmissionPolicy, policyServerSecret, policyServerName); err != nil {
-			setFalseConditionType(
+			setTrueConditionType(
 				&clusterAdmissionPolicy.Status.Conditions,
 				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
-				fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
 			)
-			return err
 		}
-
-		setTrueConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
-		)
 	}
 
 	return nil

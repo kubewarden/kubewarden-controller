@@ -20,17 +20,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 )
 
 // PolicyServerReconciler reconciles a PolicyServer object
@@ -69,6 +73,13 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Reconcile
 	if err := admissionReconciler.Reconcile(ctx, &policyServer); err != nil {
+		if admission.IsPolicyServerNotReady(err) {
+			log.Info("delaying policy registration since policy server is not yet ready")
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: time.Second * 5,
+			}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("reconciliation error: %w", err)
 	}
 	if err := r.updatePolicyServerStatus(ctx, &policyServer); err != nil {
@@ -91,8 +102,54 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	err := mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.ClusterAdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
+		clusterAdmissionPolicy := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
+		return []string{clusterAdmissionPolicy.Spec.PolicyServer}
+	})
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.PolicyServer{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
+			if !ok {
+				return []ctrl.Request{}
+			}
+			// TODO check policy if server exist. use owner references or webhook for validating
+			var originalPolicy policiesv1alpha2.ClusterAdmissionPolicy
+			err := r.Client.Get(context.Background(), client.ObjectKey{
+				Name: policy.Name,
+			}, &originalPolicy)
+			if apierrors.IsNotFound(err) {
+				r.deleteWebhooks(policy)
+			}
+			return []ctrl.Request{
+				{
+					NamespacedName: client.ObjectKey{
+						Name:      policy.Spec.PolicyServer,
+						Namespace: policy.Namespace,
+					},
+				},
+			}
+
+		})).
 		Complete(r)
+}
+
+func (r *PolicyServerReconciler) deleteWebhooks(policy *policiesv1alpha2.ClusterAdmissionPolicy) {
+	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: policy.Name,
+		},
+	}
+	_ = r.Client.Delete(context.Background(), validatingWebhook)
+	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: policy.Name,
+		},
+	}
+	_ = r.Client.Delete(context.Background(), mutatingWebhook)
 }
