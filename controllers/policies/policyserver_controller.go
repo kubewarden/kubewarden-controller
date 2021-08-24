@@ -74,7 +74,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Reconcile
 	if err := admissionReconciler.Reconcile(ctx, &policyServer); err != nil {
 		if admission.IsPolicyServerNotReady(err) {
-			log.Error(err, "delaying policy registration since policy server is not yet ready")
+			log.Info("delaying policy registration since policy server is not yet ready")
 			return ctrl.Result{
 				Requeue:      true,
 				RequeueAfter: time.Second * 5,
