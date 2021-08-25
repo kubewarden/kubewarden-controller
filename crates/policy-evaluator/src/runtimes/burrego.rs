@@ -9,6 +9,9 @@ use burrego::opa::host_callbacks::HostCallbacks;
 
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
+use crate::policy_evaluator::RegoPolicyExecutionMode;
+use serde_json::json;
+
 lazy_static! {
     pub static ref DEFAULT_HOST_CALLBACKS: HostCallbacks = HostCallbacks {
         opa_abort: Box::new(BurregoHostCallbacks::opa_abort),
@@ -29,15 +32,45 @@ impl BurregoHostCallbacks {
 impl<'a> Runtime<'a> {
     pub fn validate(
         &mut self,
-        _settings: &PolicySettings,
+        settings: &PolicySettings,
         request: &ValidateRequest,
     ) -> ValidationResponse {
         let uid = request.uid();
 
+        // OPA and Gatekeeper expect arguments in different ways. Provide the ones that each expect.
+        let document_to_evaluate = match self.0.policy_execution_mode {
+            RegoPolicyExecutionMode::Opa => {
+                // Policies for OPA expect the whole `AdmissionReview`
+                // object: produce a synthetic external one so
+                // existing OPA policies are compatible.
+                json!({
+                    "apiVersion": "admission.k8s.io/v1",
+                    "kind": "AdmissionReview",
+                    "request": &request.0,
+                })
+            }
+            RegoPolicyExecutionMode::Gatekeeper => {
+                // Gatekeeper policies include a toplevel review
+                // object that contains the whole `AdmissionReview`
+                // resource, and the parameters -- defined in their
+                // `ConstraintTemplate` and configured when the Policy
+                // is created.
+                json!({
+                    "parameters": settings,
+                    "review": {
+                        "apiVersion": "admission.k8s.io/v1",
+                        "kind": "AdmissionReview",
+                        "request": &request.0,
+
+                    }
+                })
+            }
+        };
+
         let burrego_evaluation =
             self.0
                 .evaluator
-                .evaluate(self.0.entrypoint_id, &request.0, &self.0.data);
+                .evaluate(self.0.entrypoint_id, &document_to_evaluate, &self.0.data);
 
         match burrego_evaluation {
             Ok(evaluation_result) => {

@@ -1,7 +1,11 @@
 use anyhow::{anyhow, Result};
 use serde::Serialize;
 use serde_json::{json, value};
-use std::{fmt, fs, path::Path};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt, fs,
+    path::Path,
+};
 
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
@@ -16,7 +20,7 @@ use crate::runtimes::{
 };
 use crate::validation_response::ValidationResponse;
 
-#[derive(Clone, PartialEq, serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Copy, Clone, PartialEq, serde::Deserialize, serde::Serialize, Debug)]
 pub enum PolicyExecutionMode {
     #[serde(rename = "kubewarden-wapc")]
     KubewardenWapc,
@@ -39,7 +43,7 @@ impl fmt::Display for PolicyExecutionMode {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct ValidateRequest(pub(crate) serde_json::Value);
 
 impl ValidateRequest {
@@ -56,10 +60,30 @@ impl ValidateRequest {
     }
 }
 
+pub(crate) enum RegoPolicyExecutionMode {
+    Opa,
+    Gatekeeper,
+}
+
+impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
+    type Error = anyhow::Error;
+
+    fn try_from(execution_mode: PolicyExecutionMode) -> Result<RegoPolicyExecutionMode> {
+        match execution_mode {
+            PolicyExecutionMode::Opa => Ok(RegoPolicyExecutionMode::Opa),
+            PolicyExecutionMode::OpaGatekeeper => Ok(RegoPolicyExecutionMode::Gatekeeper),
+            PolicyExecutionMode::KubewardenWapc => Err(anyhow!(
+                "execution mode not convertible to a Rego based executon mode"
+            )),
+        }
+    }
+}
+
 pub(crate) struct BurregoEvaluator {
     pub(crate) evaluator: burrego::opa::wasm::Evaluator,
     pub(crate) entrypoint_id: i32,
     pub(crate) data: serde_json::Value,
+    pub(crate) policy_execution_mode: RegoPolicyExecutionMode,
 }
 
 pub(crate) type PolicySettings = serde_json::Map<String, serde_json::Value>;
@@ -131,6 +155,7 @@ impl PolicyEvaluator {
                     evaluator,
                     entrypoint_id: 0, // This is fixed for now to the first entry point
                     data: json!({}),  // TODO: let kwctl/policy-server populate this
+                    policy_execution_mode: policy_execution_mode.try_into()?,
                 }));
                 (policy, policy_runtime)
             }
