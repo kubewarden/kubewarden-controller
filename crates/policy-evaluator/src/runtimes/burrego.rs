@@ -50,19 +50,14 @@ impl<'a> Runtime<'a> {
                 })
             }
             RegoPolicyExecutionMode::Gatekeeper => {
-                // Gatekeeper policies include a toplevel review
-                // object that contains the whole `AdmissionReview`
-                // resource, and the parameters -- defined in their
-                // `ConstraintTemplate` and configured when the Policy
-                // is created.
+                // Gatekeeper policies include a toplevel `review`
+                // object that contains the AdmissionRequest to be
+                // evaluated in an `object` attribute, and the
+                // parameters -- defined in their `ConstraintTemplate`
+                // and configured when the Policy is created.
                 json!({
                     "parameters": settings,
-                    "review": {
-                        "apiVersion": "admission.k8s.io/v1",
-                        "kind": "AdmissionReview",
-                        "request": &request.0,
-
-                    }
+                    "review": &request.0,
                 })
             }
         };
