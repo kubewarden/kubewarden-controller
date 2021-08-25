@@ -37,7 +37,7 @@ impl<'a> Runtime<'a> {
         let burrego_evaluation =
             self.0
                 .evaluator
-                .evaluate(self.0.entrypoint_id, &self.0.input, &self.0.data);
+                .evaluate(self.0.entrypoint_id, &request.0, &self.0.data);
 
         match burrego_evaluation {
             Ok(evaluation_result) => {

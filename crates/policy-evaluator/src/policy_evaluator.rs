@@ -59,7 +59,6 @@ impl ValidateRequest {
 pub(crate) struct BurregoEvaluator {
     pub(crate) evaluator: burrego::opa::wasm::Evaluator,
     pub(crate) entrypoint_id: i32,
-    pub(crate) input: serde_json::Value,
     pub(crate) data: serde_json::Value,
 }
 
@@ -131,7 +130,6 @@ impl PolicyEvaluator {
                 let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
                     evaluator,
                     entrypoint_id: 0, // This is fixed for now to the first entry point
-                    input: json!({}), // TODO: let kwctl/policy-server populate this
                     data: json!({}),  // TODO: let kwctl/policy-server populate this
                 }));
                 (policy, policy_runtime)
