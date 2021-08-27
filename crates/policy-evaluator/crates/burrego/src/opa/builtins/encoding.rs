@@ -352,11 +352,11 @@ pub mod yaml {
 
             let expected = r#"---
 hello: world
+number: 42
 list:
   - 1
   - 2
   - 3
-number: 42
 "#;
 
             let actual = actual.unwrap();
