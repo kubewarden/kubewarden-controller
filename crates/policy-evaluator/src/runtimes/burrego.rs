@@ -40,16 +40,19 @@ impl<'a> Runtime<'a> {
         let uid = request.uid();
 
         // OPA and Gatekeeper expect arguments in different ways. Provide the ones that each expect.
-        let document_to_evaluate = match self.0.policy_execution_mode {
+        let (document_to_evaluate, data) = match self.0.policy_execution_mode {
             RegoPolicyExecutionMode::Opa => {
                 // Policies for OPA expect the whole `AdmissionReview`
                 // object: produce a synthetic external one so
                 // existing OPA policies are compatible.
-                json!({
-                    "apiVersion": "admission.k8s.io/v1",
-                    "kind": "AdmissionReview",
-                    "request": &request.0,
-                })
+                (
+                    json!({
+                        "apiVersion": "admission.k8s.io/v1",
+                        "kind": "AdmissionReview",
+                        "request": &request.0,
+                    }),
+                    json!(settings),
+                )
             }
             RegoPolicyExecutionMode::Gatekeeper => {
                 // Gatekeeper policies include a toplevel `review`
@@ -57,17 +60,20 @@ impl<'a> Runtime<'a> {
                 // evaluated in an `object` attribute, and the
                 // parameters -- defined in their `ConstraintTemplate`
                 // and configured when the Policy is created.
-                json!({
-                    "parameters": settings,
-                    "review": &request.0,
-                })
+                (
+                    json!({
+                        "parameters": settings,
+                        "review": &request.0,
+                    }),
+                    json!({"kubernetes": ""}), // TODO (ereslibre): Kubernetes context goes here
+                )
             }
         };
 
         let burrego_evaluation =
             self.0
                 .evaluator
-                .evaluate(self.0.entrypoint_id, &document_to_evaluate, &self.0.data);
+                .evaluate(self.0.entrypoint_id, &document_to_evaluate, &data);
 
         match burrego_evaluation {
             Ok(evaluation_result) => {

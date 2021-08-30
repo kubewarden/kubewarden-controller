@@ -82,7 +82,6 @@ impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
 pub(crate) struct BurregoEvaluator {
     pub(crate) evaluator: burrego::opa::wasm::Evaluator,
     pub(crate) entrypoint_id: i32,
-    pub(crate) data: serde_json::Value,
     pub(crate) policy_execution_mode: RegoPolicyExecutionMode,
 }
 
@@ -154,7 +153,6 @@ impl PolicyEvaluator {
                 let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
                     evaluator,
                     entrypoint_id: 0, // This is fixed for now to the first entry point
-                    data: json!({}),  // TODO: let kwctl/policy-server populate this
                     policy_execution_mode: policy_execution_mode.try_into()?,
                 }));
                 (policy, policy_runtime)
