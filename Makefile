@@ -88,8 +88,8 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
+	bash -c "./scripts/removeFinalizersFromCRDs.sh"
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
