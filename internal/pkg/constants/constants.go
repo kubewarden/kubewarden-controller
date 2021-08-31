@@ -24,4 +24,7 @@ const (
 
 	// Index
 	PolicyServerIndexKey = "policyServer"
+
+	// Finalizers
+	KubewardenFinalizer = "kubewarden"
 )

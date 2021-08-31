@@ -105,7 +105,7 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 ) error {
 	return errors.Wrapf(
 		r.Client.Status().Update(ctx, policyServer),
-		"failed to update ClusterAdmissionPolicy %q status", &policyServer.ObjectMeta,
+		"failed to update PolicyServer %q status", &policyServer.ObjectMeta,
 	)
 }
 

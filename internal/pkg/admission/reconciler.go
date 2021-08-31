@@ -93,7 +93,7 @@ func (r *Reconciler) ReconcileDeletion(
 	}
 
 	patch := policyServer.DeepCopy()
-	patch.ObjectMeta.Finalizers = nil
+	patch.ObjectMeta.Finalizers = removeKubewardenFinalizer(patch.ObjectMeta.Finalizers)
 	err = r.Client.Patch(ctx, patch, client.MergeFrom(policyServer))
 	if err != nil && !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot remove finalizer "+policyServer.Name)
@@ -298,11 +298,6 @@ func (r *Reconciler) enablePolicyWebhook(
 				)
 				return err
 			}
-
-			setTrueConditionType(
-				&clusterAdmissionPolicy.Status.Conditions,
-				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
-			)
 		} else {
 			if err := r.reconcileValidatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
 				setFalseConditionType(
@@ -312,11 +307,14 @@ func (r *Reconciler) enablePolicyWebhook(
 				)
 				return err
 			}
-
-			setTrueConditionType(
-				&clusterAdmissionPolicy.Status.Conditions,
-				policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
-			)
+		}
+		setTrueConditionType(
+			&clusterAdmissionPolicy.Status.Conditions,
+			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+		)
+		clusterAdmissionPolicy.Status.PolicyActive = true
+		if err := r.updateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
+			return err
 		}
 	}
 
@@ -355,7 +353,7 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 			}
 			patch := policy.DeepCopy()
-			patch.ObjectMeta.Finalizers = nil
+			patch.ObjectMeta.Finalizers = removeKubewardenFinalizer(patch.ObjectMeta.Finalizers)
 			err := r.Client.Patch(ctx, patch, client.MergeFrom(&policy))
 			if err != nil && !apierrors.IsNotFound(err) {
 				return err
@@ -363,4 +361,23 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 		}
 	}
 	return nil
+}
+
+func (r *Reconciler) updateAdmissionPolicyStatus(
+	ctx context.Context,
+	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+) error {
+	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
+		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
+	}
+	return nil
+}
+
+func removeKubewardenFinalizer(finalizers []string) []string {
+	for i, finalizer := range finalizers {
+		if finalizer == constants.KubewardenFinalizer {
+			return append(finalizers[:i], finalizers[i+1:]...)
+		}
+	}
+	return finalizers
 }
