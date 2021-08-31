@@ -24,9 +24,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,17 +56,28 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	var policyServer policiesv1alpha2.PolicyServer
 	if err := r.Get(ctx, req.NamespacedName, &policyServer); err != nil {
 		if apierrors.IsNotFound(err) {
-			policyServer = policiesv1alpha2.PolicyServer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      req.Name,
-					Namespace: req.Namespace,
-				},
-			}
-			log.Info("attempting delete")
-
-			return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &policyServer)
+			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
+	}
+
+	if policyServer.ObjectMeta.DeletionTimestamp != nil {
+		if hasPolicies, err := admissionReconciler.HasClusterAdmissionPoliciesBounded(ctx, &policyServer); hasPolicies {
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
+			}
+			err := admissionReconciler.DeleteAllClusterAdmissionPolicies(ctx, &policyServer)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("cannot delete cluster admission policies: %w", err)
+			}
+			log.Info("delaying policy server deletion since all cluster admission policies are not deleted yet")
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: time.Second * 5,
+			}, nil
+		}
+
+		return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &policyServer)
 	}
 
 	// Reconcile
@@ -96,7 +105,7 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 ) error {
 	return errors.Wrapf(
 		r.Client.Status().Update(ctx, policyServer),
-		"failed to update ClusterAdmissionPolicy %q status", &policyServer.ObjectMeta,
+		"failed to update PolicyServer %q status", &policyServer.ObjectMeta,
 	)
 }
 
@@ -118,14 +127,6 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if !ok {
 				return []ctrl.Request{}
 			}
-			// TODO check policy if server exist. use owner references or webhook for validating
-			var originalPolicy policiesv1alpha2.ClusterAdmissionPolicy
-			err := r.Client.Get(context.Background(), client.ObjectKey{
-				Name: policy.Name,
-			}, &originalPolicy)
-			if apierrors.IsNotFound(err) {
-				r.deleteWebhooks(policy)
-			}
 			return []ctrl.Request{
 				{
 					NamespacedName: client.ObjectKey{
@@ -134,22 +135,6 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					},
 				},
 			}
-
 		})).
 		Complete(r)
-}
-
-func (r *PolicyServerReconciler) deleteWebhooks(policy *policiesv1alpha2.ClusterAdmissionPolicy) {
-	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: policy.Name,
-		},
-	}
-	_ = r.Client.Delete(context.Background(), validatingWebhook)
-	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: policy.Name,
-		},
-	}
-	_ = r.Client.Delete(context.Background(), mutatingWebhook)
 }
