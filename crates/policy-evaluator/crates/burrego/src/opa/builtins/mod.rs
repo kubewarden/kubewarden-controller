@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 pub mod debugging;
 pub mod encoding;
+pub mod glob;
 pub mod regex;
 pub mod semver;
 pub mod strings;
@@ -30,6 +31,9 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
     functions.insert("yaml.unmarshal", encoding::yaml::unmarshal);
     functions.insert("hex.encode", encoding::hex::encode);
     functions.insert("hex.decode", encoding::hex::decode);
+
+    // glob
+    functions.insert("glob.quote_meta", glob::quote_meta);
 
     // regex
     functions.insert("regex.split", regex::split);
