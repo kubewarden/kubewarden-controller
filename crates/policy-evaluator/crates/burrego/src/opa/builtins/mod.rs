@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 
 pub mod encoding;
+pub mod regex;
 pub mod strings;
 
 pub type BuiltinFunctionsMap =
@@ -9,7 +10,6 @@ pub type BuiltinFunctionsMap =
 
 pub fn get_builtins() -> BuiltinFunctionsMap {
     let mut functions: BuiltinFunctionsMap = HashMap::new();
-    functions.insert("sprintf", strings::sprintf);
 
     // encoding
     functions.insert(
@@ -25,6 +25,14 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
     functions.insert("yaml.unmarshal", encoding::yaml::unmarshal);
     functions.insert("hex.encode", encoding::hex::encode);
     functions.insert("hex.decode", encoding::hex::decode);
+
+    // regex
+    functions.insert("regex.split", regex::split);
+    functions.insert("regex.template_match", regex::template_match);
+    functions.insert("regex.find_n", regex::find_n);
+
+    // strings
+    functions.insert("sprintf", strings::sprintf);
 
     functions
 }
