@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
+pub mod debugging;
 pub mod encoding;
 pub mod regex;
 pub mod strings;
@@ -10,6 +11,9 @@ pub type BuiltinFunctionsMap =
 
 pub fn get_builtins() -> BuiltinFunctionsMap {
     let mut functions: BuiltinFunctionsMap = HashMap::new();
+
+    // debugging
+    functions.insert("trace", debugging::trace);
 
     // encoding
     functions.insert(
