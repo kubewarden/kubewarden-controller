@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde::Serialize;
-use serde_json::{json, value};
+use serde_json::value;
 use std::{
     convert::{TryFrom, TryInto},
     fmt, fs,
@@ -235,6 +235,7 @@ impl PolicyEvaluator {
 mod tests {
     use super::*;
 
+    use serde_json::json;
     use std::collections::HashMap;
 
     #[test]
