@@ -199,6 +199,9 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	}
 
 	templateAnnotations := policyServer.Spec.Annotations
+	if templateAnnotations == nil {
+		templateAnnotations = make(map[string]string)
+	}
 	templateAnnotations[constants.PolicyServerDeploymentConfigAnnotation] = configMapVersion
 
 	return &appsv1.Deployment{
