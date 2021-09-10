@@ -43,6 +43,9 @@ mod test {
 
         assert_eq!(super::escape("nie?ce"), r"nie\?ce");
 
-        assert_eq!(super::escape("some *?\\[]{} text"), "some \\*\\?\\\\\\[\\]\\{\\} text");
+        assert_eq!(
+            super::escape("some *?\\[]{} text"),
+            "some \\*\\?\\\\\\[\\]\\{\\} text"
+        );
     }
 }
