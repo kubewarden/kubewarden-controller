@@ -33,14 +33,16 @@ fn escape(s: &str) -> String {
 mod test {
     #[test]
     fn escape() {
-        assert_eq!(super::escape("*.domain.com"), r"\*.domain.com",);
+        assert_eq!(super::escape("*.domain.com"), r"\*.domain.com");
 
-        assert_eq!(super::escape("*.domain-*.com"), r"\*.domain-\*.com",);
+        assert_eq!(super::escape("*.domain-*.com"), r"\*.domain-\*.com");
 
-        assert_eq!(super::escape("domain.com"), r"domain.com",);
+        assert_eq!(super::escape("domain.com"), r"domain.com");
 
-        assert_eq!(super::escape("domain-[ab].com"), r"domain-\[ab\].com",);
+        assert_eq!(super::escape("domain-[ab].com"), r"domain-\[ab\].com");
 
-        assert_eq!(super::escape("nie?ce"), r"nie\?ce",);
+        assert_eq!(super::escape("nie?ce"), r"nie\?ce");
+
+        assert_eq!(super::escape("some *?\\[]{} text"), "some \\*\\?\\\\\\[\\]\\{\\} text");
     }
 }
