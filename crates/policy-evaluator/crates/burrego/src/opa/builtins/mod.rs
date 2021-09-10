@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub mod debugging;
 pub mod encoding;
 pub mod regex;
+pub mod semver;
 pub mod strings;
 
 pub type BuiltinFunctionsMap =
@@ -34,6 +35,10 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
     functions.insert("regex.split", regex::split);
     functions.insert("regex.template_match", regex::template_match);
     functions.insert("regex.find_n", regex::find_n);
+
+    // semver
+    functions.insert("semver.is_valid", semver::is_valid);
+    functions.insert("semver.compare", semver::compare);
 
     // strings
     functions.insert("sprintf", strings::sprintf);
