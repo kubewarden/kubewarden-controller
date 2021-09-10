@@ -1,12 +1,12 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
-pub mod debugging;
-pub mod encoding;
-pub mod glob;
-pub mod regex;
-pub mod semver;
-pub mod strings;
+mod debugging;
+mod encoding;
+mod glob;
+mod regex;
+mod semver;
+mod strings;
 
 pub type BuiltinFunctionsMap =
     HashMap<&'static str, fn(&[serde_json::Value]) -> Result<serde_json::Value>>;
