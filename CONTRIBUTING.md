@@ -1,5 +1,20 @@
 # Contributing
 
+## Building
+
+To build kubewarden-controller some packages are required. If you are using 
+openSUSE Leap, you can install them with the following command:
+
+```
+sudo zypper in -y make go
+```
+
+Then, can run the following command to build the package:
+
+```
+make
+```
+
 ## Commit titles
 
 Commit titles matter when a release is tagged and the changelog is
