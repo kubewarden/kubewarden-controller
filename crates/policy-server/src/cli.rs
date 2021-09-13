@@ -7,6 +7,8 @@ use std::{collections::HashMap, net::SocketAddr, path::Path};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
+static SERVICE_NAME: &str = "kubewarden-policy-server";
+
 pub(crate) fn build_cli() -> App<'static, 'static> {
     App::new(crate_name!())
         .author(crate_authors!())
@@ -154,7 +156,7 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
             // The Jaeger exporter can be configerd via environment
             // variables (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter)
             let tracer = opentelemetry_jaeger::new_pipeline()
-                .with_service_name("kubewarden-policy-server")
+                .with_service_name(SERVICE_NAME)
                 .install_batch(opentelemetry::runtime::Tokio)?;
 
             // Create a tracing layer with the configured tracer
@@ -173,7 +175,13 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
             let tracer = opentelemetry_otlp::new_pipeline()
                 .tracing()
                 .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-                .install_simple()?;
+                .with_trace_config(opentelemetry::sdk::trace::config().with_resource(
+                    opentelemetry::sdk::Resource::new(vec![opentelemetry::KeyValue::new(
+                        "service.name",
+                        SERVICE_NAME,
+                    )]),
+                ))
+                .install_batch(opentelemetry::runtime::Tokio)?;
 
             // Create a tracing layer with the configured tracer
             let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
