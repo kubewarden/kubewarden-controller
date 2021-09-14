@@ -292,7 +292,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			if err := r.reconcileMutatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
 				setFalseConditionType(
 					&clusterAdmissionPolicy.Status.Conditions,
-					policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+					policiesv1alpha2.ClusterAdmissionPolicyActive,
 					fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
 				)
 				return err
@@ -301,7 +301,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			if err := r.reconcileValidatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
 				setFalseConditionType(
 					&clusterAdmissionPolicy.Status.Conditions,
-					policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+					policiesv1alpha2.ClusterAdmissionPolicyActive,
 					fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
 				)
 				return err
@@ -309,7 +309,7 @@ func (r *Reconciler) enablePolicyWebhook(
 		}
 		setTrueConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+			policiesv1alpha2.ClusterAdmissionPolicyActive,
 		)
 		clusterAdmissionPolicy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusActive
 		if err := r.UpdateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {

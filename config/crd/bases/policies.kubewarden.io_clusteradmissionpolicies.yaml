@@ -286,7 +286,7 @@ spec:
               conditions:
                 description: 'Conditions represent the observed conditions of the
                   ClusterAdmissionPolicy resource.  Known .status.conditions.types
-                  are: "PolicyServerSecretReconciled", "PolicyServerConfigMapReconciled",
+                  are: "PolicyServerSecretReconciled", "PolicyServerBound", "PolicyServerConfigMapReconciled",
                   "PolicyServerDeploymentReconciled", "PolicyServerServiceReconciled"
                   and "PolicyServerWebhookRegistered"'
                 items:

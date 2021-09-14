@@ -157,10 +157,10 @@ const (
 	// PolicyServerConfigMapReconciled represents the condition of the
 	// Policy Server ConfigMap reconciliation
 	PolicyServerConfigMapReconciled PolicyConditionType = "PolicyServerConfigMapReconciled"
-	// PolicyServerWebhookConfigurationReconciled represents the
-	// condition of the Policy Server WebhookConfiguration
-	// reconciliation
-	PolicyServerWebhookConfigurationReconciled PolicyConditionType = "PolicyServerWebhookConfigurationReconciled"
+	// ClusterAdmissionPolicyActive represents the condition of the Policy
+	// admission webhook being registered
+	ClusterAdmissionPolicyActive PolicyConditionType = "active"
+)
 
 // +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
 type ClusterAdmissionPolicyStatusEnum string
@@ -189,6 +189,7 @@ type ClusterAdmissionPolicyStatus struct {
 	// Conditions represent the observed conditions of the
 	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
 	// are: "PolicyServerSecretReconciled",
+	// "PolicyServerBound",
 	// "PolicyServerConfigMapReconciled",
 	// "PolicyServerDeploymentReconciled",
 	// "PolicyServerServiceReconciled" and
