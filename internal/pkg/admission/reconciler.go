@@ -16,6 +16,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
@@ -93,7 +94,7 @@ func (r *Reconciler) ReconcileDeletion(
 	}
 
 	patch := policyServer.DeepCopy()
-	patch.ObjectMeta.Finalizers = removeKubewardenFinalizer(patch.ObjectMeta.Finalizers)
+	controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 	err = r.Client.Patch(ctx, patch, client.MergeFrom(policyServer))
 	if err != nil && !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot remove finalizer "+policyServer.Name)
@@ -353,7 +354,7 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 			}
 			patch := policy.DeepCopy()
-			patch.ObjectMeta.Finalizers = removeKubewardenFinalizer(patch.ObjectMeta.Finalizers)
+			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 			err := r.Client.Patch(ctx, patch, client.MergeFrom(&policy))
 			if err != nil && !apierrors.IsNotFound(err) {
 				return err
@@ -371,13 +372,4 @@ func (r *Reconciler) updateAdmissionPolicyStatus(
 		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
 	}
 	return nil
-}
-
-func removeKubewardenFinalizer(finalizers []string) []string {
-	for i, finalizer := range finalizers {
-		if finalizer == constants.KubewardenFinalizer {
-			return append(finalizers[:i], finalizers[i+1:]...)
-		}
-	}
-	return finalizers
 }
