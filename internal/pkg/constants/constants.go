@@ -23,7 +23,8 @@ const (
 	AppLabelKey = "app"
 
 	// Index
-	PolicyServerIndexKey = "policyServer"
+	PolicyServerIndexKey  = "policyServer"
+	PolicyServerIndexName = "name"
 
 	// Finalizers
 	KubewardenFinalizer = "kubewarden"

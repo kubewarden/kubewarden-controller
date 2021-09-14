@@ -45,10 +45,6 @@ var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ClusterAdmissionPolicy) Default() {
 	clusteradmissionpolicylog.Info("default", "name", r.Name)
-
-	// TODO start with status "unscheduled", the controller will update the status
-	// when the policy is bound to a policy-server
-
 	controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
 }
 

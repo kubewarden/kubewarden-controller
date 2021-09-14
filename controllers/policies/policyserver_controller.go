@@ -19,6 +19,8 @@ package policies
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/go-logr/logr"
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
@@ -32,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"time"
 )
 
 // PolicyServerReconciler reconciles a PolicyServer object
@@ -120,6 +121,14 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.PolicyServer{}, constants.PolicyServerIndexName, func(object client.Object) []string {
+		policyServer := object.(*policiesv1alpha2.PolicyServer)
+		return []string{policyServer.Name}
+	})
+	if err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.PolicyServer{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
@@ -128,11 +137,44 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if !ok {
 				return []ctrl.Request{}
 			}
+
+			if policy.Status.PolicyStatus == "" {
+				policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusUnscheduled
+				err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
+				if err != nil {
+					r.Log.Error(err, "cannot update status of policy "+policy.Name)
+					return []ctrl.Request{}
+				}
+			}
+
+			var policyServers policiesv1alpha2.PolicyServerList
+			err := r.List(context.Background(), &policyServers, client.MatchingFields{constants.PolicyServerIndexName: policy.Spec.PolicyServer})
+			if err != nil {
+				r.Log.Error(err, "cannot list PolicyServers corresponding to policy "+policy.Name)
+				return []ctrl.Request{}
+			}
+			if len(policyServers.Items) == 0 {
+				policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusUnschedulable
+				err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
+				if err != nil {
+					r.Log.Error(err, "cannot update status of policy "+policy.Name)
+				}
+				r.Log.Info("policy " + policy.Name + " cannot be scheduled: no matching PolicyServer")
+				return []ctrl.Request{}
+			} else {
+				policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusPending
+				err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
+				if err != nil {
+					r.Log.Error(err, "cannot update status of policy "+policy.Name)
+					return []ctrl.Request{}
+				}
+				r.Log.Info("policy " + policy.Name + " pending")
+			}
+
 			return []ctrl.Request{
 				{
 					NamespacedName: client.ObjectKey{
-						Name:      policy.Spec.PolicyServer,
-						Namespace: policy.Namespace,
+						Name: policy.Spec.PolicyServer,
 					},
 				},
 			}

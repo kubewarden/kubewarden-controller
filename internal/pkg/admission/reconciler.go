@@ -278,11 +278,9 @@ func (r *Reconciler) enablePolicyWebhook(
 	policyServerSecret *corev1.Secret,
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
-
 	if err != nil {
 		return err
 	}
-
 	if !policyServerReady {
 		return errors.New("policy server not yet ready")
 	}
@@ -314,7 +312,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
 		)
 		clusterAdmissionPolicy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusActive
-		if err := r.updateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
+		if err := r.UpdateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
 			return err
 		}
 	}
@@ -364,7 +362,9 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 	return nil
 }
 
-func (r *Reconciler) updateAdmissionPolicyStatus(
+// UpdateAdmissionPolicyStatus Updates the status subresource of the passed
+// clusterAdmissionPolicy with a Client apt for it.
+func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {

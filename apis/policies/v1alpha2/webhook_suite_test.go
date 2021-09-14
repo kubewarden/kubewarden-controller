@@ -203,7 +203,8 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 		k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
 
 		By("checking default values")
-		// TODO check for status "unscheduled"
+		// Testing for PolicyStatus == "unscheduled" can't happen here, Status
+		// subresources can't be defaulted
 		Expect(pol.ObjectMeta.Finalizers).To(HaveLen(1))
 		Expect(pol.ObjectMeta.Finalizers[0]).To(Equal(constants.KubewardenFinalizer))
 		Expect(pol.Spec.PolicyServer).To(Equal("policy-server-foo"))
