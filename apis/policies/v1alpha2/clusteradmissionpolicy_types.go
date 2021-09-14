@@ -161,14 +161,30 @@ const (
 	// condition of the Policy Server WebhookConfiguration
 	// reconciliation
 	PolicyServerWebhookConfigurationReconciled PolicyConditionType = "PolicyServerWebhookConfigurationReconciled"
+
+// +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
+type ClusterAdmissionPolicyStatusEnum string
+
+const (
+	// ClusterAdmissionPolicyStatusUnscheduled is a transient state that will continue
+	// to unschedulable or pending. This is the default state.
+	ClusterAdmissionPolicyStatusUnscheduled ClusterAdmissionPolicyStatusEnum = "unscheduled"
+	// ClusterAdmissionPolicyStatusUnschedulable informs that policy server where to
+	// schedule the policy is not available
+	ClusterAdmissionPolicyStatusUnschedulable ClusterAdmissionPolicyStatusEnum = "unschedulable"
+	// ClusterAdmissionPolicyStatusPending informs that the policy server exists,
+	// we are reconciling all resources
+	ClusterAdmissionPolicyStatusPending ClusterAdmissionPolicyStatusEnum = "pending"
+	// ClusterAdmissionPolicyStatusActive informs that the k8s API server should be
+	// forwarding admission review objects to the policy
+	ClusterAdmissionPolicyStatusActive ClusterAdmissionPolicyStatusEnum = "active"
 )
 
 // ClusterAdmissionPolicyStatus defines the observed state of ClusterAdmissionPolicy
 type ClusterAdmissionPolicyStatus struct {
-	// PolicyActive represents whether this AdmissionPolicy is active,
-	// such that the Kubernetes API server should be forwarding
-	// admission review objects to the policy
-	PolicyActive bool `json:"policyActive"`
+	// PolicyStatus represents whether this ClusterAdmissionPolicy is unscheduled,
+	// unschedulable, pending, or active.
+	PolicyStatus ClusterAdmissionPolicyStatusEnum `json:"policyStatus"`
 	// Conditions represent the observed conditions of the
 	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
 	// are: "PolicyServerSecretReconciled",
@@ -190,7 +206,7 @@ type ClusterAdmissionPolicyStatus struct {
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
-//+kubebuilder:printcolumn:name="Active",type=boolean,JSONPath=`.status.policyActive`,description="Whether the policy is active and receiving admission reviews"
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyStatus`,description="Status of the policy"
 type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

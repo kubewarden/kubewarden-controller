@@ -313,7 +313,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			&clusterAdmissionPolicy.Status.Conditions,
 			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
 		)
-		clusterAdmissionPolicy.Status.PolicyActive = true
+		clusterAdmissionPolicy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusActive
 		if err := r.updateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
 			return err
 		}

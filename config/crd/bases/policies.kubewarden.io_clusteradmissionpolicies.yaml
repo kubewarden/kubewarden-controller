@@ -21,10 +21,10 @@ spec:
       jsonPath: .spec.mutating
       name: Mutating
       type: boolean
-    - description: Whether the policy is active and receiving admission reviews
-      jsonPath: .status.policyActive
-      name: Active
-      type: boolean
+    - description: Status of the policy
+      jsonPath: .status.policyStatus
+      name: Status
+      type: string
     name: v1alpha2
     schema:
       openAPIV3Schema:
@@ -360,14 +360,18 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              policyActive:
-                description: PolicyActive represents whether this AdmissionPolicy
-                  is active, such that the Kubernetes API server should be forwarding
-                  admission review objects to the policy
-                type: boolean
+              policyStatus:
+                description: PolicyStatus represents whether this ClusterAdmissionPolicy
+                  is unscheduled, unschedulable, pending, or active.
+                enum:
+                - unscheduled
+                - unschedulable
+                - pending
+                - active
+                type: string
             required:
             - conditions
-            - policyActive
+            - policyStatus
             type: object
         type: object
     served: true
