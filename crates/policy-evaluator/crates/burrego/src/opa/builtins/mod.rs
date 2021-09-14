@@ -29,6 +29,7 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
     functions.insert("json.is_valid", encoding::json::is_valid);
     functions.insert("yaml.marshal", encoding::yaml::marshal);
     functions.insert("yaml.unmarshal", encoding::yaml::unmarshal);
+    functions.insert("yaml.is_valid", encoding::yaml::is_valid);
     functions.insert("hex.encode", encoding::hex::encode);
     functions.insert("hex.decode", encoding::hex::decode);
 

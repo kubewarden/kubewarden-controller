@@ -332,11 +332,28 @@ pub mod yaml {
             .map_err(|e| anyhow!("yaml.unmarshal: cannot convert result into JSON: {:?}", e))
     }
 
+    pub fn is_valid(args: &[serde_json::Value]) -> Result<serde_json::Value> {
+        if args.len() != 1 {
+            return Err(anyhow!("yaml.is_valid: wrong number of arguments"));
+        }
+
+        let input = args[0]
+            .as_str()
+            .ok_or_else(|| anyhow!("yaml.is_valid: 1st parameter is not a string"))?;
+
+        let v: serde_yaml::Result<serde_yaml::Value> = serde_yaml::from_str(input);
+        let res = v.is_ok();
+
+        serde_json::to_value(res)
+            .map_err(|e| anyhow!("yaml.is_valid: cannot convert value into JSON: {:?}", e))
+    }
+
     #[cfg(test)]
     mod test {
         use super::*;
         use assert_json_diff::assert_json_eq;
         use serde_json::json;
+        use std::collections::HashMap;
 
         #[test]
         fn test_marshal() {
@@ -388,6 +405,25 @@ number: 42
 
             let actual = actual.unwrap();
             assert_json_eq!(json!(expected), actual);
+        }
+
+        #[test]
+        fn test_is_valid() {
+            let mut cases: HashMap<String, bool> = HashMap::new();
+            cases.insert(
+                String::from("some_key: [1,2]\nsome_other_key: [3.0, 4.0]"),
+                true,
+            );
+            cases.insert(String::from("some_key: [1,2"), false);
+
+            for (input, expected) in cases.iter() {
+                let args: Vec<serde_json::Value> = vec![json!(input)];
+                let actual = is_valid(&args);
+                assert!(actual.is_ok());
+
+                let actual = actual.unwrap();
+                assert_json_eq!(json!(expected), actual);
+            }
         }
     }
 }
