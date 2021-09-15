@@ -361,6 +361,7 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               policyStatus:
+                default: unscheduled
                 description: PolicyStatus represents whether this ClusterAdmissionPolicy
                   is unscheduled, unschedulable, pending, or active.
                 enum:

@@ -184,6 +184,7 @@ const (
 type ClusterAdmissionPolicyStatus struct {
 	// PolicyStatus represents whether this ClusterAdmissionPolicy is unscheduled,
 	// unschedulable, pending, or active.
+	// +kubebuilder:default:=unscheduled
 	PolicyStatus ClusterAdmissionPolicyStatusEnum `json:"policyStatus"`
 	// Conditions represent the observed conditions of the
 	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
