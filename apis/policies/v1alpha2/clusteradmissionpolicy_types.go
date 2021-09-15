@@ -197,7 +197,7 @@ type ClusterAdmissionPolicyStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //nolint:lll

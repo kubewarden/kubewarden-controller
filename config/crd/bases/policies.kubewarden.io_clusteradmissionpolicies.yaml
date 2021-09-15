@@ -371,7 +371,6 @@ spec:
                 - active
                 type: string
             required:
-            - conditions
             - policyStatus
             type: object
         type: object
