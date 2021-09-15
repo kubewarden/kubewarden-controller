@@ -38,6 +38,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	registrationv1 "k8s.io/api/admissionregistration/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -131,4 +138,88 @@ var _ = AfterSuite(func() {
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
+})
+
+func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string) *ClusterAdmissionPolicy {
+	return &ClusterAdmissionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: ClusterAdmissionPolicySpec{
+			PolicyServer: policyServerName,
+			Settings: runtime.RawExtension{
+				Raw: []byte("{}"),
+			},
+			Rules: []registrationv1.RuleWithOperations{{
+				Operations: []registrationv1.OperationType{registrationv1.OperationAll},
+				Rule: registrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				},
+			}},
+		},
+	}
+}
+
+func deleteClusterAdmissionPolicy(ctx context.Context, name, namespace string) {
+	nsn := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+	pol := &ClusterAdmissionPolicy{}
+	err := k8sClient.Get(ctx, nsn, pol)
+	if apierrors.IsNotFound(err) {
+		return
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(k8sClient.Delete(ctx, pol)).To(Succeed())
+
+	// Remove finalizer
+	err = k8sClient.Get(ctx, nsn, pol)
+	Expect(err).NotTo(HaveOccurred())
+	polUpdated := pol.DeepCopy()
+	controllerutil.RemoveFinalizer(polUpdated, constants.KubewardenFinalizer)
+	err = k8sClient.Update(ctx, polUpdated)
+	if err != nil {
+		fmt.Print(err)
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, nsn, &ClusterAdmissionPolicy{})
+		return apierrors.IsNotFound(err)
+	}).Should(BeTrue())
+}
+
+var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
+	namespace := "default"
+
+	It("should accept creating ClusterAdmissionPolicy", func() {
+		pol := makeClusterAdmissionPolicyTemplate("policy-test", namespace, "policy-server-foo")
+		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
+		k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+
+		By("checking default values")
+		// TODO check for status "unscheduled"
+		Expect(pol.ObjectMeta.Finalizers).To(HaveLen(1))
+		Expect(pol.ObjectMeta.Finalizers[0]).To(Equal(constants.KubewardenFinalizer))
+		Expect(pol.Spec.PolicyServer).To(Equal("policy-server-foo"))
+
+		By("deleting the created ClusterAdmissionPolicy")
+		deleteClusterAdmissionPolicy(ctx, "policy-test", namespace)
+	})
+
+	It("should deny updating ClusterAdmissionPolicy if policyServer name is changed", func() {
+		pol := makeClusterAdmissionPolicyTemplate("policy-test2", namespace, "policy-server-bar")
+		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
+
+		pol.Spec.PolicyServer = "policy-server-changed"
+		Expect(k8sClient.Update(ctx, pol)).NotTo(Succeed())
+
+		By("deleting the created ClusterAdmissionPolicy")
+		deleteClusterAdmissionPolicy(ctx, "policy-test2", namespace)
+	})
 })

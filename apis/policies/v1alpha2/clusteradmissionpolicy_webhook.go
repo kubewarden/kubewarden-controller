@@ -21,6 +21,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // log is for logging in this package.
@@ -32,8 +38,6 @@ func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error
 		Complete()
 }
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create;update,versions=v1alpha2,name=mclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
@@ -42,10 +46,12 @@ var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
 func (r *ClusterAdmissionPolicy) Default() {
 	clusteradmissionpolicylog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
+	// TODO start with status "unscheduled", the controller will update the status
+	// when the policy is bound to a policy-server
+
+	controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create;update,versions=v1alpha2,name=vclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &ClusterAdmissionPolicy{}
@@ -53,8 +59,6 @@ var _ webhook.Validator = &ClusterAdmissionPolicy{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ClusterAdmissionPolicy) ValidateCreate() error {
 	clusteradmissionpolicylog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
@@ -62,14 +66,21 @@ func (r *ClusterAdmissionPolicy) ValidateCreate() error {
 func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 	clusteradmissionpolicylog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
+	if r.Spec.PolicyServer != old.(*ClusterAdmissionPolicy).Spec.PolicyServer {
+		var errs field.ErrorList
+		p := field.NewPath("spec")
+		pp := p.Child("policyServer")
+		errs = append(errs, field.Forbidden(pp, "the field is immutable"))
+
+		return apierrors.NewInvalid(
+			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
+			r.Name, errs)
+	}
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ClusterAdmissionPolicy) ValidateDelete() error {
 	clusteradmissionpolicylog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
