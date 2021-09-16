@@ -1,9 +1,27 @@
 use clap::{clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings};
+use itertools::Itertools;
+use lazy_static::lazy_static;
+use policy_evaluator::burrego::opa::builtins as opa_builtins;
+
+lazy_static! {
+    static ref VERSION_AND_BUILTINS: String = {
+        let builtins: String = opa_builtins::get_builtins()
+            .keys()
+            .sorted()
+            .map(|builtin| format!("  - {}", builtin))
+            .join("\n");
+
+        format!(
+            "{}\n\nOpen Policy Agent/Gatekeeper implemented builtins:\n{}",
+            crate_version!(),
+            builtins,
+        )
+    };
+}
 
 pub fn build_cli() -> clap::App<'static, 'static> {
     clap_app!(
         (crate_name!()) =>
-            (version: crate_version!())
             (author: crate_authors!(",\n"))
             (about: crate_description!())
             (@arg verbose: -v "Increase verbosity")
@@ -62,5 +80,6 @@ pub fn build_cli() -> clap::App<'static, 'static> {
              (@arg ("shell"): * -s --("shell") +takes_value "Shell type: bash, fish, zsh, elvish, powershell")
             )
     )
-    .setting(AppSettings::SubcommandRequiredElseHelp)
+        .long_version(VERSION_AND_BUILTINS.as_str())
+        .setting(AppSettings::SubcommandRequiredElseHelp)
 }
