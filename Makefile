@@ -61,12 +61,17 @@ test: manifests generate fmt vet ## Run tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
+dev-cert-webhooks: ## Create local cert for webhook server if they don't exist, useful when running the manager locally
+	test -s /tmp/k8s-webhook-server/serving-certs/tls.crt && \
+	test -s /tmp/k8s-webhook-server/serving-certs/tls.key || \
+	bash -c "./scripts/webhook-cert/create-webhook-cert.sh"
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests generate fmt vet dev-cert-webhooks ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
