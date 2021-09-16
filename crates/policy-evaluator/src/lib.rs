@@ -1,3 +1,4 @@
+pub extern crate burrego;
 extern crate k8s_openapi;
 extern crate kube;
 extern crate wasmparser;

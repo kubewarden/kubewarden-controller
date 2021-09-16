@@ -1,2 +1,2 @@
-pub(crate) mod burrego;
+pub mod burrego;
 pub(crate) mod wapc;
