@@ -374,17 +374,22 @@ checksum = "9c59e7af012c713f529e7a3ee57ce9b31ddd858d4b512923602f74608b009631"
 [[package]]
 name = "burrego"
 version = "0.1.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#be4aa31fe447695a93462a6f944653fb200fe97a"
+source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#ae5108cc7937b305f44764827bc17597d5d2ab8a"
 dependencies = [
  "anyhow",
+ "base64 0.13.0",
  "clap",
  "gtmpl",
  "gtmpl_value",
  "lazy_static",
+ "regex",
+ "semver 1.0.4",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tracing",
  "tracing-subscriber",
+ "url 2.2.2",
  "wasmtime",
 ]
 
@@ -1688,9 +1693,11 @@ dependencies = [
  "anyhow",
  "clap",
  "directories",
+ "itertools",
  "k8s-openapi",
  "kube",
  "kubewarden-policy-sdk",
+ "lazy_static",
  "mdcat",
  "policy-evaluator",
  "policy-fetcher",
@@ -2293,7 +2300,7 @@ dependencies = [
 [[package]]
 name = "policy-evaluator"
 version = "0.1.19"
-source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#be4aa31fe447695a93462a6f944653fb200fe97a"
+source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#ae5108cc7937b305f44764827bc17597d5d2ab8a"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
