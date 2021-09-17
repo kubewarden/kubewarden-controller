@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -62,7 +64,12 @@ func (r *ClusterAdmissionPolicy) ValidateCreate() error {
 func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 	clusteradmissionpolicylog.Info("validate update", "name", r.Name)
 
-	if r.Spec.PolicyServer != old.(*ClusterAdmissionPolicy).Spec.PolicyServer {
+	oldPolicy, ok := old.(*ClusterAdmissionPolicy)
+	if !ok {
+		return apierrors.NewInternalError(
+			fmt.Errorf("object is not of type ClusterAdmissionPolicy: %#v", old))
+	}
+	if r.Spec.PolicyServer != oldPolicy.Spec.PolicyServer {
 		var errs field.ErrorList
 		p := field.NewPath("spec")
 		pp := p.Child("policyServer")

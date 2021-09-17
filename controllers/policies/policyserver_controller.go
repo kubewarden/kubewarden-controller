@@ -135,6 +135,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
 			policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
 			if !ok {
+				r.Log.Error(err, "object is not type of ClusterAdmissionPolicy: %#v", policy)
 				return []ctrl.Request{}
 			}
 
