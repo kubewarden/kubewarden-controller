@@ -315,6 +315,7 @@ func (r *Reconciler) enablePolicyWebhook(
 		if err := r.UpdateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
 			return err
 		}
+		r.Log.Info("policy " + clusterAdmissionPolicy.Name + " active")
 	}
 
 	return nil
