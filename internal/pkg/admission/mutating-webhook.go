@@ -16,6 +16,8 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
+//+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=get;list;watch;create;update;patch
+
 func (r *Reconciler) reconcileMutatingWebhookConfiguration(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
