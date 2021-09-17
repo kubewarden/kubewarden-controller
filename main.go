@@ -24,7 +24,10 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/ereslibre/kube-webhook-wrapper/webhookwrapper"
+
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -73,14 +76,35 @@ func main() {
 		deploymentsNamespace = os.Getenv("NAMESPACE")
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "a4ddbf36.kubewarden.io",
-	})
+	mgr, err := webhookwrapper.NewManager(
+		ctrl.Options{
+			Scheme:                 scheme,
+			MetricsBindAddress:     metricsAddr,
+			Port:                   9443,
+			HealthProbeBindAddress: probeAddr,
+			LeaderElection:         enableLeaderElection,
+			LeaderElectionID:       "a4ddbf36.kubewarden.io",
+		},
+		setupLog,
+		[]webhookwrapper.WebhookRegistrator{
+			{
+				Registrator: (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager,
+				GVK: schema.GroupVersionKind{
+					Group:   policiesv1alpha2.GroupVersion.Group,
+					Version: policiesv1alpha2.GroupVersion.Version,
+					Kind:    "policyserver",
+				},
+			},
+			{
+				Registrator: (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+				GVK: schema.GroupVersionKind{
+					Group:   policiesv1alpha2.GroupVersion.Group,
+					Version: policiesv1alpha2.GroupVersion.Version,
+					Kind:    "clusteradmissionpolicy",
+				},
+			},
+		},
+	)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -100,14 +124,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
 		os.Exit(1)
 	}
-	if err = (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterAdmissionPolicy")
-		os.Exit(1)
-	}
-	if err = (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "PolicyServer")
-		os.Exit(1)
-	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
