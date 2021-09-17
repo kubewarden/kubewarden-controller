@@ -288,7 +288,7 @@ spec:
                   ClusterAdmissionPolicy resource.  Known .status.conditions.types
                   are: "PolicyServerSecretReconciled", "PolicyServerConfigMapReconciled",
                   "PolicyServerDeploymentReconciled", "PolicyServerServiceReconciled"
-                  and "PolicyServerWebhookRegistered" "ClusterAdmissionPolicyActive"'
+                  and "ClusterAdmissionPolicyActive"'
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct

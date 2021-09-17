@@ -191,7 +191,6 @@ type ClusterAdmissionPolicyStatus struct {
 	// "PolicyServerConfigMapReconciled",
 	// "PolicyServerDeploymentReconciled",
 	// "PolicyServerServiceReconciled" and
-	// "PolicyServerWebhookRegistered"
 	// "ClusterAdmissionPolicyActive"
 	// +patchMergeKey=type
 	// +patchStrategy=merge
