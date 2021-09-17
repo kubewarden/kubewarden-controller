@@ -1,6 +1,9 @@
 use crate::settings::{read_policies_file, Policy};
 use anyhow::{anyhow, Result};
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg};
+use itertools::Itertools;
+use lazy_static::lazy_static;
+use policy_evaluator::burrego::opa::builtins as opa_builtins;
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 use std::{collections::HashMap, net::SocketAddr, path::Path};
@@ -8,6 +11,22 @@ use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
 static SERVICE_NAME: &str = "kubewarden-policy-server";
+
+lazy_static! {
+    static ref VERSION_AND_BUILTINS: String = {
+        let builtins: String = opa_builtins::get_builtins()
+            .keys()
+            .sorted()
+            .map(|builtin| format!("  - {}", builtin))
+            .join("\n");
+
+        format!(
+            "{}\n\nOpen Policy Agent/Gatekeeper implemented builtins:\n{}",
+            crate_version!(),
+            builtins,
+        )
+    };
+}
 
 pub(crate) fn build_cli() -> App<'static, 'static> {
     App::new(crate_name!())
@@ -95,6 +114,7 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
                 .takes_value(true)
                 .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
         )
+        .long_version(VERSION_AND_BUILTINS.as_str())
 }
 
 pub(crate) fn api_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr> {
