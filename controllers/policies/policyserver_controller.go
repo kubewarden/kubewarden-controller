@@ -47,7 +47,14 @@ type PolicyServerReconciler struct {
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=policyservers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=policyservers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=policyservers/finalizers,verbs=update
-//+kubebuilder:rbac:groups=core,resources=secrets;configmaps,verbs=get;list;watch;create;update;patch
+//
+// The following ought to be part of kubewarden-controller-manager-cluster-role:
+//+kubebuilder:rbac:groups=core,resources=secrets;configmaps,verbs=list;watch
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=list;watch
+//
+// The following ought to be part of kubewarden-controller-manager-namespaced-role:
+//+kubebuilder:rbac:groups=core,resources=secrets;services;configmaps,verbs=get;list;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;create;delete;update;patch
 
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("policyserver", req.NamespacedName)
