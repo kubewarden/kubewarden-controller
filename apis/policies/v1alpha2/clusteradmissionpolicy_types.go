@@ -189,11 +189,11 @@ type ClusterAdmissionPolicyStatus struct {
 	// Conditions represent the observed conditions of the
 	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
 	// are: "PolicyServerSecretReconciled",
-	// "PolicyServerBound",
 	// "PolicyServerConfigMapReconciled",
 	// "PolicyServerDeploymentReconciled",
 	// "PolicyServerServiceReconciled" and
 	// "PolicyServerWebhookRegistered"
+	// "ClusterAdmissionPolicyActive"
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
