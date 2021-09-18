@@ -4,6 +4,7 @@ use std::collections::HashMap;
 mod debugging;
 mod encoding;
 mod glob;
+mod json;
 mod regex;
 mod semver;
 mod strings;
@@ -35,6 +36,9 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
 
     // glob
     functions.insert("glob.quote_meta", glob::quote_meta);
+
+    // objects
+    functions.insert("json.patch", json::patch);
 
     // regex
     functions.insert("regex.split", regex::split);
