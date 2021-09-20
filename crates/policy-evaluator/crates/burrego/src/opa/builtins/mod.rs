@@ -4,9 +4,11 @@ use std::collections::HashMap;
 mod debugging;
 mod encoding;
 mod glob;
+mod json;
 mod regex;
 mod semver;
 mod strings;
+mod time;
 
 pub type BuiltinFunctionsMap =
     HashMap<&'static str, fn(&[serde_json::Value]) -> Result<serde_json::Value>>;
@@ -36,6 +38,9 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
     // glob
     functions.insert("glob.quote_meta", glob::quote_meta);
 
+    // objects
+    functions.insert("json.patch", json::patch);
+
     // regex
     functions.insert("regex.split", regex::split);
     functions.insert("regex.template_match", regex::template_match);
@@ -47,6 +52,11 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
 
     // strings
     functions.insert("sprintf", strings::sprintf);
+
+    // time
+    functions.insert("time.now_ns", time::now_ns);
+    functions.insert("parse_rfc3339_ns", time::parse_rfc3339_ns);
+    functions.insert("date", time::date);
 
     functions
 }

@@ -367,17 +367,11 @@ pub mod yaml {
             let actual = marshal(&args);
             assert!(actual.is_ok());
 
-            let expected = r#"---
-hello: world
-number: 42
-list:
-  - 1
-  - 2
-  - 3
-"#;
+            let actual_str = actual.unwrap();
+            let actual_json: serde_json::Value =
+                serde_yaml::from_str(actual_str.as_str().unwrap()).unwrap();
 
-            let actual = actual.unwrap();
-            assert_json_eq!(json!(expected), actual);
+            assert_json_eq!(input, actual_json);
         }
 
         #[test]
