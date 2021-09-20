@@ -318,13 +318,16 @@ checksum = "9c59e7af012c713f529e7a3ee57ce9b31ddd858d4b512923602f74608b009631"
 [[package]]
 name = "burrego"
 version = "0.1.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#ae5108cc7937b305f44764827bc17597d5d2ab8a"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.0#01548909206cbbc6ce8cf7321ca3596aa72cfb9b"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
+ "chrono",
+ "chrono-tz",
  "clap",
  "gtmpl",
  "gtmpl_value",
+ "json-patch",
  "lazy_static",
  "regex",
  "semver 1.0.4",
@@ -458,6 +461,16 @@ dependencies = [
  "serde",
  "time",
  "winapi",
+]
+
+[[package]]
+name = "chrono-tz"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2554a3155fec064362507487171dcc4edc3df60cb10f3a1fb10ed8094822b120"
+dependencies = [
+ "chrono",
+ "parse-zoneinfo",
 ]
 
 [[package]]
@@ -1942,6 +1955,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "parse-zoneinfo"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c705f256449c60da65e11ff6626e0c16a0a0b96aaa348de61376b249bc340f41"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "paste"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2029,8 +2051,8 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
 name = "policy-evaluator"
-version = "0.1.19"
-source = "git+https://github.com/kubewarden/policy-evaluator?branch=opa#ae5108cc7937b305f44764827bc17597d5d2ab8a"
+version = "0.2.0"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.0#01548909206cbbc6ce8cf7321ca3596aa72cfb9b"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -2075,7 +2097,7 @@ dependencies = [
 
 [[package]]
 name = "policy-server"
-version = "0.1.10"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-stream",
