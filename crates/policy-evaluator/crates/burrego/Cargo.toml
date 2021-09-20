@@ -1,0 +1,30 @@
+[package]
+name = "burrego"
+version = "0.1.1"
+authors = ["Flavio Castelli <fcastelli@suse.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.40"
+base64 = "0.13.0"
+clap = "2.33.3"
+chrono = "0.4.19"
+chrono-tz = "0.5.3"
+gtmpl = "0.7.1"
+gtmpl_value = "0.5.1"
+json-patch = "0.2.6"
+lazy_static = "1.4.0"
+regex = "1.5.4"
+semver = "1.0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.64"
+serde_yaml = "0.8.13"
+tracing = "0.1"
+tracing-subscriber = { version= "0.2", features = ["fmt"] }
+url = "2.2.2"
+wasmtime = "0.28.0"
+
+[dev-dependencies]
+assert-json-diff = "2.0.1"

@@ -6,6 +6,8 @@ use std::path::Path;
 use validator::{Validate, ValidationError};
 use wasmparser::{Parser, Payload};
 
+use crate::policy_evaluator::PolicyExecutionMode;
+
 #[derive(Deserialize, Serialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Operation {
     #[serde(rename = "CREATE")]
@@ -118,8 +120,9 @@ fn validate_resources(data: &[String]) -> Result<(), ValidationError> {
 
 #[derive(Deserialize, Serialize, Debug, Clone, Validate)]
 #[serde(rename_all = "camelCase")]
+#[validate(schema(function = "validate_metadata", skip_on_field_errors = false))]
 pub struct Metadata {
-    #[validate(required, custom = "validate_protocol_version")]
+    #[validate(required)]
     pub protocol_version: Option<ProtocolVersion>,
     #[validate]
     pub rules: Vec<Rule>,
@@ -128,6 +131,8 @@ pub struct Metadata {
     pub mutating: bool,
     #[serde(default)]
     pub context_aware: bool,
+    #[serde(default)]
+    pub execution_mode: PolicyExecutionMode,
 }
 
 impl Default for Metadata {
@@ -138,6 +143,7 @@ impl Default for Metadata {
             annotations: Some(HashMap::new()),
             mutating: false,
             context_aware: false,
+            execution_mode: PolicyExecutionMode::KubewardenWapc,
         }
     }
 }
@@ -159,13 +165,15 @@ impl Metadata {
     }
 }
 
-fn validate_protocol_version(protocol: &ProtocolVersion) -> Result<(), ValidationError> {
-    match protocol {
-        ProtocolVersion::Unknown => Err(ValidationError::new(
+fn validate_metadata(metadata: &Metadata) -> Result<(), ValidationError> {
+    if metadata.execution_mode == PolicyExecutionMode::KubewardenWapc
+        && metadata.protocol_version == Some(ProtocolVersion::Unknown)
+    {
+        return Err(ValidationError::new(
             "Must specifify a valid protocol version",
-        )),
-        _ => Ok(()),
+        ));
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -257,7 +265,48 @@ mod tests {
         };
         assert!(metadata.validate().is_err());
 
+        // fails because the protocol cannot be None
+        metadata = Metadata {
+            protocol_version: None,
+            execution_mode: PolicyExecutionMode::KubewardenWapc,
+            ..Default::default()
+        };
+
+        assert!(metadata.validate().is_err());
+
         Ok(())
+    }
+
+    #[test]
+    fn metadata_with_kubewarden_execution_mode_must_have_a_valid_protocol() {
+        let metadata = Metadata {
+            protocol_version: Some(ProtocolVersion::Unknown),
+            execution_mode: PolicyExecutionMode::KubewardenWapc,
+            ..Default::default()
+        };
+
+        assert!(metadata.validate().is_err());
+
+        let metadata = Metadata {
+            protocol_version: Some(ProtocolVersion::V1),
+            execution_mode: PolicyExecutionMode::KubewardenWapc,
+            ..Default::default()
+        };
+
+        assert!(metadata.validate().is_ok());
+    }
+
+    #[test]
+    fn metadata_with_rego_execution_mode_must_have_a_valid_protocol() {
+        for mode in vec![PolicyExecutionMode::Opa, PolicyExecutionMode::OpaGatekeeper] {
+            let metadata = Metadata {
+                protocol_version: Some(ProtocolVersion::Unknown),
+                execution_mode: mode,
+                ..Default::default()
+            };
+
+            assert!(metadata.validate().is_ok());
+        }
     }
 
     #[test]
@@ -273,6 +322,7 @@ mod tests {
             "rules": [ ],
             "mutating": false,
             "contextAware": false,
+            "executionMode": "kubewarden-wapc",
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -318,6 +368,7 @@ mod tests {
             },
             "mutating": false,
             "contextAware": false,
+            "executionMode": "kubewarden-wapc",
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
