@@ -8,6 +8,7 @@ mod json;
 mod regex;
 mod semver;
 mod strings;
+mod time;
 
 pub type BuiltinFunctionsMap =
     HashMap<&'static str, fn(&[serde_json::Value]) -> Result<serde_json::Value>>;
@@ -51,6 +52,11 @@ pub fn get_builtins() -> BuiltinFunctionsMap {
 
     // strings
     functions.insert("sprintf", strings::sprintf);
+
+    // time
+    functions.insert("time.now_ns", time::now_ns);
+    functions.insert("parse_rfc3339_ns", time::parse_rfc3339_ns);
+    functions.insert("date", time::date);
 
     functions
 }
