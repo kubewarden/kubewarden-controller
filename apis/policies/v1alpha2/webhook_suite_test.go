@@ -39,12 +39,13 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	registrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -108,6 +109,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&ClusterAdmissionPolicy{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&PolicyServer{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook
@@ -194,6 +198,50 @@ func deleteClusterAdmissionPolicy(ctx context.Context, name, namespace string) {
 	}).Should(BeTrue())
 }
 
+func makePolicyServerTemplate(name, namespace string) *PolicyServer {
+	return &PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: PolicyServerSpec{
+			Image:    "image",
+			Replicas: 1,
+		},
+	}
+}
+
+func deletePolicyServer(ctx context.Context, name, namespace string) {
+	nsn := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+	pol := &PolicyServer{}
+	err := k8sClient.Get(ctx, nsn, pol)
+	if apierrors.IsNotFound(err) {
+		return
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(k8sClient.Delete(ctx, pol)).To(Succeed())
+
+	// Remove finalizer
+	err = k8sClient.Get(ctx, nsn, pol)
+	Expect(err).NotTo(HaveOccurred())
+	polUpdated := pol.DeepCopy()
+	controllerutil.RemoveFinalizer(polUpdated, constants.KubewardenFinalizer)
+	err = k8sClient.Update(ctx, polUpdated)
+	if err != nil {
+		fmt.Print(err)
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, nsn, &ClusterAdmissionPolicy{})
+		return apierrors.IsNotFound(err)
+	}).Should(BeTrue())
+}
+
 var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 	namespace := "default"
 
@@ -223,4 +271,22 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 		By("deleting the created ClusterAdmissionPolicy")
 		deleteClusterAdmissionPolicy(ctx, "policy-test2", namespace)
 	})
+})
+
+var _ = Describe("validate PolicyServer webhook with ", func() {
+	namespace := "default"
+
+	It("should add kubewarden finalizer when creating a PolicyServer", func() {
+		pol := makePolicyServerTemplate("policyserver-test", namespace)
+		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
+		k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+
+		By("checking default values")
+		Expect(pol.ObjectMeta.Finalizers).To(HaveLen(1))
+		Expect(pol.ObjectMeta.Finalizers[0]).To(Equal(constants.KubewardenFinalizer))
+
+		By("deleting the created PolicyServer")
+		deletePolicyServer(ctx, "policyserver-test", namespace)
+	})
+
 })
