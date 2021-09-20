@@ -104,6 +104,10 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterAdmissionPolicy")
 		os.Exit(1)
 	}
+	if err = (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "PolicyServer")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
