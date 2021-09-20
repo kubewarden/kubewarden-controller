@@ -90,9 +90,6 @@ var _ = BeforeSuite(func() {
 	err = admissionv1beta1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = admissionv1beta1.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
-
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -288,8 +285,8 @@ var _ = Describe("validate PolicyServer webhook with ", func() {
 		Expect(pol.ObjectMeta.Finalizers).To(HaveLen(1))
 		Expect(pol.ObjectMeta.Finalizers[0]).To(Equal(constants.KubewardenFinalizer))
 
-		By("deleting the created ClusterAdmissionPolicy")
-		deletePolicyServer(ctx, "policy-test", namespace)
+		By("deleting the created PolicyServer")
+		deletePolicyServer(ctx, "policyserver-test", namespace)
 	})
 
 })
