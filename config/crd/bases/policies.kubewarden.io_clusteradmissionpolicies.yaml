@@ -257,6 +257,7 @@ spec:
               settings:
                 description: 'Settings is a free-form object that contains the policy
                   configuration values. x-kubernetes-embedded-resource: false'
+                nullable: true
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               sideEffects:

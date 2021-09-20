@@ -37,6 +37,7 @@ type ClusterAdmissionPolicySpec struct {
 	// Settings is a free-form object that contains the policy configuration
 	// values.
 	// +optional
+	// +nullable
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// x-kubernetes-embedded-resource: false
 	Settings runtime.RawExtension `json:"settings,omitempty"`
