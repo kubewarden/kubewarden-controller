@@ -5,7 +5,7 @@ go 1.15
 require (
 	cloud.google.com/go v0.60.0 // indirect
 	github.com/go-logr/logr v0.3.0
-	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/google/go-cmp v0.5.4
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/nxadm/tail v1.4.8 // indirect

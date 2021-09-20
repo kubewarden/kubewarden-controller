@@ -16,6 +16,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
@@ -93,7 +94,7 @@ func (r *Reconciler) ReconcileDeletion(
 	}
 
 	patch := policyServer.DeepCopy()
-	patch.ObjectMeta.Finalizers = removeKubewardenFinalizer(patch.ObjectMeta.Finalizers)
+	controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 	err = r.Client.Patch(ctx, patch, client.MergeFrom(policyServer))
 	if err != nil && !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot remove finalizer "+policyServer.Name)
@@ -277,11 +278,9 @@ func (r *Reconciler) enablePolicyWebhook(
 	policyServerSecret *corev1.Secret,
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
-
 	if err != nil {
 		return err
 	}
-
 	if !policyServerReady {
 		return errors.New("policy server not yet ready")
 	}
@@ -293,7 +292,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			if err := r.reconcileMutatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
 				setFalseConditionType(
 					&clusterAdmissionPolicy.Status.Conditions,
-					policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+					policiesv1alpha2.ClusterAdmissionPolicyActive,
 					fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
 				)
 				return err
@@ -302,7 +301,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			if err := r.reconcileValidatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
 				setFalseConditionType(
 					&clusterAdmissionPolicy.Status.Conditions,
-					policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+					policiesv1alpha2.ClusterAdmissionPolicyActive,
 					fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
 				)
 				return err
@@ -310,12 +309,13 @@ func (r *Reconciler) enablePolicyWebhook(
 		}
 		setTrueConditionType(
 			&clusterAdmissionPolicy.Status.Conditions,
-			policiesv1alpha2.PolicyServerWebhookConfigurationReconciled,
+			policiesv1alpha2.ClusterAdmissionPolicyActive,
 		)
-		clusterAdmissionPolicy.Status.PolicyActive = true
-		if err := r.updateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
+		clusterAdmissionPolicy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusActive
+		if err := r.UpdateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
 			return err
 		}
+		r.Log.Info("policy " + clusterAdmissionPolicy.Name + " active")
 	}
 
 	return nil
@@ -353,7 +353,7 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 			}
 			patch := policy.DeepCopy()
-			patch.ObjectMeta.Finalizers = removeKubewardenFinalizer(patch.ObjectMeta.Finalizers)
+			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 			err := r.Client.Patch(ctx, patch, client.MergeFrom(&policy))
 			if err != nil && !apierrors.IsNotFound(err) {
 				return err
@@ -363,7 +363,9 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 	return nil
 }
 
-func (r *Reconciler) updateAdmissionPolicyStatus(
+// UpdateAdmissionPolicyStatus Updates the status subresource of the passed
+// clusterAdmissionPolicy with a Client apt for it.
+func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
@@ -371,13 +373,4 @@ func (r *Reconciler) updateAdmissionPolicyStatus(
 		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
 	}
 	return nil
-}
-
-func removeKubewardenFinalizer(finalizers []string) []string {
-	for i, finalizer := range finalizers {
-		if finalizer == constants.KubewardenFinalizer {
-			return append(finalizers[:i], finalizers[i+1:]...)
-		}
-	}
-	return finalizers
 }

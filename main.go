@@ -100,6 +100,10 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
 		os.Exit(1)
 	}
+	if err = (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterAdmissionPolicy")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

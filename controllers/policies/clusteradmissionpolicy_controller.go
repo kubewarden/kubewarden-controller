@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
-	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,16 +46,6 @@ type ClusterAdmissionPolicyReconciler struct {
 func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	return ctrl.Result{}, fmt.Errorf("reconciliation error: ")
-}
-
-func (r *ClusterAdmissionPolicyReconciler) updateAdmissionPolicyStatus(
-	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
-) error {
-	return errors.Wrapf(
-		r.Client.Status().Update(ctx, clusterAdmissionPolicy),
-		"failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta,
-	)
 }
 
 // SetupWithManager sets up the controller with the Manager.
