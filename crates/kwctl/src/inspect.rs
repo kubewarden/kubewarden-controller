@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Result};
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
-use policy_evaluator::{constants::*, policy_metadata::Metadata};
+use policy_evaluator::{
+    constants::*, policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata,
+};
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
 use std::convert::TryFrom;
@@ -12,7 +13,9 @@ pub(crate) fn inspect(uri: &str, output: OutputType) -> Result<()> {
     let wasm_path = crate::utils::wasm_path(uri.as_str())?;
     let printer = get_printer(output);
 
-    match Metadata::from_path(&wasm_path)? {
+    let metadata = Metadata::from_path(&wasm_path)
+        .map_err(|e| anyhow!("Error parsing policy metadata: {}", e))?;
+    match metadata {
         Some(metadata) => printer.print(&metadata),
         None => Err(anyhow!(
             "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
@@ -73,9 +76,6 @@ impl MetadataPrettyPrinter {
             .protocol_version
             .clone()
             .ok_or_else(|| anyhow!("Invalid policy: protocol_version not defined"))?;
-        if protocol_version == ProtocolVersion::Unknown {
-            return Err(anyhow!("Invalid policy: protocol_version not defined"));
-        }
 
         let pretty_annotations = vec![
             KUBEWARDEN_ANNOTATION_POLICY_TITLE,
@@ -99,7 +99,10 @@ impl MetadataPrettyPrinter {
         }
         table.add_row(row![Fgbl -> "mutating:", metadata.mutating]);
         table.add_row(row![Fgbl -> "context aware:", metadata.context_aware]);
-        table.add_row(row![Fgbl -> "protocol version:", protocol_version]);
+        table.add_row(row![Fgbl -> "execution mode:", metadata.execution_mode]);
+        if metadata.execution_mode == PolicyExecutionMode::KubewardenWapc {
+            table.add_row(row![Fgbl -> "protocol version:", protocol_version]);
+        }
 
         let _usage = annotations.remove(KUBEWARDEN_ANNOTATION_POLICY_USAGE);
         if !annotations.is_empty() {

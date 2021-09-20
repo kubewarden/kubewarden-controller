@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
+use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_fetcher::store::Store;
 use regex::Regex;
+use serde_json::json;
 use std::{env, path::PathBuf};
 use url::Url;
 
@@ -38,8 +40,24 @@ pub(crate) fn wasm_path(uri: &str) -> Result<PathBuf> {
     }
 }
 
+pub(crate) fn new_policy_execution_mode_from_str(name: &str) -> Result<PolicyExecutionMode> {
+    let execution_mode: PolicyExecutionMode =
+        serde_json::from_value(json!(name)).map_err(|_| {
+            anyhow!(
+                "Unknown policy execution mode \"{}\". Valid values are {}, {}, {}",
+                name,
+                serde_json::to_string(&PolicyExecutionMode::KubewardenWapc).unwrap(),
+                serde_json::to_string(&PolicyExecutionMode::Opa).unwrap(),
+                serde_json::to_string(&PolicyExecutionMode::OpaGatekeeper).unwrap(),
+            )
+        })?;
+    Ok(execution_mode)
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[test]
@@ -82,5 +100,38 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_build_policy_execution_mode_from_valid_input() {
+        let mut data: HashMap<String, PolicyExecutionMode> = HashMap::new();
+        data.insert(String::from("opa"), PolicyExecutionMode::Opa);
+        data.insert(
+            String::from("gatekeeper"),
+            PolicyExecutionMode::OpaGatekeeper,
+        );
+        data.insert(
+            String::from("kubewarden-wapc"),
+            PolicyExecutionMode::KubewardenWapc,
+        );
+
+        for (name, mode) in data {
+            let actual = new_policy_execution_mode_from_str(name.as_str());
+            assert!(
+                actual.is_ok(),
+                "Error while converting {}: {:?}",
+                name,
+                actual
+            );
+
+            let actual = actual.unwrap();
+            assert_eq!(actual, mode, "Expected {}, got {}", mode, actual);
+        }
+    }
+
+    #[test]
+    fn test_build_policy_execution_mode_from_invalid_input() {
+        let actual = new_policy_execution_mode_from_str("test");
+        assert!(actual.is_err(),);
     }
 }

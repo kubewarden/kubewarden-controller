@@ -1,8 +1,7 @@
+use crate::backend::{Backend, BackendDetector};
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
-use policy_evaluator::{
-    constants::*, policy_evaluator::PolicyEvaluator, policy_metadata::Metadata,
-};
+use policy_evaluator::{constants::*, policy_metadata::Metadata};
 use std::fs::File;
 use std::path::PathBuf;
 use validator::Validate;
@@ -12,32 +11,30 @@ pub(crate) fn write_annotation(
     metadata_path: PathBuf,
     destination: PathBuf,
 ) -> Result<()> {
-    let metadata = prepare_metadata(wasm_path.clone(), metadata_path, protocol_detector)?;
+    let backend_detector = BackendDetector::default();
+    let metadata = prepare_metadata(wasm_path.clone(), metadata_path, backend_detector)?;
     write_annotated_wasm_file(wasm_path, destination, metadata)
-}
-
-fn protocol_detector(wasm_path: PathBuf) -> Result<ProtocolVersion> {
-    let policy_evaluator = PolicyEvaluator::from_file(
-        String::from(wasm_path.to_string_lossy()),
-        wasm_path.as_path(),
-        None,
-    )?;
-    policy_evaluator
-        .protocol_version()
-        .map_err(|e| anyhow!("Cannot compute ProtocolVersion used by the policy: {:?}", e))
 }
 
 fn prepare_metadata(
     wasm_path: PathBuf,
     metadata_path: PathBuf,
-    detect_protocol_func: impl Fn(PathBuf) -> Result<ProtocolVersion>,
+    backend_detector: BackendDetector,
 ) -> Result<Metadata> {
-    let metadata_file = File::open(metadata_path)?;
-    let mut metadata: Metadata = serde_yaml::from_reader(&metadata_file)?;
+    let metadata_file =
+        File::open(metadata_path).map_err(|e| anyhow!("Error opening metadata file: {}", e))?;
+    let mut metadata: Metadata = serde_yaml::from_reader(&metadata_file)
+        .map_err(|e| anyhow!("Error unmarshalling metadata {}", e))?;
 
-    let protocol_version = detect_protocol_func(wasm_path)?;
+    let backend = backend_detector.detect(wasm_path, &metadata)?;
 
-    metadata.protocol_version = Some(protocol_version);
+    match backend {
+        Backend::Opa => metadata.protocol_version = Some(ProtocolVersion::Unknown),
+        Backend::OpaGatekeeper => metadata.protocol_version = Some(ProtocolVersion::Unknown),
+        Backend::KubewardenWapc(protocol_version) => {
+            metadata.protocol_version = Some(protocol_version)
+        }
+    };
 
     let mut annotations = metadata.annotations.unwrap_or_default();
     annotations.insert(
@@ -82,6 +79,14 @@ mod tests {
         Ok(ProtocolVersion::V1)
     }
 
+    fn mock_rego_policy_detector_true(_wasm_path: PathBuf) -> Result<bool> {
+        Ok(true)
+    }
+
+    fn mock_rego_policy_detector_false(_wasm_path: PathBuf) -> Result<bool> {
+        Ok(false)
+    }
+
     #[test]
     fn test_kwctl_version_is_added_to_already_populated_annotations() -> Result<()> {
         let dir = tempdir()?;
@@ -106,10 +111,14 @@ mod tests {
 
         write!(file, "{}", raw_metadata)?;
 
+        let backend_detector = BackendDetector::new(
+            mock_rego_policy_detector_false,
+            mock_protocol_version_detector_v1,
+        );
         let metadata = prepare_metadata(
             PathBuf::from("irrelevant.wasm"),
             file_path,
-            mock_protocol_version_detector_v1,
+            backend_detector,
         )?;
         let annotations = metadata.annotations.unwrap();
 
@@ -151,10 +160,14 @@ mod tests {
 
         write!(file, "{}", raw_metadata)?;
 
+        let backend_detector = BackendDetector::new(
+            mock_rego_policy_detector_false,
+            mock_protocol_version_detector_v1,
+        );
         let metadata = prepare_metadata(
             PathBuf::from("irrelevant.wasm"),
             file_path,
-            mock_protocol_version_detector_v1,
+            backend_detector,
         )?;
         let annotations = metadata.annotations.unwrap();
 
@@ -186,21 +199,65 @@ mod tests {
           resources: ["pods"]
           operations: ["CREATE", "UPDATE"]
         mutating: false
+        executionMode: kubewarden-wapc
         "#
         );
 
         write!(file, "{}", raw_metadata)?;
 
+        let backend_detector = BackendDetector::new(
+            mock_rego_policy_detector_false,
+            mock_protocol_version_detector_v1,
+        );
         let metadata = prepare_metadata(
             PathBuf::from("irrelevant.wasm"),
             file_path,
-            mock_protocol_version_detector_v1,
+            backend_detector,
         )?;
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
             annotations.get(KUBEWARDEN_ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_final_metadata_for_a_rego_policy() -> Result<()> {
+        let dir = tempdir()?;
+
+        let file_path = dir.path().join("metadata.yml");
+        let mut file = File::create(file_path.clone())?;
+
+        let raw_metadata = String::from(
+            r#"
+        rules:
+        - apiGroups: [""]
+          apiVersions: ["v1"]
+          resources: ["pods"]
+          operations: ["CREATE", "UPDATE"]
+        mutating: false
+        executionMode: opa
+        "#,
+        );
+
+        write!(file, "{}", raw_metadata)?;
+
+        let backend_detector = BackendDetector::new(
+            mock_rego_policy_detector_true,
+            mock_protocol_version_detector_v1,
+        );
+        let metadata = prepare_metadata(
+            PathBuf::from("irrelevant.wasm"),
+            file_path,
+            backend_detector,
+        );
+        assert!(metadata.is_ok());
+        assert_eq!(
+            metadata.unwrap().protocol_version,
+            Some(ProtocolVersion::Unknown)
         );
 
         Ok(())

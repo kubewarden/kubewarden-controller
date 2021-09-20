@@ -24,13 +24,16 @@ use tracing::debug;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use policy_evaluator::policy_metadata::Metadata;
+use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 
+use crate::utils::new_policy_execution_mode_from_str;
+
 mod annotate;
+mod backend;
 mod cli;
 mod completions;
 mod inspect;
@@ -64,7 +67,7 @@ async fn main() -> Result<()> {
     match matches.subcommand_name() {
         Some("policies") => policies::list(),
         Some("pull") => {
-            if let Some(ref matches) = matches.subcommand_matches("pull") {
+            if let Some(matches) = matches.subcommand_matches("pull") {
                 let uri = matches.value_of("uri").unwrap();
                 let destination = matches
                     .value_of("output-path")
@@ -79,7 +82,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("push") => {
-            if let Some(ref matches) = matches.subcommand_matches("push") {
+            if let Some(matches) = matches.subcommand_matches("push") {
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let wasm_uri = crate::utils::map_path_to_uri(matches.value_of("policy").unwrap())?;
                 let wasm_path = crate::utils::wasm_path(wasm_uri.as_str())?;
@@ -100,31 +103,22 @@ async fn main() -> Result<()> {
                     "policy push"
                 );
 
-                let policy = fs::read(&wasm_path)?;
                 let force = matches.is_present("force");
-                let metadata = Metadata::from_path(&wasm_path)?;
-                if metadata.is_none() {
-                    if force {
-                        eprintln!("Warning: pushing a non-annotated policy!");
-                    } else {
-                        return Err(anyhow!("Cannot push a policy that is not annotated. Use `annotate` command or `push --force`"));
-                    }
-                }
 
-                push::push(&policy, &uri, docker_config, sources).await?;
+                push::push(wasm_path, &uri, docker_config, sources, force).await?;
             };
             println!("Policy successfully pushed");
             Ok(())
         }
         Some("rm") => {
-            if let Some(ref matches) = matches.subcommand_matches("rm") {
+            if let Some(matches) = matches.subcommand_matches("rm") {
                 let uri = matches.value_of("uri").unwrap();
                 rm::rm(uri)?;
             }
             Ok(())
         }
         Some("run") => {
-            if let Some(ref matches) = matches.subcommand_matches("run") {
+            if let Some(matches) = matches.subcommand_matches("run") {
                 let uri = matches.value_of("uri").unwrap();
                 let request = match matches.value_of("request-path").unwrap() {
                     "-" => {
@@ -163,12 +157,26 @@ async fn main() -> Result<()> {
                 };
                 let (sources, docker_config) = remote_server_options(matches)
                     .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
-                run::pull_and_run(uri, docker_config, sources, &request, settings).await?;
+                let execution_mode: Option<PolicyExecutionMode> =
+                    if let Some(mode_name) = matches.value_of("execution-mode") {
+                        Some(new_policy_execution_mode_from_str(mode_name)?)
+                    } else {
+                        None
+                    };
+                run::pull_and_run(
+                    uri,
+                    execution_mode,
+                    docker_config,
+                    sources,
+                    &request,
+                    settings,
+                )
+                .await?;
             }
             Ok(())
         }
         Some("annotate") => {
-            if let Some(ref matches) = matches.subcommand_matches("annotate") {
+            if let Some(matches) = matches.subcommand_matches("annotate") {
                 let wasm_path = matches
                     .value_of("wasm-path")
                     .map(|output| PathBuf::from_str(output).unwrap())
@@ -186,7 +194,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("inspect") => {
-            if let Some(ref matches) = matches.subcommand_matches("inspect") {
+            if let Some(matches) = matches.subcommand_matches("inspect") {
                 let uri = matches.value_of("uri").unwrap();
                 let output = inspect::OutputType::try_from(matches.value_of("output"))?;
 
@@ -195,7 +203,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("manifest") => {
-            if let Some(ref matches) = matches.subcommand_matches("manifest") {
+            if let Some(matches) = matches.subcommand_matches("manifest") {
                 let uri = matches.value_of("uri").unwrap();
                 let resource_type = matches.value_of("type").unwrap();
                 if matches.is_present("settings-path") && matches.is_present("settings-json") {
@@ -223,7 +231,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("completions") => {
-            if let Some(ref matches) = matches.subcommand_matches("completions") {
+            if let Some(matches) = matches.subcommand_matches("completions") {
                 let shell = match matches.value_of("shell").unwrap() {
                     "bash" => clap::Shell::Bash,
                     "fish" => clap::Shell::Fish,
