@@ -131,17 +131,18 @@ impl PolicyEvaluator {
                 let wapc_host = WapcHost::new(Box::new(engine), wapc_callback)?;
                 let policy = PolicyEvaluator::from_contents_internal(
                     id,
-                    |_| Ok(wapc_host.id()),
+                    || Some(wapc_host.id()),
                     Policy::new,
                     policy_execution_mode,
                 )?;
+
                 let policy_runtime = Runtime::Wapc(wapc_host);
                 (policy, policy_runtime)
             }
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
                 let policy = PolicyEvaluator::from_contents_internal(
                     id.clone(),
-                    |_| Ok(0),
+                    || None,
                     Policy::new,
                     policy_execution_mode,
                 )?;
@@ -173,17 +174,17 @@ impl PolicyEvaluator {
         policy_execution_mode: PolicyExecutionMode,
     ) -> Result<Policy>
     where
-        E: Fn(PolicyExecutionMode) -> Result<u64>,
-        P: Fn(String) -> Result<Policy>,
+        E: Fn() -> Option<u64>,
+        P: Fn(String, Option<u64>) -> Result<Policy>,
     {
-        let wapc_policy_id = engine_initializer(policy_execution_mode)?;
-
-        let policy = policy_initializer(id)?;
-        WAPC_POLICY_MAPPING
-            .write()
-            .unwrap()
-            .insert(wapc_policy_id, policy.clone());
-
+        let policy_id = engine_initializer();
+        let policy = policy_initializer(id, policy_id)?;
+        if policy_execution_mode == PolicyExecutionMode::KubewardenWapc {
+            WAPC_POLICY_MAPPING.write().unwrap().insert(
+                policy_id.ok_or_else(|| anyhow!("invalid policy id"))?,
+                policy.clone(),
+            );
+        }
         Ok(policy)
     }
 
@@ -247,8 +248,8 @@ mod tests {
 
         PolicyEvaluator::from_contents_internal(
             "mock_policy".to_string(),
-            |_| Ok(policy_id),
-            |_| Ok(policy.clone()),
+            || Some(policy_id),
+            |_, _| Ok(policy.clone()),
             PolicyExecutionMode::KubewardenWapc,
         )?;
 
@@ -256,6 +257,29 @@ mod tests {
 
         assert!(policy_mapping.contains_key(&policy_id));
         assert_eq!(policy_mapping[&policy_id], policy);
+
+        Ok(())
+    }
+
+    #[test]
+    fn policy_is_not_registered_in_the_mapping_if_not_wapc() -> Result<()> {
+        let policy = Policy::default();
+        let policy_id = 1;
+
+        let wapc_policy_mapping_len = WAPC_POLICY_MAPPING.read().unwrap().len();
+        assert!(!WAPC_POLICY_MAPPING.read().unwrap().contains_key(&policy_id));
+
+        PolicyEvaluator::from_contents_internal(
+            "mock_policy".to_string(),
+            || Some(policy_id),
+            |_, _| Ok(policy.clone()),
+            PolicyExecutionMode::OpaGatekeeper,
+        )?;
+
+        let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
+
+        assert_eq!(policy_mapping.len(), wapc_policy_mapping_len);
+        assert!(!WAPC_POLICY_MAPPING.read().unwrap().contains_key(&policy_id));
 
         Ok(())
     }
