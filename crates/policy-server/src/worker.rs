@@ -1,12 +1,14 @@
 use crate::communication::EvalRequest;
 use crate::settings::Policy;
 use crate::utils::convert_yaml_map_to_json;
-use anyhow::{anyhow, Result};
+use anyhow::Result;
+use itertools::Itertools;
 use policy_evaluator::{
     policy_evaluator::{PolicyEvaluator, ValidateRequest},
     policy_metadata::Metadata,
 };
 use std::collections::HashMap;
+use std::fmt;
 use tokio::sync::mpsc::Receiver;
 use tracing::{error, info_span};
 
@@ -15,13 +17,26 @@ pub(crate) struct Worker {
     channel_rx: Receiver<EvalRequest>,
 }
 
+pub struct PolicyErrors(HashMap<String, String>);
+
+impl fmt::Display for PolicyErrors {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut errors = self
+            .0
+            .iter()
+            .map(|(policy, error)| format!("[{}: {}]", policy, error));
+        write!(f, "{}", errors.join(", "))
+    }
+}
+
 impl Worker {
     #[tracing::instrument(name = "worker_new", skip(rx, policies))]
     pub(crate) fn new(
         rx: Receiver<EvalRequest>,
         policies: HashMap<String, Policy>,
-    ) -> Result<Worker> {
-        let mut evs: HashMap<String, PolicyEvaluator> = HashMap::new();
+    ) -> Result<Worker, PolicyErrors> {
+        let mut evs_errors = HashMap::new();
+        let mut evs = HashMap::new();
 
         for (id, policy) in policies.iter() {
             let settings = policy.settings();
@@ -38,27 +53,64 @@ impl Worker {
                     }
                 });
 
-            let policy_contents = std::fs::read(&policy.wasm_module_path)?;
-            let policy_metadata = Metadata::from_contents(policy_contents.clone())?;
+            let policy_contents = match std::fs::read(&policy.wasm_module_path) {
+                Ok(policy_contents) => policy_contents,
+                Err(err) => {
+                    evs_errors.insert(
+                        policy.url.clone(),
+                        format!("policy contents are invalid: {:?}", err),
+                    );
+                    continue;
+                }
+            };
+
+            let policy_metadata = match Metadata::from_contents(policy_contents.clone()) {
+                Ok(policy_metadata) => policy_metadata,
+                Err(err) => {
+                    evs_errors.insert(
+                        policy.url.clone(),
+                        format!("policy metadata is invalid: {:?}", err),
+                    );
+                    continue;
+                }
+            };
+
             let policy_execution_mode = policy_metadata.unwrap_or_default().execution_mode;
 
-            let mut policy_evaluator = PolicyEvaluator::from_contents(
+            let mut policy_evaluator = match PolicyEvaluator::from_contents(
                 id.to_string(),
                 policy_contents,
                 policy_execution_mode,
                 settings_json,
-            )?;
+            ) {
+                Ok(policy_evaluator) => policy_evaluator,
+                Err(err) => {
+                    evs_errors.insert(
+                        policy.url.clone(),
+                        format!("could not instantiate policy: {:?}", err),
+                    );
+                    continue;
+                }
+            };
 
             let set_val_rep = policy_evaluator.validate_settings();
             if !set_val_rep.valid {
-                return Err(anyhow!(
-                    "The settings of policy {} are invalid: {:?}",
-                    policy.url,
-                    set_val_rep.message
-                ));
+                evs_errors.insert(
+                    policy.url.clone(),
+                    format!(
+                        "settings of policy {} are invalid: {:?}",
+                        policy.url.clone(),
+                        set_val_rep.message
+                    ),
+                );
+                continue;
             }
 
             evs.insert(id.to_string(), policy_evaluator);
+        }
+
+        if !evs_errors.is_empty() {
+            return Err(PolicyErrors(evs_errors));
         }
 
         Ok(Worker {

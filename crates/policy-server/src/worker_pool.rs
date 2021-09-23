@@ -60,7 +60,7 @@ impl WorkerPool {
                                     error!(error = e.to_string().as_str(), "cannot spawn worker");
                                     canary.store(false, Ordering::SeqCst);
                                     b.wait();
-                                    return Err(anyhow!("Worker {} couldn't start: {:?}", n, e));
+                                    return Err(anyhow!("Worker {} couldn't start: {}", n, e));
                                 }
                             };
                             b.wait();
