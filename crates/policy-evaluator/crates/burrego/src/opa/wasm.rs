@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use wasmtime::{
     AsContextMut, Caller, Engine, Func, Instance, Limits, Linker, Memory, MemoryType, Module, Store,
@@ -350,14 +351,24 @@ impl Evaluator {
             .join(", ");
         debug!(used = used_builtins.as_str(), "policy builtins");
 
-        Ok(Evaluator {
+        let mut evaluator = Evaluator {
             engine,
             linker,
             store,
             instance,
             memory,
             policy,
-        })
+        };
+
+        let not_implemented_builtins = evaluator.not_implemented_builtins()?;
+        if !not_implemented_builtins.is_empty() {
+            return Err(anyhow!(
+                "missing Rego builtins: {}. Aborting execution.",
+                not_implemented_builtins.iter().join(", ")
+            ));
+        }
+
+        Ok(evaluator)
     }
 
     pub fn opa_abi_version(&mut self) -> Result<(i32, i32)> {
