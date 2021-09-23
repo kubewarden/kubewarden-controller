@@ -21,7 +21,7 @@ func TestIsPolicyServerNotReady(t *testing.T) {
 	}
 
 	otherErr := fmt.Errorf("this is generic error")
-	if IsPolicyServerNotReady(otherErr) != false {
+	if !IsPolicyServerNotReady(otherErr) != false {
 		t.Errorf("expected generic error to not be identified")
 	}
 }
