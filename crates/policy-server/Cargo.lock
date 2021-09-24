@@ -318,7 +318,7 @@ checksum = "9c59e7af012c713f529e7a3ee57ce9b31ddd858d4b512923602f74608b009631"
 [[package]]
 name = "burrego"
 version = "0.1.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.0#01548909206cbbc6ce8cf7321ca3596aa72cfb9b"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.1#f822307cec22b3583c76300a1f814fe3fb6e7384"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -327,6 +327,7 @@ dependencies = [
  "clap",
  "gtmpl",
  "gtmpl_value",
+ "itertools",
  "json-patch",
  "lazy_static",
  "regex",
@@ -2051,8 +2052,8 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
 name = "policy-evaluator"
-version = "0.2.0"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.0#01548909206cbbc6ce8cf7321ca3596aa72cfb9b"
+version = "0.2.1"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.1#f822307cec22b3583c76300a1f814fe3fb6e7384"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
