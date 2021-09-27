@@ -160,7 +160,7 @@ const (
 	PolicyServerConfigMapReconciled PolicyConditionType = "PolicyServerConfigMapReconciled"
 	// ClusterAdmissionPolicyActive represents the condition of the Policy
 	// admission webhook being registered
-	ClusterAdmissionPolicyActive PolicyConditionType = "active"
+	ClusterAdmissionPolicyActive PolicyConditionType = "PolicyActive"
 )
 
 // +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
