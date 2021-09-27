@@ -1,6 +1,6 @@
 [package]
 name = "policy-server"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>"
@@ -11,7 +11,7 @@ edition = "2018"
 anyhow = "1.0"
 async-stream = "0.3.0"
 itertools = "0.10.1"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.1" }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.13" }
 kubewarden-policy-sdk = "0.2.4"
 lazy_static = "1.4.0"
