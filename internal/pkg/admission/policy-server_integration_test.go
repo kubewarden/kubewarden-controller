@@ -83,7 +83,6 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	if err != nil {
 		t.Errorf("error when shutting down https server : %s", err.Error())
 	}
-
 }
 
 func isConnectionRefusedError(err error) bool {

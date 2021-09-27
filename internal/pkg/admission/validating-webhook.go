@@ -30,7 +30,6 @@ func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 	}
 	if apierrors.IsAlreadyExists(err) {
 		return r.updateValidatingWebhook(ctx, clusterAdmissionPolicy, webhook)
-
 	}
 	return fmt.Errorf("cannot reconcile validating webhook: %w", err)
 }
@@ -38,7 +37,6 @@ func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	newWebhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
-
 	var originalWebhook admissionregistrationv1.ValidatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{

@@ -119,7 +119,6 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policySer
 }
 
 func shouldUpdatePolicyServerDeployment(originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) bool {
-
 	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
 		originalDeployment.Spec.Template.Spec.Containers[0].Image != newDeployment.Spec.Template.Spec.Containers[0].Image ||
 		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
@@ -141,7 +140,6 @@ func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, n
 }
 
 func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1alpha2.PolicyServer) *appsv1.Deployment {
-
 	const (
 		certsVolumeName             = "certs"
 		policiesConfigContainerPath = "/config"

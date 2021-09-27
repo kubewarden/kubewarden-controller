@@ -37,7 +37,6 @@ func (r *Reconciler) reconcileMutatingWebhookConfiguration(
 func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	newWebhook *admissionregistrationv1.MutatingWebhookConfiguration) error {
-
 	var originalWebhook admissionregistrationv1.MutatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{

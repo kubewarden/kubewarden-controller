@@ -8,7 +8,6 @@ import (
 )
 
 func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
-
 	deployment := createDeployment(1, "sa", "image", []corev1.EnvVar{{Name: "env1"}}, map[string]string{})
 	var tests = []struct {
 		name     string

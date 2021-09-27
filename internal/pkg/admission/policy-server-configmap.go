@@ -28,7 +28,6 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 	policyServer *policiesv1alpha2.PolicyServer,
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
 ) error {
-
 	cfg := &corev1.ConfigMap{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,

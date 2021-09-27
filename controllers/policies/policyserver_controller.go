@@ -105,7 +105,6 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	return ctrl.Result{}, nil
-
 }
 
 func (r *PolicyServerReconciler) updatePolicyServerStatus(

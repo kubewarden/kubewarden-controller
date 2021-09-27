@@ -66,7 +66,6 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 			generateCACalled = false
 		})
 	}
-
 }
 
 func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
@@ -114,7 +113,6 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 			generateCertCalled = false
 		})
 	}
-
 }
 
 const namespace = "namespace"
