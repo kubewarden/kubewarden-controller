@@ -76,10 +76,16 @@ func main() {
 		deploymentsNamespace = os.Getenv("NAMESPACE")
 	}
 
+	webhookHost, ok := os.LookupEnv("WEBHOOK_HOST")
+	if !ok {
+		webhookHost = "127.0.0.1"
+	}
+
 	mgr, err := webhookwrapper.NewManager(
 		ctrl.Options{
 			Scheme:                 scheme,
 			MetricsBindAddress:     metricsAddr,
+			Host:                   webhookHost,
 			Port:                   9443,
 			HealthProbeBindAddress: probeAddr,
 			LeaderElection:         enableLeaderElection,
@@ -94,6 +100,8 @@ func main() {
 					Version: policiesv1alpha2.GroupVersion.Version,
 					Kind:    "policyserver",
 				},
+				Resources:   []string{"policyservers"},
+				WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-policyserver",
 			},
 			{
 				Registrator: (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
@@ -102,6 +110,8 @@ func main() {
 					Version: policiesv1alpha2.GroupVersion.Version,
 					Kind:    "clusteradmissionpolicy",
 				},
+				Resources:   []string{"clusteradmissionpolicies"},
+				WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
 			},
 		},
 	)
