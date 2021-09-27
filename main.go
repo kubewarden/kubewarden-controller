@@ -101,7 +101,8 @@ func main() {
 					Kind:    "policyserver",
 				},
 				Resources:   []string{"policyservers"},
-				WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-policyserver",
+				WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-policyserver",
+				Mutating:    true,
 			},
 			{
 				Registrator: (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
@@ -111,7 +112,8 @@ func main() {
 					Kind:    "clusteradmissionpolicy",
 				},
 				Resources:   []string{"clusteradmissionpolicies"},
-				WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+				WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+				Mutating:    true,
 			},
 		},
 	)
