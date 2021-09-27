@@ -29,7 +29,7 @@ function uninstall() {
   kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io  -l kubewarden=true
 
   echo -e "${RED}Removing Kubewarden namespace '$namespace'${NC}"
-  kubectl delete namespace $namespace
+  kubectl delete namespace "$namespace"
 
   echo -e "${RED}Removing Custom Resource Definitions and their instances${NC}"
   kubectl delete customresourcedefinitions.apiextensions.k8s.io policyservers.policies.kubewarden.io
@@ -55,15 +55,14 @@ function print_help() {
 
 getopt --test > /dev/null
 if [[ $? -ne 4 ]]; then
-  echo 'I’m sorry, `getopt --test` failed in this environment.'
+  echo "Sorry, 'getopt --test' failed in this environment."
   exit 1
 fi
 
 OPTIONS=fhn:
 LONGOPTS=force,help,namespace:
 
-PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
-if [[ $? -ne 0 ]]; then
+if ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@"); then
   # e.g. return value is 1
   #  then getopt has complained about wrong arguments to stdout
   exit 2
@@ -99,7 +98,7 @@ done
 
 if [ "$force" = false ]; then
   echo -e "${RED}WARNING:${NC} this script will remove all the Kubewarden resources from your cluster"
-  read -p "Continue (y/n)? " choice
+  read -r -p "Continue (y/n)? " choice
   case "$choice" in
     y|Y ) force=true;;
     n|N ) exit 0;;
@@ -108,4 +107,4 @@ if [ "$force" = false ]; then
 fi
 
 # it means the user either answered "yes" or used the "--force" flag
-uninstall $namespace
+uninstall "$namespace"
