@@ -44,6 +44,7 @@ linters:
     - paralleltest
     - testpackage
     - wsl
+    - lll # long lines
     # https://github.com/golangci/golangci-lint/issues/541
     - interfacer
     # TODO: enable once we can set some exceptions
