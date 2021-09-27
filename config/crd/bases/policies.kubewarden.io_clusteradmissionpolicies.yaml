@@ -21,10 +21,10 @@ spec:
       jsonPath: .spec.mutating
       name: Mutating
       type: boolean
-    - description: Whether the policy is active and receiving admission reviews
-      jsonPath: .status.policyActive
-      name: Active
-      type: boolean
+    - description: Status of the policy
+      jsonPath: .status.policyStatus
+      name: Status
+      type: string
     name: v1alpha2
     schema:
       openAPIV3Schema:
@@ -194,6 +194,10 @@ spec:
                       are ANDed.
                     type: object
                 type: object
+              policyServer:
+                default: default
+                description: PolicyServer identifies an existing PolicyServer resource.
+                type: string
               rules:
                 description: Rules describes what operations on what resources/subresources
                   the webhook cares about. The webhook cares about an operation if
@@ -253,6 +257,7 @@ spec:
               settings:
                 description: 'Settings is a free-form object that contains the policy
                   configuration values. x-kubernetes-embedded-resource: false'
+                nullable: true
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               sideEffects:
@@ -284,7 +289,7 @@ spec:
                   ClusterAdmissionPolicy resource.  Known .status.conditions.types
                   are: "PolicyServerSecretReconciled", "PolicyServerConfigMapReconciled",
                   "PolicyServerDeploymentReconciled", "PolicyServerServiceReconciled"
-                  and "PolicyServerWebhookRegistered"'
+                  and "ClusterAdmissionPolicyActive"'
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -356,14 +361,17 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              policyActive:
-                description: PolicyActive represents whether this AdmissionPolicy
-                  is active, such that the Kubernetes API server should be forwarding
-                  admission review objects to the policy
-                type: boolean
+              policyStatus:
+                description: PolicyStatus represents whether this ClusterAdmissionPolicy
+                  is unscheduled, unschedulable, pending, or active.
+                enum:
+                - unscheduled
+                - unschedulable
+                - pending
+                - active
+                type: string
             required:
-            - conditions
-            - policyActive
+            - policyStatus
             type: object
         type: object
     served: true

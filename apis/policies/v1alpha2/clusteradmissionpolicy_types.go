@@ -23,6 +23,11 @@ import (
 
 // ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
 type ClusterAdmissionPolicySpec struct {
+	// PolicyServer identifies an existing PolicyServer resource.
+	// +kubebuilder:default:=default
+	// +optional
+	PolicyServer string `json:"policyServer"`
+
 	// Module is the location of the WASM module to be loaded. Can be a
 	// local file (file://), a remote file served by an HTTP server
 	// (http://, https://), or an artifact served by an OCI-compatible
@@ -32,6 +37,7 @@ type ClusterAdmissionPolicySpec struct {
 	// Settings is a free-form object that contains the policy configuration
 	// values.
 	// +optional
+	// +nullable
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// x-kubernetes-embedded-resource: false
 	Settings runtime.RawExtension `json:"settings,omitempty"`
@@ -148,54 +154,50 @@ type ClusterAdmissionPolicySpec struct {
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
-type ReconciliationTransitionReason string
-
 const (
-	// ReconciliationFailed represents a reconciliation failure
-	ReconciliationFailed ReconciliationTransitionReason = "ReconciliationFailed"
-	// ReconciliationSucceeded represents a reconciliation success
-	ReconciliationSucceeded ReconciliationTransitionReason = "ReconciliationSucceeded"
-)
-
-type PolicyConditionType string
-
-const (
-	// PolicyServerSecretReconciled represents the condition of the
-	// Policy Server Secret reconciliation
-	PolicyServerSecretReconciled PolicyConditionType = "PolicyServerSecretReconciled"
 	// PolicyServerConfigMapReconciled represents the condition of the
 	// Policy Server ConfigMap reconciliation
 	PolicyServerConfigMapReconciled PolicyConditionType = "PolicyServerConfigMapReconciled"
-	// PolicyServerDeploymentReconciled represents the condition of the
-	// Policy Server Deployment reconciliation
-	PolicyServerDeploymentReconciled PolicyConditionType = "PolicyServerDeploymentReconciled"
-	// PolicyServerServiceReconciled represents the condition of the
-	// Policy Server Service reconciliation
-	PolicyServerServiceReconciled PolicyConditionType = "PolicyServerServiceReconciled"
-	// PolicyServerWebhookConfigurationReconciled represents the
-	// condition of the Policy Server WebhookConfiguration
-	// reconciliation
-	PolicyServerWebhookConfigurationReconciled PolicyConditionType = "PolicyServerWebhookConfigurationReconciled"
+	// ClusterAdmissionPolicyActive represents the condition of the Policy
+	// admission webhook being registered
+	ClusterAdmissionPolicyActive PolicyConditionType = "active"
+)
+
+// +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
+type ClusterAdmissionPolicyStatusEnum string
+
+const (
+	// ClusterAdmissionPolicyStatusUnscheduled is a transient state that will continue
+	// to unschedulable or pending. This is the default state.
+	ClusterAdmissionPolicyStatusUnscheduled ClusterAdmissionPolicyStatusEnum = "unscheduled"
+	// ClusterAdmissionPolicyStatusUnschedulable informs that policy server where to
+	// schedule the policy is not available
+	ClusterAdmissionPolicyStatusUnschedulable ClusterAdmissionPolicyStatusEnum = "unschedulable"
+	// ClusterAdmissionPolicyStatusPending informs that the policy server exists,
+	// we are reconciling all resources
+	ClusterAdmissionPolicyStatusPending ClusterAdmissionPolicyStatusEnum = "pending"
+	// ClusterAdmissionPolicyStatusActive informs that the k8s API server should be
+	// forwarding admission review objects to the policy
+	ClusterAdmissionPolicyStatusActive ClusterAdmissionPolicyStatusEnum = "active"
 )
 
 // ClusterAdmissionPolicyStatus defines the observed state of ClusterAdmissionPolicy
 type ClusterAdmissionPolicyStatus struct {
-	// PolicyActive represents whether this AdmissionPolicy is active,
-	// such that the Kubernetes API server should be forwarding
-	// admission review objects to the policy
-	PolicyActive bool `json:"policyActive"`
+	// PolicyStatus represents whether this ClusterAdmissionPolicy is unscheduled,
+	// unschedulable, pending, or active.
+	PolicyStatus ClusterAdmissionPolicyStatusEnum `json:"policyStatus"`
 	// Conditions represent the observed conditions of the
 	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
 	// are: "PolicyServerSecretReconciled",
 	// "PolicyServerConfigMapReconciled",
 	// "PolicyServerDeploymentReconciled",
 	// "PolicyServerServiceReconciled" and
-	// "PolicyServerWebhookRegistered"
+	// "ClusterAdmissionPolicyActive"
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //nolint:lll
@@ -205,7 +207,7 @@ type ClusterAdmissionPolicyStatus struct {
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
-//+kubebuilder:printcolumn:name="Active",type=boolean,JSONPath=`.status.policyActive`,description="Whether the policy is active and receiving admission reviews"
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyStatus`,description="Status of the policy"
 type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

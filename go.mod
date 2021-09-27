@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.81.0 // indirect
 	github.com/go-logr/logr v0.3.0
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/google/go-cmp v0.5.5
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/kr/text v0.2.0 // indirect

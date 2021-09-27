@@ -61,12 +61,17 @@ test: manifests generate fmt vet ## Run tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
+dev-cert-webhooks: ## Create local cert for webhook server if they don't exist, useful when running the manager locally
+	test -s /tmp/k8s-webhook-server/serving-certs/tls.crt && \
+	test -s /tmp/k8s-webhook-server/serving-certs/tls.key || \
+	bash -c "./scripts/webhook-cert/create-webhook-cert.sh"
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests generate fmt vet dev-cert-webhooks ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
@@ -88,8 +93,8 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
+	bash -c "./scripts/removeFinalizersFromCRDs.sh"
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

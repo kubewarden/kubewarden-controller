@@ -8,9 +8,25 @@ resources:
 - api:
     crdVersion: v1
     namespaced: false
+  controller: true
+  domain: kubewarden.io
+  group: policies
+  kind: PolicyServer
+  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2
+  version: v1alpha2
+  webhooks:
+    defaulting: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: false
   domain: kubewarden.io
   group: policies
   kind: ClusterAdmissionPolicy
   path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2
   version: v1alpha2
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

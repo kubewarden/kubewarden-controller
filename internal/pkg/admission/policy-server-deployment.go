@@ -3,30 +3,30 @@ package admission
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strconv"
-	"time"
-
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"path/filepath"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
-func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context) error {
-	configMapVersion, err := r.policyServerConfigMapVersion(ctx)
+func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
+	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
 	}
 
-	err = r.Client.Create(ctx, r.deployment(ctx, configMapVersion))
+	deployment := r.deployment(configMapVersion, policyServer)
+	err = r.Client.Create(ctx, deployment)
 	if err == nil {
 		return nil
 	}
@@ -34,17 +34,17 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context) error 
 		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
 	}
 
-	return r.updatePolicyServerDeployment(ctx, configMapVersion)
+	return r.updatePolicyServerDeployment(ctx, policyServer, deployment)
 }
 
 // isPolicyServerReady returns true when the PolicyServer deployment is running only
 // fresh replicas that are reflecting its Spec.
 // This works using the same code of `kubectl rollout status <deployment>`
-func (r *Reconciler) isPolicyServerReady(ctx context.Context) (bool, error) {
+func (r *Reconciler) isPolicyServerReady(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (bool, error) {
 	deployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerDeploymentName,
+		Name:      policyServer.NameWithPrefix(),
 	}, deployment)
 	if err != nil {
 		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
@@ -93,85 +93,54 @@ func getProgressingDeploymentCondition(status appsv1.DeploymentStatus) *appsv1.D
 	return nil
 }
 
-func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, configMapVersion string) error {
-	deployment := &appsv1.Deployment{}
+func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, newDeployment *appsv1.Deployment) error {
+	originalDeployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerDeploymentName,
-	}, deployment)
+		Name:      policyServer.NameWithPrefix(),
+	}, originalDeployment)
 	if err != nil {
 		return fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
-	//nolint
-	currentConfigVersion, found := deployment.Spec.Template.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigAnnotation]
-	if !found || currentConfigVersion != configMapVersion {
-		// the current deployment is using an older version of the configuration
-		patch := createPatch(configMapVersion)
-		err = r.Client.Patch(ctx, deployment, client.RawPatch(types.StrategicMergePatchType, patch))
+	if shouldUpdatePolicyServerDeployment(originalDeployment, newDeployment) {
+		patch := originalDeployment.DeepCopy()
+		patch.Spec.Replicas = newDeployment.Spec.Replicas
+		patch.Spec.Template = newDeployment.Spec.Template
+		patch.Spec.Template.Annotations[constants.PolicyServerDeploymentRestartAnnotation] = time.Now().Format(time.RFC3339)
+		err = r.Client.Patch(ctx, patch, client.MergeFrom(originalDeployment))
 		if err != nil {
 			return fmt.Errorf("cannot patch policy-server Deployment: %w", err)
 		}
 		r.Log.Info("deployment patched")
 	}
+
 	return nil
 }
 
-func createPatch(configMapVersion string) []byte {
-	patch := fmt.Sprintf(`
-{
-	"apiVersion": "apps/v1",
-	"kind": "Deployment",
-	"spec": {
-		"template": {
-			"metadata": {
-				"annotations": {
-					"kubectl.kubernetes.io/restartedAt": "%s",
-					"%s": "%s"
-				}
-			}
-		}
-	}
-}`, time.Now().Format(time.RFC3339),
-		constants.PolicyServerDeploymentConfigAnnotation, configMapVersion)
-	return []byte(patch)
+func shouldUpdatePolicyServerDeployment(originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) bool {
+
+	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
+		originalDeployment.Spec.Template.Spec.Containers[0].Image != newDeployment.Spec.Template.Spec.Containers[0].Image ||
+		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
+		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
+		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment)
 }
 
-type PolicyServerDeploymentSettings struct {
-	Replicas int32
-	Image    string
-}
-
-func (r *Reconciler) policyServerDeploymentSettings(ctx context.Context) PolicyServerDeploymentSettings {
-	settings := PolicyServerDeploymentSettings{
-		Replicas: int32(constants.PolicyServerReplicaSize),
-		Image:    constants.PolicyServerImage,
+func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) bool {
+	if originalDeployment.Spec.Template.Annotations == nil && newDeployment.Spec.Template.Annotations == nil {
+		return true
 	}
-
-	cfg := &corev1.ConfigMap{}
-	if err := r.Client.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      constants.PolicyServerConfigMapName,
-	}, cfg); err == nil {
-		buf, found := cfg.Data[constants.PolicyServerReplicaSizeKey]
-		if found {
-			repSize, err := strconv.ParseInt(buf, 10, 32)
-			if err == nil {
-				settings.Replicas = int32(repSize)
-			}
-		}
-
-		buf, found = cfg.Data[constants.PolicyServerImageKey]
-		if found {
-			settings.Image = buf
+	annotationsWithoutRestart := make(map[string]string)
+	for k, v := range originalDeployment.Spec.Template.Annotations {
+		if k != constants.PolicyServerDeploymentRestartAnnotation {
+			annotationsWithoutRestart[k] = v
 		}
 	}
-
-	return settings
+	return reflect.DeepEqual(annotationsWithoutRestart, newDeployment.Spec.Template.Annotations)
 }
 
-func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *appsv1.Deployment {
-	settings := r.policyServerDeploymentSettings(ctx)
+func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1alpha2.PolicyServer) *appsv1.Deployment {
 
 	const (
 		certsVolumeName             = "certs"
@@ -182,8 +151,8 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 	)
 
 	admissionContainer := corev1.Container{
-		Name:  constants.PolicyServerDeploymentName,
-		Image: settings.Image,
+		Name:  policyServer.NameWithPrefix(),
+		Image: policyServer.Spec.Image,
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      certsVolumeName,
@@ -196,7 +165,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				MountPath: policiesConfigContainerPath,
 			},
 		},
-		Env: []corev1.EnvVar{
+		Env: append([]corev1.EnvVar{
 			{
 				Name:  "KUBEWARDEN_CERT_FILE",
 				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
@@ -217,7 +186,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 				Name:  "KUBEWARDEN_POLICIES",
 				Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
 			},
-		},
+		}, policyServer.Spec.Env...),
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
@@ -229,38 +198,46 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 		},
 	}
 
-	templateAnnotations := map[string]string{
-		constants.PolicyServerDeploymentConfigAnnotation: configMapVersion,
+	templateAnnotations := policyServer.Spec.Annotations
+	if templateAnnotations == nil {
+		templateAnnotations = make(map[string]string)
 	}
+	templateAnnotations[constants.PolicyServerDeploymentConfigAnnotation] = configMapVersion
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.PolicyServerDeploymentName,
+			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
-			Labels:    constants.PolicyServerLabels,
+			Labels: map[string]string{
+				constants.AppLabelKey: policyServer.AppLabel(),
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &settings.Replicas,
+			Replicas: &policyServer.Spec.Replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: constants.PolicyServerLabels,
+				MatchLabels: map[string]string{
+					constants.AppLabelKey: policyServer.AppLabel(),
+				},
 			},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      constants.PolicyServerLabels,
+					Labels: map[string]string{
+						constants.AppLabelKey: policyServer.AppLabel(),
+					},
 					Annotations: templateAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:         []corev1.Container{admissionContainer},
-					ServiceAccountName: r.DeploymentsServiceAccountName,
+					ServiceAccountName: policyServer.Spec.ServiceAccountName,
 					Volumes: []corev1.Volume{
 						{
 							Name: certsVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: constants.PolicyServerSecretName,
+									SecretName: policyServer.NameWithPrefix(),
 								},
 							},
 						},
@@ -269,7 +246,7 @@ func (r *Reconciler) deployment(ctx context.Context, configMapVersion string) *a
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: constants.PolicyServerConfigMapName,
+										Name: policyServer.NameWithPrefix(),
 									},
 									Items: []corev1.KeyToPath{
 										{

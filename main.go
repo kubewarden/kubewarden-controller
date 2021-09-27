@@ -44,7 +44,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(policiesv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -52,7 +51,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
-	var deploymentsNamespace, deploymentsServiceAccountName string
+	var deploymentsNamespace string
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -68,10 +67,6 @@ func main() {
 		"deployments-namespace",
 		"",
 		"The namespace where the kubewarden resources will be created.")
-	flag.StringVar(&deploymentsServiceAccountName,
-		"deployments-service-account-name",
-		"default",
-		"The service account name that kubewarden policy-server deployment will use.")
 	flag.Parse()
 
 	if deploymentsNamespace == "" {
@@ -92,17 +87,25 @@ func main() {
 	}
 
 	reconciler := admission.Reconciler{
-		Client:                        mgr.GetClient(),
-		DeploymentsNamespace:          deploymentsNamespace,
-		DeploymentsServiceAccountName: deploymentsServiceAccountName,
+		Client:               mgr.GetClient(),
+		DeploymentsNamespace: deploymentsNamespace,
 	}
-	if err = (&policiescontrollers.ClusterAdmissionPolicyReconciler{
+
+	if err = (&policiescontrollers.PolicyServerReconciler{
 		Client:     mgr.GetClient(),
-		Log:        ctrl.Log.WithName("controllers").WithName("policies").WithName("ClusterAdmissionPolicy"),
 		Scheme:     mgr.GetScheme(),
+		Log:        ctrl.Log.WithName("controllers").WithName("policies").WithName("ClusterAdmissionPolicy"),
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
+		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
+		os.Exit(1)
+	}
+	if err = (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterAdmissionPolicy")
+		os.Exit(1)
+	}
+	if err = (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "PolicyServer")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
