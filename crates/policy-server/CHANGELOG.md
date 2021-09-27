@@ -2,6 +2,24 @@
 ## [Unreleased]
 
 
+<a name="v0.2.1"></a>
+## [v0.2.1] - 2021-09-27
+### Pull Requests
+- Merge pull request [#92](https://github.com/kubewarden/policy-server/issues/92) from ereslibre/abort-if-builtin-missing
+
+
+<a name="v0.2.0"></a>
+## [v0.2.0] - 2021-09-20
+### Features
+- Handle policies written using Rego
+
+### Pull Requests
+- Merge pull request [#91](https://github.com/kubewarden/policy-server/issues/91) from kubewarden/opa
+- Merge pull request [#90](https://github.com/kubewarden/policy-server/issues/90) from flavio/opa
+- Merge pull request [#87](https://github.com/kubewarden/policy-server/issues/87) from kubewarden/builtin-report
+- Merge pull request [#85](https://github.com/kubewarden/policy-server/issues/85) from flavio/fix-opentelemetry-otlp-integration
+
+
 <a name="v0.1.10"></a>
 ## [v0.1.10] - 2021-08-19
 ### Pull Requests
@@ -106,7 +124,9 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.1...HEAD
+[v0.2.1]: https://github.com/kubewarden/policy-server/compare/v0.2.0...v0.2.1
+[v0.2.0]: https://github.com/kubewarden/policy-server/compare/v0.1.10...v0.2.0
 [v0.1.10]: https://github.com/kubewarden/policy-server/compare/v0.1.9...v0.1.10
 [v0.1.9]: https://github.com/kubewarden/policy-server/compare/v0.1.8...v0.1.9
 [v0.1.8]: https://github.com/kubewarden/policy-server/compare/v0.1.7...v0.1.8
