@@ -45,10 +45,7 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 }
 
 func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap, clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
-	newPoliciesMap, err := r.createPoliciesMap(clusterAdmissionPolicies)
-	if err != nil {
-		return fmt.Errorf("cannot create policies: %w", err)
-	}
+	newPoliciesMap := r.createPoliciesMap(clusterAdmissionPolicies)
 
 	if shouldUpdate, err := shouldUpdatePolicyMap(cfg.Data[constants.PolicyServerConfigPoliciesEntry], newPoliciesMap); err != nil {
 		return fmt.Errorf("cannot compare policies: %w", err)
@@ -83,10 +80,7 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	policyServer *policiesv1alpha2.PolicyServer,
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
 ) error {
-	policies, err := r.createPoliciesMap(clusterAdmissionPolicies)
-	if err != nil {
-		return fmt.Errorf("cannot create policies: %w", err)
-	}
+	policies := r.createPoliciesMap(clusterAdmissionPolicies)
 
 	policiesYML, err := json.Marshal(policies)
 	if err != nil {
@@ -109,7 +103,7 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	return r.Client.Create(ctx, cfg)
 }
 
-func (r *Reconciler) createPoliciesMap(clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) (map[string]policyServerConfigEntry, error) {
+func (r *Reconciler) createPoliciesMap(clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) map[string]policyServerConfigEntry {
 	policies := make(map[string]policyServerConfigEntry)
 
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
@@ -118,8 +112,7 @@ func (r *Reconciler) createPoliciesMap(clusterAdmissionPolicies *policiesv1alpha
 			Settings: clusterAdmissionPolicy.Spec.Settings,
 		}
 	}
-
-	return policies, nil
+	return policies
 }
 
 func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (string, error) {
