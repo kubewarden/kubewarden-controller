@@ -260,6 +260,7 @@ func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, poli
 		return err
 	}
 	for _, policy := range clusterAdmissionPolicies.Items {
+		policy := policy // safely use pointer inside for
 		// will not delete it because it has a finalizer. It will add a DeletionTimestamp
 		err := r.Client.Delete(context.Background(), &policy)
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -287,6 +288,7 @@ func (r *Reconciler) enablePolicyWebhook(
 	}
 
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
+		clusterAdmissionPolicy := clusterAdmissionPolicy // safely use pointer inside for
 		// register the new dynamic admission controller only once the policy is
 		// served by the PolicyServer deployment
 		if clusterAdmissionPolicy.Spec.Mutating {
@@ -331,6 +333,7 @@ func (r *Reconciler) getClusterAdmissionPolicies(ctx context.Context, policyServ
 
 func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList) error {
 	for _, policy := range clusterAdmissionPolicies.Items {
+		policy := policy // safely use pointer inside for
 		if policy.DeletionTimestamp != nil {
 			if policy.Spec.Mutating {
 				mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
