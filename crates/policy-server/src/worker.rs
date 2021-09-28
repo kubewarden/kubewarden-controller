@@ -30,7 +30,11 @@ impl fmt::Display for PolicyErrors {
 }
 
 impl Worker {
-    #[tracing::instrument(name = "worker_new", skip(rx, policies))]
+    #[tracing::instrument(
+        name = "worker_new",
+        fields(host=crate::cli::HOSTNAME.as_str()),
+        skip_all,
+    )]
     pub(crate) fn new(
         rx: Receiver<EvalRequest>,
         policies: HashMap<String, Policy>,

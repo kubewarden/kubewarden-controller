@@ -34,7 +34,19 @@ pub(crate) async fn route(
     }
 }
 
-#[tracing::instrument(name = "validation", fields(request_uid=tracing::field::Empty), skip(req, tx))]
+// note about tracing: we are manually adding the `policy_id` field
+// because otherwise the automatic "export" would cause the string to be
+// double quoted. This would make searching by tag inside of Jaeger ugly.
+// A concrete example: the automatic generation leads to the creation
+// of `policy_id = "\"psp-capabilities\""` instead of `policy_id = "psp-capabilities"`
+#[tracing::instrument(
+    name = "validation",
+    fields(
+        request_uid=tracing::field::Empty,
+        host=crate::cli::HOSTNAME.as_str(),
+        policy_id=policy_id.as_str(),
+        ),
+    skip_all)]
 async fn handle_post_validate(
     req: Request<Body>,
     policy_id: String,
@@ -141,7 +153,7 @@ fn build_ar_response(validation_response: ValidationResponse) -> anyhow::Result<
     serde_json::to_string(&reply).map_err(|e| anyhow!("Error serializing response: {:?}", e))
 }
 
-#[tracing::instrument]
+#[tracing::instrument(fields(host=crate::cli::HOSTNAME.as_str()))]
 async fn handle_not_found() -> Result<Response<Body>, hyper::Error> {
     info!("request not found");
     let mut not_found = Response::default();

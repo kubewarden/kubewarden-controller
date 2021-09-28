@@ -26,6 +26,8 @@ lazy_static! {
             builtins,
         )
     };
+    pub(crate) static ref HOSTNAME: String =
+        std::env::var("HOSTNAME").unwrap_or_else(|_| String::from("unknown"));
 }
 
 pub(crate) fn build_cli() -> App<'static, 'static> {
