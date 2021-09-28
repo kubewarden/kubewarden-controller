@@ -28,9 +28,9 @@ type Reconciler struct {
 	Log                  logr.Logger
 }
 
-type errorList []error
+type reconcilerErrors []error
 
-func (errorList errorList) Error() string {
+func (errorList reconcilerErrors) Error() string {
 	errors := []string{}
 	for _, error := range errorList {
 		errors = append(errors, error.Error())
@@ -42,7 +42,7 @@ func (r *Reconciler) ReconcileDeletion(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
 ) error {
-	errors := errorList{}
+	errors := reconcilerErrors{}
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
