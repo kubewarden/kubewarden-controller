@@ -78,6 +78,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	ca, _ := admissionregistration.GenerateCA()
 	caSecret := &corev1.Secret{Data: map[string][]byte{constants.PolicyServerCARootCACert: ca.CaCert, constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(ca.CaPrivateKey)}}
 
+	// nolint:unparam
 	generateCertFunc := func(ca []byte, commonName string, extraSANs []string, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
 		generateCertCalled = true
 		return servingCert, servingKey, nil
