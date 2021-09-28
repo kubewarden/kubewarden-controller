@@ -27,9 +27,9 @@ import (
 // log is for logging in this package.
 var policyserverlog = logf.Log.WithName("policyserver-resource")
 
-func (r *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(ps).
 		Complete()
 }
 
@@ -38,7 +38,7 @@ func (r *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &PolicyServer{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *PolicyServer) Default() {
-	policyserverlog.Info("default", "name", r.Name)
-	controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
+func (ps *PolicyServer) Default() {
+	policyserverlog.Info("default", "name", ps.Name)
+	controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
 }
