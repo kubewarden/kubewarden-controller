@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -58,7 +59,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if err != tt.err {
+			if !errors.Is(err, tt.err) {
 				t.Errorf("got %s, want %s", err, tt.err)
 			}
 
@@ -106,7 +107,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if err != tt.err {
+			if !errors.Is(err, tt.err) {
 				t.Errorf("got %s, want %s", err, tt.err)
 			}
 
