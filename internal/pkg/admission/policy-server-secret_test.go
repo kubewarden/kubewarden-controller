@@ -27,7 +27,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	}
 
 	pemEncodeCertificateFunc := func(certificate []byte) ([]byte, error) {
-		if bytes.Compare(certificate, ca.CaCert) != 0 {
+		if !bytes.Equal(certificate, ca.CaCert) {
 			return nil, fmt.Errorf("certificate received should be the one returned by generateCA")
 		}
 		return caPemBytes, nil
