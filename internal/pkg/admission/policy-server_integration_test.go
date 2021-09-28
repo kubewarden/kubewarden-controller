@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 const port = "8181"

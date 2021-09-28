@@ -3,16 +3,17 @@ package admission
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"reflect"
+	"time"
+
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"path/filepath"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
