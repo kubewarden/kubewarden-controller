@@ -76,6 +76,9 @@ func main() {
 		deploymentsNamespace = os.Getenv("NAMESPACE")
 	}
 
+	developmentModeEnvvar, ok := os.LookupEnv("KUBEWARDEN_DEVELOPMENT_MODE")
+	developmentMode := ok && developmentModeEnvvar != "0" && developmentModeEnvvar != "false"
+
 	webhookHost, ok := os.LookupEnv("WEBHOOK_HOST")
 	if !ok {
 		webhookHost = "127.0.0.1"
@@ -92,6 +95,7 @@ func main() {
 			LeaderElectionID:       "a4ddbf36.kubewarden.io",
 		},
 		setupLog,
+		developmentMode,
 		[]webhookwrapper.WebhookRegistrator{
 			{
 				Registrator: (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager,
