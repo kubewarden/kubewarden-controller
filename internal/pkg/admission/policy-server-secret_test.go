@@ -51,18 +51,19 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			secret, err := test.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
-			if diff := cmp.Diff(secret.Data, test.secretContents); diff != "" {
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := tt.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
+			if diff := cmp.Diff(secret.Data, tt.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if err != test.err {
-				t.Errorf("got %s, want %s", err, test.err)
+			if err != tt.err {
+				t.Errorf("got %s, want %s", err, tt.err)
 			}
 
-			if generateCACalled != test.generateCACalled {
-				t.Errorf("got %t, want %t", generateCACalled, test.generateCACalled)
+			if generateCACalled != tt.generateCACalled {
+				t.Errorf("got %t, want %t", generateCACalled, tt.generateCACalled)
 			}
 			generateCACalled = false
 		})
@@ -98,18 +99,19 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			secret, err := test.r.fetchOrInitializePolicyServerSecret(context.Background(), "policyServer", caSecret, generateCertFunc)
-			if diff := cmp.Diff(secret.StringData, test.secretContents); diff != "" {
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := tt.r.fetchOrInitializePolicyServerSecret(context.Background(), "policyServer", caSecret, generateCertFunc)
+			if diff := cmp.Diff(secret.StringData, tt.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if err != test.err {
-				t.Errorf("got %s, want %s", err, test.err)
+			if err != tt.err {
+				t.Errorf("got %s, want %s", err, tt.err)
 			}
 
-			if generateCertCalled != test.generateCertCalled {
-				t.Errorf("got %t, want %t", generateCertCalled, test.generateCertCalled)
+			if generateCertCalled != tt.generateCertCalled {
+				t.Errorf("got %t, want %t", generateCertCalled, tt.generateCertCalled)
 			}
 			generateCertCalled = false
 		})

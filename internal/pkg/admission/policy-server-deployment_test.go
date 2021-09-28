@@ -27,10 +27,11 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := shouldUpdatePolicyServerDeployment(test.original, test.new)
-			if got != test.expect {
-				t.Errorf("got %t, want %t", got, test.expect)
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldUpdatePolicyServerDeployment(tt.original, tt.new)
+			if got != tt.expect {
+				t.Errorf("got %t, want %t", got, tt.expect)
 			}
 		})
 	}
