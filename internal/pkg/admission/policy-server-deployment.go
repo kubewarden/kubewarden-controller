@@ -50,7 +50,6 @@ func (r *Reconciler) isPolicyServerReady(ctx context.Context, policyServer *poli
 		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
-	// nolint
 	// This code takes inspiration from how `kubectl rollout status deployment <name>`
 	// works. The source code can be found here:
 	// https://github.com/kubernetes/kubectl/blob/ddb56dde55b6b8de6eba1efbd1d435bed7b40ff4/pkg/polymorphichelpers/rollout_status.go#L75-L91
