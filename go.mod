@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	cloud.google.com/go v0.60.0 // indirect
-	github.com/ereslibre/kube-webhook-wrapper v0.0.0-20210928104911-2bfca01da2ba
+	github.com/ereslibre/kube-webhook-wrapper v0.0.0-20210928125905-5ef83f4b1738
 	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.5.5
 	github.com/onsi/ginkgo v1.16.4

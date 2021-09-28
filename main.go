@@ -79,16 +79,27 @@ func main() {
 	developmentModeEnvvar, ok := os.LookupEnv("KUBEWARDEN_DEVELOPMENT_MODE")
 	developmentMode := ok && developmentModeEnvvar != "0" && developmentModeEnvvar != "false"
 
-	webhookHost, ok := os.LookupEnv("WEBHOOK_HOST")
+	webhookHostListen, ok := os.LookupEnv("WEBHOOK_LISTEN")
 	if !ok {
-		webhookHost = "127.0.0.1"
+		webhookHostListen = ""
+	}
+
+	webhookHostAdvertise, ok := os.LookupEnv("WEBHOOK_ADVERTISE")
+	if !ok {
+		webhookHostAdvertise = ""
+	}
+
+	if webhookHostListen == "" && webhookHostAdvertise != "" {
+		webhookHostListen = webhookHostAdvertise
+	} else if webhookHostListen != "" && webhookHostAdvertise == "" {
+		webhookHostAdvertise = webhookHostListen
 	}
 
 	mgr, err := webhookwrapper.NewManager(
 		ctrl.Options{
 			Scheme:                 scheme,
 			MetricsBindAddress:     metricsAddr,
-			Host:                   webhookHost,
+			Host:                   webhookHostListen,
 			Port:                   9443,
 			HealthProbeBindAddress: probeAddr,
 			LeaderElection:         enableLeaderElection,
@@ -96,6 +107,7 @@ func main() {
 		},
 		setupLog,
 		developmentMode,
+		webhookHostAdvertise,
 		[]webhookwrapper.WebhookRegistrator{
 			{
 				Registrator: (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager,
