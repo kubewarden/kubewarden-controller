@@ -176,16 +176,14 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				r.Log.Info("policy " + policy.Name + " cannot be scheduled: no matching PolicyServer")
 				return []ctrl.Request{}
-			} else {
-				policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusPending
-				err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
-				if err != nil {
-					r.Log.Error(err, "cannot update status of policy "+policy.Name)
-					return []ctrl.Request{}
-				}
-				r.Log.Info("policy " + policy.Name + " pending")
 			}
-
+			policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusPending
+			err = r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
+			if err != nil {
+				r.Log.Error(err, "cannot update status of policy "+policy.Name)
+				return []ctrl.Request{}
+			}
+			r.Log.Info("policy " + policy.Name + " pending")
 			return []ctrl.Request{
 				{
 					NamespacedName: client.ObjectKey{
