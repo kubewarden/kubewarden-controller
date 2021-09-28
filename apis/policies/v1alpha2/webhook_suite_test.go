@@ -186,7 +186,7 @@ func deleteClusterAdmissionPolicy(ctx context.Context, name, namespace string) {
 	controllerutil.RemoveFinalizer(polUpdated, constants.KubewardenFinalizer)
 	err = k8sClient.Update(ctx, polUpdated)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Fprint(GinkgoWriter, err)
 	}
 	Expect(err).NotTo(HaveOccurred())
 
@@ -230,7 +230,7 @@ func deletePolicyServer(ctx context.Context, name, namespace string) {
 	controllerutil.RemoveFinalizer(polUpdated, constants.KubewardenFinalizer)
 	err = k8sClient.Update(ctx, polUpdated)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Fprint(GinkgoWriter, err)
 	}
 	Expect(err).NotTo(HaveOccurred())
 
