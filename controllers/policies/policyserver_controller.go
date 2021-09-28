@@ -120,15 +120,23 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 // SetupWithManager sets up the controller with the Manager.
 func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.ClusterAdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
-		clusterAdmissionPolicy := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
-		return []string{clusterAdmissionPolicy.Spec.PolicyServer}
+		policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
+		if !ok {
+			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
+			return []string{}
+		}
+		return []string{policy.Spec.PolicyServer}
 	})
 	if err != nil {
 		return err
 	}
 
 	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.PolicyServer{}, constants.PolicyServerIndexName, func(object client.Object) []string {
-		policyServer := object.(*policiesv1alpha2.PolicyServer)
+		policyServer, ok := object.(*policiesv1alpha2.PolicyServer)
+		if !ok {
+			r.Log.Error(nil, "object is not type of PolicyServer: %#v", policyServer)
+			return []string{}
+		}
 		return []string{policyServer.Name}
 	})
 	if err != nil {
