@@ -86,7 +86,12 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}, nil
 		}
 
-		return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &policyServer)
+		err := admissionReconciler.ReconcileDeletion(ctx, &policyServer)
+		if err != nil {
+			err = fmt.Errorf("failed reconciling deletion of policyServer %s: %w",
+				policyServer.Name, err)
+		}
+		return ctrl.Result{}, err
 	}
 
 	// Reconcile
@@ -128,7 +133,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return []string{policy.Spec.PolicyServer}
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
 
 	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.PolicyServer{}, constants.PolicyServerIndexName, func(object client.Object) []string {
@@ -140,10 +145,10 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return []string{policyServer.Name}
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.PolicyServer{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
@@ -193,4 +198,9 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}
 		})).
 		Complete(r)
+
+	if err != nil {
+		err = fmt.Errorf("failed enrolling controller with manager: %w", err)
+	}
+	return err
 }

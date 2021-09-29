@@ -128,7 +128,7 @@ var _ = BeforeSuite(func() {
 		// nolint:gosec
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed polling webhook server: %w", err)
 		}
 		conn.Close()
 		return nil

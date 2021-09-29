@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"fmt"
+
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -28,9 +30,13 @@ import (
 var policyserverlog = logf.Log.WithName("policyserver-resource")
 
 func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
+	err := ctrl.NewWebhookManagedBy(mgr).
 		For(ps).
 		Complete()
+	if err != nil {
+		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
+	}
+	return nil
 }
 
 //+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create,versions=v1alpha2,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}

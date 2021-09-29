@@ -35,9 +35,13 @@ import (
 var clusteradmissionpolicylog = logf.Log.WithName("clusteradmissionpolicy-resource")
 
 func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
+	err := ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
+	if err != nil {
+		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
+	}
+	return nil
 }
 
 //+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create,versions=v1alpha2,name=mclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}

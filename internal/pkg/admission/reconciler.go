@@ -264,7 +264,8 @@ func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, poli
 		// will not delete it because it has a finalizer. It will add a DeletionTimestamp
 		err := r.Client.Delete(context.Background(), &policy)
 		if err != nil && !apierrors.IsNotFound(err) {
-			return err
+			return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+				policy.Name, err)
 		}
 	}
 	err = r.deletePendingClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
@@ -327,7 +328,9 @@ func (r *Reconciler) enablePolicyWebhook(
 func (r *Reconciler) getClusterAdmissionPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (policiesv1alpha2.ClusterAdmissionPolicyList, error) {
 	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
-
+	if err != nil {
+		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
+	}
 	return clusterAdmissionPolicies, err
 }
 
@@ -343,7 +346,8 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 				err := r.Client.Delete(context.Background(), mutatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return err
+					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+						policy.Name, err)
 				}
 			} else {
 				validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
@@ -353,14 +357,16 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 				err := r.Client.Delete(context.Background(), validatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return err
+					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+						policy.Name, err)
 				}
 			}
 			patch := policy.DeepCopy()
 			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 			err := r.Client.Patch(ctx, patch, client.MergeFrom(&policy))
 			if err != nil && !apierrors.IsNotFound(err) {
-				return err
+				return fmt.Errorf("failed removing finalizers of ClusterAdmissionPolicy %s: %w",
+					policy.Name, err)
 			}
 		}
 	}

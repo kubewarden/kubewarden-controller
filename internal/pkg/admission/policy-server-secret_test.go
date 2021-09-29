@@ -22,6 +22,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	ca, err := admissionregistration.GenerateCA()
 	generateCACalled := false
 
+	// nolint: wrapcheck
 	generateCAFunc := func() (*admissionregistration.CA, error) {
 		generateCACalled = true
 		return ca, err
