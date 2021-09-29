@@ -34,6 +34,9 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 		domain,
 		[]string{domain},
 		ca.CaPrivateKey)
+	if err != nil {
+		t.Errorf("failed generating cert: %s", err.Error())
+	}
 
 	var server http.Server
 	var wg sync.WaitGroup
