@@ -41,17 +41,18 @@ func TestArePoliciesEqual(t *testing.T) {
 			true},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
 			var currentPoliciesMap map[string]policyServerConfigEntry
-			if err := json.Unmarshal([]byte(test.newPoliciesYML), &currentPoliciesMap); err != nil {
+			if err := json.Unmarshal([]byte(tt.newPoliciesYML), &currentPoliciesMap); err != nil {
 				t.Errorf("unexpected error %s", err.Error())
 			}
-			got, err := shouldUpdatePolicyMap(test.currentPoliciesYML, currentPoliciesMap)
+			got, err := shouldUpdatePolicyMap(tt.currentPoliciesYML, currentPoliciesMap)
 			if err != nil {
 				t.Errorf("unexpected error %s", err.Error())
 			}
-			if got != test.expect {
-				t.Errorf("got %t, want %t", got, test.expect)
+			if got != tt.expect {
+				t.Errorf("got %t, want %t", got, tt.expect)
 			}
 		})
 	}

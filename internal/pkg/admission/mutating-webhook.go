@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -37,7 +38,6 @@ func (r *Reconciler) reconcileMutatingWebhookConfiguration(
 func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	newWebhook *admissionregistrationv1.MutatingWebhookConfiguration) error {
-
 	var originalWebhook admissionregistrationv1.MutatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{

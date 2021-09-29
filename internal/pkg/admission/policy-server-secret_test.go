@@ -5,14 +5,16 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 )
 
 func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
@@ -20,13 +22,14 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	ca, err := admissionregistration.GenerateCA()
 	generateCACalled := false
 
+	// nolint: wrapcheck
 	generateCAFunc := func() (*admissionregistration.CA, error) {
 		generateCACalled = true
 		return ca, err
 	}
 
 	pemEncodeCertificateFunc := func(certificate []byte) ([]byte, error) {
-		if bytes.Compare(certificate, ca.CaCert) != 0 {
+		if !bytes.Equal(certificate, ca.CaCert) {
 			return nil, fmt.Errorf("certificate received should be the one returned by generateCA")
 		}
 		return caPemBytes, nil
@@ -50,23 +53,23 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			secret, err := test.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
-			if diff := cmp.Diff(secret.Data, test.secretContents); diff != "" {
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := tt.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
+			if diff := cmp.Diff(secret.Data, tt.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if err != test.err {
-				t.Errorf("got %s, want %s", err, test.err)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got %s, want %s", err, tt.err)
 			}
 
-			if generateCACalled != test.generateCACalled {
-				t.Errorf("got %t, want %t", generateCACalled, test.generateCACalled)
+			if generateCACalled != tt.generateCACalled {
+				t.Errorf("got %t, want %t", generateCACalled, tt.generateCACalled)
 			}
 			generateCACalled = false
 		})
 	}
-
 }
 
 func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
@@ -76,6 +79,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	ca, _ := admissionregistration.GenerateCA()
 	caSecret := &corev1.Secret{Data: map[string][]byte{constants.PolicyServerCARootCACert: ca.CaCert, constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(ca.CaPrivateKey)}}
 
+	// nolint:unparam
 	generateCertFunc := func(ca []byte, commonName string, extraSANs []string, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
 		generateCertCalled = true
 		return servingCert, servingKey, nil
@@ -98,23 +102,23 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			secret, err := test.r.fetchOrInitializePolicyServerSecret(context.Background(), "policyServer", caSecret, generateCertFunc)
-			if diff := cmp.Diff(secret.StringData, test.secretContents); diff != "" {
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := tt.r.fetchOrInitializePolicyServerSecret(context.Background(), "policyServer", caSecret, generateCertFunc)
+			if diff := cmp.Diff(secret.StringData, tt.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if err != test.err {
-				t.Errorf("got %s, want %s", err, test.err)
+			if !errors.Is(err, tt.err) {
+				t.Errorf("got %s, want %s", err, tt.err)
 			}
 
-			if generateCertCalled != test.generateCertCalled {
-				t.Errorf("got %t, want %t", generateCertCalled, test.generateCertCalled)
+			if generateCertCalled != tt.generateCertCalled {
+				t.Errorf("got %t, want %t", generateCertCalled, tt.generateCertCalled)
 			}
 			generateCertCalled = false
 		})
 	}
-
 }
 
 const namespace = "namespace"

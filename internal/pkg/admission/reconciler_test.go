@@ -2,6 +2,9 @@ package admission
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -10,8 +13,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
-	"time"
 )
 
 func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
@@ -38,7 +39,7 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	clusterAdmissionPolicies := policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{validationPolicy, mutatingPolicy}}
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}, &validationPolicy)
-	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, &validationPolicy, &mutatingPolicy).Build()
+	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, mutatingWebhook, &validationPolicy, &mutatingPolicy).Build()
 	r := Reconciler{
 		Client:               cl,
 		DeploymentsNamespace: namespace,

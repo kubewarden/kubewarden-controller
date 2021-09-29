@@ -3,16 +3,17 @@ package admission
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"reflect"
+	"time"
+
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"path/filepath"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
@@ -50,7 +51,6 @@ func (r *Reconciler) isPolicyServerReady(ctx context.Context, policyServer *poli
 		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
-	// nolint
 	// This code takes inspiration from how `kubectl rollout status deployment <name>`
 	// works. The source code can be found here:
 	// https://github.com/kubernetes/kubectl/blob/ddb56dde55b6b8de6eba1efbd1d435bed7b40ff4/pkg/polymorphichelpers/rollout_status.go#L75-L91
@@ -119,7 +119,6 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policySer
 }
 
 func shouldUpdatePolicyServerDeployment(originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) bool {
-
 	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
 		originalDeployment.Spec.Template.Spec.Containers[0].Image != newDeployment.Spec.Template.Spec.Containers[0].Image ||
 		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
@@ -141,7 +140,6 @@ func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, n
 }
 
 func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1alpha2.PolicyServer) *appsv1.Deployment {
-
 	const (
 		certsVolumeName             = "certs"
 		policiesConfigContainerPath = "/config"

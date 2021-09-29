@@ -3,9 +3,10 @@ package admission
 import (
 	"context"
 	"fmt"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"path/filepath"
 	"reflect"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -30,7 +31,6 @@ func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 	}
 	if apierrors.IsAlreadyExists(err) {
 		return r.updateValidatingWebhook(ctx, clusterAdmissionPolicy, webhook)
-
 	}
 	return fmt.Errorf("cannot reconcile validating webhook: %w", err)
 }
@@ -38,7 +38,6 @@ func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 	newWebhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
-
 	var originalWebhook admissionregistrationv1.ValidatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{

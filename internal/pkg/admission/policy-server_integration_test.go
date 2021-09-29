@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 const port = "8181"
@@ -33,6 +34,9 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 		domain,
 		[]string{domain},
 		ca.CaPrivateKey)
+	if err != nil {
+		t.Errorf("failed generating cert: %s", err.Error())
+	}
 
 	var server http.Server
 	var wg sync.WaitGroup
@@ -83,7 +87,6 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	if err != nil {
 		t.Errorf("error when shutting down https server : %s", err.Error())
 	}
-
 }
 
 func isConnectionRefusedError(err error) bool {

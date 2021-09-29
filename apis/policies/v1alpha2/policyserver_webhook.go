@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"fmt"
+
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -27,10 +29,14 @@ import (
 // log is for logging in this package.
 var policyserverlog = logf.Log.WithName("policyserver-resource")
 
-func (r *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	err := ctrl.NewWebhookManagedBy(mgr).
+		For(ps).
 		Complete()
+	if err != nil {
+		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
+	}
+	return nil
 }
 
 //+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create,versions=v1alpha2,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}
@@ -38,7 +44,7 @@ func (r *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &PolicyServer{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *PolicyServer) Default() {
-	policyserverlog.Info("default", "name", r.Name)
-	controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
+func (ps *PolicyServer) Default() {
+	policyserverlog.Info("default", "name", ps.Name)
+	controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
 }

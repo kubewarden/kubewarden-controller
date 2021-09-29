@@ -86,7 +86,12 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}, nil
 		}
 
-		return ctrl.Result{}, admissionReconciler.ReconcileDeletion(ctx, &policyServer)
+		err := admissionReconciler.ReconcileDeletion(ctx, &policyServer)
+		if err != nil {
+			err = fmt.Errorf("failed reconciling deletion of policyServer %s: %w",
+				policyServer.Name, err)
+		}
+		return ctrl.Result{}, err
 	}
 
 	// Reconcile
@@ -105,7 +110,6 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	return ctrl.Result{}, nil
-
 }
 
 func (r *PolicyServerReconciler) updatePolicyServerStatus(
@@ -121,22 +125,30 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 // SetupWithManager sets up the controller with the Manager.
 func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.ClusterAdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
-		clusterAdmissionPolicy := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
-		return []string{clusterAdmissionPolicy.Spec.PolicyServer}
+		policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
+		if !ok {
+			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
+			return []string{}
+		}
+		return []string{policy.Spec.PolicyServer}
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
 
 	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.PolicyServer{}, constants.PolicyServerIndexName, func(object client.Object) []string {
-		policyServer := object.(*policiesv1alpha2.PolicyServer)
+		policyServer, ok := object.(*policiesv1alpha2.PolicyServer)
+		if !ok {
+			r.Log.Error(nil, "object is not type of PolicyServer: %#v", policyServer)
+			return []string{}
+		}
 		return []string{policyServer.Name}
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.PolicyServer{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
@@ -169,16 +181,14 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				r.Log.Info("policy " + policy.Name + " cannot be scheduled: no matching PolicyServer")
 				return []ctrl.Request{}
-			} else {
-				policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusPending
-				err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
-				if err != nil {
-					r.Log.Error(err, "cannot update status of policy "+policy.Name)
-					return []ctrl.Request{}
-				}
-				r.Log.Info("policy " + policy.Name + " pending")
 			}
-
+			policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusPending
+			err = r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
+			if err != nil {
+				r.Log.Error(err, "cannot update status of policy "+policy.Name)
+				return []ctrl.Request{}
+			}
+			r.Log.Info("policy " + policy.Name + " pending")
 			return []ctrl.Request{
 				{
 					NamespacedName: client.ObjectKey{
@@ -188,4 +198,9 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}
 		})).
 		Complete(r)
+
+	if err != nil {
+		err = fmt.Errorf("failed enrolling controller with manager: %w", err)
+	}
+	return err
 }

@@ -19,6 +19,7 @@ package policies
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 
@@ -44,7 +45,6 @@ type ClusterAdmissionPolicyReconciler struct {
 
 // Reconcile takes care of reconciling ClusterAdmissionPolicy resources
 func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-
 	return ctrl.Result{}, fmt.Errorf("reconciliation error: ")
 }
 

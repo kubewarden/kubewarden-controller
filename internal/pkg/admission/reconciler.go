@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -27,9 +28,9 @@ type Reconciler struct {
 	Log                  logr.Logger
 }
 
-type errorList []error
+type reconcilerErrors []error
 
-func (errorList errorList) Error() string {
+func (errorList reconcilerErrors) Error() string {
 	errors := []string{}
 	for _, error := range errorList {
 		errors = append(errors, error.Error())
@@ -41,7 +42,7 @@ func (r *Reconciler) ReconcileDeletion(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
 ) error {
-	errors := errorList{}
+	errors := reconcilerErrors{}
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -259,10 +260,12 @@ func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, poli
 		return err
 	}
 	for _, policy := range clusterAdmissionPolicies.Items {
+		policy := policy // safely use pointer inside for
 		// will not delete it because it has a finalizer. It will add a DeletionTimestamp
 		err := r.Client.Delete(context.Background(), &policy)
 		if err != nil && !apierrors.IsNotFound(err) {
-			return err
+			return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+				policy.Name, err)
 		}
 	}
 	err = r.deletePendingClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
@@ -286,6 +289,7 @@ func (r *Reconciler) enablePolicyWebhook(
 	}
 
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
+		clusterAdmissionPolicy := clusterAdmissionPolicy // safely use pointer inside for
 		// register the new dynamic admission controller only once the policy is
 		// served by the PolicyServer deployment
 		if clusterAdmissionPolicy.Spec.Mutating {
@@ -324,12 +328,15 @@ func (r *Reconciler) enablePolicyWebhook(
 func (r *Reconciler) getClusterAdmissionPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (policiesv1alpha2.ClusterAdmissionPolicyList, error) {
 	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
-
+	if err != nil {
+		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
+	}
 	return clusterAdmissionPolicies, err
 }
 
 func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList) error {
 	for _, policy := range clusterAdmissionPolicies.Items {
+		policy := policy // safely use pointer inside for
 		if policy.DeletionTimestamp != nil {
 			if policy.Spec.Mutating {
 				mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
@@ -339,7 +346,8 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 				err := r.Client.Delete(context.Background(), mutatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return err
+					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+						policy.Name, err)
 				}
 			} else {
 				validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
@@ -349,14 +357,16 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 				err := r.Client.Delete(context.Background(), validatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return err
+					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+						policy.Name, err)
 				}
 			}
 			patch := policy.DeepCopy()
 			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 			err := r.Client.Patch(ctx, patch, client.MergeFrom(&policy))
 			if err != nil && !apierrors.IsNotFound(err) {
-				return err
+				return fmt.Errorf("failed removing finalizers of ClusterAdmissionPolicy %s: %w",
+					policy.Name, err)
 			}
 		}
 	}

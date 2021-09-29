@@ -1,14 +1,14 @@
 package admission
 
 import (
+	"testing"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
-
 	deployment := createDeployment(1, "sa", "image", []corev1.EnvVar{{Name: "env1"}}, map[string]string{})
 	var tests = []struct {
 		name     string
@@ -27,10 +27,11 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := shouldUpdatePolicyServerDeployment(test.original, test.new)
-			if got != test.expect {
-				t.Errorf("got %t, want %t", got, test.expect)
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
+			got := shouldUpdatePolicyServerDeployment(tt.original, tt.new)
+			if got != tt.expect {
+				t.Errorf("got %t, want %t", got, tt.expect)
 			}
 		})
 	}

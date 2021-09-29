@@ -31,7 +31,6 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	//+kubebuilder:scaffold:imports
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -51,7 +50,6 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx context.Context
@@ -127,9 +125,10 @@ var _ = BeforeSuite(func() {
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
 	Eventually(func() error {
+		// nolint:gosec
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed polling webhook server: %w", err)
 		}
 		conn.Close()
 		return nil
@@ -167,6 +166,7 @@ func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string
 	}
 }
 
+// nolint: dupl
 func deleteClusterAdmissionPolicy(ctx context.Context, name, namespace string) {
 	nsn := types.NamespacedName{
 		Name:      name,
@@ -188,7 +188,7 @@ func deleteClusterAdmissionPolicy(ctx context.Context, name, namespace string) {
 	controllerutil.RemoveFinalizer(polUpdated, constants.KubewardenFinalizer)
 	err = k8sClient.Update(ctx, polUpdated)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Fprint(GinkgoWriter, err)
 	}
 	Expect(err).NotTo(HaveOccurred())
 
@@ -211,6 +211,7 @@ func makePolicyServerTemplate(name, namespace string) *PolicyServer {
 	}
 }
 
+// nolint: dupl
 func deletePolicyServer(ctx context.Context, name, namespace string) {
 	nsn := types.NamespacedName{
 		Name:      name,
@@ -232,7 +233,7 @@ func deletePolicyServer(ctx context.Context, name, namespace string) {
 	controllerutil.RemoveFinalizer(polUpdated, constants.KubewardenFinalizer)
 	err = k8sClient.Update(ctx, polUpdated)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Fprint(GinkgoWriter, err)
 	}
 	Expect(err).NotTo(HaveOccurred())
 
@@ -248,7 +249,11 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 	It("should accept creating ClusterAdmissionPolicy", func() {
 		pol := makeClusterAdmissionPolicyTemplate("policy-test", namespace, "policy-server-foo")
 		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
-		k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		if err != nil {
+			fmt.Fprint(GinkgoWriter, err)
+		}
+		Expect(err).NotTo(HaveOccurred())
 
 		By("checking default values")
 		// Testing for PolicyStatus == "unscheduled" can't happen here, Status
@@ -279,7 +284,11 @@ var _ = Describe("validate PolicyServer webhook with ", func() {
 	It("should add kubewarden finalizer when creating a PolicyServer", func() {
 		pol := makePolicyServerTemplate("policyserver-test", namespace)
 		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
-		k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		if err != nil {
+			fmt.Fprint(GinkgoWriter, err)
+		}
+		Expect(err).NotTo(HaveOccurred())
 
 		By("checking default values")
 		Expect(pol.ObjectMeta.Finalizers).To(HaveLen(1))
