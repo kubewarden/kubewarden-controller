@@ -26,6 +26,8 @@ lazy_static! {
             builtins,
         )
     };
+    pub(crate) static ref HOSTNAME: String =
+        std::env::var("HOSTNAME").unwrap_or_else(|_| String::from("unknown"));
 }
 
 pub(crate) fn build_cli() -> App<'static, 'static> {
@@ -159,6 +161,7 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
         .add_directive("cranelift_wasm=off".parse().unwrap())
         .add_directive("regalloc=off".parse().unwrap())
         .add_directive("hyper=off".parse().unwrap())
+        .add_directive("h2=off".parse().unwrap())
         .add_directive("tower=off".parse().unwrap());
 
     match matches.value_of("log-fmt").unwrap_or_default() {
