@@ -49,3 +49,9 @@ linters:
     - interfacer
     # TODO: enable once we can set some exceptions
     - funlen
+
+linters-settings:
+  cyclop:
+    max-complexity: 13
+  nestif:
+    min-complexity: 8
