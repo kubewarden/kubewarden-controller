@@ -39,7 +39,7 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	clusterAdmissionPolicies := policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{validationPolicy, mutatingPolicy}}
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}, &validationPolicy)
-	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, &validationPolicy, &mutatingPolicy).Build()
+	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, mutatingWebhook, &validationPolicy, &mutatingPolicy).Build()
 	r := Reconciler{
 		Client:               cl,
 		DeploymentsNamespace: namespace,

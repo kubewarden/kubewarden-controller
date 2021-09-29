@@ -51,6 +51,9 @@ func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context, po
 
 func (r *Reconciler) buildPolicyServerSecret(policyServerName string, caSecret *corev1.Secret, generateCert generateCertFunc) (*corev1.Secret, error) {
 	ca, err := extractCaFromSecret(caSecret)
+	if err != nil {
+		return nil, err
+	}
 	servingCert, servingKey, err := generateCert(
 		ca.CaCert,
 		fmt.Sprintf("%s.%s.svc", policyServerName, r.DeploymentsNamespace),
@@ -76,16 +79,16 @@ func (r *Reconciler) buildPolicyServerSecret(policyServerName string, caSecret *
 func extractCaFromSecret(caSecret *corev1.Secret) (*admissionregistration.CA, error) {
 	caCert, ok := caSecret.Data[constants.PolicyServerCARootCACert]
 	if !ok {
-		return nil, fmt.Errorf("")
+		return nil, fmt.Errorf("CA could not be extracted from secret %s", caSecret.Kind)
 	}
 	caPrivateKeyBytes, ok := caSecret.Data[constants.PolicyServerCARootPrivateKeyCertName]
 	if !ok {
-		return nil, fmt.Errorf("")
+		return nil, fmt.Errorf("private key bytes could not be extracted from secret %s", caSecret.Kind)
 	}
 
 	caPrivateKey, err := x509.ParsePKCS1PrivateKey(caPrivateKeyBytes)
 	if err != nil {
-		return nil, fmt.Errorf("")
+		return nil, fmt.Errorf("private key could not be extracted from secret %s", caSecret.Kind)
 	}
 	return &admissionregistration.CA{CaCert: caCert, CaPrivateKey: caPrivateKey}, nil
 }
