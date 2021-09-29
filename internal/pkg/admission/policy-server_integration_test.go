@@ -9,10 +9,14 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 )
+
+const port = "8181"
 
 func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	const domain = "localhost"
+	const maxRetries = 10
 	r := createReconcilerWithEmptyClient()
 	// create CA
 	caSecret, err := r.buildPolicyServerCARootSecret(admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
@@ -42,21 +46,32 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 		}
 		tlsConfig := &tls.Config{
 			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
 		}
 		server = http.Server{
-			Addr:      ":8080",
+			Addr:      ":" + port,
 			TLSConfig: tlsConfig,
 		}
 		wg.Done()
-		server.ListenAndServeTLS("", "")
+		_ = server.ListenAndServeTLS("", "")
 	}()
 
-	//wait for https server to be ready to avoid race conditions
+	// wait for https server to be ready to avoid race conditions
 	wg.Wait()
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caSecret.Data[constants.PolicyServerCARootPemName])
-	//test ssl handshake using the ca pem
-	conn, err := tls.Dial("tcp", domain+":8080", &tls.Config{RootCAs: rootCAs})
+	retries := 0
+	var conn *tls.Conn
+	for retries < maxRetries {
+		// test ssl handshake using the ca pem
+		conn, err = tls.Dial("tcp", domain+":"+port, &tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12})
+		if err == nil || !isConnectionRefusedError(err) {
+			break
+		}
+		// wait 50 millisecond and retry to avoid race conditions as server might still not be ready
+		time.Sleep(50 * time.Millisecond)
+		retries++
+	}
 	if err != nil {
 		t.Errorf("error when connecting to the https server : %s", err.Error())
 	}
@@ -69,4 +84,8 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 		t.Errorf("error when shutting down https server : %s", err.Error())
 	}
 
+}
+
+func isConnectionRefusedError(err error) bool {
+	return err.Error() == "dial tcp [::1]:"+port+": connect: connection refused"
 }
