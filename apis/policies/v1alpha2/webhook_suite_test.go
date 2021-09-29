@@ -247,7 +247,11 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 	It("should accept creating ClusterAdmissionPolicy", func() {
 		pol := makeClusterAdmissionPolicyTemplate("policy-test", namespace, "policy-server-foo")
 		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
-		k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		if err != nil {
+			fmt.Fprint(GinkgoWriter, err)
+		}
+		Expect(err).NotTo(HaveOccurred())
 
 		By("checking default values")
 		// Testing for PolicyStatus == "unscheduled" can't happen here, Status
@@ -278,7 +282,11 @@ var _ = Describe("validate PolicyServer webhook with ", func() {
 	It("should add kubewarden finalizer when creating a PolicyServer", func() {
 		pol := makePolicyServerTemplate("policyserver-test", namespace)
 		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
-		k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
+		if err != nil {
+			fmt.Fprint(GinkgoWriter, err)
+		}
+		Expect(err).NotTo(HaveOccurred())
 
 		By("checking default values")
 		Expect(pol.ObjectMeta.Finalizers).To(HaveLen(1))
