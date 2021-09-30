@@ -17,6 +17,10 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: Bound to Policy Server
+      jsonPath: .spec.policyServer
+      name: Policy Server
+      type: string
     - description: Whether the policy is mutating
       jsonPath: .spec.mutating
       name: Mutating
