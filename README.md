@@ -14,19 +14,8 @@ it is deployed.
 
 ## Installation
 
-The kubewarden-controller can be deployed using a helm chart:
-
-```shell
-$ helm repo add kubewarden https://charts.kubewarden.io
-$ helm install --create-namespace -n kubewarden kubewarden-controller kubewarden/kubewarden-controller
-```
-
-This will install kubewarden-controller on the Kubernetes cluster in the default
-configuration.
-
-The default configuration values should be good enough for the
-majority of deployments, all the options are documented
-[here](https://charts.kubewarden.io/#configuration).
+The kubewarden-controller can be deployed using a helm chart. For instructions,
+see https://charts.kubewarden.io.
 
 ## Usage
 
@@ -83,6 +72,7 @@ You can delete the admission policy you just created:
 
 ```
 $ kubectl delete clusteradmissionpolicy psp-capabilities
+$ kubectl patch clusteradmissionpolicy psp-capabilities -p '{"metadata":{"finalizers":null}}' --type=merge
 ```
 
 ## Learn more
