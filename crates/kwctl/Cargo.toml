@@ -1,7 +1,7 @@
 [package]
 name = "kwctl"
 description = "Tool to manage Kubewarden policies"
-version = "0.2.1"
+version = "0.2.2"
 authors = [
         "Flavio Castelli <fcastelli@suse.com>",
         "Rafael Fernández López <rfernandezlopez@suse.com>",
@@ -21,7 +21,7 @@ kubewarden-policy-sdk = "0.2.3"
 lazy_static = "1.4.0"
 mdcat = "0.22"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.1" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.13" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.14" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.8"
 pulldown-cmark = { version = "0.8", default-features = false }

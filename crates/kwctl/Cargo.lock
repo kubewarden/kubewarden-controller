@@ -1702,7 +1702,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -2346,8 +2346,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.1.13"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.13#d5217a5045df17affb0faecd3635358dbc94f6aa"
+version = "0.1.14"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.14#52277963c3bc47530d8724ddcfb01301535b50cb"
 dependencies = [
  "anyhow",
  "async-std",
