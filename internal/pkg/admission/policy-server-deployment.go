@@ -12,6 +12,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -24,6 +26,11 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
+	}
+
+	if err := r.policyServerImagePullSecretPresent(ctx, policyServer); (policyServer.Spec.ImagePullSecret != "") &&
+		err != nil {
+		return err
 	}
 
 	deployment := r.deployment(configMapVersion, policyServer)
@@ -93,6 +100,21 @@ func getProgressingDeploymentCondition(status appsv1.DeploymentStatus) *appsv1.D
 	return nil
 }
 
+func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
+	// By using Unstructured data we force the client to fetch fresh, uncached
+	// data from the API server
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "Secret",
+		Version: "v1",
+	})
+	err := r.Client.Get(ctx, client.ObjectKey{
+		Namespace: r.DeploymentsNamespace,
+		Name:      policyServer.Spec.ImagePullSecret,
+	}, u)
+	return fmt.Errorf("cannot get spec.ImagePullSecret: %w", err)
+}
+
 func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, newDeployment *appsv1.Deployment) error {
 	originalDeployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
@@ -141,11 +163,13 @@ func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, n
 
 func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1alpha2.PolicyServer) *appsv1.Deployment {
 	const (
-		certsVolumeName             = "certs"
-		policiesConfigContainerPath = "/config"
-		policiesFilename            = "policies.yml"
-		policiesVolumeName          = "policies"
-		secretsContainerPath        = "/pki"
+		certsVolumeName                  = "certs"
+		policiesConfigContainerPath      = "/config"
+		policiesFilename                 = "policies.yml"
+		policiesVolumeName               = "policies"
+		secretsContainerPath             = "/pki"
+		imagePullSecretVolumeName        = "imagepullsecret"
+		dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
 	)
 
 	admissionContainer := corev1.Container{
@@ -195,6 +219,21 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		},
 	}
+	if policyServer.Spec.ImagePullSecret != "" {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      imagePullSecretVolumeName,
+				ReadOnly:  true,
+				MountPath: dockerConfigJSONPolicyServerPath,
+			},
+		)
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
+				Value: filepath.Join(dockerConfigJSONPolicyServerPath, ".dockerconfigjson"),
+			},
+		)
+	}
 
 	templateAnnotations := policyServer.Spec.Annotations
 	if templateAnnotations == nil {
@@ -202,7 +241,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	}
 	templateAnnotations[constants.PolicyServerDeploymentConfigAnnotation] = configMapVersion
 
-	return &appsv1.Deployment{
+	policyServerDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
@@ -260,4 +299,19 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		},
 	}
+	if policyServer.Spec.ImagePullSecret != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: imagePullSecretVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: policyServer.Spec.ImagePullSecret,
+					},
+				},
+			},
+		)
+	}
+
+	return policyServerDeployment
 }

@@ -45,6 +45,11 @@ type PolicyServerSpec struct {
 	// Namespace service account will be used if not specified.
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// Name of ImagePullSecret secret in the same namespace, used for pulling
+	// policies from repositories.
+	// +optional
+	ImagePullSecret string `json:"imagePullSecret,omitempty"`
 }
 
 type ReconciliationTransitionReason string
