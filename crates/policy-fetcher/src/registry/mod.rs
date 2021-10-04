@@ -123,7 +123,7 @@ impl Registry {
                 if !sources
                     .clone()
                     .unwrap_or_default()
-                    .is_insecure_source(url.host_str().unwrap_or_default())
+                    .is_insecure_source(&crate::host_and_port(&url)?)
                 {
                     return Err(anyhow!("could not push policy: {}", err,));
                 }
