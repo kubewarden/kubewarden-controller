@@ -82,7 +82,7 @@ pub async fn fetch_policy(
     let sources = sources.unwrap_or(&sources_default);
 
     if let Err(err) = policy_fetcher
-        .fetch(&url, client_protocol(&url, &sources)?, &destination)
+        .fetch(&url, client_protocol(&url, sources)?, &destination)
         .await
     {
         if !sources.is_insecure_source(&host_and_port(&url)?) {
@@ -118,7 +118,7 @@ pub async fn fetch_policy(
 }
 
 fn client_protocol(url: &Url, sources: &Sources) -> Result<ClientProtocol> {
-    if let Some(certificates) = sources.source_authority(&host_and_port(&url)?) {
+    if let Some(certificates) = sources.source_authority(&host_and_port(url)?) {
         return Ok(ClientProtocol::Https(
             TlsVerificationMode::CustomCaCertificates(certificates),
         ));
@@ -141,7 +141,7 @@ fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<
             (Some(store), policy_path)
         }
         PullDestination::LocalFile(destination) => {
-            if Path::is_dir(&destination) {
+            if Path::is_dir(destination) {
                 let filename = url.path().split('/').last().unwrap();
                 (None, destination.join(filename))
             } else {
