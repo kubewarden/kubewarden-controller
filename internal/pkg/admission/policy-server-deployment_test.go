@@ -36,6 +36,7 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 		})
 	}
 }
+
 func createDeployment(replicasInt int, serviceAccount string, image string, env []corev1.EnvVar, annotations map[string]string) *appsv1.Deployment {
 	replicas := int32(replicasInt)
 	container := corev1.Container{

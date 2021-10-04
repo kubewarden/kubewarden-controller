@@ -153,6 +153,10 @@ spec:
               image:
                 description: Docker image name.
                 type: string
+              imagePullSecret:
+                description: Name of ImagePullSecret secret in the same namespace,
+                  used for pulling policies from repositories.
+                type: string
               replicas:
                 description: Replicas is the number of desired replicas.
                 format: int32
