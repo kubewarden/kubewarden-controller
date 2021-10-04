@@ -2,6 +2,9 @@
 ## [Unreleased]
 
 
+<a name="v0.2.2"></a>
+## [v0.2.2] - 2021-10-04
+
 <a name="v0.2.1"></a>
 ## [v0.2.1] - 2021-09-24
 
@@ -106,7 +109,8 @@
 - Merge pull request [#12](https://github.com/kubewarden/policy-server/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.2...HEAD
+[v0.2.2]: https://github.com/kubewarden/policy-server/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/kubewarden/policy-server/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/kubewarden/policy-server/compare/v0.1.10...v0.2.0
 [v0.1.10]: https://github.com/kubewarden/policy-server/compare/v0.1.9...v0.1.10
