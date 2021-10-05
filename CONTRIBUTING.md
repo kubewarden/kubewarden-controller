@@ -63,7 +63,7 @@ commit.
 Assuming your official kubewarden remote is called `upstream`:
 
 ```console
-$ git push upstream vX.Y.Z
+$ git push upstream main vX.Y.Z
 ```
 
 Check that the Github actions are properly executed and have no
