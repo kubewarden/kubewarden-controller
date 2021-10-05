@@ -2,6 +2,41 @@
 ## [Unreleased]
 
 
+<a name="0.4.0"></a>
+## [0.4.0] - 2021-10-01
+### Features
+- Introduce a PolicyServer CRD that allow users to describe a Policy Server
+  Deployment. The configuration of PolicyServer is now done through this
+  resource, instead of using the `policy-server` ConfigMap.
+- ClusterAdmissionPolicy has the following changes:
+  - A new PolicyStatus field which can be: `unscheduled`, `unschedulable`, `pending` or `active`
+  - A new condition called PolicyActive.
+  - A `policyServer` attribute. This is used to specify which instance of
+    PolicyServer is going to host the policy. If nothing is specified, the
+    policy will be scheduled on the PolicyServer named `default`. This one is
+    created by the helm chart at installation time.
+- Introduce cert-manager dependency
+- PolicyServer and ClusterAdmissionPolicies are now validated and mutated by
+  dedicated admission controllers. The kubewarden-controller is acting as
+  validation endpoint for both of them.
+- All the resources created by the operator are now using
+  [`Finalizers`](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/).
+
+### Pull Requests
+- Merge pull request [#98](https://github.com/kubewarden/kubewarden-controller/issues/98) from kubewarden/viccuad-update-readme
+- Merge pull request [#94](https://github.com/kubewarden/kubewarden-controller/issues/94) from ereslibre/policy-server-output
+- Merge pull request [#91](https://github.com/kubewarden/kubewarden-controller/issues/91) from viccuad/golangci-lint-gha
+- Merge pull request [#90](https://github.com/kubewarden/kubewarden-controller/issues/90) from raulcabello/new-architecture
+- Merge pull request [#85](https://github.com/kubewarden/kubewarden-controller/issues/85) from flavio/uninstall-script
+- Merge pull request [#82](https://github.com/kubewarden/kubewarden-controller/issues/82) from flavio/new-architecture-crds-docs
+- Merge pull request [#83](https://github.com/kubewarden/kubewarden-controller/issues/83) from ereslibre/rename-policy-active-condition
+- Merge pull request [#81](https://github.com/kubewarden/kubewarden-controller/issues/81) from viccuad/new-architecture
+- Merge pull request [#76](https://github.com/kubewarden/kubewarden-controller/issues/76) from viccuad/webhooks
+- Merge pull request [#75](https://github.com/kubewarden/kubewarden-controller/issues/75) from jvanz/how-to-build
+- Merge pull request [#66](https://github.com/kubewarden/kubewarden-controller/issues/66) from raulcabello/new-architecture
+- Merge pull request [#64](https://github.com/kubewarden/kubewarden-controller/issues/64) from raulcabello/new-architecture
+
+
 <a name="v0.3.2"></a>
 ## [v0.3.2] - 2021-08-19
 ### Pull Requests
@@ -87,7 +122,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...0.4.0
 [v0.3.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.3...v0.3.0
