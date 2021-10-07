@@ -48,7 +48,7 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
                 .long("log-fmt")
                 .env("KUBEWARDEN_LOG_FMT")
                 .default_value("text")
-                .possible_values(&["text", "json", "jaeger", "otlp"])
+                .possible_values(&["text", "json", "otlp"])
                 .help("Log output format"),
         )
         .arg(
@@ -173,23 +173,6 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
             .with(filter_layer)
             .with(fmt::layer())
             .init(),
-        "jaeger" => {
-            // Create a new OpenTelemetry pipeline sending events
-            // to a jaeger instance
-            // The Jaeger exporter can be configerd via environment
-            // variables (https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter)
-            let tracer = opentelemetry_jaeger::new_pipeline()
-                .with_service_name(SERVICE_NAME)
-                .install_batch(opentelemetry::runtime::Tokio)?;
-
-            // Create a tracing layer with the configured tracer
-            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-            tracing_subscriber::registry()
-                .with(filter_layer)
-                .with(telemetry)
-                .with(fmt::layer())
-                .init()
-        }
         "otlp" => {
             // Create a new OpenTelemetry pipeline sending events to a
             // OpenTelemetry collector using the OTLP format.

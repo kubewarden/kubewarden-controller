@@ -56,7 +56,7 @@ fn main() -> Result<()> {
     // This is the channel used to have the asynchronous code trigger the
     // bootstrap of the worker pool. The bootstrap must be triggered
     // from within the asynchronous code because some of the tracing collectors
-    // (e.g. jaeger, OpenTelemetry) require a tokio::Runtime to be available.
+    // (e.g. OpenTelemetry) require a tokio::Runtime to be available.
     let (worker_pool_bootstrap_req_tx, worker_pool_bootstrap_req_rx) =
         oneshot::channel::<WorkerPoolBootRequest>();
 
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
     // This is the channel used to have the asynchronous code trigger the
     // bootstrap of the kubernetes poller. The bootstrap must be triggered
     // from within the asynchronous code because some of the tracing collectors
-    // (e.g. jaeger, OpenTelemetry) require a tokio::Runtime to be available.
+    // (e.g. OpenTelemetry) require a tokio::Runtime to be available.
     let (kube_poller_bootstrap_req_tx, kube_poller_bootstrap_req_rx) =
         oneshot::channel::<KubePollerBootRequest>();
 
