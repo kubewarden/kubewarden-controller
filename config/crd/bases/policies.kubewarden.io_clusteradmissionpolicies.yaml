@@ -232,6 +232,7 @@ spec:
                         are added. If '*' is present, the length of the slice must
                         be one. Required.
                       items:
+                        description: OperationType specifies an operation for a request.
                         type: string
                       type: array
                     resources:

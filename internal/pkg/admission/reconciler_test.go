@@ -71,7 +71,12 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	err = r.Client.Get(context.Background(), client.ObjectKey{
 		Name: admissionPolicyName,
 	}, policy)
-	if err != nil {
+	if err != nil && errors.IsNotFound(err) {
+		// return early from the test, as because of the lack of finalizers, the resource has been
+		// garbage collected. We cannot test for the lack of our finalizers, but we know that the
+		// resource disappeared due to the lack of our finalizer, so it is also a success case.
+		return
+	} else if err != nil {
 		t.Errorf("received unexpected error %s", err.Error())
 	}
 	if len(policy.Finalizers) != 0 {

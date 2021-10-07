@@ -24,6 +24,9 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/ereslibre/kube-webhook-wrapper/webhookwrapper"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -69,18 +72,27 @@ func main() {
 		"The namespace where the kubewarden resources will be created.")
 	flag.Parse()
 
+	environment := readEnvironment()
+
 	if deploymentsNamespace == "" {
-		deploymentsNamespace = os.Getenv("NAMESPACE")
+		deploymentsNamespace = environment.deploymentsNamespace
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "a4ddbf36.kubewarden.io",
-	})
+	mgr, err := webhookwrapper.NewManager(
+		ctrl.Options{
+			Scheme:                 scheme,
+			MetricsBindAddress:     metricsAddr,
+			Host:                   environment.webhookHostListen,
+			Port:                   9443,
+			HealthProbeBindAddress: probeAddr,
+			LeaderElection:         enableLeaderElection,
+			LeaderElectionID:       "a4ddbf36.kubewarden.io",
+		},
+		setupLog,
+		environment.developmentMode,
+		environment.webhookHostAdvertise,
+		webhooks(),
+	)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -100,14 +112,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
 		os.Exit(1)
 	}
-	if err = (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterAdmissionPolicy")
-		os.Exit(1)
-	}
-	if err = (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "PolicyServer")
-		os.Exit(1)
-	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -123,5 +128,48 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+func webhooks() []webhookwrapper.WebhookRegistrator {
+	return []webhookwrapper.WebhookRegistrator{
+		{
+			Registrator: (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager,
+			Name:        "policyservers.kubewarden.dev",
+			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
+				{
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
+						admissionregistrationv1.Update,
+					},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
+						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						Resources:   []string{"policyservers"},
+					},
+				},
+			},
+			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-policyserver",
+			Mutating:    true,
+		},
+		{
+			Registrator: (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "clusteradmissionpolicies.kubewarden.dev",
+			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
+				{
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
+						admissionregistrationv1.Update,
+					},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
+						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						Resources:   []string{"clusteradmissionpolicies"},
+					},
+				},
+			},
+			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+			Mutating:    true,
+		},
 	}
 }
