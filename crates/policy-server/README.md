@@ -86,41 +86,6 @@ flag is used to choose the format to be used.
 By default, log messages are printed on the standard output using the
 `text` format. Logs can be printed as JSON objects using the `json` format type.
 
-### Jaeger
-
-[Jaeger](https://www.jaegertracing.io/) is an open souce distributed tracing
-solution.
-
-Policy server can send trace events directly to a Jaeger collector using the
-`--log-fmt jaeger` flag.
-
-Underneat, policy server relies on [Open Telemetry](https://github.com/open-telemetry/opentelemetry-rust)
-to send events to the Jaeger collector.
-
-By default, events are sent to a collector listening on localhost. However, 
-additional Jaeger settings can be specified via [these environment variables](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter):
-
-| Name                            | Description                                                      | Default                                                                                          |
-|---------------------------------|------------------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| OTEL_EXPORTER_JAEGER_AGENT_HOST | Hostname for the Jaeger agent                                    | "localhost"                                                                                      |
-| OTEL_EXPORTER_JAEGER_AGENT_PORT | Port for the Jaeger agent                                        | 6832                                                                                             |
-| OTEL_EXPORTER_JAEGER_ENDPOINT   | HTTP endpoint for Jaeger traces                                  | <!-- markdown-link-check-disable --> "http://localhost:14250"<!-- markdown-link-check-enable --> |
-| OTEL_EXPORTER_JAEGER_TIMEOUT    | Maximum time the Jaeger exporter will wait for each batch export | 10s                                                                                              |
-| OTEL_EXPORTER_JAEGER_USER       | Username to be used for HTTP basic authentication                | -                                                                                                |
-| OTEL_EXPORTER_JAEGER_PASSWORD   | Password to be used for HTTP basic authentication                | -                                                                                                |
-
-A quick evaluation of Jaeger can be done using its "all-in-one" container
-image.
-
-The image can be started via:
-```console
-docker run -d -p6831:6831/udp -p6832:6832/udp -p16686:16686 -p14268:14268 jaegertracing/all-in-one:latest
-```
-
-**Note well:** this Jaeger deployment is not meant for production. Please
-take a look at [Jaeger's official documentation](https://www.jaegertracing.io/docs/)
-for more details.
-
 ### Open Telemetry Collector
 
 The open Telemetry project provides a [collector](https://opentelemetry.io/docs/collector/)
@@ -140,6 +105,9 @@ Current limitations:
   * Policy server doesn't expose any configuration setting for Open Telemetry
     (e.g.: endpoint URL, encryption, authentication,...). All of the tuning
     has to be done on the collector process that runs as a sidecar.
+
+More details about OpenTelemetry and tracing can be found inside of
+our [official docs](https://docs.kubewarden.io/operator-manual/tracing/01-quickstart.html).
 
 # Building
 
