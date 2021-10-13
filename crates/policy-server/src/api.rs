@@ -34,6 +34,27 @@ pub(crate) async fn route(
     }
 }
 
+fn populate_span_with_admission_review_data(adm_rev: &AdmissionReview) {
+    Span::current().record("kind", &adm_rev.kind.kind.as_str());
+    Span::current().record("kind_group", &adm_rev.kind.group.as_str());
+    Span::current().record("kind_version", &adm_rev.kind.version.as_str());
+    Span::current().record("name", &adm_rev.name.as_ref().unwrap().as_str());
+    Span::current().record("namespace", &adm_rev.namespace.as_ref().unwrap().as_str());
+    Span::current().record("operation", &adm_rev.operation.as_str());
+    Span::current().record("request_uid", &adm_rev.uid.as_str());
+    Span::current().record("resource", &adm_rev.resource.resource.as_str());
+    Span::current().record("resource_group", &adm_rev.resource.group.as_str());
+    Span::current().record("resource_version", &adm_rev.resource.version.as_str());
+    Span::current().record(
+        "subresource",
+        &adm_rev.sub_resource.as_ref().unwrap().as_str(),
+    );
+}
+
+fn populate_span_with_policy_evaluation_results(validation: &ValidationResponse) {
+    Span::current().record("allowed", &validation.allowed);
+    Span::current().record("mutated", &validation.patch.is_some());
+}
 // note about tracing: we are manually adding the `policy_id` field
 // because otherwise the automatic "export" would cause the string to be
 // double quoted. This would make searching by tag inside of Jaeger ugly.
@@ -45,6 +66,18 @@ pub(crate) async fn route(
         request_uid=tracing::field::Empty,
         host=crate::cli::HOSTNAME.as_str(),
         policy_id=policy_id.as_str(),
+        name=tracing::field::Empty,
+        namespace=tracing::field::Empty,
+        operation=tracing::field::Empty,
+        subresource=tracing::field::Empty,
+        kind_group=tracing::field::Empty,
+        kind_version=tracing::field::Empty,
+        kind=tracing::field::Empty,
+        resource_group=tracing::field::Empty,
+        resource_version=tracing::field::Empty,
+        resource=tracing::field::Empty,
+        allowed=tracing::field::Empty,
+        mutated=tracing::field::Empty,
         ),
     skip_all)]
 async fn handle_post_validate(
@@ -73,14 +106,12 @@ async fn handle_post_validate(
             return Ok(bad_req);
         }
     };
-
-    // add request UID to the span context as one of its fields
-    Span::current().record("request_uid", &adm_rev.uid.as_str());
+    populate_span_with_admission_review_data(&adm_rev);
 
     let (resp_tx, resp_rx) = oneshot::channel();
     let eval_req = EvalRequest {
         policy_id,
-        req: adm_rev.request,
+        req: adm_rev,
         resp_chan: resp_tx,
         parent_span: Span::current(),
     };
@@ -96,6 +127,7 @@ async fn handle_post_validate(
     match res {
         Ok(r) => match r {
             Some(vr) => {
+                populate_span_with_policy_evaluation_results(&vr);
                 let json_payload = match build_ar_response(vr) {
                     Ok(j) => j,
                     Err(e) => {

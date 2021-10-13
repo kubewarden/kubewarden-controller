@@ -6,6 +6,7 @@ use itertools::Itertools;
 use policy_evaluator::{
     policy_evaluator::{PolicyEvaluator, ValidateRequest},
     policy_metadata::Metadata,
+    validation_response::ValidationResponse,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -129,10 +130,21 @@ impl Worker {
             let _enter = span.enter();
 
             let res = match self.evaluators.get_mut(&req.policy_id) {
-                Some(policy_evaluator) => {
-                    let resp = policy_evaluator.validate(ValidateRequest::new(req.req));
-                    req.resp_chan.send(Some(resp))
-                }
+                Some(policy_evaluator) => match serde_json::to_value(req.req) {
+                    Ok(json) => {
+                        let resp = policy_evaluator.validate(ValidateRequest::new(json));
+                        req.resp_chan.send(Some(resp))
+                    }
+                    Err(e) => {
+                        let error_msg = format!("Failed to serialize AdmissionReview: {:?}", e);
+                        error!("{}", error_msg);
+                        req.resp_chan.send(Some(ValidationResponse::reject(
+                            req.policy_id,
+                            error_msg,
+                            hyper::StatusCode::BAD_REQUEST.as_u16(),
+                        )))
+                    }
+                },
                 None => req.resp_chan.send(None),
             };
             if res.is_err() {
