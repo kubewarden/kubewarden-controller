@@ -37,7 +37,6 @@ type PolicyServerSpec struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// List of environment variables to set in the container.
-	// Cannot be updated.
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
