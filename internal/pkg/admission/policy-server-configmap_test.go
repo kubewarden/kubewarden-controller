@@ -57,3 +57,49 @@ func TestArePoliciesEqual(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldUpdateSourcesMap(t *testing.T) {
+	tests := []struct {
+		name                   string
+		currentSourcesYML      string
+		newInsecureSourcesList []string
+		expect                 bool
+	}{
+		{
+			"empty sources",
+			"{}",
+			nil,
+			false,
+		},
+		{
+			"add insecure_sources",
+			"{}",
+			[]string{"localhost:5000"},
+			true,
+		},
+		{
+			"remove insecure_sources",
+			"{\"insecure_sources\":[\"localhost:5000\"]}",
+			make([]string, 0),
+			true,
+		},
+		{
+			"same insecure_sources",
+			"{\"insecure_sources\":[\"localhost:5000\"]}",
+			[]string{"localhost:5000"},
+			false,
+		},
+	}
+	for _, test := range tests {
+		tt := test // ensure tt is correctly scoped when used in function literal
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := shouldUpdateSourcesMap(tt.currentSourcesYML, tt.newInsecureSourcesList)
+			if err != nil {
+				t.Errorf("unexpected error %s", err.Error())
+			}
+			if got != tt.expect {
+				t.Errorf("got %t, want %t", got, tt.expect)
+			}
+		})
+	}
+}
