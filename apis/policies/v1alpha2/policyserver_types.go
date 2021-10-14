@@ -50,6 +50,10 @@ type PolicyServerSpec struct {
 	// policies from repositories.
 	// +optional
 	ImagePullSecret string `json:"imagePullSecret,omitempty"`
+
+	// List of insecure URIs to policy repositories.
+	// +optional
+	InsecureSources []string `json:"insecureSources,omitempty"`
 }
 
 type ReconciliationTransitionReason string

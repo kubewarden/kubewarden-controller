@@ -165,8 +165,11 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	const (
 		certsVolumeName                  = "certs"
 		policiesConfigContainerPath      = "/config"
+		sourcesConfigContainerPath       = "/sources"
 		policiesFilename                 = "policies.yml"
+		sourcesFilename                  = "sources.yml"
 		policiesVolumeName               = "policies"
+		sourcesVolumeName                = "sources"
 		secretsContainerPath             = "/pki"
 		imagePullSecretVolumeName        = "imagepullsecret"
 		dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
@@ -231,6 +234,21 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			corev1.EnvVar{
 				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
 				Value: filepath.Join(dockerConfigJSONPolicyServerPath, ".dockerconfigjson"),
+			},
+		)
+	}
+	if len(policyServer.Spec.InsecureSources) > 0 {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      sourcesVolumeName,
+				ReadOnly:  true,
+				MountPath: sourcesConfigContainerPath,
+			},
+		)
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_SOURCES_PATH",
+				Value: filepath.Join(sourcesConfigContainerPath, sourcesFilename),
 			},
 		)
 	}
@@ -307,6 +325,27 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName: policyServer.Spec.ImagePullSecret,
+					},
+				},
+			},
+		)
+	}
+	if len(policyServer.Spec.InsecureSources) > 0 {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: sourcesVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: policyServer.NameWithPrefix(),
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.PolicyServerConfigSourcesEntry,
+								Path: sourcesFilename,
+							},
+						},
 					},
 				},
 			},

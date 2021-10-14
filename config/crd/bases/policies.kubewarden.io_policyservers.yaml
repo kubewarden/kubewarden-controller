@@ -157,6 +157,11 @@ spec:
                 description: Name of ImagePullSecret secret in the same namespace,
                   used for pulling policies from repositories.
                 type: string
+              insecureSources:
+                description: List of insecure URIs to policy repositories.
+                items:
+                  type: string
+                type: array
               replicas:
                 description: Replicas is the number of desired replicas.
                 format: int32
