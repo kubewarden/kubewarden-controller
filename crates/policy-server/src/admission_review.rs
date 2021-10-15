@@ -1,20 +1,20 @@
 use anyhow::{anyhow, Result};
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub(crate) struct GroupVersionKind {
     pub group: String,
     pub version: String,
     pub kind: String,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub(crate) struct GroupVersionResource {
     pub group: String,
     pub version: String,
     pub resource: String,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AdmissionReview {
     pub uid: String,

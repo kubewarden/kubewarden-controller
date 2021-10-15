@@ -1,4 +1,5 @@
 use crate::communication::EvalRequest;
+use crate::metrics;
 use crate::settings::Policy;
 use crate::utils::convert_yaml_map_to_json;
 use anyhow::Result;
@@ -130,10 +131,28 @@ impl Worker {
             let _enter = span.enter();
 
             let res = match self.evaluators.get_mut(&req.policy_id) {
-                Some(policy_evaluator) => match serde_json::to_value(req.req) {
+                Some(policy_evaluator) => match serde_json::to_value(req.req.clone()) {
                     Ok(json) => {
                         let resp = policy_evaluator.validate(ValidateRequest::new(json));
-                        req.resp_chan.send(Some(resp))
+                        let accepted = resp.allowed;
+                        let mutated = resp.patch.is_some();
+                        let error_code = if let Some(status) = &resp.status {
+                            status.code
+                        } else {
+                            None
+                        };
+                        let res = req.resp_chan.send(Some(resp));
+                        metrics::add_policy_evaluation(metrics::PolicyEvaluation {
+                            policy_name: policy_evaluator.policy.id.clone(),
+                            resource_name: req.req.name.unwrap_or_else(|| "unknown".to_string()),
+                            resource_namespace: req.req.namespace,
+                            resource_kind: req.req.request_kind.unwrap_or_default().kind,
+                            resource_request_operation: req.req.operation.clone(),
+                            accepted,
+                            mutated,
+                            error_code,
+                        });
+                        res
                     }
                     Err(e) => {
                         let error_msg = format!("Failed to serialize AdmissionReview: {:?}", e);
