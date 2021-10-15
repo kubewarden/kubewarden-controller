@@ -13,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,9 +29,11 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
 	}
 
-	if err := r.policyServerImagePullSecretPresent(ctx, policyServer); (policyServer.Spec.ImagePullSecret != "") &&
-		err != nil {
-		return err
+	if policyServer.Spec.ImagePullSecret != "" {
+		err := r.policyServerImagePullSecretPresent(ctx, policyServer)
+		if err != nil {
+			return err
+		}
 	}
 
 	deployment := r.deployment(configMapVersion, policyServer)
@@ -112,7 +115,21 @@ func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, pol
 		Namespace: r.DeploymentsNamespace,
 		Name:      policyServer.Spec.ImagePullSecret,
 	}, u)
-	return fmt.Errorf("cannot get spec.ImagePullSecret: %w", err)
+	if err != nil {
+		return fmt.Errorf("cannot get spec.ImagePullSecret: %w", err)
+	}
+
+	var secret corev1.Secret
+	err = runtime.DefaultUnstructuredConverter.
+		FromUnstructured(u.UnstructuredContent(), &secret)
+	if err != nil {
+		return fmt.Errorf("spec.ImagePullSecret is not of Kind Secret: %w", err)
+	}
+
+	if secret.Type != "kubernetes.io/dockerconfigjson" {
+		return fmt.Errorf("spec.ImagePullSecret secret \"%s\" is not of type kubernetes.io/dockerconfigjson", secret.Name)
+	}
+	return nil
 }
 
 func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, newDeployment *appsv1.Deployment) error {

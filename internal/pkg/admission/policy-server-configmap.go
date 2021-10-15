@@ -86,7 +86,7 @@ func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
 	}
 	err = r.Client.Patch(ctx, patch, client.MergeFrom(cfg))
 	if err != nil {
-		return fmt.Errorf("cannot patching policies: %w", err)
+		return fmt.Errorf("cannot patch PolicyServer Configmap: %w", err)
 	}
 
 	return nil
