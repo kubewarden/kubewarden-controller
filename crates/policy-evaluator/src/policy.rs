@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::clone::Clone;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Policy {
+pub struct Policy {
     pub id: String,
     policy_id: Option<u64>,
 }

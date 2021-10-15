@@ -96,7 +96,7 @@ enum Runtime {
 
 pub struct PolicyEvaluator {
     runtime: Runtime,
-    policy: Policy,
+    pub policy: Policy,
     settings: PolicySettings,
 }
 
