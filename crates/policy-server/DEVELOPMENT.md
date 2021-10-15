@@ -18,7 +18,7 @@ docker run --rm \
   --name jaeger \
   -p14250:14250 \
   -p16686:16686 \
-  jaegertracing/all-in-one:latest
+  jaegertracing/all-in-one:1.27.0
 ```
 
 On another console, obtain the IP address of the
@@ -36,10 +36,23 @@ Start the OpenTelemetry collector:
 ```console
 docker run --rm \
   -p 4317:4317 \
+  -p 8889:8889 \
   -v `pwd`/otel-collector-minimal-config.yaml:/etc/otel/config.yaml:ro \
-  otel/opentelemetry-collector-dev:latest \
+  otel/opentelemetry-collector:0.36.0 \
     --log-level debug \
     --config /etc/otel/config.yaml
+```
+
+Start prometheus, so it can start scraping metrics. By adding the `host.docker.internal`, the
+prometheus container will be able to reach the OpenTelemetry collector exposed port in the host, and
+scrape that endpoint. Check the `prometheus.yml` configuration for more details.
+
+```console
+docker run -d --rm \
+  --add-host=host.docker.internal:host-gateway \
+  -p 9090:9090 \
+  -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml \
+  prom/prometheus:v2.30.3
 ```
 
 Now start policy-server:
