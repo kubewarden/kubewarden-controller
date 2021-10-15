@@ -22,9 +22,15 @@ exporters:
     # TODO: change the IP address with the IP/FQDN of your jaeger endpoint
     endpoint: "172.17.0.2:14250"
     insecure: true
+  prometheus:
+    endpoint: ":8889"
 
 service:
   pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: []
+      exporters: [prometheus]
     traces:
       receivers: [otlp]
       processors: [batch]
