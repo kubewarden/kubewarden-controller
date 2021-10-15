@@ -13,6 +13,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use directories::UserDirs;
 use std::{
+    collections::HashMap,
     convert::TryFrom,
     fs,
     io::{self, Read},
@@ -44,6 +45,7 @@ mod push;
 mod rm;
 mod run;
 mod utils;
+mod verify;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -78,6 +80,35 @@ async fn main() -> Result<()> {
                 };
                 let (sources, docker_config) = remote_server_options(matches)?;
                 pull::pull(uri, docker_config, sources, destination).await?;
+            };
+            Ok(())
+        }
+        Some("verify") => {
+            if let Some(matches) = matches.subcommand_matches("verify") {
+                let uri = matches.value_of("uri").unwrap();
+                let key_file = matches.value_of("key").unwrap();
+                let (sources, docker_config) = remote_server_options(matches)?;
+
+                let annotations: Option<HashMap<String, String>>;
+                annotations = match matches.values_of("annotations") {
+                    None => None,
+                    Some(items) => {
+                        let mut values: HashMap<String, String> = HashMap::new();
+                        for item in items {
+                            let tmp: Vec<_> = item.splitn(2, '=').collect();
+                            if tmp.len() == 2 {
+                                values.insert(String::from(tmp[0]), String::from(tmp[1]));
+                            }
+                        }
+                        if values.is_empty() {
+                            None
+                        } else {
+                            Some(values)
+                        }
+                    }
+                };
+
+                verify::verify(uri, docker_config, sources, annotations, key_file).await?;
             };
             Ok(())
         }

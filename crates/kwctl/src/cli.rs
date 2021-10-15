@@ -61,6 +61,47 @@ pub fn build_cli() -> clap::App<'static, 'static> {
                 )
         )
         .subcommand(
+            SubCommand::with_name("verify")
+                .about("Verify a Kubewarden policy from a given URI using Sigstore")
+                .arg(
+                    Arg::with_name("docker-config-json-path")
+                    .long("docker-config-json-path")
+                    .takes_value(true)
+                    .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
+                )
+                .arg(
+                    Arg::with_name("sources-path")
+                    .long("sources-path")
+                    .takes_value(true)
+                    .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)")
+                )
+                .arg(
+                    Arg::with_name("key")
+                    .short("k")
+                    .long("key")
+                    .takes_value(true)
+                    .required(true)
+                    .help("Verification key")
+                )
+                .arg(
+                    Arg::with_name("annotations")
+                        .short("a")
+                        .long("annotation")
+                        .value_name("PAIR")
+                        .help("Annotations that have to be satisfied")
+                        .required(false)
+                        .multiple(true)
+                        .number_of_values(1)
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("uri")
+                        .required(true)
+                        .index(1)
+                        .help("Policy URI. Supported schemes: registry://")
+                )
+        )
+        .subcommand(
             SubCommand::with_name("push")
                 .about("Pushes a Kubewarden policy to an OCI registry")
                 .arg(
