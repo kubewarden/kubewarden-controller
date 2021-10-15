@@ -17,6 +17,7 @@ const (
 	// PolicyServer ConfigMap
 	PolicyServerConfigPoliciesEntry         = "policies.yml"
 	PolicyServerDeploymentRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
+	PolicyServerConfigSourcesEntry          = "sources.yml"
 
 	// Label
 	AppLabelKey = "app"
