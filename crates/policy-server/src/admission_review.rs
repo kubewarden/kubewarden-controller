@@ -16,7 +16,7 @@ pub(crate) struct GroupVersionResource {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct AdmissionReview {
+pub(crate) struct AdmissionRequest {
     pub uid: String,
     pub kind: GroupVersionKind,
     pub resource: GroupVersionResource,
@@ -34,8 +34,8 @@ pub(crate) struct AdmissionReview {
     pub options: Option<k8s_openapi::apimachinery::pkg::runtime::RawExtension>,
 }
 
-impl AdmissionReview {
-    pub(crate) fn new(raw: hyper::body::Bytes) -> Result<AdmissionReview> {
+impl AdmissionRequest {
+    pub(crate) fn new(raw: hyper::body::Bytes) -> Result<AdmissionRequest> {
         let obj: serde_json::Value = match serde_json::from_slice(&raw) {
             Ok(obj) => obj,
             Err(e) => return Err(anyhow!("Error parsing request: {:?}", e)),
@@ -45,8 +45,8 @@ impl AdmissionReview {
             Some(req) => req,
             None => return Err(anyhow!("Cannot parse AdmissionReview: 'request' not found")),
         };
-        let admission_review: AdmissionReview = serde_json::from_value(req.clone())?;
-        Ok(admission_review)
+        let admission_request: AdmissionRequest = serde_json::from_value(req.clone())?;
+        Ok(admission_request)
     }
 }
 
@@ -60,7 +60,7 @@ mod tests {
     fn invalid_input() {
         let input = Bytes::from("this is not the JSON you're looking for");
 
-        let res = AdmissionReview::new(input);
+        let res = AdmissionRequest::new(input);
         assert!(res.is_err());
     }
 
@@ -72,7 +72,7 @@ mod tests {
         "#,
         );
 
-        let res = AdmissionReview::new(input);
+        let res = AdmissionRequest::new(input);
         assert!(res.is_err());
     }
 
@@ -88,7 +88,7 @@ mod tests {
         "#,
         );
 
-        let res = AdmissionReview::new(input);
+        let res = AdmissionRequest::new(input);
         assert!(res.is_err());
     }
 
@@ -127,7 +127,7 @@ mod tests {
         "#,
         );
 
-        let res = AdmissionReview::new(input);
+        let res = AdmissionRequest::new(input);
         assert!(!res.is_err());
 
         let ar = res.unwrap();
