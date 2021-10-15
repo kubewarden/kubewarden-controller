@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "kubewarden-policy-server"
+    scrape_interval: 5s
+    static_configs:
+      # TODO: change the host with the IP/FQDN and port where the opentelemetry exporter is
+      # listening. If you run prometheus with `--add-host=host.docker.internal:host-gateway`, you
+      # you can just leave this as is.
+      - targets: ["host.docker.internal:8889"]
