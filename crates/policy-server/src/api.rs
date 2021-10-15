@@ -38,8 +38,11 @@ fn populate_span_with_admission_review_data(adm_rev: &AdmissionReview) {
     Span::current().record("kind", &adm_rev.kind.kind.as_str());
     Span::current().record("kind_group", &adm_rev.kind.group.as_str());
     Span::current().record("kind_version", &adm_rev.kind.version.as_str());
-    Span::current().record("name", &adm_rev.name.as_ref().unwrap().as_str());
-    Span::current().record("namespace", &adm_rev.namespace.as_ref().unwrap().as_str());
+    Span::current().record("name", &adm_rev.name.clone().unwrap_or_default().as_str());
+    Span::current().record(
+        "namespace",
+        &adm_rev.namespace.clone().unwrap_or_default().as_str(),
+    );
     Span::current().record("operation", &adm_rev.operation.as_str());
     Span::current().record("request_uid", &adm_rev.uid.as_str());
     Span::current().record("resource", &adm_rev.resource.resource.as_str());
@@ -47,7 +50,7 @@ fn populate_span_with_admission_review_data(adm_rev: &AdmissionReview) {
     Span::current().record("resource_version", &adm_rev.resource.version.as_str());
     Span::current().record(
         "subresource",
-        &adm_rev.sub_resource.as_ref().unwrap().as_str(),
+        &adm_rev.sub_resource.clone().unwrap_or_default().as_str(),
     );
 }
 
