@@ -259,13 +259,13 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			corev1.VolumeMount{
 				Name:      sourcesVolumeName,
 				ReadOnly:  true,
-				MountPath: sourcesConfigContainerPath,
+				MountPath: constants.PolicyServerSourcesConfigContainerPath,
 			},
 		)
 		admissionContainer.Env = append(admissionContainer.Env,
 			corev1.EnvVar{
 				Name:  "KUBEWARDEN_SOURCES_PATH",
-				Value: filepath.Join(sourcesConfigContainerPath, sourcesFilename),
+				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
 			},
 		)
 	}
