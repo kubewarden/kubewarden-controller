@@ -51,7 +51,9 @@ var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ClusterAdmissionPolicy) Default() {
 	clusteradmissionpolicylog.Info("default", "name", r.Name)
-	controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
+	if r.ObjectMeta.DeletionTimestamp == nil {
+		controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
+	}
 }
 
 //+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create;update,versions=v1alpha2,name=vclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}

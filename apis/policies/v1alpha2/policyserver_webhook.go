@@ -46,5 +46,7 @@ var _ webhook.Defaulter = &PolicyServer{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (ps *PolicyServer) Default() {
 	policyserverlog.Info("default", "name", ps.Name)
-	controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
+	if ps.ObjectMeta.DeletionTimestamp == nil {
+		controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
+	}
 }
