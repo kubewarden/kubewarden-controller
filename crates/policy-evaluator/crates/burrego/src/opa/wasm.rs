@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use wasmtime::{
-    AsContextMut, Caller, Engine, Func, Instance, Limits, Linker, Memory, MemoryType, Module, Store,
+    AsContextMut, Caller, Engine, Func, Instance, Linker, Memory, MemoryType, Module, Store,
 };
 
 use crate::opa::{builtins, host_callbacks::HostCallbacks, Policy, StackHelper};
@@ -115,7 +115,7 @@ impl Evaluator {
         let opa_data_helper: Option<StackHelper> = None;
         let mut store = Store::new(&engine, opa_data_helper);
 
-        let memory_ty = MemoryType::new(Limits::new(5, None));
+        let memory_ty = MemoryType::new(5, None);
         let memory = Memory::new(&mut store, memory_ty)?;
         linker.define("env", "memory", memory)?;
 
