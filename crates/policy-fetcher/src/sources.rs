@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
@@ -8,7 +8,39 @@ use std::path::{Path, PathBuf};
 use std::{fs, fs::File};
 
 #[derive(Clone, Default, Deserialize, Debug)]
-struct RawSourceAuthorities(HashMap<String, Vec<PathBuf>>);
+struct RawSourceAuthorities(HashMap<String, Vec<RawSourceAuthority>>);
+
+// This is how a RawSourceAuthority looks like:
+// ```json
+// {
+//    "path": "/foo.pem"
+// },
+// {
+//    "data": "PEM Data"
+// }
+// ```
+#[derive(Clone, Deserialize, Debug)]
+#[serde(untagged)]
+enum RawSourceAuthority {
+    DataBased { data: RawCertificate },
+    PathBased { path: PathBuf },
+}
+
+impl TryFrom<RawSourceAuthority> for RawCertificate {
+    type Error = anyhow::Error;
+
+    fn try_from(raw_source_authority: RawSourceAuthority) -> Result<Self> {
+        match raw_source_authority {
+            RawSourceAuthority::DataBased { data } => Ok(data),
+            RawSourceAuthority::PathBased { path } => {
+                let file_data = fs::read(path.clone()).map_err(|e| {
+                    anyhow!("Cannot read certificate from file '{:?}': {:?}", path, e)
+                })?;
+                Ok(RawCertificate(file_data))
+            }
+        }
+    }
+}
 
 #[derive(Clone, Default, Deserialize, Debug)]
 #[serde(default)]
@@ -17,32 +49,29 @@ struct RawSources {
     source_authorities: RawSourceAuthorities,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 struct RawCertificate(Vec<u8>);
 
 #[derive(Clone, Debug, Default)]
 struct SourceAuthorities(HashMap<String, Vec<Certificate>>);
 
-impl From<RawSourceAuthorities> for SourceAuthorities {
-    fn from(source_authorities: RawSourceAuthorities) -> SourceAuthorities {
-        SourceAuthorities(
-            source_authorities
-                .0
-                .iter()
-                .map(|(host, certificates)| {
-                    (
-                        host.clone(),
-                        certificates
-                            .iter()
-                            .filter_map(|certificate_path| {
-                                fs::read(certificate_path).ok().map(RawCertificate)
-                            })
-                            .filter_map(|certificate| Certificate::try_from(certificate).ok())
-                            .collect(),
-                    )
-                })
-                .collect(),
-        )
+impl TryFrom<RawSourceAuthorities> for SourceAuthorities {
+    type Error = anyhow::Error;
+
+    fn try_from(raw_source_authorities: RawSourceAuthorities) -> Result<SourceAuthorities> {
+        let mut sa = SourceAuthorities::default();
+
+        for (host, authorities) in raw_source_authorities.0 {
+            let mut certs: Vec<Certificate> = Vec::new();
+            for authority in authorities {
+                let raw_cert: RawCertificate = authority.try_into()?;
+                let cert: Certificate = raw_cert.try_into()?;
+                certs.push(cert);
+            }
+            sa.0.insert(host.clone(), certs);
+        }
+
+        Ok(sa)
     }
 }
 
@@ -98,4 +127,134 @@ impl Sources {
 
 pub fn read_sources_file(path: &Path) -> Result<Sources> {
     serde_yaml::from_reader::<_, RawSources>(File::open(path)?)?.try_into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_deserialization_of_path_based_raw_source_authority() {
+        let expected_path = "/foo.pem";
+        let raw = json!({ "path": expected_path });
+
+        let actual: Result<RawSourceAuthority, serde_json::Error> = serde_json::from_value(raw);
+        match actual {
+            Ok(RawSourceAuthority::PathBased { path }) => {
+                let expected: PathBuf = expected_path.into();
+                assert_eq!(path, expected);
+            }
+            unexpected => {
+                panic!("Didn't get the expected value: {:?}", unexpected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_deserialization_of_data_based_raw_source_authority() {
+        let expected_data = RawCertificate("hello world".into());
+        let raw = json!({ "data": expected_data });
+
+        let actual: Result<RawSourceAuthority, serde_json::Error> = serde_json::from_value(raw);
+        match actual {
+            Ok(RawSourceAuthority::DataBased { data }) => {
+                assert_eq!(data, expected_data);
+            }
+            unexpected => {
+                panic!("Didn't get the expected value: {:?}", unexpected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_deserialization_of_unknown_raw_source_authority() {
+        let broken_cases = vec![json!({ "something": "unknown" }), json!({ "path": 1 })];
+        for bc in broken_cases {
+            let actual: Result<RawSourceAuthority, serde_json::Error> =
+                serde_json::from_value(bc.clone());
+            assert!(
+                actual.is_err(),
+                "Expected {:?} to fail, got instead {:?}",
+                bc,
+                actual
+            );
+        }
+    }
+
+    #[test]
+    fn test_raw_source_authority_cannot_be_converted_into_raw_certificate_when_file_is_missing() {
+        let mut path = PathBuf::new();
+        path.push("/boom");
+        let auth = RawSourceAuthority::PathBased { path };
+
+        let expected: Result<RawCertificate> = auth.try_into();
+        assert!(expected.is_err());
+    }
+
+    #[test]
+    fn test_raw_path_based_source_authority_convertion_into_raw_certificate() -> Result<()> {
+        let mut file = NamedTempFile::new()?;
+
+        let expected_contents = "hello world";
+        write!(file, "{}", expected_contents)?;
+
+        let path = file.path();
+        let auth = RawSourceAuthority::PathBased {
+            path: path.to_path_buf(),
+        };
+
+        let expected: Result<RawCertificate> = auth.try_into();
+        match expected {
+            Ok(RawCertificate(data)) => {
+                assert_eq!(&data, expected_contents.as_bytes());
+            }
+            unexpected => {
+                panic!("Didn't get what I was expecting: {:?}", unexpected);
+            }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_raw_source_authorities_to_source_authority() {
+        let cert_data = r#"-----BEGIN CERTIFICATE-----
+MIICUTCCAfugAwIBAgIBADANBgkqhkiG9w0BAQQFADBXMQswCQYDVQQGEwJDTjEL
+MAkGA1UECBMCUE4xCzAJBgNVBAcTAkNOMQswCQYDVQQKEwJPTjELMAkGA1UECxMC
+VU4xFDASBgNVBAMTC0hlcm9uZyBZYW5nMB4XDTA1MDcxNTIxMTk0N1oXDTA1MDgx
+NDIxMTk0N1owVzELMAkGA1UEBhMCQ04xCzAJBgNVBAgTAlBOMQswCQYDVQQHEwJD
+TjELMAkGA1UEChMCT04xCzAJBgNVBAsTAlVOMRQwEgYDVQQDEwtIZXJvbmcgWWFu
+ZzBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCp5hnG7ogBhtlynpOS21cBewKE/B7j
+V14qeyslnr26xZUsSVko36ZnhiaO/zbMOoRcKK9vEcgMtcLFuQTWDl3RAgMBAAGj
+gbEwga4wHQYDVR0OBBYEFFXI70krXeQDxZgbaCQoR4jUDncEMH8GA1UdIwR4MHaA
+FFXI70krXeQDxZgbaCQoR4jUDncEoVukWTBXMQswCQYDVQQGEwJDTjELMAkGA1UE
+CBMCUE4xCzAJBgNVBAcTAkNOMQswCQYDVQQKEwJPTjELMAkGA1UECxMCVU4xFDAS
+BgNVBAMTC0hlcm9uZyBZYW5nggEAMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEE
+BQADQQA/ugzBrjjK9jcWnDVfGHlk3icNRq0oV7Ri32z/+HQX67aRfgZu7KWdI+Ju
+Wm7DCfrPNGVwFWUQOmsPue9rZBgO
+-----END CERTIFICATE-----
+"#;
+        let expected_cert = Certificate::Pem(cert_data.into());
+
+        let raw = json!({
+            "foo.com": [
+                { "data": RawCertificate(cert_data.into())},
+                { "data": RawCertificate(cert_data.into())}
+            ]}
+        );
+        let raw_source_authorities: RawSourceAuthorities = serde_json::from_value(raw).unwrap();
+
+        let actual: Result<SourceAuthorities> = raw_source_authorities.try_into();
+        assert!(actual.is_ok(), "Got an expected error: {:?}", actual);
+
+        let actual_map = actual.unwrap().0;
+        let actual_certs = actual_map.get("foo.com").unwrap();
+        assert_eq!(actual_certs.len(), 2);
+        for actual_cert in actual_certs {
+            assert_eq!(actual_cert, &expected_cert);
+        }
+    }
 }

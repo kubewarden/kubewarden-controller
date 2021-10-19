@@ -26,3 +26,6 @@ serde_json = "1.0.64"
 serde_yaml = "0.8.15"
 url = "2.2.0"
 walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3.2.0"
