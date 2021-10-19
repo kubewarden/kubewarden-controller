@@ -23,6 +23,7 @@ webhooks:
     - v1alpha2
     operations:
     - CREATE
+    - UPDATE
     resources:
     - clusteradmissionpolicies
   sideEffects: None
@@ -43,6 +44,7 @@ webhooks:
     - v1alpha2
     operations:
     - CREATE
+    - UPDATE
     resources:
     - policyservers
   sideEffects: None

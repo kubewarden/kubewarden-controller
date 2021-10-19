@@ -39,12 +39,14 @@ func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create,versions=v1alpha2,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1alpha2,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &PolicyServer{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (ps *PolicyServer) Default() {
 	policyserverlog.Info("default", "name", ps.Name)
-	controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
+	if ps.ObjectMeta.DeletionTimestamp == nil {
+		controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
+	}
 }
