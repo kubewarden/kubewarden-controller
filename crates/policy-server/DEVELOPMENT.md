@@ -265,3 +265,15 @@ curl --location --request POST 'localhost:3000/validate/psp-capabilities' \
   }
 }'
 ```
+
+If you want to visualize the metrics in a Grafana dashboard you can start a Grafana 
+instance locally:
+
+```
+docker run -d --add-host=host.docker.internal:host-gateway --name=grafana -p 3001:3000 grafana/grafana
+```
+
+After that, you can access Grafana WebUI at [localhost:3001](http://localhost:3001), create a Prometheus
+data source using the `http://host.docker.internal:9090` as the data source URL,
+and [import](https://grafana.com/docs/grafana/latest/dashboards/export-import/#import-dashboard)
+the dashboard definition kubewarden-dashboard.json file into the Grafana instance.
