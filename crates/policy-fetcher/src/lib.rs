@@ -40,7 +40,7 @@ pub async fn fetch_policy(
     docker_config: Option<DockerConfig>,
     sources: Option<&Sources>,
 ) -> Result<PathBuf> {
-    let url = match Url::parse(url) {
+    let mut url = match Url::parse(url) {
         Ok(u) => Ok(u),
         Err(ParseError::RelativeUrlWithoutBase) => {
             Url::parse(format!("registry://{}", url).as_str())
@@ -54,7 +54,14 @@ pub async fn fetch_policy(
                 .to_file_path()
                 .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err));
         }
-        "http" | "https" | "registry" => Ok(()),
+        "registry" => {
+            // Add latest tag if no tag was provided
+            if !url.path().contains(':') {
+                url.set_path(&[url.path(), &"latest"].join(":"));
+            }
+            Ok(())
+        }
+        "http" | "https" => Ok(()),
         _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
     }?;
     let (store, destination) = pull_destination(&url, &destination)?;
