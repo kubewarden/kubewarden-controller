@@ -12,6 +12,7 @@ mod admission_review;
 mod api;
 mod cli;
 mod kube_poller;
+mod metrics;
 mod server;
 mod settings;
 mod utils;
@@ -117,6 +118,14 @@ fn main() -> Result<()> {
         if let Err(err) = cli::setup_tracing(&matches) {
             fatal_error(err.to_string());
         }
+
+        // The unused variable is required so the meter is not dropped early and
+        // lives for the whole block lifetime, exporting metrics
+        let _meter = if matches.is_present("enable-metrics") {
+            Some(metrics::init_meter())
+        } else {
+            None
+        };
 
         // Download policies
         let policies_download_dir = matches.value_of("policies-download-dir").unwrap();

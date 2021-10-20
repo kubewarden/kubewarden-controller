@@ -5,7 +5,7 @@ use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info, span::Span, warn};
 
-use crate::admission_review::AdmissionReview;
+use crate::admission_review::AdmissionRequest;
 use crate::communication::EvalRequest;
 
 pub(crate) async fn route(
@@ -34,20 +34,23 @@ pub(crate) async fn route(
     }
 }
 
-fn populate_span_with_admission_review_data(adm_rev: &AdmissionReview) {
-    Span::current().record("kind", &adm_rev.kind.kind.as_str());
-    Span::current().record("kind_group", &adm_rev.kind.group.as_str());
-    Span::current().record("kind_version", &adm_rev.kind.version.as_str());
-    Span::current().record("name", &adm_rev.name.as_ref().unwrap().as_str());
-    Span::current().record("namespace", &adm_rev.namespace.as_ref().unwrap().as_str());
-    Span::current().record("operation", &adm_rev.operation.as_str());
-    Span::current().record("request_uid", &adm_rev.uid.as_str());
-    Span::current().record("resource", &adm_rev.resource.resource.as_str());
-    Span::current().record("resource_group", &adm_rev.resource.group.as_str());
-    Span::current().record("resource_version", &adm_rev.resource.version.as_str());
+fn populate_span_with_admission_request_data(adm_req: &AdmissionRequest) {
+    Span::current().record("kind", &adm_req.kind.kind.as_str());
+    Span::current().record("kind_group", &adm_req.kind.group.as_str());
+    Span::current().record("kind_version", &adm_req.kind.version.as_str());
+    Span::current().record("name", &adm_req.name.clone().unwrap_or_default().as_str());
+    Span::current().record(
+        "namespace",
+        &adm_req.namespace.clone().unwrap_or_default().as_str(),
+    );
+    Span::current().record("operation", &adm_req.operation.as_str());
+    Span::current().record("request_uid", &adm_req.uid.as_str());
+    Span::current().record("resource", &adm_req.resource.resource.as_str());
+    Span::current().record("resource_group", &adm_req.resource.group.as_str());
+    Span::current().record("resource_version", &adm_req.resource.version.as_str());
     Span::current().record(
         "subresource",
-        &adm_rev.sub_resource.as_ref().unwrap().as_str(),
+        &adm_req.sub_resource.clone().unwrap_or_default().as_str(),
     );
 }
 
@@ -89,7 +92,7 @@ async fn handle_post_validate(
     let raw_str = String::from_utf8(raw.to_vec())
         .unwrap_or_else(|_| String::from("cannot convert raw request into utf8"));
 
-    let adm_rev = match AdmissionReview::new(raw) {
+    let adm_req = match AdmissionRequest::new(raw) {
         Ok(ar) => {
             debug!(admission_review = %serde_json::to_string(&ar).unwrap().as_str());
             ar
@@ -106,12 +109,12 @@ async fn handle_post_validate(
             return Ok(bad_req);
         }
     };
-    populate_span_with_admission_review_data(&adm_rev);
+    populate_span_with_admission_request_data(&adm_req);
 
     let (resp_tx, resp_rx) = oneshot::channel();
     let eval_req = EvalRequest {
         policy_id,
-        req: adm_rev,
+        req: adm_req,
         resp_chan: resp_tx,
         parent_span: Span::current(),
     };

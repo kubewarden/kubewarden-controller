@@ -116,6 +116,13 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
                 .takes_value(true)
                 .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
         )
+        .arg(
+            Arg::with_name("enable-metrics")
+                .long("enable-metrics")
+                .required(false)
+                .takes_value(false)
+                .help("Enable metrics"),
+        )
         .long_version(VERSION_AND_BUILTINS.as_str())
 }
 

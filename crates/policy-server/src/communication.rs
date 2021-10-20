@@ -3,13 +3,13 @@ use policy_evaluator::validation_response::ValidationResponse;
 use std::collections::HashMap;
 use tokio::sync::oneshot;
 
-use crate::admission_review::AdmissionReview;
+use crate::admission_review::AdmissionRequest;
 use crate::settings::Policy;
 
 #[derive(Debug)]
 pub(crate) struct EvalRequest {
     pub policy_id: String,
-    pub req: AdmissionReview,
+    pub req: AdmissionRequest,
     pub resp_chan: oneshot::Sender<Option<ValidationResponse>>,
     pub parent_span: tracing::Span,
 }
