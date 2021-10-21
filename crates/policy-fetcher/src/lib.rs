@@ -26,6 +26,7 @@ use crate::store::Store;
 
 use oci_distribution::Reference;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use url::ParseError;
 
 #[derive(Debug)]
@@ -182,8 +183,11 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
 }
 
 fn add_tag_if_not_present(url: &mut Url) {
-    let image_url = [url.host().unwrap().to_string(), url.path().to_string()].join("");
-    if let Ok(reference) = image_url.parse::<Reference>() {
+    if let Ok(reference) = Reference::from_str(
+        url.as_ref()
+            .strip_prefix("registry://")
+            .unwrap_or_else(|| url.as_ref()),
+    ) {
         if reference.tag() == None {
             url.set_path(&[url.path(), "latest"].join(":"));
         }
