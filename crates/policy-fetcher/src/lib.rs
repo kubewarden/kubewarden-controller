@@ -24,7 +24,9 @@ use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
 
+use oci_distribution::Reference;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use url::ParseError;
 
 #[derive(Debug)]
@@ -40,7 +42,7 @@ pub async fn fetch_policy(
     docker_config: Option<DockerConfig>,
     sources: Option<&Sources>,
 ) -> Result<PathBuf> {
-    let url = match Url::parse(url) {
+    let mut url = match Url::parse(url) {
         Ok(u) => Ok(u),
         Err(ParseError::RelativeUrlWithoutBase) => {
             Url::parse(format!("registry://{}", url).as_str())
@@ -54,7 +56,11 @@ pub async fn fetch_policy(
                 .to_file_path()
                 .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err));
         }
-        "http" | "https" | "registry" => Ok(()),
+        "registry" => {
+            add_tag_if_not_present(&mut url);
+            Ok(())
+        }
+        "http" | "https" => Ok(()),
         _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
     }?;
     let (store, destination) = pull_destination(&url, &destination)?;
@@ -174,6 +180,18 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
             .map(|port| format!(":{}", port))
             .unwrap_or_default(),
     ))
+}
+
+fn add_tag_if_not_present(url: &mut Url) {
+    if let Ok(reference) = Reference::from_str(
+        url.as_ref()
+            .strip_prefix("registry://")
+            .unwrap_or_else(|| url.as_ref()),
+    ) {
+        if reference.tag() == None {
+            url.set_path(&[url.path(), "latest"].join(":"));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -306,5 +324,41 @@ mod tests {
             ),
         );
         Ok(())
+    }
+
+    #[test]
+    fn latest_tag_added_if_tag_not_present() {
+        let mut input =
+            Url::parse("registry://ghcr.io/kubewarden/policies/psp-capabilities").unwrap();
+        let expected = "registry://ghcr.io/kubewarden/policies/psp-capabilities:latest";
+        add_tag_if_not_present(&mut input);
+        assert_eq!(expected, input.to_string())
+    }
+
+    #[test]
+    fn latest_tag_not_added_if_tag_is_present() {
+        let mut input =
+            Url::parse("registry://ghcr.io/kubewarden/policies/psp-capabilities:v1").unwrap();
+        let expected = "registry://ghcr.io/kubewarden/policies/psp-capabilities:v1";
+        add_tag_if_not_present(&mut input);
+        assert_eq!(expected, input.to_string())
+    }
+
+    #[test]
+    fn latest_tag_added_if_not_present_and_port_is_present() {
+        let mut input =
+            Url::parse("registry://ghcr.io:433/kubewarden/policies/psp-capabilities").unwrap();
+        let expected = "registry://ghcr.io:433/kubewarden/policies/psp-capabilities:latest";
+        add_tag_if_not_present(&mut input);
+        assert_eq!(expected, input.to_string())
+    }
+
+    #[test]
+    fn latest_tag_added_if_not_present_and_ip_is_used() {
+        let mut input =
+            Url::parse("registry://0.0.0.0:433/kubewarden/policies/psp-capabilities").unwrap();
+        let expected = "registry://0.0.0.0:433/kubewarden/policies/psp-capabilities:latest";
+        add_tag_if_not_present(&mut input);
+        assert_eq!(expected, input.to_string())
     }
 }
