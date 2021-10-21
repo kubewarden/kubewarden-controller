@@ -107,6 +107,27 @@ impl Registry {
             .unwrap_or(RegistryAuth::Anonymous)
     }
 
+    /// Fetch the manifest of the OCI object referenced by the given url.
+    /// The url is expected to be in the "registry://" format.
+    pub(crate) async fn manifest(
+        &self,
+        url: &str,
+        sources: &Option<Sources>,
+    ) -> Result<oci_distribution::manifest::OciManifest> {
+        let url = Url::parse(url).map_err(|_| anyhow!("invalid URL: {}", url))?;
+        let reference =
+            Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
+
+        let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
+        let cp = crate::client_protocol(&url, &sources.clone().unwrap_or_default())?;
+
+        let (m, _) = Registry::client(cp)
+            .pull_manifest(&reference, &registry_auth)
+            .await?;
+
+        Ok(m)
+    }
+
     pub async fn push(&self, policy: &[u8], url: &str, sources: &Option<Sources>) -> Result<()> {
         let url = Url::parse(url).map_err(|_| anyhow!("invalid URL: {}", url))?;
 

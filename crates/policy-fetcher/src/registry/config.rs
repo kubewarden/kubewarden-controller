@@ -1,6 +1,9 @@
 use anyhow::{anyhow, Result};
+use oci_distribution::Reference;
 use serde::Deserialize;
-use std::{collections::HashMap, convert::TryFrom, convert::TryInto, fs::File, path::Path};
+use std::{
+    collections::HashMap, convert::TryFrom, convert::TryInto, fs::File, path::Path, str::FromStr,
+};
 use tracing::error;
 
 #[derive(Deserialize, Debug)]
@@ -23,9 +26,30 @@ pub enum RegistryAuth {
     BasicAuth(Vec<u8>, Vec<u8>),
 }
 
+impl TryFrom<RegistryAuth> for sigstore::registry::Auth {
+    type Error = anyhow::Error;
+
+    fn try_from(ra: RegistryAuth) -> Result<Self> {
+        let RegistryAuth::BasicAuth(username, password) = ra;
+        Ok(sigstore::registry::Auth::Basic(
+            String::from_utf8(username).map_err(|e| anyhow!("username is not utf8: {:?}", e))?,
+            String::from_utf8(password).map_err(|e| anyhow!("password is not utf8: {:?}", e))?,
+        ))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct DockerConfig {
     pub auths: HashMap<String, RegistryAuth>,
+}
+
+impl DockerConfig {
+    pub fn auth(&self, image_url: &str) -> Result<Option<RegistryAuth>> {
+        let reference =
+            Reference::from_str(image_url.strip_prefix("registry://").unwrap_or(image_url))?;
+
+        Ok(self.auths.get(reference.registry()).cloned())
+    }
 }
 
 impl TryFrom<DockerConfigRaw> for DockerConfig {

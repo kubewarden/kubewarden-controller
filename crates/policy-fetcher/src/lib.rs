@@ -14,6 +14,7 @@ pub mod policy;
 pub mod registry;
 pub mod sources;
 pub mod store;
+pub mod verify;
 
 use crate::registry::config::DockerConfig;
 
