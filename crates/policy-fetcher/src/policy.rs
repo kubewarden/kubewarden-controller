@@ -1,3 +1,4 @@
+use sha2::{Digest, Sha256};
 use std::fmt;
 use std::fmt::Display;
 use std::path::PathBuf;
@@ -6,6 +7,13 @@ use std::path::PathBuf;
 pub struct Policy {
     pub uri: String,
     pub local_path: PathBuf,
+}
+
+impl Policy {
+    pub fn digest(&self) -> Result<String, std::io::Error> {
+        let d = Sha256::digest(&std::fs::read(&self.local_path)?);
+        Ok(format!("{:x}", d))
+    }
 }
 
 impl Display for Policy {

@@ -115,6 +115,83 @@ impl TryFrom<RawCertificate> for Certificate {
     }
 }
 
+impl From<&Certificate> for sigstore::registry::Certificate {
+    fn from(cert: &Certificate) -> Self {
+        match cert {
+            Certificate::Der(data) => sigstore::registry::Certificate {
+                encoding: sigstore::registry::CertificateEncoding::Der,
+                data: data.clone(),
+            },
+            Certificate::Pem(data) => sigstore::registry::Certificate {
+                encoding: sigstore::registry::CertificateEncoding::Pem,
+                data: data.clone(),
+            },
+        }
+    }
+}
+
+impl From<Sources> for oci_distribution::client::ClientConfig {
+    fn from(sources: Sources) -> Self {
+        let protocol = if sources.insecure_sources.is_empty() {
+            oci_distribution::client::ClientProtocol::Https
+        } else {
+            let insecure: Vec<String> = sources.insecure_sources.iter().cloned().collect();
+            oci_distribution::client::ClientProtocol::HttpsExcept(insecure)
+        };
+
+        let extra_root_certificates: Vec<oci_distribution::client::Certificate> = sources
+            .source_authorities
+            .0
+            .iter()
+            .map(|(_, certs)| {
+                certs
+                    .iter()
+                    .map(|c| c.into())
+                    .collect::<Vec<oci_distribution::client::Certificate>>()
+            })
+            .flatten()
+            .collect();
+
+        oci_distribution::client::ClientConfig {
+            accept_invalid_hostnames: false,
+            accept_invalid_certificates: false,
+            protocol,
+            extra_root_certificates,
+        }
+    }
+}
+
+impl From<Sources> for sigstore::registry::ClientConfig {
+    fn from(sources: Sources) -> Self {
+        let protocol = if sources.insecure_sources.is_empty() {
+            sigstore::registry::ClientProtocol::Https
+        } else {
+            let insecure: Vec<String> = sources.insecure_sources.iter().cloned().collect();
+            sigstore::registry::ClientProtocol::HttpsExcept(insecure)
+        };
+
+        let extra_root_certificates: Vec<sigstore::registry::Certificate> = sources
+            .source_authorities
+            .0
+            .iter()
+            .map(|(_, certs)| {
+                certs
+                    .iter()
+                    .map(|c| c.into())
+                    .collect::<Vec<sigstore::registry::Certificate>>()
+            })
+            .flatten()
+            .collect();
+
+        sigstore::registry::ClientConfig {
+            accept_invalid_hostnames: false,
+            accept_invalid_certificates: false,
+            protocol,
+            extra_root_certificates,
+        }
+    }
+}
+
 impl Sources {
     pub(crate) fn is_insecure_source(&self, host: &str) -> bool {
         self.insecure_sources.contains(host)
