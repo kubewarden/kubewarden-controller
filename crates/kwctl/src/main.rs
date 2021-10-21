@@ -7,7 +7,6 @@ extern crate pretty_bytes;
 #[macro_use]
 extern crate prettytable;
 extern crate serde_yaml;
-extern crate sha2;
 
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
