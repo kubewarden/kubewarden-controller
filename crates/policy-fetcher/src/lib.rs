@@ -27,6 +27,7 @@ use crate::store::Store;
 use oci_distribution::Reference;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use tracing::debug;
 use url::ParseError;
 
 #[derive(Debug)]
@@ -82,7 +83,7 @@ pub async fn fetch_policy(
         }
         _ => unreachable!(),
     }
-    eprintln!("pulling policy...");
+    debug!(?url, "pulling policy");
     let policy_fetcher = url_fetcher(url.scheme(), docker_config)?;
     let sources_default = Sources::default();
     let sources = sources.unwrap_or(&sources_default);

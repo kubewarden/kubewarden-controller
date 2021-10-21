@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use std::{collections::HashMap, convert::TryFrom, convert::TryInto, fs::File, path::Path};
+use tracing::error;
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct RegistryAuthRaw {
@@ -38,9 +39,10 @@ impl TryFrom<DockerConfigRaw> for DockerConfig {
                 .filter_map(|(host, auth)| match OptionalRegistryAuth::try_from(auth) {
                     Ok(registry_auth) => registry_auth.map(|registry_auth| (host, registry_auth)),
                     Err(e) => {
-                        eprintln!(
-                            "error parsing host {} configuration: {}; host ignored",
-                            host, e
+                        error!(
+                            host = %host,
+                            error = %e,
+                            "error parsing host configuration, host ignored",
                         );
                         None
                     }
