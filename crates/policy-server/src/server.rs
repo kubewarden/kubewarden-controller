@@ -60,7 +60,7 @@ pub(crate) async fn run_server(
                 async move {
                     Ok::<_, hyper::Error>(service_fn(move |req| api::route(req, svc_tx.clone())))
                 }
-            });
+            })
         };
     }
 
