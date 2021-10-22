@@ -4,7 +4,6 @@ use policy_fetcher::policy::Policy;
 use policy_fetcher::store::Store;
 use pretty_bytes::converter::convert;
 use prettytable::{format, Table};
-use sha2::{Digest, Sha256};
 
 pub(crate) fn list() -> Result<()> {
     if policy_list()?.is_empty() {
@@ -39,10 +38,8 @@ pub(crate) fn list() -> Result<()> {
                 ("unknown", "no")
             };
 
-        let sha256sum = format!(
-            "{:.12x}",
-            Sha256::digest(&std::fs::read(&policy.local_path)?)
-        );
+        let mut sha256sum = policy.digest()?;
+        sha256sum.truncate(12);
 
         let policy_filesystem_metadata = std::fs::metadata(&policy.local_path)?;
 

@@ -1825,7 +1825,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "sha2",
  "sigstore 0.0.1 (git+https://github.com/flavio/sigstore-rs?branch=main)",
  "syntect",
  "tempfile",
