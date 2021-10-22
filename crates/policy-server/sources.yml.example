@@ -1,8 +1,16 @@
+---
 insecure_sources:
   - "registry.dev.my-corp.com"
   - "registry-2.dev.my-corp.com:5001"
 source_authorities:
   "registry.pre.my-corp.com":
-    ca_path: "/path/to/ca.crt"
+    - type: Path
+      path: "/path/to/ca.pem"
   "registry-2.pre.my-corp.com:5001":
-    ca_path: "/path/to/ca.crt"
+    - type: Path
+      path: "/path/to/ca.pem"
+    - type: Path
+      path: "/path/to/ca.der"
+    - type: Data
+      data: |
+            our PEM encoded cert
