@@ -1825,7 +1825,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "sigstore 0.0.1 (git+https://github.com/flavio/sigstore-rs?branch=main)",
  "syntect",
  "tempfile",
  "tokio 1.12.0",
@@ -2518,7 +2517,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
- "sigstore 0.0.1 (git+https://github.com/flavio/sigstore-rs?tag=v0.0.1)",
+ "sigstore",
  "tracing",
  "url 2.2.2",
  "walkdir",
@@ -3171,23 +3170,6 @@ dependencies = [
 name = "sigstore"
 version = "0.0.1"
 source = "git+https://github.com/flavio/sigstore-rs?tag=v0.0.1#e6d0c16f1cd7644121af0941641aaddab04aa310"
-dependencies = [
- "anyhow",
- "async-trait",
- "base64 0.13.0",
- "ecdsa",
- "oci-distribution 0.7.0",
- "p256",
- "serde",
- "serde_json",
- "tokio 1.12.0",
- "tracing",
-]
-
-[[package]]
-name = "sigstore"
-version = "0.0.1"
-source = "git+https://github.com/flavio/sigstore-rs?branch=main#e6d0c16f1cd7644121af0941641aaddab04aa310"
 dependencies = [
  "anyhow",
  "async-trait",

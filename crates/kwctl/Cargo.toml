@@ -29,7 +29,6 @@ regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8.17"
-sigstore = { git = "https://github.com/flavio/sigstore-rs", branch = "main" }
 syntect = "4.5.0"
 tokio-compat-02 = "0.2.0"
 tokio = { version = "^1", features = ["full"] }
