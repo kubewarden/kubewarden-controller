@@ -2,6 +2,24 @@
 ## [Unreleased]
 
 
+<a name="v0.2.3"></a>
+## [v0.2.3] - 2021-10-25
+### Bug Fixes
+- ensure latest version of wasmtime is used
+
+### Features
+- enrich tracing with extra AdmissionReview fields.
+
+### Pull Requests
+- Merge pull request [#115](https://github.com/kubewarden/policy-server/issues/115) from ereslibre/enable-metrics-envvar
+- Merge pull request [#108](https://github.com/kubewarden/policy-server/issues/108) from ereslibre/metrics
+- Merge pull request [#112](https://github.com/kubewarden/policy-server/issues/112) from kubewarden/upgrade-wasmtime
+- Merge pull request [#111](https://github.com/kubewarden/policy-server/issues/111) from kubewarden/handle-new-sources-format
+- Merge pull request [#100](https://github.com/kubewarden/policy-server/issues/100) from jvanz/enrich-traces
+- Merge pull request [#104](https://github.com/kubewarden/policy-server/issues/104) from flavio/remove-jaeger-tracing
+- Merge pull request [#101](https://github.com/kubewarden/policy-server/issues/101) from flavio/tracing-local-development
+
+
 <a name="v0.2.2"></a>
 ## [v0.2.2] - 2021-10-04
 ### Pull Requests
@@ -130,7 +148,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.3...HEAD
+[v0.2.3]: https://github.com/kubewarden/policy-server/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/kubewarden/policy-server/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/kubewarden/policy-server/compare/v0.2.0...v0.2.1
 [v0.2.0]: https://github.com/kubewarden/policy-server/compare/v0.1.10...v0.2.0
