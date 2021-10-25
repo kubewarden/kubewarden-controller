@@ -288,6 +288,13 @@ func (r *Reconciler) enablePolicyWebhook(
 		return errors.New("policy server not yet ready")
 	}
 
+	setTrueConditionType(&policyServer.Status.Conditions, policiesv1alpha2.PolicyServerServiceActive)
+	policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusActive
+	err = r.UpdatePolicyServerStatus(context.Background(), policyServer)
+	if err != nil {
+		return err
+	}
+	r.Log.Info("policy server " + policyServer.Name + " active")
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		clusterAdmissionPolicy := clusterAdmissionPolicy // safely use pointer inside for
 		// register the new dynamic admission controller only once the policy is
@@ -381,6 +388,18 @@ func (r *Reconciler) UpdateAdmissionPolicyStatus(
 ) error {
 	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
 		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
+	}
+	return nil
+}
+
+// UpdatePolicyServerStatus Updates the status subresource of the passed
+// clusterPolicyServer with a Client apt for it.
+func (r *Reconciler) UpdatePolicyServerStatus(
+	ctx context.Context,
+	policyServer *policiesv1alpha2.PolicyServer,
+) error {
+	if err := r.Client.Status().Update(ctx, policyServer); err != nil {
+		return fmt.Errorf("failed to update PolicyServer %q status", &policyServer.ObjectMeta)
 	}
 	return nil
 }

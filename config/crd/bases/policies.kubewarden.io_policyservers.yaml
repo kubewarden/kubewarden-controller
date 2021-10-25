@@ -16,7 +16,12 @@ spec:
     singular: policyserver
   scope: Cluster
   versions:
-  - name: v1alpha2
+  - additionalPrinterColumns:
+    - description: Status of the policy server
+      jsonPath: .status.policyServerStatus
+      name: Status
+      type: string
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: PolicyServer is the Schema for the policyservers API
@@ -46,7 +51,6 @@ spec:
                 type: object
               env:
                 description: List of environment variables to set in the container.
-                  Cannot be updated.
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -252,8 +256,15 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              policyServerStatus:
+                enum:
+                - unscheduled
+                - unschedulable
+                - pending
+                - active
+                type: string
             required:
-            - conditions
+            - policyServerStatus
             type: object
         type: object
     served: true

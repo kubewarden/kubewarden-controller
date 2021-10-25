@@ -151,6 +151,31 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.PolicyServer{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		Watches(&source.Kind{Type: &policiesv1alpha2.PolicyServer{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			policyServer, ok := object.(*policiesv1alpha2.PolicyServer)
+			if !ok {
+				r.Log.Error(err, "object is not type of PolicyServer: %#v", policyServer)
+				return []ctrl.Request{}
+			}
+
+			if policyServer.ObjectMeta.DeletionTimestamp == nil {
+				policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusPending
+				err = r.Reconciler.UpdatePolicyServerStatus(context.Background(), policyServer)
+				if err != nil {
+					r.Log.Error(err, "cannot update status of policy server "+policyServer.Name)
+					return []ctrl.Request{}
+				}
+				r.Log.Info("policy server" + policyServer.Name + " pending")
+				return []ctrl.Request{
+					{
+						NamespacedName: client.ObjectKey{
+							Name: policyServer.Name,
+						},
+					},
+				}
+			}
+			return []ctrl.Request{}
+		})).
 		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
 			policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
 			if !ok {

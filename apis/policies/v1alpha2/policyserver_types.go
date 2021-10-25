@@ -79,10 +79,28 @@ const (
 	// PolicyServerServiceReconciled represents the condition of the
 	// Policy Server Service reconciliation
 	PolicyServerServiceReconciled PolicyConditionType = "PolicyServerServiceReconciled"
+	// PolicyServerServiceActive represents the condition of the
+	// Policy Server ready and active
+	PolicyServerServiceActive PolicyConditionType = "PolicyServerActive"
+)
+
+// +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
+type PolicyServerStatusEnum string
+
+const (
+	//  PolicyServerStatusPending represents that policy server is still
+	//  starting and it is not receiving requests
+	PolicyServerStatusPending PolicyServerStatusEnum = "pending"
+	//  PolicyServerStatusPending represents that policy server is able
+	//  receive requests
+	PolicyServerStatusActive PolicyServerStatusEnum = "active"
 )
 
 // PolicyServerStatus defines the observed state of PolicyServer
 type PolicyServerStatus struct {
+	// PolicyServerStatus represents whether this PolicyServer is
+	// pending, or active.
+	PolicyServerStatus PolicyServerStatusEnum `json:"policyServerStatus"`
 	// Conditions represent the observed conditions of the
 	// PolicyServer resource.  Known .status.conditions.types
 	// are: "PolicyServerSecretReconciled",
@@ -92,13 +110,13 @@ type PolicyServerStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
-
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyServerStatus`,description="Status of the policy server"
 // PolicyServer is the Schema for the policyservers API
 type PolicyServer struct {
 	metav1.TypeMeta   `json:",inline"`
