@@ -10,8 +10,11 @@ const (
 	PolicyServerCARootPrivateKeyCertName = "policy-server-root-ca-privatekey-cert"
 
 	// PolicyServer Deployment
+	PolicyServerEnableMetricsEnvVar        = "KUBEWARDEN_ENABLE_METRICS"
 	PolicyServerDeploymentConfigAnnotation = "config/version"
 	PolicyServerPort                       = 8443
+	PolicyServerMetricsPortEnvVar          = "KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT"
+	PolicyServerMetricsPort                = 8080
 	PolicyServerReadinessProbe             = "/readiness"
 
 	// PolicyServer ConfigMap
