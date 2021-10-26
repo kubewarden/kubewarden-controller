@@ -2,6 +2,15 @@
 ## [Unreleased]
 
 
+<a name="v0.2.4"></a>
+## [v0.2.4] - 2021-10-25
+### Features
+- Bump policy-fetcher v0.1.17, new sources.yml format
+
+### Pull Requests
+- Merge pull request [#116](https://github.com/kubewarden/policy-server/issues/116) from viccuad/bump-sources
+
+
 <a name="v0.2.3"></a>
 ## [v0.2.3] - 2021-10-25
 ### Bug Fixes
@@ -148,7 +157,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.4...HEAD
+[v0.2.4]: https://github.com/kubewarden/policy-server/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/kubewarden/policy-server/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/kubewarden/policy-server/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/kubewarden/policy-server/compare/v0.2.0...v0.2.1
