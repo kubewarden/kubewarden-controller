@@ -195,11 +195,11 @@ impl From<Sources> for sigstore::registry::ClientConfig {
 }
 
 impl Sources {
-    pub(crate) fn is_insecure_source(&self, host: &str) -> bool {
+    pub fn is_insecure_source(&self, host: &str) -> bool {
         self.insecure_sources.contains(host)
     }
 
-    pub(crate) fn source_authority(&self, host: &str) -> Option<Vec<Certificate>> {
+    pub fn source_authority(&self, host: &str) -> Option<Vec<Certificate>> {
         self.source_authorities.0.get(host).map(Clone::clone)
     }
 }
