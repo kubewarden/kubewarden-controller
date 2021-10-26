@@ -58,42 +58,79 @@ func TestArePoliciesEqual(t *testing.T) {
 	}
 }
 
-func TestShouldUpdateSourcesMap(t *testing.T) {
+func TestShouldUpdateSourcesList(t *testing.T) {
 	tests := []struct {
-		name                   string
-		currentSourcesYML      string
-		newInsecureSourcesList []string
-		expect                 bool
+		name              string
+		currentSourcesYML string
+		newSourcesList    policyServerSourcesEntry
+		expect            bool
 	}{
 		{
 			"empty sources",
 			"{}",
-			nil,
+			policyServerSourcesEntry{},
 			false,
 		},
 		{
 			"add insecure_sources",
 			"{}",
-			[]string{"localhost:5000"},
+			policyServerSourcesEntry{InsecureSources: []string{"localhost:5000"}},
 			true,
 		},
 		{
 			"remove insecure_sources",
 			"{\"insecure_sources\":[\"localhost:5000\"]}",
-			make([]string, 0),
+			policyServerSourcesEntry{},
 			true,
 		},
 		{
 			"same insecure_sources",
 			"{\"insecure_sources\":[\"localhost:5000\"]}",
-			[]string{"localhost:5000"},
+			policyServerSourcesEntry{InsecureSources: []string{"localhost:5000"}},
+			false,
+		},
+		{
+			"add source_authorities",
+			"{}",
+			policyServerSourcesEntry{
+				InsecureSources: []string{},
+				SourceAuthorities: map[string][]policyServerSourceAuthority{
+					"host.k3d.internal:5000": {
+						policyServerSourceAuthority{
+							Type: "Data",
+							Data: "pem cert 1",
+						},
+					},
+				},
+			},
+			true,
+		},
+		{
+			"remove source_authorities",
+			"{\"source_authorities\":{\"host.k3d.internal:5000\":[{\"type\": \"Data\",\"data\":\"pem cert 1\"}]}}",
+			policyServerSourcesEntry{},
+			true,
+		},
+		{
+			"same source_authorities",
+			"{\"source_authorities\":{\"host.k3d.internal:5000\":[{\"type\": \"Data\",\"data\":\"pem cert 1\"}]}}",
+			policyServerSourcesEntry{
+				SourceAuthorities: map[string][]policyServerSourceAuthority{
+					"host.k3d.internal:5000": {
+						policyServerSourceAuthority{
+							Type: "Data",
+							Data: "pem cert 1",
+						},
+					},
+				},
+			},
 			false,
 		},
 	}
 	for _, test := range tests {
 		tt := test // ensure tt is correctly scoped when used in function literal
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := shouldUpdateSourcesMap(tt.currentSourcesYML, tt.newInsecureSourcesList)
+			got, err := shouldUpdateSourcesList(tt.currentSourcesYML, tt.newSourcesList)
 			if err != nil {
 				t.Errorf("unexpected error %s", err.Error())
 			}
