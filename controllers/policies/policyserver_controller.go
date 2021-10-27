@@ -26,6 +26,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -67,7 +68,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
+		return ctrl.Result{}, fmt.Errorf("cannot retrieve policy server: %w", err)
 	}
 
 	if policyServer.ObjectMeta.DeletionTimestamp != nil {
@@ -94,6 +95,10 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	if err := r.updatePolicyServerStatus(ctx, &policyServer); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update policy server status error: %w", err)
+	}
+
 	// Reconcile
 	if err := admissionReconciler.Reconcile(ctx, &policyServer); err != nil {
 		if admission.IsPolicyServerNotReady(err) {
@@ -116,6 +121,7 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
 ) error {
+	r.Reconciler.ReconcileStatus(ctx, policyServer)
 	return errors.Wrapf(
 		r.Client.Status().Update(ctx, policyServer),
 		"failed to update PolicyServer %q status", &policyServer.ObjectMeta,
@@ -147,35 +153,34 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
-
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.PolicyServer{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Watches(&source.Kind{Type: &policiesv1alpha2.PolicyServer{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
-			policyServer, ok := object.(*policiesv1alpha2.PolicyServer)
+		Watches(&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			deployment, ok := object.(*appsv1.Deployment)
 			if !ok {
-				r.Log.Error(err, "object is not type of PolicyServer: %#v", policyServer)
+				r.Log.Error(err, "object is not type of Deployment: %#v", deployment)
 				return []ctrl.Request{}
 			}
-
-			if policyServer.ObjectMeta.DeletionTimestamp == nil {
-				policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusPending
-				err = r.Reconciler.UpdatePolicyServerStatus(context.Background(), policyServer)
-				if err != nil {
-					r.Log.Error(err, "cannot update status of policy server "+policyServer.Name)
-					return []ctrl.Request{}
-				}
-				r.Log.Info("policy server" + policyServer.Name + " pending")
+			if policy_name, ok := deployment.Labels[constants.PolicyServerNameLabelKey]; ok {
 				return []ctrl.Request{
 					{
 						NamespacedName: client.ObjectKey{
-							Name: policyServer.Name,
+							Name: policy_name,
 						},
 					},
 				}
 			}
 			return []ctrl.Request{}
-		})).
+		})).Complete(r)
+
+	if err != nil {
+		err = fmt.Errorf("failed enrolling controller with manager: %w", err)
+		return err
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).
+		For(&policiesv1alpha2.PolicyServer{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
 			policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
 			if !ok {

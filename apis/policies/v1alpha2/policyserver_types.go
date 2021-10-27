@@ -84,7 +84,7 @@ const (
 	PolicyServerServiceActive PolicyConditionType = "PolicyServerActive"
 )
 
-// +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
+// +kubebuilder:validation:Enum=pending;active
 type PolicyServerStatusEnum string
 
 const (

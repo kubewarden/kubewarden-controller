@@ -20,7 +20,8 @@ const (
 	PolicyServerConfigSourcesEntry          = "sources.yml"
 
 	// Label
-	AppLabelKey = "app"
+	AppLabelKey              = "app"
+	PolicyServerNameLabelKey = "policyServerName"
 
 	// Index
 	PolicyServerIndexKey  = "policyServer"

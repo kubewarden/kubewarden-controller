@@ -108,6 +108,27 @@ func (r *Reconciler) ReconcileDeletion(
 	return errors
 }
 
+func (r *Reconciler) ReconcileStatus(
+	ctx context.Context,
+	policyServer *policiesv1alpha2.PolicyServer,
+) {
+	ok, _ := r.isPolicyServerReady(ctx, policyServer)
+	policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusPending
+	if ok {
+		policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusActive
+		setTrueConditionType(
+			&policyServer.Status.Conditions,
+			policiesv1alpha2.PolicyServerServiceActive,
+		)
+	} else {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			policiesv1alpha2.PolicyServerServiceActive,
+			"policy server replicas are not ready",
+		)
+	}
+}
+
 func setFalseConditionType(
 	conditions *[]metav1.Condition,
 	conditionType policiesv1alpha2.PolicyConditionType,
@@ -288,13 +309,6 @@ func (r *Reconciler) enablePolicyWebhook(
 		return errors.New("policy server not yet ready")
 	}
 
-	setTrueConditionType(&policyServer.Status.Conditions, policiesv1alpha2.PolicyServerServiceActive)
-	policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusActive
-	err = r.UpdatePolicyServerStatus(context.Background(), policyServer)
-	if err != nil {
-		return err
-	}
-	r.Log.Info("policy server " + policyServer.Name + " active")
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		clusterAdmissionPolicy := clusterAdmissionPolicy // safely use pointer inside for
 		// register the new dynamic admission controller only once the policy is

@@ -257,9 +257,9 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               policyServerStatus:
+                description: PolicyServerStatus represents whether this PolicyServer
+                  is pending, or active.
                 enum:
-                - unscheduled
-                - unschedulable
                 - pending
                 - active
                 type: string
