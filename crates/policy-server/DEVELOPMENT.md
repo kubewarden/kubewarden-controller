@@ -62,7 +62,8 @@ cargo run --release -- \
   --policies policies.yml \
   --workers 2 \
   --log-fmt otlp \
-  --log-level debug
+  --log-level debug \
+  --enable-metrics
 ```
 
 Some notes about this command:
