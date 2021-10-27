@@ -14,17 +14,30 @@ WORKDIR /usr/src/policy-server
 COPY . .
 RUN cargo install --root /usr/local/cargo --path .
 
-# final image
-FROM registry.opensuse.org/opensuse/leap:15.3
-LABEL org.opencontainers.image.source https://github.com/kubewarden/policy-server
+FROM registry.suse.com/suse/sle15:latest as sle
 
-COPY --from=builder /usr/local/cargo/bin/policy-server /usr/local/bin/policy-server
+RUN zypper download libopenssl1_1
+# move rpm packages to / to strip arch from path:
+RUN find /var/cache/zypp/packages/ -iname '*.rpm' -exec mv '{}' / \;
 
 RUN useradd \
   --system \
   --shell "/sbin/nologin" \
   --uid 2000 \
   kubewarden
+
+# final image
+FROM registry.suse.com/bci/minimal
+LABEL org.opencontainers.image.source https://github.com/kubewarden/policy-server
+
+USER root
+
+COPY --from=sle /etc/passwd /etc/passwd
+COPY --from=sle /*.rpm /
+COPY --from=builder /usr/local/cargo/bin/policy-server /usr/local/bin/policy-server
+
+RUN rpm --install /*.rpm; rm -f /*.rpm
+
 USER kubewarden
 
 EXPOSE 3000
