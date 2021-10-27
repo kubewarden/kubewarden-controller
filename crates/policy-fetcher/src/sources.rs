@@ -195,11 +195,11 @@ impl From<Sources> for sigstore::registry::ClientConfig {
 }
 
 impl Sources {
-    pub(crate) fn is_insecure_source(&self, host: &str) -> bool {
+    pub fn is_insecure_source(&self, host: &str) -> bool {
         self.insecure_sources.contains(host)
     }
 
-    pub(crate) fn source_authority(&self, host: &str) -> Option<Vec<Certificate>> {
+    pub fn source_authority(&self, host: &str) -> Option<Vec<Certificate>> {
         self.source_authorities.0.get(host).map(Clone::clone)
     }
 }
@@ -214,7 +214,6 @@ mod tests {
     use serde_json::json;
     use std::io::Write;
     use tempfile::NamedTempFile;
-    use textwrap::indent;
 
     const CERT_DATA: &str = r#"-----BEGIN CERTIFICATE-----
 MIICUTCCAfugAwIBAgIBADANBgkqhkiG9w0BAQQFADBXMQswCQYDVQQGEwJDTjEL
@@ -337,49 +336,5 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
         for actual_cert in actual_certs {
             assert_eq!(actual_cert, &expected_cert);
         }
-    }
-
-    #[test]
-    fn test_read_sources_file() -> Result<()> {
-        let mut sources_file = NamedTempFile::new()?;
-
-        let expected_contents = r#"
-insecure_sources:
-  - "localhost:5000"
-source_authorities:
-  "example.com:5000":
-    - type: Data
-      data: |
-"#;
-        write!(sources_file, "{}", expected_contents)?;
-        write!(sources_file, "{}", indent(CERT_DATA, "            "))?;
-
-        let expected_cert = Certificate::Pem(CERT_DATA.into());
-        let path = sources_file.path();
-        let actual: Result<Sources> = read_sources_file(path);
-
-        match actual {
-            Ok(_) => {
-                assert_eq!(
-                    actual
-                        .as_ref()
-                        .unwrap()
-                        .source_authorities
-                        .0
-                        .get("example.com:5000")
-                        .unwrap()[0],
-                    expected_cert
-                );
-                assert!(actual
-                    .as_ref()
-                    .unwrap()
-                    .insecure_sources
-                    .contains("localhost:5000"));
-            }
-            unexpected => {
-                panic!("Didn't get what I was expecting: {:?}", unexpected);
-            }
-        }
-        Ok(())
     }
 }
