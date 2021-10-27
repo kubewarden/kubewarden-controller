@@ -31,7 +31,7 @@ const (
 
 type policyServerSourceAuthority struct {
 	Type sourceAuthorityType `json:"type"`
-	Data string              `json:"data"` // contains a PEM or DER encoded certificate
+	Data string              `json:"data"` // contains a PEM encoded certificate
 }
 
 // nolint:tagliatelle
