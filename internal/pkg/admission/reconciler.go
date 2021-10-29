@@ -2,13 +2,13 @@ package admission
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	"github.com/pkg/errors"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -108,11 +108,11 @@ func (r *Reconciler) ReconcileDeletion(
 	return errors
 }
 
-func (r *Reconciler) ReconcileStatus(
+func (r *Reconciler) reconcileStatus(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
-) {
-	ok, _ := r.isPolicyServerReady(ctx, policyServer)
+) error {
+	ok, err := r.isPolicyServerReady(ctx, policyServer)
 	policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusPending
 	if ok {
 		policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusActive
@@ -127,6 +127,17 @@ func (r *Reconciler) ReconcileStatus(
 			"policy server replicas are not ready",
 		)
 	}
+	if updateErr := r.Client.Status().Update(ctx, policyServer); updateErr != nil {
+		// If something change the resource during the reconcile loop, ignore it.
+		if apierrors.IsConflict(updateErr) {
+			return err
+		}
+		return errors.Wrapf(
+			updateErr,
+			"failed to update policy server %q status", &policyServer.ObjectMeta,
+		)
+	}
+	return err
 }
 
 func setFalseConditionType(
@@ -260,6 +271,10 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerServiceReconciled,
 	)
 
+	if err := r.reconcileStatus(ctx, policyServer); err != nil {
+		return err
+	}
+
 	return r.enablePolicyWebhook(ctx, policyServer, policyServerCARootSecret, &clusterAdmissionPolicies)
 }
 
@@ -301,14 +316,6 @@ func (r *Reconciler) enablePolicyWebhook(
 	policyServer *policiesv1alpha2.PolicyServer,
 	policyServerSecret *corev1.Secret,
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
-	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
-	if err != nil {
-		return err
-	}
-	if !policyServerReady {
-		return errors.New("policy server not yet ready")
-	}
-
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		clusterAdmissionPolicy := clusterAdmissionPolicy // safely use pointer inside for
 		// register the new dynamic admission controller only once the policy is
@@ -402,18 +409,6 @@ func (r *Reconciler) UpdateAdmissionPolicyStatus(
 ) error {
 	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
 		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
-	}
-	return nil
-}
-
-// UpdatePolicyServerStatus Updates the status subresource of the passed
-// clusterPolicyServer with a Client apt for it.
-func (r *Reconciler) UpdatePolicyServerStatus(
-	ctx context.Context,
-	policyServer *policiesv1alpha2.PolicyServer,
-) error {
-	if err := r.Client.Status().Update(ctx, policyServer); err != nil {
-		return fmt.Errorf("failed to update PolicyServer %q status", &policyServer.ObjectMeta)
 	}
 	return nil
 }
