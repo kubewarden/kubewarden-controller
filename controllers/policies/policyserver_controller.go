@@ -70,6 +70,13 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, fmt.Errorf("cannot retrieve policy server: %w", err)
 	}
 
+	if policyServer.Status.PolicyServerStatus == "" {
+		policyServer.Status.PolicyServerStatus = policiesv1alpha2.PolicyServerStatusUnscheduled
+		if err := admissionReconciler.UpdatePolicyServerStatus(ctx, &policyServer); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if policyServer.ObjectMeta.DeletionTimestamp != nil {
 		if hasPolicies, err := admissionReconciler.HasClusterAdmissionPoliciesBounded(ctx, &policyServer); hasPolicies {
 			if err != nil {

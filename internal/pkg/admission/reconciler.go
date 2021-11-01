@@ -2,13 +2,13 @@ package admission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
-	"github.com/pkg/errors"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -127,15 +127,13 @@ func (r *Reconciler) reconcileStatus(
 			"policy server replicas are not ready",
 		)
 	}
-	if updateErr := r.Client.Status().Update(ctx, policyServer); updateErr != nil {
+	if updateErr := r.UpdatePolicyServerStatus(ctx, policyServer); updateErr != nil {
 		// If something change the resource during the reconcile loop, ignore it.
-		if apierrors.IsConflict(updateErr) {
+		originalErr := errors.Unwrap(updateErr)
+		if apierrors.IsConflict(originalErr) {
 			return err
 		}
-		return errors.Wrapf(
-			updateErr,
-			"failed to update policy server %q status", &policyServer.ObjectMeta,
-		)
+		return updateErr
 	}
 	return err
 }
@@ -409,6 +407,17 @@ func (r *Reconciler) UpdateAdmissionPolicyStatus(
 ) error {
 	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
 		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
+	}
+	return nil
+}
+
+// UpdatePolicyServerStatus Updates the status of the passed PolicyServer
+func (r *Reconciler) UpdatePolicyServerStatus(
+	ctx context.Context,
+	policyServer *policiesv1alpha2.PolicyServer,
+) error {
+	if err := r.Client.Status().Update(ctx, policyServer); err != nil {
+		return fmt.Errorf("failed to update policy server %q to pending status. %w", &policyServer.ObjectMeta, err)
 	}
 	return nil
 }

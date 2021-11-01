@@ -84,10 +84,13 @@ const (
 	PolicyServerServiceActive PolicyConditionType = "PolicyServerActive"
 )
 
-// +kubebuilder:validation:Enum=pending;active
+// +kubebuilder:validation:Enum=unscheduled;pending;active
 type PolicyServerStatusEnum string
 
 const (
+	// PolicyServerStatusUnscheduled is a transient state that will continue
+	// to pending or active. This is the default state.
+	PolicyServerStatusUnscheduled PolicyServerStatusEnum = "unscheduled"
 	//  PolicyServerStatusPending represents that policy server is still
 	//  starting and it is not receiving requests
 	PolicyServerStatusPending PolicyServerStatusEnum = "pending"

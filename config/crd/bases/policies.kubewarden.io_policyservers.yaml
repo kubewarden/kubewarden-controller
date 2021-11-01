@@ -260,6 +260,7 @@ spec:
                 description: PolicyServerStatus represents whether this PolicyServer
                   is pending, or active.
                 enum:
+                - unscheduled
                 - pending
                 - active
                 type: string
