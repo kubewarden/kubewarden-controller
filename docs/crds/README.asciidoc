@@ -151,8 +151,10 @@ PolicyServerSpec defines the desired state of PolicyServer
 | *`image`* __string__ | Docker image name.
 | *`replicas`* __integer__ | Replicas is the number of desired replicas.
 | *`annotations`* __object (keys:string, values:string)__ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations
-| *`env`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#envvar-v1-core[$$EnvVar$$] array__ | List of environment variables to set in the container. Cannot be updated.
+| *`env`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#envvar-v1-core[$$EnvVar$$] array__ | List of environment variables to set in the container.
 | *`serviceAccountName`* __string__ | Name of the service account associated with the policy server. Namespace service account will be used if not specified.
+| *`imagePullSecret`* __string__ | Name of ImagePullSecret secret in the same namespace, used for pulling policies from repositories.
+| *`insecureSources`* __string array__ | List of insecure URIs to policy repositories.
 |===
 
 
