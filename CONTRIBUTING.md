@@ -108,6 +108,14 @@ in the changelog:
 
 ## Tagging a new release
 
+### Make sure CRD docs are updated:
+
+```console
+$ cd docs/crds
+$ make generate
+$ # commit resulting changes
+```
+
 ### Create a new tag
 
 #### Requirements
@@ -153,3 +161,6 @@ executed succesfully.
 
 Now that the controller has a new tag released, consider bumping the
 [`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-controller).
+
+### Consider announcing the new release in channels!
+

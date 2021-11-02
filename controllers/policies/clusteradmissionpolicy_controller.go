@@ -38,7 +38,6 @@ type ClusterAdmissionPolicyReconciler struct {
 	Reconciler admission.Reconciler
 }
 
-//nolint:lll
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicies/finalizers,verbs=update
