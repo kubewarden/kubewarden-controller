@@ -182,7 +182,6 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	const (
 		certsVolumeName                  = "certs"
 		policiesConfigContainerPath      = "/config"
-		sourcesConfigContainerPath       = "/sources"
 		policiesFilename                 = "policies.yml"
 		sourcesFilename                  = "sources.yml"
 		policiesVolumeName               = "policies"
@@ -254,18 +253,18 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		)
 	}
-	if len(policyServer.Spec.InsecureSources) > 0 {
+	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
 			corev1.VolumeMount{
 				Name:      sourcesVolumeName,
 				ReadOnly:  true,
-				MountPath: sourcesConfigContainerPath,
+				MountPath: constants.PolicyServerSourcesConfigContainerPath,
 			},
 		)
 		admissionContainer.Env = append(admissionContainer.Env,
 			corev1.EnvVar{
 				Name:  "KUBEWARDEN_SOURCES_PATH",
-				Value: filepath.Join(sourcesConfigContainerPath, sourcesFilename),
+				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
 			},
 		)
 	}
@@ -347,7 +346,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		)
 	}
-	if len(policyServer.Spec.InsecureSources) > 0 {
+	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
 		policyServerDeployment.Spec.Template.Spec.Volumes = append(
 			policyServerDeployment.Spec.Template.Spec.Volumes,
 			corev1.Volume{
@@ -356,12 +355,6 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: policyServer.NameWithPrefix(),
-						},
-						Items: []corev1.KeyToPath{
-							{
-								Key:  constants.PolicyServerConfigSourcesEntry,
-								Path: sourcesFilename,
-							},
 						},
 					},
 				},

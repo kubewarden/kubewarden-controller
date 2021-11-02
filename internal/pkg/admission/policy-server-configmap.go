@@ -23,9 +23,21 @@ type policyServerConfigEntry struct {
 	Settings runtime.RawExtension `json:"settings,omitempty"`
 }
 
+type sourceAuthorityType string
+
+const (
+	Data sourceAuthorityType = "Data" // only data type is supported
+)
+
+type policyServerSourceAuthority struct {
+	Type sourceAuthorityType `json:"type"`
+	Data string              `json:"data"` // contains a PEM encoded certificate
+}
+
+// nolint:tagliatelle
 type policyServerSourcesEntry struct {
-	// nolint:tagliatelle
-	InsecureSources []string `json:"insecure_sources,omitempty"`
+	InsecureSources   []string                                 `json:"insecure_sources,omitempty"`
+	SourceAuthorities map[string][]policyServerSourceAuthority `json:"source_authorities,omitempty"`
 }
 
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
@@ -53,6 +65,7 @@ func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
 	policyServer *policiesv1alpha2.PolicyServer) error {
 	newPoliciesMap := r.createPoliciesMap(clusterAdmissionPolicies)
+	newSourcesList := r.createSourcesMap(policyServer)
 
 	var (
 		shouldUpdatePolicies, shouldUpdateSources bool
@@ -61,7 +74,8 @@ func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
 	if shouldUpdatePolicies, err = shouldUpdatePolicyMap(cfg.Data[constants.PolicyServerConfigPoliciesEntry], newPoliciesMap); err != nil {
 		return fmt.Errorf("cannot compare policies: %w", err)
 	}
-	if shouldUpdateSources, err = shouldUpdateSourcesMap(cfg.Data[constants.PolicyServerConfigSourcesEntry], policyServer.Spec.InsecureSources); err != nil {
+	if shouldUpdateSources, err = shouldUpdateSourcesList(cfg.Data[constants.PolicyServerConfigSourcesEntry],
+		newSourcesList); err != nil {
 		return fmt.Errorf("cannot compare insecureSources: %w", err)
 	}
 	if !(shouldUpdatePolicies || shouldUpdateSources) {
@@ -77,8 +91,7 @@ func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
 		patch.Data[constants.PolicyServerConfigPoliciesEntry] = string(newPoliciesYML)
 	}
 	if shouldUpdateSources {
-		newSources := r.createSourcesMap(policyServer.Spec.InsecureSources)
-		newSourcesYML, err := json.Marshal(newSources)
+		newSourcesYML, err := json.Marshal(newSourcesList)
 		if err != nil {
 			return fmt.Errorf("cannot marshal insecureSources: %w", err)
 		}
@@ -102,14 +115,13 @@ func shouldUpdatePolicyMap(currentPoliciesYML string, newPoliciesMap map[string]
 	return !reflect.DeepEqual(currentPoliciesMap, newPoliciesMap), nil
 }
 
-func shouldUpdateSourcesMap(currentSourcesYML string, newInsecureSourcesList []string) (bool, error) {
+func shouldUpdateSourcesList(currentSourcesYML string, newSources policyServerSourcesEntry) (bool, error) {
 	var currentSources policyServerSourcesEntry
-
 	if err := json.Unmarshal([]byte(currentSourcesYML), &currentSources); err != nil {
 		return false, fmt.Errorf("cannot unmarshal insecureSources: %w", err)
 	}
 
-	return !reflect.DeepEqual(currentSources.InsecureSources, newInsecureSourcesList), nil
+	return !reflect.DeepEqual(currentSources, newSources), nil
 }
 
 func (r *Reconciler) createPolicyServerConfigMap(
@@ -118,12 +130,12 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
 ) error {
 	policies := r.createPoliciesMap(clusterAdmissionPolicies)
-	sources := r.createSourcesMap(policyServer.Spec.InsecureSources)
-
 	policiesYML, err := json.Marshal(policies)
 	if err != nil {
 		return fmt.Errorf("cannot marshal policies: %w", err)
 	}
+
+	sources := r.createSourcesMap(policyServer)
 	sourcesYML, err := json.Marshal(sources)
 	if err != nil {
 		return fmt.Errorf("cannot marshal insecureSources: %w", err)
@@ -158,13 +170,25 @@ func (r *Reconciler) createPoliciesMap(clusterAdmissionPolicies *policiesv1alpha
 	return policies
 }
 
-func (r *Reconciler) createSourcesMap(sourcesList []string) policyServerSourcesEntry {
-	if sourcesList == nil {
-		sourcesList = make([]string, 0)
+func (r *Reconciler) createSourcesMap(policyServer *policiesv1alpha2.PolicyServer) (sourcesEntry policyServerSourcesEntry) {
+	sourcesEntry.InsecureSources = policyServer.Spec.InsecureSources
+	if sourcesEntry.InsecureSources == nil {
+		sourcesEntry.InsecureSources = make([]string, 0)
 	}
-	return policyServerSourcesEntry{
-		InsecureSources: sourcesList,
+
+	sourcesEntry.SourceAuthorities = make(map[string][]policyServerSourceAuthority)
+	// build sources.yml with data keys for policy-server
+	for uri, certs := range policyServer.Spec.SourceAuthorities {
+		sourcesEntry.SourceAuthorities[uri] = make([]policyServerSourceAuthority, 0)
+		for _, cert := range certs {
+			sourcesEntry.SourceAuthorities[uri] = append(sourcesEntry.SourceAuthorities[uri],
+				policyServerSourceAuthority{
+					Type: Data,
+					Data: cert,
+				})
+		}
 	}
+	return sourcesEntry
 }
 
 func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (string, error) {

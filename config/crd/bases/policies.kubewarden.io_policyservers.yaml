@@ -46,7 +46,6 @@ spec:
                 type: object
               env:
                 description: List of environment variables to set in the container.
-                  Cannot be updated.
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -170,6 +169,15 @@ spec:
                 description: Name of the service account associated with the policy
                   server. Namespace service account will be used if not specified.
                 type: string
+              sourceAuthorities:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
+                description: Key value map of registry URIs endpoints to a list of
+                  their associated PEM encoded certificate authorities that have to
+                  be used to verify the certificate used by the endpoint.
+                type: object
             required:
             - image
             - replicas

@@ -53,6 +53,12 @@ type PolicyServerSpec struct {
 	// List of insecure URIs to policy repositories.
 	// +optional
 	InsecureSources []string `json:"insecureSources,omitempty"`
+
+	// Key value map of registry URIs endpoints to a list of their associated
+	// PEM encoded certificate authorities that have to be used to verify the
+	// certificate used by the endpoint.
+	// +optional
+	SourceAuthorities map[string][]string `json:"sourceAuthorities,omitempty"`
 }
 
 type ReconciliationTransitionReason string
