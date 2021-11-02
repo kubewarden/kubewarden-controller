@@ -176,18 +176,16 @@ func (r *Reconciler) createSourcesMap(policyServer *policiesv1alpha2.PolicyServe
 		sourcesEntry.InsecureSources = make([]string, 0)
 	}
 
-	if policyServer.Spec.SourceAuthorities != nil {
-		sourcesEntry.SourceAuthorities = make(map[string][]policyServerSourceAuthority)
-		// build sources.yml with data keys for policy-server
-		for uri, certs := range policyServer.Spec.SourceAuthorities {
-			sourcesEntry.SourceAuthorities[uri] = make([]policyServerSourceAuthority, 0)
-			for _, cert := range certs {
-				sourcesEntry.SourceAuthorities[uri] = append(sourcesEntry.SourceAuthorities[uri],
-					policyServerSourceAuthority{
-						Type: Data,
-						Data: cert,
-					})
-			}
+	sourcesEntry.SourceAuthorities = make(map[string][]policyServerSourceAuthority)
+	// build sources.yml with data keys for policy-server
+	for uri, certs := range policyServer.Spec.SourceAuthorities {
+		sourcesEntry.SourceAuthorities[uri] = make([]policyServerSourceAuthority, 0)
+		for _, cert := range certs {
+			sourcesEntry.SourceAuthorities[uri] = append(sourcesEntry.SourceAuthorities[uri],
+				policyServerSourceAuthority{
+					Type: Data,
+					Data: cert,
+				})
 		}
 	}
 	return sourcesEntry
