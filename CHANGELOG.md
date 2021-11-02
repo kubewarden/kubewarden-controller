@@ -2,8 +2,8 @@
 ## [Unreleased]
 
 
-<a name="0.4.0"></a>
-## [0.4.0] - 2021-10-01
+<a name="v0.4.0"></a>
+## [v0.4.0] - 2021-10-01
 ### Features
 - Introduce a PolicyServer CRD that allow users to describe a Policy Server
   Deployment. The configuration of PolicyServer is now done through this
@@ -122,8 +122,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/0.4.0...HEAD
-[0.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...0.4.0
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.0...HEAD
+[v0.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...v0.4.0
 [v0.3.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.3...v0.3.0
