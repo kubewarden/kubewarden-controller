@@ -153,3 +153,6 @@ executed succesfully.
 
 Now that the controller has a new tag released, consider bumping the
 [`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-controller).
+
+### Consider announcing the new release in channels!
+
