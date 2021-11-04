@@ -16,11 +16,11 @@ pub mod sources;
 pub mod store;
 pub mod verify;
 
-use crate::registry::config::DockerConfig;
-
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
 use crate::local::Local;
+use crate::policy::Policy;
+use crate::registry::config::DockerConfig;
 use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
@@ -43,7 +43,7 @@ pub async fn fetch_policy(
     destination: PullDestination,
     docker_config: Option<DockerConfig>,
     sources: Option<&Sources>,
-) -> Result<PathBuf> {
+) -> Result<Policy> {
     let mut url = match Url::parse(url) {
         Ok(u) => Ok(u),
         Err(ParseError::RelativeUrlWithoutBase) => {
@@ -54,9 +54,12 @@ pub async fn fetch_policy(
     match url.scheme() {
         "file" => {
             // no-op: return early
-            return url
-                .to_file_path()
-                .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err));
+            return Ok(Policy {
+                uri: url.to_string(),
+                local_path: url
+                    .to_file_path()
+                    .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err))?,
+            });
         }
         "registry" => {
             add_tag_if_not_present(&mut url);
@@ -74,12 +77,18 @@ pub async fn fetch_policy(
             // On a registry, the `latest` tag always pulls the latest version
             let tag = url.as_str().split(':').last();
             if tag != Some("latest") && Path::exists(&destination) {
-                return Ok(destination);
+                return Ok(Policy {
+                    uri: url.to_string(),
+                    local_path: destination,
+                });
             }
         }
         "http" | "https" => {
             if Path::exists(&destination) {
-                return Ok(destination);
+                return Ok(Policy {
+                    uri: url.to_string(),
+                    local_path: destination,
+                });
             }
         }
         _ => unreachable!(),
@@ -111,7 +120,10 @@ pub async fn fetch_policy(
         .await
         .is_ok()
     {
-        return Ok(destination);
+        return Ok(Policy {
+            uri: url.to_string(),
+            local_path: destination,
+        });
     }
 
     if policy_fetcher
@@ -119,7 +131,10 @@ pub async fn fetch_policy(
         .await
         .is_ok()
     {
-        return Ok(destination);
+        return Ok(Policy {
+            uri: url.to_string(),
+            local_path: destination,
+        });
     }
 
     Err(anyhow!("could not pull policy {}", url))
