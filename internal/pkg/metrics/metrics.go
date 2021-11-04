@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
@@ -16,9 +17,9 @@ import (
 )
 
 const (
-	METER_NAME                        = "kubewarden"
-	POLICY_COUNTER_METRIC_NAME        = "kubewarden_policy_total"
-	POLICY_COUNTER_METRIC_DESCRIPTION = "How many policies are installed in the cluster"
+	meterName                      = "kubewarden"
+	policyCounterMetricName        = "kubewarden_policy_total"
+	policyCounterMetricDescription = "How many policies are installed in the cluster"
 )
 
 func New(openTelemetryEndpoint string) error {
@@ -30,7 +31,7 @@ func New(openTelemetryEndpoint string) error {
 	)
 	exporter, err := otlp.NewExporter(ctx, driver)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot start metric exporter: %w", err)
 	}
 	controller := controller.New(
 		processor.New(
@@ -42,7 +43,10 @@ func New(openTelemetryEndpoint string) error {
 	)
 	global.SetMeterProvider(controller.MeterProvider())
 	err = controller.Start(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("cannot start metric controller: %w", err)
+	}
+	return nil
 }
 
 func RecordPolicyCount(policy *policiesv1alpha2.ClusterAdmissionPolicy) {
@@ -59,11 +63,11 @@ func RecordPolicyCount(policy *policiesv1alpha2.ClusterAdmissionPolicy) {
 		attribute.String("failure_policy", failurePolicy),
 		attribute.String("policy_status", string(policy.Status.PolicyStatus)),
 	}
-	meter := global.Meter(METER_NAME)
+	meter := global.Meter(meterName)
 	valueRecorder := metric.Must(meter).
 		NewInt64Counter(
-			POLICY_COUNTER_METRIC_NAME,
-			metric.WithDescription(POLICY_COUNTER_METRIC_DESCRIPTION),
+			policyCounterMetricName,
+			metric.WithDescription(policyCounterMetricDescription),
 		).Bind(commonLabels...)
 	defer valueRecorder.Unbind()
 	valueRecorder.Add(context.Background(), 1)

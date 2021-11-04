@@ -37,6 +37,7 @@ import (
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	policiescontrollers "github.com/kubewarden/kubewarden-controller/controllers/policies"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -56,11 +57,16 @@ func main() {
 	var enableLeaderElection bool
 	var deploymentsNamespace string
 	var probeAddr string
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	var enableMetrics bool
+	var openTelemetryEndpoint string
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&enableMetrics, "enable-metrics", false,
+		"Enable metrics collection about policy server and cluster admission policies")
+	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -76,6 +82,14 @@ func main() {
 
 	if deploymentsNamespace == "" {
 		deploymentsNamespace = environment.deploymentsNamespace
+	}
+
+	if enableMetrics {
+		if err := metrics.New(openTelemetryEndpoint); err != nil {
+			setupLog.Error(err, "unable to initialize metrics provider")
+			os.Exit(1)
+		}
+		setupLog.Info("Metrics initialized")
 	}
 
 	mgr, err := webhookwrapper.NewManager(
