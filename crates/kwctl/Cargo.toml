@@ -21,7 +21,7 @@ kubewarden-policy-sdk = "0.2.3"
 lazy_static = "1.4.0"
 mdcat = "0.22"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.3" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.16" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.18" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.8"
 pulldown-cmark = { version = "0.8", default-features = false }

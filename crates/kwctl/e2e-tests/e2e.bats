@@ -17,7 +17,6 @@ kwctl() {
 @test "pull a policy from HTTPS" {
     kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm
     [ "$status" -eq 0 ]
-    [ "$output" = "pulling policy..." ]
     kwctl policies
     [ "$status" -eq 0 ]
     [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.5/policy.wasm" ]]
@@ -26,7 +25,6 @@ kwctl() {
 @test "pull a policy from an OCI registry" {
     kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5
     [ "$status" -eq 0 ]
-    [ "$output" = "pulling policy..." ]
     kwctl policies
     [ "$status" -eq 0 ]
     [[ "$output" =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.5" ]]
