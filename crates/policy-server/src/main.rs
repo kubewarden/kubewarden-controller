@@ -4,6 +4,7 @@ extern crate policy_evaluator;
 
 use anyhow::Result;
 use opentelemetry::global::shutdown_tracer_provider;
+use policy_evaluator::policy_metadata::Metadata;
 use std::{process, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
@@ -164,7 +165,33 @@ fn main() -> Result<()> {
             )
             .await
             {
-                Ok(path) => policy.wasm_module_path = path,
+                Ok(fetched_policy) => {
+                    if let Ok(Some(policy_metadata)) =
+                        Metadata::from_path(&fetched_policy.local_path)
+                    {
+                        info!(
+                            name = name.as_str(),
+                            path = fetched_policy.local_path.clone().into_os_string().to_str(),
+                            sha256sum = fetched_policy
+                                .digest()
+                                .unwrap_or_else(|_| "unknown".to_string())
+                                .as_str(),
+                            mutating = policy_metadata.mutating,
+                            "policy download",
+                        );
+                    } else {
+                        info!(
+                            name = name.as_str(),
+                            path = fetched_policy.local_path.clone().into_os_string().to_str(),
+                            sha256sum = fetched_policy
+                                .digest()
+                                .unwrap_or_else(|_| "unknown".to_string())
+                                .as_str(),
+                            "policy download",
+                        );
+                    }
+                    policy.wasm_module_path = fetched_policy.local_path;
+                }
                 Err(e) => {
                     return fatal_error(format!(
                         "error while fetching policy {} from {}: {}",
