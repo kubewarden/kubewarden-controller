@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -382,5 +383,6 @@ func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
 		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
 	}
+	metrics.RecordPolicyCount(clusterAdmissionPolicy)
 	return nil
 }
