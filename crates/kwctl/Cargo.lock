@@ -2500,8 +2500,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.1.16"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.16#b0a55566dc15d95dc97c0386a7e529c4d8e68f3f"
+version = "0.1.18"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.1.18#2e8c86129e796cd9f24f0c8744be3bddc4b8a96f"
 dependencies = [
  "anyhow",
  "async-std",
@@ -3169,7 +3169,7 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.0.1"
-source = "git+https://github.com/flavio/sigstore-rs?tag=v0.0.1#e6d0c16f1cd7644121af0941641aaddab04aa310"
+source = "git+https://github.com/sigstore/sigstore-rs?tag=v0.0.1#e6d0c16f1cd7644121af0941641aaddab04aa310"
 dependencies = [
  "anyhow",
  "async-trait",

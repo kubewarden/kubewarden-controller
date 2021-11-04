@@ -21,7 +21,7 @@ pub(crate) async fn pull_and_run(
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
 
-    let policy_path = pull::pull(
+    let policy = pull::pull(
         &uri,
         docker_config,
         sources,
@@ -29,9 +29,8 @@ pub(crate) async fn pull_and_run(
     )
     .await
     .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
-    let policy_path = policy_path.as_path();
 
-    let metadata = Metadata::from_path(policy_path)?;
+    let metadata = Metadata::from_path(&policy.local_path)?;
     if let Some(ref metadata) = metadata {
         if metadata.context_aware {
             println!("Fetching Kubernetes context since this policy is context-aware");
@@ -54,12 +53,12 @@ pub(crate) async fn pull_and_run(
         metadata.clone(),
         user_execution_mode,
         BackendDetector::default(),
-        policy_path,
+        &policy.local_path,
     )?;
 
     let mut policy_evaluator = PolicyEvaluator::from_file(
         policy_id,
-        policy_path,
+        &policy.local_path,
         execution_mode,
         settings.map_or(Ok(None), |settings| {
             if settings.is_empty() {
