@@ -34,3 +34,9 @@ tracing = "0.1"
 tracing-subscriber = { version= "0.2", features = ["fmt"] }
 tracing-futures = "0.2"
 tracing-opentelemetry = "0.15.0"
+
+[patch.crates-io]
+# Forcing base64ct to version 1.1.1 given that version 1.2.0 has been
+# bumped to use Rust 2021 edition. When we see is time, we can bump as
+# well, but for now, pin to 1.1.1 that is bound to edition 2018.
+base64ct = { git = "https://github.com/RustCrypto/formats.git", tag = "base64ct/v1.1.1" }
