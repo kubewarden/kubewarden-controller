@@ -280,7 +280,8 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
 			Labels: map[string]string{
-				constants.AppLabelKey: policyServer.AppLabel(),
+				constants.AppLabelKey:              policyServer.AppLabel(),
+				constants.PolicyServerNameLabelKey: policyServer.Name,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
