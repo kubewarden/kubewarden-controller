@@ -40,26 +40,26 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}, &validationPolicy)
 	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, mutatingWebhook, &validationPolicy, &mutatingPolicy).Build()
-	r := Reconciler{
+	reconciler := Reconciler{
 		Client:               cl,
 		DeploymentsNamespace: namespace,
 	}
 
-	err := r.deletePendingClusterAdmissionPolicies(context.Background(), clusterAdmissionPolicies)
+	err := reconciler.deletePendingClusterAdmissionPolicies(context.Background(), clusterAdmissionPolicies)
 	if err != nil {
 		t.Errorf("received unexpected error %s", err.Error())
 	}
 
 	// verify webhooks are deleted
 	validatingWebhook = &admissionregistrationv1.ValidatingWebhookConfiguration{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{
+	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
 		Name: admissionPolicyName,
 	}, validatingWebhook)
 	if !errors.IsNotFound(err) {
 		t.Errorf("validating webhook not deleted")
 	}
 	mutatingWebhook = &admissionregistrationv1.MutatingWebhookConfiguration{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{
+	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
 		Name: mutatingPolicyName,
 	}, mutatingWebhook)
 	if !errors.IsNotFound(err) {
@@ -68,7 +68,7 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 
 	// verify cluster admission policies finalizers are deleted
 	policy := &policiesv1alpha2.ClusterAdmissionPolicy{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{
+	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
 		Name: admissionPolicyName,
 	}, policy)
 	if err != nil && errors.IsNotFound(err) {
@@ -83,7 +83,7 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 		t.Errorf("validating policy finalizers should be empty, but found %s", policy.Finalizers)
 	}
 	policy = &policiesv1alpha2.ClusterAdmissionPolicy{}
-	err = r.Client.Get(context.Background(), client.ObjectKey{
+	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
 		Name: mutatingPolicyName,
 	}, policy)
 	if err != nil {
