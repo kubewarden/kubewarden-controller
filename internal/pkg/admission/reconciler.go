@@ -262,7 +262,7 @@ func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, poli
 	for _, policy := range clusterAdmissionPolicies.Items {
 		policy := policy // safely use pointer inside for
 		// will not delete it because it has a finalizer. It will add a DeletionTimestamp
-		err := r.Client.Delete(context.Background(), &policy)
+		err := r.Client.Delete(ctx, &policy)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
 				policy.Name, err)
@@ -344,7 +344,7 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 						Name: policy.Name,
 					},
 				}
-				err := r.Client.Delete(context.Background(), mutatingWebhook)
+				err := r.Client.Delete(ctx, mutatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
 						policy.Name, err)
@@ -355,7 +355,7 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 						Name: policy.Name,
 					},
 				}
-				err := r.Client.Delete(context.Background(), validatingWebhook)
+				err := r.Client.Delete(ctx, validatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
 						policy.Name, err)
