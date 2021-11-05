@@ -24,7 +24,8 @@ const (
 	PolicyServerSourcesConfigContainerPath  = "/sources"
 
 	// Label
-	AppLabelKey = "app"
+	AppLabelKey              = "app"
+	PolicyServerNameLabelKey = "policy-server-name"
 
 	// Index
 	PolicyServerIndexKey  = "policyServer"
