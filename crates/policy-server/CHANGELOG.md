@@ -3,11 +3,20 @@
 
 
 <a name="v0.2.4"></a>
-## [v0.2.4] - 2021-10-25
+## [v0.2.4] - 2021-11-05
 ### Features
+- report loaded policies on startup
+- Use r.suse.com/bci/minimal for container image
 - Bump policy-fetcher v0.1.17, new sources.yml format
 
+### Reverts
+- metrics: add KUBEWARDEN_ENABLE_METRICS envvar
+
 ### Pull Requests
+- Merge pull request [#120](https://github.com/kubewarden/policy-server/issues/120) from ereslibre/pin-base64ct
+- Merge pull request [#119](https://github.com/kubewarden/policy-server/issues/119) from ereslibre/report-policies-on-start
+- Merge pull request [#118](https://github.com/kubewarden/policy-server/issues/118) from viccuad/bci-image
+- Merge pull request [#117](https://github.com/kubewarden/policy-server/issues/117) from ereslibre/enable-metrics
 - Merge pull request [#116](https://github.com/kubewarden/policy-server/issues/116) from viccuad/bump-sources
 
 
