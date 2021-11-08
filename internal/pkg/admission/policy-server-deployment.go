@@ -106,22 +106,22 @@ func getProgressingDeploymentCondition(status appsv1.DeploymentStatus) *appsv1.D
 func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(schema.GroupVersionKind{
+	unstructuredObj := &unstructured.Unstructured{}
+	unstructuredObj.SetGroupVersionKind(schema.GroupVersionKind{
 		Kind:    "Secret",
 		Version: "v1",
 	})
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
 		Name:      policyServer.Spec.ImagePullSecret,
-	}, u)
+	}, unstructuredObj)
 	if err != nil {
 		return fmt.Errorf("cannot get spec.ImagePullSecret: %w", err)
 	}
 
 	var secret corev1.Secret
 	err = runtime.DefaultUnstructuredConverter.
-		FromUnstructured(u.UnstructuredContent(), &secret)
+		FromUnstructured(unstructuredObj.UnstructuredContent(), &secret)
 	if err != nil {
 		return fmt.Errorf("spec.ImagePullSecret is not of Kind Secret: %w", err)
 	}

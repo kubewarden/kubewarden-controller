@@ -24,16 +24,16 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	if err != nil {
 		t.Errorf("CA secret could not be created: %s", err.Error())
 	}
-	ca, err := extractCaFromSecret(caSecret)
+	admissionregCA, err := extractCaFromSecret(caSecret)
 	if err != nil {
 		t.Errorf("CA could not be extracted from secret: %s", err.Error())
 	}
 	// create cert using CA previously created
 	servingCert, servingKey, err := admissionregistration.GenerateCert(
-		ca.CaCert,
+		admissionregCA.CaCert,
 		domain,
 		[]string{domain},
-		ca.CaPrivateKey)
+		admissionregCA.CaPrivateKey)
 	if err != nil {
 		t.Errorf("failed generating cert: %s", err.Error())
 	}

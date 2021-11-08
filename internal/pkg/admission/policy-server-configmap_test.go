@@ -41,18 +41,18 @@ func TestArePoliciesEqual(t *testing.T) {
 			true},
 	}
 	for _, test := range tests {
-		tt := test // ensure tt is correctly scoped when used in function literal
-		t.Run(tt.name, func(t *testing.T) {
+		ttest := test // ensure tt is correctly scoped when used in function literal
+		t.Run(ttest.name, func(t *testing.T) {
 			var currentPoliciesMap map[string]policyServerConfigEntry
-			if err := json.Unmarshal([]byte(tt.newPoliciesYML), &currentPoliciesMap); err != nil {
+			if err := json.Unmarshal([]byte(ttest.newPoliciesYML), &currentPoliciesMap); err != nil {
 				t.Errorf("unexpected error %s", err.Error())
 			}
-			got, err := shouldUpdatePolicyMap(tt.currentPoliciesYML, currentPoliciesMap)
+			got, err := shouldUpdatePolicyMap(ttest.currentPoliciesYML, currentPoliciesMap)
 			if err != nil {
 				t.Errorf("unexpected error %s", err.Error())
 			}
-			if got != tt.expect {
-				t.Errorf("got %t, want %t", got, tt.expect)
+			if got != ttest.expect {
+				t.Errorf("got %t, want %t", got, ttest.expect)
 			}
 		})
 	}
@@ -128,14 +128,14 @@ func TestShouldUpdateSourcesList(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		tt := test // ensure tt is correctly scoped when used in function literal
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := shouldUpdateSourcesList(tt.currentSourcesYML, tt.newSourcesList)
+		ttest := test // ensure ttest is correctly scoped when used in function literal
+		t.Run(ttest.name, func(t *testing.T) {
+			got, err := shouldUpdateSourcesList(ttest.currentSourcesYML, ttest.newSourcesList)
 			if err != nil {
 				t.Errorf("unexpected error %s", err.Error())
 			}
-			if got != tt.expect {
-				t.Errorf("got %t, want %t", got, tt.expect)
+			if got != ttest.expect {
+				t.Errorf("got %t, want %t", got, ttest.expect)
 			}
 		})
 	}

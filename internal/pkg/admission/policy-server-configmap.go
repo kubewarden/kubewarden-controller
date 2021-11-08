@@ -194,19 +194,19 @@ func (r *Reconciler) createSourcesMap(policyServer *policiesv1alpha2.PolicyServe
 func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (string, error) {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(schema.GroupVersionKind{
+	unstructuredObj := &unstructured.Unstructured{}
+	unstructuredObj.SetGroupVersionKind(schema.GroupVersionKind{
 		Kind:    "ConfigMap",
 		Version: "v1",
 	})
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
 		Name:      policyServer.NameWithPrefix(),
-	}, u)
+	}, unstructuredObj)
 
 	if err != nil {
 		return "", fmt.Errorf("cannot retrieve existing policies ConfigMap: %w", err)
 	}
 
-	return u.GetResourceVersion(), nil
+	return unstructuredObj.GetResourceVersion(), nil
 }

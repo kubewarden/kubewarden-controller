@@ -54,15 +54,15 @@ func (r *Reconciler) fetchOrInitializePolicyServerSecret(ctx context.Context, po
 }
 
 func (r *Reconciler) buildPolicyServerSecret(policyServerName string, caSecret *corev1.Secret, generateCert generateCertFunc) (*corev1.Secret, error) {
-	ca, err := extractCaFromSecret(caSecret)
+	admissionregCA, err := extractCaFromSecret(caSecret)
 	if err != nil {
 		return nil, err
 	}
 	servingCert, servingKey, err := generateCert(
-		ca.CaCert,
+		admissionregCA.CaCert,
 		fmt.Sprintf("%s.%s.svc", policyServerName, r.DeploymentsNamespace),
 		[]string{fmt.Sprintf("%s.%s.svc", policyServerName, r.DeploymentsNamespace)},
-		ca.CaPrivateKey)
+		admissionregCA.CaPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate policy-server %s certificate: %w", policyServerName, err)
 	}
@@ -118,17 +118,17 @@ func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Conte
 }
 
 func (r *Reconciler) buildPolicyServerCARootSecret(generateCA generateCAFunc, pemEncodeCertificate pemEncodeCertificateFunc) (*corev1.Secret, error) {
-	ca, err := generateCA()
+	caRoot, err := generateCA()
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate policy-server secret CA: %w", err)
 	}
-	caPEMEncoded, err := pemEncodeCertificate(ca.CaCert)
+	caPEMEncoded, err := pemEncodeCertificate(caRoot.CaCert)
 	if err != nil {
 		return nil, fmt.Errorf("cannot encode policy-server secret CA: %w", err)
 	}
-	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(ca.CaPrivateKey)
+	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(caRoot.CaPrivateKey)
 	secretContents := map[string][]byte{
-		constants.PolicyServerCARootCACert:             ca.CaCert,
+		constants.PolicyServerCARootCACert:             caRoot.CaCert,
 		constants.PolicyServerCARootPemName:            caPEMEncoded,
 		constants.PolicyServerCARootPrivateKeyCertName: caPrivateKeyBytes,
 	}

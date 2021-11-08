@@ -19,26 +19,26 @@ import (
 
 func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	caPemBytes := []byte{}
-	ca, err := admissionregistration.GenerateCA()
+	admissionregCA, err := admissionregistration.GenerateCA()
 	generateCACalled := false
 
 	// nolint: wrapcheck
 	generateCAFunc := func() (*admissionregistration.CA, error) {
 		generateCACalled = true
-		return ca, err
+		return admissionregCA, err
 	}
 
 	pemEncodeCertificateFunc := func(certificate []byte) ([]byte, error) {
-		if !bytes.Equal(certificate, ca.CaCert) {
+		if !bytes.Equal(certificate, admissionregCA.CaCert) {
 			return nil, fmt.Errorf("certificate received should be the one returned by generateCA")
 		}
 		return caPemBytes, nil
 	}
 
 	caSecretContents := map[string][]byte{
-		constants.PolicyServerCARootCACert:             ca.CaCert,
+		constants.PolicyServerCARootCACert:             admissionregCA.CaCert,
 		constants.PolicyServerCARootPemName:            caPemBytes,
-		constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(ca.CaPrivateKey),
+		constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(admissionregCA.CaPrivateKey),
 	}
 
 	var tests = []struct {
@@ -53,19 +53,19 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tt := test // ensure tt is correctly scoped when used in function literal
-		t.Run(tt.name, func(t *testing.T) {
-			secret, err := tt.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
-			if diff := cmp.Diff(secret.Data, tt.secretContents); diff != "" {
+		ttest := test // ensure tt is correctly scoped when used in function literal
+		t.Run(ttest.name, func(t *testing.T) {
+			secret, err := ttest.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
+			if diff := cmp.Diff(secret.Data, ttest.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if !errors.Is(err, tt.err) {
-				t.Errorf("got %s, want %s", err, tt.err)
+			if !errors.Is(err, ttest.err) {
+				t.Errorf("got %s, want %s", err, ttest.err)
 			}
 
-			if generateCACalled != tt.generateCACalled {
-				t.Errorf("got %t, want %t", generateCACalled, tt.generateCACalled)
+			if generateCACalled != ttest.generateCACalled {
+				t.Errorf("got %t, want %t", generateCACalled, ttest.generateCACalled)
 			}
 			generateCACalled = false
 		})
@@ -76,8 +76,8 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	generateCertCalled := false
 	servingCert := []byte{1}
 	servingKey := []byte{2}
-	ca, _ := admissionregistration.GenerateCA()
-	caSecret := &corev1.Secret{Data: map[string][]byte{constants.PolicyServerCARootCACert: ca.CaCert, constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(ca.CaPrivateKey)}}
+	admissionregCA, _ := admissionregistration.GenerateCA()
+	caSecret := &corev1.Secret{Data: map[string][]byte{constants.PolicyServerCARootCACert: admissionregCA.CaCert, constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(admissionregCA.CaPrivateKey)}}
 
 	// nolint:unparam
 	generateCertFunc := func(ca []byte, commonName string, extraSANs []string, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
@@ -102,19 +102,19 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tt := test // ensure tt is correctly scoped when used in function literal
-		t.Run(tt.name, func(t *testing.T) {
-			secret, err := tt.r.fetchOrInitializePolicyServerSecret(context.Background(), "policyServer", caSecret, generateCertFunc)
-			if diff := cmp.Diff(secret.StringData, tt.secretContents); diff != "" {
+		ttest := test // ensure tt is correctly scoped when used in function literal
+		t.Run(ttest.name, func(t *testing.T) {
+			secret, err := ttest.r.fetchOrInitializePolicyServerSecret(context.Background(), "policyServer", caSecret, generateCertFunc)
+			if diff := cmp.Diff(secret.StringData, ttest.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
 
-			if !errors.Is(err, tt.err) {
-				t.Errorf("got %s, want %s", err, tt.err)
+			if !errors.Is(err, ttest.err) {
+				t.Errorf("got %s, want %s", err, ttest.err)
 			}
 
-			if generateCertCalled != tt.generateCertCalled {
-				t.Errorf("got %t, want %t", generateCertCalled, tt.generateCertCalled)
+			if generateCertCalled != ttest.generateCertCalled {
+				t.Errorf("got %t, want %t", generateCertCalled, ttest.generateCertCalled)
 			}
 			generateCertCalled = false
 		})
