@@ -11,6 +11,7 @@ use policy_evaluator::{
 };
 use std::collections::HashMap;
 use std::fmt;
+use std::time::Instant;
 use tokio::sync::mpsc::Receiver;
 use tracing::{error, info_span};
 
@@ -133,7 +134,9 @@ impl Worker {
             let res = match self.evaluators.get_mut(&req.policy_id) {
                 Some(policy_evaluator) => match serde_json::to_value(req.req.clone()) {
                     Ok(json) => {
+                        let start_time = Instant::now();
                         let resp = policy_evaluator.validate(ValidateRequest::new(json));
+                        let policy_evaluation_duration = start_time.elapsed();
                         let accepted = resp.allowed;
                         let mutated = resp.patch.is_some();
                         let error_code = if let Some(status) = &resp.status {
@@ -142,7 +145,7 @@ impl Worker {
                             None
                         };
                         let res = req.resp_chan.send(Some(resp));
-                        metrics::add_policy_evaluation(metrics::PolicyEvaluation {
+                        let policy_evaluation = metrics::PolicyEvaluation {
                             policy_name: policy_evaluator.policy.id.clone(),
                             resource_name: req.req.name.unwrap_or_else(|| "unknown".to_string()),
                             resource_namespace: req.req.namespace,
@@ -151,7 +154,12 @@ impl Worker {
                             accepted,
                             mutated,
                             error_code,
-                        });
+                        };
+                        metrics::record_policy_latency(
+                            policy_evaluation_duration,
+                            &policy_evaluation,
+                        );
+                        metrics::add_policy_evaluation(&policy_evaluation);
                         res
                     }
                     Err(e) => {
