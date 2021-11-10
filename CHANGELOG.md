@@ -2,15 +2,33 @@
 ## [Unreleased]
 
 
+<a name="v0.4.2"></a>
+## [v0.4.2] - 2021-11-04
+### Code Refactoring
+- Rename vars that are too short
+- Reuse parent context for deleting policies
+
+### Features
+- Policy counter metric.
+- OpenTelemetry integration.
+- policy server name label in the deployment.
+- add OpenTelemetry integration
+
+### Pull Requests
+- Merge pull request [#122](https://github.com/kubewarden/kubewarden-controller/issues/122) from viccuad/golangci-1.42
+- Merge pull request [#112](https://github.com/kubewarden/kubewarden-controller/issues/112) from ereslibre/opentelemetry
+- Merge pull request [#118](https://github.com/kubewarden/kubewarden-controller/issues/118) from viccuad/main
+
+
 <a name="v0.4.1"></a>
-## [v0.4.1] - 2021-11-02
+## [v0.4.1] - 2021-11-03
 ### Code Refactoring
 - Extract sources path into constants pkg
 
 ### Features
-- Add spec.sourceAuthorities to PolicyServer CR
+- Add PolicyServer.spec.sourceAuthorities to CR
 - Add spec.insecureSources to PolicyServer CR
-- Add spec.imagePullSecrets to PolicyServer to CR
+- Add spec.imagePullSecrets to PolicyServer
 
 ### Pull Requests
 - Merge pull request [#117](https://github.com/kubewarden/kubewarden-controller/issues/117) from viccuad/docs-crds
@@ -22,24 +40,9 @@
 
 
 <a name="v0.4.0"></a>
-## [v0.4.0] - 2021-10-01
-### Features
-- Introduce a PolicyServer CRD that allow users to describe a Policy Server
-  Deployment. The configuration of PolicyServer is now done through this
-  resource, instead of using the `policy-server` ConfigMap.
-- ClusterAdmissionPolicy has the following changes:
-  - A new PolicyStatus field which can be: `unscheduled`, `unschedulable`, `pending` or `active`
-  - A new condition called PolicyActive.
-  - A `policyServer` attribute. This is used to specify which instance of
-    PolicyServer is going to host the policy. If nothing is specified, the
-    policy will be scheduled on the PolicyServer named `default`. This one is
-    created by the helm chart at installation time.
-- Introduce cert-manager dependency
-- PolicyServer and ClusterAdmissionPolicies are now validated and mutated by
-  dedicated admission controllers. The kubewarden-controller is acting as
-  validation endpoint for both of them.
-- All the resources created by the operator are now using
-  [`Finalizers`](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/).
+## [v0.4.0] - 2021-10-05
+### Reverts
+- Set PolicyStatus "unscheduled" as default in CRD
 
 ### Pull Requests
 - Merge pull request [#98](https://github.com/kubewarden/kubewarden-controller/issues/98) from kubewarden/viccuad-update-readme
@@ -141,7 +144,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.2...HEAD
+[v0.4.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...v0.4.0
 [v0.3.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.1...v0.3.2
