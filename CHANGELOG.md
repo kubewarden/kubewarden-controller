@@ -26,9 +26,9 @@
 - Extract sources path into constants pkg
 
 ### Features
-- Add PolicyServer.spec.sourceAuthorities to CR
+- Add spec.sourceAuthorities to PolicyServer CR
 - Add spec.insecureSources to PolicyServer CR
-- Add spec.imagePullSecrets to PolicyServer
+- Add spec.imagePullSecrets to PolicyServer CR
 
 ### Pull Requests
 - Merge pull request [#117](https://github.com/kubewarden/kubewarden-controller/issues/117) from viccuad/docs-crds
@@ -40,9 +40,24 @@
 
 
 <a name="v0.4.0"></a>
-## [v0.4.0] - 2021-10-05
-### Reverts
-- Set PolicyStatus "unscheduled" as default in CRD
+## [v0.4.0] - 2021-10-01
+### Features
+- Introduce a PolicyServer CRD that allow users to describe a Policy Server
+  Deployment. The configuration of PolicyServer is now done through this
+  resource, instead of using the `policy-server` ConfigMap.
+- ClusterAdmissionPolicy has the following changes:
+  - A new PolicyStatus field which can be: `unscheduled`, `unschedulable`, `pending` or `active`
+  - A new condition called PolicyActive.
+  - A `policyServer` attribute. This is used to specify which instance of
+    PolicyServer is going to host the policy. If nothing is specified, the
+    policy will be scheduled on the PolicyServer named `default`. This one is
+    created by the helm chart at installation time.
+- Introduce cert-manager dependency
+- PolicyServer and ClusterAdmissionPolicies are now validated and mutated by
+  dedicated admission controllers. The kubewarden-controller is acting as
+  validation endpoint for both of them.
+- All the resources created by the operator are now using
+  [`Finalizers`](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/).
 
 ### Pull Requests
 - Merge pull request [#98](https://github.com/kubewarden/kubewarden-controller/issues/98) from kubewarden/viccuad-update-readme
