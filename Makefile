@@ -101,12 +101,6 @@ kustomize: ## Download kustomize locally if necessary.
 
 ##@ Release
 
-tag:
-	@git tag "${TAG}" || (echo "Tag ${TAG} already exists. If you want to retag, delete it manually and re-run this command" && exit 1)
-	@git-chglog --output CHANGELOG.md
-	@git commit -m 'Update CHANGELOG.md' -- CHANGELOG.md
-	@git tag -f "${TAG}"
-
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
