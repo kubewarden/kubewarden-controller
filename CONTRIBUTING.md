@@ -132,17 +132,20 @@ $ go get -u github.com/git-chglog/git-chglog/cmd/git-chglog@v0.14.2
 For creating a new release, first create a new tag:
 
 ```console
-$ TAG=vX.Y.Z make tag
+git-chglog --next-tag vX.Y.Z -o CHANGELOG.md
 ```
 
-This will also update the `CHANGELOG.md` file on a separate
-commit.
+This will update the `CHANGELOG.md` file without yet commiting it. You should
+only stage changes to the new version, and format them as needed.
+
 
 ### Push new tag to the upstream repository
 
 Assuming your official kubewarden remote is called `upstream`:
 
 ```console
+$ git commit -m 'Update CHANGELOG.md' # on main branch
+$ git tag -a vX.Y.Z  -m "vX.Y.Z" -s
 $ git push upstream main vX.Y.Z
 ```
 
