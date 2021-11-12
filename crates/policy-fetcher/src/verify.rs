@@ -36,10 +36,9 @@ impl Verifier {
     /// When annotations are provided, they are enforced with the values specified
     /// inside of the Sigstore signature object.
     ///
-    /// Finally, this method checks whether the specified policy already exists
-    /// on the local file system. When that happens, the checksum of the local file
-    /// is compared with the one mentioned inside of the signed (and verified) manifest.
-    /// That ensures nobody tampered the local policy.
+    /// Note well: this method doesn't compare the checksum of a possible local
+    /// file with the one inside of the signed (and verified) manifest, as that
+    /// can only be done with certainty after pulling the policy.
     ///
     /// Note well: right now, verification can be done only against policies that are
     /// stored inside of OCI registries.
@@ -108,8 +107,6 @@ impl Verifier {
             .image
             .docker_manifest_digest;
 
-        self.verify_local_file_checksum(&url, image_name, docker_config, manifest_digest)
-            .await
     }
 
     /// Compares the checksum of the local policy with the one mentioned inside of the
