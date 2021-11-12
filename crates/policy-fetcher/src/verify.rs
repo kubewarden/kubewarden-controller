@@ -112,22 +112,38 @@ impl Verifier {
         Ok(manifest_digest)
     }
 
-    /// Compares the checksum of the local policy with the one mentioned inside of the
-    /// the signed (and verified) manifest.
-    async fn verify_local_file_checksum(
+    /// Verifies the checksum of the local file  by comparing it with the one
+    /// mentioned inside of the signed (and verified) manifest digest.
+    /// That ensures nobody tampered with the local policy.
+    ///
+    /// Note well: right now, verification can be done only against policies
+    /// that are stored inside of OCI registries.
+    pub async fn verify_local_file_checksum(
         &mut self,
-        url: &Url,
-        image_name: &str,
+        url: &str,
         docker_config: Option<DockerConfig>,
         verified_manifest_digest: &str,
     ) -> Result<()> {
+        let url = match Url::parse(url) {
+            Ok(u) => Ok(u),
+            Err(ParseError::RelativeUrlWithoutBase) => {
+                Url::parse(format!("registry://{}", url).as_str())
+            }
+            Err(e) => Err(e),
+        }?;
+        if url.scheme() != "registry" {
+            return Err(anyhow!(
+                "Verification works only with 'registry://' protocol"
+            ));
+        }
+        let image_name = url.as_str().strip_prefix("registry://").unwrap();
+
         let store = Store::default();
         let local_path =
             store.policy_full_path(url.as_str(), crate::store::PolicyPath::PrefixAndFilename)?;
 
         if !local_path.exists() {
-            info!(policy = %url, "No local policy to verify");
-            return Ok(());
+            return Err(anyhow!("No local policy to verify the manifest for"));
         }
 
         let registry = crate::registry::Registry::new(&docker_config);
