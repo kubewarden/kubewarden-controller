@@ -80,3 +80,34 @@ kwctl() {
     kwctl policies
     [ "$output" = "" ]
 }
+
+@test "verify a signed policy from an OCI registry" {
+    kwctl pull -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 1 ]
+    [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys were passed.*') -ne 0 ]
+    kwctl pull -k test-data/sigstore/cosign1.pub -k test-data/sigstore/cosign2.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
+    [ $(expr "$output" : '.*Local checksum successfully verified.*') -ne 0 ]
+    kwctl pull -k test-data/sigstore/cosign3.pub registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 1 ]
+    [ $(expr "$output" : '.*The signature object didn'\''t have any layer signed with the given key.*') -ne 0 ]
+    kwctl pull -k test-data/sigstore/cosign2.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 1 ]
+    [ $(expr "$output" : '.*The signature object didn'\''t have any layer signed with the given key.*') -ne 0 ]
+    # TODO should return instead: Annotation not satisfied missing_annotation="stable"
+}
+
+@test "pull a signed policy from an OCI registry" {
+    kwctl pull -k test-data/sigstore/cosign1.pub -k test-data/cosign1.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
+    [ $(expr "$output" : '.*Local checksum successfully verified.*') -ne 0 ]
+}
+
+@test "execute a signed policy from an OCI registry" {
+    kwctl run -k test-data/sigstore/cosign1.pub -k test-data/cosign1.pub -a env=prod -a stable=true --request-path test-data/privileged-pod.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+    [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
+}
