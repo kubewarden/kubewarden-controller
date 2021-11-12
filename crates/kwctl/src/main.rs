@@ -19,6 +19,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+use verify::VerificationAnnotations;
 
 use tracing::debug;
 use tracing_subscriber::prelude::*;
@@ -78,36 +79,36 @@ async fn main() -> Result<()> {
                     None => PullDestination::MainStore,
                 };
                 let (sources, docker_config) = remote_server_options(matches)?;
-                pull::pull(uri, docker_config, sources, destination).await?;
+                let (key_files, annotations) = verification_options(matches)?;
+
+                // verify policy prior to pulling if keys listed, and keep the
+                // verified manifest digest of last iteration, even if all are
+                // the same:
+                let mut verified_manifest_digest: Option<String> = None;
+                for key_file in key_files.iter() {
+                    verified_manifest_digest = Some(
+                        verify::verify(uri, &docker_config, &sources, &annotations, &key_file[0])
+                            .await?,
+                    );
+                }
+                pull::pull(uri, docker_config.clone(), sources.clone(), destination).await?;
+                if let Some(digest) = verified_manifest_digest {
+                    verify::verify_local_checksum(uri, &docker_config, &sources, &digest).await?
+                }
             };
             Ok(())
         }
         Some("verify") => {
             if let Some(matches) = matches.subcommand_matches("verify") {
                 let uri = matches.value_of("uri").unwrap();
-                let key_file = matches.value_of("key").unwrap();
                 let (sources, docker_config) = remote_server_options(matches)?;
+                let (key_files, annotations) = verification_options(matches)?;
 
-                let annotations: Option<HashMap<String, String>>;
-                annotations = match matches.values_of("annotations") {
-                    None => None,
-                    Some(items) => {
-                        let mut values: HashMap<String, String> = HashMap::new();
-                        for item in items {
-                            let tmp: Vec<_> = item.splitn(2, '=').collect();
-                            if tmp.len() == 2 {
-                                values.insert(String::from(tmp[0]), String::from(tmp[1]));
-                            }
-                        }
-                        if values.is_empty() {
-                            None
-                        } else {
-                            Some(values)
-                        }
-                    }
-                };
-
-                verify::verify(uri, docker_config, sources, annotations, key_file).await?;
+                for key_file in key_files.iter() {
+                    println!("{:}", &key_file[0]);
+                    verify::verify(uri, &docker_config, &sources, &annotations, &key_file[0])
+                        .await?;
+                }
             };
             Ok(())
         }
@@ -193,13 +194,27 @@ async fn main() -> Result<()> {
                     } else {
                         None
                     };
+                let (key_files, annotations) = verification_options(matches)?;
+
+                // verify policy prior to pulling if keys listed, and keep the
+                // verified manifest digest of last iteration, even if all are
+                // the same:
+                let mut verified_manifest_digest: Option<String> = None;
+                for key_file in key_files.iter() {
+                    verified_manifest_digest = Some(
+                        verify::verify(uri, &docker_config, &sources, &annotations, &key_file[0])
+                            .await?,
+                    );
+                }
+
                 run::pull_and_run(
                     uri,
                     execution_mode,
-                    docker_config,
-                    sources,
+                    &docker_config,
+                    &sources,
                     &request,
                     settings,
+                    &verified_manifest_digest,
                 )
                 .await?;
             }
@@ -315,4 +330,40 @@ fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Optio
         };
 
     Ok((sources, docker_config))
+}
+
+fn verification_options(
+    matches: &ArgMatches,
+) -> Result<(Option<Vec<String>>, Option<VerificationAnnotations>)> {
+    let key_files: Option<Vec<String>>;
+    key_files = matches
+        .values_of("verification-key")
+        .map(|items| items.into_iter().map(|i| i.to_string()).collect());
+
+    let annotations: Option<VerificationAnnotations>;
+    annotations = match matches.values_of("verification-annotation") {
+        None => None,
+        Some(items) => {
+            let mut values: HashMap<String, String> = HashMap::new();
+            for item in items {
+                let tmp: Vec<_> = item.splitn(2, '=').collect();
+                if tmp.len() == 2 {
+                    values.insert(String::from(tmp[0]), String::from(tmp[1]));
+                }
+            }
+            if values.is_empty() {
+                None
+            } else {
+                Some(values)
+            }
+        }
+    };
+
+    if key_files.is_none() && annotations.is_some() {
+        return Err(anyhow!(
+            "Intending to verify annotations, but no verification keys were passed"
+        ));
+    }
+
+    Ok((key_files, annotations))
 }

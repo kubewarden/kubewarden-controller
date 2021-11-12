@@ -9,26 +9,31 @@ use policy_evaluator::{
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 use std::path::Path;
 
-use crate::{backend::BackendDetector, pull};
+use crate::{backend::BackendDetector, pull, verify};
 
 pub(crate) async fn pull_and_run(
     uri: &str,
     user_execution_mode: Option<PolicyExecutionMode>,
-    docker_config: Option<DockerConfig>,
-    sources: Option<Sources>,
+    docker_config: &Option<DockerConfig>,
+    sources: &Option<Sources>,
     request: &str,
     settings: Option<String>,
+    verified_manifest_digest: &Option<String>,
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
 
     let policy = pull::pull(
         &uri,
-        docker_config,
-        sources,
+        docker_config.clone(),
+        sources.clone(),
         policy_fetcher::PullDestination::MainStore,
     )
     .await
     .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
+
+    if let Some(digest) = verified_manifest_digest {
+        verify::verify_local_checksum(&uri, docker_config, sources, digest).await?
+    }
 
     let metadata = Metadata::from_path(&policy.local_path)?;
     if let Some(ref metadata) = metadata {

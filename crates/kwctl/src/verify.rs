@@ -5,11 +5,13 @@ use policy_fetcher::verify::Verifier;
 use std::{collections::HashMap, fs};
 use tracing::info;
 
+pub(crate) type VerificationAnnotations = HashMap<String, String>;
+
 pub(crate) async fn verify(
     url: &str,
     docker_config: Option<DockerConfig>,
     sources: Option<Sources>,
-    annotations: Option<HashMap<String, String>>,
+    annotations: Option<VerificationAnnotations>,
     key_file: &str,
 ) -> Result<String> {
     let verification_key = read_key_file(key_file)?;
