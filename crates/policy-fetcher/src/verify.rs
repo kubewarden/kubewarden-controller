@@ -31,24 +31,25 @@ impl Verifier {
         }
     }
 
-    /// Verifies the given policy using the verification key provided by the user.
+    /// Verifies the given policy using the verification key provided by the
+    /// user.
     ///
-    /// When annotations are provided, they are enforced with the values specified
-    /// inside of the Sigstore signature object.
+    /// When annotations are provided, they are enforced with the values
+    /// specified inside of the Sigstore signature object.
     ///
     /// Note well: this method doesn't compare the checksum of a possible local
     /// file with the one inside of the signed (and verified) manifest, as that
     /// can only be done with certainty after pulling the policy.
     ///
-    /// Note well: right now, verification can be done only against policies that are
-    /// stored inside of OCI registries.
+    /// Note well: right now, verification can be done only against policies
+    /// that are stored inside of OCI registries.
     pub async fn verify(
         &mut self,
         url: &str,
         docker_config: Option<DockerConfig>,
         annotations: Option<HashMap<String, String>>,
         verification_key: &str,
-    ) -> Result<()> {
+    ) -> Result<String> {
         let url = match Url::parse(url) {
             Ok(u) => Ok(u),
             Err(ParseError::RelativeUrlWithoutBase) => {
@@ -100,13 +101,15 @@ impl Verifier {
         // cosign_client.verify raises an error if no SimpleSigning
         // object is found -> the vector has at least one entry.
         // Finally, all the entries have the same docker_manifest_digest
-        let manifest_digest = &simple_signing_matches
+        let manifest_digest = simple_signing_matches
             .get(0)
             .unwrap()
             .critical
             .image
-            .docker_manifest_digest;
+            .docker_manifest_digest
+            .clone();
 
+        Ok(manifest_digest)
     }
 
     /// Compares the checksum of the local policy with the one mentioned inside of the
