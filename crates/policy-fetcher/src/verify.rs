@@ -37,6 +37,8 @@ impl Verifier {
     /// When annotations are provided, they are enforced with the values
     /// specified inside of the Sigstore signature object.
     ///
+    /// In case of success, returns the manifest digest of the verified policy.
+    ///
     /// Note well: this method doesn't compare the checksum of a possible local
     /// file with the one inside of the signed (and verified) manifest, as that
     /// can only be done with certainty after pulling the policy.
