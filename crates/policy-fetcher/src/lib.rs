@@ -183,7 +183,7 @@ fn url_fetcher(
     match scheme {
         "file" => Ok(Box::new(Local::default())),
         "http" | "https" => Ok(Box::new(Https::default())),
-        "registry" => Ok(Box::new(Registry::new(&docker_config))),
+        "registry" => Ok(Box::new(Registry::new(docker_config.as_ref()))),
         _ => return Err(anyhow!("unknown scheme: {}", scheme)),
     }
 }
