@@ -241,10 +241,14 @@ mod tests {
 
     #[test]
     fn policy_is_registered_in_the_mapping() -> Result<()> {
-        let policy = Policy::default();
-        let policy_id = 1;
+        let policy_name = "policy_is_registered_in_the_mapping";
 
-        assert!(!WAPC_POLICY_MAPPING.read().unwrap().contains_key(&policy_id));
+        // We cannot set policy.id at build time, because some attributes
+        // of Policy are private.
+        let mut policy = Policy::default();
+        policy.id = policy_name.to_string();
+
+        let policy_id = 1;
 
         PolicyEvaluator::from_contents_internal(
             "mock_policy".to_string(),
@@ -254,33 +258,39 @@ mod tests {
         )?;
 
         let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
+        let found = policy_mapping
+            .iter()
+            .find(|(_id, policy)| policy.id == policy_name);
 
-        assert!(policy_mapping.contains_key(&policy_id));
-        assert_eq!(policy_mapping[&policy_id], policy);
+        assert!(found.is_some());
 
         Ok(())
     }
 
     #[test]
     fn policy_is_not_registered_in_the_mapping_if_not_wapc() -> Result<()> {
-        let policy = Policy::default();
+        let policy_name = "policy_is_not_registered_in_the_mapping_if_not_wapc";
+
+        // We cannot set policy.id at build time, because some attributes
+        // of Policy are private.
+        let mut policy = Policy::default();
+        policy.id = policy_name.to_string();
+
         let policy_id = 1;
 
-        let wapc_policy_mapping_len = WAPC_POLICY_MAPPING.read().unwrap().len();
-        assert!(!WAPC_POLICY_MAPPING.read().unwrap().contains_key(&policy_id));
-
         PolicyEvaluator::from_contents_internal(
-            "mock_policy".to_string(),
+            policy_name.to_string(),
             || Some(policy_id),
             |_, _| Ok(policy.clone()),
             PolicyExecutionMode::OpaGatekeeper,
         )?;
 
         let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
+        let found = policy_mapping
+            .iter()
+            .find(|(_id, policy)| policy.id == policy_name);
 
-        assert_eq!(policy_mapping.len(), wapc_policy_mapping_len);
-        assert!(!WAPC_POLICY_MAPPING.read().unwrap().contains_key(&policy_id));
-
+        assert!(found.is_none());
         Ok(())
     }
 
