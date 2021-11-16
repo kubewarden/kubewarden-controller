@@ -84,7 +84,7 @@ impl From<ClientProtocol> for ClientConfig {
 impl Registry {
     pub fn new(docker_config: Option<&DockerConfig>) -> Registry {
         Registry {
-            docker_config: docker_config.map(|dc| dc.clone()),
+            docker_config: docker_config.cloned(),
         }
     }
 
@@ -119,7 +119,7 @@ impl Registry {
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
 
         let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
-        let sources: Sources = sources.map(|s| s.clone()).unwrap_or_default();
+        let sources: Sources = sources.cloned().unwrap_or_default();
         let cp = crate::client_protocol(&url, &sources)?;
 
         let (m, _) = Registry::client(cp)
@@ -129,9 +129,28 @@ impl Registry {
         Ok(m)
     }
 
+    /// Fetch the manifest's digest of the OCI object referenced by the given url.
+    /// The url is expected to be in the "registry://" format.
+    pub async fn manifest_digest(&self, url: &str, sources: Option<&Sources>) -> Result<String> {
+        let url = Url::parse(url).map_err(|_| anyhow!("invalid URL: {}", url))?;
+        let reference = Reference::from_str(
+            url.as_ref()
+                .strip_prefix("registry://")
+                .unwrap_or_else(|| url.as_ref()),
+        )?;
+
+        let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
+        let sources: Sources = sources.cloned().unwrap_or_default();
+        let cp = crate::client_protocol(&url, &sources)?;
+
+        Registry::client(cp)
+            .fetch_manifest_digest(&reference, &registry_auth)
+            .await
+    }
+
     pub async fn push(&self, policy: &[u8], url: &str, sources: Option<&Sources>) -> Result<()> {
         let url = Url::parse(url).map_err(|_| anyhow!("invalid URL: {}", url))?;
-        let sources: Sources = sources.map(|s| s.clone()).unwrap_or_default();
+        let sources: Sources = sources.cloned().unwrap_or_default();
 
         match self
             .do_push(policy, &url, crate::client_protocol(&url, &sources)?)
