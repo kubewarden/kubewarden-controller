@@ -9,18 +9,18 @@ pub(crate) type VerificationAnnotations = HashMap<String, String>;
 
 pub(crate) async fn verify(
     url: &str,
-    docker_config: Option<DockerConfig>,
-    sources: Option<Sources>,
-    annotations: Option<VerificationAnnotations>,
+    docker_config: Option<&DockerConfig>,
+    sources: Option<&Sources>,
+    annotations: Option<&VerificationAnnotations>,
     key_file: &str,
 ) -> Result<String> {
     let verification_key = read_key_file(key_file)?;
-    let mut verifier = Verifier::new(sources.clone());
+    let mut verifier = Verifier::new(sources.cloned());
     let verified_manifest_digest = verifier
         .verify(
             url,
-            docker_config.clone(),
-            annotations.clone(),
+            docker_config.cloned(),
+            annotations.cloned(),
             &verification_key,
         )
         .await?;
@@ -31,13 +31,13 @@ pub(crate) async fn verify(
 
 pub(crate) async fn verify_local_checksum(
     url: &str,
-    docker_config: &Option<DockerConfig>,
-    sources: &Option<Sources>,
+    docker_config: Option<&DockerConfig>,
+    sources: Option<&Sources>,
     verified_manifest_digest: &str,
 ) -> Result<()> {
-    let mut verifier = Verifier::new(sources.clone());
+    let mut verifier = Verifier::new(sources.cloned());
     verifier
-        .verify_local_file_checksum(url, docker_config.clone(), verified_manifest_digest)
+        .verify_local_file_checksum(url, docker_config.cloned(), verified_manifest_digest)
         .await?;
 
     info!("Local checksum successfully verified");

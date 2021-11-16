@@ -87,13 +87,25 @@ async fn main() -> Result<()> {
                 let mut verified_manifest_digest: Option<String> = None;
                 for key_file in key_files.iter() {
                     verified_manifest_digest = Some(
-                        verify::verify(uri, &docker_config, &sources, &annotations, &key_file[0])
-                            .await?,
+                        verify::verify(
+                            uri,
+                            docker_config.as_ref(),
+                            sources.as_ref(),
+                            annotations.as_ref(),
+                            &key_file[0],
+                        )
+                        .await?,
                     );
                 }
-                pull::pull(uri, docker_config.clone(), sources.clone(), destination).await?;
+                pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
                 if let Some(digest) = verified_manifest_digest {
-                    verify::verify_local_checksum(uri, &docker_config, &sources, &digest).await?
+                    verify::verify_local_checksum(
+                        uri,
+                        docker_config.as_ref(),
+                        sources.as_ref(),
+                        &digest,
+                    )
+                    .await?
                 }
             };
             Ok(())
@@ -106,8 +118,14 @@ async fn main() -> Result<()> {
 
                 for key_file in key_files.iter() {
                     println!("{:}", &key_file[0]);
-                    verify::verify(uri, &docker_config, &sources, &annotations, &key_file[0])
-                        .await?;
+                    verify::verify(
+                        uri,
+                        docker_config.as_ref(),
+                        sources.as_ref(),
+                        annotations.as_ref(),
+                        &key_file[0],
+                    )
+                    .await?;
                 }
             };
             Ok(())
@@ -136,7 +154,14 @@ async fn main() -> Result<()> {
 
                 let force = matches.is_present("force");
 
-                push::push(wasm_path, &uri, docker_config, sources, force).await?;
+                push::push(
+                    wasm_path,
+                    &uri,
+                    docker_config.as_ref(),
+                    sources.as_ref(),
+                    force,
+                )
+                .await?;
             };
             println!("Policy successfully pushed");
             Ok(())
@@ -202,16 +227,22 @@ async fn main() -> Result<()> {
                 let mut verified_manifest_digest: Option<String> = None;
                 for key_file in key_files.iter() {
                     verified_manifest_digest = Some(
-                        verify::verify(uri, &docker_config, &sources, &annotations, &key_file[0])
-                            .await?,
+                        verify::verify(
+                            uri,
+                            docker_config.as_ref(),
+                            sources.as_ref(),
+                            annotations.as_ref(),
+                            &key_file[0],
+                        )
+                        .await?,
                     );
                 }
 
                 run::pull_and_run(
                     uri,
                     execution_mode,
-                    &docker_config,
-                    &sources,
+                    docker_config.as_ref(),
+                    sources.as_ref(),
                     &request,
                     settings,
                     &verified_manifest_digest,
@@ -303,7 +334,7 @@ async fn main() -> Result<()> {
 
 fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Option<DockerConfig>)> {
     let sources = if let Some(sources_path) = matches.value_of("sources-path") {
-        Some(read_sources_file(Path::new(sources_path))?)
+        Some(read_sources_file(Path::new(&sources_path))?)
     } else {
         let sources_path = DEFAULT_ROOT.config_dir().join("sources.yaml");
         if Path::exists(&sources_path) {
@@ -328,7 +359,6 @@ fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Optio
         } else {
             None
         };
-
     Ok((sources, docker_config))
 }
 

@@ -14,8 +14,8 @@ use crate::{backend::BackendDetector, pull, verify};
 pub(crate) async fn pull_and_run(
     uri: &str,
     user_execution_mode: Option<PolicyExecutionMode>,
-    docker_config: &Option<DockerConfig>,
-    sources: &Option<Sources>,
+    docker_config: Option<&DockerConfig>,
+    sources: Option<&Sources>,
     request: &str,
     settings: Option<String>,
     verified_manifest_digest: &Option<String>,
@@ -24,8 +24,8 @@ pub(crate) async fn pull_and_run(
 
     let policy = pull::pull(
         &uri,
-        docker_config.clone(),
-        sources.clone(),
+        docker_config,
+        sources,
         policy_fetcher::PullDestination::MainStore,
     )
     .await

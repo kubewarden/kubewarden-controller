@@ -8,8 +8,8 @@ use crate::backend::BackendDetector;
 pub(crate) async fn push(
     wasm_path: PathBuf,
     uri: &str,
-    docker_config: Option<DockerConfig>,
-    sources: Option<Sources>,
+    docker_config: Option<&DockerConfig>,
+    sources: Option<&Sources>,
     force: bool,
 ) -> Result<()> {
     match Metadata::from_path(&wasm_path)? {
@@ -29,8 +29,8 @@ pub(crate) async fn push(
     };
 
     let policy = fs::read(&wasm_path).map_err(|e| anyhow!("Cannot open policy file: {:?}", e))?;
-    Registry::new(&docker_config)
-        .push(&policy, uri, &sources)
+    Registry::new(&docker_config.cloned())
+        .push(&policy, uri, &sources.cloned())
         .await
 }
 
