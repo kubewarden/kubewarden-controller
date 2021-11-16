@@ -4,9 +4,9 @@ use policy_fetcher::{fetch_policy, policy::Policy, sources::Sources, PullDestina
 
 pub(crate) async fn pull(
     uri: &str,
-    docker_config: Option<DockerConfig>,
-    sources: Option<Sources>,
+    docker_config: Option<&DockerConfig>,
+    sources: Option<&Sources>,
     destination: PullDestination,
 ) -> Result<Policy> {
-    fetch_policy(uri, destination, docker_config, sources.as_ref()).await
+    fetch_policy(uri, destination, docker_config.cloned(), sources).await
 }
