@@ -3,9 +3,9 @@ use serde::Serialize;
 use serde_json::value;
 use std::{
     convert::{TryFrom, TryInto},
-    fmt, fs,
-    path::Path,
+    fmt,
 };
+use tokio::sync::mpsc;
 
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
@@ -13,6 +13,7 @@ use wasmtime_provider::WasmtimeEngineProvider;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
+use crate::callback_requests::CallbackRequest;
 use crate::policy::Policy;
 use crate::runtimes::burrego::Runtime as BurregoRuntime;
 use crate::runtimes::{
@@ -110,20 +111,14 @@ impl fmt::Debug for PolicyEvaluator {
 }
 
 impl PolicyEvaluator {
-    pub fn from_file(
-        id: String,
-        policy_file: &Path,
-        policy_execution_mode: PolicyExecutionMode,
-        settings: Option<serde_json::Map<String, serde_json::Value>>,
-    ) -> Result<PolicyEvaluator> {
-        PolicyEvaluator::from_contents(id, fs::read(policy_file)?, policy_execution_mode, settings)
-    }
-
-    pub fn from_contents(
+    /// This method should not be used directly. Please use
+    /// `PolicyEvaluatorBuilder` instead.
+    pub(crate) fn new(
         id: String,
         policy_contents: Vec<u8>,
         policy_execution_mode: PolicyExecutionMode,
         settings: Option<serde_json::Map<String, serde_json::Value>>,
+        callback_channel: Option<mpsc::Sender<CallbackRequest>>,
     ) -> Result<PolicyEvaluator> {
         let (policy, runtime) = match policy_execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
@@ -131,6 +126,7 @@ impl PolicyEvaluator {
                 let wapc_host = WapcHost::new(Box::new(engine), wapc_callback)?;
                 let policy = PolicyEvaluator::from_contents_internal(
                     id,
+                    callback_channel,
                     || Some(wapc_host.id()),
                     Policy::new,
                     policy_execution_mode,
@@ -142,6 +138,7 @@ impl PolicyEvaluator {
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
                 let policy = PolicyEvaluator::from_contents_internal(
                     id.clone(),
+                    callback_channel,
                     || None,
                     Policy::new,
                     policy_execution_mode,
@@ -169,16 +166,17 @@ impl PolicyEvaluator {
 
     fn from_contents_internal<E, P>(
         id: String,
+        callback_channel: Option<mpsc::Sender<CallbackRequest>>,
         engine_initializer: E,
         policy_initializer: P,
         policy_execution_mode: PolicyExecutionMode,
     ) -> Result<Policy>
     where
         E: Fn() -> Option<u64>,
-        P: Fn(String, Option<u64>) -> Result<Policy>,
+        P: Fn(String, Option<u64>, Option<mpsc::Sender<CallbackRequest>>) -> Result<Policy>,
     {
         let policy_id = engine_initializer();
-        let policy = policy_initializer(id, policy_id)?;
+        let policy = policy_initializer(id, policy_id, callback_channel)?;
         if policy_execution_mode == PolicyExecutionMode::KubewardenWapc {
             WAPC_POLICY_MAPPING.write().unwrap().insert(
                 policy_id.ok_or_else(|| anyhow!("invalid policy id"))?,
@@ -252,8 +250,9 @@ mod tests {
 
         PolicyEvaluator::from_contents_internal(
             "mock_policy".to_string(),
+            None,
             || Some(policy_id),
-            |_, _| Ok(policy.clone()),
+            |_, _, _| Ok(policy.clone()),
             PolicyExecutionMode::KubewardenWapc,
         )?;
 
@@ -280,8 +279,9 @@ mod tests {
 
         PolicyEvaluator::from_contents_internal(
             policy_name.to_string(),
+            None,
             || Some(policy_id),
-            |_, _| Ok(policy.clone()),
+            |_, _, _| Ok(policy.clone()),
             PolicyExecutionMode::OpaGatekeeper,
         )?;
 
