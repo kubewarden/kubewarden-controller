@@ -1,46 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__requires": [
-    {
-      "type": "panel",
-      "id": "gauge",
-      "name": "Gauge",
-      "version": ""
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.2.1"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -65,8 +23,8 @@
   "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1634911724412,
+  "id": 26,
+  "iteration": 1637180672488,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -127,7 +85,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -183,7 +141,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -243,7 +201,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -298,7 +256,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -312,7 +270,7 @@
       "type": "stat"
     },
     {
-      "datasource": "${DS_PROMETHEUS}",
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -353,7 +311,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -367,7 +325,7 @@
       "type": "stat"
     },
     {
-      "datasource": "${DS_PROMETHEUS}",
+      "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -408,7 +366,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -463,7 +421,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -848,7 +806,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -904,7 +862,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -959,7 +917,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -973,13 +931,199 @@
       "type": "stat"
     },
     {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "timeseries",
+      "datasource": null,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 59,
+      "legend": {
+        "show": true
+      },
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__interval])) by (le)",
+          "format": "heatmap",
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Policies latency",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": "",
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": "500",
+        "min": "0",
+        "show": true,
+        "splitFactor": null,
+        "width": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": 10,
+      "yBucketSize": 10
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "id": 61,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "value"
+      },
+      "pluginVersion": "8.2.3",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "histogram_quantile(.90, sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__interval])) by (le))",
+          "format": "heatmap",
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "90th percentile latency evaluation",
+      "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 49
+      },
+      "id": 63,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.3",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_total{policy_status=\"active\"})",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "{{policy_status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Policy activations",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 57
       },
       "id": 30,
       "panels": [],
@@ -1013,7 +1157,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 41
+        "y": 58
       },
       "id": 54,
       "options": {
@@ -1029,7 +1173,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -1069,7 +1213,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 41
+        "y": 58
       },
       "id": 56,
       "options": {
@@ -1085,7 +1229,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -1125,7 +1269,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 41
+        "y": 58
       },
       "id": 57,
       "options": {
@@ -1141,7 +1285,7 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -1178,7 +1322,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 49
+        "y": 66
       },
       "id": 31,
       "options": {
@@ -1196,7 +1340,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -1234,7 +1378,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 49
+        "y": 66
       },
       "id": 32,
       "options": {
@@ -1252,7 +1396,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -1289,7 +1433,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 49
+        "y": 66
       },
       "id": 33,
       "options": {
@@ -1307,7 +1451,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.1",
+      "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
@@ -1376,7 +1520,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 73
       },
       "id": 34,
       "options": {
@@ -1402,7 +1546,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": false,
+  "refresh": "5s",
   "schemaVersion": 31,
   "style": "dark",
   "tags": [],
@@ -1440,5 +1584,5 @@
   "timezone": "",
   "title": "Kubewarden",
   "uid": "r3Pw-1O7z",
-  "version": 21
+  "version": 5
 }
