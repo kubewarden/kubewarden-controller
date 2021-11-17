@@ -1,9 +1,9 @@
-use kube::api::{ListParams, Resource};
-use kube::Client;
+use anyhow::{anyhow, Result};
+use kube::{
+    api::{ListParams, Request},
+    Client,
+};
 use std::sync::RwLock;
-
-use k8s_openapi::api::core::v1::{Namespace, Service};
-use k8s_openapi::api::networking::v1::Ingress;
 
 use lazy_static::lazy_static;
 
@@ -37,30 +37,47 @@ impl ClusterContext {
         (*self.services.read().unwrap()).clone()
     }
 
-    pub async fn refresh(&self, kubernetes_client: &Client) -> kube::Result<()> {
-        // TODO (ereslibre): use macros to remove duplication and then
-        // generalize
+    pub async fn refresh(&self, kubernetes_client: &Client) -> Result<()> {
         {
-            let ingress_list_req = Resource::all::<Ingress>().list(&ListParams::default())?;
-            let ingress_list = kubernetes_client.request_text(ingress_list_req).await?;
-            if let Ok(mut ingresses) = self.ingresses.write() {
-                *ingresses = ingress_list
-            };
-        };
-        {
-            let namespace_list_req = Resource::all::<Namespace>().list(&ListParams::default())?;
-            let namespace_list = kubernetes_client.request_text(namespace_list_req).await?;
+            let namespace_list = kubernetes_client
+                .request_text(
+                    Request::new("/api/v1/namespaces")
+                        .list(&ListParams::default())
+                        .map_err(|err| anyhow!("could not list namespaces: {:?}", err))?,
+                )
+                .await?;
+
             if let Ok(mut namespaces) = self.namespaces.write() {
                 *namespaces = namespace_list
             };
-        };
+        }
         {
-            let service_list_req = Resource::all::<Service>().list(&ListParams::default())?;
-            let service_list = kubernetes_client.request_text(service_list_req).await?;
+            let service_list = kubernetes_client
+                .request_text(
+                    Request::new("/api/v1/services")
+                        .list(&ListParams::default())
+                        .map_err(|err| anyhow!("could not list services: {:?}", err))?,
+                )
+                .await?;
+
             if let Ok(mut services) = self.services.write() {
                 *services = service_list
             };
-        };
+        }
+        {
+            let ingress_list = kubernetes_client
+                .request_text(
+                    Request::new("/apis/networking.k8s.io/v1/ingresses")
+                        .list(&ListParams::default())
+                        .map_err(|err| anyhow!("could not list ingresses: {:?}", err))?,
+                )
+                .await?;
+
+            if let Ok(mut ingresses) = self.ingresses.write() {
+                *ingresses = ingress_list
+            };
+        }
+
         Ok(())
     }
 }
