@@ -2,6 +2,13 @@
 ## [Unreleased]
 
 
+<a name="v0.2.5"></a>
+## [v0.2.5] - 2021-11-18
+### Pull Requests
+- Merge pull request [#125](https://github.com/kubewarden/policy-server/issues/125) from kubewarden/bump-dependencies
+- Merge pull request [#121](https://github.com/kubewarden/policy-server/issues/121) from kubewarden/cargo-audit-config
+
+
 <a name="v0.2.4"></a>
 ## [v0.2.4] - 2021-11-05
 ### Features
@@ -166,7 +173,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.5...HEAD
+[v0.2.5]: https://github.com/kubewarden/policy-server/compare/v0.2.4...v0.2.5
 [v0.2.4]: https://github.com/kubewarden/policy-server/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/kubewarden/policy-server/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/kubewarden/policy-server/compare/v0.2.1...v0.2.2
