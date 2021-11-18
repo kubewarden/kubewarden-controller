@@ -2,8 +2,14 @@
 ## [Unreleased]
 
 
+<a name="v0.2.4"></a>
+## [v0.2.4] - 2021-11-18
+### Pull Requests
+- Merge pull request [#90](https://github.com/kubewarden/kwctl/issues/90) from kubewarden/bump-dependencies
+
+
 <a name="v0.2.3"></a>
-## [v0.2.3] - 2021-11-16
+## [v0.2.3] - 2021-11-17
 ### Bug Fixes
 - ensure latest version of wasmtime is used
 
@@ -17,6 +23,7 @@
 - Implement the verify sub-command
 
 ### Pull Requests
+- Merge pull request [#87](https://github.com/kubewarden/kwctl/issues/87) from viccuad/main
 - Merge pull request [#84](https://github.com/kubewarden/kwctl/issues/84) from viccuad/sigstore-verify
 - Merge pull request [#83](https://github.com/kubewarden/kwctl/issues/83) from ereslibre/update-policy-fetcher
 - Merge pull request [#82](https://github.com/kubewarden/kwctl/issues/82) from kubewarden/update-readme
@@ -133,7 +140,8 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v0.2.4...HEAD
+[v0.2.4]: https://github.com/kubewarden/kwctl/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/kubewarden/kwctl/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/kubewarden/kwctl/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/kubewarden/kwctl/compare/v0.2.0...v0.2.1
