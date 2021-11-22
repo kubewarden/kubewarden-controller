@@ -85,17 +85,31 @@ async fn main() -> Result<()> {
                 // verified manifest digest of last iteration, even if all are
                 // the same:
                 let mut verified_manifest_digest: Option<String> = None;
-                for key_file in key_files.iter() {
-                    verified_manifest_digest = Some(
-                        verify::verify(
-                            uri,
-                            docker_config.as_ref(),
-                            sources.as_ref(),
-                            annotations.as_ref(),
-                            &key_file[0],
-                        )
-                        .await?,
-                    );
+                match key_files {
+                    Some(keys) => {
+                        for key in keys {
+                            verified_manifest_digest = Some(
+                                verify::verify(
+                                    uri,
+                                    docker_config.as_ref(),
+                                    sources.as_ref(),
+                                    annotations.as_ref(),
+                                    &key,
+                                )
+                                .await
+                                .map_err(|e| {
+                                    anyhow!(
+                                        "Policy cannot be validated with key '{}': {:?}",
+                                        key,
+                                        e
+                                    )
+                                })?,
+                            );
+                        }
+                    }
+                    None => {
+                        return Err(anyhow!("keyless verification not yet implemented"));
+                    }
                 }
                 pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
                 if let Some(digest) = verified_manifest_digest {
@@ -116,16 +130,25 @@ async fn main() -> Result<()> {
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let (key_files, annotations) = verification_options(matches)?;
 
-                for key_file in key_files.iter() {
-                    println!("{:}", &key_file[0]);
-                    verify::verify(
-                        uri,
-                        docker_config.as_ref(),
-                        sources.as_ref(),
-                        annotations.as_ref(),
-                        &key_file[0],
-                    )
-                    .await?;
+                match key_files {
+                    Some(keys) => {
+                        for key in keys {
+                            verify::verify(
+                                uri,
+                                docker_config.as_ref(),
+                                sources.as_ref(),
+                                annotations.as_ref(),
+                                &key,
+                            )
+                            .await
+                            .map_err(|e| {
+                                anyhow!("Policy cannot be validated with key '{}': {:?}", key, e)
+                            })?;
+                        }
+                    }
+                    None => {
+                        return Err(anyhow!("keyless verification not yet implemented"));
+                    }
                 }
             };
             Ok(())
@@ -225,17 +248,31 @@ async fn main() -> Result<()> {
                 // verified manifest digest of last iteration, even if all are
                 // the same:
                 let mut verified_manifest_digest: Option<String> = None;
-                for key_file in key_files.iter() {
-                    verified_manifest_digest = Some(
-                        verify::verify(
-                            uri,
-                            docker_config.as_ref(),
-                            sources.as_ref(),
-                            annotations.as_ref(),
-                            &key_file[0],
-                        )
-                        .await?,
-                    );
+                match key_files {
+                    Some(keys) => {
+                        for key in keys {
+                            verified_manifest_digest = Some(
+                                verify::verify(
+                                    uri,
+                                    docker_config.as_ref(),
+                                    sources.as_ref(),
+                                    annotations.as_ref(),
+                                    &key,
+                                )
+                                .await
+                                .map_err(|e| {
+                                    anyhow!(
+                                        "Policy cannot be validated with key '{}': {:?}",
+                                        key,
+                                        e
+                                    )
+                                })?,
+                            );
+                        }
+                    }
+                    None => {
+                        return Err(anyhow!("keyless verification not yet implemented"));
+                    }
                 }
 
                 run::pull_and_run(
