@@ -85,30 +85,21 @@ async fn main() -> Result<()> {
                 // verified manifest digest of last iteration, even if all are
                 // the same:
                 let mut verified_manifest_digest: Option<String> = None;
-                match key_files {
-                    Some(keys) => {
-                        for key in keys {
-                            verified_manifest_digest = Some(
-                                verify::verify(
-                                    uri,
-                                    docker_config.as_ref(),
-                                    sources.as_ref(),
-                                    annotations.as_ref(),
-                                    &key,
-                                )
-                                .await
-                                .map_err(|e| {
-                                    anyhow!(
-                                        "Policy cannot be validated with key '{}': {:?}",
-                                        key,
-                                        e
-                                    )
-                                })?,
-                            );
-                        }
-                    }
-                    None => {
-                        return Err(anyhow!("keyless verification not yet implemented"));
+                if let Some(keys) = key_files {
+                    for key in keys {
+                        verified_manifest_digest = Some(
+                            verify::verify(
+                                uri,
+                                docker_config.as_ref(),
+                                sources.as_ref(),
+                                annotations.as_ref(),
+                                &key,
+                            )
+                            .await
+                            .map_err(|e| {
+                                anyhow!("Policy cannot be validated with key '{}': {:?}", key, e)
+                            })?,
+                        );
                     }
                 }
                 pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
@@ -248,30 +239,21 @@ async fn main() -> Result<()> {
                 // verified manifest digest of last iteration, even if all are
                 // the same:
                 let mut verified_manifest_digest: Option<String> = None;
-                match key_files {
-                    Some(keys) => {
-                        for key in keys {
-                            verified_manifest_digest = Some(
-                                verify::verify(
-                                    uri,
-                                    docker_config.as_ref(),
-                                    sources.as_ref(),
-                                    annotations.as_ref(),
-                                    &key,
-                                )
-                                .await
-                                .map_err(|e| {
-                                    anyhow!(
-                                        "Policy cannot be validated with key '{}': {:?}",
-                                        key,
-                                        e
-                                    )
-                                })?,
-                            );
-                        }
-                    }
-                    None => {
-                        return Err(anyhow!("keyless verification not yet implemented"));
+                if let Some(keys) = key_files {
+                    for key in keys {
+                        verified_manifest_digest = Some(
+                            verify::verify(
+                                uri,
+                                docker_config.as_ref(),
+                                sources.as_ref(),
+                                annotations.as_ref(),
+                                &key,
+                            )
+                            .await
+                            .map_err(|e| {
+                                anyhow!("Policy cannot be validated with key '{}': {:?}", key, e)
+                            })?,
+                        );
                     }
                 }
 
