@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::clone::Clone;
+use std::fmt;
 use tokio::sync::mpsc;
 
 use crate::callback_requests::CallbackRequest;
@@ -10,7 +11,7 @@ use crate::callback_requests::CallbackRequest;
 /// This struct is used extensively inside of the `host_callback`
 /// function to obtain information about the policy that is invoking
 /// a host waPC function, and handle the request.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Policy {
     pub id: String,
     policy_id: Option<u64>,
@@ -18,6 +19,21 @@ pub struct Policy {
     /// to request the computation of code that can only be run inside of an
     /// asynchronous block
     pub callback_channel: Option<mpsc::Sender<CallbackRequest>>,
+}
+
+impl fmt::Debug for Policy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let callback_channel = match self.callback_channel {
+            Some(_) => "Some(...)",
+            None => "None",
+        };
+
+        write!(
+            f,
+            r#"Policy {{ id: "{}", policy_id: {:?}, callback_channel: {} }}"#,
+            self.id, self.policy_id, callback_channel,
+        )
+    }
 }
 
 impl PartialEq for Policy {
