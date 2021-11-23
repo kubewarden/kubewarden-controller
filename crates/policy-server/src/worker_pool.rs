@@ -1,5 +1,5 @@
-use crate::communication::{EvalRequest, WorkerPoolBootRequest};
 use anyhow::{anyhow, Result};
+use policy_evaluator::callback_requests::CallbackRequest;
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -12,21 +12,25 @@ use std::{
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
+use crate::communication::{EvalRequest, WorkerPoolBootRequest};
 use crate::worker::Worker;
 
 pub(crate) struct WorkerPool {
     api_rx: mpsc::Receiver<EvalRequest>,
     bootstrap_rx: oneshot::Receiver<WorkerPoolBootRequest>,
+    callback_handler_tx: mpsc::Sender<CallbackRequest>,
 }
 
 impl WorkerPool {
     pub(crate) fn new(
         bootstrap_rx: oneshot::Receiver<WorkerPoolBootRequest>,
         api_rx: mpsc::Receiver<EvalRequest>,
+        callback_handler_tx: mpsc::Sender<CallbackRequest>,
     ) -> WorkerPool {
         WorkerPool {
             api_rx,
             bootstrap_rx,
+            callback_handler_tx,
         }
     }
 
@@ -51,10 +55,11 @@ impl WorkerPool {
                         let ps = data.policies.clone();
                         let b = barrier.clone();
                         let canary = boot_canary.clone();
+                        let callback_handler_tx = self.callback_handler_tx.clone();
 
                         let join = thread::spawn(move || -> Result<()> {
                             info!(spawned = n, total = pool_size, "spawning worker");
-                            let worker = match Worker::new(rx, ps) {
+                            let worker = match Worker::new(rx, ps, callback_handler_tx) {
                                 Ok(w) => w,
                                 Err(e) => {
                                     error!(error = e.to_string().as_str(), "cannot spawn worker");

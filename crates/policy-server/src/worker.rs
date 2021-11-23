@@ -1,19 +1,22 @@
-use crate::communication::EvalRequest;
-use crate::metrics;
-use crate::settings::Policy;
-use crate::utils::convert_yaml_map_to_json;
 use anyhow::Result;
 use itertools::Itertools;
+use policy_evaluator::callback_requests::CallbackRequest;
 use policy_evaluator::{
     policy_evaluator::{PolicyEvaluator, ValidateRequest},
+    policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_metadata::Metadata,
     validation_response::ValidationResponse,
 };
 use std::collections::HashMap;
 use std::fmt;
 use std::time::Instant;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info_span};
+
+use crate::communication::EvalRequest;
+use crate::metrics;
+use crate::settings::Policy;
+use crate::utils::convert_yaml_map_to_json;
 
 pub(crate) struct Worker {
     evaluators: HashMap<String, PolicyEvaluator>,
@@ -41,6 +44,7 @@ impl Worker {
     pub(crate) fn new(
         rx: Receiver<EvalRequest>,
         policies: HashMap<String, Policy>,
+        callback_handler_tx: Sender<CallbackRequest>,
     ) -> Result<Worker, PolicyErrors> {
         let mut evs_errors = HashMap::new();
         let mut evs = HashMap::new();
@@ -84,12 +88,13 @@ impl Worker {
 
             let policy_execution_mode = policy_metadata.unwrap_or_default().execution_mode;
 
-            let mut policy_evaluator = match PolicyEvaluator::from_contents(
-                id.to_string(),
-                policy_contents,
-                policy_execution_mode,
-                settings_json,
-            ) {
+            let mut policy_evaluator = match PolicyEvaluatorBuilder::new(id.to_string())
+                .policy_contents(&policy_contents)
+                .execution_mode(policy_execution_mode)
+                .settings(settings_json)
+                .callback_channel(callback_handler_tx.clone())
+                .build()
+            {
                 Ok(policy_evaluator) => policy_evaluator,
                 Err(err) => {
                     evs_errors.insert(

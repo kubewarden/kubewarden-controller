@@ -4,7 +4,9 @@ extern crate policy_evaluator;
 
 use anyhow::Result;
 use opentelemetry::global::shutdown_tracer_provider;
+use policy_evaluator::callback_handler::CallbackHandlerBuilder;
 use policy_evaluator::policy_metadata::Metadata;
+use std::path::PathBuf;
 use std::{process, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
@@ -21,8 +23,6 @@ mod worker;
 
 mod worker_pool;
 use worker_pool::WorkerPool;
-
-use std::path::PathBuf;
 
 mod communication;
 use communication::{EvalRequest, KubePollerBootRequest, WorkerPoolBootRequest};
@@ -42,7 +42,32 @@ fn main() -> Result<()> {
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
-    // Phase 1: setup the Wasm worker pool, this "lives" inside of a          //
+    // Phase 1: setup the CallbackHandler. This is used by the synchronous    //
+    // world (the waPC host_callback) to request the execution of code that   //
+    // can be run only inside of asynchronous world.                          //
+    // An example of that, is a policy that changes the container image       //
+    // references to ensure they use immutable shasum instead of tags.   The  //
+    // act of retrieving the container image manifest digest requires a       //
+    // network request, which is fulfilled using asynchronous code.           //
+    //                                                                        //
+    // The communication between the two worlds happens via tokio channels.   //
+    //                                                                        //
+    ////////////////////////////////////////////////////////////////////////////
+
+    // This is a channel used to stop the tokio task that is run
+    // inside of the CallbackHandler
+    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
+        oneshot::channel();
+
+    let mut callback_handler = CallbackHandlerBuilder::default()
+        .registry_config(sources.clone(), docker_config.clone())
+        .shutdown_channel(callback_handler_shutdown_channel_rx)
+        .build()?;
+    let callback_sender_channel = callback_handler.sender_channel();
+
+    ////////////////////////////////////////////////////////////////////////////
+    //                                                                        //
+    // Phase 2: setup the Wasm worker pool, this "lives" inside of a          //
     // dedicated system thread.                                               //
     //                                                                        //
     // The communication between the "synchronous world" (aka the Wasm worker //
@@ -64,13 +89,17 @@ fn main() -> Result<()> {
 
     // Spawn the system thread that runs the main loop of the worker pool manager
     let wasm_thread = thread::spawn(move || {
-        let worker_pool = WorkerPool::new(worker_pool_bootstrap_req_rx, api_rx);
+        let worker_pool = WorkerPool::new(
+            worker_pool_bootstrap_req_rx,
+            api_rx,
+            callback_sender_channel,
+        );
         worker_pool.run();
     });
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
-    // Phase 2: setup a dedicated thread that runs the Kubernetes poller      //
+    // Phase 3: setup a dedicated thread that runs the Kubernetes poller      //
     //                                                                        //
     ////////////////////////////////////////////////////////////////////////////
 
@@ -98,7 +127,7 @@ fn main() -> Result<()> {
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
-    // Phase 3: setup the asynchronous world.                                 //
+    // Phase 4: setup the asynchronous world.                                 //
     //                                                                        //
     // We setup the tokio Runtime manually, instead of relying on the the     //
     // `tokio::main` macro, because we don't want the "synchronous" world to  //
@@ -237,6 +266,13 @@ fn main() -> Result<()> {
         }
         info!(status = "done", "kubernetes poller bootstrap");
 
+        // Spawn the tokio task used by the CallbackHandler
+        let callback_handle = tokio::spawn(async move {
+            info!(status = "init", "CallbackHandler task");
+            callback_handler.loop_eval().await;
+            info!(status = "exit", "CallbackHandler task");
+        });
+
         // Bootstrap the worker pool
         info!(status = "init", "worker pool bootstrap");
         let (worker_pool_bootstrap_res_tx, mut worker_pool_bootstrap_res_rx) =
@@ -289,6 +325,17 @@ fn main() -> Result<()> {
             }
         };
         server::run_server(&addr, tls_acceptor, api_tx).await;
+
+        // The evaluation is done, we can shutdown the tokio task that is running
+        // the CallbackHandler
+        if callback_handler_shutdown_channel_tx.send(()).is_err() {
+            error!("Cannot shut down the CallbackHandler task");
+        } else if let Err(e) = callback_handle.await {
+            error!(
+                error = e.to_string().as_str(),
+                "Error waiting for the CallbackHandler task"
+            );
+        }
     });
 
     if let Err(e) = wasm_thread.join() {
