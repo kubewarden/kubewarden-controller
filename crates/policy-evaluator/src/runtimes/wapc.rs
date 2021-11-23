@@ -7,7 +7,7 @@ use tracing::{debug, error};
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
 
-use crate::callback_requests::{CallbackRequest, CallbackResponse};
+use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
@@ -75,8 +75,10 @@ pub(crate) fn host_callback(
                         .map_err(|_| "Cannot parse given payload as string")?;
 
                     let (tx, mut rx) = oneshot::channel::<Result<CallbackResponse>>();
-                    let req = CallbackRequest::OciManifestDigest {
-                        image: image.clone(),
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::OciManifestDigest {
+                            image: image.clone(),
+                        },
                         response_channel: tx,
                     };
 
