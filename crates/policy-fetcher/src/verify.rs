@@ -148,7 +148,7 @@ impl Verifier {
             return Err(anyhow!("No local policy to verify the manifest for"));
         }
 
-        let registry = crate::registry::Registry::new(&docker_config);
+        let registry = crate::registry::Registry::new(docker_config.as_ref());
         let reference = oci_distribution::Reference::from_str(image_name)?;
         let image_immutable_ref = format!(
             "registry://{}/{}@{}",
@@ -157,7 +157,7 @@ impl Verifier {
             verified_manifest_digest
         );
         let manifest = registry
-            .manifest(&image_immutable_ref, &self.sources.clone())
+            .manifest(&image_immutable_ref, self.sources.as_ref())
             .await?;
 
         let digests: Vec<String> = manifest
