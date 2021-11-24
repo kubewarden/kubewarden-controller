@@ -1,4 +1,46 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "8.2.3"
+    },
+    {
+      "type": "panel",
+      "id": "heatmap",
+      "name": "Heatmap",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -23,8 +65,8 @@
   "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 26,
-  "iteration": 1637180672488,
+  "id": null,
+  "iteration": 1637931173543,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -47,11 +89,13 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "green",
+            "mode": "fixed"
           },
           "mappings": [],
           "max": 100,
           "min": 0,
+          "noValue": "0%",
           "thresholds": {
             "mode": "percentage",
             "steps": [
@@ -73,6 +117,9 @@
       },
       "id": 50,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -81,33 +128,34 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "text": {},
+        "textMode": "auto"
       },
       "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\"})*100/sum(kubewarden_policy_evaluations_total{accepted=~\"false|true\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\"})*100/sum(kubewarden_policy_evaluations_total{})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Request accepted rate",
-      "type": "gauge"
+      "title": "Request accepted with no mutation percentage",
+      "type": "stat"
     },
     {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "red",
+            "mode": "fixed"
           },
           "mappings": [],
           "max": 100,
           "min": 0,
+          "noValue": "0%",
           "thresholds": {
             "mode": "percentage",
             "steps": [
@@ -129,6 +177,9 @@
       },
       "id": 48,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -137,9 +188,8 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "text": {},
+        "textMode": "auto"
       },
       "pluginVersion": "8.2.3",
       "targets": [
@@ -151,19 +201,21 @@
           "refId": "A"
         }
       ],
-      "title": "Request rejection rate",
-      "type": "gauge"
+      "title": "Request rejection percentage ",
+      "type": "stat"
     },
     {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "mappings": [],
           "max": 100,
           "min": 0,
+          "noValue": "0%",
           "thresholds": {
             "mode": "percentage",
             "steps": [
@@ -189,6 +241,9 @@
       },
       "id": 51,
       "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -197,31 +252,89 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "text": {},
+        "textMode": "auto"
       },
       "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\"})*100/sum(kubewarden_policy_evaluations_total{accepted=\"true\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\"})*100/sum(kubewarden_policy_evaluations_total{})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Request mutation rate (over accepted request)",
-      "type": "gauge"
+      "title": "Request mutation percentage ",
+      "type": "stat"
+    },
+    {
+      "datasource": "${DS_PROMETHEUS}",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 9
+      },
+      "id": 37,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.3",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\"})",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Total accepted requests with no mutation",
+      "type": "stat"
     },
     {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -237,7 +350,7 @@
       "gridPos": {
         "h": 7,
         "w": 6,
-        "x": 0,
+        "x": 6,
         "y": 9
       },
       "id": 39,
@@ -270,13 +383,15 @@
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "${DS_PROMETHEUS}",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "red",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -292,7 +407,7 @@
       "gridPos": {
         "h": 7,
         "w": 6,
-        "x": 6,
+        "x": 12,
         "y": 9
       },
       "id": 40,
@@ -325,68 +440,15 @@
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 12,
-        "y": 9
-      },
-      "id": 37,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\"})",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Total accepted requests",
-      "type": "stat"
-    },
-    {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "blue",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -439,14 +501,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "green",
+            "mode": "fixed"
           },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -492,7 +555,7 @@
         "x": 0,
         "y": 16
       },
-      "id": 18,
+      "id": 67,
       "options": {
         "legend": {
           "calcs": [],
@@ -506,13 +569,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(kubewarden_policy_evaluations_total{accepted=\"true\"}[30m])",
+          "expr": "sum by (accepted) (\n  rate(kubewarden_policy_evaluations_total{accepted=\"true\"}[$__rate_interval])\n)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Accepted requests",
           "refId": "A"
         }
       ],
-      "title": "Rate of accepted requests in the last 30 minutes",
+      "title": "Accepted requests rate",
       "type": "timeseries"
     },
     {
@@ -520,14 +583,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "red",
+            "mode": "fixed"
           },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -555,12 +619,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
-              },
-              {
                 "color": "red",
-                "value": 80
+                "value": null
               }
             ]
           }
@@ -573,7 +633,7 @@
         "x": 12,
         "y": 16
       },
-      "id": 28,
+      "id": 66,
       "options": {
         "legend": {
           "calcs": [],
@@ -587,14 +647,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(kubewarden_policy_evaluations_total{mutated=\"true\"}[30m])",
-          "hide": false,
+          "expr": "sum by (accepted) (\n  rate(kubewarden_policy_evaluations_total{accepted=\"false\"}[$__rate_interval])\n)",
+          "format": "time_series",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Reject requests",
           "refId": "A"
         }
       ],
-      "title": "Rate of mutated requests in the last 30 minutes",
+      "title": "Rejected requests rate",
       "type": "timeseries"
     },
     {
@@ -602,14 +662,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -639,10 +700,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           }
@@ -655,7 +712,7 @@
         "x": 0,
         "y": 24
       },
-      "id": 27,
+      "id": 68,
       "options": {
         "legend": {
           "calcs": [],
@@ -669,13 +726,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(kubewarden_policy_evaluations_total{accepted=\"false\"}[30m])",
+          "expr": "sum by (mutated) (\n  rate(kubewarden_policy_evaluations_total{mutated=\"true\"}[$__rate_interval])\n)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Mutated requests",
           "refId": "A"
         }
       ],
-      "title": "Rate of rejected requests in the last 30 minutes",
+      "title": "Mutated requests rate",
       "type": "timeseries"
     },
     {
@@ -683,14 +740,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "blue",
+            "mode": "fixed"
           },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -736,7 +794,7 @@
         "x": 12,
         "y": 24
       },
-      "id": 44,
+      "id": 69,
       "options": {
         "legend": {
           "calcs": [],
@@ -750,24 +808,88 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\"} offset 5m)",
+          "expr": "sum (\n  rate(kubewarden_policy_evaluations_total[$__rate_interval])\n)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "All requests",
           "refId": "A"
         }
       ],
-      "title": "Total rejected requests 5 minutes ago",
+      "title": " Requests rate",
       "type": "timeseries"
     },
     {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "timeseries",
       "datasource": null,
-      "description": "Number of policies that evaluated some request",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 59,
+      "legend": {
+        "show": true
+      },
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Policies latency",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": "",
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": "120",
+        "min": "0",
+        "show": true,
+        "splitFactor": null,
+        "width": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": 10,
+      "yBucketSize": 10
+    },
+    {
+      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "decimals": 0,
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -776,48 +898,53 @@
                 "value": null
               },
               {
+                "color": "#EAB839",
+                "value": 101
+              },
+              {
                 "color": "red",
-                "value": 80
+                "value": 200
               }
             ]
-          }
+          },
+          "unit": "ms"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 5,
-        "x": 0,
+        "w": 12,
+        "x": 12,
         "y": 32
       },
-      "id": 46,
+      "id": 61,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "distinctCount"
+            "lastNotNull"
           ],
-          "fields": "/^policy_name$/",
+          "fields": "",
           "values": false
         },
         "text": {},
-        "textMode": "auto"
+        "textMode": "value"
       },
       "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
-          "expr": "kubewarden_policy_evaluations_total{}",
-          "format": "table",
+          "expr": "histogram_quantile(.90, sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__interval])) by (le))",
+          "format": "heatmap",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{le}}",
           "refId": "A"
         }
       ],
-      "title": "Policies evaluated",
+      "title": "90th percentile evaluation latency",
       "type": "stat"
     },
     {
@@ -825,9 +952,11 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -842,9 +971,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 10,
-        "x": 5,
-        "y": 32
+        "w": 12,
+        "x": 0,
+        "y": 40
       },
       "id": 42,
       "options": {
@@ -880,9 +1009,11 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "red",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -897,9 +1028,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 9,
-        "x": 15,
-        "y": 32
+        "w": 12,
+        "x": 12,
+        "y": 40
       },
       "id": 8,
       "options": {
@@ -931,143 +1062,15 @@
       "type": "stat"
     },
     {
-      "cards": {
-        "cardPadding": null,
-        "cardRound": null
-      },
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateOranges",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "timeseries",
-      "datasource": null,
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 40
-      },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
-      "id": 59,
-      "legend": {
-        "show": true
-      },
-      "reverseYBuckets": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__interval])) by (le)",
-          "format": "heatmap",
-          "interval": "",
-          "legendFormat": "{{le}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Policies latency",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "xBucketNumber": null,
-      "xBucketSize": "",
-      "yAxis": {
-        "decimals": null,
-        "format": "ms",
-        "logBase": 1,
-        "max": "500",
-        "min": "0",
-        "show": true,
-        "splitFactor": null,
-        "width": null
-      },
-      "yBucketBound": "auto",
-      "yBucketNumber": 10,
-      "yBucketSize": 10
-    },
-    {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "#EAB839",
-                "value": 50
-              },
-              {
-                "color": "red",
-                "value": 100
-              }
-            ]
-          },
-          "unit": "ms"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 40
-      },
-      "id": 61,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "value"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "histogram_quantile(.90, sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__interval])) by (le))",
-          "format": "heatmap",
-          "interval": "",
-          "legendFormat": "{{le}}",
-          "refId": "A"
-        }
-      ],
-      "title": "90th percentile latency evaluation",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
+            "fixedColor": "blue",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1084,7 +1087,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 48
       },
       "id": 63,
       "options": {
@@ -1117,13 +1120,75 @@
       "type": "stat"
     },
     {
+      "datasource": null,
+      "description": "Number of policies that evaluated some request",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "id": 46,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "distinctCount"
+          ],
+          "fields": "/^policy_name$/",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.2.3",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "kubewarden_policy_evaluations_total{}",
+          "format": "table",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "title": "Policies evaluated",
+      "type": "stat"
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 56
       },
       "id": 30,
       "panels": [],
@@ -1135,11 +1200,13 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "green",
+            "mode": "fixed"
           },
           "mappings": [],
           "max": 100,
           "min": 0,
+          "noValue": "0%",
           "thresholds": {
             "mode": "percentage",
             "steps": [
@@ -1157,10 +1224,13 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 58
+        "y": 57
       },
       "id": 54,
       "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1169,33 +1239,34 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "text": {},
+        "textMode": "auto"
       },
       "pluginVersion": "8.2.3",
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": " $policy_name policy accepted request rate",
-      "type": "gauge"
+      "title": " $policy_name policy accepted request percentage",
+      "type": "stat"
     },
     {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "red",
+            "mode": "fixed"
           },
           "mappings": [],
           "max": 100,
           "min": 0,
+          "noValue": "0%",
           "thresholds": {
             "mode": "percentage",
             "steps": [
@@ -1213,10 +1284,13 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 58
+        "y": 57
       },
       "id": 56,
       "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1225,9 +1299,8 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "text": {},
+        "textMode": "auto"
       },
       "pluginVersion": "8.2.3",
       "targets": [
@@ -1239,19 +1312,21 @@
           "refId": "A"
         }
       ],
-      "title": "$policy_name policy request rejection rate ",
-      "type": "gauge"
+      "title": "$policy_name policy request rejection percentage ",
+      "type": "stat"
     },
     {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "mappings": [],
           "max": 100,
           "min": 0,
+          "noValue": "0%",
           "thresholds": {
             "mode": "percentage",
             "steps": [
@@ -1269,10 +1344,13 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 58
+        "y": 57
       },
       "id": 57,
       "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
@@ -1281,9 +1359,8 @@
           "fields": "",
           "values": false
         },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "text": {},
+        "textMode": "auto"
       },
       "pluginVersion": "8.2.3",
       "targets": [
@@ -1295,17 +1372,19 @@
           "refId": "A"
         }
       ],
-      "title": "$policy_name policy mutation request  rate",
-      "type": "gauge"
+      "title": "$policy_name policy mutation request  percentage",
+      "type": "stat"
     },
     {
       "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "green",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1322,7 +1401,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 66
+        "y": 65
       },
       "id": 31,
       "options": {
@@ -1344,13 +1423,13 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",policy_name=\"$policy_name\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\",policy_name=\"$policy_name\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Total accepted requests by a policy ($policy_name)",
+      "title": "Total accepted requests by $policy_name policy",
       "type": "stat"
     },
     {
@@ -1359,9 +1438,11 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "red",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1378,7 +1459,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 66
+        "y": 65
       },
       "id": 32,
       "options": {
@@ -1406,7 +1487,7 @@
           "refId": "A"
         }
       ],
-      "title": "Total rejected requests by a policy named $policy_name",
+      "title": "Total rejected requests by  $policy_name policy",
       "type": "stat"
     },
     {
@@ -1414,9 +1495,11 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "purple",
+            "mode": "fixed"
           },
           "mappings": [],
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1433,7 +1516,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 66
+        "y": 65
       },
       "id": 33,
       "options": {
@@ -1461,7 +1544,7 @@
           "refId": "A"
         }
       ],
-      "title": "Total mutated requests by a policy  ($policy_name)",
+      "title": "Total mutated requests by  $policy_name policy",
       "type": "stat"
     },
     {
@@ -1469,14 +1552,15 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "fixedColor": "blue",
+            "mode": "fixed"
           },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -1520,7 +1604,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 72
       },
       "id": 34,
       "options": {
@@ -1536,17 +1620,17 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"}[30m])",
+          "expr": "sum  (\n  rate(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"}[$__rate_interval])\n)",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Policy request rate",
           "refId": "A"
         }
       ],
-      "title": "Rate of requests by a policy ($policy_name)",
+      "title": "Rate of requests to $policy_name policy",
       "type": "timeseries"
     }
   ],
-  "refresh": "5s",
+  "refresh": "30s",
   "schemaVersion": 31,
   "style": "dark",
   "tags": [],
@@ -1555,8 +1639,8 @@
       {
         "current": {
           "selected": false,
-          "text": "psp-user-group",
-          "value": "psp-user-group"
+          "text": "",
+          "value": ""
         },
         "description": "Define the policy which you want to see the metrics",
         "error": null,
@@ -1566,11 +1650,11 @@
         "options": [
           {
             "selected": true,
-            "text": "psp-user-group",
-            "value": "psp-user-group"
+            "text": "",
+            "value": ""
           }
         ],
-        "query": "psp-user-group",
+        "query": "",
         "skipUrlSync": false,
         "type": "textbox"
       }
@@ -1584,5 +1668,5 @@
   "timezone": "",
   "title": "Kubewarden",
   "uid": "r3Pw-1O7z",
-  "version": 5
+  "version": 3
 }
