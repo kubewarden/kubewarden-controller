@@ -18,7 +18,7 @@ base64 = "0.13.0"
 directories = "3.0.2"
 lazy_static = "1.4.0"
 #oci-distribution = "0.6"
-oci-distribution = { git = "https://github.com/kubewarden/krustlet", branch = "oci-distribution-fix-push-to-ghcr"}
+oci-distribution = { git = "https://github.com/kubewarden/oci-distribution", branch = "not-yet-merged-patches" }
 reqwest = { version = "0.11.3", features = ["rustls"] }
 rustls = "0.19.1"
 serde_json = "1.0.64"
@@ -31,5 +31,6 @@ url = "2.2.0"
 walkdir = "2"
 
 [dev-dependencies]
+rstest = "0.11.0"
 tempfile = "3.2.0"
 textwrap = "0.11.0"

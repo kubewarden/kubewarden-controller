@@ -5,13 +5,13 @@ use url::Url;
 
 use crate::sources::Certificate;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum ClientProtocol {
     Http,
     Https(TlsVerificationMode),
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum TlsVerificationMode {
     CustomCaCertificates(Vec<Certificate>),
     SystemCa,

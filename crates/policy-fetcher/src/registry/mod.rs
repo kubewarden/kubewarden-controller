@@ -11,7 +11,9 @@ use oci_distribution::{
     secrets::RegistryAuth,
     Reference,
 };
-use std::{convert::From, path::Path, str::FromStr};
+use std::convert::TryFrom;
+use std::{path::Path, str::FromStr};
+use tracing::debug;
 use url::Url;
 
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
@@ -108,16 +110,16 @@ impl Registry {
     }
 
     /// Fetch the manifest of the OCI object referenced by the given url.
-    /// The url is expected to be in the "registry://" format.
     pub async fn manifest(
         &self,
         url: &str,
         sources: Option<&Sources>,
     ) -> Result<oci_distribution::manifest::OciManifest> {
-        let url = Url::parse(url).map_err(|_| anyhow!("invalid URL: {}", url))?;
-        let reference =
-            Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
-
+        // Start by building the Reference, this will expand the input url to
+        // ensure it contains also the registry. Example: `busybox` ->
+        // `docker.io/library/busybox:latest`
+        let reference = build_fully_resolved_reference(url)?;
+        let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
         let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
         let sources: Sources = sources.cloned().unwrap_or_default();
         let cp = crate::client_protocol(&url, &sources)?;
@@ -130,15 +132,12 @@ impl Registry {
     }
 
     /// Fetch the manifest's digest of the OCI object referenced by the given url.
-    /// The url is expected to be in the "registry://" format.
     pub async fn manifest_digest(&self, url: &str, sources: Option<&Sources>) -> Result<String> {
-        let url = Url::parse(url).map_err(|_| anyhow!("invalid URL: {}", url))?;
-        let reference = Reference::from_str(
-            url.as_ref()
-                .strip_prefix("registry://")
-                .unwrap_or_else(|| url.as_ref()),
-        )?;
-
+        // Start by building the Reference, this will expand the input url to
+        // ensure it contains also the registry. Example: `busybox` ->
+        // `docker.io/library/busybox:latest`
+        let reference = build_fully_resolved_reference(url)?;
+        let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
         let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
         let sources: Sources = sources.cloned().unwrap_or_default();
         let cp = crate::client_protocol(&url, &sources)?;
@@ -213,6 +212,17 @@ impl Registry {
     }
 }
 
+pub(crate) fn build_fully_resolved_reference(url: &str) -> Result<Reference> {
+    let image = url.strip_prefix("registry://").unwrap_or(url);
+    Reference::try_from(image).map_err(|e| {
+        anyhow!(
+            "Cannot parse {} into an OCI Reference object: {:?}",
+            image,
+            e
+        )
+    })
+}
+
 #[async_trait]
 impl PolicyFetcher for Registry {
     async fn fetch(
@@ -223,6 +233,7 @@ impl PolicyFetcher for Registry {
     ) -> Result<()> {
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
+        debug!(image=?reference, ?client_protocol, ?destination, "fetching policy");
 
         let image_content = Registry::client(client_protocol)
             .pull(
@@ -244,5 +255,84 @@ impl PolicyFetcher for Registry {
             }
             None => Err(anyhow!("could not pull policy {}", url)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest(
+        input,
+        registry,
+        repository,
+        tag,
+        digest,
+        case(
+            "registry://containers.local.lan/kubewarden/psp-apparmor:v0.1.0",
+            "containers.local.lan",
+            "kubewarden/psp-apparmor",
+            Some("v0.1.0"),
+            None
+        ),
+        // same as before, but without the registry:// protocol
+        case(
+            "containers.local.lan/kubewarden/psp-apparmor:v0.1.0",
+            "containers.local.lan",
+            "kubewarden/psp-apparmor",
+            Some("v0.1.0"),
+            None
+        ),
+        // ensure latest is added
+        case(
+            "containers.local.lan/kubewarden/psp-apparmor",
+            "containers.local.lan",
+            "kubewarden/psp-apparmor",
+            Some("latest"),
+            None
+        ),
+        case(
+            "localhost:5000/psp-apparmor",
+            "localhost:5000",
+            "psp-apparmor",
+            Some("latest"),
+            None
+        ),
+        // docker hub is a special place...
+        case(
+            "busybox",
+            "docker.io",
+            "library/busybox",
+            Some("latest"),
+            None
+        ),
+        case(
+            "opensuse/leap:15.3",
+            "docker.io",
+            "opensuse/leap",
+            Some("15.3"),
+            None
+        ),
+        case(
+            "registry://busybox",
+            "docker.io",
+            "library/busybox",
+            Some("latest"),
+            None
+        )
+    )]
+    fn test_reference_from_url(
+        input: &str,
+        registry: &str,
+        repository: &str,
+        tag: Option<&str>,
+        digest: Option<&str>,
+    ) {
+        let reference = build_fully_resolved_reference(input).expect("could not parse reference");
+        assert_eq!(registry, reference.registry(), "input was: {}", input);
+        assert_eq!(repository, reference.repository(), "input was: {}", input);
+        assert_eq!(tag, reference.tag(), "input was: {}", input);
+        assert_eq!(digest, reference.digest(), "input was: {}", input);
     }
 }
