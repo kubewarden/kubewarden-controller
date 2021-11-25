@@ -26,7 +26,7 @@ pub fn build_cli() -> clap::App<'static, 'static> {
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
-        .arg(Arg::with_name("v").short("v").help("Increase verbosity"))
+        .arg(Arg::with_name("verbose").short("v").help("Increase verbosity"))
         .subcommand(
             SubCommand::with_name("policies")
                 .about("Lists all downloaded policies")
