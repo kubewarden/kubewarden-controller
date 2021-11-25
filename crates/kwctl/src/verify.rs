@@ -3,7 +3,7 @@ use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::Verifier;
 use std::{collections::HashMap, fs};
-use tracing::info;
+use tracing::{debug, info};
 
 pub(crate) type VerificationAnnotations = HashMap<String, String>;
 
@@ -14,6 +14,7 @@ pub(crate) async fn verify(
     annotations: Option<&VerificationAnnotations>,
     key_file: &str,
 ) -> Result<String> {
+    debug!(policy = url, ?annotations, ?key_file, "Verifying policy");
     let verification_key = read_key_file(key_file)?;
     let mut verifier = Verifier::new(sources.cloned());
     let verified_manifest_digest = verifier
