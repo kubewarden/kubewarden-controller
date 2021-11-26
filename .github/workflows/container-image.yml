@@ -1,16 +1,32 @@
-on:
-  push:
-    branches:
-    - main
-    tags:
-    - 'v*'
+name: Build container image
 
-name: build container image
+on:
+  workflow_call:
+    inputs:
+      push-image:
+        type: boolean
+        required: true
+    outputs:
+      repository:
+        description: "Repository used to build the container image"
+        value: ${{ jobs.build.outputs.repository }}
+      tag:
+        description: "Tag used to build the container image"
+        value: ${{ jobs.build.outputs.tag }}
+      artifact:
+        description: "Uploaded artifact with the container tarball"
+        value: ${{ jobs.build.outputs.artifact }}
+
+
 
 jobs:
   build:
     name: Build container image
     runs-on: ubuntu-latest
+    outputs:
+      repository: ${{ steps.setoutput.outputs.repository }}
+      tag: ${{ steps.setoutput.outputs.tag }}
+      artifact: ${{ steps.setoutput.outputs.artifact }}
     steps:
       -
         name: Checkout code
@@ -29,24 +45,18 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Build and push development container image
+        name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64, linux/arm64
-          push: true
-          tags: |
-            ghcr.io/kubewarden/kubewarden-controller:latest
+        run: |
+          echo TAG_NAME=latest >> $GITHUB_ENV
       -
         name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+            echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
       -
-        name: Build and push tagged container image
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        name: Build and push container image
+        if: ${{ inputs.push-image }}
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -54,4 +64,32 @@ jobs:
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/kubewarden/kubewarden-controller:${{ env.TAG_NAME }}
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
+      -
+        # Only build amd64 because buildx does not allow multiple platforms when
+        # exporting the image to a tarball. As we use this only for end-to-end tests
+        # and they run on amd64 arch, let's skip the arm64 build for now.
+        name: Build linux/amd64 container image
+        if: ${{ inputs.push-image == false }}
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
+          tags: |
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
+      -
+        name: Upload container image to use in other jobs
+        if: ${{ inputs.push-image == false }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: kubewarden-controller-image-${{ env.TAG_NAME }}
+          path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
+      -
+        id: setoutput
+        name: Set output parameters
+        run: |
+          echo "::set-output name=repository::ghcr.io/${{github.repository_owner}}/kubewarden-controller"
+          echo "::set-output name=tag::${{ env.TAG_NAME }}"
+          echo "::set-output name=artifact::kubewarden-controller-image-${{env.TAG_NAME}}"
