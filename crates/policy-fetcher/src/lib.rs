@@ -20,14 +20,13 @@ use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
 use crate::local::Local;
 use crate::policy::Policy;
+use crate::registry::build_fully_resolved_reference;
 use crate::registry::config::DockerConfig;
 use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
 
-use oci_distribution::Reference;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use tracing::debug;
 use url::ParseError;
 
@@ -44,7 +43,7 @@ pub async fn fetch_policy(
     docker_config: Option<DockerConfig>,
     sources: Option<&Sources>,
 ) -> Result<Policy> {
-    let mut url = match Url::parse(url) {
+    let url = match Url::parse(url) {
         Ok(u) => Ok(u),
         Err(ParseError::RelativeUrlWithoutBase) => {
             Url::parse(format!("registry://{}", url).as_str())
@@ -61,11 +60,7 @@ pub async fn fetch_policy(
                     .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err))?,
             });
         }
-        "registry" => {
-            add_tag_if_not_present(&mut url);
-            Ok(())
-        }
-        "http" | "https" => Ok(()),
+        "registry" | "http" | "https" => Ok(()),
         _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
     }?;
     let (store, destination) = pull_destination(&url, &destination)?;
@@ -75,8 +70,8 @@ pub async fn fetch_policy(
     match url.scheme() {
         "registry" => {
             // On a registry, the `latest` tag always pulls the latest version
-            let tag = url.as_str().split(':').last();
-            if tag != Some("latest") && Path::exists(&destination) {
+            let reference = build_fully_resolved_reference(url.as_str())?;
+            if reference.tag() != Some("latest") && Path::exists(&destination) {
                 return Ok(Policy {
                     uri: url.to_string(),
                     local_path: destination,
@@ -197,18 +192,6 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
             .map(|port| format!(":{}", port))
             .unwrap_or_default(),
     ))
-}
-
-fn add_tag_if_not_present(url: &mut Url) {
-    if let Ok(reference) = Reference::from_str(
-        url.as_ref()
-            .strip_prefix("registry://")
-            .unwrap_or_else(|| url.as_ref()),
-    ) {
-        if reference.tag() == None {
-            url.set_path(&[url.path(), "latest"].join(":"));
-        }
-    }
 }
 
 #[cfg(test)]
@@ -341,41 +324,5 @@ mod tests {
             ),
         );
         Ok(())
-    }
-
-    #[test]
-    fn latest_tag_added_if_tag_not_present() {
-        let mut input =
-            Url::parse("registry://ghcr.io/kubewarden/policies/psp-capabilities").unwrap();
-        let expected = "registry://ghcr.io/kubewarden/policies/psp-capabilities:latest";
-        add_tag_if_not_present(&mut input);
-        assert_eq!(expected, input.to_string())
-    }
-
-    #[test]
-    fn latest_tag_not_added_if_tag_is_present() {
-        let mut input =
-            Url::parse("registry://ghcr.io/kubewarden/policies/psp-capabilities:v1").unwrap();
-        let expected = "registry://ghcr.io/kubewarden/policies/psp-capabilities:v1";
-        add_tag_if_not_present(&mut input);
-        assert_eq!(expected, input.to_string())
-    }
-
-    #[test]
-    fn latest_tag_added_if_not_present_and_port_is_present() {
-        let mut input =
-            Url::parse("registry://ghcr.io:433/kubewarden/policies/psp-capabilities").unwrap();
-        let expected = "registry://ghcr.io:433/kubewarden/policies/psp-capabilities:latest";
-        add_tag_if_not_present(&mut input);
-        assert_eq!(expected, input.to_string())
-    }
-
-    #[test]
-    fn latest_tag_added_if_not_present_and_ip_is_used() {
-        let mut input =
-            Url::parse("registry://0.0.0.0:433/kubewarden/policies/psp-capabilities").unwrap();
-        let expected = "registry://0.0.0.0:433/kubewarden/policies/psp-capabilities:latest";
-        add_tag_if_not_present(&mut input);
-        assert_eq!(expected, input.to_string())
     }
 }
