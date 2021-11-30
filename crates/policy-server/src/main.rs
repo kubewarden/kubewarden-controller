@@ -40,6 +40,27 @@ fn main() -> Result<()> {
             .expect("error parsing the number of workers")
     });
 
+    // As of clap version 2, we have to do this check in separate
+    // steps.
+    //
+    // `--enable-metrics` does not take a value. However, using
+    // `env` from clap to link the `KUBEWARDEN_ENABLE_METRICS`
+    // envvar to this flag forcefully sets `takes_value` on the
+    // flag, making the usage of `--enable-metrics` argument weird
+    // (this should not take a value).
+    //
+    // The answer is therefore, to just set up the
+    // `--enable-metrics` flag in clap, and check manually whether
+    // the environment variable is set.
+    //
+    // The same is true for `--verify-policies` flag, and
+    // KUBEWARDEN_ENABLE_VERIFICATION env var.
+    //
+    // Check https://github.com/clap-rs/clap/issues/1476 for
+    // further details.
+    let metrics_enabled = matches.is_present("enable-metrics")
+        || std::env::var_os("KUBEWARDEN_ENABLE_METRICS").is_some();
+
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
     // Phase 1: setup the Wasm worker pool, this "lives" inside of a          //
@@ -120,23 +141,6 @@ fn main() -> Result<()> {
             fatal_error(err.to_string());
         }
 
-        // As of clap version 2, we have to do this check in separate
-        // steps.
-        //
-        // `--enable-metrics` does not take a value. However, using
-        // `env` from clap to link the `KUBEWARDEN_ENABLE_METRICS`
-        // envvar to this flag forcefully sets `takes_value` on the
-        // flag, making the usage of `--enable-metrics` argument weird
-        // (this should not take a value).
-        //
-        // The answer is therefore, to just set up the
-        // `--enable-metrics` flag in clap, and check manually whether
-        // the environment variable is set.
-        //
-        // Check https://github.com/clap-rs/clap/issues/1476 for
-        // further details.
-        let metrics_enabled = matches.is_present("enable-metrics")
-            || std::env::var_os("KUBEWARDEN_ENABLE_METRICS").is_some();
 
         // The unused variable is required so the meter is not dropped early and
         // lives for the whole block lifetime, exporting metrics
