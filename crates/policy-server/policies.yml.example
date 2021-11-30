@@ -1,7 +1,7 @@
 psp-apparmor:
-  url: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.3
+  url: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.7
 psp-capabilities:
-  url: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.2
+  url: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.7
   settings:
     allowed_capabilities: ["*"]
     required_drop_capabilities: ["KILL"]
