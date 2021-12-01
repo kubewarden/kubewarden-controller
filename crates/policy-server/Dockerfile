@@ -8,37 +8,24 @@ RUN zypper in -y curl && \
     # Now add the repository and install cargo
     zypper ar -f obs://devel:languages:rust/openSUSE_Leap_15.3 devel:languages:rust && \
     zypper ref && \
-    zypper in -y cargo gcc libopenssl-devel
+    zypper in -y gcc cargo
 
 WORKDIR /usr/src/policy-server
 COPY . .
 RUN cargo install --root /usr/local/cargo --path .
 
-FROM registry.suse.com/suse/sle15:latest as sle
-
-RUN zypper download libopenssl1_1
-# move rpm packages to / to strip arch from path:
-RUN find /var/cache/zypp/packages/ -iname '*.rpm' -exec mv '{}' / \;
-
-RUN useradd \
-  --system \
-  --shell "/sbin/nologin" \
-  --uid 2000 \
-  kubewarden
-
 # final image
 FROM registry.suse.com/bci/minimal
 LABEL org.opencontainers.image.source https://github.com/kubewarden/policy-server
 
-USER root
+# By default we will run as this user...
+RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd
+# Add the default GID to /etc/group for completeness.
+RUN echo "policy-server:x:65533:policy-server" >> /etc/group
 
-COPY --from=sle /etc/passwd /etc/passwd
-COPY --from=sle /*.rpm /
 COPY --from=builder /usr/local/cargo/bin/policy-server /usr/local/bin/policy-server
 
-RUN rpm --install /*.rpm; rm -f /*.rpm
-
-USER kubewarden
+USER 65533:65533
 
 EXPOSE 3000
 

@@ -43,8 +43,8 @@ example:
   settings:
     valid_namespace: valid
 "#;
-        let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
-        assert_eq!(policies.is_empty(), false);
+        let policies: HashMap<String, Policy> = serde_yaml::from_str(input).unwrap();
+        assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
         let json_data = convert_yaml_map_to_json(policy.settings().unwrap());
@@ -62,8 +62,8 @@ example:
   url: file:///tmp/namespace-validate-policy.wasm
   settings: {}
 "#;
-        let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
-        assert_eq!(policies.is_empty(), false);
+        let policies: HashMap<String, Policy> = serde_yaml::from_str(input).unwrap();
+        assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
         let json_data = convert_yaml_map_to_json(policy.settings().unwrap());
