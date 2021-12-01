@@ -21,14 +21,17 @@ pub struct Verifier {
 impl Verifier {
     /// Creates a new verifier using the `Sources` provided. These are
     /// later used to interact with remote OCI registries.
-    pub fn new(sources: Option<Sources>) -> Self {
+    pub fn new(sources: Option<Sources>) -> Result<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
-        let cosign_client = sigstore::cosign::Client::new(client_config);
-        Verifier {
+        let cosign_client = sigstore::cosign::ClientBuilder::default()
+            .with_client_config(client_config)
+            .build()
+            .map_err(|e| anyhow!("could not build a cosign client: {}", e))?;
+        Ok(Verifier {
             cosign_client,
             sources,
-        }
+        })
     }
 
     /// Verifies the given policy using the verification key provided by the
@@ -95,7 +98,7 @@ impl Verifier {
                 &auth,
                 &source_image_digest,
                 &cosign_signature_image,
-                verification_key,
+                &Some(verification_key.to_string()),
                 annotations,
             )
             .await?;
