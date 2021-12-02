@@ -5,6 +5,7 @@ extern crate policy_evaluator;
 use anyhow::Result;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::policy_metadata::Metadata;
+use settings::VerificationSettings;
 use std::{process, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
@@ -60,6 +61,13 @@ fn main() -> Result<()> {
     // further details.
     let metrics_enabled = matches.is_present("enable-metrics")
         || std::env::var_os("KUBEWARDEN_ENABLE_METRICS").is_some();
+    let verify_enabled = matches.is_present("enable-verification")
+        || std::env::var_os("KUBEWARDEN_ENABLE_VERIFICATION").is_some();
+
+    let mut verification_settings: Option<VerificationSettings> = None;
+    if verify_enabled {
+        verification_settings = Some(cli::verification_settings(&matches)?);
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
@@ -141,7 +149,6 @@ fn main() -> Result<()> {
             fatal_error(err.to_string());
         }
 
-
         // The unused variable is required so the meter is not dropped early and
         // lives for the whole block lifetime, exporting metrics
         let _meter = if metrics_enabled {
@@ -161,6 +168,48 @@ fn main() -> Result<()> {
         );
         for (name, policy) in policies.iter_mut() {
             debug!(policy = name.as_str(), "download");
+
+            let mut verifier = policy_fetcher::verify::Verifier::new(sources.clone());
+            let mut verified_manifest_digest: Option<String> = None;
+
+            if verify_enabled {
+                // verify policy prior to pulling for all keys, and keep the
+                // verified manifest digest of last iteration, even if all are
+                // the same:
+                for key_value in verification_settings
+                    .as_ref()
+                    .unwrap()
+                    .verification_keys
+                    .values()
+                {
+                    verified_manifest_digest = Some(
+                        verifier
+                            .verify(
+                                &policy.url,
+                                docker_config.clone(),
+                                verification_settings
+                                    .as_ref()
+                                    .unwrap()
+                                    .verification_annotations
+                                    .clone(),
+                                key_value,
+                            )
+                            .await
+                            .map_err(|e| fatal_error(e.to_string()))
+                            .unwrap(),
+                    );
+                }
+                info!(
+                    name = name.as_str(),
+                    sha256sum = verified_manifest_digest
+                        .as_ref()
+                        .unwrap_or(&"unknown".to_string())
+                        .as_str(),
+                    status = "verified-signatures",
+                    "policy download",
+                );
+            }
+
             match policy_fetcher::fetch_policy(
                 &policy.url,
                 policy_fetcher::PullDestination::Store(PathBuf::from(policies_download_dir)),
@@ -170,6 +219,32 @@ fn main() -> Result<()> {
             .await
             {
                 Ok(fetched_policy) => {
+                    if verify_enabled {
+                        if verified_manifest_digest.is_none() {
+                            // when deserializing keys we check that have keys to
+                            // verify. We will always have a digest manifest
+                            unreachable!();
+                        }
+                        verifier
+                            .verify_local_file_checksum(
+                                &fetched_policy.uri,
+                                docker_config.clone(),
+                                verified_manifest_digest.as_ref().unwrap(),
+                            )
+                            .await
+                            .map_err(|e| fatal_error(e.to_string()))
+                            .unwrap();
+                        info!(
+                            name = name.as_str(),
+                            sha256sum = verified_manifest_digest
+                                .as_ref()
+                                .unwrap_or(&"unknown".to_string())
+                                .as_str(),
+                            status = "verified-local-checksum",
+                            "policy download",
+                        );
+                    }
+
                     if let Ok(Some(policy_metadata)) =
                         Metadata::from_path(&fetched_policy.local_path)
                     {
