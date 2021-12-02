@@ -3,14 +3,17 @@ use kube::Client;
 use policy_evaluator::{
     cluster_context::ClusterContext,
     constants::*,
-    policy_evaluator::{PolicyEvaluator, PolicyExecutionMode, ValidateRequest},
+    policy_evaluator::{PolicyExecutionMode, ValidateRequest},
+    policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_metadata::Metadata,
 };
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 use std::path::Path;
 
-use crate::{backend::BackendDetector, pull, verify};
+use crate::{backend::BackendDetector, pull, sigstore::SigstoreOpts, verify};
 
+// TODO(ereslibre): arguments to be refactored, and allow to be removed.
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn pull_and_run(
     uri: &str,
     user_execution_mode: Option<PolicyExecutionMode>,
@@ -19,6 +22,7 @@ pub(crate) async fn pull_and_run(
     request: &str,
     settings: Option<String>,
     verified_manifest_digest: &Option<String>,
+    sigstore_opts: Option<&SigstoreOpts>,
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
 
@@ -32,7 +36,14 @@ pub(crate) async fn pull_and_run(
     .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
 
     if let Some(digest) = verified_manifest_digest {
-        verify::verify_local_checksum(&uri, docker_config, sources, digest).await?
+        verify::verify_local_checksum(
+            &uri,
+            docker_config,
+            sources,
+            digest,
+            sigstore_opts.ok_or(anyhow!("could not retrieve sigstore options"))?,
+        )
+        .await?
     }
 
     let metadata = Metadata::from_path(&policy.local_path)?;
@@ -61,25 +72,20 @@ pub(crate) async fn pull_and_run(
         &policy.local_path,
     )?;
 
-    let mut policy_evaluator = PolicyEvaluator::from_file(
-        policy_id,
-        &policy.local_path,
-        execution_mode,
-        settings.map_or(Ok(None), |settings| {
-            if settings.is_empty() {
-                Ok(None)
-            } else {
-                serde_yaml::from_str(&settings)
-            }
-        })?,
-    )
-    .map_err(|err| {
-        anyhow!(
-            "error creating policy evaluator for policy {}: {}",
-            uri,
-            err
-        )
+    let policy_settings = settings.map_or(Ok(None), |settings| {
+        if settings.is_empty() {
+            Ok(None)
+        } else {
+            serde_yaml::from_str(&settings)
+        }
     })?;
+
+    let mut policy_evaluator = PolicyEvaluatorBuilder::new(policy_id)
+        .policy_file(&policy.local_path)?
+        .execution_mode(execution_mode)
+        .settings(policy_settings)
+        .build()?;
+
     let req_obj = match request {
         serde_json::Value::Object(ref object) => {
             if object.get("kind").and_then(serde_json::Value::as_str) == Some("AdmissionReview") {
