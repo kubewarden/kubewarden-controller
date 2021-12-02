@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Result};
+use cached::proc_macro::cached;
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 use tokio::sync::{mpsc, oneshot};
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 
@@ -109,13 +110,17 @@ impl CallbackHandler {
                             CallbackRequestType::OciManifestDigest {
                                 image,
                             } => {
-                                let response =
-                                    self.oci_client
-                                        .digest(&image)
-                                        .await
-                                        .map(|digest| CallbackResponse {
-                                            payload: digest.as_bytes().to_vec(),
-                                        });
+                                let response = get_oci_digest_cached(&self.oci_client, &image)
+                                    .await
+                                    .map(|digest| {
+                                        if digest.was_cached {
+                                            debug!(?image, "Got image digest from cache");
+                                        } else {
+                                            debug!(?image, "Got image digest by querying remote registry");
+                                        }
+                                        CallbackResponse {
+                                        payload: digest.as_bytes().to_vec(),
+                                    }});
 
                                 if let Err(e) = req.response_channel.send(response) {
                                     warn!("callback handler: cannot send response back: {:?}", e);
@@ -130,4 +135,28 @@ impl CallbackHandler {
             }
         }
     }
+}
+
+// Interacting with a remote OCI registry is time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * only the image "url" is used as key. oci::Client is not hashable, plus
+//     the client is always the same
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}", img) }"#,
+    with_cached_flag = true
+)]
+async fn get_oci_digest_cached(
+    oci_client: &oci::Client,
+    img: &str,
+) -> Result<cached::Return<String>> {
+    oci_client.digest(img).await.map(cached::Return::new)
 }
