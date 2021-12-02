@@ -1,0 +1,21 @@
+name: Kubewarden End-to-end tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  build:
+    name: "Build"
+    uses: kubewarden/kubewarden-controller/.github/workflows/container-image.yml@main
+    with:
+      push-image: false
+  run-e2e-tests:
+    name: "Tests"
+    needs: [build]
+    uses: kubewarden/kubewarden-end-to-end-tests/.github/workflows/e2e-tests.yml@v0.1.0
+    with:
+      controller-image-repository: ${{ needs.build.outputs.repository }}
+      controller-image-tag: ${{ needs.build.outputs.tag }}
+      controller-container-image-artifact: ${{ needs.build.outputs.artifact }}
