@@ -104,6 +104,11 @@ impl CallbackHandler {
     pub async fn loop_eval(&mut self) {
         loop {
             tokio::select! {
+                // place the shutdown check before the message evaluation,
+                // as recommended by tokio's documentation about select!
+                _ = &mut self.shutdown_channel => {
+                    return;
+                },
                 maybe_req = self.rx.recv() => {
                     if let Some(req) = maybe_req {
                         match req.request {
@@ -129,9 +134,6 @@ impl CallbackHandler {
                         }
                     }
                 },
-                _ = &mut self.shutdown_channel => {
-                    return;
-                }
             }
         }
     }
