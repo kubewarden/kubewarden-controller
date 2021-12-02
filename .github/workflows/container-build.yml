@@ -1,0 +1,16 @@
+name: Build container image every change.
+
+on:
+  push:
+    branches:
+      - "*"
+    tags:
+      - 'v*'
+
+
+jobs:
+  build:
+    name: Build
+    uses: kubewarden/kubewarden-controller/.github/workflows/container-image.yml@main
+    with:
+      push-image: true
