@@ -114,7 +114,6 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
                 .env("KUBEWARDEN_VERIFICATION_CONFIG_PATH")
                 .long("verification-path")
                 .default_value("verification.yml")
-                // .takes_value(true)
                 .help("YAML file holding verification information (URIs, keys, annotations...)"),
         )
         .arg(

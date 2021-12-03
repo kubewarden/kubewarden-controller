@@ -223,6 +223,7 @@ fn main() -> Result<()> {
                         if verified_manifest_digest.is_none() {
                             // when deserializing keys we check that have keys to
                             // verify. We will always have a digest manifest
+                            fatal_error("Trying to verify but no keys were passed".to_string());
                             unreachable!();
                         }
                         verifier
