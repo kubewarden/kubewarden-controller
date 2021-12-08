@@ -67,7 +67,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
+		return ctrl.Result{}, fmt.Errorf("cannot retrieve policy server: %w", err)
 	}
 
 	if policyServer.ObjectMeta.DeletionTimestamp != nil {
