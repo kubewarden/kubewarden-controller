@@ -182,6 +182,17 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				r.Log.Info("policy " + policy.Name + " cannot be scheduled: no matching PolicyServer")
 				return []ctrl.Request{}
 			}
+			if policy.DeletionTimestamp != nil {
+				// policy scheduled for deletion hence read-only, can't change
+				// status:
+				return []ctrl.Request{
+					{
+						NamespacedName: client.ObjectKey{
+							Name: policy.Spec.PolicyServer,
+						},
+					},
+				}
+			}
 			policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusPending
 			err = r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 			if err != nil {
