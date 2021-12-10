@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -174,6 +175,17 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return []ctrl.Request{}
 			}
 			if len(policyServers.Items) == 0 {
+				if policy.DeletionTimestamp != nil {
+					// policy not associated with PolicyServer, and scheduled
+					// for deletion, remove finalizer:
+					patch := policy.DeepCopy()
+					controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
+					err := r.Client.Patch(context.Background(), patch, client.MergeFrom(object))
+					if err != nil {
+						r.Log.Error(err, "cannot remove finalizer from policy "+policy.Name)
+					}
+					return []ctrl.Request{}
+				}
 				policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusUnschedulable
 				err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 				if err != nil {
