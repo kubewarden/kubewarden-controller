@@ -5,9 +5,7 @@ use crate::{policy::Policy, registry::config::DockerConfig};
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign::{Client, CosignCapabilities};
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::str::FromStr;
+use std::{collections::HashMap, convert::TryInto, str::FromStr};
 use tracing::{error, info};
 use url::{ParseError, Url};
 
@@ -21,11 +19,17 @@ pub struct Verifier {
 impl Verifier {
     /// Creates a new verifier using the `Sources` provided. These are
     /// later used to interact with remote OCI registries.
-    pub fn new(sources: Option<Sources>) -> Result<Self> {
+    pub fn new(
+        sources: Option<Sources>,
+        fulcio_cert: &[u8],
+        rekor_public_key: &str,
+    ) -> Result<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
         let cosign_client = sigstore::cosign::ClientBuilder::default()
             .with_client_config(client_config)
+            .with_fulcio_cert(fulcio_cert)
+            .with_rekor_pub_key(rekor_public_key)
             .build()
             .map_err(|e| anyhow!("could not build a cosign client: {}", e))?;
         Ok(Verifier {
