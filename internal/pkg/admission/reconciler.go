@@ -381,7 +381,7 @@ func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
 	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
-		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
+		return fmt.Errorf("failed to update status of ClusterAdmissionPolicy %q, %w", &clusterAdmissionPolicy.ObjectMeta, err)
 	}
 	metrics.RecordPolicyCount(clusterAdmissionPolicy)
 	return nil
