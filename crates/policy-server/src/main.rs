@@ -64,10 +64,11 @@ fn main() -> Result<()> {
     let verify_enabled = matches.is_present("enable-verification")
         || std::env::var_os("KUBEWARDEN_ENABLE_VERIFICATION").is_some();
 
-    let mut verification_settings: Option<VerificationSettings> = None;
-    if verify_enabled {
-        verification_settings = Some(cli::verification_settings(&matches)?);
-    }
+    let verification_settings: Option<VerificationSettings> = if verify_enabled {
+        Some(cli::verification_settings(&matches)?)
+    } else {
+        None
+    };
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
@@ -223,7 +224,7 @@ fn main() -> Result<()> {
                         if verified_manifest_digest.is_none() {
                             // when deserializing keys we check that have keys to
                             // verify. We will always have a digest manifest
-                            fatal_error("Trying to verify but no keys were passed".to_string());
+                            fatal_error("Verification of policy failed".to_string());
                             unreachable!();
                         }
                         verifier
