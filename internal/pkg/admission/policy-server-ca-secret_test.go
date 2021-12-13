@@ -104,7 +104,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	for _, test := range tests {
 		ttest := test // ensure tt is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			secret, err := ttest.r.fetchOrInitializePolicyServerSecret(context.Background(), "policyServer", caSecret, generateCertFunc)
+			secret, err := ttest.r.fetchOrInitializePolicyServerCASecret(context.Background(), "policyServer", caSecret, generateCertFunc)
 			if diff := cmp.Diff(secret.StringData, ttest.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}

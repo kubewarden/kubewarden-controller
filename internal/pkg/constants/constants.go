@@ -1,7 +1,7 @@
 package constants
 
 const (
-	// PolicyServer Secret
+	// PolicyServer CA Secret
 	PolicyServerTLSCert                  = "policy-server-cert"
 	PolicyServerTLSKey                   = "policy-server-key"
 	PolicyServerCARootSecretName         = "policy-server-root-ca"
