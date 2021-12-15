@@ -52,6 +52,6 @@ linters:
 
 linters-settings:
   cyclop:
-    max-complexity: 16
+    max-complexity: 13
   nestif:
     min-complexity: 8
