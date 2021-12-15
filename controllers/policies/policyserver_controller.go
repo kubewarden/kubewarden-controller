@@ -153,6 +153,10 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&policiesv1alpha2.PolicyServer{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			// The watch will trigger twice per object change; once with the old
+			// object, and once the new object. We need to be mindful when doing
+			// Updates since they will invalidate the newever versions of the
+			// object.
 			policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
 			if !ok {
 				r.Log.Error(err, "object is not type of ClusterAdmissionPolicy: %#v", policy)
@@ -175,28 +179,12 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return []ctrl.Request{}
 			}
 			if len(policyServers.Items) == 0 {
-				if policy.DeletionTimestamp != nil {
-					// policy not associated with PolicyServer, and scheduled
-					// for deletion, remove finalizer:
-					patch := policy.DeepCopy()
-					controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
-					err := r.Client.Patch(context.Background(), patch, client.MergeFrom(object))
-					if err != nil {
-						r.Log.Error(err, "cannot remove finalizer from policy "+policy.Name)
-					}
-					return []ctrl.Request{}
-				}
-				policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusUnschedulable
-				err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
-				if err != nil {
-					r.Log.Error(err, "cannot update status of policy "+policy.Name)
-				}
-				r.Log.Info("policy " + policy.Name + " cannot be scheduled: no matching PolicyServer")
-				return []ctrl.Request{}
+				return r.reconcileOrphanPolicies(policy)
 			}
+
 			if policy.DeletionTimestamp != nil {
 				// policy scheduled for deletion hence read-only, can't change
-				// status:
+				// status, reconcile loop removes Finalizer:
 				return []ctrl.Request{
 					{
 						NamespacedName: client.ObjectKey{
@@ -226,4 +214,26 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		err = fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
 	return err
+}
+
+func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy *policiesv1alpha2.ClusterAdmissionPolicy) []reconcile.Request {
+	if policy.DeletionTimestamp != nil {
+		// policy not associated with PolicyServer, and scheduled
+		// for deletion, remove finalizer:
+		patch := policy.DeepCopy()
+		controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
+		err := r.Client.Patch(context.Background(), patch, client.MergeFrom(policy))
+		if err != nil {
+			r.Log.Error(err, "cannot remove finalizer from policy "+policy.Name)
+		}
+		return []ctrl.Request{}
+	}
+
+	policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusUnschedulable
+	err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
+	if err != nil {
+		r.Log.Error(err, "cannot update status of policy "+policy.Name)
+	}
+	r.Log.Info("policy " + policy.Name + " cannot be scheduled: no matching PolicyServer")
+	return []ctrl.Request{}
 }
