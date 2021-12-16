@@ -193,6 +193,11 @@ func (r *Reconciler) Reconcile(
 		return err
 	}
 
+	setTrueConditionType(
+		&policyServer.Status.Conditions,
+		policiesv1alpha2.PolicyServerCASecretReconciled,
+	)
+
 	clusterAdmissionPolicies, err = r.getClusterAdmissionPolicies(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
