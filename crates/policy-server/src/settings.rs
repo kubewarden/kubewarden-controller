@@ -49,7 +49,7 @@ example:
   settings:
     valid_namespace: valid
 "#;
-        let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
+        let policies: HashMap<String, Policy> = serde_yaml::from_str(input).unwrap();
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
@@ -66,7 +66,7 @@ example:
   settings: {}
 "#;
 
-        let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
+        let policies: HashMap<String, Policy> = serde_yaml::from_str(input).unwrap();
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
@@ -82,7 +82,7 @@ example:
   url: file:///tmp/namespace-validate-policy.wasm
 "#;
 
-        let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
+        let policies: HashMap<String, Policy> = serde_yaml::from_str(input).unwrap();
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
@@ -101,7 +101,7 @@ example:
 }
 "#;
 
-        let policies: HashMap<String, Policy> = serde_yaml::from_str(&input).unwrap();
+        let policies: HashMap<String, Policy> = serde_yaml::from_str(input).unwrap();
         assert!(!policies.is_empty());
 
         let policy = policies.get("privileged-pods").unwrap();
