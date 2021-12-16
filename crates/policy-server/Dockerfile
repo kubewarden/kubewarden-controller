@@ -1,32 +1,21 @@
-# build image
-FROM registry.opensuse.org/opensuse/leap:15.3 as builder
-
-RUN zypper in -y curl && \
-    sh -c 'curl https://download.opensuse.org/repositories/devel:/languages:/rust/openSUSE_Leap_15.3/repodata/repomd.xml.key > gpg.key' && \
-    gpg --import gpg.key && \
-    rpm --import gpg.key && \
-    # Now add the repository and install cargo
-    zypper ar -f obs://devel:languages:rust/openSUSE_Leap_15.3 devel:languages:rust && \
-    zypper ref && \
-    zypper in -y gcc cargo
-
-WORKDIR /usr/src/policy-server
-COPY . .
-RUN cargo install --root /usr/local/cargo --path .
-
-# final image
-FROM registry.suse.com/bci/minimal
-LABEL org.opencontainers.image.source https://github.com/kubewarden/policy-server
-
-# By default we will run as this user...
+FROM alpine AS common
 RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd
-# Add the default GID to /etc/group for completeness.
 RUN echo "policy-server:x:65533:policy-server" >> /etc/group
 
-COPY --from=builder /usr/local/cargo/bin/policy-server /usr/local/bin/policy-server
+# amd64-specific
+FROM scratch AS build-amd64
+COPY --from=common /etc/passwd /etc/passwd
+COPY --from=common /etc/group /etc/group
+COPY --chmod=0755 policy-server-x86_64 /policy-server
 
+# arm64-specific
+FROM scratch AS build-arm64
+COPY --from=common /etc/passwd /etc/passwd
+COPY --from=common /etc/group /etc/group
+COPY --chmod=0755 policy-server-aarch64 /policy-server
+
+# common final steps
+FROM build-${TARGETARCH}
 USER 65533:65533
-
 EXPOSE 3000
-
-ENTRYPOINT ["/usr/local/bin/policy-server"]
+ENTRYPOINT ["/policy-server"]
