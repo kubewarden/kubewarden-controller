@@ -145,9 +145,9 @@ func (r *Reconciler) Reconcile(
 		return fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
 	}
 
-	err = r.deletePendingClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
+	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
 	if err != nil {
-		return fmt.Errorf("cannot delete pending cluster admission policies: %w", err)
+		return fmt.Errorf("cannot delete cluster admission policies: %w", err)
 	}
 
 	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
@@ -269,7 +269,7 @@ func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, poli
 				policy.Name, err)
 		}
 	}
-	err = r.deletePendingClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
+	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
 	if err != nil {
 		return err
 	}
@@ -335,7 +335,7 @@ func (r *Reconciler) getClusterAdmissionPolicies(ctx context.Context, policyServ
 	return clusterAdmissionPolicies, err
 }
 
-func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList) error {
+func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context, clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList) error {
 	for _, policy := range clusterAdmissionPolicies.Items {
 		policy := policy // safely use pointer inside for
 		if policy.DeletionTimestamp != nil {
@@ -347,7 +347,7 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 				err := r.Client.Delete(ctx, mutatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+					return fmt.Errorf("failed deleting webhook of ClusterAdmissionPolicy %s: %w",
 						policy.Name, err)
 				}
 			} else {
@@ -358,7 +358,7 @@ func (r *Reconciler) deletePendingClusterAdmissionPolicies(ctx context.Context, 
 				}
 				err := r.Client.Delete(ctx, validatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
+					return fmt.Errorf("failed deleting webhook of ClusterAdmissionPolicy %s: %w",
 						policy.Name, err)
 				}
 			}
@@ -381,7 +381,7 @@ func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
 ) error {
 	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
-		return fmt.Errorf("failed to update ClusterAdmissionPolicy %q status", &clusterAdmissionPolicy.ObjectMeta)
+		return fmt.Errorf("failed to update status of ClusterAdmissionPolicy %q, %w", &clusterAdmissionPolicy.ObjectMeta, err)
 	}
 	metrics.RecordPolicyCount(clusterAdmissionPolicy)
 	return nil

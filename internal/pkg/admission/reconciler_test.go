@@ -45,7 +45,7 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 		DeploymentsNamespace: namespace,
 	}
 
-	err := reconciler.deletePendingClusterAdmissionPolicies(context.Background(), clusterAdmissionPolicies)
+	err := reconciler.deleteWebhooksClusterAdmissionPolicies(context.Background(), clusterAdmissionPolicies)
 	if err != nil {
 		t.Errorf("received unexpected error %s", err.Error())
 	}
