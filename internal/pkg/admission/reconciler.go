@@ -178,7 +178,7 @@ func (r *Reconciler) Reconcile(
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerSecretReconciled,
+			policiesv1alpha2.PolicyServerCASecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -187,7 +187,7 @@ func (r *Reconciler) Reconcile(
 	if err := r.reconcileCASecret(ctx, policyServerCASecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerSecretReconciled,
+			policiesv1alpha2.PolicyServerCASecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err

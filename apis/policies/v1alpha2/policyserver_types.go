@@ -73,9 +73,9 @@ const (
 type PolicyConditionType string
 
 const (
-	// PolicyServerSecretReconciled represents the condition of the
+	// PolicyServerCASecretReconciled represents the condition of the
 	// Policy Server Secret reconciliation
-	PolicyServerSecretReconciled PolicyConditionType = "PolicyServerSecretReconciled"
+	PolicyServerCASecretReconciled PolicyConditionType = "PolicyCAServerSecretReconciled"
 	// PolicyServerCARootSecretReconciled represents the condition of the
 	// Policy Server CA Root Secret reconciliation
 	PolicyServerCARootSecretReconciled PolicyConditionType = "PolicyCARootServerSecretReconciled" // nolint:gosec
