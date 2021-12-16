@@ -59,6 +59,12 @@ type PolicyServerSpec struct {
 	// certificate used by the endpoint.
 	// +optional
 	SourceAuthorities map[string][]string `json:"sourceAuthorities,omitempty"`
+
+	// Name of VerificationConfig configmap in the same namespace, containing
+	// Sigstore verification configuration. The configuration must be under a
+	// key named verification-config in the Configmap.
+	// +optional
+	VerificationConfig string `json:"verificationConfig,omitempty"`
 }
 
 type ReconciliationTransitionReason string

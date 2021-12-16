@@ -23,6 +23,10 @@ const (
 	PolicyServerConfigSourcesEntry          = "sources.yml"
 	PolicyServerSourcesConfigContainerPath  = "/sources"
 
+	// PolicyServer VerificationSecret
+	PolicyServerVerificationConfigEntry         = "verification-config"
+	PolicyServerVerificationConfigContainerPath = "/verification"
+
 	// Label
 	AppLabelKey              = "app"
 	PolicyServerNameLabelKey = "policy-server-name"

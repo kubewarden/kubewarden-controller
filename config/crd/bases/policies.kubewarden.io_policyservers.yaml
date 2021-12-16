@@ -178,6 +178,11 @@ spec:
                   their associated PEM encoded certificate authorities that have to
                   be used to verify the certificate used by the endpoint.
                 type: object
+              verificationConfig:
+                description: Name of VerificationConfig configmap in the same namespace,
+                  containing Sigstore verification configuration. The configuration
+                  must be under a key named verification-config in the Configmap.
+                type: string
             required:
             - image
             - replicas

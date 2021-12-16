@@ -184,8 +184,10 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		policiesConfigContainerPath      = "/config"
 		policiesFilename                 = "policies.yml"
 		sourcesFilename                  = "sources.yml"
+		verificationFilename             = "verification.yml"
 		policiesVolumeName               = "policies"
 		sourcesVolumeName                = "sources"
+		verificationConfigVolumeName     = "verification"
 		secretsContainerPath             = "/pki"
 		imagePullSecretVolumeName        = "imagepullsecret"
 		dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
@@ -237,6 +239,27 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				},
 			},
 		},
+	}
+	if policyServer.Spec.VerificationConfig != "" {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      verificationConfigVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerVerificationConfigContainerPath,
+			},
+		)
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_ENABLE_VERIFICATION",
+				Value: "yes",
+			},
+		)
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_VERIFICATION_CONFIG_PATH",
+				Value: filepath.Join(constants.PolicyServerVerificationConfigContainerPath, verificationFilename),
+			},
+		)
 	}
 	if policyServer.Spec.ImagePullSecret != "" {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
@@ -333,6 +356,27 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				},
 			},
 		},
+	}
+	if policyServer.Spec.VerificationConfig != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: verificationConfigVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: policyServer.Spec.VerificationConfig,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.PolicyServerVerificationConfigEntry,
+								Path: verificationFilename,
+							},
+						},
+					},
+				},
+			},
+		)
 	}
 	if policyServer.Spec.ImagePullSecret != "" {
 		policyServerDeployment.Spec.Template.Spec.Volumes = append(
