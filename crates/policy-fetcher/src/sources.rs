@@ -155,7 +155,6 @@ impl From<Sources> for oci_distribution::client::ClientConfig {
             .collect();
 
         oci_distribution::client::ClientConfig {
-            accept_invalid_hostnames: false,
             accept_invalid_certificates: false,
             protocol,
             extra_root_certificates,
@@ -186,7 +185,6 @@ impl From<Sources> for sigstore::registry::ClientConfig {
             .collect();
 
         sigstore::registry::ClientConfig {
-            accept_invalid_hostnames: false,
             accept_invalid_certificates: false,
             protocol,
             extra_root_certificates,

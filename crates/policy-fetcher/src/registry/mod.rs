@@ -73,7 +73,6 @@ impl From<ClientProtocol> for ClientConfig {
                     }
                     TlsVerificationMode::NoTlsVerification => {
                         client_config.accept_invalid_certificates = true;
-                        client_config.accept_invalid_hostnames = true;
                     }
                 };
 

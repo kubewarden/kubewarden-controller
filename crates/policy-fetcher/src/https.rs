@@ -53,9 +53,7 @@ impl PolicyFetcher for Https {
                         }
                     }
                     TlsVerificationMode::NoTlsVerification => {
-                        client_builder = client_builder
-                            .danger_accept_invalid_certs(true)
-                            .danger_accept_invalid_hostnames(true);
+                        client_builder = client_builder.danger_accept_invalid_certs(true);
                     }
                 }
             }
