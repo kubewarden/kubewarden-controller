@@ -1,0 +1,9 @@
+---
+apiVersion: policies.kubewarden.io/v1alpha2
+kind: PolicyServer
+metadata:
+  name: reserved-instance-for-tenant-a
+spec:
+  image: ghcr.io/kubewarden/policy-server:latest
+  replicas: 1
+  verificationConfig: my-verification-config
