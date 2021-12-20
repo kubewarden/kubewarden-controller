@@ -60,7 +60,7 @@ For example, given the configuration file from above, the `namespace_simple` pol
 will be invoked with the `valid_namespace` parameter set to `kubewarden-approved`.
 
 Note well: it's possible to expose the same policy multiple times, each time with
-a different set of paraments.
+a different set of parameters.
 
 The Wasm file providing the Kubewarden Policy can be either loaded from
 the local filesystem or it can be fetched from a remote location. The behaviour
@@ -76,7 +76,7 @@ depends on the URL format provided by the user:
 
 The verbosity of policy-server can be configured via the `--log-level` flag.
 The default log level used is `info`, but `trace`, `debug`, `warn` and `error`
-levels are availble too.
+levels are available too.
 
 Policy server can produce logs events using different formats. The `--log-fmt`
 flag is used to choose the format to be used.
@@ -111,12 +111,11 @@ our [official docs](https://docs.kubewarden.io/operator-manual/tracing/01-quicks
 
 # Building
 
-You can either build `kubewarden-admission` from sources (see below) or you can
-use the container image we maintain inside of our
+You can use the container image we maintain inside of our
 [GitHub Container Registry](https://github.com/orgs/kubewarden/packages/container/package/policy-server).
 
-The `policy-server` binary can be built in this way:
+Alternatively, the `policy-server` binary can be built in this way:
 
 ```shell
-$ cargo build
+$ make build
 ```
