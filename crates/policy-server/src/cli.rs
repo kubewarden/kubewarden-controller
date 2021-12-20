@@ -1,4 +1,4 @@
-use crate::settings::{read_policies_file, read_verification_file, Policy, VerificationSettings};
+use crate::settings::{read_policies_file, Policy};
 use anyhow::{anyhow, Result};
 use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg};
 use itertools::Itertools;
@@ -110,13 +110,6 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
                 .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
         )
         .arg(
-            Arg::with_name("verification-path")
-                .env("KUBEWARDEN_VERIFICATION_CONFIG_PATH")
-                .long("verification-path")
-                .default_value("verification.yml")
-                .help("YAML file holding verification information (URIs, keys, annotations...)"),
-        )
-        .arg(
             Arg::with_name("docker-config-json-path")
                 .env("KUBEWARDEN_DOCKER_CONFIG_JSON_PATH")
                 .long("docker-config-json-path")
@@ -128,14 +121,7 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
                 .long("enable-metrics")
                 .required(false)
                 .takes_value(false)
-                .help("Enable metrics [env: KUBEWARDEN_ENABLE_METRICS=]"),
-        )
-        .arg(
-            Arg::with_name("enable-verification")
-                .long("enable-verification")
-                .required(false)
-                .takes_value(false)
-                .help("Enable Sigstore verification [env: KUBEWARDEN_ENABLE_VERIFICATION=]"),
+                .help("Enable metrics"),
         )
         .long_version(VERSION_AND_BUILTINS.as_str())
 }
@@ -169,27 +155,6 @@ pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Pol
             e
         )
     })
-}
-
-pub(crate) fn verification_settings(matches: &clap::ArgMatches) -> Result<VerificationSettings> {
-    let verification_file = Path::new(matches.value_of("verification-path").unwrap_or("."));
-    match read_verification_file(verification_file) {
-        Err(e) => Err(anyhow!(
-            "error while loading verification info from {:?}: {}",
-            verification_file,
-            e
-        )),
-        Ok(vs) => {
-            if vs.verification_keys.is_empty() {
-                Err(anyhow!(
-                    "error while loading verification info from {:?}: contains 0 verification keys",
-                    verification_file,
-                ))
-            } else {
-                Ok(vs)
-            }
-        }
-    }
 }
 
 // Setup the tracing system. This MUST be done inside of a tokio Runtime
