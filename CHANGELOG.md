@@ -2,6 +2,25 @@
 ## [Unreleased]
 
 
+<a name="v0.4.3"></a>
+## [v0.4.3] - 2021-12-20
+### Bug Fixes
+- Delete Policies not associated with PolicyServers
+- Don't Update Policy.Status if Policy is read-only
+
+### Code Refactoring
+- split watch logic with reconcileOrphanPolicies()
+- Drop `make tag`, use git-chglog --next
+
+### Reverts
+- Bump cyclomatix complexity to 16 from 13
+
+### Pull Requests
+- Merge pull request [#135](https://github.com/kubewarden/kubewarden-controller/issues/135) from viccuad/bug-finalizers
+- Merge pull request [#128](https://github.com/kubewarden/kubewarden-controller/issues/128) from kubewarden/report-mode-rfc
+- Merge pull request [#124](https://github.com/kubewarden/kubewarden-controller/issues/124) from viccuad/git-chlog-workflow
+
+
 <a name="v0.4.2"></a>
 ## [v0.4.2] - 2021-11-04
 ### Code Refactoring
@@ -159,7 +178,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.3...HEAD
+[v0.4.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.2...v0.4.3
 [v0.4.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.0...v0.4.1
 [v0.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...v0.4.0
