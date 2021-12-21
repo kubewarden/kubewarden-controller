@@ -107,9 +107,11 @@ impl Verifier {
             )
             .await?;
 
-        // cosign_client.verify raises an error if no SimpleSigning
-        // object is found -> the vector has at least one entry.
-        // Finally, all the entries have the same docker_manifest_digest
+        if simple_signing_matches.is_empty() {
+            return Err(anyhow!("No signing keys matched given constraints"));
+        }
+
+        // All entries have the same docker_manifest_digest
         let manifest_digest = simple_signing_matches
             .get(0)
             .unwrap()
