@@ -1,4 +1,3 @@
-
 HYPERFINE := $(shell command -v hyperfine 2> /dev/null)
 
 .PHONY: build
