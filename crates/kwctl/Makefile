@@ -1,3 +1,4 @@
+
 HYPERFINE := $(shell command -v hyperfine 2> /dev/null)
 
 .PHONY: build
@@ -16,9 +17,13 @@ lint:
 test: fmt lint
 	cargo test --workspace
 
+.PHONY: cosign-initialize
+cosign-initialize:
+	cosign initialize
+
 .PHONY: e2e-test
-e2e-test:
-	sh -c 'cd e2e-tests; bats .'
+e2e-test: cosign-initialize
+	sh -c 'cd e2e-tests; bats --print-output-on-failure .'
 
 .PHONY: clean
 clean:

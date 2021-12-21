@@ -71,8 +71,9 @@ pub(crate) fn manifest(uri: &str, resource_type: &str, settings: Option<String>)
     };
     let resource = match resource_type {
         "ClusterAdmissionPolicy" => ClusterAdmissionPolicy::try_from(scaffold_data),
-        _other => Err(anyhow!(
-            "Resource {} unknown. Valid types are: ClusterAdmissionPolicy"
+        other => Err(anyhow!(
+            "Resource {} unknown. Valid types are: ClusterAdmissionPolicy",
+            other,
         )),
     }?;
 

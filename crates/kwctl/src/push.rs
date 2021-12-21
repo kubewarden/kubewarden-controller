@@ -29,8 +29,8 @@ pub(crate) async fn push(
     };
 
     let policy = fs::read(&wasm_path).map_err(|e| anyhow!("Cannot open policy file: {:?}", e))?;
-    Registry::new(&docker_config.cloned())
-        .push(&policy, uri, &sources.cloned())
+    Registry::new(docker_config)
+        .push(&policy, uri, sources)
         .await
 }
 

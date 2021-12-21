@@ -26,11 +26,11 @@ which will be triangulated back to our image):
 $ COSIGN_PASSWORD=kubewarden cosign generate-key-pair
 $ mv cosign.key cosign1.key; mv cosign.pub cosign1.pub
 $ COSIGN_PASSWORD=kubewarden cosign sign \
-  -key cosign1.key -a env=prod -a stable=true \
+  --key cosign1.key -a env=prod -a stable=true \
   ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
 $ COSIGN_PASSWORD=kubewarden cosign generate-key-pair
 $ mv cosign.key cosign2.key; mv cosign.pub cosign2.pub
 $ COSIGN_PASSWORD=kubewarden  cosign sign \
-  -key cosign2.key -a env=prod \
+  --key cosign2.key -a env=prod \
   ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
 ```

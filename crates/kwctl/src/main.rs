@@ -31,6 +31,8 @@ use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 
+use sigstore::SigstoreOpts;
+
 use crate::utils::new_policy_execution_mode_from_str;
 
 mod annotate;
@@ -44,6 +46,7 @@ mod pull;
 mod push;
 mod rm;
 mod run;
+mod sigstore;
 mod utils;
 mod verify;
 
@@ -81,37 +84,50 @@ async fn main() -> Result<()> {
                 };
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let (key_files, annotations) = verification_options(matches)?;
+                let sigstore_options = sigstore_options(matches)?;
 
-                // verify policy prior to pulling if keys listed, and keep the
-                // verified manifest digest of last iteration, even if all are
-                // the same:
                 let mut verified_manifest_digest: Option<String> = None;
-                if let Some(keys) = key_files {
-                    for key in keys {
-                        verified_manifest_digest = Some(
-                            verify::verify(
-                                uri,
-                                docker_config.as_ref(),
-                                sources.as_ref(),
-                                annotations.as_ref(),
-                                &key,
-                            )
-                            .await
-                            .map_err(|e| {
-                                anyhow!("Policy cannot be validated with key '{}': {:?}", key, e)
-                            })?,
-                        );
+                if let Some(ref sigstore_options) = sigstore_options {
+                    // verify policy prior to pulling if keys listed, and keep the
+                    // verified manifest digest of last iteration, even if all are
+                    // the same:
+                    if let Some(keys) = key_files {
+                        for key in keys {
+                            verified_manifest_digest = Some(
+                                verify::verify(
+                                    uri,
+                                    docker_config.as_ref(),
+                                    sources.as_ref(),
+                                    annotations.as_ref(),
+                                    &key,
+                                    sigstore_options,
+                                )
+                                .await
+                                .map_err(|e| {
+                                    anyhow!(
+                                        "Policy cannot be validated with key '{}': {:?}",
+                                        key,
+                                        e
+                                    )
+                                })?,
+                            );
+                        }
                     }
                 }
+
                 pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
-                if let Some(digest) = verified_manifest_digest {
-                    verify::verify_local_checksum(
-                        uri,
-                        docker_config.as_ref(),
-                        sources.as_ref(),
-                        &digest,
-                    )
-                    .await?
+
+                if let Some(ref sigstore_options) = sigstore_options {
+                    if let Some(digest) = verified_manifest_digest {
+                        verify::verify_local_checksum(
+                            uri,
+                            docker_config.as_ref(),
+                            sources.as_ref(),
+                            &digest,
+                            sigstore_options,
+                        )
+                        .await?
+                    }
                 }
             };
             Ok(())
@@ -121,6 +137,8 @@ async fn main() -> Result<()> {
                 let uri = matches.value_of("uri").unwrap();
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let (key_files, annotations) = verification_options(matches)?;
+                let sigstore_options = sigstore_options(matches)?
+                    .ok_or(anyhow!("could not retrieve sigstore options"))?;
 
                 match key_files {
                     Some(keys) => {
@@ -131,6 +149,7 @@ async fn main() -> Result<()> {
                                 sources.as_ref(),
                                 annotations.as_ref(),
                                 &key,
+                                &sigstore_options,
                             )
                             .await
                             .map_err(|e| {
@@ -235,26 +254,34 @@ async fn main() -> Result<()> {
                         None
                     };
                 let (key_files, annotations) = verification_options(matches)?;
+                let sigstore_options = sigstore_options(matches)?;
 
-                // verify policy prior to pulling if keys listed, and keep the
-                // verified manifest digest of last iteration, even if all are
-                // the same:
                 let mut verified_manifest_digest: Option<String> = None;
-                if let Some(keys) = key_files {
-                    for key in keys {
-                        verified_manifest_digest = Some(
-                            verify::verify(
-                                uri,
-                                docker_config.as_ref(),
-                                sources.as_ref(),
-                                annotations.as_ref(),
-                                &key,
-                            )
-                            .await
-                            .map_err(|e| {
-                                anyhow!("Policy cannot be validated with key '{}': {:?}", key, e)
-                            })?,
-                        );
+                if let Some(ref sigstore_options) = sigstore_options {
+                    // verify policy prior to pulling if keys listed, and keep the
+                    // verified manifest digest of last iteration, even if all are
+                    // the same:
+                    if let Some(keys) = key_files {
+                        for key in keys {
+                            verified_manifest_digest = Some(
+                                verify::verify(
+                                    uri,
+                                    docker_config.as_ref(),
+                                    sources.as_ref(),
+                                    annotations.as_ref(),
+                                    &key,
+                                    sigstore_options,
+                                )
+                                .await
+                                .map_err(|e| {
+                                    anyhow!(
+                                        "Policy cannot be validated with key '{}': {:?}",
+                                        key,
+                                        e
+                                    )
+                                })?,
+                            );
+                        }
                     }
                 }
 
@@ -266,6 +293,7 @@ async fn main() -> Result<()> {
                     &request,
                     settings,
                     &verified_manifest_digest,
+                    sigstore_options.clone().as_ref(),
                 )
                 .await?;
             }
@@ -416,4 +444,38 @@ fn verification_options(
     }
 
     Ok((key_files, annotations))
+}
+
+fn sigstore_options(matches: &ArgMatches) -> Result<Option<SigstoreOpts>> {
+    let fulcio_cert = if let Some(fulcio_cert_path) = matches.value_of("fulcio-cert-path") {
+        Some(fs::read(fulcio_cert_path)?)
+    } else if Path::exists(&cli::SIGSTORE_FULCIO_CERT_PATH) {
+        Some(fs::read(&*cli::SIGSTORE_FULCIO_CERT_PATH)?)
+    } else {
+        None
+    };
+
+    let rekor_public_key =
+        if let Some(rekor_public_key_path) = matches.value_of("rekor-public-key-path") {
+            Some(fs::read(rekor_public_key_path)?)
+        } else if Path::exists(&cli::SIGSTORE_REKOR_PUBLIC_KEY_PATH) {
+            Some(fs::read(&*cli::SIGSTORE_REKOR_PUBLIC_KEY_PATH)?)
+        } else {
+            None
+        };
+
+    if fulcio_cert.is_none() && rekor_public_key.is_none() {
+        return Ok(None);
+    }
+
+    if fulcio_cert.is_none() || rekor_public_key.is_none() {
+        return Err(anyhow!(
+            "both a fulcio certificate and a rekor public key are required, these can be generated by using the `cosign initialize` command"
+        ));
+    }
+
+    Ok(Some(SigstoreOpts {
+        fulcio_cert: fulcio_cert.unwrap(),
+        rekor_public_key: String::from_utf8(rekor_public_key.unwrap())?,
+    }))
 }

@@ -4,6 +4,7 @@ use clap::{
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
+use std::path::PathBuf;
 
 lazy_static! {
     static ref VERSION_AND_BUILTINS: String = {
@@ -19,6 +20,18 @@ lazy_static! {
             builtins,
         )
     };
+    static ref SIGSTORE_TARGETS_PATH: PathBuf = {
+        directories::BaseDirs::new()
+            .unwrap_or_else(|| panic!("not possible to build base dirs"))
+            .home_dir()
+            .join(".sigstore")
+            .join("root")
+            .join("targets")
+    };
+    pub(crate) static ref SIGSTORE_FULCIO_CERT_PATH: PathBuf =
+        SIGSTORE_TARGETS_PATH.join("fulcio.crt.pem");
+    pub(crate) static ref SIGSTORE_REKOR_PUBLIC_KEY_PATH: PathBuf =
+        SIGSTORE_TARGETS_PATH.join("rekor.pub");
 }
 
 pub fn build_cli() -> clap::App<'static, 'static> {
@@ -54,6 +67,18 @@ pub fn build_cli() -> clap::App<'static, 'static> {
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to key used to verify the policy. Can be repeated multiple times")
+                )
+                .arg(
+                    Arg::with_name("fulcio-cert-path")
+                    .long("fulcio-cert-path")
+                    .takes_value(true)
+                    .help("Path to the Fulcio certificate")
+                )
+                .arg(
+                    Arg::with_name("rekor-public-key-path")
+                    .long("rekor-public-key-path")
+                    .takes_value(true)
+                    .help("Path to the Rekor public key")
                 )
                 .arg(
                     Arg::with_name("verification-annotation")
@@ -102,6 +127,18 @@ pub fn build_cli() -> clap::App<'static, 'static> {
                     .takes_value(true)
                     .required(true)
                     .help("Path to key used to verify the policy. Can be repeated multiple times")
+                )
+                .arg(
+                    Arg::with_name("fulcio-cert-path")
+                    .long("fulcio-cert-path")
+                    .takes_value(true)
+                    .help("Path to the Fulcio certificate")
+                )
+                .arg(
+                    Arg::with_name("rekor-public-key-path")
+                    .long("rekor-public-key-path")
+                    .takes_value(true)
+                    .help("Path to the Rekor public key")
                 )
                 .arg(
                     Arg::with_name("verification-annotation")
@@ -207,6 +244,18 @@ pub fn build_cli() -> clap::App<'static, 'static> {
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to key used to verify the policy. Can be repeated multiple times")
+                )
+                .arg(
+                    Arg::with_name("fulcio-cert-path")
+                    .long("fulcio-cert-path")
+                    .takes_value(true)
+                    .help("Path to the Fulcio certificate")
+                )
+                .arg(
+                    Arg::with_name("rekor-public-key-path")
+                    .long("rekor-public-key-path")
+                    .takes_value(true)
+                    .help("Path to the Rekor public key")
                 )
                 .arg(
                     Arg::with_name("verification-annotation")

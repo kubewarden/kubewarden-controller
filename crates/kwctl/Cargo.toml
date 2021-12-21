@@ -16,12 +16,12 @@ clap = "2.33.3"
 directories = "3.0.2"
 itertools = "0.10.1"
 k8s-openapi = { version = "0.13.0", default-features = false, features = ["v1_22"] }
-kube = "0.64.0"
+kube = { version = "0.64.0", default-features = false, features = ["client", "rustls-tls"] }
 kubewarden-policy-sdk = "0.2.3"
 lazy_static = "1.4.0"
-mdcat = "0.22"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.4" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.1.19" }
+mdcat = "0.24"
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.7" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.2.3" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.8"
 pulldown-cmark = { version = "0.8", default-features = false }
