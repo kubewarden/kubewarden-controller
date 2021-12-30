@@ -2,7 +2,11 @@ package admission
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
+
+	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestArePoliciesEqual(t *testing.T) {
@@ -55,6 +59,42 @@ func TestArePoliciesEqual(t *testing.T) {
 				t.Errorf("got %t, want %t", got, ttest.expect)
 			}
 		})
+	}
+}
+
+func TestCreatePoliciesMap(t *testing.T) {
+	reconciler, validationPolicy, mutatingPolicy := createReconciler()
+
+	var policies map[string]policyServerConfigEntry
+	clusterAdmissionPolicies := policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{}}
+	policies = reconciler.createPoliciesMap(&clusterAdmissionPolicies)
+	if len(policies) != 0 {
+		t.Error("Empty ClusterAdmissionPolicyList should generate empty policies map")
+	}
+
+	clusterAdmissionPolicies = policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{validationPolicy, mutatingPolicy}}
+	policies = reconciler.createPoliciesMap(&clusterAdmissionPolicies)
+	if len(policies) != 2 {
+		t.Error("Policy map must has 2 entries")
+	}
+	expectedPolicies := make(map[string]policyServerConfigEntry)
+	expectedPolicies[admissionPolicyName] = policyServerConfigEntry{
+		URL:      "registry://blabla/validation-policy:latest",
+		Mutating: false,
+		Settings: runtime.RawExtension{},
+	}
+	expectedPolicies[mutatingPolicyName] = policyServerConfigEntry{
+		URL:      "registry://blabla/mutation-policy:latest",
+		Mutating: true,
+		Settings: runtime.RawExtension{},
+	}
+	if len(policies) != len(expectedPolicies) {
+		t.Errorf("Policies maps must be length %d", len(expectedPolicies))
+	}
+	for policyName, policy := range policies {
+		if expectedPolicy, ok := expectedPolicies[policyName]; !ok || !reflect.DeepEqual(expectedPolicy, policy) {
+			t.Errorf("Policies map is missing some policy or the policies values are different from the expected.\n  Expected: %#v\n  Actual: %#v", expectedPolicy, policy)
+		}
 	}
 }
 
