@@ -19,8 +19,9 @@ import (
 )
 
 type policyServerConfigEntry struct {
-	URL      string               `json:"url"`
-	Settings runtime.RawExtension `json:"settings,omitempty"`
+	URL             string               `json:"url"`
+	AllowedToMutate bool                 `json:"allowedToMutate"`
+	Settings        runtime.RawExtension `json:"settings,omitempty"`
 }
 
 type sourceAuthorityType string
@@ -163,8 +164,9 @@ func (r *Reconciler) createPoliciesMap(clusterAdmissionPolicies *policiesv1alpha
 
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		policies[clusterAdmissionPolicy.Name] = policyServerConfigEntry{
-			URL:      clusterAdmissionPolicy.Spec.Module,
-			Settings: clusterAdmissionPolicy.Spec.Settings,
+			URL:             clusterAdmissionPolicy.Spec.Module,
+			AllowedToMutate: clusterAdmissionPolicy.Spec.Mutating,
+			Settings:        clusterAdmissionPolicy.Spec.Settings,
 		}
 	}
 	return policies

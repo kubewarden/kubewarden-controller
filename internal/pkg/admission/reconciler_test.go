@@ -16,26 +16,7 @@ import (
 )
 
 func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
-	admissionPolicyName := "admissionPolicy"
-	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: admissionPolicyName,
-		},
-	}
-	validationPolicy := policiesv1alpha2.ClusterAdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: admissionPolicyName, Finalizers: []string{"kubewarden"}},
-		Spec:       policiesv1alpha2.ClusterAdmissionPolicySpec{Mutating: false},
-	}
-	mutatingPolicyName := "mutatingPolicy"
-	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: mutatingPolicyName,
-		},
-	}
-	mutatingPolicy := policiesv1alpha2.ClusterAdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: mutatingPolicyName, Finalizers: []string{"kubewarden"}},
-		Spec:       policiesv1alpha2.ClusterAdmissionPolicySpec{Mutating: true},
-	}
+	reconciler, validationPolicy, mutatingPolicy := createReconciler()
 	clusterAdmissionPolicies := policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{validationPolicy, mutatingPolicy}}
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}, &validationPolicy)
@@ -51,14 +32,14 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	}
 
 	// verify webhooks are deleted
-	validatingWebhook = &admissionregistrationv1.ValidatingWebhookConfiguration{}
+	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{}
 	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
 		Name: admissionPolicyName,
 	}, validatingWebhook)
 	if !errors.IsNotFound(err) {
 		t.Errorf("validating webhook not deleted")
 	}
-	mutatingWebhook = &admissionregistrationv1.MutatingWebhookConfiguration{}
+	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
 	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
 		Name: mutatingPolicyName,
 	}, mutatingWebhook)
