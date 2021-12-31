@@ -3,28 +3,16 @@ package admission
 import (
 	"context"
 	"testing"
-	"time"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	reconciler, validationPolicy, mutatingPolicy := createReconciler()
 	clusterAdmissionPolicies := policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{validationPolicy, mutatingPolicy}}
-	customScheme := scheme.Scheme
-	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}, &validationPolicy)
-	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, mutatingWebhook, &validationPolicy, &mutatingPolicy).Build()
-	reconciler := Reconciler{
-		Client:               cl,
-		DeploymentsNamespace: namespace,
-	}
 
 	err := reconciler.deleteWebhooksClusterAdmissionPolicies(context.Background(), clusterAdmissionPolicies)
 	if err != nil {
@@ -34,14 +22,14 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	// verify webhooks are deleted
 	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{}
 	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
-		Name: admissionPolicyName,
+		Name: validationPolicy.Name,
 	}, validatingWebhook)
 	if !errors.IsNotFound(err) {
 		t.Errorf("validating webhook not deleted")
 	}
 	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
 	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
-		Name: mutatingPolicyName,
+		Name: mutatingPolicy.Name,
 	}, mutatingWebhook)
 	if !errors.IsNotFound(err) {
 		t.Errorf("mutating webhook not deleted")
@@ -50,7 +38,7 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	// verify cluster admission policies finalizers are deleted
 	policy := &policiesv1alpha2.ClusterAdmissionPolicy{}
 	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
-		Name: admissionPolicyName,
+		Name: validationPolicy.Name,
 	}, policy)
 	if err != nil && errors.IsNotFound(err) {
 		// return early from the test, as because of the lack of finalizers, the resource has been
@@ -65,7 +53,7 @@ func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	}
 	policy = &policiesv1alpha2.ClusterAdmissionPolicy{}
 	err = reconciler.Client.Get(context.Background(), client.ObjectKey{
-		Name: mutatingPolicyName,
+		Name: mutatingPolicy.Name,
 	}, policy)
 	if err != nil {
 		t.Errorf("received unexpected error %s", err.Error())
