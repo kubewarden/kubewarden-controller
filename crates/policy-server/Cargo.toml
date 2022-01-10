@@ -3,7 +3,8 @@ name = "policy-server"
 version = "0.2.5"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
-  "Rafael Fernández López <rfernandezlopez@suse.com>"
+  "Rafael Fernández López <rfernandezlopez@suse.com>",
+  "Víctor Cuadrado Juan <vcuadradojuan@suse.de>"
 ]
 edition = "2018"
 
