@@ -22,6 +22,9 @@ mod settings;
 mod utils;
 mod worker;
 
+mod constants;
+use constants::{FULCIO_CRT, REKOR_PUB_KEY};
+
 mod worker_pool;
 use worker_pool::WorkerPool;
 
@@ -199,10 +202,26 @@ fn main() -> Result<()> {
         for (name, policy) in policies.iter_mut() {
             debug!(policy = name.as_str(), "download");
 
-            let mut verifier = policy_fetcher::verify::Verifier::new(sources.clone());
+            let mut verifier = match policy_fetcher::verify::Verifier::new(
+                sources.clone(),
+                FULCIO_CRT.as_bytes(),
+                REKOR_PUB_KEY,
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    fatal_error(format!("Cannot created sigstore verifier: {:?}", e));
+                    unreachable!()
+                }
+            };
+
             let mut verified_manifest_digest: Option<String> = None;
 
             if verify_enabled {
+                info!(
+                    policy = name.as_str(),
+                    "verifying policy authenticity and integrity using sigstore"
+                );
+
                 // verify policy prior to pulling for all keys, and keep the
                 // verified manifest digest of last iteration, even if all are
                 // the same:
@@ -225,7 +244,12 @@ fn main() -> Result<()> {
                                 key_value,
                             )
                             .await
-                            .map_err(|e| fatal_error(e.to_string()))
+                            .map_err(|e| {
+                                fatal_error(format!(
+                                    "Policy '{}' cannot be verified: {:?}",
+                                    name, e
+                                ))
+                            })
                             .unwrap(),
                     );
                 }
@@ -256,9 +280,10 @@ fn main() -> Result<()> {
                             fatal_error("Verification of policy failed".to_string());
                             unreachable!();
                         }
+
                         verifier
                             .verify_local_file_checksum(
-                                &fetched_policy.uri,
+                                &fetched_policy,
                                 docker_config.clone(),
                                 verified_manifest_digest.as_ref().unwrap(),
                             )
