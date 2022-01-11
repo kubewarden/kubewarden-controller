@@ -65,7 +65,8 @@ fn main() -> Result<()> {
     let metrics_enabled = matches.is_present("enable-metrics")
         || std::env::var_os("KUBEWARDEN_ENABLE_METRICS").is_some();
     let verify_enabled = matches.is_present("enable-verification")
-        || std::env::var_os("KUBEWARDEN_ENABLE_VERIFICATION").is_some();
+        || std::env::var_os("KUBEWARDEN_ENABLE_VERIFICATION").is_some()
+        || matches.is_present("verification-path");
 
     let verification_settings: Option<VerificationSettings> = if verify_enabled {
         Some(cli::verification_settings(&matches)?)
