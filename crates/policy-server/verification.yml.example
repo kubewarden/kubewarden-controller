@@ -1,0 +1,15 @@
+---
+verification_keys:
+  key-name-irrelevant: |
+            -----BEGIN PUBLIC KEY-----
+            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEX0HFTtCfTtPmkx5p1RbtwDE1EVzu
+            wjQs1cCRKb5Pz/yUspkQsN3FO4iyWodCy5j3o0CdIJD/1gvq98pf4IG9tA==
+            -----END PUBLIC KEY-----
+  another-key: |
+            -----BEGIN PUBLIC KEY-----
+            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEX0HFTtCfTtPmkx5p1RbtwDE1EVzu
+            wjQs1cCRKb5Pz/yUspkQsN3FO4iyWodCy5j3o0CdIJD/1gvq98pf4IG9tA==
+            -----END PUBLIC KEY-----
+verification_annotations: # optional
+  env: prod
+  foo: bar
