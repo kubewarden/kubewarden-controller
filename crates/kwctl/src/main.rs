@@ -115,12 +115,13 @@ async fn main() -> Result<()> {
                     }
                 }
 
-                pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
+                let policy =
+                    pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
 
                 if let Some(ref sigstore_options) = sigstore_options {
                     if let Some(digest) = verified_manifest_digest {
                         verify::verify_local_checksum(
-                            uri,
+                            &policy,
                             docker_config.as_ref(),
                             sources.as_ref(),
                             &digest,
