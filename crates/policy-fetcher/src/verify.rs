@@ -1,5 +1,4 @@
 use crate::sources::Sources;
-use crate::store::Store;
 use crate::{policy::Policy, registry::config::DockerConfig};
 
 use anyhow::{anyhow, Result};
@@ -131,14 +130,14 @@ impl Verifier {
     /// that are stored inside of OCI registries.
     pub async fn verify_local_file_checksum(
         &mut self,
-        url: &str,
+        policy: &Policy,
         docker_config: Option<DockerConfig>,
         verified_manifest_digest: &str,
     ) -> Result<()> {
-        let url = match Url::parse(url) {
+        let url = match Url::parse(&policy.uri) {
             Ok(u) => Ok(u),
             Err(ParseError::RelativeUrlWithoutBase) => {
-                Url::parse(format!("registry://{}", url).as_str())
+                Url::parse(format!("registry://{}", policy.uri).as_str())
             }
             Err(e) => Err(e),
         }?;
@@ -149,12 +148,11 @@ impl Verifier {
         }
         let image_name = url.as_str().strip_prefix("registry://").unwrap();
 
-        let store = Store::default();
-        let local_path =
-            store.policy_full_path(url.as_str(), crate::store::PolicyPath::PrefixAndFilename)?;
-
-        if !local_path.exists() {
-            return Err(anyhow!("No local policy to verify the manifest for"));
+        if !policy.local_path.exists() {
+            return Err(anyhow!(
+                "Policy cannot be verified, local wasm file doesn't exist: {:?}",
+                policy.local_path
+            ));
         }
 
         let registry = crate::registry::Registry::new(docker_config.as_ref());
@@ -185,10 +183,6 @@ impl Verifier {
             .strip_prefix("sha256:")
             .ok_or_else(|| anyhow!("The checksum inside of the remote manifest is not using the sha256 hashing algorithm as expected."))?;
 
-        let policy = Policy {
-            uri: url.to_string(),
-            local_path,
-        };
         let file_digest = policy.digest()?;
         if file_digest != expected_digest {
             Err(anyhow!("The digest of the local file doesn't match with the one reported inside of the signed manifest. Got {} instead of {}", file_digest, expected_digest))
