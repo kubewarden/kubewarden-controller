@@ -210,7 +210,7 @@ fn main() -> Result<()> {
             ) {
                 Ok(v) => v,
                 Err(e) => {
-                    fatal_error(format!("Cannot created sigstore verifier: {:?}", e));
+                    fatal_error(format!("Cannot create sigstore verifier: {:?}", e));
                     unreachable!()
                 }
             };
