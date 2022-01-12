@@ -37,7 +37,7 @@ pub(crate) async fn pull_and_run(
 
     if let Some(digest) = verified_manifest_digest {
         verify::verify_local_checksum(
-            &uri,
+            &policy,
             docker_config,
             sources,
             digest,

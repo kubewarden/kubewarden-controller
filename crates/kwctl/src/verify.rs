@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
-use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::Verifier;
+use policy_fetcher::{policy::Policy, registry::config::DockerConfig};
 use std::{collections::HashMap, fs};
 use tracing::{debug, info};
 
@@ -37,7 +37,7 @@ pub(crate) async fn verify(
 }
 
 pub(crate) async fn verify_local_checksum(
-    url: &str,
+    policy: &Policy,
     docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
     verified_manifest_digest: &str,
@@ -49,7 +49,7 @@ pub(crate) async fn verify_local_checksum(
         &sigstore_opts.rekor_public_key,
     )?;
     verifier
-        .verify_local_file_checksum(url, docker_config.cloned(), verified_manifest_digest)
+        .verify_local_file_checksum(policy, docker_config.cloned(), verified_manifest_digest)
         .await?;
 
     info!("Local checksum successfully verified");

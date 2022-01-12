@@ -20,8 +20,8 @@ kube = { version = "0.64.0", default-features = false, features = ["client", "ru
 kubewarden-policy-sdk = "0.2.3"
 lazy_static = "1.4.0"
 mdcat = "0.24"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.7" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.2.3" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.9" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.3.0" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.8"
 pulldown-cmark = { version = "0.8", default-features = false }
