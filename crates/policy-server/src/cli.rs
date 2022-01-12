@@ -113,7 +113,6 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
             Arg::with_name("verification-path")
                 .env("KUBEWARDEN_VERIFICATION_CONFIG_PATH")
                 .long("verification-path")
-                .default_value("verification.yml")
                 .help("YAML file holding verification information (URIs, keys, annotations...)"),
         )
         .arg(
@@ -172,7 +171,12 @@ pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Pol
 }
 
 pub(crate) fn verification_settings(matches: &clap::ArgMatches) -> Result<VerificationSettings> {
-    let verification_file = Path::new(matches.value_of("verification-path").unwrap_or("."));
+    if matches.value_of("verification-path").is_none() {
+        return Err(anyhow!(
+            "error parsing arguments: --verification-path must be provided"
+        ));
+    }
+    let verification_file = Path::new(matches.value_of("verification-path").unwrap());
     match read_verification_file(verification_file) {
         Err(e) => Err(anyhow!(
             "error while loading verification info from {:?}: {}",
