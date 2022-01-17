@@ -10,7 +10,8 @@ use std::path::{Path, PathBuf};
 #[derive(Deserialize, Debug, Clone)]
 pub struct Policy {
     pub url: String,
-
+    #[serde(rename = "allowedToMutate")]
+    pub allowed_to_mutate: Option<bool>,
     #[serde(skip)]
     pub wasm_module_path: PathBuf,
 
@@ -65,8 +66,44 @@ example:
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
+        assert!(policy.allowed_to_mutate.is_none());
         let settings = policy.settings();
         assert!(settings.is_some());
+    }
+
+    #[test]
+    fn test_allowed_to_mutate_settings() {
+        let input = r#"
+---
+example:
+  url: file:///tmp/namespace-validate-policy.wasm
+  allowedToMutate: true
+  settings:
+    valid_namespace: valid
+"#;
+        let policies: HashMap<String, Policy> = serde_yaml::from_str(input).unwrap();
+        assert!(!policies.is_empty());
+
+        let policy = policies.get("example").unwrap();
+        assert!(policy.allowed_to_mutate.unwrap());
+        let settings = policy.settings();
+        assert!(settings.is_some());
+
+        let input2 = r#"
+---
+example:
+  url: file:///tmp/namespace-validate-policy.wasm
+  allowedToMutate: false
+  settings:
+    valid_namespace: valid
+"#;
+        let policies2: HashMap<String, Policy> = serde_yaml::from_str(input2).unwrap();
+        assert!(!policies2.is_empty());
+
+        let policy2 = policies2.get("example").unwrap();
+        assert_eq!(policy2.allowed_to_mutate.unwrap(), false);
+        let settings2 = policy2.settings();
+        assert!(settings2.is_some());
     }
 
     #[test]

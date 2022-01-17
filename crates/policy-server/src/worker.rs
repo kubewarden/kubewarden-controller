@@ -5,7 +5,7 @@ use policy_evaluator::{
     policy_evaluator::{PolicyEvaluator, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_metadata::Metadata,
-    validation_response::ValidationResponse,
+    validation_response::{ValidationResponse, ValidationResponseStatus},
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -18,8 +18,13 @@ use crate::metrics;
 use crate::settings::Policy;
 use crate::utils::convert_yaml_map_to_json;
 
+struct PolicyEvaluatorWithSettings {
+    policy_evaluator: PolicyEvaluator,
+    allowed_to_mutate: Option<bool>,
+}
+
 pub(crate) struct Worker {
-    evaluators: HashMap<String, PolicyEvaluator>,
+    evaluators: HashMap<String, PolicyEvaluatorWithSettings>,
     channel_rx: Receiver<EvalRequest>,
 }
 
@@ -118,7 +123,12 @@ impl Worker {
                 continue;
             }
 
-            evs.insert(id.to_string(), policy_evaluator);
+            let policy_evaluator_with_settings = PolicyEvaluatorWithSettings {
+                policy_evaluator,
+                allowed_to_mutate: policy.allowed_to_mutate,
+            };
+
+            evs.insert(id.to_string(), policy_evaluator_with_settings);
         }
 
         if !evs_errors.is_empty() {
@@ -137,7 +147,10 @@ impl Worker {
             let _enter = span.enter();
 
             let res = match self.evaluators.get_mut(&req.policy_id) {
-                Some(policy_evaluator) => match serde_json::to_value(req.req.clone()) {
+                Some(PolicyEvaluatorWithSettings {
+                    policy_evaluator,
+                    allowed_to_mutate,
+                }) => match serde_json::to_value(req.req.clone()) {
                     Ok(json) => {
                         let start_time = Instant::now();
                         let resp = policy_evaluator.validate(ValidateRequest::new(json));
@@ -148,6 +161,21 @@ impl Worker {
                             status.code
                         } else {
                             None
+                        };
+                        let resp = if mutated && allowed_to_mutate.as_ref() == Some(&false) {
+                            ValidationResponse {
+                                allowed: false,
+                                status: Some(ValidationResponseStatus {
+                                    message: Some(format!("Request rejected by policy {}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.", &req.policy_id)),
+                                    code: None,
+                                }),
+                                // if `allowed_to_mutate` is false, we are in a validating webhook. If we send a patch, k8s will fail because validating webhook do not expect this field
+                                patch: None,
+                                patch_type: None,
+                                ..resp
+                            }
+                        } else {
+                            resp
                         };
                         let res = req.resp_chan.send(Some(resp));
                         let policy_evaluation = metrics::PolicyEvaluation {
