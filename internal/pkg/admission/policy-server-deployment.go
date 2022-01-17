@@ -250,12 +250,6 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		)
 		admissionContainer.Env = append(admissionContainer.Env,
 			corev1.EnvVar{
-				Name:  "KUBEWARDEN_ENABLE_VERIFICATION",
-				Value: "yes",
-			},
-		)
-		admissionContainer.Env = append(admissionContainer.Env,
-			corev1.EnvVar{
 				Name:  "KUBEWARDEN_VERIFICATION_CONFIG_PATH",
 				Value: filepath.Join(constants.PolicyServerVerificationConfigContainerPath, verificationFilename),
 			},
