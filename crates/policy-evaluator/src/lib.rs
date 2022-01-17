@@ -14,3 +14,5 @@ pub mod policy_metadata;
 mod policy_tracing;
 pub mod runtimes;
 pub mod validation_response;
+
+pub use kubewarden_policy_sdk::metadata::ProtocolVersion;
