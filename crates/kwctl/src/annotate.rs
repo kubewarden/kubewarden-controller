@@ -1,7 +1,6 @@
 use crate::backend::{Backend, BackendDetector};
 use anyhow::{anyhow, Result};
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
-use policy_evaluator::{constants::*, policy_metadata::Metadata};
+use policy_evaluator::{constants::*, policy_metadata::Metadata, ProtocolVersion};
 use std::fs::File;
 use std::path::PathBuf;
 use validator::Validate;
