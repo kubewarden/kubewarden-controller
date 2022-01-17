@@ -1,4 +1,5 @@
 HYPERFINE := $(shell command -v hyperfine 2> /dev/null)
+IMG ?= policy-server:latest
 
 .PHONY: build
 build:
@@ -26,3 +27,7 @@ tag:
 	@git-chglog --output CHANGELOG.md
 	@git commit -m 'Update CHANGELOG.md' -- CHANGELOG.md
 	@git tag -f "${TAG}"
+
+.PHONY: docker-build
+docker-build: test ## Build docker image with the manager.
+	docker build -t ${IMG} .
