@@ -1,57 +1,113 @@
+name: build container image
 on:
   push:
     branches:
     - main
     tags:
     - 'v*'
-
-name: build container image
-
 jobs:
-  build:
+  ci:
+    uses: .github/workflows/tests.yml@main
+  build-x86_64:
+    name: Build x86_64 binary
+    runs-on: ubuntu-latest
+    needs:
+      - ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: rustup target add x86_64-unknown-linux-musl
+      - name: Setup musl for x86_64
+        run: |
+          curl https://musl.cc/x86_64-linux-musl-cross.tgz | tar -xz
+          echo "$PWD/x86_64-linux-musl-cross/bin" >> $GITHUB_PATH
+      - name: Build policy-server
+        env:
+          CC: x86_64-linux-musl-gcc
+        run: cargo build --target=x86_64-unknown-linux-musl --release
+      - name: Upload policy-server
+        uses: actions/upload-artifact@v2
+        with:
+          name: policy-server-x86_64
+          path: target/x86_64-unknown-linux-musl/release/policy-server
+  build-aarch64:
+    name: Build aarch64 binary
+    runs-on: ubuntu-latest
+    needs:
+      - ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: rustup target add aarch64-unknown-linux-musl
+      - name: Setup musl for aarch64
+        run: |
+          curl https://musl.cc/aarch64-linux-musl-cross.tgz | tar -xz
+          echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
+      - name: Build policy-server
+        env:
+          CC: aarch64-linux-musl-gcc
+        run: cargo build --target=aarch64-unknown-linux-musl --release
+      - name: Upload policy-server
+        uses: actions/upload-artifact@v2
+        with:
+          name: policy-server-aarch64
+          path: target/aarch64-unknown-linux-musl/release/policy-server
+  build-container-image:
     name: Build container image
     runs-on: ubuntu-latest
+    needs:
+     - build-x86_64
+     - build-aarch64
     steps:
-      -
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v2
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
+      - name: policy-server-x86_64
+        uses: actions/download-artifact@v2
+        with:
+          name: policy-server-x86_64
+          path: /tmp/kubewarden
+      - name: policy-server-aarch64
+        uses: actions/download-artifact@v2
+        with:
+          name: policy-server-aarch64
+          path: /tmp/kubewarden
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      -
-        name: Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Build and push development container image
+      - name: Build and push development container image
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         uses: docker/build-push-action@v2
         with:
-          context: .
-          file: ./Dockerfile
+          context: /tmp/kubewarden
+          file: Dockerfile
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/kubewarden/policy-server:latest
-      -
-        name: Retrieve tag name
+            ghcr.io/${{ github.repository_owner }}/policy-server:latest
+      - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
           echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
-      -
-        name: Build and push tagged container image
+      - name: Build and push tagged container image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/build-push-action@v2
         with:
-          context: .
-          file: ./Dockerfile
+          context: /tmp/kubewarden
+          file: Dockerfile
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/kubewarden/policy-server:${{ env.TAG_NAME }}
+            ghcr.io/${{ github.repository_owner }}/policy-server:${{ env.TAG_NAME }}
