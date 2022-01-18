@@ -1,13 +1,12 @@
 use anyhow::{anyhow, Result};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
+use policy_evaluator::constants::KUBEWARDEN_ANNOTATION_POLICY_TITLE;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use validator::Validate;
 
 use policy_evaluator::policy_metadata::{Metadata, Rule};
-
-const POLICY_TITLE_ANNOTATION: &str = "io.kubewarden.policy.title";
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -103,7 +102,7 @@ fn get_policy_title_from_cli_or_metadata(
             .annotations
             .as_ref()
             .unwrap_or(&HashMap::new())
-            .get(POLICY_TITLE_ANNOTATION)
+            .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
             .map(|s| s.to_string())
     })
 }
@@ -128,7 +127,7 @@ mod tests {
             protocol_version: None,
             rules: vec![],
             annotations: Some(HashMap::from([(
-                POLICY_TITLE_ANNOTATION.to_string(),
+                KUBEWARDEN_ANNOTATION_POLICY_TITLE.to_string(),
                 title,
             )])),
             mutating: false,
