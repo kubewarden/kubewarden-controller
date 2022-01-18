@@ -357,6 +357,12 @@ pub fn build_cli() -> clap::App<'static, 'static> {
                         .index(1)
                         .help("Policy URI. Supported schemes: registry://, https://, file://")
                 )
+                .arg(
+                    Arg::with_name("title")
+                        .long("title")
+                        .takes_value(true)
+                        .help("Policy title")
+                )
         )
         .subcommand(
             SubCommand::with_name("completions")
