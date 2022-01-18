@@ -8,7 +8,7 @@ on:
 jobs:
   ci:
     # A branch is required, and cannot be dynamic - https://github.com/actions/runner/issues/1493
-    uses: ./.github/workflows/tests.yml@main
+    uses: kubewarden/policy-server/.github/workflows/tests.yml@main
   build-x86_64:
     name: Build x86_64 binary
     runs-on: ubuntu-latest
