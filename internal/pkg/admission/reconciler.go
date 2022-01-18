@@ -160,7 +160,7 @@ func (r *Reconciler) Reconcile(
 		return err
 	}
 
-	if err := r.reconcileSecret(ctx, policyServerCARootSecret); err != nil {
+	if err := r.reconcileCASecret(ctx, policyServerCARootSecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerCARootSecretReconciled,
@@ -174,24 +174,29 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerCARootSecretReconciled,
 	)
 
-	policyServerSecret, err := r.fetchOrInitializePolicyServerSecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
+	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerSecretReconciled,
+			policiesv1alpha2.PolicyServerCASecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
 	}
 
-	if err := r.reconcileSecret(ctx, policyServerSecret); err != nil {
+	if err := r.reconcileCASecret(ctx, policyServerCASecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerSecretReconciled,
+			policiesv1alpha2.PolicyServerCASecretReconciled,
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
 	}
+
+	setTrueConditionType(
+		&policyServer.Status.Conditions,
+		policiesv1alpha2.PolicyServerCASecretReconciled,
+	)
 
 	clusterAdmissionPolicies, err = r.getClusterAdmissionPolicies(ctx, policyServer)
 	if err != nil {

@@ -1,0 +1,16 @@
+---
+apiVersion: policies.kubewarden.io/v1alpha2
+kind: ClusterAdmissionPolicy
+metadata:
+  name: signed-policy
+spec:
+  policyServer: reserved-instance-for-tenant-a
+  module: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+  rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["pods"]
+      operations:
+        - CREATE
+        - UPDATE
+  mutating: false

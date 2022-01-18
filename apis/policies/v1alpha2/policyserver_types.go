@@ -59,6 +59,12 @@ type PolicyServerSpec struct {
 	// certificate used by the endpoint.
 	// +optional
 	SourceAuthorities map[string][]string `json:"sourceAuthorities,omitempty"`
+
+	// Name of VerificationConfig configmap in the same namespace, containing
+	// Sigstore verification configuration. The configuration must be under a
+	// key named verification-config in the Configmap.
+	// +optional
+	VerificationConfig string `json:"verificationConfig,omitempty"`
 }
 
 type ReconciliationTransitionReason string
@@ -73,9 +79,9 @@ const (
 type PolicyConditionType string
 
 const (
-	// PolicyServerSecretReconciled represents the condition of the
+	// PolicyServerCASecretReconciled represents the condition of the
 	// Policy Server Secret reconciliation
-	PolicyServerSecretReconciled PolicyConditionType = "PolicyServerSecretReconciled"
+	PolicyServerCASecretReconciled PolicyConditionType = "PolicyCAServerSecretReconciled"
 	// PolicyServerCARootSecretReconciled represents the condition of the
 	// Policy Server CA Root Secret reconciliation
 	PolicyServerCARootSecretReconciled PolicyConditionType = "PolicyCARootServerSecretReconciled" // nolint:gosec
