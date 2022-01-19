@@ -350,8 +350,9 @@ async fn main() -> Result<()> {
                 } else {
                     None
                 };
+                let policy_title = matches.value_of("title");
 
-                manifest::manifest(uri, resource_type, settings)?;
+                manifest::manifest(uri, resource_type, settings, policy_title.map(String::from))?;
             };
             Ok(())
         }
