@@ -1,6 +1,6 @@
 [package]
 name = "policy-fetcher"
-version = "0.3.0"
+version = "0.3.1"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>"
@@ -17,16 +17,14 @@ async-trait = "0.1.50"
 base64 = "0.13.0"
 directories = "3.0.2"
 lazy_static = "1.4.0"
-#oci-distribution = "0.6"
-# Pinned git revision to be replaced with a tag when something greater than v0.8.0 is tagged
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "96f19570e7", default-features = false, features = ["rustls-tls"] }
+oci-distribution = { version = "0.8.1", default-features = false, features =  ["rustls-tls"] }
 reqwest = { version = "0.11.3", default-features = false, features = ["rustls-tls"] }
 rustls = "0.19.1"
 serde_json = "1.0.64"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8.15"
 sha2 = "0.9.5"
-sigstore = { git = "https://github.com/kubewarden/sigstore-rs", default-features = false, features = ["rustls-tls"], branch = "not-yet-merged-patches" }
+sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "35fcc0f0a643c42989d301d6940add98f6ca6b6e" }
 tracing = "0.1.29"
 url = "2.2.0"
 walkdir = "2"

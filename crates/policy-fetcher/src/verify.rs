@@ -26,7 +26,7 @@ impl Verifier {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
         let cosign_client = sigstore::cosign::ClientBuilder::default()
-            .with_client_config(client_config)
+            .with_oci_client_config(client_config)
             .with_fulcio_cert(fulcio_cert)
             .with_rekor_pub_key(rekor_public_key)
             .build()
