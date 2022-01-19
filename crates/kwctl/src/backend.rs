@@ -1,8 +1,7 @@
 use anyhow::{anyhow, Result};
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use policy_evaluator::{
     policy_evaluator::PolicyExecutionMode, policy_evaluator_builder::PolicyEvaluatorBuilder,
-    policy_metadata::Metadata,
+    policy_metadata::Metadata, ProtocolVersion,
 };
 use std::path::{Path, PathBuf};
 

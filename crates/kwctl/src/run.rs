@@ -217,7 +217,7 @@ fn determine_execution_mode(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kubewarden_policy_sdk::metadata::ProtocolVersion;
+    use policy_evaluator::ProtocolVersion;
     use std::path::PathBuf;
 
     fn mock_protocol_version_detector_v1(_wasm_path: PathBuf) -> Result<ProtocolVersion> {

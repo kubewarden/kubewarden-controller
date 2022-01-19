@@ -362,7 +362,7 @@ checksum = "8f1e260c3a9040a7c19a12468758f4c16f31a81a1fe087482be9570ec864bb6c"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.9#843b60f4d5509be89b53b9b6c3b04efcdeb17507"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.10#cdb46478a4336091d375357612fe99a6104208cb"
 dependencies = [
  "anyhow",
  "base64",
@@ -1892,9 +1892,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.2.4"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61a46677c118ebeff46e1d3b09450715270366482a5b0cbeb8ef04152f7b4605"
+checksum = "9f866fd0ab46019965538c69370bb9c72ac904d66f78f5469c3d56d4d299e1f5"
 dependencies = [
  "anyhow",
  "k8s-openapi 0.11.0",
@@ -1926,7 +1926,6 @@ dependencies = [
  "itertools",
  "k8s-openapi 0.13.1",
  "kube",
- "kubewarden-policy-sdk",
  "lazy_static",
  "mdcat",
  "policy-evaluator",
@@ -2565,8 +2564,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.2.9"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.9#843b60f4d5509be89b53b9b6c3b04efcdeb17507"
+version = "0.2.10"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.10#cdb46478a4336091d375357612fe99a6104208cb"
 dependencies = [
  "anyhow",
  "base64",
