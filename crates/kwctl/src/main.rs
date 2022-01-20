@@ -189,7 +189,7 @@ async fn main() -> Result<()> {
 
                 let force = matches.is_present("force");
 
-                push::push(
+                let immutable_ref = push::push(
                     wasm_path,
                     &uri,
                     docker_config.as_ref(),
@@ -197,8 +197,18 @@ async fn main() -> Result<()> {
                     force,
                 )
                 .await?;
+
+                match matches.value_of("output") {
+                    Some("json") => {
+                        let mut response: HashMap<&str, String> = HashMap::new();
+                        response.insert("immutable_ref", immutable_ref);
+                        serde_json::to_writer(std::io::stdout(), &response)?
+                    }
+                    _ => {
+                        println!("Policy successfully pushed: {}", immutable_ref);
+                    }
+                }
             };
-            println!("Policy successfully pushed");
             Ok(())
         }
         Some("rm") => {

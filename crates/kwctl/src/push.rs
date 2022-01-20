@@ -11,7 +11,7 @@ pub(crate) async fn push(
     docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
     force: bool,
-) -> Result<()> {
+) -> Result<String> {
     match Metadata::from_path(&wasm_path)? {
         Some(_) => {}
         None => {
