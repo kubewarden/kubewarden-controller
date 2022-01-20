@@ -193,6 +193,9 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
 	)
 
+	policyStoreVolume := "policy-store"
+	policyStoreVolumePath := "/tmp"
+
 	admissionContainer := corev1.Container{
 		Name:  policyServer.NameWithPrefix(),
 		Image: policyServer.Spec.Image,
@@ -206,6 +209,10 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				Name:      policiesVolumeName,
 				ReadOnly:  true,
 				MountPath: policiesConfigContainerPath,
+			},
+			{
+				Name:      policyStoreVolume,
+				MountPath: policyStoreVolumePath,
 			},
 		},
 		Env: append([]corev1.EnvVar{
@@ -223,7 +230,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 			{
 				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
-				Value: "/tmp/",
+				Value: policyStoreVolumePath,
 			},
 			{
 				Name:  "KUBEWARDEN_POLICIES",
@@ -322,6 +329,12 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 					Containers:         []corev1.Container{admissionContainer},
 					ServiceAccountName: policyServer.Spec.ServiceAccountName,
 					Volumes: []corev1.Volume{
+						{
+							Name: policyStoreVolume,
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
 						{
 							Name: certsVolumeName,
 							VolumeSource: corev1.VolumeSource{
