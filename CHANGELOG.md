@@ -2,6 +2,22 @@
 ## [Unreleased]
 
 
+<a name="v0.4.4"></a>
+## [v0.4.4] - 2022-01-20
+### Code Refactoring
+- Drop KUBEWARDEN_ENABLE_VERIFICATION, not needed
+- Rename Secret to CASecret for disambiguation
+- Move policy-server-{,ca}-secret{,_test}.go
+
+### Features
+- Add verification options to PolicyServer
+- Set missing policiesv1alpha2.PolicyServerCASecretReconciled
+
+### Pull Requests
+- Merge pull request [#144](https://github.com/kubewarden/kubewarden-controller/issues/144) from ereslibre/create-policy-server-tmp-volume
+- Merge pull request [#139](https://github.com/kubewarden/kubewarden-controller/issues/139) from viccuad/verification-secret
+
+
 <a name="v0.4.3"></a>
 ## [v0.4.3] - 2021-12-20
 ### Bug Fixes
