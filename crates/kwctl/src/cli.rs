@@ -177,6 +177,15 @@ pub fn build_cli() -> clap::App<'static, 'static> {
                     .long("force")
                     .help("Push also a policy that is not annotated")
                 )
+                .arg(
+                    Arg::with_name("output")
+                    .long("output")
+                    .short("o")
+                    .takes_value(true)
+                    .possible_values(&["text", "json"])
+                    .default_value("text")
+                    .help("Output format")
+                )
                .arg(
                     Arg::with_name("policy")
                         .required(true)
