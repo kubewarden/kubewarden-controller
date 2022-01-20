@@ -35,7 +35,7 @@ tracing-futures = "0.2"
 validator = { version = "0.14", features = ["derive"] }
 wapc = "0.10.1"
 wasmparser = "0.82.0"
-wasmtime-provider = "0.0.5"
+wasmtime-provider = "0.0.7"
 
 [dev-dependencies]
 assert-json-diff = "2.0.1"
