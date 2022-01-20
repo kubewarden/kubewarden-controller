@@ -32,11 +32,12 @@ jobs:
         CC: x86_64-linux-musl-gcc
       run: cargo build --target=x86_64-unknown-linux-musl --release
     - run: mv target/x86_64-unknown-linux-musl/release/kwctl kwctl-linux-x86_64
+    - run: zip -j9 kwctl-linux-x86_64.zip kwctl-linux-x86_64
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
         name: kwctl-linux-x86_64
-        path: kwctl-linux-x86_64
+        path: kwctl-linux-x86_64.zip
 
   build-linux-aarch64:
     name: Build linux (aarch64) binary
@@ -59,11 +60,12 @@ jobs:
         CC: aarch64-linux-musl-gcc
       run: cargo build --target=aarch64-unknown-linux-musl --release
     - run: mv target/aarch64-unknown-linux-musl/release/kwctl kwctl-linux-aarch64
+    - run: zip -j9 kwctl-linux-aarch64.zip kwctl-linux-aarch64
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
         name: kwctl-linux-aarch64
-        path: kwctl-linux-aarch64
+        path: kwctl-linux-aarch64.zip
 
   build-darwin-x86_64:
     name: Build darwin (x86_64) binary
@@ -80,11 +82,12 @@ jobs:
     - name: Build kwctl
       run: cargo build --target=x86_64-apple-darwin --release
     - run: mv target/x86_64-apple-darwin/release/kwctl kwctl-darwin-x86_64
+    - run: zip -j9 kwctl-darwin-x86_64.zip kwctl-darwin-x86_64
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
         name: kwctl-darwin-x86_64
-        path: kwctl-darwin-x86_64
+        path: kwctl-darwin-x86_64.zip
 
   build-windows-x86_64:
     name: Build windows (x86_64) binary
@@ -101,11 +104,14 @@ jobs:
     - name: Build kwctl
       run: cargo build --target=x86_64-pc-windows-msvc --release
     - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
+    - run: |
+        "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe
+      shell: bash
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
         name: kwctl-windows-x86_64
-        path: kwctl-windows-x86_64.exe
+        path: kwctl-windows-x86_64.exe.zip
 
   release:
     name: Create release
@@ -116,7 +122,6 @@ jobs:
       - build-darwin-x86_64
       - build-windows-x86_64
     steps:
-
     - name: Create Release
       id: create-release
       uses: actions/create-release@v1
@@ -126,7 +131,7 @@ jobs:
         tag_name: ${{ github.ref }}
         release_name: Release kwctl ${{ github.ref }}
         draft: false
-        prerelease: false
+        prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
 
     - name: Download linux-x86_64 binary
       uses: actions/download-artifact@v2
@@ -138,9 +143,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-linux-x86_64
-        asset_path: kwctl-linux-x86_64
-        asset_content_type: application/octet-stream
+        asset_name: kwctl-linux-x86_64.zip
+        asset_path: kwctl-linux-x86_64.zip
+        asset_content_type: application/zip
 
     - name: Download linux-aarch64 binary
       uses: actions/download-artifact@v2
@@ -152,9 +157,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-linux-aarch64
-        asset_path: kwctl-linux-aarch64
-        asset_content_type: application/octet-stream
+        asset_name: kwctl-linux-aarch64.zip
+        asset_path: kwctl-linux-aarch64.zip
+        asset_content_type: application/zip
 
     - name: Download darwin-x86_64 binary
       uses: actions/download-artifact@v2
@@ -166,9 +171,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-darwin-x86_64
-        asset_path: kwctl-darwin-x86_64
-        asset_content_type: application/octet-stream
+        asset_name: kwctl-darwin-x86_64.zip
+        asset_path: kwctl-darwin-x86_64.zip
+        asset_content_type: application/zip
 
     - name: Download windows-x86_64 binary
       uses: actions/download-artifact@v2
@@ -180,6 +185,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-windows-x86_64.exe
-        asset_path: kwctl-windows-x86_64.exe
-        asset_content_type: application/octet-stream
+        asset_name: kwctl-windows-x86_64.exe.zip
+        asset_path: kwctl-windows-x86_64.exe.zip
+        asset_content_type: application/zip
