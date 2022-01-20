@@ -15,7 +15,7 @@ async-std = "1.9.0"
 async-stream = "0.3.0"
 async-trait = "0.1.50"
 base64 = "0.13.0"
-directories = "3.0.2"
+directories = "4.0.1"
 lazy_static = "1.4.0"
 oci-distribution = { git = "https://github.com/kubewarden/oci-distribution", branch = "not-yet-merged-patches", default-features = false, features =  ["rustls-tls"] }
 regex = "1.5.4"
