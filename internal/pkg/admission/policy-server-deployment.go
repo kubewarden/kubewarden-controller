@@ -292,6 +292,11 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		)
 	}
+	enableReadOnlyFilesystem := true
+	admissionContainerSecurityContext := corev1.SecurityContext{
+		ReadOnlyRootFilesystem: &enableReadOnlyFilesystem,
+	}
+	admissionContainer.SecurityContext = &admissionContainerSecurityContext
 
 	templateAnnotations := policyServer.Spec.Annotations
 	if templateAnnotations == nil {
