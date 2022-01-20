@@ -22,7 +22,7 @@ cached = "0.29.0"
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
 k8s-openapi = { version = "0.13.0", default-features = false, features = ["v1_22"] }
-kube = { version = "0.64.0", default-features = false, features = ["client", "rustls-tls"] }
+kube = { version = "0.66.0", default-features = false, features = ["client", "rustls-tls"] }
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "96f19570e7", default-features = false, features = ["rustls-tls"] }
