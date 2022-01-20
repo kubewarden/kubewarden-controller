@@ -14,7 +14,7 @@ async-stream = "0.3.0"
 itertools = "0.10.1"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.9" }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.3.0" }
-kubewarden-policy-sdk = "0.2.4"
+kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 clap = "2.33.3"
 futures-util = "0.3.12"
