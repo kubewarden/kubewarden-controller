@@ -1946,7 +1946,7 @@ dependencies = [
  "url 2.2.2",
  "validator",
  "walrus",
- "wasmparser 0.80.2",
+ "wasmparser 0.82.0",
 ]
 
 [[package]]
@@ -4287,6 +4287,12 @@ name = "wasmparser"
 version = "0.80.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "449167e2832691a1bff24cde28d2804e90e09586a448c8e76984792c44334a6b"
+
+[[package]]
+name = "wasmparser"
+version = "0.82.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0559cc0f1779240d6f894933498877ea94f693d84f3ee39c9a9932c6c312bd70"
 
 [[package]]
 name = "wasmtime"
