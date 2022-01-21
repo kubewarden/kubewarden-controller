@@ -1,0 +1,22 @@
+name: policy-server release
+on:
+  push:
+    tags:
+    - 'v*'
+jobs:
+  ci:
+    uses: kubewarden/policy-server/.github/workflows/tests.yml@main
+  release:
+    name: Create release
+    needs:
+      - ci
+    steps:
+      - name: Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release policy-server ${{ github.ref }}
+          draft: false
+          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
