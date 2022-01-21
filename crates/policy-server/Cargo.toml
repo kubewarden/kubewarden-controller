@@ -1,6 +1,6 @@
 [package]
 name = "policy-server"
-version = "0.2.5"
+version = "0.2.6-rc1"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
