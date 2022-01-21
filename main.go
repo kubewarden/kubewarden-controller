@@ -133,7 +133,13 @@ func main() {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// To ensure that the controller will be set as ready only after the
+	// manager starts running the runnables use the Webhook started checker.
+	// The healthz.Ping is not used because it always return as "Ready"
+	// which can cause issues with Helm if it is fast enough and try
+	// to deploy policy servers and cluster admission policies before the controller
+	// starts to run
+	if err := mgr.AddReadyzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
