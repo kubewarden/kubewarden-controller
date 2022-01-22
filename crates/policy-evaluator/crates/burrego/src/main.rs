@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use clap::{clap_app, crate_authors, crate_description, crate_name, crate_version, AppSettings};
+use clap::{crate_authors, crate_name, crate_version, App, AppSettings, Arg};
 use serde_json::json;
 use std::{fs::File, io::BufReader, path::PathBuf, process};
 
@@ -10,27 +10,60 @@ use tracing_subscriber::{fmt, EnvFilter};
 mod opa;
 use opa::wasm::Evaluator;
 
+pub(crate) fn build_cli() -> App<'static> {
+    App::new(crate_name!())
+        .author(crate_authors!())
+        .version(crate_version!())
+        .about("evaluate a OPA policy")
+        .arg(
+            Arg::new("verbose")
+                .short('v')
+                .takes_value(false)
+                .help("Increase verbosity"),
+        )
+        .subcommand(
+            App::new("eval")
+                .about("evaluate a OPA policy")
+                .arg(
+                    Arg::new("input")
+                        .short('i')
+                        .long("input")
+                        .takes_value(true)
+                        .help("JSON string with the input"),
+                )
+                .arg(
+                    Arg::new("input-path")
+                        .long("input-path")
+                        .takes_value(true)
+                        .help("path to the file containing the JSON input"),
+                )
+                .arg(
+                    Arg::new("data")
+                        .short('d')
+                        .long("data")
+                        .takes_value(true)
+                        .help("JSON string with the data"),
+                )
+                .arg(
+                    Arg::new("entrypoint")
+                        .short('e')
+                        .long("entrypoint")
+                        .takes_value(true)
+                        .help("OPA entrypoint to evaluate"),
+                )
+                .arg(
+                    Arg::new("policy")
+                        .required(true)
+                        .index(1)
+                        .help("Path to the wasm file containing the policy"),
+                ),
+        )
+        .subcommand(App::new("builtins").about("List the supported builtins"))
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+}
+
 fn main() -> Result<()> {
-    let matches = clap_app!(
-    (crate_name!()) =>
-        (version: crate_version!())
-        (author: crate_authors!(",\n"))
-        (about: crate_description!())
-        (@arg verbose: -v "Increase verbosity")
-        (@subcommand eval =>
-            (about: "evaluate a OPA policy")
-            (@arg ("input"): -i --("input") +takes_value "JSON string with the input")
-            (@arg ("input-path"): --("input-path") +takes_value "path to the file containing the JSON input")
-            (@arg ("data"): -d --("data") +takes_value "JSON string with the data")
-            (@arg ("entrypoint"): -e --("entrypoint") +takes_value "OPA entrypoint to evaluate")
-            (@arg ("policy"): * "Path to the wasm file containing the policy")
-        )
-        (@subcommand builtins =>
-            (about: "List the supported builtins")
-        )
-    )
-    .setting(AppSettings::SubcommandRequiredElseHelp)
-    .get_matches();
+    let matches = build_cli().get_matches();
 
     // setup logging
     let level_filter = if matches.is_present("verbose") {

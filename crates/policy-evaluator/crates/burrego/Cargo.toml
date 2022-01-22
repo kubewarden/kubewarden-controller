@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.40"
 base64 = "0.13.0"
-clap = "2.33.3"
+clap = { version = "3.0.10", features = [ "cargo", "env" ] }
 chrono = "0.4.19"
 chrono-tz = "0.6.1"
 gtmpl = "0.7.1"
