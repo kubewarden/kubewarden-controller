@@ -30,64 +30,72 @@ lazy_static! {
         std::env::var("HOSTNAME").unwrap_or_else(|_| String::from("unknown"));
 }
 
-pub(crate) fn build_cli() -> App<'static, 'static> {
+pub(crate) fn build_cli() -> App<'static> {
     App::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())
         .about(crate_description!())
         .arg(
-            Arg::with_name("log-level")
+            Arg::new("log-level")
                 .long("log-level")
+                .takes_value(true)
                 .env("KUBEWARDEN_LOG_LEVEL")
                 .default_value("info")
                 .possible_values(&["trace", "debug", "info", "warn", "error"])
                 .help("Log level"),
         )
         .arg(
-            Arg::with_name("log-fmt")
+            Arg::new("log-fmt")
                 .long("log-fmt")
+                .takes_value(true)
                 .env("KUBEWARDEN_LOG_FMT")
                 .default_value("text")
                 .possible_values(&["text", "json", "otlp"])
                 .help("Log output format"),
         )
         .arg(
-            Arg::with_name("address")
+            Arg::new("address")
                 .long("addr")
+                .takes_value(true)
                 .default_value("0.0.0.0")
                 .env("KUBEWARDEN_BIND_ADDRESS")
                 .help("Bind against ADDRESS"),
         )
         .arg(
-            Arg::with_name("port")
+            Arg::new("port")
                 .long("port")
+                .takes_value(true)
                 .default_value("3000")
                 .env("KUBEWARDEN_PORT")
                 .help("Listen on PORT"),
         )
         .arg(
-            Arg::with_name("workers")
+            Arg::new("workers")
                 .long("workers")
+                .takes_value(true)
                 .env("KUBEWARDEN_WORKERS")
                 .help("Number of workers thread to create"),
         )
         .arg(
-            Arg::with_name("cert-file")
+            Arg::new("cert-file")
                 .long("cert-file")
+                .takes_value(true)
                 .default_value("")
                 .env("KUBEWARDEN_CERT_FILE")
                 .help("Path to an X.509 certificate file for HTTPS"),
         )
         .arg(
-            Arg::with_name("key-file")
+            Arg::new("key-file")
                 .long("key-file")
+                .takes_value(true)
                 .default_value("")
                 .env("KUBEWARDEN_KEY_FILE")
                 .help("Path to an X.509 private key file for HTTPS"),
         )
         .arg(
-            Arg::with_name("policies")
+            Arg::new("policies")
                 .long("policies")
+                .takes_value(true)
                 .env("KUBEWARDEN_POLICIES")
                 .default_value("policies.yml")
                 .help(
@@ -96,44 +104,49 @@ pub(crate) fn build_cli() -> App<'static, 'static> {
                 ),
         )
         .arg(
-            Arg::with_name("policies-download-dir")
+            Arg::new("policies-download-dir")
                 .long("policies-download-dir")
+                .takes_value(true)
                 .default_value(".")
                 .env("KUBEWARDEN_POLICIES_DOWNLOAD_DIR")
                 .help("Download path for the policies"),
         )
         .arg(
-            Arg::with_name("sources-path")
+            Arg::new("sources-path")
                 .takes_value(true)
                 .long("sources-path")
+                .takes_value(true)
                 .env("KUBEWARDEN_SOURCES_PATH")
                 .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
         )
         .arg(
-            Arg::with_name("verification-path")
+            Arg::new("verification-path")
                 .env("KUBEWARDEN_VERIFICATION_CONFIG_PATH")
                 .long("verification-path")
+                .takes_value(true)
                 .help("YAML file holding verification information (URIs, keys, annotations...)"),
         )
         .arg(
-            Arg::with_name("docker-config-json-path")
+            Arg::new("docker-config-json-path")
                 .env("KUBEWARDEN_DOCKER_CONFIG_JSON_PATH")
                 .long("docker-config-json-path")
                 .takes_value(true)
                 .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
         )
         .arg(
-            Arg::with_name("enable-metrics")
+            Arg::new("enable-metrics")
                 .long("enable-metrics")
-                .required(false)
                 .takes_value(false)
+                .env("KUBEWARDEN_ENABLE_METRICS")
+                .required(false)
                 .help("Enable metrics [env: KUBEWARDEN_ENABLE_METRICS=]"),
         )
         .arg(
-            Arg::with_name("enable-verification")
+            Arg::new("enable-verification")
                 .long("enable-verification")
-                .required(false)
                 .takes_value(false)
+                .env("KUBEWARDEN_ENABLE_VERIFICATION")
+                .required(false)
                 .help("Enable Sigstore verification [env: KUBEWARDEN_ENABLE_VERIFICATION=]"),
         )
         .long_version(VERSION_AND_BUILTINS.as_str())
