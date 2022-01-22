@@ -368,18 +368,7 @@ async fn main() -> Result<()> {
         }
         Some("completions") => {
             if let Some(matches) = matches.subcommand_matches("completions") {
-                let shell = match matches.value_of("shell").unwrap() {
-                    "bash" => clap::Shell::Bash,
-                    "fish" => clap::Shell::Fish,
-                    "zsh" => clap::Shell::Zsh,
-                    "elvish" => clap::Shell::Elvish,
-                    "powershell" => clap::Shell::PowerShell,
-                    unknown => {
-                        eprintln!("Unknown shell '{}'", unknown);
-                        std::process::exit(1);
-                    }
-                };
-                completions::completions(&shell)?;
+                completions::completions(matches.value_of("shell").unwrap())?;
             }
             Ok(())
         }

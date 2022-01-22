@@ -83,8 +83,8 @@ kwctl() {
 
 @test "verify a signed policy from an OCI registry" {
     kwctl verify -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
-    [ "$status" -eq 1 ]
-    [ $(expr "$output" : '.*The following required arguments were not provided.*') -ne 0 ]
+    [ "$status" -eq 2 ]
+    [ $(expr "$output" : '.*The following required arguments were not provided:.*') -ne 0 ]
     kwctl verify -k test-data/sigstore/cosign1.pub -k unexistent-path-to-key.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
     [ $(expr "$output" : '.*No such file or directory.*') -ne 0 ]

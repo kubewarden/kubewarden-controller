@@ -1,28 +1,34 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use clap_complete::{
+    generate,
+    shells::{Bash, Elvish, Fish, PowerShell, Zsh},
+};
+use std::io;
 
-pub(crate) fn completions(shell: &clap::Shell) -> Result<()> {
+pub(crate) fn completions(shell: &str) -> Result<()> {
     let mut app = crate::cli::build_cli();
-    let mut buf: Vec<u8> = Vec::new();
-    app.gen_completions_to("kwctl", *shell, &mut buf);
-
-    let output = String::from_utf8(buf)?;
 
     match shell {
-        clap::Shell::Zsh => print!("{}", fix_zsh_completion(&output)),
-        _ => print!("{}", output),
-    };
-
-    Ok(())
-}
-
-// zsh output has to be fixed, the last line should not be used
-// See: https://github.com/clap-rs/clap/issues/2488#issuecomment-864576617
-fn fix_zsh_completion(output: &str) -> String {
-    let line_count = output.lines().count();
-    let res: Vec<String> = output
-        .lines()
-        .take(line_count - 1)
-        .map(String::from)
-        .collect();
-    res.join("\n")
+        "bash" => {
+            generate(Bash, &mut app, "kwctl", &mut io::stdout());
+            Ok(())
+        }
+        "fish" => {
+            generate(Fish, &mut app, "kwctl", &mut io::stdout());
+            Ok(())
+        }
+        "zsh" => {
+            generate(Zsh, &mut app, "kwctl", &mut io::stdout());
+            Ok(())
+        }
+        "elvish" => {
+            generate(Elvish, &mut app, "kwctl", &mut io::stdout());
+            Ok(())
+        }
+        "powershell" => {
+            generate(PowerShell, &mut app, "kwctl", &mut io::stdout());
+            Ok(())
+        }
+        unknown => Err(anyhow!("Unknown shell '{}'", unknown)),
+    }
 }
