@@ -280,7 +280,7 @@ impl PolicyFetcher for Registry {
     }
 }
 
-/// Buidls an immutable OCI reference for the given image
+/// Builds an immutable OCI reference for the given image
 ///
 /// * `image ref`: the mutable image reference. For example: `ghcr.io/kubewarden/secure-policy:latest`
 /// * `manifest_url`: the URL of the manifest, as returned when doing a push operation. For example
