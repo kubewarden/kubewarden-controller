@@ -3294,9 +3294,9 @@ checksum = "568a8e6258aa33c13358f81fd834adb854c6f7c9468520910a9b1e8fac068012"
 
 [[package]]
 name = "serde"
-version = "1.0.133"
+version = "1.0.135"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97565067517b60e2d1ea8b268e59ce036de907ac523ad83a0475da04e818989a"
+checksum = "2cf9235533494ea2ddcdb794665461814781c53f19d87b76e571a1c35acbad2b"
 dependencies = [
  "serde_derive",
 ]
@@ -3313,9 +3313,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.133"
+version = "1.0.135"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed201699328568d8d08208fdd080e3ff594e6c422e438b6705905da01005d537"
+checksum = "8dcde03d87d4c973c04be249e7d8f0b35db1c848c487bd43032808e59dd8328d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3417,13 +3417,13 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.1.0"
-source = "git+https://github.com/kubewarden/sigstore-rs?branch=not-yet-merged-patches#6d3841465a06f7a153a26b6456e467216abd71a7"
+source = "git+https://github.com/sigstore/sigstore-rs?rev=35fcc0f0a643c42989d301d6940add98f6ca6b6e#35fcc0f0a643c42989d301d6940add98f6ca6b6e"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64",
  "ecdsa",
- "oci-distribution 0.8.0",
+ "oci-distribution 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "olpc-cjson",
  "p256",
  "serde",
@@ -3436,13 +3436,13 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.1.0"
-source = "git+https://github.com/sigstore/sigstore-rs?rev=35fcc0f0a643c42989d301d6940add98f6ca6b6e#35fcc0f0a643c42989d301d6940add98f6ca6b6e"
+source = "git+https://github.com/kubewarden/sigstore-rs?branch=not-yet-merged-patches#6d3841465a06f7a153a26b6456e467216abd71a7"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64",
  "ecdsa",
- "oci-distribution 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oci-distribution 0.8.0",
  "olpc-cjson",
  "p256",
  "serde",
