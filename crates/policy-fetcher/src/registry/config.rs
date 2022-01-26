@@ -18,7 +18,7 @@ pub(crate) struct RegistryAuthRaw {
 
 #[derive(Deserialize, Debug)]
 pub struct DockerConfigRaw {
-    auths: HashMap<String, RegistryAuthRaw>,
+    auths: Option<HashMap<String, RegistryAuthRaw>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -56,9 +56,8 @@ impl TryFrom<DockerConfigRaw> for DockerConfig {
     type Error = anyhow::Error;
 
     fn try_from(docker_config: DockerConfigRaw) -> Result<Self> {
-        Ok(DockerConfig {
-            auths: docker_config
-                .auths
+        let auths = match docker_config.auths {
+            Some(auths) => auths
                 .into_iter()
                 .filter_map(|(host, auth)| match OptionalRegistryAuth::try_from(auth) {
                     Ok(registry_auth) => registry_auth.map(|registry_auth| (host, registry_auth)),
@@ -72,7 +71,9 @@ impl TryFrom<DockerConfigRaw> for DockerConfig {
                     }
                 })
                 .collect(),
-        })
+            None => HashMap::default(),
+        };
+        Ok(DockerConfig { auths })
     }
 }
 
@@ -130,7 +131,7 @@ mod tests {
         ];
 
         let docker_config: DockerConfig = DockerConfigRaw {
-            auths: HashMap::from_iter(auths),
+            auths: Some(HashMap::from_iter(auths)),
         }
         .try_into()?;
 
