@@ -12,7 +12,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "3.0.12", features = [ "cargo", "env" ] }
+clap = { version = "3.0.13", features = [ "cargo", "env" ] }
 clap_complete = "3.0.5"
 directories = "4.0.1"
 itertools = "0.10.1"
