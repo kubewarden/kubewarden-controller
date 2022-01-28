@@ -2,6 +2,22 @@
 ## [Unreleased]
 
 
+<a name="v0.4.5"></a>
+## [v0.4.5] - 2022-01-24
+### Pull Requests
+- Merge pull request [#150](https://github.com/kubewarden/kubewarden-controller/issues/150) from jvanz/main
+
+
+<a name="v0.4.5-rc1"></a>
+## [v0.4.5-rc1] - 2022-01-24
+### Bug Fixes
+- **policy-server:** Run the policy server with readonly root
+
+### Pull Requests
+- Merge pull request [#146](https://github.com/kubewarden/kubewarden-controller/issues/146) from ereslibre/create-github-release
+- Merge pull request [#145](https://github.com/kubewarden/kubewarden-controller/issues/145) from flavio/run-policy-server-container-with-readonly-root
+
+
 <a name="v0.4.4"></a>
 ## [v0.4.4] - 2022-01-20
 ### Code Refactoring
@@ -38,7 +54,7 @@
 
 
 <a name="v0.4.2"></a>
-## [v0.4.2] - 2021-11-04
+## [v0.4.2] - 2021-11-10
 ### Code Refactoring
 - Rename vars that are too short
 - Reuse parent context for deleting policies
@@ -61,9 +77,9 @@
 - Extract sources path into constants pkg
 
 ### Features
-- Add spec.sourceAuthorities to PolicyServer CR
+- Add PolicyServer.spec.sourceAuthorities to CR
 - Add spec.insecureSources to PolicyServer CR
-- Add spec.imagePullSecrets to PolicyServer CR
+- Add spec.imagePullSecrets to PolicyServer
 
 ### Pull Requests
 - Merge pull request [#117](https://github.com/kubewarden/kubewarden-controller/issues/117) from viccuad/docs-crds
@@ -75,24 +91,9 @@
 
 
 <a name="v0.4.0"></a>
-## [v0.4.0] - 2021-10-01
-### Features
-- Introduce a PolicyServer CRD that allow users to describe a Policy Server
-  Deployment. The configuration of PolicyServer is now done through this
-  resource, instead of using the `policy-server` ConfigMap.
-- ClusterAdmissionPolicy has the following changes:
-  - A new PolicyStatus field which can be: `unscheduled`, `unschedulable`, `pending` or `active`
-  - A new condition called PolicyActive.
-  - A `policyServer` attribute. This is used to specify which instance of
-    PolicyServer is going to host the policy. If nothing is specified, the
-    policy will be scheduled on the PolicyServer named `default`. This one is
-    created by the helm chart at installation time.
-- Introduce cert-manager dependency
-- PolicyServer and ClusterAdmissionPolicies are now validated and mutated by
-  dedicated admission controllers. The kubewarden-controller is acting as
-  validation endpoint for both of them.
-- All the resources created by the operator are now using
-  [`Finalizers`](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/).
+## [v0.4.0] - 2021-10-05
+### Reverts
+- Set PolicyStatus "unscheduled" as default in CRD
 
 ### Pull Requests
 - Merge pull request [#98](https://github.com/kubewarden/kubewarden-controller/issues/98) from kubewarden/viccuad-update-readme
@@ -194,7 +195,10 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5...HEAD
+[v0.4.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5-rc1...v0.4.5
+[v0.4.5-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.4...v0.4.5-rc1
+[v0.4.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.3...v0.4.4
 [v0.4.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.2...v0.4.3
 [v0.4.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.1...v0.4.2
 [v0.4.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.0...v0.4.1
