@@ -26,6 +26,10 @@ issues:
     - path: internal/pkg/admission/mutating-webhook.go
       linters:
         - dupl
+    - path: apis/policies/v1alpha2/clusteradmissionpolicy_types.go
+      text: "got 'TypeMeta' want 'typeMeta'"
+    - path: apis/policies/v1alpha2/policyserver_types.go
+      text: "got 'TypeMeta' want 'typeMeta'"
 
 linters:
   enable-all: true
