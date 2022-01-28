@@ -2,6 +2,53 @@
 ## [Unreleased]
 
 
+<a name="v0.2.6"></a>
+## [v0.2.6] - 2022-01-28
+### Pull Requests
+- Merge pull request [#173](https://github.com/kubewarden/policy-server/issues/173) from kubewarden/dependabot/cargo/clap-3.0.13
+- Merge pull request [#172](https://github.com/kubewarden/policy-server/issues/172) from kubewarden/dependabot/cargo/serde-1.0.136
+- Merge pull request [#169](https://github.com/kubewarden/policy-server/issues/169) from kubewarden/dependabot/cargo/clap-3.0.12
+- Merge pull request [#162](https://github.com/kubewarden/policy-server/issues/162) from flavio/update-clap
+- Merge pull request [#164](https://github.com/kubewarden/policy-server/issues/164) from kubewarden/dependabot/cargo/anyhow-1.0.53
+- Merge pull request [#165](https://github.com/kubewarden/policy-server/issues/165) from kubewarden/dependabot/cargo/serde_json-1.0.78
+- Merge pull request [#166](https://github.com/kubewarden/policy-server/issues/166) from kubewarden/dependabot/cargo/serde-1.0.135
+
+
+<a name="v0.2.6-rc2"></a>
+## [v0.2.6-rc2] - 2022-01-24
+
+<a name="v0.2.6-rc1"></a>
+## [v0.2.6-rc1] - 2022-01-21
+### Bug Fixes
+- Don't default to verification always enabled
+
+### Features
+- Integrate the CallbackHandler
+
+### Reverts
+- Revert "feat: Sigstore verification of policies on download"
+- feat: Sigstore verification of policies on download
+
+### Pull Requests
+- Merge pull request [#158](https://github.com/kubewarden/policy-server/issues/158) from ereslibre/bump-dependencies
+- Merge pull request [#155](https://github.com/kubewarden/policy-server/issues/155) from ereslibre/create-github-release
+- Merge pull request [#156](https://github.com/kubewarden/policy-server/issues/156) from ereslibre/bump-dependencies
+- Merge pull request [#152](https://github.com/kubewarden/policy-server/issues/152) from kubewarden/dependabot/cargo/kubewarden-policy-sdk-0.3.2
+- Merge pull request [#147](https://github.com/kubewarden/policy-server/issues/147) from kubewarden/dependabot/cargo/hyper-0.14.16
+- Merge pull request [#149](https://github.com/kubewarden/policy-server/issues/149) from kubewarden/dependabot/cargo/serde-1.0.133
+- Merge pull request [#150](https://github.com/kubewarden/policy-server/issues/150) from kubewarden/dependabot/cargo/serde_yaml-0.8.23
+- Merge pull request [#146](https://github.com/kubewarden/policy-server/issues/146) from kubewarden/dependabot/cargo/anyhow-1.0.52
+- Merge pull request [#144](https://github.com/kubewarden/policy-server/issues/144) from flavio/add-dependabot
+- Merge pull request [#138](https://github.com/kubewarden/policy-server/issues/138) from ereslibre/cross-compile
+- Merge pull request [#141](https://github.com/kubewarden/policy-server/issues/141) from viccuad/default-verification
+- Merge pull request [#140](https://github.com/kubewarden/policy-server/issues/140) from flavio/verify-sigstore-policies-on-download
+- Merge pull request [#134](https://github.com/kubewarden/policy-server/issues/134) from flavio/fix-container-image-build
+- Merge pull request [#126](https://github.com/kubewarden/policy-server/issues/126) from flavio/oci-fetch-manifest
+- Merge pull request [#133](https://github.com/kubewarden/policy-server/issues/133) from kubewarden/revert-132-policy-verify
+- Merge pull request [#132](https://github.com/kubewarden/policy-server/issues/132) from viccuad/policy-verify
+- Merge pull request [#131](https://github.com/kubewarden/policy-server/issues/131) from ereslibre/rustls-tls
+
+
 <a name="v0.2.5"></a>
 ## [v0.2.5] - 2021-11-18
 ### Pull Requests
@@ -173,7 +220,10 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.6...HEAD
+[v0.2.6]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc2...v0.2.6
+[v0.2.6-rc2]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc1...v0.2.6-rc2
+[v0.2.6-rc1]: https://github.com/kubewarden/policy-server/compare/v0.2.5...v0.2.6-rc1
 [v0.2.5]: https://github.com/kubewarden/policy-server/compare/v0.2.4...v0.2.5
 [v0.2.4]: https://github.com/kubewarden/policy-server/compare/v0.2.3...v0.2.4
 [v0.2.3]: https://github.com/kubewarden/policy-server/compare/v0.2.2...v0.2.3
