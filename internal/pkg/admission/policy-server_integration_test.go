@@ -39,8 +39,8 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	}
 
 	var server http.Server
-	var wg sync.WaitGroup
-	wg.Add(1)
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
 
 	// create https server with the certificates created
 	go func() {
@@ -56,12 +56,12 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 			Addr:      ":" + port,
 			TLSConfig: tlsConfig,
 		}
-		wg.Done()
+		waitGroup.Done()
 		_ = server.ListenAndServeTLS("", "")
 	}()
 
 	// wait for https server to be ready to avoid race conditions
-	wg.Wait()
+	waitGroup.Wait()
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caSecret.Data[constants.PolicyServerCARootPemName])
 	retries := 0
