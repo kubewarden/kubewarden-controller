@@ -27,6 +27,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
+use policy_fetcher::registry::Registry;
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
@@ -369,6 +370,16 @@ async fn main() -> Result<()> {
         Some("completions") => {
             if let Some(matches) = matches.subcommand_matches("completions") {
                 completions::completions(matches.value_of("shell").unwrap())?;
+            }
+            Ok(())
+        }
+        Some("digest") => {
+            if let Some(matches) = matches.subcommand_matches("digest") {
+                let uri = matches.value_of("uri").unwrap();
+                let (sources, docker_config) = remote_server_options(matches)?;
+                let registry = Registry::new(docker_config.as_ref());
+                let digest = registry.manifest_digest(uri, sources.as_ref()).await?;
+                println!("{}@{}", uri, digest);
             }
             Ok(())
         }
