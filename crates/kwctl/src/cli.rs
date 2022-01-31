@@ -383,6 +383,28 @@ pub fn build_cli() -> clap::App<'static> {
                     .help("Shell type")
                 )
         )
+        .subcommand(
+            App::new("digest")
+                .about("Fetch the digest of its OCI manifest")
+                .arg(
+                    Arg::new("uri")
+                        .required(true)
+                        .index(1)
+                        .help("Policy URI")
+                )
+                .arg(
+                    Arg::new("sources-path")
+                        .long("sources-path")
+                        .takes_value(true)
+                        .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)")
+                )
+                .arg(
+                    Arg::new("docker-config-json-path")
+                        .long("docker-config-json-path")
+                        .takes_value(true)
+                        .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
+                )
+        )
         .long_version(VERSION_AND_BUILTINS.as_str())
         .setting(AppSettings::SubcommandRequiredElseHelp)
 }
