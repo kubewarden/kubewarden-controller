@@ -122,3 +122,10 @@ kwctl() {
     [ "$status" -eq 1 ]
     [ $(expr "$output" : '.*No signing keys matched given constraints*') -ne 0 ]
 }
+
+@test "fetch policy digest from an OCI registry" {
+    kwctl digest registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    [[ "$output" == "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9@sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5" ]]
+    kwctl digest ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    [[ "$output" == "ghcr.io/kubewarden/policies/pod-privileged:v0.1.9@sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5" ]]
+}
