@@ -26,7 +26,7 @@ kube = { version = "0.66.0", default-features = false, features = ["client", "ru
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "96f19570e7", default-features = false, features = ["rustls-tls"] }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.3.0" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.4.1" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
