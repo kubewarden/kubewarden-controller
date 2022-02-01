@@ -45,7 +45,8 @@ fn main() -> Result<()> {
     });
 
     let metrics_enabled = matches.is_present("enable-metrics");
-    let verify_enabled = matches.is_present("enable-verification");
+    let verify_enabled =
+        matches.is_present("enable-verification") || matches.is_present("verification-path");
     let verification_settings: Option<VerificationSettings> = if verify_enabled {
         Some(cli::verification_settings(&matches)?)
     } else {
