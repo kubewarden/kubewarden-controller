@@ -63,3 +63,13 @@ fn parses_with_invalid_username_password() {
         }
     )
 }
+
+#[test]
+fn parses_with_missing_auth() {
+    assert_eq!(
+        docker_config("auths-not-present.json"),
+        DockerConfig {
+            auths: HashMap::new(),
+        }
+    )
+}
