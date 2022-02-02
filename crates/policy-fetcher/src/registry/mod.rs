@@ -21,6 +21,7 @@ use url::Url;
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::registry::config::{DockerConfig, RegistryAuth as OwnRegistryAuth};
 use crate::sources::{Certificate, Sources};
+use crate::validate_wasm;
 
 pub mod config;
 
@@ -271,6 +272,7 @@ impl PolicyFetcher for Registry {
 
         match image_content {
             Some(image_content) => {
+                validate_wasm(&image_content)?;
                 let mut file = File::create(destination).await?;
                 file.write_all(&image_content[..]).await?;
                 Ok(())

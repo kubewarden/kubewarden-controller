@@ -29,6 +29,7 @@ use crate::store::Store;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 use url::ParseError;
+use wasmtime::{Engine, Module};
 
 #[derive(Debug)]
 pub enum PullDestination {
@@ -192,6 +193,13 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
             .map(|port| format!(":{}", port))
             .unwrap_or_default(),
     ))
+}
+
+fn validate_wasm(buf: &[u8]) -> Result<()> {
+    match Module::validate(&Engine::default(), buf) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(anyhow!("invalid wasm file: {}", e)),
+    }
 }
 
 #[cfg(test)]

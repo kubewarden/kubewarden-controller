@@ -13,6 +13,7 @@ use url::Url;
 
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::sources::Certificate;
+use crate::validate_wasm;
 
 // Struct used to reference a WASM module that is hosted on a HTTP(s) server
 #[derive(Default)]
@@ -61,6 +62,7 @@ impl PolicyFetcher for Https {
 
         let client = client_builder.build()?;
         let buf = client.get(url.as_ref()).send().await?.bytes().await?;
+        validate_wasm(&buf)?;
         let mut file = File::create(destination).await?;
         file.write_all(&buf).await?;
 
