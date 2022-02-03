@@ -584,9 +584,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.0.13"
+version = "3.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08799f92c961c7a1cf0cc398a9073da99e21ce388b46372c37f3191f2f3eed3e"
+checksum = "b63edc3f163b3c71ec8aa23f9bd6070f77edbf3d1d198b164afa90ff00e4ec62"
 dependencies = [
  "atty",
  "bitflags",
@@ -604,7 +604,7 @@ version = "3.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be4dabb7e2f006497e1da045feaa512acf0686f76b68d94925da2d9422dcb521"
 dependencies = [
- "clap 3.0.13",
+ "clap 3.0.14",
 ]
 
 [[package]]
@@ -1984,7 +1984,7 @@ name = "kwctl"
 version = "0.2.5"
 dependencies = [
  "anyhow",
- "clap 3.0.13",
+ "clap 3.0.14",
  "clap_complete",
  "directories 4.0.1",
  "itertools",
@@ -3464,13 +3464,13 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.1.0"
-source = "git+https://github.com/kubewarden/sigstore-rs?branch=not-yet-merged-patches#6d3841465a06f7a153a26b6456e467216abd71a7"
+source = "git+https://github.com/sigstore/sigstore-rs?rev=35fcc0f0a643c42989d301d6940add98f6ca6b6e#35fcc0f0a643c42989d301d6940add98f6ca6b6e"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64",
  "ecdsa",
- "oci-distribution 0.8.0",
+ "oci-distribution 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "olpc-cjson",
  "p256",
  "serde",
@@ -3483,13 +3483,13 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.1.0"
-source = "git+https://github.com/sigstore/sigstore-rs?rev=35fcc0f0a643c42989d301d6940add98f6ca6b6e#35fcc0f0a643c42989d301d6940add98f6ca6b6e"
+source = "git+https://github.com/kubewarden/sigstore-rs?branch=not-yet-merged-patches#6d3841465a06f7a153a26b6456e467216abd71a7"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64",
  "ecdsa",
- "oci-distribution 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "oci-distribution 0.8.0",
  "olpc-cjson",
  "p256",
  "serde",
