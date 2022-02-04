@@ -1,13 +1,10 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use anyhow::{anyhow, Result};
-use async_std::fs::File;
-use async_std::prelude::*;
 use async_trait::async_trait;
 use std::{
     boxed::Box,
     convert::{TryFrom, TryInto},
-    path::Path,
 };
 use url::Url;
 
@@ -33,12 +30,7 @@ impl TryFrom<&Certificate> for reqwest::Certificate {
 
 #[async_trait]
 impl PolicyFetcher for Https {
-    async fn fetch(
-        &self,
-        url: &Url,
-        client_protocol: ClientProtocol,
-        destination: &Path,
-    ) -> Result<()> {
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Vec<u8>> {
         let mut client_builder = reqwest::Client::builder();
         match client_protocol {
             ClientProtocol::Http => {}
@@ -60,10 +52,12 @@ impl PolicyFetcher for Https {
         };
 
         let client = client_builder.build()?;
-        let buf = client.get(url.as_ref()).send().await?.bytes().await?;
-        let mut file = File::create(destination).await?;
-        file.write_all(&buf).await?;
-
-        Ok(())
+        Ok(client
+            .get(url.as_ref())
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .to_vec())
     }
 }

@@ -1,6 +1,4 @@
 use anyhow::{anyhow, Result};
-use async_std::fs::File;
-use async_std::prelude::*;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use oci_distribution::{
@@ -14,7 +12,7 @@ use oci_distribution::{
 };
 use regex::Regex;
 use std::convert::TryFrom;
-use std::{path::Path, str::FromStr};
+use std::str::FromStr;
 use tracing::debug;
 use url::Url;
 
@@ -247,15 +245,10 @@ pub(crate) fn build_fully_resolved_reference(url: &str) -> Result<Reference> {
 
 #[async_trait]
 impl PolicyFetcher for Registry {
-    async fn fetch(
-        &self,
-        url: &Url,
-        client_protocol: ClientProtocol,
-        destination: &Path,
-    ) -> Result<()> {
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Vec<u8>> {
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
-        debug!(image=?reference, ?client_protocol, ?destination, "fetching policy");
+        debug!(image=?reference, ?client_protocol, "fetching policy");
 
         let image_content = Registry::client(client_protocol)
             .pull(
@@ -270,11 +263,7 @@ impl PolicyFetcher for Registry {
             .map(|layer| layer.data);
 
         match image_content {
-            Some(image_content) => {
-                let mut file = File::create(destination).await?;
-                file.write_all(&image_content[..]).await?;
-                Ok(())
-            }
+            Some(image_content) => Ok(image_content),
             None => Err(anyhow!("could not pull policy {}", url)),
         }
     }
