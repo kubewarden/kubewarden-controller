@@ -1,6 +1,5 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use bytes::Bytes;
 use url::Url;
 
 use crate::sources::Certificate;
@@ -22,6 +21,6 @@ pub(crate) enum TlsVerificationMode {
 // a WASM module
 #[async_trait]
 pub(crate) trait PolicyFetcher {
-    // Download the WASM module to the provided destination
-    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Bytes>;
+    // Download and return the bytes of the WASM module
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Vec<u8>>;
 }

@@ -25,7 +25,6 @@ use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
 
-use bytes::Bytes;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 use url::ParseError;
@@ -184,7 +183,7 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
     ))
 }
 
-fn create_file_if_valid(bytes: Bytes, destination: &Path, url: String) -> Result<Policy> {
+fn create_file_if_valid(bytes: Vec<u8>, destination: &Path, url: String) -> Result<Policy> {
     if let Err(err) = Module::validate(&Engine::default(), bytes.as_ref()) {
         return Err(anyhow!("invalid wasm file: {}", err));
     };

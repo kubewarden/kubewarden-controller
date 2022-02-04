@@ -2,7 +2,6 @@
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use bytes::Bytes;
 use std::{
     boxed::Box,
     convert::{TryFrom, TryInto},
@@ -31,7 +30,7 @@ impl TryFrom<&Certificate> for reqwest::Certificate {
 
 #[async_trait]
 impl PolicyFetcher for Https {
-    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Bytes> {
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Vec<u8>> {
         let mut client_builder = reqwest::Client::builder();
         match client_protocol {
             ClientProtocol::Http => {}
@@ -53,7 +52,12 @@ impl PolicyFetcher for Https {
         };
 
         let client = client_builder.build()?;
-        let buf = client.get(url.as_ref()).send().await?.bytes().await?;
-        Ok(buf)
+        Ok(client
+            .get(url.as_ref())
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .to_vec())
     }
 }

@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use bytes::Bytes;
 use lazy_static::lazy_static;
 use oci_distribution::{
     client::{
@@ -246,7 +245,7 @@ pub(crate) fn build_fully_resolved_reference(url: &str) -> Result<Reference> {
 
 #[async_trait]
 impl PolicyFetcher for Registry {
-    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Bytes> {
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Vec<u8>> {
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
         debug!(image=?reference, ?client_protocol, "fetching policy");
@@ -264,7 +263,7 @@ impl PolicyFetcher for Registry {
             .map(|layer| layer.data);
 
         match image_content {
-            Some(image_content) => Ok(Bytes::from(image_content)),
+            Some(image_content) => Ok(image_content),
             None => Err(anyhow!("could not pull policy {}", url)),
         }
     }

@@ -31,7 +31,6 @@ tracing = "0.1.29"
 url = "2.2.0"
 walkdir = "2"
 wasmtime = "0.30.0"
-bytes = "1.1.0"
 
 [dev-dependencies]
 rstest = "0.12.0"
