@@ -122,8 +122,8 @@ impl PolicyEvaluator {
     ) -> Result<PolicyEvaluator> {
         let (policy, runtime) = match policy_execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
-                let engine = WasmtimeEngineProvider::new(&policy_contents, None);
-                let wapc_host = WapcHost::new(Box::new(engine), wapc_callback)?;
+                let engine = WasmtimeEngineProvider::new(&policy_contents, None)?;
+                let wapc_host = WapcHost::new(Box::new(engine), Some(Box::new(wapc_callback)))?;
                 let policy = PolicyEvaluator::from_contents_internal(
                     id,
                     callback_channel,
