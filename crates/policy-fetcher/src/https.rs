@@ -1,19 +1,16 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use anyhow::{anyhow, Result};
-use async_std::fs::File;
-use async_std::prelude::*;
 use async_trait::async_trait;
+use bytes::Bytes;
 use std::{
     boxed::Box,
     convert::{TryFrom, TryInto},
-    path::Path,
 };
 use url::Url;
 
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::sources::Certificate;
-use crate::validate_wasm;
 
 // Struct used to reference a WASM module that is hosted on a HTTP(s) server
 #[derive(Default)]
@@ -34,12 +31,7 @@ impl TryFrom<&Certificate> for reqwest::Certificate {
 
 #[async_trait]
 impl PolicyFetcher for Https {
-    async fn fetch(
-        &self,
-        url: &Url,
-        client_protocol: ClientProtocol,
-        destination: &Path,
-    ) -> Result<()> {
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Bytes> {
         let mut client_builder = reqwest::Client::builder();
         match client_protocol {
             ClientProtocol::Http => {}
@@ -62,10 +54,6 @@ impl PolicyFetcher for Https {
 
         let client = client_builder.build()?;
         let buf = client.get(url.as_ref()).send().await?.bytes().await?;
-        validate_wasm(&buf)?;
-        let mut file = File::create(destination).await?;
-        file.write_all(&buf).await?;
-
-        Ok(())
+        Ok(buf)
     }
 }

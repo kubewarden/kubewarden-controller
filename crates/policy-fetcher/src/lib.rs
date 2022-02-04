@@ -5,11 +5,11 @@ extern crate walkdir;
 
 use anyhow::{anyhow, Result};
 use std::boxed::Box;
+use std::fs;
 use url::Url;
 
 pub mod fetcher;
 mod https;
-mod local;
 pub mod policy;
 pub mod registry;
 pub mod sources;
@@ -18,7 +18,6 @@ pub mod verify;
 
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
-use crate::local::Local;
 use crate::policy::Policy;
 use crate::registry::build_fully_resolved_reference;
 use crate::registry::config::DockerConfig;
@@ -26,6 +25,7 @@ use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
 
+use bytes::Bytes;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 use url::ParseError;
@@ -94,43 +94,33 @@ pub async fn fetch_policy(
     let sources_default = Sources::default();
     let sources = sources.unwrap_or(&sources_default);
 
-    if let Err(err) = policy_fetcher
-        .fetch(&url, client_protocol(&url, sources)?, &destination)
+    match policy_fetcher
+        .fetch(&url, client_protocol(&url, sources)?)
         .await
     {
-        if !sources.is_insecure_source(&host_and_port(&url)?) {
-            return Err(anyhow!(
-                "the policy {} could not be downloaded due to error: {}",
-                url,
-                err
-            ));
+        Err(err) => {
+            if !sources.is_insecure_source(&host_and_port(&url)?) {
+                return Err(anyhow!(
+                    "the policy {} could not be downloaded due to error: {}",
+                    url,
+                    err
+                ));
+            }
         }
+        Ok(bytes) => return create_file_if_valid(bytes, &destination, url.to_string()),
     }
-
-    if policy_fetcher
+    if let Ok(bytes) = policy_fetcher
         .fetch(
             &url,
             ClientProtocol::Https(TlsVerificationMode::NoTlsVerification),
-            &destination,
         )
         .await
-        .is_ok()
     {
-        return Ok(Policy {
-            uri: url.to_string(),
-            local_path: destination,
-        });
+        return create_file_if_valid(bytes, &destination, url.to_string());
     }
 
-    if policy_fetcher
-        .fetch(&url, ClientProtocol::Http, &destination)
-        .await
-        .is_ok()
-    {
-        return Ok(Policy {
-            uri: url.to_string(),
-            local_path: destination,
-        });
+    if let Ok(bytes) = policy_fetcher.fetch(&url, ClientProtocol::Http).await {
+        return create_file_if_valid(bytes, &destination, url.to_string());
     }
 
     Err(anyhow!("could not pull policy {}", url))
@@ -177,7 +167,6 @@ fn url_fetcher(
     docker_config: Option<DockerConfig>,
 ) -> Result<Box<dyn PolicyFetcher>> {
     match scheme {
-        "file" => Ok(Box::new(Local::default())),
         "http" | "https" => Ok(Box::new(Https::default())),
         "registry" => Ok(Box::new(Registry::new(docker_config.as_ref()))),
         _ => return Err(anyhow!("unknown scheme: {}", scheme)),
@@ -195,11 +184,16 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
     ))
 }
 
-fn validate_wasm(buf: &[u8]) -> Result<()> {
-    match Module::validate(&Engine::default(), buf) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(anyhow!("invalid wasm file: {}", e)),
-    }
+fn create_file_if_valid(bytes: Bytes, destination: &Path, url: String) -> Result<Policy> {
+    if let Err(err) = Module::validate(&Engine::default(), bytes.as_ref()) {
+        return Err(anyhow!("invalid wasm file: {}", err));
+    };
+    fs::write(destination, bytes)?;
+
+    Ok(Policy {
+        uri: url,
+        local_path: destination.to_path_buf(),
+    })
 }
 
 #[cfg(test)]
