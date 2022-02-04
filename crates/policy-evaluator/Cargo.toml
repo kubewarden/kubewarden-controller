@@ -32,9 +32,13 @@ tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 validator = { version = "0.14", features = ["derive"] }
-wapc = "0.10.1"
 wasmparser = "0.82.0"
-wasmtime-provider = "0.0.7"
+# Given we are using a git repository, we need to point both
+# dependencies to the same tag. Otherwise, traits that are shared by
+# both crates are considered different. This can be removed once a new
+# version of `wapc` has been pushed to crates.io.
+wapc = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
+wasmtime-provider = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
 
 [dev-dependencies]
 assert-json-diff = "2.0.1"
