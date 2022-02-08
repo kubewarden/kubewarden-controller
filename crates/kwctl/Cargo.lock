@@ -362,7 +362,7 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.11#c6538ac597648144c3279696fb76f82e05c54e91"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.12#0419eb5cc47d242818377d07e1389bc7ac69b1b4"
 dependencies = [
  "anyhow",
  "base64",
@@ -2674,8 +2674,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.2.11"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.11#c6538ac597648144c3279696fb76f82e05c54e91"
+version = "0.2.12"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.12#0419eb5cc47d242818377d07e1389bc7ac69b1b4"
 dependencies = [
  "anyhow",
  "base64",
@@ -2701,8 +2701,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.4.2"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.4.2#8c52e0a1d193e7b9a0f8d0a5d21b7a278db65a81"
+version = "0.4.3"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.4.3#3a205e0ace6b101ed551453cd1ef27f356d46eb9"
 dependencies = [
  "anyhow",
  "async-std",
