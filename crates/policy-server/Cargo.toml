@@ -12,8 +12,8 @@ edition = "2018"
 anyhow = "1.0"
 async-stream = "0.3.0"
 itertools = "0.10.1"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.11" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.4.2" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.12" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.4.3" }
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 clap = { version = "3.0.14", features = [ "cargo", "env" ] }
