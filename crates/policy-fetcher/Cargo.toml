@@ -30,7 +30,7 @@ sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features =
 tracing = "0.1.29"
 url = "2.2.0"
 walkdir = "2"
-wasmtime = "0.33.0"
+wasmtime = "0.34.0"
 
 [dev-dependencies]
 rstest = "0.12.0"
