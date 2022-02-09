@@ -1,0 +1,14 @@
+{
+  "extends": [
+    "config:base",
+  ],
+  "labels": ["dependencies"],
+  "lockFileMaintenance": { "enabled": true },
+  "packageRules": [
+    {
+      "extends": ["schedule:earlyMondays"],
+      "matchUpdateTypes": ["patch"]
+    }
+  ],
+  "rebaseWhen": "behind-base-branch"
+}
