@@ -19,7 +19,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/cpuid v1.2.0 // indirect
-	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.16.0
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v0.0.0-20180427012116-c95755e4bcd7 // indirect
