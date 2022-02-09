@@ -2,6 +2,14 @@ version: 2
 updates:
 - package-ecosystem: cargo
   directory: "/"
+  ignore:
+  # Given dependabot opens a PR per dependency at this time, ignore
+  # patch level updates because of the noise they create. Renovatebot
+  # will take care of creating PR's that bump all patchlevel versions
+  # of all dependencies in a single PR. For minor and major releases
+  # of dependencies we are happy having a PR per dependency.
+  - dependency-name: "*"
+    update-types: ["version-update:semver-patch"]
   schedule:
     interval: daily
     time: "13:00"

@@ -1,0 +1,12 @@
+{
+  "extends": [
+    "config:base",
+    "schedule:earlyMondays"
+  ],
+  "labels": ["dependencies"],
+  "lockFileMaintenance": { "enabled": true },
+  "major": { "enabled": false },
+  "minor": { "enabled": false },
+  "patch": { "enabled": true },
+  "rebaseWhen": "behind-base-branch"
+}
