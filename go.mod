@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	cloud.google.com/go v0.93.3 // indirect
-	github.com/ereslibre/kube-webhook-wrapper v0.0.1
+	github.com/ereslibre/kube-webhook-wrapper v0.0.2
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-lintpack/lintpack v0.5.2 // indirect
 	github.com/go-logr/logr v0.4.0
