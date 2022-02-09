@@ -7,7 +7,7 @@ require (
 	github.com/ereslibre/kube-webhook-wrapper v0.0.1
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-lintpack/lintpack v0.5.2 // indirect
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.2.1
 	github.com/golangci/errcheck v0.0.0-20181223084120-ef45e06d44b6 // indirect
 	github.com/golangci/go-tools v0.0.0-20190318055746-e32c54105b7c // indirect
 	github.com/golangci/goconst v0.0.0-20180610141641-041c5f2b40f3 // indirect
@@ -24,10 +24,10 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v0.0.0-20180427012116-c95755e4bcd7 // indirect
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
-	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel v1.3.0
 	go.opentelemetry.io/otel/exporters/otlp v0.20.0
-	go.opentelemetry.io/otel/metric v0.20.0
-	go.opentelemetry.io/otel/sdk/metric v0.20.0
+	go.opentelemetry.io/otel/metric v0.26.0
+	go.opentelemetry.io/otel/sdk/metric v0.26.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
