@@ -4,8 +4,7 @@ use std::{collections::HashMap, fs::File, path::Path};
 use url::Url;
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct VerificationSettings {
     pub api_version: String,
     pub all_of: Vec<Signature>,
@@ -13,8 +12,7 @@ pub struct VerificationSettings {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AnyOf {
     #[serde(default = "default_minimum_matches")]
     pub minimum_matches: String,
@@ -26,9 +24,7 @@ fn default_minimum_matches() -> String {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(tag = "kind")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", tag = "kind", deny_unknown_fields)]
 pub enum Signature {
     PubKey(PubKey),
     GenericIssuer(GenericIssuer),
@@ -37,8 +33,7 @@ pub enum Signature {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PubKey {
     pub owner: Option<String>,
     pub key: String,
@@ -46,8 +41,7 @@ pub struct PubKey {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GenericIssuer {
     pub issuer: String,
     #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
@@ -56,8 +50,7 @@ pub struct GenericIssuer {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct UrlIssuer {
     pub url: Url,
     #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
@@ -66,8 +59,7 @@ pub struct UrlIssuer {
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum Subject {
     SubjectEqual(String),
     #[serde(deserialize_with = "deserialize_subject_url_prefix")]
@@ -89,8 +81,7 @@ where
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GithubAction {
     pub owner: String,
     pub repo: Option<String>,
