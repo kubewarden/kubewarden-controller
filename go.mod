@@ -7,7 +7,7 @@ require (
 	github.com/ereslibre/kube-webhook-wrapper v0.0.1
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-lintpack/lintpack v0.5.2 // indirect
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.2.0
 	github.com/golangci/errcheck v0.0.0-20181223084120-ef45e06d44b6 // indirect
 	github.com/golangci/go-tools v0.0.0-20190318055746-e32c54105b7c // indirect
 	github.com/golangci/goconst v0.0.0-20180610141641-041c5f2b40f3 // indirect
@@ -37,9 +37,9 @@ require (
 	google.golang.org/genproto v0.0.0-20210828152312-66f60bf46e71 // indirect
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
-	k8s.io/api v0.22.1
-	k8s.io/apimachinery v0.22.1
-	k8s.io/client-go v0.22.1
+	k8s.io/api v0.23.3
+	k8s.io/apimachinery v0.23.3
+	k8s.io/client-go v0.23.3
 	sigs.k8s.io/controller-runtime v0.10.0
 	sourcegraph.com/sqs/pbtypes v0.0.0-20180604144634-d3ebe8f20ae4 // indirect
 )
