@@ -8,5 +8,17 @@
   "major": { "enabled": false },
   "minor": { "enabled": false },
   "patch": { "enabled": true },
+  "packageRules": [
+    {
+      "matchPackagePatterns": [
+        "*"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "groupName": "all patchlevel  dependencies",
+      "groupSlug": "all-patch"
+    }
+  ],
   "rebaseWhen": "behind-base-branch"
 }
