@@ -7,7 +7,7 @@ use url::Url;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct VerificationSettings {
     pub api_version: String,
-    pub all_of: Vec<Signature>,
+    pub all_of: Option<Vec<Signature>>,
     pub any_of: Option<AnyOf>,
 }
 
@@ -99,16 +99,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected = "invalid type: unit value, expected a sequence")]
-    fn test_deserialize_fail_on_empty_signatures() {
-        let config = r#"---
-apiVersion: v1
-allOf:
-"#;
-        let _vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
-    }
-
-    #[test]
     #[should_panic(expected = "no variant of enum Subject found in flattened data")]
     fn test_deserialize_on_missing_flattened_field() {
         let config = r#"---
@@ -160,7 +150,7 @@ allOf:
         }));
         let expected: VerificationSettings = VerificationSettings {
             api_version: "v1".to_string(),
-            all_of: signatures.clone(),
+            all_of: Some(signatures.clone()),
             any_of: None,
         };
         assert_eq!(vs, expected);
@@ -197,7 +187,7 @@ allOf:
         }));
         let expected: VerificationSettings = VerificationSettings {
             api_version: "v1".to_string(),
-            all_of: signatures.clone(),
+            all_of: Some(signatures.clone()),
             any_of: None,
         };
         assert_eq!(vs, expected);
