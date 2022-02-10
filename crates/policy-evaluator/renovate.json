@@ -16,7 +16,7 @@
       "matchUpdateTypes": [
         "patch"
       ],
-      "groupName": "all patchlevel  dependencies",
+      "groupName": "all patchlevel dependencies",
       "groupSlug": "all-patch"
     }
   ],
