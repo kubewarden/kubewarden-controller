@@ -3,15 +3,18 @@ use crate::{policy::Policy, registry::config::DockerConfig};
 
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
-use sigstore::cosign::{Client, CosignCapabilities};
-use std::{collections::HashMap, convert::TryInto, str::FromStr};
+use sigstore::cosign;
+use sigstore::cosign::verification_constraint::{PublicKeyVerifier, VerificationConstraintVec};
+use sigstore::cosign::CosignCapabilities;
+
+use std::{convert::TryInto, str::FromStr};
 use tracing::{error, info};
 use url::{ParseError, Url};
 
 /// This structure simplifies the process of policy verification
 /// using Sigstore
 pub struct Verifier {
-    cosign_client: Client,
+    cosign_client: sigstore::cosign::Client,
     sources: Option<Sources>,
 }
 
@@ -27,7 +30,7 @@ impl Verifier {
     ) -> Result<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
-        let cosign_client = sigstore::cosign::ClientBuilder::default()
+        let cosign_client = cosign::ClientBuilder::default()
             .with_oci_client_config(client_config)
             .with_fulcio_cert(fulcio_cert)
             .with_rekor_pub_key(rekor_public_key)
@@ -57,9 +60,10 @@ impl Verifier {
         &mut self,
         url: &str,
         docker_config: Option<DockerConfig>,
-        annotations: Option<HashMap<String, String>>,
-        verification_key: &str,
+        verification_settings: config::VerificationSettings,
     ) -> Result<String> {
+        // obtain image name:
+        //
         let url = match Url::parse(url) {
             Ok(u) => Ok(u),
             Err(ParseError::RelativeUrlWithoutBase) => {
@@ -72,9 +76,10 @@ impl Verifier {
                 "Verification works only with 'registry://' protocol"
             ));
         }
-
         let image_name = url.as_str().strip_prefix("registry://").unwrap();
 
+        // obtain registry auth:
+        //
         let auth: sigstore::registry::Auth = match docker_config.clone() {
             Some(docker_config) => {
                 let sigstore_auth: Option<Result<sigstore::registry::Auth>> = docker_config
@@ -94,39 +99,114 @@ impl Verifier {
             None => sigstore::registry::Auth::Anonymous,
         };
 
+        // build verification constraints from our settings:
+        //
+        let mut constraints_all_of: VerificationConstraintVec = Vec::new();
+        let mut constraints_any_of: VerificationConstraintVec = Vec::new();
+
+        if let Some(ref signatures_all_of) = verification_settings.all_of {
+            for signature in signatures_all_of.iter() {
+                match signature {
+                    config::Signature::PubKey(pubkey) => {
+                        let verifier = PublicKeyVerifier::new(&pubkey.key)
+                            .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
+                        constraints_all_of.push(Box::new(verifier));
+                    }
+                    config::Signature::GenericIssuer(_generic_issuer) => todo!(),
+                    config::Signature::UrlIssuer(_url_issuer) => todo!(),
+                    config::Signature::GithubAction(_github_action) => todo!(),
+                }
+            }
+        }
+        let length_constraints_all_of = constraints_all_of.len();
+
+        if let Some(ref signatures_any_of) = verification_settings.any_of {
+            for signature in signatures_any_of.signatures.iter() {
+                match signature {
+                    config::Signature::PubKey(pubkey) => {
+                        let verifier = PublicKeyVerifier::new(&pubkey.key)
+                            .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
+                        constraints_any_of.push(Box::new(verifier));
+                    }
+                    config::Signature::GenericIssuer(_) => todo!(),
+                    config::Signature::UrlIssuer(_) => todo!(),
+                    config::Signature::GithubAction(_) => todo!(),
+                }
+            }
+        }
+
+        // obtain all signatures of image:
+        //
+        // trusted_signature_layers() will error early if cosign_client using
+        // Fulcio,Rekor certs and signatures are not verified
+        //
         let (cosign_signature_image, source_image_digest) =
             self.cosign_client.triangulate(image_name, &auth).await?;
 
-        let simple_signing_matches = self
+        let trusted_layers = self
             .cosign_client
-            .verify(
-                &auth,
-                &source_image_digest,
-                &cosign_signature_image,
-                &Some(verification_key.to_string()),
-                annotations,
-            )
+            .trusted_signature_layers(&auth, &source_image_digest, &cosign_signature_image)
             .await?;
 
-        if simple_signing_matches.is_empty() {
-            return Err(anyhow!("No signing keys matched given constraints"));
+        // filter signatures against our constraints:
+        //
+        let trusted_signatures_all_of: anyhow::Result<Vec<cosign::SignatureLayer>> =
+            cosign::filter_signature_layers(&trusted_layers, constraints_all_of)
+                .map_err(|e| anyhow!("{}", e));
+
+        let trusted_signatures_any_of: anyhow::Result<Vec<cosign::SignatureLayer>> =
+            cosign::filter_signature_layers(&trusted_layers, constraints_any_of)
+                .map_err(|e| anyhow!("{}", e));
+
+        // Verify for behaviour all_of, any_of:
+        // * trusted_signatures_all_of must be at least length of constraints_all_of
+        // * trusted_signatures_any_of must be at least signatures_any_of.minimum_matches
+        //
+        match (trusted_signatures_all_of, trusted_signatures_any_of) {
+            (Ok(trusted_all_of), Ok(trusted_any_of)) => match (trusted_all_of, trusted_any_of) {
+                (trusted_all_of, _) if trusted_all_of.is_empty() => {
+                    return Err(anyhow!(
+                        "Image verification failed: no matching signature found on AllOf list"
+                    ));
+                }
+                (trusted_all_of, _) if trusted_all_of.len() < length_constraints_all_of => {
+                    return Err(anyhow!(
+                        "Image verification failed: missing signatures in AllOf list"
+                    ));
+                }
+
+                (_, trusted_any_of) if verification_settings.any_of.is_some() => {
+                    let signatures_any_of = verification_settings.any_of.unwrap();
+                    if trusted_any_of.len() <= signatures_any_of.minimum_matches.into() {
+                        return Err(anyhow!(
+                            "Image verification failed: missing signatures in AnyOf list"
+                        ));
+                    } else {
+                        println!("Image successfully verified");
+                        Ok(source_image_digest)
+                    }
+                }
+                (_, _) => {
+                    println!("Image successfully verified");
+                    Ok(source_image_digest)
+                }
+            },
+            (Ok(_), Err(err)) | (Err(err), Ok(_)) => {
+                return Err(anyhow!("Image verification failed: {:?}", err))
+            }
+            (Err(err_all_of), Err(err_any_of)) => {
+                return Err(anyhow!(
+                    "Image verification failed: {:?} {:?}",
+                    err_all_of,
+                    err_any_of
+                ))
+            }
         }
-
-        // All entries have the same docker_manifest_digest
-        let manifest_digest = simple_signing_matches
-            .get(0)
-            .unwrap()
-            .critical
-            .image
-            .docker_manifest_digest
-            .clone();
-
-        Ok(manifest_digest)
     }
 
-    /// Verifies the checksum of the local file  by comparing it with the one
+    /// Verifies the checksum of the local file by comparing it with the one
     /// mentioned inside of the signed (and verified) manifest digest.
-    /// That ensures nobody tampered with the local policy.
+    /// This ensures nobody tampered with the local policy.
     ///
     /// Note well: right now, verification can be done only against policies
     /// that are stored inside of OCI registries.
