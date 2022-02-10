@@ -1,6 +1,6 @@
 |              |                                  |
 | :----------- | :------------------------------- |
-| Feature Name | Audit Mode                       |
+| Feature Name | Monitor Mode                     |
 | Start Date   | Nov 25th 2021                    |
 | Category     | Policy Enforcement               |
 | RFC PR       | [PR128](https://github.com/kubewarden/kubewarden-controller/pull/128)  |
@@ -10,7 +10,7 @@
 
 > Brief (one-paragraph) explanation of the feature.
 
-The audit mode will improve the visibility of a cluster administrator with regards to policies and
+The monitor mode will improve the visibility of a cluster administrator with regards to policies and
 how they act. It will enable the cluster administrator to understand the consequences of fully
 activating a policy before it starts to reject requests.
 
@@ -33,10 +33,10 @@ deploying new policies in a running cluster. This RFC works on the strategy to i
 situation and let the administrator gain visibility before policies are truly enforced in the
 cluster.
 
-Introduce an audit mode in Kubewarden that acts in the following way:
+Introduce a monitor mode in Kubewarden that acts in the following way:
 
 1. Deploy policies without rejecting or mutating requests, so actions that would have been taken had
-   the policy been active are logged. We will call this method "audit"  mode, because it lets
+   the policy been active are logged. We will call this method "monitor"  mode, because it lets
    the cluster operator understand if a policy in this mode would be rejecting requests that impact
    the regular functionality of the cluster.
 
@@ -49,12 +49,12 @@ Introduce an audit mode in Kubewarden that acts in the following way:
 As a Kubernetes administrator I want to deploy new policies in a state that they don't perform any
 request rejections, but only inform about what would have been rejected had the policy been active.
 
-As a Kubernetes administrator I want to deploy new policies in "audit" mode, and then flip the
-switch of the policy to activate it after it has been in "audit" mode for a short while that I
+As a Kubernetes administrator I want to deploy new policies in "monitor" mode, and then flip the
+switch of the policy to activate it after it has been in "monitor" mode for a short while that I
 considered enough to learn if it would have an undesired impact in the cluster.
 
 As a Kubernetes administrator I want to plot in Grafana acceptions/rejections/mutations coming from
-policies in "audit" mode in the same way that I do with policies in "enforce" mode -- the only mode
+policies in "monitor" mode in the same way that I do with policies in "protect" mode -- the only mode
 Kubewarden had until now.
 
 # Detailed design
@@ -66,7 +66,7 @@ Kubewarden had until now.
 > This section should cover architecture aspects and the rationale behind disruptive technical
 > decisions (when applicable), as well as corner-cases and warnings.
 
-## "audit" mode
+## "monitor" mode
 
 ### CRD
 
@@ -80,15 +80,15 @@ type ClusterAdmissionPolicySpec struct {
 }
 ```
 
-Two values are allowed: `enforce` and `audit`. If `mode` is omitted,
-it will be defaulted to `enforce`.
+Two values are allowed: `protect` and `monitor`. If `mode` is omitted,
+it will be defaulted to `protect`.
 
-It's possible to update the `mode` from `audit` to `enforce`.
+It's possible to update the `mode` from `monitor` to `protect`.
 
-Allowing to change `mode` from `enforce` to `audit` will be rejected
+Allowing to change `mode` from `protect` to `monitor` will be rejected
 -- so it's not possible to deactivate policies just by having `UPDATE`
-permissions. If the user wants to change a policy from `enforce` to
-`audit` mode, they have to delete the policy and recreate in `audit`
+permissions. If the user wants to change a policy from `protect` to
+`monitor` mode, they have to delete the policy and recreate in `monitor`
 mode as a new policy, so it's clear that the user needs `DELETE`
 permission over the policy resource.
 
@@ -97,7 +97,7 @@ permission over the policy resource.
 The Policy Server has to be updated so the `mode` is included in the [`Policy` struct used for
 settings](https://github.com/kubewarden/policy-server/blob/c8d64da87448b7f9250a1d6b5e56817f25b56359/src/settings.rs#L11-L19).
 
-The Policy Server will always accept the request if this struct `mode` is set to `audit`.
+The Policy Server will always accept the request if this struct `mode` is set to `monitor`.
 
 The Policy Server will log with INFO level every evaluation specifying the `mode` of the policy. If
 the policy is mutating the resource, the resulting object will be printed in the structured tracing
