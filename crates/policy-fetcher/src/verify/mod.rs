@@ -169,14 +169,20 @@ impl Verifier {
             .manifest(&image_immutable_ref, self.sources.as_ref())
             .await?;
 
-        let digests: Vec<String> = manifest
-            .layers
-            .iter()
-            .filter_map(|layer| match layer.media_type.as_str() {
-                WASM_LAYER_MEDIA_TYPE => Some(layer.digest.clone()),
-                _ => None,
-            })
-            .collect();
+        let digests: Vec<String>;
+        if let oci_distribution::manifest::OciManifest::Image(ref image) = manifest {
+            digests = image
+                .layers
+                .iter()
+                .filter_map(|layer| match layer.media_type.as_str() {
+                    WASM_LAYER_MEDIA_TYPE => Some(layer.digest.clone()),
+                    _ => None,
+                })
+                .collect()
+        } else {
+            unreachable!("Expected Image, found ImageIndex manifest. This cannot happen, as oci clientConfig.platform_resolver is None and we will error earlier");
+        }
+
         if digests.len() != 1 {
             error!(manifest = ?manifest, "The manifest is expected to have one WASM layer");
             return Err(anyhow!("Cannot verify local file integrity, the remote manifest doesn't have only one WASM layer"));

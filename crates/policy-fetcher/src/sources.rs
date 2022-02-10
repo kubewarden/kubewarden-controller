@@ -155,9 +155,10 @@ impl From<Sources> for oci_distribution::client::ClientConfig {
             .collect();
 
         oci_distribution::client::ClientConfig {
-            accept_invalid_certificates: false,
             protocol,
+            accept_invalid_certificates: false,
             extra_root_certificates,
+            platform_resolver: None,
         }
     }
 }
