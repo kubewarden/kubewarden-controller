@@ -459,6 +459,7 @@ apiVersion: v1
 
 anyOf:
   minimumMatches: 2
+  signatures:
   - kind: githubAction
     owner: kubewarden
     annotations:
@@ -496,6 +497,7 @@ allOf:
       env: prod
 anyOf:
   minimumMatches: 2
+  signatures:
   - kind: pubKey
     owner: bob
     key: ....
