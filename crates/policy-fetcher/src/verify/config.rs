@@ -15,12 +15,12 @@ pub struct VerificationSettings {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AnyOf {
     #[serde(default = "default_minimum_matches")]
-    pub minimum_matches: String,
+    pub minimum_matches: u8,
     pub signatures: Vec<Signature>,
 }
 
-fn default_minimum_matches() -> String {
-    "1".to_string()
+fn default_minimum_matches() -> u8 {
+    1
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
