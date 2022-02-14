@@ -4,7 +4,7 @@ use crate::{policy::Policy, registry::config::DockerConfig};
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign;
-use sigstore::cosign::verification_constraint::{PublicKeyVerifier, VerificationConstraintVec};
+use sigstore::cosign::verification_constraint::VerificationConstraintVec;
 use sigstore::cosign::CosignCapabilities;
 
 use std::{convert::TryInto, str::FromStr};
@@ -19,6 +19,7 @@ pub struct Verifier {
 }
 
 pub mod config;
+pub mod verification_constraints;
 
 impl Verifier {
     /// Creates a new verifier using the `Sources` provided. These are
@@ -107,14 +108,34 @@ impl Verifier {
         if let Some(ref signatures_all_of) = verification_settings.all_of {
             for signature in signatures_all_of.iter() {
                 match signature {
-                    config::Signature::PubKey(pubkey) => {
-                        let verifier = PublicKeyVerifier::new(&pubkey.key)
+                    config::Signature::PubKey {
+                        owner: _,
+                        key,
+                        annotations,
+                    } => {
+                        let verifier =
+                            verification_constraints::PublicKeyAndAnnotationsVerifier::new(
+                                key,
+                                annotations.to_owned(),
+                            )
                             .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
                         constraints_all_of.push(Box::new(verifier));
                     }
-                    config::Signature::GenericIssuer(_generic_issuer) => todo!(),
-                    config::Signature::UrlIssuer(_url_issuer) => todo!(),
-                    config::Signature::GithubAction(_github_action) => todo!(),
+                    config::Signature::GenericIssuer {
+                        issuer: _,
+                        subject: _,
+                        annotations: _,
+                    } => todo!(),
+                    config::Signature::UrlIssuer {
+                        url: _,
+                        subject: _,
+                        annotations: _,
+                    } => todo!(),
+                    config::Signature::GithubAction {
+                        owner: _,
+                        repo: _,
+                        annotations: _,
+                    } => todo!(),
                 }
             }
         }
@@ -123,14 +144,34 @@ impl Verifier {
         if let Some(ref signatures_any_of) = verification_settings.any_of {
             for signature in signatures_any_of.signatures.iter() {
                 match signature {
-                    config::Signature::PubKey(pubkey) => {
-                        let verifier = PublicKeyVerifier::new(&pubkey.key)
+                    config::Signature::PubKey {
+                        owner: _,
+                        key,
+                        annotations,
+                    } => {
+                        let verifier =
+                            verification_constraints::PublicKeyAndAnnotationsVerifier::new(
+                                key,
+                                annotations.to_owned(),
+                            )
                             .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
                         constraints_any_of.push(Box::new(verifier));
                     }
-                    config::Signature::GenericIssuer(_) => todo!(),
-                    config::Signature::UrlIssuer(_) => todo!(),
-                    config::Signature::GithubAction(_) => todo!(),
+                    config::Signature::GenericIssuer {
+                        issuer: _,
+                        subject: _,
+                        annotations: _,
+                    } => todo!(),
+                    config::Signature::UrlIssuer {
+                        url: _,
+                        subject: _,
+                        annotations: _,
+                    } => todo!(),
+                    config::Signature::GithubAction {
+                        owner: _,
+                        repo: _,
+                        annotations: _,
+                    } => todo!(),
                 }
             }
         }
