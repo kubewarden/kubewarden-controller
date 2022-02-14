@@ -11,16 +11,17 @@ use std::collections::HashMap;
 use std::fmt;
 use std::time::Instant;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::{error, info_span};
+use tracing::{error, info, info_span};
 
 use crate::communication::EvalRequest;
 use crate::metrics;
-use crate::settings::Policy;
+use crate::settings::{Policy, PolicyMode};
 use crate::utils::convert_yaml_map_to_json;
 
 struct PolicyEvaluatorWithSettings {
     policy_evaluator: PolicyEvaluator,
-    allowed_to_mutate: Option<bool>,
+    policy_mode: PolicyMode,
+    allowed_to_mutate: bool,
 }
 
 pub(crate) struct Worker {
@@ -125,7 +126,8 @@ impl Worker {
 
             let policy_evaluator_with_settings = PolicyEvaluatorWithSettings {
                 policy_evaluator,
-                allowed_to_mutate: policy.allowed_to_mutate,
+                policy_mode: policy.policy_mode.clone(),
+                allowed_to_mutate: policy.allowed_to_mutate.unwrap_or(false),
             };
 
             evs.insert(id.to_string(), policy_evaluator_with_settings);
@@ -141,6 +143,62 @@ impl Worker {
         })
     }
 
+    // Returns a validation response with policy-server specific
+    // constraints taken into account:
+    // - A policy might have tried to mutate while the policy-server
+    //   configuration does not allow it to mutate
+    // - A policy might be running in "Monitor" mode, that always
+    //   accepts the request (without mutation), logging the answer
+    fn validation_response_with_constraints(
+        policy_id: &str,
+        policy_mode: &PolicyMode,
+        allowed_to_mutate: bool,
+        validation_response: ValidationResponse,
+    ) -> ValidationResponse {
+        if validation_response.patch.is_some() && !allowed_to_mutate {
+            // Return early -- a policy not allowed to mutate tried to
+            // mutate --, we don't care about the policy mode at this
+            // point, this will be a problem in Protect mode, so
+            // return the error too if we are in Monitor mode.
+            return ValidationResponse {
+                allowed: false,
+                status: Some(ValidationResponseStatus {
+                    message: Some(format!("Request rejected by policy {}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.", policy_id)),
+                    code: None,
+                }),
+                // if `allowed_to_mutate` is false, we are in a validating webhook. If we send a patch, k8s will fail because validating webhook do not expect this field
+                patch: None,
+                patch_type: None,
+                ..validation_response
+            };
+        };
+        match policy_mode {
+            PolicyMode::Protect => validation_response,
+            PolicyMode::Monitor => {
+                // In monitor mode we always accept
+                // the request, but log what would
+                // have been the decision of the
+                // policy. We also force mutating
+                // patches to be none. Status is also
+                // overriden, as it's only taken into
+                // account when a request is rejected.
+                info!(
+                    policy_id = policy_id,
+                    allowed_to_mutate = allowed_to_mutate,
+                    response = format!("{:?}", validation_response).as_str(),
+                    "policy evaluation (monitor mode)",
+                );
+                ValidationResponse {
+                    allowed: true,
+                    patch_type: None,
+                    patch: None,
+                    status: None,
+                    ..validation_response
+                }
+            }
+        }
+    }
+
     pub(crate) fn run(mut self) {
         while let Some(req) = self.channel_rx.blocking_recv() {
             let span = info_span!(parent: &req.parent_span, "policy_eval");
@@ -149,37 +207,34 @@ impl Worker {
             let res = match self.evaluators.get_mut(&req.policy_id) {
                 Some(PolicyEvaluatorWithSettings {
                     policy_evaluator,
+                    policy_mode,
                     allowed_to_mutate,
                 }) => match serde_json::to_value(req.req.clone()) {
                     Ok(json) => {
+                        let policy_name = policy_evaluator.policy.id.clone();
+                        let policy_mode = policy_mode.clone();
                         let start_time = Instant::now();
-                        let resp = policy_evaluator.validate(ValidateRequest::new(json));
+                        let allowed_to_mutate = *allowed_to_mutate;
+                        let validation_response =
+                            policy_evaluator.validate(ValidateRequest::new(json));
                         let policy_evaluation_duration = start_time.elapsed();
-                        let accepted = resp.allowed;
-                        let mutated = resp.patch.is_some();
-                        let error_code = if let Some(status) = &resp.status {
+                        let error_code = if let Some(status) = &validation_response.status {
                             status.code
                         } else {
                             None
                         };
-                        let resp = if mutated && allowed_to_mutate.as_ref() == Some(&false) {
-                            ValidationResponse {
-                                allowed: false,
-                                status: Some(ValidationResponseStatus {
-                                    message: Some(format!("Request rejected by policy {}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.", &req.policy_id)),
-                                    code: None,
-                                }),
-                                // if `allowed_to_mutate` is false, we are in a validating webhook. If we send a patch, k8s will fail because validating webhook do not expect this field
-                                patch: None,
-                                patch_type: None,
-                                ..resp
-                            }
-                        } else {
-                            resp
-                        };
-                        let res = req.resp_chan.send(Some(resp));
+                        let accepted = validation_response.allowed;
+                        let mutated = validation_response.patch.is_some();
+                        let validation_response = Worker::validation_response_with_constraints(
+                            &req.policy_id,
+                            &policy_mode,
+                            allowed_to_mutate,
+                            validation_response,
+                        );
+                        let res = req.resp_chan.send(Some(validation_response));
                         let policy_evaluation = metrics::PolicyEvaluation {
-                            policy_name: policy_evaluator.policy.id.clone(),
+                            policy_name,
+                            policy_mode: policy_mode.into(),
                             resource_name: req.req.name.unwrap_or_else(|| "unknown".to_string()),
                             resource_namespace: req.req.namespace,
                             resource_kind: req.req.request_kind.unwrap_or_default().kind,
@@ -211,5 +266,96 @@ impl Worker {
                 error!("receiver dropped");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const POLICY_ID: &str = "policy-id";
+
+    #[test]
+    fn validation_response_with_constraints_not_allowed_to_mutate() {
+        let rejection_response = ValidationResponse {
+            allowed: false,
+            patch: None,
+            patch_type: None,
+            status: Some(ValidationResponseStatus {
+                message: Some("Request rejected by policy policy-id. The policy attempted to mutate the request, but it is currently configured to not allow mutations.".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            Worker::validation_response_with_constraints(
+                POLICY_ID,
+                &PolicyMode::Protect,
+                false,
+                ValidationResponse {
+                    allowed: true,
+                    patch: Some("patch".to_string()),
+                    patch_type: Some("application/json-patch+json".to_string()),
+                    ..Default::default()
+                },
+            ),
+            rejection_response,
+        );
+
+        assert_eq!(
+            Worker::validation_response_with_constraints(
+                POLICY_ID,
+                &PolicyMode::Monitor,
+                false,
+                ValidationResponse {
+                    allowed: true,
+                    patch: Some("patch".to_string()),
+                    patch_type: Some("application/json-patch+json".to_string()),
+                    ..Default::default()
+                },
+            ),
+            rejection_response,
+        );
+    }
+
+    #[test]
+    fn validation_response_with_constraints_monitor_mode() {
+        let admission_response = ValidationResponse {
+            allowed: true,
+            ..Default::default()
+        };
+
+        assert_eq!(
+            Worker::validation_response_with_constraints(
+                POLICY_ID,
+                &PolicyMode::Monitor,
+                false,
+                ValidationResponse {
+                    allowed: false,
+                    status: Some(ValidationResponseStatus {
+                        message: Some("some rejection message".to_string()),
+                        code: Some(500),
+                    }),
+                    ..Default::default()
+                },
+            ),
+            admission_response,
+        );
+
+        assert_eq!(
+            Worker::validation_response_with_constraints(
+                POLICY_ID,
+                &PolicyMode::Monitor,
+                true,
+                ValidationResponse {
+                    allowed: true,
+                    patch: Some("patch".to_string()),
+                    patch_type: Some("application/json-patch+json".to_string()),
+                    ..Default::default()
+                },
+            ),
+            admission_response,
+        );
     }
 }

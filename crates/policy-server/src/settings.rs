@@ -21,11 +21,20 @@ impl Default for PolicyMode {
     }
 }
 
+impl From<PolicyMode> for String {
+    fn from(policy_mode: PolicyMode) -> String {
+        match policy_mode {
+            PolicyMode::Monitor => String::from("monitor"),
+            PolicyMode::Protect => String::from("protect"),
+        }
+    }
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Policy {
     pub url: String,
-    #[serde(default)]
-    pub mode: PolicyMode,
+    #[serde(default, rename = "policyMode")]
+    pub policy_mode: PolicyMode,
     #[serde(rename = "allowedToMutate")]
     pub allowed_to_mutate: Option<bool>,
     #[serde(skip)]
