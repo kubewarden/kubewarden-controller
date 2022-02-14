@@ -10,8 +10,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-async-stream = "0.3.0"
-itertools = "0.10.1"
+async-stream = "0.3.2"
+itertools = "0.10.3"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.12" }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.4.3" }
 kubewarden-policy-sdk = "0.3.2"
@@ -21,20 +21,20 @@ futures-util = "0.3.21"
 kube = { version = "0.68.0", default-features = false, features = ["client", "rustls-tls"] }
 k8s-openapi = { version = "0.14.0", default-features = false, features = ["v1_22"] }
 hyper = { version = "0.14", features = ["full"] }
-num_cpus = "1.13.0"
+num_cpus = "1.13.1"
 opentelemetry = { version = "0.17", default-features = false, features = ["metrics", "trace", "rt-tokio", "serialize"] }
 opentelemetry-otlp = { version = "0.10.0", features = ["metrics", "tonic"] }
-rustls = "0.20.2"
+rustls = "0.20.3"
 rustls-pemfile = "0.3.0"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8.23"
 tokio = { version = "^1", features = ["full"] }
-tokio-rustls = "0.23.1"
+tokio-rustls = "0.23.2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "json"] }
 tracing-futures = "0.2"
-tracing-opentelemetry = "0.17.0"
+tracing-opentelemetry = "0.17.1"
 
 [patch.crates-io]
 # Forcing base64ct to version 1.1.1 given that version 1.2.0 has been
