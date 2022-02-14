@@ -12,23 +12,23 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 async-std = "1.9.0"
-async-stream = "0.3.0"
-async-trait = "0.1.50"
+async-stream = "0.3.2"
+async-trait = "0.1.52"
 base64 = "0.13.0"
 directories = "4.0.1"
 lazy_static = "1.4.0"
 oci-distribution = { git = "https://github.com/kubewarden/oci-distribution", branch = "not-yet-merged-patches", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.1.4"
 regex = "1.5.4"
-reqwest = { version = "0.11.3", default-features = false, features = ["rustls-tls"] }
-rustls = "0.20.2"
+reqwest = { version = "0.11.9", default-features = false, features = ["rustls-tls"] }
+rustls = "0.20.3"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.64"
-serde_yaml = "0.8.15"
+serde_json = "1.0.79"
+serde_yaml = "0.8.23"
 sha2 = "0.10.1"
 sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "35fcc0f0a643c42989d301d6940add98f6ca6b6e" }
-tracing = "0.1.29"
-url = "2.2.0"
+tracing = "0.1.30"
+url = "2.2.2"
 walkdir = "2"
 wasmtime = "0.33.0"
 
