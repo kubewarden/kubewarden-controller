@@ -8,8 +8,24 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 #[derive(Deserialize, Debug, Clone)]
+pub enum PolicyMode {
+    #[serde(rename = "monitor")]
+    Monitor,
+    #[serde(rename = "protect")]
+    Protect,
+}
+
+impl Default for PolicyMode {
+    fn default() -> PolicyMode {
+        PolicyMode::Protect
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Policy {
     pub url: String,
+    #[serde(default)]
+    pub mode: PolicyMode,
     #[serde(rename = "allowedToMutate")]
     pub allowed_to_mutate: Option<bool>,
     #[serde(skip)]
