@@ -15,7 +15,7 @@ anyhow = "1.0"
 clap = { version = "3.0.14", features = [ "cargo", "env" ] }
 clap_complete = "3.0.6"
 directories = "4.0.1"
-itertools = "0.10.1"
+itertools = "0.10.3"
 k8s-openapi = { version = "0.14.0", default-features = false, features = ["v1_22"] }
 kube = { version = "0.68.0", default-features = false, features = ["client", "rustls-tls"] }
 lazy_static = "1.4.0"
@@ -28,13 +28,13 @@ pulldown-cmark = { version = "0.9.1", default-features = false }
 regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8.17"
+serde_yaml = "0.8.23"
 syntect = "4.5.0"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
-url = "2.2.0"
+url = "2.2.2"
 validator = { version = "0.14", features = ["derive"] }
 walrus = "0.19.0"
 wasmparser = "0.82.0"
