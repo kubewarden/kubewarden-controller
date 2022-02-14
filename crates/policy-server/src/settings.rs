@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use serde::Deserialize;
-use serde_yaml::{Mapping, Value};
+use serde_yaml::Value;
 use std::collections::HashMap;
 
 use std::fs::File;
@@ -14,17 +14,8 @@ pub struct Policy {
     pub allowed_to_mutate: Option<bool>,
     #[serde(skip)]
     pub wasm_module_path: PathBuf,
-
-    #[serde(flatten)]
-    extra_fields: HashMap<String, Value>,
-}
-
-impl Policy {
-    pub fn settings(&self) -> Option<Mapping> {
-        self.extra_fields
-            .get("settings")
-            .and_then(|settings| serde_yaml::from_value(settings.clone()).ok())
-    }
+    #[serde(default)]
+    pub settings: Option<HashMap<String, Value>>,
 }
 
 // Reads the policies configuration file, returns a HashMap with String as value
@@ -67,8 +58,7 @@ example:
 
         let policy = policies.get("example").unwrap();
         assert!(policy.allowed_to_mutate.is_none());
-        let settings = policy.settings();
-        assert!(settings.is_some());
+        assert!(policy.settings.is_some());
     }
 
     #[test]
@@ -86,8 +76,7 @@ example:
 
         let policy = policies.get("example").unwrap();
         assert!(policy.allowed_to_mutate.unwrap());
-        let settings = policy.settings();
-        assert!(settings.is_some());
+        assert!(policy.settings.is_some());
 
         let input2 = r#"
 ---
@@ -102,8 +91,7 @@ example:
 
         let policy2 = policies2.get("example").unwrap();
         assert_eq!(policy2.allowed_to_mutate.unwrap(), false);
-        let settings2 = policy2.settings();
-        assert!(settings2.is_some());
+        assert!(policy2.settings.is_some());
     }
 
     #[test]
@@ -119,8 +107,7 @@ example:
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
-        let settings = policy.settings();
-        assert!(settings.is_some());
+        assert!(policy.settings.is_some());
     }
 
     #[test]
@@ -135,8 +122,7 @@ example:
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
-        let settings = policy.settings();
-        assert!(settings.is_none());
+        assert!(policy.settings.is_none());
     }
 
     #[test]
@@ -154,7 +140,6 @@ example:
         assert!(!policies.is_empty());
 
         let policy = policies.get("privileged-pods").unwrap();
-        let settings = policy.settings();
-        assert!(settings.is_none());
+        assert!(policy.settings.is_none());
     }
 }

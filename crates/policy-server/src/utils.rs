@@ -32,7 +32,7 @@ pub(crate) fn convert_yaml_map_to_json(
 mod tests {
     use super::*;
     use crate::settings::Policy;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, iter::FromIterator};
 
     #[test]
     fn handle_yaml_map_with_data() {
@@ -47,7 +47,14 @@ example:
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
-        let json_data = convert_yaml_map_to_json(policy.settings().unwrap());
+        let json_data = convert_yaml_map_to_json(serde_yaml::Mapping::from_iter(
+            policy
+                .settings
+                .as_ref()
+                .unwrap()
+                .into_iter()
+                .map(|(key, value)| (serde_yaml::Value::String(key.clone()), value.clone())),
+        ));
         assert!(json_data.is_ok());
 
         let settings = json_data.unwrap();
@@ -66,7 +73,14 @@ example:
         assert!(!policies.is_empty());
 
         let policy = policies.get("example").unwrap();
-        let json_data = convert_yaml_map_to_json(policy.settings().unwrap());
+        let json_data = convert_yaml_map_to_json(serde_yaml::Mapping::from_iter(
+            policy
+                .settings
+                .as_ref()
+                .unwrap()
+                .into_iter()
+                .map(|(key, value)| (serde_yaml::Value::String(key.clone()), value.clone())),
+        ));
         assert!(json_data.is_ok());
 
         let settings = json_data.unwrap();
