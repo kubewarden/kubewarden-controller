@@ -26,36 +26,28 @@ fn default_minimum_matches() -> u8 {
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", tag = "kind", deny_unknown_fields)]
 pub enum Signature {
-    PubKey(PubKey),
-    GenericIssuer(GenericIssuer),
-    UrlIssuer(UrlIssuer),
-    GithubAction(GithubAction),
-}
-
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct PubKey {
-    pub owner: Option<String>,
-    pub key: String,
-    pub annotations: Option<HashMap<String, String>>,
-}
-
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct GenericIssuer {
-    pub issuer: String,
-    #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
-    pub subject: Subject,
-    pub annotations: Option<HashMap<String, String>>,
-}
-
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct UrlIssuer {
-    pub url: Url,
-    #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
-    pub subject: Subject,
-    pub annotations: Option<HashMap<String, String>>,
+    PubKey {
+        owner: Option<String>,
+        key: String,
+        annotations: Option<HashMap<String, String>>,
+    },
+    GenericIssuer {
+        issuer: String,
+        #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
+        subject: Subject,
+        annotations: Option<HashMap<String, String>>,
+    },
+    UrlIssuer {
+        url: Url,
+        #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
+        subject: Subject,
+        annotations: Option<HashMap<String, String>>,
+    },
+    GithubAction {
+        owner: String,
+        repo: Option<String>,
+        annotations: Option<HashMap<String, String>>,
+    },
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -78,14 +70,6 @@ where
         url.set_path(format!("{}{}", url.path(), '/').as_str());
     }
     Ok(url)
-}
-
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct GithubAction {
-    pub owner: String,
-    pub repo: Option<String>,
-    pub annotations: Option<HashMap<String, String>>,
 }
 
 pub fn read_verification_file(path: &Path) -> Result<VerificationSettings> {
@@ -134,20 +118,19 @@ allOf:
         let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
         let mut signatures: Vec<Signature> = Vec::new();
         signatures.push(
-            Signature::UrlIssuer(
-                UrlIssuer {
+            Signature::UrlIssuer {
                     url: Url::parse("https://token.actions.githubusercontent.com").unwrap(),
                     subject: Subject::SubjectEqual("https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main".to_string()),
                     annotations: None
                 }
-        ));
-        signatures.push(Signature::GenericIssuer(GenericIssuer {
+        );
+        signatures.push(Signature::GenericIssuer {
             issuer: "https://token.actions.githubusercontent.com".to_string(),
             subject: Subject::SubjectUrlPrefix(
                 Url::parse("https://github.com/kubewarden/").unwrap(),
             ),
             annotations: None,
-        }));
+        });
         let expected: VerificationSettings = VerificationSettings {
             api_version: "v1".to_string(),
             all_of: Some(signatures.clone()),
@@ -171,20 +154,20 @@ allOf:
 "#;
         let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
         let mut signatures: Vec<Signature> = Vec::new();
-        signatures.push(Signature::GenericIssuer(GenericIssuer {
+        signatures.push(Signature::GenericIssuer {
             issuer: "https://token.actions.githubusercontent.com".to_string(),
             subject: Subject::SubjectUrlPrefix(
                 Url::parse("https://github.com/kubewarden/").unwrap(),
             ),
             annotations: None,
-        }));
-        signatures.push(Signature::GenericIssuer(GenericIssuer {
+        });
+        signatures.push(Signature::GenericIssuer {
             issuer: "https://yourdomain.com/oauth2".to_string(),
             subject: Subject::SubjectUrlPrefix(
                 Url::parse("https://github.com/kubewarden/").unwrap(),
             ),
             annotations: None,
-        }));
+        });
         let expected: VerificationSettings = VerificationSettings {
             api_version: "v1".to_string(),
             all_of: Some(signatures.clone()),
