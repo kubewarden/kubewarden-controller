@@ -191,58 +191,36 @@ impl Verifier {
 
         // filter signatures against our constraints:
         //
-        let trusted_signatures_all_of: anyhow::Result<Vec<cosign::SignatureLayer>> =
-            cosign::filter_signature_layers(&trusted_layers, constraints_all_of)
-                .map_err(|e| anyhow!("{}", e));
-
-        let trusted_signatures_any_of: anyhow::Result<Vec<cosign::SignatureLayer>> =
-            cosign::filter_signature_layers(&trusted_layers, constraints_any_of)
-                .map_err(|e| anyhow!("{}", e));
-
-        // Verify for behaviour all_of, any_of:
-        // * trusted_signatures_all_of must be at least length of constraints_all_of
-        // * trusted_signatures_any_of must be at least signatures_any_of.minimum_matches
-        //
-        match (trusted_signatures_all_of, trusted_signatures_any_of) {
-            (Ok(trusted_all_of), Ok(trusted_any_of)) => match (trusted_all_of, trusted_any_of) {
-                (trusted_all_of, _) if trusted_all_of.is_empty() => {
-                    return Err(anyhow!(
-                        "Image verification failed: no matching signature found on AllOf list"
-                    ));
-                }
-                (trusted_all_of, _) if trusted_all_of.len() < length_constraints_all_of => {
-                    return Err(anyhow!(
-                        "Image verification failed: missing signatures in AllOf list"
-                    ));
-                }
-
-                (_, trusted_any_of) if verification_settings.any_of.is_some() => {
-                    let signatures_any_of = verification_settings.any_of.unwrap();
-                    if trusted_any_of.len() <= signatures_any_of.minimum_matches.into() {
-                        return Err(anyhow!(
-                            "Image verification failed: missing signatures in AnyOf list"
-                        ));
-                    } else {
-                        println!("Image successfully verified");
-                        Ok(source_image_digest)
-                    }
-                }
-                (_, _) => {
-                    println!("Image successfully verified");
-                    Ok(source_image_digest)
-                }
-            },
-            (Ok(_), Err(err)) | (Err(err), Ok(_)) => {
-                return Err(anyhow!("Image verification failed: {:?}", err))
-            }
-            (Err(err_all_of), Err(err_any_of)) => {
+        match cosign::filter_signature_layers(&trusted_layers, constraints_all_of) {
+            Ok(m) if m.is_empty() => {
                 return Err(anyhow!(
-                    "Image verification failed: {:?} {:?}",
-                    err_all_of,
-                    err_any_of
+                    "Image verification failed: no matching signature found on AllOf list"
                 ))
             }
+            Err(e) => return Err(anyhow!("{}", e)),
+            Ok(m) if m.len() < length_constraints_all_of => {
+                return Err(anyhow!(
+                    "Image verification failed: missing signatures in AllOf list"
+                ));
+            }
+            Ok(_) => (), // all_of verified
         }
+
+        if verification_settings.any_of.is_some() {
+            let signatures_any_of = verification_settings.any_of.unwrap();
+            match cosign::filter_signature_layers(&trusted_layers, constraints_any_of) {
+                Ok(m) if m.len() <= signatures_any_of.minimum_matches.into() => {
+                    return Err(anyhow!(
+                        "Image verification failed: missing signatures in AnyOf list"
+                    ));
+                }
+                Err(e) => return Err(anyhow!("{}", e)),
+                Ok(_) => (), // any_of verified
+            }
+        }
+
+        println!("Image successfully verified");
+        Ok(source_image_digest)
     }
 
     /// Verifies the checksum of the local file by comparing it with the one
