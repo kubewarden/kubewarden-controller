@@ -8,8 +8,8 @@ use policy_evaluator::{
     validation_response::{ValidationResponse, ValidationResponseStatus},
 };
 use std::collections::HashMap;
-use std::fmt;
 use std::time::Instant;
+use std::{fmt, iter::FromIterator};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info_span};
 
@@ -55,10 +55,12 @@ impl Worker {
         let mut evs = HashMap::new();
 
         for (id, policy) in policies.iter() {
-            let settings = policy.settings();
-
-            let settings_json =
-                settings.and_then(|settings| match convert_yaml_map_to_json(settings) {
+            let settings_json = policy.settings.as_ref().and_then(|settings| {
+                let settings =
+                    serde_yaml::Mapping::from_iter(settings.iter().map(|(key, value)| {
+                        (serde_yaml::Value::String(key.to_string()), value.clone())
+                    }));
+                match convert_yaml_map_to_json(settings) {
                     Ok(settings) => Some(settings),
                     Err(err) => {
                         error!(
@@ -67,7 +69,8 @@ impl Worker {
                         );
                         None
                     }
-                });
+                }
+            });
 
             let policy_contents = match std::fs::read(&policy.wasm_module_path) {
                 Ok(policy_contents) => policy_contents,
