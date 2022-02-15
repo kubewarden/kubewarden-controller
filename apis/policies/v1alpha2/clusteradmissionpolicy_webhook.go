@@ -85,6 +85,16 @@ func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
 			r.Name, errs)
 	}
+	if r.Spec.Mode == "monitor" && oldPolicy.Spec.Mode == "protect" {
+		var errs field.ErrorList
+		p := field.NewPath("spec")
+		pp := p.Child("mode")
+		errs = append(errs, field.Forbidden(pp, "field cannot transition from protect to monitor. Recreate instead."))
+
+		return apierrors.NewInvalid(
+			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
+			r.Name, errs)
+	}
 	return nil
 }
 
