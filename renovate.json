@@ -1,6 +1,7 @@
 {
   "extends": [
     "config:base",
+    "group:kubernetes",
     "group:allNonMajor",
     "schedule:earlyMondays"
   ],
