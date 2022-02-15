@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidationResponse {
     pub uid: String,
@@ -19,7 +19,7 @@ pub struct ValidationResponse {
     pub status: Option<ValidationResponseStatus>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
 pub struct ValidationResponseStatus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
