@@ -75,6 +75,7 @@ ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
 | Field | Description
 | *`policyServer`* __string__ | PolicyServer identifies an existing PolicyServer resource.
 | *`module`* __string__ | Module is the location of the WASM module to be loaded. Can be a local file (file://), a remote file served by an HTTP server (http://, https://), or an artifact served by an OCI-compatible registry (registry://).
+| *`mode`* __PolicyMode__ | Mode defines the execution mode of this policy. Can be set to either "protect" or "monitor". If it's empty, it is defaulted to "protect". Transitioning this setting from "monitor" to "protect" is allowed, but is disallowed to transition from "protect" to "monitor". To perform this transition, the policy should be recreated in "monitor" mode instead.
 | *`settings`* __xref:{anchor_prefix}-k8s-io-apimachinery-pkg-runtime-rawextension[$$RawExtension$$]__ | Settings is a free-form object that contains the policy configuration values. x-kubernetes-embedded-resource: false
 | *`rules`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#rulewithoperations-v1-admissionregistration[$$RuleWithOperations$$] array__ | Rules describes what operations on what resources/subresources the webhook cares about. The webhook cares about an operation if it matches _any_ Rule.
 | *`failurePolicy`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#failurepolicytype-v1-admissionregistration[$$FailurePolicyType$$]__ | FailurePolicy defines how unrecognized errors and timeout errors from the policy are handled. Allowed values are "Ignore" or "Fail". * "Ignore" means that an error calling the webhook is ignored and the API   request is allowed to continue. * "Fail" means that an error calling the webhook causes the admission to   fail and the API request to be rejected. The default behaviour is "Fail"
@@ -155,6 +156,8 @@ PolicyServerSpec defines the desired state of PolicyServer
 | *`serviceAccountName`* __string__ | Name of the service account associated with the policy server. Namespace service account will be used if not specified.
 | *`imagePullSecret`* __string__ | Name of ImagePullSecret secret in the same namespace, used for pulling policies from repositories.
 | *`insecureSources`* __string array__ | List of insecure URIs to policy repositories.
+| *`sourceAuthorities`* __object (keys:string, values:string array)__ | Key value map of registry URIs endpoints to a list of their associated PEM encoded certificate authorities that have to be used to verify the certificate used by the endpoint.
+| *`verificationConfig`* __string__ | Name of VerificationConfig configmap in the same namespace, containing Sigstore verification configuration. The configuration must be under a key named verification-config in the Configmap.
 |===
 
 

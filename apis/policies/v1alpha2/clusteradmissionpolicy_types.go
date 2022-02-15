@@ -21,6 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// +kubebuilder:validation:Enum=protect;monitor
+type PolicyMode string
+
 // ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
 type ClusterAdmissionPolicySpec struct {
 	// PolicyServer identifies an existing PolicyServer resource.
@@ -33,6 +36,17 @@ type ClusterAdmissionPolicySpec struct {
 	// (http://, https://), or an artifact served by an OCI-compatible
 	// registry (registry://).
 	Module string `json:"module,omitempty"`
+
+	// Mode defines the execution mode of this policy. Can be set to
+	// either "protect" or "monitor". If it's empty, it is defaulted to
+	// "protect".
+	// Transitioning this setting from "monitor" to "protect" is
+	// allowed, but is disallowed to transition from "protect" to
+	// "monitor". To perform this transition, the policy should be
+	// recreated in "monitor" mode instead.
+	// +kubebuilder:default:=protect
+	// +optional
+	Mode PolicyMode `json:"mode,omitempty"`
 
 	// Settings is a free-form object that contains the policy configuration
 	// values.
