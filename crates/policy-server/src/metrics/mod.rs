@@ -24,6 +24,7 @@ pub(crate) fn init_meter() -> metrics::Result<PushController> {
 #[derive(Clone)]
 pub struct PolicyEvaluation {
     pub(crate) policy_name: String,
+    pub(crate) policy_mode: String,
     pub(crate) resource_name: String,
     pub(crate) resource_kind: String,
     pub(crate) resource_namespace: Option<String>,
@@ -38,6 +39,7 @@ impl Into<Vec<KeyValue>> for &PolicyEvaluation {
     fn into(self) -> Vec<KeyValue> {
         let mut baggage = vec![
             KeyValue::new("policy_name", self.policy_name.clone()),
+            KeyValue::new("policy_mode", self.policy_mode.clone()),
             KeyValue::new("resource_name", self.resource_name.clone()),
             KeyValue::new("resource_kind", self.resource_kind.clone()),
             KeyValue::new(
