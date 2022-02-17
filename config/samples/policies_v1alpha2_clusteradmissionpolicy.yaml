@@ -1,24 +1,8 @@
 apiVersion: policies.kubewarden.io/v1alpha2
-kind: PolicyServer
-metadata:
-  name: reserved-instance-for-tenant-a
-spec:
-  image: ghcr.io/kubewarden/policy-server:latest
-  replicas: 1
-  env:
-    - name: KUBEWARDEN_LOG_LEVEL
-      value: debug
-    - name: KUBEWARDEN_LOG_FMT
-      value: text
-  annotations:
-    sidecar.jaegertracing.io/inject: default
----
-apiVersion: policies.kubewarden.io/v1alpha2
 kind: ClusterAdmissionPolicy
 metadata:
   name: psp-capabilities
 spec:
-  policyServer: reserved-instance-for-tenant-a
   module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.3
   rules:
     - apiGroups: [""]
@@ -33,3 +17,9 @@ spec:
       - CHOWN
     required_drop_capabilities:
       - NET_ADMIN
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - kubewarden

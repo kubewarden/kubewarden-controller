@@ -25,6 +25,14 @@ spec:
       jsonPath: .spec.mutating
       name: Mutating
       type: boolean
+    - description: Policy deployment mode
+      jsonPath: .spec.mode
+      name: Mode
+      type: string
+    - description: Policy deployment mode observed on the assigned Policy Server
+      jsonPath: .status.mode
+      name: Observed mode
+      type: string
     - description: Status of the policy
       jsonPath: .status.policyStatus
       name: Status
@@ -244,7 +252,7 @@ spec:
                   ClusterAdmissionPolicy resource.  Known .status.conditions.types
                   are: "PolicyServerSecretReconciled", "PolicyServerConfigMapReconciled",
                   "PolicyServerDeploymentReconciled", "PolicyServerServiceReconciled"
-                  and "ClusterAdmissionPolicyActive"'
+                  and "AdmissionPolicyActive"'
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
@@ -316,12 +324,19 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              mode:
+                description: PolicyMode represents the observed policy mode of this
+                  policy in the associated PolicyServer configuration
+                enum:
+                - protect
+                - monitor
+                - unknown
+                type: string
               policyStatus:
-                description: PolicyStatus represents whether this ClusterAdmissionPolicy
-                  is unscheduled, unschedulable, pending, or active.
+                description: PolicyStatus represents the observed status of the policy
                 enum:
                 - unscheduled
-                - unschedulable
+                - scheduled
                 - pending
                 - active
                 type: string

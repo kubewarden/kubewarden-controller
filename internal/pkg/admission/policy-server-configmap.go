@@ -12,13 +12,16 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
-type policyServerConfigEntry struct {
+type PolicyServerConfigEntry struct {
+	NamespacedName  types.NamespacedName `json:"namespacedName"`
 	URL             string               `json:"url"`
 	PolicyMode      string               `json:"policyMode"`
 	AllowedToMutate bool                 `json:"allowedToMutate"`
@@ -107,8 +110,8 @@ func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
 	return nil
 }
 
-func shouldUpdatePolicyMap(currentPoliciesYML string, newPoliciesMap map[string]policyServerConfigEntry) (bool, error) {
-	var currentPoliciesMap map[string]policyServerConfigEntry
+func shouldUpdatePolicyMap(currentPoliciesYML string, newPoliciesMap PolicyConfigEntryMap) (bool, error) {
+	var currentPoliciesMap PolicyConfigEntryMap
 
 	if err := json.Unmarshal([]byte(currentPoliciesYML), &currentPoliciesMap); err != nil {
 		return false, fmt.Errorf("cannot unmarshal policies: %w", err)
@@ -152,6 +155,9 @@ func (r *Reconciler) createPolicyServerConfigMap(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
+			Labels: map[string]string{
+				constants.PolicyServerLabelKey: policyServer.ObjectMeta.Name,
+			},
 		},
 		Data: data,
 	}
@@ -160,18 +166,54 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	return r.Client.Create(ctx, cfg)
 }
 
-func (r *Reconciler) createPoliciesMap(policies []policiesv1alpha2.Policy) map[string]policyServerConfigEntry {
-	policiesMap := make(map[string]policyServerConfigEntry)
+type PolicyConfigEntryMap map[string]PolicyServerConfigEntry
 
-	for _, policy := range policies {
-		policiesMap[policy.GetUniqueName()] = policyServerConfigEntry{
-			URL:             policy.GetModule(),
-			PolicyMode:      string(policy.GetPolicyMode()),
-			AllowedToMutate: policy.IsMutating(),
-			Settings:        policy.GetSettings(),
+func (policyConfigEntryMap PolicyConfigEntryMap) ToAdmissionPolicyReconcileRequests() []reconcile.Request {
+	res := []reconcile.Request{}
+	for _, policy := range policyConfigEntryMap {
+		if policy.NamespacedName.Namespace == "" {
+			continue
+		}
+		res = append(res, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: policy.NamespacedName.Namespace,
+				Name:      policy.NamespacedName.Name,
+			},
+		})
+	}
+	return res
+}
+
+func (policyConfigEntryMap PolicyConfigEntryMap) ToClusterAdmissionPolicyReconcileRequests() []reconcile.Request {
+	res := []reconcile.Request{}
+	for _, policy := range policyConfigEntryMap {
+		if policy.NamespacedName.Namespace != "" {
+			continue
+		}
+		res = append(res, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: policy.NamespacedName.Name,
+			},
+		})
+	}
+	return res
+}
+
+func (r *Reconciler) createPoliciesMap(admissionPolicies []policiesv1alpha2.Policy) PolicyConfigEntryMap {
+	policies := PolicyConfigEntryMap{}
+	for _, admissionPolicy := range admissionPolicies {
+		policies[admissionPolicy.GetUniqueName()] = PolicyServerConfigEntry{
+			NamespacedName: types.NamespacedName{
+				Namespace: admissionPolicy.GetNamespace(),
+				Name:      admissionPolicy.GetName(),
+			},
+			URL:             admissionPolicy.GetModule(),
+			PolicyMode:      string(admissionPolicy.GetPolicyMode()),
+			AllowedToMutate: admissionPolicy.IsMutating(),
+			Settings:        admissionPolicy.GetSettings(),
 		}
 	}
-	return policiesMap
+	return policies
 }
 
 func (r *Reconciler) createSourcesMap(policyServer *policiesv1alpha2.PolicyServer) (sourcesEntry policyServerSourcesEntry) {
@@ -203,7 +245,7 @@ func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policySer
 		Kind:    "ConfigMap",
 		Version: "v1",
 	})
-	err := r.Client.Get(ctx, client.ObjectKey{
+	err := r.APIReader.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
 		Name:      policyServer.NameWithPrefix(),
 	}, unstructuredObj)

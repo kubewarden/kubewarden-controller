@@ -19,12 +19,11 @@ import (
 
 //+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch
 
-func (r *Reconciler) reconcileValidatingWebhookConfiguration(
+func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 	ctx context.Context,
 	policy v1alpha2.Policy,
-	admissionSecret *corev1.Secret,
-	policyServerName string) error {
-	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerName)
+	admissionSecret *corev1.Secret) error {
+	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policy.GetPolicyServer())
 	err := r.Client.Create(ctx, webhook)
 	if err == nil {
 		return nil

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
@@ -48,7 +49,7 @@ func TestArePoliciesEqual(t *testing.T) {
 	for _, test := range tests {
 		ttest := test // ensure tt is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			var currentPoliciesMap map[string]policyServerConfigEntry
+			var currentPoliciesMap PolicyConfigEntryMap
 			if err := json.Unmarshal([]byte(ttest.newPoliciesYML), &currentPoliciesMap); err != nil {
 				t.Errorf("unexpected error %s", err.Error())
 			}
@@ -66,7 +67,7 @@ func TestArePoliciesEqual(t *testing.T) {
 func TestCreatePoliciesMap(t *testing.T) {
 	reconciler, validationPolicy, mutatingPolicy := createReconciler()
 
-	var policies map[string]policyServerConfigEntry
+	var policies PolicyConfigEntryMap
 	clusterAdmissionPolicies := []v1alpha2.Policy{}
 	policies = reconciler.createPoliciesMap(clusterAdmissionPolicies)
 	if len(policies) != 0 {
@@ -78,13 +79,19 @@ func TestCreatePoliciesMap(t *testing.T) {
 	if len(policies) != 2 {
 		t.Error("Policy map must has 2 entries")
 	}
-	expectedPolicies := make(map[string]policyServerConfigEntry)
-	expectedPolicies[validationPolicy.GetUniqueName()] = policyServerConfigEntry{
+	expectedPolicies := make(PolicyConfigEntryMap)
+	expectedPolicies[validationPolicy.GetUniqueName()] = PolicyServerConfigEntry{
+		NamespacedName: types.NamespacedName{
+			Name: validationPolicy.GetName(),
+		},
 		URL:             "registry://blabla/validation-policy:latest",
 		AllowedToMutate: false,
 		Settings:        runtime.RawExtension{},
 	}
-	expectedPolicies[mutatingPolicy.GetUniqueName()] = policyServerConfigEntry{
+	expectedPolicies[mutatingPolicy.GetUniqueName()] = PolicyServerConfigEntry{
+		NamespacedName: types.NamespacedName{
+			Name: mutatingPolicy.GetName(),
+		},
 		URL:             "registry://blabla/mutation-policy:latest",
 		AllowedToMutate: true,
 		Settings:        runtime.RawExtension{},

@@ -181,6 +181,18 @@ ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
 
 
 
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-apis-policies-v1alpha2-policymodestatus"]
+==== PolicyModeStatus (string) 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-apis-policies-v1alpha2-policystatus[$$PolicyStatus$$]
+****
+
+
+
 [id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-apis-policies-v1alpha2-policyserver"]
 ==== PolicyServer 
 

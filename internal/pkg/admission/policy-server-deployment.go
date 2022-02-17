@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
-	"time"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -46,61 +45,6 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 	}
 
 	return r.updatePolicyServerDeployment(ctx, policyServer, deployment)
-}
-
-// isPolicyServerReady returns true when the PolicyServer deployment is running only
-// fresh replicas that are reflecting its Spec.
-// This works using the same code of `kubectl rollout status <deployment>`
-func (r *Reconciler) isPolicyServerReady(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (bool, error) {
-	deployment := &appsv1.Deployment{}
-	err := r.Client.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      policyServer.NameWithPrefix(),
-	}, deployment)
-	if err != nil {
-		return false, fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
-	}
-
-	// This code takes inspiration from how `kubectl rollout status deployment <name>`
-	// works. The source code can be found here:
-	// https://github.com/kubernetes/kubectl/blob/ddb56dde55b6b8de6eba1efbd1d435bed7b40ff4/pkg/polymorphichelpers/rollout_status.go#L75-L91
-	if deployment.Generation <= deployment.Status.ObservedGeneration {
-		cond := getProgressingDeploymentCondition(deployment.Status)
-		if cond != nil && cond.Reason == "ProgressDeadlineExceeded" {
-			return false, fmt.Errorf("deployment %q exceeded its progress deadline", deployment.Name)
-		}
-		if deployment.Spec.Replicas != nil && deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
-			return false,
-				&PolicyServerNotReadyError{
-					Message: fmt.Sprintf("Waiting for deployment %q rollout to finish: %d out of %d new replicas have been updated",
-						deployment.Name, deployment.Status.UpdatedReplicas, *deployment.Spec.Replicas)}
-		}
-		if deployment.Status.Replicas > deployment.Status.UpdatedReplicas {
-			return false, &PolicyServerNotReadyError{
-				Message: fmt.Sprintf("Waiting for deployment %q rollout to finish: %d old replicas are pending termination",
-					deployment.Name, deployment.Status.Replicas-deployment.Status.UpdatedReplicas)}
-		}
-		if deployment.Status.AvailableReplicas < deployment.Status.UpdatedReplicas {
-			return false, &PolicyServerNotReadyError{
-				Message: fmt.Sprintf("Waiting for deployment %q rollout to finish: %d of %d updated replicas are available",
-					deployment.Name, deployment.Status.AvailableReplicas, deployment.Status.UpdatedReplicas)}
-		}
-		// deployment successfully rolled out
-		return true, nil
-	}
-	return false, &PolicyServerNotReadyError{
-		Message: "Waiting for deployment spec update to be observed"}
-}
-
-// GetDeploymentCondition returns the condition with the provided type.
-func getProgressingDeploymentCondition(status appsv1.DeploymentStatus) *appsv1.DeploymentCondition {
-	for i := range status.Conditions {
-		c := status.Conditions[i]
-		if c.Type == appsv1.DeploymentProgressing {
-			return &c
-		}
-	}
-	return nil
 }
 
 func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
@@ -146,7 +90,7 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policySer
 		patch := originalDeployment.DeepCopy()
 		patch.Spec.Replicas = newDeployment.Spec.Replicas
 		patch.Spec.Template = newDeployment.Spec.Template
-		patch.Spec.Template.Annotations[constants.PolicyServerDeploymentRestartAnnotation] = time.Now().Format(time.RFC3339)
+		patch.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation]
 		err = r.Client.Patch(ctx, patch, client.MergeFrom(originalDeployment))
 		if err != nil {
 			return fmt.Errorf("cannot patch policy-server Deployment: %w", err)
@@ -161,6 +105,7 @@ func shouldUpdatePolicyServerDeployment(originalDeployment *appsv1.Deployment, n
 	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
 		originalDeployment.Spec.Template.Spec.Containers[0].Image != newDeployment.Spec.Template.Spec.Containers[0].Image ||
 		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
+		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
 		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment)
 }
@@ -306,15 +251,17 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	if templateAnnotations == nil {
 		templateAnnotations = make(map[string]string)
 	}
-	templateAnnotations[constants.PolicyServerDeploymentConfigAnnotation] = configMapVersion
 
 	policyServerDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
+			Annotations: map[string]string{
+				constants.PolicyServerDeploymentConfigVersionAnnotation: configMapVersion,
+			},
 			Labels: map[string]string{
-				constants.AppLabelKey:              policyServer.AppLabel(),
-				constants.PolicyServerNameLabelKey: policyServer.Name,
+				constants.AppLabelKey:          policyServer.AppLabel(),
+				constants.PolicyServerLabelKey: policyServer.Name,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -331,6 +278,8 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						constants.AppLabelKey: policyServer.AppLabel(),
+						constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
+						constants.PolicyServerLabelKey:                            policyServer.Name,
 					},
 					Annotations: templateAnnotations,
 				},

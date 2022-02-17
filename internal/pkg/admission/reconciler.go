@@ -2,7 +2,6 @@ package admission
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -18,13 +16,13 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
 
 type Reconciler struct {
 	Client               client.Client
+	APIReader            client.Reader
 	DeploymentsNamespace string
 	Log                  logr.Logger
 }
@@ -52,7 +50,13 @@ func (r *Reconciler) ReconcileDeletion(
 		},
 	}
 	err := r.Client.Delete(ctx, deployment)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err == nil {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			string(policiesv1alpha2.PolicyServerDeploymentReconciled),
+			"Policy Server has been deleted",
+		)
+	} else if !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Deployment "+policyServer.Name)
 		errors = append(errors, err)
 	}
@@ -63,9 +67,14 @@ func (r *Reconciler) ReconcileDeletion(
 			Namespace: r.DeploymentsNamespace,
 		},
 	}
-
 	err = r.Client.Delete(ctx, certificateSecret)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err == nil {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			string(policiesv1alpha2.PolicyServerCASecretReconciled),
+			"Policy Server has been deleted",
+		)
+	} else if !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Certificate Secret "+policyServer.Name)
 		errors = append(errors, err)
 	}
@@ -77,7 +86,13 @@ func (r *Reconciler) ReconcileDeletion(
 		},
 	}
 	err = r.Client.Delete(ctx, service)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err == nil {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			string(policiesv1alpha2.PolicyServerServiceReconciled),
+			"Policy Server has been deleted",
+		)
+	} else if !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Service "+policyServer.Name)
 		errors = append(errors, err)
 	}
@@ -88,20 +103,18 @@ func (r *Reconciler) ReconcileDeletion(
 			Namespace: r.DeploymentsNamespace,
 		},
 	}
-
 	err = r.Client.Delete(ctx, cfg)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err == nil {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			string(policiesv1alpha2.PolicyServerConfigMapReconciled),
+			"Policy Server has been deleted",
+		)
+	} else if !apierrors.IsNotFound(err) {
 		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer ConfigMap "+policyServer.Name)
 		errors = append(errors, err)
 	}
 
-	patch := policyServer.DeepCopy()
-	controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
-	err = r.Client.Patch(ctx, patch, client.MergeFrom(policyServer))
-	if err != nil && !apierrors.IsNotFound(err) {
-		r.Log.Error(err, "ReconcileDeletion: cannot remove finalizer "+policyServer.Name)
-		errors = append(errors, err)
-	}
 	if len(errors) == 0 {
 		return nil
 	}
@@ -111,13 +124,13 @@ func (r *Reconciler) ReconcileDeletion(
 
 func setFalseConditionType(
 	conditions *[]metav1.Condition,
-	conditionType policiesv1alpha2.PolicyConditionType,
+	conditionType string,
 	message string,
 ) {
 	apimeta.SetStatusCondition(
 		conditions,
 		metav1.Condition{
-			Type:    string(conditionType),
+			Type:    conditionType,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(policiesv1alpha2.ReconciliationFailed),
 			Message: message,
@@ -125,11 +138,11 @@ func setFalseConditionType(
 	)
 }
 
-func setTrueConditionType(conditions *[]metav1.Condition, conditionType policiesv1alpha2.PolicyConditionType) {
+func setTrueConditionType(conditions *[]metav1.Condition, conditionType string) {
 	apimeta.SetStatusCondition(
 		conditions,
 		metav1.Condition{
-			Type:   string(conditionType),
+			Type:   conditionType,
 			Status: metav1.ConditionTrue,
 			Reason: string(policiesv1alpha2.ReconciliationSucceeded),
 		},
@@ -139,22 +152,13 @@ func setTrueConditionType(conditions *[]metav1.Condition, conditionType policies
 func (r *Reconciler) Reconcile(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
+	policies []policiesv1alpha2.Policy,
 ) error {
-	policies, err := r.getPolicies(ctx, policyServer)
-	if err != nil {
-		return fmt.Errorf("cannot retrieve policies: %w", err)
-	}
-
-	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, policies)
-	if err != nil {
-		return fmt.Errorf("cannot delete cluster admission policies: %w", err)
-	}
-
 	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerCARootSecretReconciled,
+			string(policiesv1alpha2.PolicyServerCARootSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -163,7 +167,7 @@ func (r *Reconciler) Reconcile(
 	if err := r.reconcileCASecret(ctx, policyServerCARootSecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerCARootSecretReconciled,
+			string(policiesv1alpha2.PolicyServerCARootSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -171,14 +175,14 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		policiesv1alpha2.PolicyServerCARootSecretReconciled,
+		string(policiesv1alpha2.PolicyServerCARootSecretReconciled),
 	)
 
 	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerCASecretReconciled,
+			string(policiesv1alpha2.PolicyServerCASecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -187,7 +191,7 @@ func (r *Reconciler) Reconcile(
 	if err := r.reconcileCASecret(ctx, policyServerCASecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerCASecretReconciled,
+			string(policiesv1alpha2.PolicyServerCASecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -195,18 +199,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		policiesv1alpha2.PolicyServerCASecretReconciled,
+		string(policiesv1alpha2.PolicyServerCASecretReconciled),
 	)
-
-	policies, err = r.getPolicies(ctx, policyServer)
-	if err != nil {
-		return fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
-	}
 
 	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, policies); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerConfigMapReconciled,
+			string(policiesv1alpha2.PolicyServerConfigMapReconciled),
 			fmt.Sprintf("error reconciling configmap: %v", err),
 		)
 		return err
@@ -214,13 +213,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		policiesv1alpha2.PolicyServerConfigMapReconciled,
+		string(policiesv1alpha2.PolicyServerConfigMapReconciled),
 	)
 
 	if err := r.reconcilePolicyServerDeployment(ctx, policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerDeploymentReconciled,
+			string(policiesv1alpha2.PolicyServerDeploymentReconciled),
 			fmt.Sprintf("error reconciling deployment: %v", err),
 		)
 		return err
@@ -228,13 +227,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		policiesv1alpha2.PolicyServerDeploymentReconciled,
+		string(policiesv1alpha2.PolicyServerDeploymentReconciled),
 	)
 
 	if err := r.reconcilePolicyServerService(ctx, policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			policiesv1alpha2.PolicyServerServiceReconciled,
+			string(policiesv1alpha2.PolicyServerServiceReconciled),
 			fmt.Sprintf("error reconciling service: %v", err),
 		)
 		return err
@@ -242,96 +241,22 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		policiesv1alpha2.PolicyServerServiceReconciled,
+		string(policiesv1alpha2.PolicyServerServiceReconciled),
 	)
 
-	return r.enablePolicyWebhook(ctx, policyServer, policyServerCARootSecret, policies)
-}
-
-func (r *Reconciler) HasClusterAdmissionPoliciesBounded(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (bool, error) {
-	policies, err := r.getPolicies(ctx, policyServer)
-	if err != nil {
-		return false, err
-	}
-	if len(policies) > 0 {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
-	policies, err := r.getPolicies(ctx, policyServer)
-	if err != nil {
-		return err
-	}
-	for _, policy := range policies {
-		policy := policy // safely use pointer inside for
-		// will not delete it because it has a finalizer. It will add a DeletionTimestamp
-		err := r.Client.Delete(ctx, policy)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed deleting pending Policy %s: %w",
-				policy.GetUniqueName(), err)
-		}
-	}
-	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, policies)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
-func (r *Reconciler) enablePolicyWebhook(
-	ctx context.Context,
-	policyServer *policiesv1alpha2.PolicyServer,
-	policyServerSecret *corev1.Secret,
-	policies []policiesv1alpha2.Policy) error {
-	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
-	if err != nil {
-		return err
-	}
-	if !policyServerReady {
-		return errors.New("policy server not yet ready")
-	}
+type GetPoliciesBehavior int
 
-	for _, policy := range policies {
-		policy := policy // safely use pointer inside for
-		// register the new dynamic admission controller only once the Policy is
-		// served by the PolicyServer deployment
-		if policy.IsMutating() {
-			if err := r.reconcileMutatingWebhookConfiguration(ctx, policy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
-				setFalseConditionType(
-					&policy.GetStatus().Conditions,
-					policiesv1alpha2.ClusterAdmissionPolicyActive,
-					fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
-				)
-				return err
-			}
-		} else {
-			if err := r.reconcileValidatingWebhookConfiguration(ctx, policy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
-				setFalseConditionType(
-					&policy.GetStatus().Conditions,
-					policiesv1alpha2.ClusterAdmissionPolicyActive,
-					fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
-				)
-				return err
-			}
-		}
-		setTrueConditionType(
-			&policy.GetStatus().Conditions,
-			policiesv1alpha2.ClusterAdmissionPolicyActive,
-		)
-		policy.SetStatus(policiesv1alpha2.PolicyStatusActive)
-		if err := r.UpdateAdmissionPolicyStatus(ctx, policy); err != nil {
-			return err
-		}
-		r.Log.Info("Policy " + policy.GetUniqueName() + " active")
-	}
+const (
+	SkipDeleted GetPoliciesBehavior = iota
+	IncludeDeleted
+)
 
-	return nil
-}
-
-func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) ([]policiesv1alpha2.Policy, error) {
+// GetPolicies returns all admission policies and cluster admission
+// policies bound to the given policyServer
+func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, getPoliciesBehavior GetPoliciesBehavior) ([]policiesv1alpha2.Policy, error) {
 	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
@@ -348,54 +273,20 @@ func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1al
 	policies := make([]policiesv1alpha2.Policy, 0)
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		clusterAdmissionPolicy := clusterAdmissionPolicy
+		if getPoliciesBehavior == SkipDeleted && clusterAdmissionPolicy.DeletionTimestamp != nil {
+			continue
+		}
 		policies = append(policies, &clusterAdmissionPolicy)
 	}
 	for _, admissionPolicy := range admissionPolicies.Items {
 		admissionPolicy := admissionPolicy
+		if getPoliciesBehavior == SkipDeleted && admissionPolicy.DeletionTimestamp != nil {
+			continue
+		}
 		policies = append(policies, &admissionPolicy)
 	}
 
 	return policies, nil
-}
-
-func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context, policies []policiesv1alpha2.Policy) error {
-	for _, policy := range policies {
-		policy := policy // safely use pointer inside for
-		if policy.GetDeletionTimestamp() != nil {
-			if policy.IsMutating() {
-				mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: policy.GetUniqueName(),
-					},
-				}
-				err := r.Client.Delete(ctx, mutatingWebhook)
-				if err != nil && !apierrors.IsNotFound(err) {
-					return fmt.Errorf("failed deleting webhook of ClusterAdmissionPolicy %s: %w",
-						policy.GetUniqueName(), err)
-				}
-			} else {
-				validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: policy.GetUniqueName(),
-					},
-				}
-				err := r.Client.Delete(ctx, validatingWebhook)
-				if err != nil && !apierrors.IsNotFound(err) {
-					return fmt.Errorf("failed deleting webhook of Policy %s: %w",
-						policy.GetUniqueName(), err)
-				}
-			}
-			var patch policiesv1alpha2.Policy
-			policy.CopyInto(&patch)
-			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
-			err := r.Client.Patch(ctx, patch, client.MergeFrom(policy))
-			if err != nil && !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed removing finalizers of Policy %s: %w",
-					policy.GetUniqueName(), err)
-			}
-		}
-	}
-	return nil
 }
 
 // UpdateAdmissionPolicyStatus Updates the status subresource of the passed

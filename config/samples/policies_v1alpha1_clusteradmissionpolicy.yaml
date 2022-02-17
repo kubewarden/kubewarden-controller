@@ -1,4 +1,4 @@
-apiVersion: policies.kubewarden.io/v1alpha2
+apiVersion: policies.kubewarden.io/v1alpha1
 kind: ClusterAdmissionPolicy
 metadata:
   name: psp-capabilities
