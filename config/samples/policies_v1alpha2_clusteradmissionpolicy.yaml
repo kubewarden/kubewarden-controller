@@ -9,7 +9,7 @@ spec:
     - name: KUBEWARDEN_LOG_LEVEL
       value: debug
     - name: KUBEWARDEN_LOG_FMT
-      value: jaeger
+      value: text
   annotations:
     sidecar.jaegertracing.io/inject: default
 ---

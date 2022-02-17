@@ -1,20 +1,12 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: sa
----
 apiVersion: policies.kubewarden.io/v1alpha2
 kind: PolicyServer
 metadata:
   name: policyserver
 spec:
-  image: ghcr.io/kubewarden/policy-server:v1.0.0
+  image: ghcr.io/kubewarden/policy-server:v0.2.6
   replicas: 1
   env:
     - name: KUBEWARDEN_LOG_LEVEL
       value: debug
     - name: KUBEWARDEN_LOG_FMT
-      value: jaeger
-  annotations:
-    sidecar.jaegertracing.io/inject: default
-  serviceAccountName: sa
+      value: text
