@@ -49,6 +49,46 @@ pub enum Signature {
     },
 }
 
+impl Signature {
+    pub fn verifier(&self) -> Result<Box<dyn VerificationConstraint>> {
+        match self {
+            Signature::PubKey {
+                owner: _,
+                key,
+                annotations,
+            } => {
+                let vc = verification_constraints::PublicKeyAndAnnotationsVerifier::new(
+                    key,
+                    SignatureDigestAlgorithm::default(),
+                    annotations.as_ref(),
+                )
+                .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
+                Ok(Box::new(vc))
+            }
+            Signature::GenericIssuer {
+                issuer,
+                subject,
+                annotations,
+            } => Ok(Box::new(
+                verification_constraints::GenericIssuerSubjectVerifier::new(
+                    issuer,
+                    subject,
+                    annotations.as_ref(),
+                ),
+            )),
+            Signature::GithubAction {
+                owner,
+                repo,
+                annotations,
+            } => Ok(Box::new(verification_constraints::GitHubVerifier::new(
+                owner,
+                repo.as_ref().map(|r| r.as_str()),
+                annotations.as_ref(),
+            ))),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum Subject {

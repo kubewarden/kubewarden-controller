@@ -107,72 +107,14 @@ impl Verifier {
 
         if let Some(ref signatures_all_of) = verification_settings.all_of {
             for signature in signatures_all_of.iter() {
-                match signature {
-                    config::Signature::PubKey {
-                        owner: _,
-                        key,
-                        annotations,
-                    } => {
-                        let verifier =
-                            verification_constraints::PublicKeyAndAnnotationsVerifier::new(
-                                key,
-                                annotations.to_owned(),
-                            )
-                            .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
-                        constraints_all_of.push(Box::new(verifier));
-                    }
-                    config::Signature::GenericIssuer {
-                        issuer: _,
-                        subject: _,
-                        annotations: _,
-                    } => todo!(),
-                    config::Signature::UrlIssuer {
-                        url: _,
-                        subject: _,
-                        annotations: _,
-                    } => todo!(),
-                    config::Signature::GithubAction {
-                        owner: _,
-                        repo: _,
-                        annotations: _,
-                    } => todo!(),
-                }
+                constraints_all_of.push(signature.verifier()?);
             }
         }
         let length_constraints_all_of = constraints_all_of.len();
 
         if let Some(ref signatures_any_of) = verification_settings.any_of {
             for signature in signatures_any_of.signatures.iter() {
-                match signature {
-                    config::Signature::PubKey {
-                        owner: _,
-                        key,
-                        annotations,
-                    } => {
-                        let verifier =
-                            verification_constraints::PublicKeyAndAnnotationsVerifier::new(
-                                key,
-                                annotations.to_owned(),
-                            )
-                            .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
-                        constraints_any_of.push(Box::new(verifier));
-                    }
-                    config::Signature::GenericIssuer {
-                        issuer: _,
-                        subject: _,
-                        annotations: _,
-                    } => todo!(),
-                    config::Signature::UrlIssuer {
-                        url: _,
-                        subject: _,
-                        annotations: _,
-                    } => todo!(),
-                    config::Signature::GithubAction {
-                        owner: _,
-                        repo: _,
-                        annotations: _,
-                    } => todo!(),
-                }
+                constraints_any_of.push(signature.verifier()?);
             }
         }
 
