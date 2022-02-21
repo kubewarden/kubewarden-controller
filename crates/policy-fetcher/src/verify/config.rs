@@ -1,9 +1,15 @@
-use anyhow::Result;
-use serde::{Deserialize, Deserializer};
+use anyhow::{anyhow, Result};
+use serde::{Deserialize, Deserializer, Serialize};
+use sigstore::{
+    cosign::verification_constraint::VerificationConstraint, crypto::SignatureDigestAlgorithm,
+};
+use std::boxed::Box;
 use std::{collections::HashMap, fs::File, path::Path};
 use url::Url;
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+use crate::verify::verification_constraints;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct VerificationSettings {
     pub api_version: String,
@@ -11,7 +17,7 @@ pub struct VerificationSettings {
     pub any_of: Option<AnyOf>,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AnyOf {
     #[serde(default = "default_minimum_matches")]
@@ -23,7 +29,7 @@ fn default_minimum_matches() -> u8 {
     1
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", tag = "kind", deny_unknown_fields)]
 pub enum Signature {
     PubKey {
@@ -33,13 +39,6 @@ pub enum Signature {
     },
     GenericIssuer {
         issuer: String,
-        #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
-        subject: Subject,
-        annotations: Option<HashMap<String, String>>,
-    },
-    UrlIssuer {
-        url: Url,
-        #[serde(flatten)] // FIXME not supported with deny_unknown_fields, see tests
         subject: Subject,
         annotations: Option<HashMap<String, String>>,
     },
@@ -50,12 +49,12 @@ pub enum Signature {
     },
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub enum Subject {
-    SubjectEqual(String),
+    Equal(String),
     #[serde(deserialize_with = "deserialize_subject_url_prefix")]
-    SubjectUrlPrefix(Url),
+    UrlPrefix(Url),
 }
 
 fn deserialize_subject_url_prefix<'de, D>(deserializer: D) -> Result<Url, D::Error>
@@ -83,52 +82,49 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected = "no variant of enum Subject found in flattened data")]
-    fn test_deserialize_on_missing_flattened_field() {
+    #[should_panic(expected = "missing field `subject`")]
+    fn test_deserialize_on_missing_signature() {
         let config = r#"---
-apiVersion: v1
+    apiVersion: v1
 
-allOf:
-  - kind: urlIssuer
-    url: https://token.actions.githubusercontent.com
-    # subjectEqual: thisismissing
-  - kind: genericIssuer
-    issuer: https://token.actions.githubusercontent.com
-    subjectUrlPrefix: https://github.com/kubewarden/
-"#;
+    allOf:
+      - kind: genericIssuer
+        issuer: https://token.actions.githubusercontent.com
+        # missing subject
+        #subject:
+        #   urlPrefix: https://github.com/kubewarden/
+    "#;
         let _vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
     }
 
     #[test]
-    // Test that using serde's `flatten` and `deny_unknown_fields` works
-    // correctly, as they are not supported together.
-    fn test_deserialize_flattened_fields() {
+    fn test_deserialize() {
         let config = r#"---
-apiVersion: v1
+    apiVersion: v1
 
-allOf:
-  - kind: urlIssuer
-    url: https://token.actions.githubusercontent.com
-    subjectEqual: https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main
-  - kind: genericIssuer
-    issuer: https://token.actions.githubusercontent.com
-    subjectUrlPrefix: https://github.com/kubewarden
-"#;
+    allOf:
+      - kind: genericIssuer
+        issuer: https://token.actions.githubusercontent.com
+        subject:
+           equal: https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main
+      - kind: genericIssuer
+        issuer: https://token.actions.githubusercontent.com
+        subject:
+           urlPrefix: https://github.com/kubewarden
+    "#;
 
         let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
         let mut signatures: Vec<Signature> = Vec::new();
         signatures.push(
-            Signature::UrlIssuer {
-                    url: Url::parse("https://token.actions.githubusercontent.com").unwrap(),
-                    subject: Subject::SubjectEqual("https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main".to_string()),
-                    annotations: None
-                }
-        );
+                Signature::GenericIssuer {
+                        issuer: "https://token.actions.githubusercontent.com".to_string(),
+                        subject: Subject::Equal("https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main".to_string()),
+                        annotations: None
+                    }
+            );
         signatures.push(Signature::GenericIssuer {
             issuer: "https://token.actions.githubusercontent.com".to_string(),
-            subject: Subject::SubjectUrlPrefix(
-                Url::parse("https://github.com/kubewarden/").unwrap(),
-            ),
+            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
             annotations: None,
         });
         let expected: VerificationSettings = VerificationSettings {
@@ -142,30 +138,28 @@ allOf:
     #[test]
     fn test_sanitize_url_prefix() {
         let config = r#"---
-apiVersion: v1
+    apiVersion: v1
 
-allOf:
-  - kind: genericIssuer
-    issuer: https://token.actions.githubusercontent.com
-    subjectUrlPrefix: https://github.com/kubewarden # should deserialize path to kubewarden/
-  - kind: genericIssuer
-    issuer: https://yourdomain.com/oauth2
-    subjectUrlPrefix: https://github.com/kubewarden/ # should deserialize path to kubewarden/
-"#;
+    allOf:
+      - kind: genericIssuer
+        issuer: https://token.actions.githubusercontent.com
+        subject:
+           urlPrefix: https://github.com/kubewarden # should deserialize path to kubewarden/
+      - kind: genericIssuer
+        issuer: https://yourdomain.com/oauth2
+        subject:
+           urlPrefix: https://github.com/kubewarden/ # should deserialize path to kubewarden/
+    "#;
         let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
         let mut signatures: Vec<Signature> = Vec::new();
         signatures.push(Signature::GenericIssuer {
             issuer: "https://token.actions.githubusercontent.com".to_string(),
-            subject: Subject::SubjectUrlPrefix(
-                Url::parse("https://github.com/kubewarden/").unwrap(),
-            ),
+            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
             annotations: None,
         });
         signatures.push(Signature::GenericIssuer {
             issuer: "https://yourdomain.com/oauth2".to_string(),
-            subject: Subject::SubjectUrlPrefix(
-                Url::parse("https://github.com/kubewarden/").unwrap(),
-            ),
+            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
             annotations: None,
         });
         let expected: VerificationSettings = VerificationSettings {
