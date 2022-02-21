@@ -26,8 +26,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.79"
 serde_yaml = "0.8.23"
 sha2 = "0.10.2"
-#TODO: go back to sigstore-rs official repo once https://github.com/sigstore/sigstore-rs/pull/38 is merged
-sigstore = { git = "https://github.com/flavio/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "5d81bf4dc8a8730ddbe8c2d1ba3f833cb2008893" }
+sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "1ee44b396872127f57eaa3038f06bc58ad61f8e6" }
 tracing = "0.1.31"
 url = { version = "2.2.2", features = ["serde"] }
 walkdir = "2"
