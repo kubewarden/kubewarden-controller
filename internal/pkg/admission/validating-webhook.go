@@ -3,6 +3,7 @@ package admission
 import (
 	"context"
 	"fmt"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
 	"path/filepath"
 	"reflect"
 
@@ -13,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
@@ -21,27 +21,27 @@ import (
 
 func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policy policy.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) error {
-	webhook := r.validatingWebhookConfiguration(clusterAdmissionPolicy, admissionSecret, policyServerName)
+	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerName)
 	err := r.Client.Create(ctx, webhook)
 	if err == nil {
 		return nil
 	}
 	if apierrors.IsAlreadyExists(err) {
-		return r.updateValidatingWebhook(ctx, clusterAdmissionPolicy, webhook)
+		return r.updateValidatingWebhook(ctx, policy, webhook)
 	}
 	return fmt.Errorf("cannot reconcile validating webhook: %w", err)
 }
 
 func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policy policy.Policy,
 	newWebhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
 	var originalWebhook admissionregistrationv1.ValidatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{
-		Name: clusterAdmissionPolicy.Name,
+		Name: policy.GetName(),
 	}, &originalWebhook)
 	if err != nil && apierrors.IsNotFound(err) {
 		return fmt.Errorf("cannot retrieve mutating webhook: %w", err)
@@ -60,10 +60,10 @@ func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 }
 
 func (r *Reconciler) validatingWebhookConfiguration(
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policy policy.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) *admissionregistrationv1.ValidatingWebhookConfiguration {
-	admissionPath := filepath.Join("/validate", clusterAdmissionPolicy.Name)
+	admissionPath := filepath.Join("/validate", policy.GetName())
 	admissionPort := int32(constants.PolicyServerPort)
 
 	service := admissionregistrationv1.ServiceReference{
@@ -73,32 +73,32 @@ func (r *Reconciler) validatingWebhookConfiguration(
 		Port:      &admissionPort,
 	}
 
-	sideEffects := clusterAdmissionPolicy.Spec.SideEffects
+	sideEffects := policy.GetSideEffects()
 	if sideEffects == nil {
 		noneSideEffects := admissionregistrationv1.SideEffectClassNone
 		sideEffects = &noneSideEffects
 	}
 	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterAdmissionPolicy.Name,
+			Name: policy.GetName(),
 			Labels: map[string]string{
 				"kubewarden": "true",
 			},
 		},
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
-				Name: fmt.Sprintf("%s.kubewarden.admission", clusterAdmissionPolicy.Name),
+				Name: fmt.Sprintf("%s.kubewarden.admission", policy.GetName()),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
 					CABundle: admissionSecret.Data[constants.PolicyServerCARootPemName],
 				},
-				Rules:                   clusterAdmissionPolicy.Spec.Rules,
-				FailurePolicy:           clusterAdmissionPolicy.Spec.FailurePolicy,
-				MatchPolicy:             clusterAdmissionPolicy.Spec.MatchPolicy,
-				NamespaceSelector:       clusterAdmissionPolicy.Spec.NamespaceSelector,
-				ObjectSelector:          clusterAdmissionPolicy.Spec.ObjectSelector,
+				Rules:                   policy.GetRules(),
+				FailurePolicy:           policy.GetFailurePolicy(),
+				MatchPolicy:             policy.GetMatchPolicy(),
+				NamespaceSelector:       policy.GetNamespaceSelector(),
+				ObjectSelector:          policy.GetObjectSelector(),
 				SideEffects:             sideEffects,
-				TimeoutSeconds:          clusterAdmissionPolicy.Spec.TimeoutSeconds,
+				TimeoutSeconds:          policy.GetTimeoutSeconds(),
 				AdmissionReviewVersions: []string{"v1"},
 			},
 		},

@@ -19,6 +19,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // +kubebuilder:validation:Enum=protect;monitor
@@ -240,4 +241,68 @@ type ClusterAdmissionPolicyList struct {
 
 func init() {
 	SchemeBuilder.Register(&ClusterAdmissionPolicy{}, &ClusterAdmissionPolicyList{})
+}
+
+func (p *ClusterAdmissionPolicy) SetStatus(status ClusterAdmissionPolicyStatusEnum) {
+	p.Status.PolicyStatus = status
+}
+
+func (p *ClusterAdmissionPolicy) GetPolicyMode() PolicyMode {
+	return p.Spec.Mode
+}
+
+func (p *ClusterAdmissionPolicy) GetModule() string {
+	return p.Spec.Module
+}
+
+func (p *ClusterAdmissionPolicy) IsMutating() bool {
+	return p.Spec.Mutating
+}
+
+func (p *ClusterAdmissionPolicy) GetSettings() runtime.RawExtension {
+	return p.Spec.Settings
+}
+
+func (p *ClusterAdmissionPolicy) GetStatus() *ClusterAdmissionPolicyStatus {
+	return &p.Status
+}
+
+func (p *ClusterAdmissionPolicy) DeepCopyPolicy() client.Object {
+	return p.DeepCopy()
+}
+
+func (p *ClusterAdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectClass {
+	return p.Spec.SideEffects
+}
+
+func (p *ClusterAdmissionPolicy) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
+	return p.Spec.FailurePolicy
+}
+
+func (p *ClusterAdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
+	return p.Spec.MatchPolicy
+}
+
+func (p *ClusterAdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
+	return p.Spec.Rules
+}
+
+func (p *ClusterAdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
+	return p.Spec.NamespaceSelector
+}
+
+func (p *ClusterAdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
+	return p.Spec.ObjectSelector
+}
+
+func (p *ClusterAdmissionPolicy) GetTimeoutSeconds() *int32 {
+	return p.Spec.TimeoutSeconds
+}
+
+func (p *ClusterAdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
+	return &p.ObjectMeta
+}
+
+func (p *ClusterAdmissionPolicy) GetPolicyServer() string {
+	return p.Spec.PolicyServer
 }

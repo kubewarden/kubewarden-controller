@@ -2,11 +2,10 @@ package admission
 
 import (
 	"encoding/json"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
+	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
 	"testing"
-
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestArePoliciesEqual(t *testing.T) {
@@ -66,14 +65,14 @@ func TestCreatePoliciesMap(t *testing.T) {
 	reconciler, validationPolicy, mutatingPolicy := createReconciler()
 
 	var policies map[string]policyServerConfigEntry
-	clusterAdmissionPolicies := policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{}}
-	policies = reconciler.createPoliciesMap(&clusterAdmissionPolicies)
+	clusterAdmissionPolicies := []policy.Policy{}
+	policies = reconciler.createPoliciesMap(clusterAdmissionPolicies)
 	if len(policies) != 0 {
 		t.Error("Empty ClusterAdmissionPolicyList should generate empty policies map")
 	}
 
-	clusterAdmissionPolicies = policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{validationPolicy, mutatingPolicy}}
-	policies = reconciler.createPoliciesMap(&clusterAdmissionPolicies)
+	clusterAdmissionPolicies = []policy.Policy{&validationPolicy, &mutatingPolicy}
+	policies = reconciler.createPoliciesMap(clusterAdmissionPolicies)
 	if len(policies) != 2 {
 		t.Error("Policy map must has 2 entries")
 	}

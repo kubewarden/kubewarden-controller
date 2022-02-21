@@ -20,6 +20,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -146,4 +147,79 @@ type AdmissionPolicyList struct {
 
 func init() {
 	SchemeBuilder.Register(&AdmissionPolicy{}, &AdmissionPolicyList{})
+}
+
+func (p *AdmissionPolicy) SetStatus(status ClusterAdmissionPolicyStatusEnum) {
+	p.Status.PolicyStatus = status
+}
+
+func (p *AdmissionPolicy) GetPolicyMode() PolicyMode {
+	return p.Spec.Mode
+}
+
+func (p *AdmissionPolicy) GetModule() string {
+	return p.Spec.Module
+}
+
+func (p *AdmissionPolicy) IsMutating() bool {
+	return p.Spec.Mutating
+}
+
+func (p *AdmissionPolicy) GetSettings() runtime.RawExtension {
+	return p.Spec.Settings
+}
+
+func (p *AdmissionPolicy) GetStatus() *ClusterAdmissionPolicyStatus {
+	return &p.Status
+}
+
+func (p *AdmissionPolicy) DeepCopyPolicy() client.Object {
+	return p.DeepCopy()
+}
+
+func (p *AdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectClass {
+	return p.Spec.SideEffects
+}
+
+// GetRules returns all rules. Scope is namespaced since AdmissionPolicy just watch for namespace resources
+func (p *AdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
+	namespacedScopeV1 := admissionregistrationv1.NamespacedScope
+	rules := make([]admissionregistrationv1.RuleWithOperations, 0)
+	for _, rule := range p.Spec.Rules {
+		rule.Scope = &namespacedScopeV1
+		rules = append(rules, rule)
+	}
+
+	return rules
+}
+
+func (p *AdmissionPolicy) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
+	return p.Spec.FailurePolicy
+}
+
+func (p *AdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
+	return p.Spec.MatchPolicy
+}
+
+// GetNamespaceSelector returns the namespace of the AdmissionPolicy since it is the only namespace we want the policy to be applied to.
+func (p *AdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
+	return &metav1.LabelSelector{
+		MatchLabels: map[string]string{"kubernetes.io/metadata.name": p.ObjectMeta.Namespace},
+	}
+}
+
+func (p *AdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
+	return p.Spec.ObjectSelector
+}
+
+func (p *AdmissionPolicy) GetTimeoutSeconds() *int32 {
+	return p.Spec.TimeoutSeconds
+}
+
+func (p *AdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
+	return &p.ObjectMeta
+}
+
+func (p *AdmissionPolicy) GetPolicyServer() string {
+	return p.Spec.PolicyServer
 }

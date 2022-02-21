@@ -3,9 +3,9 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
 	"time"
 
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
@@ -49,19 +49,19 @@ func New(openTelemetryEndpoint string) error {
 	return nil
 }
 
-func RecordPolicyCount(policy *policiesv1alpha2.ClusterAdmissionPolicy) {
+func RecordPolicyCount(policy policy.Policy) {
 	failurePolicy := ""
-	if policy.Spec.FailurePolicy != nil {
-		failurePolicy = string(*policy.Spec.FailurePolicy)
+	if policy.GetFailurePolicy() != nil {
+		failurePolicy = string(*policy.GetFailurePolicy())
 	}
 	commonLabels := []attribute.KeyValue{
-		attribute.String("name", policy.Name),
-		attribute.String("policy_server", policy.Spec.PolicyServer),
-		attribute.String("module", policy.Spec.Module),
-		attribute.Bool("mutating", policy.Spec.Mutating),
-		attribute.String("namespace", policy.Namespace),
+		attribute.String("name", policy.GetName()),
+		attribute.String("policy_server", policy.GetPolicyServer()),
+		attribute.String("module", policy.GetModule()),
+		attribute.Bool("mutating", policy.IsMutating()),
+		attribute.String("namespace", policy.GetNamespace()),
 		attribute.String("failure_policy", failurePolicy),
-		attribute.String("policy_status", string(policy.Status.PolicyStatus)),
+		attribute.String("policy_status", string(policy.GetStatus().PolicyStatus)),
 	}
 	meter := global.Meter(meterName)
 	valueRecorder := metric.Must(meter).

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -46,7 +47,7 @@ type policyServerSourcesEntry struct {
 func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
-	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
+	policies []policy.Policy,
 ) error {
 	cfg := &corev1.ConfigMap{}
 	err := r.Client.Get(ctx, client.ObjectKey{
@@ -55,18 +56,18 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 	}, cfg)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return r.createPolicyServerConfigMap(ctx, policyServer, clusterAdmissionPolicies)
+			return r.createPolicyServerConfigMap(ctx, policyServer, policies)
 		}
-		return fmt.Errorf("cannot lookup policy server ConfigMap: %w", err)
+		return fmt.Errorf("cannot lookup Policy server ConfigMap: %w", err)
 	}
 
-	return r.updateIfNeeded(ctx, cfg, clusterAdmissionPolicies, policyServer)
+	return r.updateIfNeeded(ctx, cfg, policies, policyServer)
 }
 
 func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
-	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
+	policies []policy.Policy,
 	policyServer *policiesv1alpha2.PolicyServer) error {
-	newPoliciesMap := r.createPoliciesMap(clusterAdmissionPolicies)
+	newPoliciesMap := r.createPoliciesMap(policies)
 	newSourcesList := r.createSourcesMap(policyServer)
 
 	var (
@@ -129,10 +130,10 @@ func shouldUpdateSourcesList(currentSourcesYML string, newSources policyServerSo
 func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
-	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList,
+	policies []policy.Policy,
 ) error {
-	policies := r.createPoliciesMap(clusterAdmissionPolicies)
-	policiesYML, err := json.Marshal(policies)
+	policiesMap := r.createPoliciesMap(policies)
+	policiesYML, err := json.Marshal(policiesMap)
 	if err != nil {
 		return fmt.Errorf("cannot marshal policies: %w", err)
 	}
@@ -160,18 +161,18 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	return r.Client.Create(ctx, cfg)
 }
 
-func (r *Reconciler) createPoliciesMap(clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) map[string]policyServerConfigEntry {
-	policies := make(map[string]policyServerConfigEntry)
+func (r *Reconciler) createPoliciesMap(policies []policy.Policy) map[string]policyServerConfigEntry {
+	policiesMap := make(map[string]policyServerConfigEntry)
 
-	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
-		policies[clusterAdmissionPolicy.Name] = policyServerConfigEntry{
-			URL:             clusterAdmissionPolicy.Spec.Module,
-			PolicyMode:      string(clusterAdmissionPolicy.Spec.Mode),
-			AllowedToMutate: clusterAdmissionPolicy.Spec.Mutating,
-			Settings:        clusterAdmissionPolicy.Spec.Settings,
+	for _, policy := range policies {
+		policiesMap[policy.GetName()] = policyServerConfigEntry{
+			URL:             policy.GetModule(),
+			PolicyMode:      string(policy.GetPolicyMode()),
+			AllowedToMutate: policy.IsMutating(),
+			Settings:        policy.GetSettings(),
 		}
 	}
-	return policies
+	return policiesMap
 }
 
 func (r *Reconciler) createSourcesMap(policyServer *policiesv1alpha2.PolicyServer) (sourcesEntry policyServerSourcesEntry) {
@@ -181,7 +182,7 @@ func (r *Reconciler) createSourcesMap(policyServer *policiesv1alpha2.PolicyServe
 	}
 
 	sourcesEntry.SourceAuthorities = make(map[string][]policyServerSourceAuthority)
-	// build sources.yml with data keys for policy-server
+	// build sources.yml with data keys for Policy-server
 	for uri, certs := range policyServer.Spec.SourceAuthorities {
 		sourcesEntry.SourceAuthorities[uri] = make([]policyServerSourceAuthority, 0)
 		for _, cert := range certs {

@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -140,12 +141,12 @@ func (r *Reconciler) Reconcile(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
 ) error {
-	clusterAdmissionPolicies, err := r.getClusterAdmissionPolicies(ctx, policyServer)
+	policies, err := r.getPolicies(ctx, policyServer)
 	if err != nil {
-		return fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
+		return fmt.Errorf("cannot retrieve policies: %w", err)
 	}
 
-	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
+	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, policies)
 	if err != nil {
 		return fmt.Errorf("cannot delete cluster admission policies: %w", err)
 	}
@@ -198,12 +199,12 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerCASecretReconciled,
 	)
 
-	clusterAdmissionPolicies, err = r.getClusterAdmissionPolicies(ctx, policyServer)
+	policies, err = r.getPolicies(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot retrieve cluster admission policies: %w", err)
 	}
 
-	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, &clusterAdmissionPolicies); err != nil {
+	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, policies); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			policiesv1alpha2.PolicyServerConfigMapReconciled,
@@ -245,15 +246,15 @@ func (r *Reconciler) Reconcile(
 		policiesv1alpha2.PolicyServerServiceReconciled,
 	)
 
-	return r.enablePolicyWebhook(ctx, policyServer, policyServerCARootSecret, &clusterAdmissionPolicies)
+	return r.enablePolicyWebhook(ctx, policyServer, policyServerCARootSecret, policies)
 }
 
 func (r *Reconciler) HasClusterAdmissionPoliciesBounded(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (bool, error) {
-	clusterAdmissionPolicies, err := r.getClusterAdmissionPolicies(ctx, policyServer)
+	policies, err := r.getPolicies(ctx, policyServer)
 	if err != nil {
 		return false, err
 	}
-	if len(clusterAdmissionPolicies.Items) > 0 {
+	if len(policies) > 0 {
 		return true, nil
 	}
 
@@ -261,20 +262,20 @@ func (r *Reconciler) HasClusterAdmissionPoliciesBounded(ctx context.Context, pol
 }
 
 func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
-	clusterAdmissionPolicies, err := r.getClusterAdmissionPolicies(ctx, policyServer)
+	policies, err := r.getPolicies(ctx, policyServer)
 	if err != nil {
 		return err
 	}
-	for _, policy := range clusterAdmissionPolicies.Items {
+	for _, policy := range policies {
 		policy := policy // safely use pointer inside for
 		// will not delete it because it has a finalizer. It will add a DeletionTimestamp
-		err := r.Client.Delete(ctx, &policy)
+		err := r.Client.Delete(ctx, policy)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
-				policy.Name, err)
+				policy.GetName(), err)
 		}
 	}
-	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, clusterAdmissionPolicies)
+	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, policies)
 	if err != nil {
 		return err
 	}
@@ -285,32 +286,32 @@ func (r *Reconciler) enablePolicyWebhook(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
 	policyServerSecret *corev1.Secret,
-	clusterAdmissionPolicies *policiesv1alpha2.ClusterAdmissionPolicyList) error {
+	policies []policy.Policy) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
 	if err != nil {
 		return err
 	}
 	if !policyServerReady {
-		return errors.New("policy server not yet ready")
+		return errors.New("Policy server not yet ready")
 	}
 
-	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
-		clusterAdmissionPolicy := clusterAdmissionPolicy // safely use pointer inside for
-		// register the new dynamic admission controller only once the policy is
+	for _, policy := range policies {
+		policy := policy // safely use pointer inside for
+		// register the new dynamic admission controller only once the Policy is
 		// served by the PolicyServer deployment
-		if clusterAdmissionPolicy.Spec.Mutating {
-			if err := r.reconcileMutatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
+		if policy.IsMutating() {
+			if err := r.reconcileMutatingWebhookConfiguration(ctx, policy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
 				setFalseConditionType(
-					&clusterAdmissionPolicy.Status.Conditions,
+					&policy.GetStatus().Conditions,
 					policiesv1alpha2.ClusterAdmissionPolicyActive,
 					fmt.Sprintf("error reconciling mutating webhook configuration: %v", err),
 				)
 				return err
 			}
 		} else {
-			if err := r.reconcileValidatingWebhookConfiguration(ctx, &clusterAdmissionPolicy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
+			if err := r.reconcileValidatingWebhookConfiguration(ctx, policy, policyServerSecret, policyServer.NameWithPrefix()); err != nil {
 				setFalseConditionType(
-					&clusterAdmissionPolicy.Status.Conditions,
+					&policy.GetStatus().Conditions,
 					policiesv1alpha2.ClusterAdmissionPolicyActive,
 					fmt.Sprintf("error reconciling validating webhook configuration: %v", err),
 				)
@@ -318,62 +319,79 @@ func (r *Reconciler) enablePolicyWebhook(
 			}
 		}
 		setTrueConditionType(
-			&clusterAdmissionPolicy.Status.Conditions,
+			&policy.GetStatus().Conditions,
 			policiesv1alpha2.ClusterAdmissionPolicyActive,
 		)
-		clusterAdmissionPolicy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusActive
-		if err := r.UpdateAdmissionPolicyStatus(ctx, &clusterAdmissionPolicy); err != nil {
+		policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusActive)
+		if err := r.UpdateAdmissionPolicyStatus(ctx, policy); err != nil {
 			return err
 		}
-		r.Log.Info("policy " + clusterAdmissionPolicy.Name + " active")
+		r.Log.Info("Policy " + policy.GetName() + " active")
 	}
 
 	return nil
 }
 
-func (r *Reconciler) getClusterAdmissionPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) (policiesv1alpha2.ClusterAdmissionPolicyList, error) {
+func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) ([]policy.Policy, error) {
 	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
-	if err != nil {
+	if err != nil && apierrors.IsNotFound(err) {
 		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
+		return nil, err
 	}
-	return clusterAdmissionPolicies, err
+	var admissionPolicies policiesv1alpha2.AdmissionPolicyList
+	err = r.Client.List(ctx, &admissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
+	if err != nil && apierrors.IsNotFound(err) {
+		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
+		return nil, err
+	}
+
+	policies := make([]policy.Policy, 0)
+	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
+		policies = append(policies, &clusterAdmissionPolicy)
+	}
+	for _, admissionPolicy := range admissionPolicies.Items {
+		policies = append(policies, &admissionPolicy)
+	}
+
+	return policies, nil
 }
 
-func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context, clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList) error {
-	for _, policy := range clusterAdmissionPolicies.Items {
+func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context, policies []policy.Policy) error {
+	for _, policy := range policies {
 		policy := policy // safely use pointer inside for
-		if policy.DeletionTimestamp != nil {
-			if policy.Spec.Mutating {
+		if policy.GetDeletionTimestamp() != nil {
+			if policy.IsMutating() {
 				mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: policy.Name,
+						Name: policy.GetName(),
 					},
 				}
 				err := r.Client.Delete(ctx, mutatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed deleting webhook of ClusterAdmissionPolicy %s: %w",
-						policy.Name, err)
+						policy.GetName(), err)
 				}
 			} else {
 				validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: policy.Name,
+						Name: policy.GetName(),
 					},
 				}
 				err := r.Client.Delete(ctx, validatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed deleting webhook of ClusterAdmissionPolicy %s: %w",
-						policy.Name, err)
+						policy.GetName(), err)
 				}
 			}
-			patch := policy.DeepCopy()
+			patch := policy.DeepCopyPolicy()
 			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
-			err := r.Client.Patch(ctx, patch, client.MergeFrom(&policy))
+			err := r.Client.Patch(ctx, patch, client.MergeFrom(policy))
 			if err != nil && !apierrors.IsNotFound(err) {
 				return fmt.Errorf("failed removing finalizers of ClusterAdmissionPolicy %s: %w",
-					policy.Name, err)
+					policy.GetName(), err)
 			}
+
 		}
 	}
 	return nil
@@ -383,11 +401,11 @@ func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context,
 // clusterAdmissionPolicy with a Client apt for it.
 func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	ctx context.Context,
-	clusterAdmissionPolicy *policiesv1alpha2.ClusterAdmissionPolicy,
+	policy policy.Policy,
 ) error {
-	if err := r.Client.Status().Update(ctx, clusterAdmissionPolicy); err != nil {
-		return fmt.Errorf("failed to update status of ClusterAdmissionPolicy %q, %w", &clusterAdmissionPolicy.ObjectMeta, err)
+	if err := r.Client.Status().Update(ctx, policy); err != nil {
+		return fmt.Errorf("failed to update status of Policy %q, %w", policy.GetObjectMeta(), err)
 	}
-	metrics.RecordPolicyCount(clusterAdmissionPolicy)
+	metrics.RecordPolicyCount(policy)
 	return nil
 }
