@@ -17,7 +17,7 @@ async-trait = "0.1.52"
 base64 = "0.13.0"
 directories = "4.0.1"
 lazy_static = "1.4.0"
-oci-distribution = { git = "https://github.com/kubewarden/oci-distribution", branch = "not-yet-merged-patches", default-features = false, features =  ["rustls-tls"] }
+oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "0f717968093a5415f428503d741dedf24ea97948", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.1.4"
 regex = "1.5.4"
 reqwest = { version = "0.11.9", default-features = false, features = ["rustls-tls"] }
@@ -26,9 +26,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.79"
 serde_yaml = "0.8.23"
 sha2 = "0.10.2"
-sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "35fcc0f0a643c42989d301d6940add98f6ca6b6e" }
+sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "1ee44b396872127f57eaa3038f06bc58ad61f8e6" }
 tracing = "0.1.31"
-url = "2.2.2"
+url = { version = "2.2.2", features = ["serde"] }
 walkdir = "2"
 wasmtime = "0.33.0"
 
