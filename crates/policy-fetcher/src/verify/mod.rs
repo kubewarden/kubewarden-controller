@@ -8,7 +8,7 @@ use sigstore::cosign::verification_constraint::VerificationConstraintVec;
 use sigstore::cosign::CosignCapabilities;
 
 use std::{convert::TryInto, str::FromStr};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use url::{ParseError, Url};
 
 /// This structure simplifies the process of policy verification
@@ -161,7 +161,10 @@ impl Verifier {
             }
         }
 
-        println!("Image successfully verified");
+        debug!(
+            policy = url.to_string().as_str(),
+            "Policy successfully verified"
+        );
         Ok(source_image_digest)
     }
 
