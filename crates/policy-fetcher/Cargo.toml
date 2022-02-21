@@ -28,7 +28,7 @@ serde_yaml = "0.8.23"
 sha2 = "0.10.2"
 sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "35fcc0f0a643c42989d301d6940add98f6ca6b6e" }
 tracing = "0.1.31"
-url = "2.2.2"
+url = { version = "2.2.2", features = ["serde"] }
 walkdir = "2"
 wasmtime = "0.33.0"
 

@@ -15,6 +15,8 @@ pub struct Verifier {
     sources: Option<Sources>,
 }
 
+pub mod config;
+
 impl Verifier {
     /// Creates a new verifier using the `Sources` provided. These are
     /// later used to interact with remote OCI registries.
