@@ -2,7 +2,6 @@ package admission
 
 import (
 	"context"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -17,7 +16,7 @@ import (
 
 func TestDeletePendingClusterAdmissionPolicies(t *testing.T) {
 	reconciler, validationPolicy, mutatingPolicy := createReconciler()
-	clusterAdmissionPolicies := []policy.Policy{&validationPolicy, &mutatingPolicy}
+	clusterAdmissionPolicies := []policiesv1alpha2.Policy{&validationPolicy, &mutatingPolicy}
 
 	err := reconciler.deleteWebhooksClusterAdmissionPolicies(context.Background(), clusterAdmissionPolicies)
 	if err != nil {

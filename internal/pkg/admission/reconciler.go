@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -286,7 +285,7 @@ func (r *Reconciler) enablePolicyWebhook(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
 	policyServerSecret *corev1.Secret,
-	policies []policy.Policy) error {
+	policies []policiesv1alpha2.Policy) error {
 	policyServerReady, err := r.isPolicyServerReady(ctx, policyServer)
 	if err != nil {
 		return err
@@ -332,7 +331,7 @@ func (r *Reconciler) enablePolicyWebhook(
 	return nil
 }
 
-func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) ([]policy.Policy, error) {
+func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) ([]policiesv1alpha2.Policy, error) {
 	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
@@ -346,7 +345,7 @@ func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1al
 		return nil, err
 	}
 
-	policies := make([]policy.Policy, 0)
+	policies := make([]policiesv1alpha2.Policy, 0)
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		policies = append(policies, &clusterAdmissionPolicy)
 	}
@@ -357,7 +356,7 @@ func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1al
 	return policies, nil
 }
 
-func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context, policies []policy.Policy) error {
+func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context, policies []policiesv1alpha2.Policy) error {
 	for _, policy := range policies {
 		policy := policy // safely use pointer inside for
 		if policy.GetDeletionTimestamp() != nil {
@@ -401,7 +400,7 @@ func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context,
 // clusterAdmissionPolicy with a Client apt for it.
 func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	ctx context.Context,
-	policy policy.Policy,
+	policy policiesv1alpha2.Policy,
 ) error {
 	if err := r.Client.Status().Update(ctx, policy); err != nil {
 		return fmt.Errorf("failed to update status of Policy %q, %w", policy.GetObjectMeta(), err)

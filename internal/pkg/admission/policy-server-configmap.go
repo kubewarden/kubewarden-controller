@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +46,7 @@ type policyServerSourcesEntry struct {
 func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
-	policies []policy.Policy,
+	policies []policiesv1alpha2.Policy,
 ) error {
 	cfg := &corev1.ConfigMap{}
 	err := r.Client.Get(ctx, client.ObjectKey{
@@ -65,7 +64,7 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 }
 
 func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
-	policies []policy.Policy,
+	policies []policiesv1alpha2.Policy,
 	policyServer *policiesv1alpha2.PolicyServer) error {
 	newPoliciesMap := r.createPoliciesMap(policies)
 	newSourcesList := r.createSourcesMap(policyServer)
@@ -130,7 +129,7 @@ func shouldUpdateSourcesList(currentSourcesYML string, newSources policyServerSo
 func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1alpha2.PolicyServer,
-	policies []policy.Policy,
+	policies []policiesv1alpha2.Policy,
 ) error {
 	policiesMap := r.createPoliciesMap(policies)
 	policiesYML, err := json.Marshal(policiesMap)
@@ -161,7 +160,7 @@ func (r *Reconciler) createPolicyServerConfigMap(
 	return r.Client.Create(ctx, cfg)
 }
 
-func (r *Reconciler) createPoliciesMap(policies []policy.Policy) map[string]policyServerConfigEntry {
+func (r *Reconciler) createPoliciesMap(policies []policiesv1alpha2.Policy) map[string]policyServerConfigEntry {
 	policiesMap := make(map[string]policyServerConfigEntry)
 
 	for _, policy := range policies {

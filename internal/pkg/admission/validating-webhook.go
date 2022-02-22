@@ -3,7 +3,7 @@ package admission
 import (
 	"context"
 	"fmt"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"path/filepath"
 	"reflect"
 
@@ -21,7 +21,7 @@ import (
 
 func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 	ctx context.Context,
-	policy policy.Policy,
+	policy v1alpha2.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) error {
 	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerName)
@@ -36,7 +36,7 @@ func (r *Reconciler) reconcileValidatingWebhookConfiguration(
 }
 
 func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
-	policy policy.Policy,
+	policy v1alpha2.Policy,
 	newWebhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
 	var originalWebhook admissionregistrationv1.ValidatingWebhookConfiguration
 
@@ -60,7 +60,7 @@ func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 }
 
 func (r *Reconciler) validatingWebhookConfiguration(
-	policy policy.Policy,
+	policy v1alpha2.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", policy.GetName())

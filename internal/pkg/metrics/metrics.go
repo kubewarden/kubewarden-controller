@@ -3,7 +3,7 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/policy"
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -49,7 +49,7 @@ func New(openTelemetryEndpoint string) error {
 	return nil
 }
 
-func RecordPolicyCount(policy policy.Policy) {
+func RecordPolicyCount(policy v1alpha2.Policy) {
 	failurePolicy := ""
 	if policy.GetFailurePolicy() != nil {
 		failurePolicy = string(*policy.GetFailurePolicy())

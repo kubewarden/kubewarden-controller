@@ -1,21 +1,21 @@
-package policy
+package v1alpha2
 
 import (
-	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+//+kubebuilder:object:generate:=false
 type Policy interface {
 	client.Object
-	GetPolicyMode() v1alpha2.PolicyMode
+	GetPolicyMode() PolicyMode
 	GetModule() string
 	IsMutating() bool
 	GetSettings() runtime.RawExtension
-	GetStatus() *v1alpha2.ClusterAdmissionPolicyStatus
-	SetStatus(status v1alpha2.ClusterAdmissionPolicyStatusEnum)
+	GetStatus() *ClusterAdmissionPolicyStatus
+	SetStatus(status ClusterAdmissionPolicyStatusEnum)
 	DeepCopyPolicy() client.Object
 	GetSideEffects() *admissionregistrationv1.SideEffectClass
 	GetRules() []admissionregistrationv1.RuleWithOperations
