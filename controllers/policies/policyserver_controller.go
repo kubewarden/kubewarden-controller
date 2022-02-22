@@ -125,55 +125,55 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 	)
 }
 
-func convertIntoClusterAdmissionPolicy(object client.Object) (*policiesv1alpha2.ClusterAdmissionPolicy, bool) {
-	policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
+func convertIntoPolicy(object client.Object) (policiesv1alpha2.Policy, bool) {
+	policy, ok := object.(policiesv1alpha2.Policy)
 	return policy, ok
 }
 
 // This is a function called when we detect some  update event in a
 // ClusterAdmissionPolicy
 func watchClusterAdmissionPolicy(reconciler *PolicyServerReconciler, object client.Object) reconcile.Request {
-	policy, ok := convertIntoClusterAdmissionPolicy(object)
+	policy, ok := convertIntoPolicy(object)
 	if !ok {
 		reconciler.Log.Error(fmt.Errorf("object is not type of ClusterAdmissionPolicy: %#v", policy), "")
 		return ctrl.Request{}
 	}
 
 	var policyServers policiesv1alpha2.PolicyServerList
-	err := reconciler.List(context.Background(), &policyServers, client.MatchingFields{constants.PolicyServerIndexName: policy.Spec.PolicyServer})
+	err := reconciler.List(context.Background(), &policyServers, client.MatchingFields{constants.PolicyServerIndexName: policy.GetPolicyServer()})
 	if err != nil {
-		reconciler.Log.Error(err, "cannot list PolicyServers corresponding to policy "+policy.Name)
+		reconciler.Log.Error(err, "cannot list PolicyServers corresponding to policy "+policy.GetName())
 		return ctrl.Request{}
 	}
 	if len(policyServers.Items) == 0 {
 		return reconciler.reconcileOrphanPolicies(policy)
 	}
 
-	policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusPending
+	policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusPending)
 	err = reconciler.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
-		reconciler.Log.Error(err, "cannot update status of policy "+policy.Name)
+		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetName())
 		return ctrl.Request{}
 	}
-	reconciler.Log.Info("policy " + policy.Name + " pending")
-	return ctrl.Request{NamespacedName: client.ObjectKey{Name: policy.Spec.PolicyServer}}
+	reconciler.Log.Info("policy " + policy.GetName() + " pending")
+	return ctrl.Request{NamespacedName: client.ObjectKey{Name: policy.GetPolicyServer()}}
 }
 
 // This is a function called when we detect some create or update event in a
 // ClusterAdmissionPolicy
 func setDefaultClusterAdmissionPolicyStatus(reconciler *PolicyServerReconciler, object client.Object) reconcile.Request {
-	policy, ok := convertIntoClusterAdmissionPolicy(object)
+	policy, ok := convertIntoPolicy(object)
 	if !ok {
 		reconciler.Log.Error(fmt.Errorf("object is not type of ClusterAdmissionPolicy: %#v", policy), "")
 		return ctrl.Request{}
 	}
 
-	policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusUnscheduled
+	policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusUnscheduled)
 	err := reconciler.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
-		reconciler.Log.Error(err, "cannot update status of policy "+policy.Name)
+		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetName())
 	}
-	return ctrl.Request{}
+	return ctrl.Request{NamespacedName: client.ObjectKey{Name: policy.GetPolicyServer()}}
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -186,6 +186,15 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 		return []string{policy.Spec.PolicyServer}
 	})
+	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.AdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
+		policy, ok := object.(*policiesv1alpha2.AdmissionPolicy)
+		if !ok {
+			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
+			return []string{}
+		}
+		return []string{policy.Spec.PolicyServer}
+	})
+
 	if err != nil {
 		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
@@ -206,25 +215,15 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&policiesv1alpha2.PolicyServer{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.Funcs{
-			CreateFunc: func(e event.CreateEvent, queue workqueue.RateLimitingInterface) {
-				queue.Add(setDefaultClusterAdmissionPolicyStatus(r, e.Object))
-			},
-			UpdateFunc: func(e event.UpdateEvent, queue workqueue.RateLimitingInterface) {
-				queue.Add(watchClusterAdmissionPolicy(r, e.ObjectNew))
-			},
-			DeleteFunc: func(e event.DeleteEvent, queue workqueue.RateLimitingInterface) {
-				policy, ok := convertIntoClusterAdmissionPolicy(e.Object)
-				if ok {
-					queue.Add(ctrl.Request{
-						NamespacedName: client.ObjectKey{
-							Name: policy.Spec.PolicyServer,
-						},
-					})
-				} else {
-					r.Log.Error(err, "object is not type of ClusterAdmissionPolicy: %#v", policy)
-					queue.Add(ctrl.Request{})
-				}
-			},
+			CreateFunc:  r.watchCreateFunc,
+			UpdateFunc:  r.watchUpdateFunc,
+			DeleteFunc:  r.watchDeleteFunc,
+			GenericFunc: nil,
+		}).
+		Watches(&source.Kind{Type: &policiesv1alpha2.AdmissionPolicy{}}, handler.Funcs{
+			CreateFunc:  r.watchCreateFunc,
+			UpdateFunc:  r.watchUpdateFunc,
+			DeleteFunc:  r.watchDeleteFunc,
 			GenericFunc: nil,
 		}).Complete(r)
 
@@ -234,24 +233,46 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return err
 }
 
-func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy *policiesv1alpha2.ClusterAdmissionPolicy) reconcile.Request {
-	if policy.DeletionTimestamp != nil {
+func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy policiesv1alpha2.Policy) reconcile.Request {
+	if policy.GetDeletionTimestamp() != nil {
 		// policy not associated with PolicyServer, and scheduled
 		// for deletion, remove finalizer:
-		patch := policy.DeepCopy()
+		patch := policy.DeepCopyPolicy()
 		controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 		err := r.Client.Patch(context.Background(), patch, client.MergeFrom(policy))
 		if err != nil {
-			r.Log.Error(err, "cannot remove finalizer from policy "+policy.Name)
+			r.Log.Error(err, "cannot remove finalizer from policy "+policy.GetName())
 		}
 		return ctrl.Request{}
 	}
 
-	policy.Status.PolicyStatus = policiesv1alpha2.ClusterAdmissionPolicyStatusUnschedulable
+	policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusUnschedulable)
 	err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
-		r.Log.Error(err, "cannot update status of policy "+policy.Name)
+		r.Log.Error(err, "cannot update status of policy "+policy.GetName())
 	}
-	r.Log.Info("policy " + policy.Name + " cannot be scheduled: no matching PolicyServer")
+	r.Log.Info("policy " + policy.GetName() + " cannot be scheduled: no matching PolicyServer")
 	return ctrl.Request{}
+}
+
+func (r *PolicyServerReconciler) watchCreateFunc(e event.CreateEvent, queue workqueue.RateLimitingInterface) {
+	queue.Add(setDefaultClusterAdmissionPolicyStatus(r, e.Object))
+}
+
+func (r *PolicyServerReconciler) watchUpdateFunc(e event.UpdateEvent, queue workqueue.RateLimitingInterface) {
+	queue.Add(watchClusterAdmissionPolicy(r, e.ObjectNew))
+}
+
+func (r *PolicyServerReconciler) watchDeleteFunc(e event.DeleteEvent, queue workqueue.RateLimitingInterface) {
+	policy, ok := convertIntoPolicy(e.Object)
+	if ok {
+		queue.Add(ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Name: policy.GetPolicyServer(),
+			},
+		})
+	} else {
+		r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
+		queue.Add(ctrl.Request{})
+	}
 }
