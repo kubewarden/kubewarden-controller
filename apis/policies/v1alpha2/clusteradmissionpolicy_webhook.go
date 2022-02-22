@@ -18,7 +18,6 @@ package v1alpha2
 
 import (
 	"fmt"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -75,7 +74,12 @@ func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 		return apierrors.NewInternalError(
 			fmt.Errorf("object is not of type ClusterAdmissionPolicy: %#v", old))
 	}
-	if r.Spec.PolicyServer != oldPolicy.Spec.PolicyServer {
+
+	return validatePolicyUpdate(oldPolicy, r)
+}
+
+func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
+	if newPolicy.GetPolicyServer() != oldPolicy.GetPolicyServer() {
 		var errs field.ErrorList
 		p := field.NewPath("spec")
 		pp := p.Child("policyServer")
@@ -83,9 +87,9 @@ func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 
 		return apierrors.NewInvalid(
 			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
-			r.Name, errs)
+			newPolicy.GetName(), errs)
 	}
-	if r.Spec.Mode == "monitor" && oldPolicy.Spec.Mode == "protect" {
+	if newPolicy.GetPolicyMode() == "monitor" && oldPolicy.GetPolicyMode() == "protect" {
 		var errs field.ErrorList
 		p := field.NewPath("spec")
 		pp := p.Child("mode")
@@ -93,8 +97,9 @@ func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 
 		return apierrors.NewInvalid(
 			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
-			r.Name, errs)
+			newPolicy.GetName(), errs)
 	}
+
 	return nil
 }
 
