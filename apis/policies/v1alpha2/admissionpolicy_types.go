@@ -126,7 +126,11 @@ type AdmissionPolicySpec struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-
+//+kubebuilder:resource:scope=Namespaced
+//+kubebuilder:storageversion
+//+kubebuilder:printcolumn:name="Policy Server",type=string,JSONPath=`.spec.policyServer`,description="Bound to Policy Server"
+//+kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyStatus`,description="Status of the policy"
 // AdmissionPolicy is the Schema for the admissionpolicies API
 type AdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`

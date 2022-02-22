@@ -16,7 +16,20 @@ spec:
     singular: admissionpolicy
   scope: Namespaced
   versions:
-  - name: v1alpha2
+  - additionalPrinterColumns:
+    - description: Bound to Policy Server
+      jsonPath: .spec.policyServer
+      name: Policy Server
+      type: string
+    - description: Whether the policy is mutating
+      jsonPath: .spec.mutating
+      name: Mutating
+      type: boolean
+    - description: Status of the policy
+      jsonPath: .status.policyStatus
+      name: Status
+      type: string
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: AdmissionPolicy is the Schema for the admissionpolicies API
