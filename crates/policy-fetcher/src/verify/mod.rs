@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign;
 use sigstore::cosign::verification_constraint::VerificationConstraintVec;
+use sigstore::cosign::ClientBuilder;
 use sigstore::cosign::CosignCapabilities;
 
 use std::{convert::TryInto, str::FromStr};
@@ -31,7 +32,7 @@ impl Verifier {
     ) -> Result<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
-        let cosign_client = cosign::ClientBuilder::default()
+        let cosign_client = ClientBuilder::default()
             .with_oci_client_config(client_config)
             .with_fulcio_cert(fulcio_cert)
             .with_rekor_pub_key(rekor_public_key)
@@ -100,24 +101,6 @@ impl Verifier {
             None => sigstore::registry::Auth::Anonymous,
         };
 
-        // build verification constraints from our settings:
-        //
-        let mut constraints_all_of: VerificationConstraintVec = Vec::new();
-        let mut constraints_any_of: VerificationConstraintVec = Vec::new();
-
-        if let Some(ref signatures_all_of) = verification_settings.all_of {
-            for signature in signatures_all_of.iter() {
-                constraints_all_of.push(signature.verifier()?);
-            }
-        }
-        let length_constraints_all_of = constraints_all_of.len();
-
-        if let Some(ref signatures_any_of) = verification_settings.any_of {
-            for signature in signatures_any_of.signatures.iter() {
-                constraints_any_of.push(signature.verifier()?);
-            }
-        }
-
         // obtain all signatures of image:
         //
         // trusted_signature_layers() will error early if cosign_client using
@@ -131,36 +114,11 @@ impl Verifier {
             .trusted_signature_layers(&auth, &source_image_digest, &cosign_signature_image)
             .await?;
 
-        // filter signatures against our constraints:
+        // verify signatures against our settings:
         //
-        match cosign::filter_signature_layers(&trusted_layers, constraints_all_of) {
-            Ok(m) if m.is_empty() => {
-                return Err(anyhow!(
-                    "Image verification failed: no matching signature found on AllOf list"
-                ))
-            }
-            Err(e) => return Err(anyhow!("{}", e)),
-            Ok(m) if m.len() < length_constraints_all_of => {
-                return Err(anyhow!(
-                    "Image verification failed: missing signatures in AllOf list"
-                ));
-            }
-            Ok(_) => (), // all_of verified
-        }
+        verify_signatures_against_settings(&verification_settings, &trusted_layers)?;
 
-        if verification_settings.any_of.is_some() {
-            let signatures_any_of = verification_settings.any_of.unwrap();
-            match cosign::filter_signature_layers(&trusted_layers, constraints_any_of) {
-                Ok(m) if m.len() <= signatures_any_of.minimum_matches.into() => {
-                    return Err(anyhow!(
-                        "Image verification failed: missing signatures in AnyOf list"
-                    ));
-                }
-                Err(e) => return Err(anyhow!("{}", e)),
-                Ok(_) => (), // any_of verified
-            }
-        }
-
+        // everything is fine here:
         debug!(
             policy = url.to_string().as_str(),
             "Policy successfully verified"
@@ -243,4 +201,59 @@ impl Verifier {
             Ok(())
         }
     }
+}
+
+// Verifies the trusted layers against the verification settings passed to it.
+// It does that by creating the verification constraints from the settings, and
+// then filtering the trusted_layers with the corresponding constraints.
+fn verify_signatures_against_settings(
+    verification_settings: &config::VerificationSettings,
+    trusted_layers: &[SignatureLayer],
+) -> Result<()> {
+    // build verification constraints from our settings:
+    //
+    let mut constraints_all_of: VerificationConstraintVec = Vec::new();
+    let mut constraints_any_of: VerificationConstraintVec = Vec::new();
+
+    if let Some(ref signatures_all_of) = verification_settings.all_of {
+        for signature in signatures_all_of.iter() {
+            constraints_all_of.push(signature.verifier()?);
+        }
+    }
+    if let Some(ref signatures_any_of) = verification_settings.any_of {
+        for signature in signatures_any_of.signatures.iter() {
+            constraints_any_of.push(signature.verifier()?);
+        }
+    }
+
+    // filter trusted_layers against our verification constraints:
+    //
+    let length_constraints_all_of = constraints_all_of.len();
+    match cosign::filter_signature_layers(trusted_layers, constraints_all_of) {
+        Ok(m) if m.is_empty() => {
+            return Err(anyhow!(
+                "Image verification failed: no matching signature found on AllOf list"
+            ))
+        }
+        Err(e) => return Err(anyhow!("{}", e)),
+        Ok(m) if m.len() <= length_constraints_all_of => {
+            return Err(anyhow!(
+                "Image verification failed: missing signatures in AllOf list"
+            ));
+        }
+        Ok(_) => (), // all_of verified
+    }
+    if verification_settings.any_of.is_some() {
+        let signatures_any_of = verification_settings.any_of.as_ref().unwrap();
+        match cosign::filter_signature_layers(trusted_layers, constraints_any_of) {
+            Ok(m) if m.len() < signatures_any_of.minimum_matches.into() => {
+                return Err(anyhow!(
+                    "Image verification failed: missing signatures in AnyOf list"
+                ));
+            }
+            Err(e) => return Err(anyhow!("{}", e)),
+            Ok(_) => (), // any_of verified
+        }
+    }
+    Ok(())
 }
