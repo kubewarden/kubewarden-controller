@@ -8,6 +8,7 @@ use sigstore::cosign::signature_layers::SignatureLayer;
 use sigstore::cosign::verification_constraint::VerificationConstraintVec;
 use sigstore::cosign::ClientBuilder;
 use sigstore::cosign::CosignCapabilities;
+use sigstore::errors::SigstoreVerifyConstraintsError;
 
 use std::{convert::TryInto, str::FromStr};
 use tracing::{debug, error, info};
@@ -231,31 +232,35 @@ fn verify_signatures_against_settings(
 
     // filter trusted_layers against our verification constraints:
     //
-    let length_constraints_all_of = constraints_all_of.len();
-    match cosign::filter_signature_layers(trusted_layers, constraints_all_of) {
-        Ok(m) if m.is_empty() => {
-            return Err(anyhow!(
-                "Image verification failed: no matching signature found on AllOf list"
-            ))
-        }
-        Err(e) => return Err(anyhow!("{}", e)),
-        Ok(m) if m.len() <= length_constraints_all_of => {
-            return Err(anyhow!(
-                "Image verification failed: missing signatures in AllOf list"
-            ));
-        }
-        Ok(_) => (), // all_of verified
+    if verification_settings.all_of.is_none() && verification_settings.any_of.is_none() {
+        // deserialized config is already sanitized, and should not reach here anyways
+        return Err(anyhow!(
+            "Image verification failed: no signatures to verify"
+        ));
     }
+
+    if verification_settings.all_of.is_some() {
+        if let Err(SigstoreVerifyConstraintsError { .. }) =
+            cosign::verify_constraints(trusted_layers, constraints_all_of.iter())
+        {
+            // TODO build error with list of unsatisfied constraints
+            return Err(anyhow!("Image verification failed: missing signatures"));
+        }
+    }
+
     if verification_settings.any_of.is_some() {
         let signatures_any_of = verification_settings.any_of.as_ref().unwrap();
-        match cosign::filter_signature_layers(trusted_layers, constraints_any_of) {
-            Ok(m) if m.len() < signatures_any_of.minimum_matches.into() => {
+        if let Err(SigstoreVerifyConstraintsError {
+            unsatisfied_constraints,
+        }) = cosign::verify_constraints(trusted_layers, constraints_any_of.iter())
+        {
+            let num_satisfied_constraits = constraints_any_of.len() - unsatisfied_constraints.len();
+            if num_satisfied_constraits < signatures_any_of.minimum_matches.into() {
+                // TODO build error with list of unsatisfied constraints
                 return Err(anyhow!(
-                    "Image verification failed: missing signatures in AnyOf list"
+                    "Image verification failed: minimum number of signatures not reached"
                 ));
             }
-            Err(e) => return Err(anyhow!("{}", e)),
-            Ok(_) => (), // any_of verified
         }
     }
     Ok(())
@@ -370,7 +375,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     }
 
     #[test]
-    #[should_panic(expected = "Image verification failed: No Signature Layer passed verification")]
+    #[should_panic(expected = "Image verification failed: missing signatures")]
     fn test_verify_settings_not_maching_all_of() {
         // build verification config:
         let signatures_all_of: Vec<Signature> = vec![generic_issuer(
