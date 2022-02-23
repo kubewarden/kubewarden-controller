@@ -154,22 +154,21 @@ mod tests {
     "#;
 
         let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
-        let mut signatures: Vec<Signature> = Vec::new();
-        signatures.push(
-                Signature::GenericIssuer {
-                        issuer: "https://token.actions.githubusercontent.com".to_string(),
-                        subject: Subject::Equal("https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main".to_string()),
-                        annotations: None
-                    }
-            );
-        signatures.push(Signature::GenericIssuer {
-            issuer: "https://token.actions.githubusercontent.com".to_string(),
-            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
-            annotations: None,
-        });
+        let signatures: Vec<Signature> = vec![
+            Signature::GenericIssuer {
+                    issuer: "https://token.actions.githubusercontent.com".to_string(),
+                    subject: Subject::Equal("https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main".to_string()),
+                    annotations: None
+                },
+            Signature::GenericIssuer {
+                issuer: "https://token.actions.githubusercontent.com".to_string(),
+                subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
+                annotations: None,
+            }
+        ];
         let expected: VerificationSettings = VerificationSettings {
             api_version: "v1".to_string(),
-            all_of: Some(signatures.clone()),
+            all_of: Some(signatures),
             any_of: None,
         };
         assert_eq!(vs, expected);
@@ -191,20 +190,21 @@ mod tests {
            urlPrefix: https://github.com/kubewarden/ # should deserialize path to kubewarden/
     "#;
         let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
-        let mut signatures: Vec<Signature> = Vec::new();
-        signatures.push(Signature::GenericIssuer {
-            issuer: "https://token.actions.githubusercontent.com".to_string(),
-            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
-            annotations: None,
-        });
-        signatures.push(Signature::GenericIssuer {
-            issuer: "https://yourdomain.com/oauth2".to_string(),
-            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
-            annotations: None,
-        });
+        let signatures: Vec<Signature> = vec![
+            Signature::GenericIssuer {
+                issuer: "https://token.actions.githubusercontent.com".to_string(),
+                subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
+                annotations: None,
+            },
+            Signature::GenericIssuer {
+                issuer: "https://yourdomain.com/oauth2".to_string(),
+                subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
+                annotations: None,
+            },
+        ];
         let expected: VerificationSettings = VerificationSettings {
             api_version: "v1".to_string(),
-            all_of: Some(signatures.clone()),
+            all_of: Some(signatures),
             any_of: None,
         };
         assert_eq!(vs, expected);
