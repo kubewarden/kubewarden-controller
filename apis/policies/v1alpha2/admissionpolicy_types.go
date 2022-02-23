@@ -136,8 +136,8 @@ type AdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AdmissionPolicySpec          `json:"spec,omitempty"`
-	Status ClusterAdmissionPolicyStatus `json:"status,omitempty"`
+	Spec   AdmissionPolicySpec `json:"spec,omitempty"`
+	Status PolicyStatus        `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -153,7 +153,7 @@ func init() {
 	SchemeBuilder.Register(&AdmissionPolicy{}, &AdmissionPolicyList{})
 }
 
-func (p *AdmissionPolicy) SetStatus(status ClusterAdmissionPolicyStatusEnum) {
+func (p *AdmissionPolicy) SetStatus(status PolicyStatusEnum) {
 	p.Status.PolicyStatus = status
 }
 
@@ -173,7 +173,7 @@ func (p *AdmissionPolicy) GetSettings() runtime.RawExtension {
 	return p.Spec.Settings
 }
 
-func (p *AdmissionPolicy) GetStatus() *ClusterAdmissionPolicyStatus {
+func (p *AdmissionPolicy) GetStatus() *PolicyStatus {
 	return &p.Status
 }
 

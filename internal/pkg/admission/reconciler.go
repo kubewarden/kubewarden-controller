@@ -321,7 +321,7 @@ func (r *Reconciler) enablePolicyWebhook(
 			&policy.GetStatus().Conditions,
 			policiesv1alpha2.ClusterAdmissionPolicyActive,
 		)
-		policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusActive)
+		policy.SetStatus(policiesv1alpha2.PolicyStatusActive)
 		if err := r.UpdateAdmissionPolicyStatus(ctx, policy); err != nil {
 			return err
 		}

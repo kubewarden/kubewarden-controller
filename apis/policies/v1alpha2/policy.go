@@ -14,8 +14,8 @@ type Policy interface {
 	GetModule() string
 	IsMutating() bool
 	GetSettings() runtime.RawExtension
-	GetStatus() *ClusterAdmissionPolicyStatus
-	SetStatus(status ClusterAdmissionPolicyStatusEnum)
+	GetStatus() *PolicyStatus
+	SetStatus(status PolicyStatusEnum)
 	DeepCopyPolicy() client.Object
 	GetSideEffects() *admissionregistrationv1.SideEffectClass
 	GetRules() []admissionregistrationv1.RuleWithOperations

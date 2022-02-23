@@ -154,7 +154,7 @@ func watchClusterAdmissionPolicy(reconciler *PolicyServerReconciler, object clie
 		return reconciler.reconcileOrphanPolicies(policy)
 	}
 
-	policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusPending)
+	policy.SetStatus(policiesv1alpha2.PolicyStatusPending)
 	err = reconciler.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
 		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetName())
@@ -173,7 +173,7 @@ func setDefaultClusterAdmissionPolicyStatus(reconciler *PolicyServerReconciler, 
 		return ctrl.Request{}
 	}
 
-	policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusUnscheduled)
+	policy.SetStatus(policiesv1alpha2.PolicyStatusUnscheduled)
 	err := reconciler.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
 		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetName())
@@ -251,7 +251,7 @@ func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy policiesv1alpha2
 		return ctrl.Request{}
 	}
 
-	policy.SetStatus(policiesv1alpha2.ClusterAdmissionPolicyStatusUnschedulable)
+	policy.SetStatus(policiesv1alpha2.PolicyStatusUnschedulable)
 	err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
 		r.Log.Error(err, "cannot update status of policy "+policy.GetName())

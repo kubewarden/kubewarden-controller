@@ -179,28 +179,28 @@ const (
 )
 
 // +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
-type ClusterAdmissionPolicyStatusEnum string
+type PolicyStatusEnum string
 
 const (
-	// ClusterAdmissionPolicyStatusUnscheduled is a transient state that will continue
+	// PolicyStatusUnscheduled is a transient state that will continue
 	// to unschedulable or pending. This is the default state.
-	ClusterAdmissionPolicyStatusUnscheduled ClusterAdmissionPolicyStatusEnum = "unscheduled"
-	// ClusterAdmissionPolicyStatusUnschedulable informs that policy server where to
+	PolicyStatusUnscheduled PolicyStatusEnum = "unscheduled"
+	// PolicyStatusUnschedulable informs that policy server where to
 	// schedule the policy is not available
-	ClusterAdmissionPolicyStatusUnschedulable ClusterAdmissionPolicyStatusEnum = "unschedulable"
-	// ClusterAdmissionPolicyStatusPending informs that the policy server exists,
+	PolicyStatusUnschedulable PolicyStatusEnum = "unschedulable"
+	// PolicyStatusPending informs that the policy server exists,
 	// we are reconciling all resources
-	ClusterAdmissionPolicyStatusPending ClusterAdmissionPolicyStatusEnum = "pending"
-	// ClusterAdmissionPolicyStatusActive informs that the k8s API server should be
+	PolicyStatusPending PolicyStatusEnum = "pending"
+	// PolicyStatusActive informs that the k8s API server should be
 	// forwarding admission review objects to the policy
-	ClusterAdmissionPolicyStatusActive ClusterAdmissionPolicyStatusEnum = "active"
+	PolicyStatusActive PolicyStatusEnum = "active"
 )
 
-// ClusterAdmissionPolicyStatus defines the observed state of ClusterAdmissionPolicy
-type ClusterAdmissionPolicyStatus struct {
+// PolicyStatus defines the observed state of ClusterAdmissionPolicy and AdmissionPolicy
+type PolicyStatus struct {
 	// PolicyStatus represents whether this ClusterAdmissionPolicy is unscheduled,
 	// unschedulable, pending, or active.
-	PolicyStatus ClusterAdmissionPolicyStatusEnum `json:"policyStatus"`
+	PolicyStatus PolicyStatusEnum `json:"policyStatus"`
 	// Conditions represent the observed conditions of the
 	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
 	// are: "PolicyServerSecretReconciled",
@@ -227,8 +227,8 @@ type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterAdmissionPolicySpec   `json:"spec,omitempty"`
-	Status ClusterAdmissionPolicyStatus `json:"status,omitempty"`
+	Spec   ClusterAdmissionPolicySpec `json:"spec,omitempty"`
+	Status PolicyStatus               `json:"status,omitempty"`
 }
 
 // ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
@@ -243,7 +243,7 @@ func init() {
 	SchemeBuilder.Register(&ClusterAdmissionPolicy{}, &ClusterAdmissionPolicyList{})
 }
 
-func (p *ClusterAdmissionPolicy) SetStatus(status ClusterAdmissionPolicyStatusEnum) {
+func (p *ClusterAdmissionPolicy) SetStatus(status PolicyStatusEnum) {
 	p.Status.PolicyStatus = status
 }
 
@@ -263,7 +263,7 @@ func (p *ClusterAdmissionPolicy) GetSettings() runtime.RawExtension {
 	return p.Spec.Settings
 }
 
-func (p *ClusterAdmissionPolicy) GetStatus() *ClusterAdmissionPolicyStatus {
+func (p *ClusterAdmissionPolicy) GetStatus() *PolicyStatus {
 	return &p.Status
 }
 

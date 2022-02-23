@@ -236,8 +236,8 @@ spec:
             - rules
             type: object
           status:
-            description: ClusterAdmissionPolicyStatus defines the observed state of
-              ClusterAdmissionPolicy
+            description: PolicyStatus defines the observed state of ClusterAdmissionPolicy
+              and AdmissionPolicy
             properties:
               conditions:
                 description: 'Conditions represent the observed conditions of the
