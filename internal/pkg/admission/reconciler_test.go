@@ -2,11 +2,12 @@ package admission
 
 import (
 	"context"
+	"testing"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -99,15 +100,15 @@ func TestGetPolicies(t *testing.T) {
 	for _, test := range tests {
 		ttest := test // ensure ttest is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			reconciler := newReconciler(test.policies)
+			reconciler := newReconciler(ttest.policies)
 			policies, err := reconciler.getPolicies(context.Background(), &policiesv1alpha2.PolicyServer{
 				ObjectMeta: metav1.ObjectMeta{Name: policyServer},
 			})
 			if err != nil {
 				t.Errorf("received unexpected error %s", err.Error())
 			}
-			if len(policies) != test.expect {
-				t.Errorf("expected %d, but got %d", test.expect, len(policies))
+			if len(policies) != ttest.expect {
+				t.Errorf("expected %b, but got %b", ttest.expect, len(policies))
 			}
 		})
 	}

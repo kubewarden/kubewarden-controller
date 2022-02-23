@@ -19,7 +19,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // +kubebuilder:validation:Enum=protect;monitor
@@ -243,66 +242,66 @@ func init() {
 	SchemeBuilder.Register(&ClusterAdmissionPolicy{}, &ClusterAdmissionPolicyList{})
 }
 
-func (p *ClusterAdmissionPolicy) SetStatus(status PolicyStatusEnum) {
-	p.Status.PolicyStatus = status
+func (r *ClusterAdmissionPolicy) SetStatus(status PolicyStatusEnum) {
+	r.Status.PolicyStatus = status
 }
 
-func (p *ClusterAdmissionPolicy) GetPolicyMode() PolicyMode {
-	return p.Spec.Mode
+func (r *ClusterAdmissionPolicy) GetPolicyMode() PolicyMode {
+	return r.Spec.Mode
 }
 
-func (p *ClusterAdmissionPolicy) GetModule() string {
-	return p.Spec.Module
+func (r *ClusterAdmissionPolicy) GetModule() string {
+	return r.Spec.Module
 }
 
-func (p *ClusterAdmissionPolicy) IsMutating() bool {
-	return p.Spec.Mutating
+func (r *ClusterAdmissionPolicy) IsMutating() bool {
+	return r.Spec.Mutating
 }
 
-func (p *ClusterAdmissionPolicy) GetSettings() runtime.RawExtension {
-	return p.Spec.Settings
+func (r *ClusterAdmissionPolicy) GetSettings() runtime.RawExtension {
+	return r.Spec.Settings
 }
 
-func (p *ClusterAdmissionPolicy) GetStatus() *PolicyStatus {
-	return &p.Status
+func (r *ClusterAdmissionPolicy) GetStatus() *PolicyStatus {
+	return &r.Status
 }
 
-func (p *ClusterAdmissionPolicy) DeepCopyPolicy() client.Object {
-	return p.DeepCopy()
+func (r *ClusterAdmissionPolicy) CopyInto(policy *Policy) {
+	*policy = r.DeepCopy()
 }
 
-func (p *ClusterAdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectClass {
-	return p.Spec.SideEffects
+func (r *ClusterAdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectClass {
+	return r.Spec.SideEffects
 }
 
-func (p *ClusterAdmissionPolicy) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
-	return p.Spec.FailurePolicy
+func (r *ClusterAdmissionPolicy) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
+	return r.Spec.FailurePolicy
 }
 
-func (p *ClusterAdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
-	return p.Spec.MatchPolicy
+func (r *ClusterAdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
+	return r.Spec.MatchPolicy
 }
 
-func (p *ClusterAdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
-	return p.Spec.Rules
+func (r *ClusterAdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
+	return r.Spec.Rules
 }
 
-func (p *ClusterAdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
-	return p.Spec.NamespaceSelector
+func (r *ClusterAdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
+	return r.Spec.NamespaceSelector
 }
 
-func (p *ClusterAdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
-	return p.Spec.ObjectSelector
+func (r *ClusterAdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
+	return r.Spec.ObjectSelector
 }
 
-func (p *ClusterAdmissionPolicy) GetTimeoutSeconds() *int32 {
-	return p.Spec.TimeoutSeconds
+func (r *ClusterAdmissionPolicy) GetTimeoutSeconds() *int32 {
+	return r.Spec.TimeoutSeconds
 }
 
-func (p *ClusterAdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
-	return &p.ObjectMeta
+func (r *ClusterAdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
+	return &r.ObjectMeta
 }
 
-func (p *ClusterAdmissionPolicy) GetPolicyServer() string {
-	return p.Spec.PolicyServer
+func (r *ClusterAdmissionPolicy) GetPolicyServer() string {
+	return r.Spec.PolicyServer
 }

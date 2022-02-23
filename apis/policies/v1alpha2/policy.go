@@ -16,7 +16,7 @@ type Policy interface {
 	GetSettings() runtime.RawExtension
 	GetStatus() *PolicyStatus
 	SetStatus(status PolicyStatusEnum)
-	DeepCopyPolicy() client.Object
+	CopyInto(object *Policy)
 	GetSideEffects() *admissionregistrationv1.SideEffectClass
 	GetRules() []admissionregistrationv1.RuleWithOperations
 	GetFailurePolicy() *admissionregistrationv1.FailurePolicyType

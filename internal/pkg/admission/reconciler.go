@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -291,7 +291,7 @@ func (r *Reconciler) enablePolicyWebhook(
 		return err
 	}
 	if !policyServerReady {
-		return errors.New("Policy server not yet ready")
+		return errors.New("policy server not yet ready")
 	}
 
 	for _, policy := range policies {
@@ -347,9 +347,11 @@ func (r *Reconciler) getPolicies(ctx context.Context, policyServer *policiesv1al
 
 	policies := make([]policiesv1alpha2.Policy, 0)
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
+		clusterAdmissionPolicy := clusterAdmissionPolicy
 		policies = append(policies, &clusterAdmissionPolicy)
 	}
 	for _, admissionPolicy := range admissionPolicies.Items {
+		admissionPolicy := admissionPolicy
 		policies = append(policies, &admissionPolicy)
 	}
 
@@ -383,14 +385,14 @@ func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context,
 						policy.GetName(), err)
 				}
 			}
-			patch := policy.DeepCopyPolicy()
+			var patch policiesv1alpha2.Policy
+			policy.CopyInto(&patch)
 			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 			err := r.Client.Patch(ctx, patch, client.MergeFrom(policy))
 			if err != nil && !apierrors.IsNotFound(err) {
 				return fmt.Errorf("failed removing finalizers of ClusterAdmissionPolicy %s: %w",
 					policy.GetName(), err)
 			}
-
 		}
 	}
 	return nil

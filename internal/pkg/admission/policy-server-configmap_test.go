@@ -2,10 +2,12 @@ package admission
 
 import (
 	"encoding/json"
-	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
-	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
 
 func TestArePoliciesEqual(t *testing.T) {

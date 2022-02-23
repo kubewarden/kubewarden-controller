@@ -130,15 +130,10 @@ func (r *PolicyServerReconciler) updatePolicyServerStatus(
 	)
 }
 
-func convertIntoPolicy(object client.Object) (policiesv1alpha2.Policy, bool) {
-	policy, ok := object.(policiesv1alpha2.Policy)
-	return policy, ok
-}
-
 // This is a function called when we detect some  update event in a
 // ClusterAdmissionPolicy
 func watchClusterAdmissionPolicy(reconciler *PolicyServerReconciler, object client.Object) reconcile.Request {
-	policy, ok := convertIntoPolicy(object)
+	policy, ok := object.(policiesv1alpha2.Policy)
 	if !ok {
 		reconciler.Log.Error(fmt.Errorf("object is not type of ClusterAdmissionPolicy: %#v", policy), "")
 		return ctrl.Request{}
@@ -167,7 +162,8 @@ func watchClusterAdmissionPolicy(reconciler *PolicyServerReconciler, object clie
 // This is a function called when we detect some create or update event in a
 // ClusterAdmissionPolicy
 func setDefaultClusterAdmissionPolicyStatus(reconciler *PolicyServerReconciler, object client.Object) reconcile.Request {
-	policy, ok := convertIntoPolicy(object)
+	policy, ok := object.(policiesv1alpha2.Policy)
+
 	if !ok {
 		reconciler.Log.Error(fmt.Errorf("object is not type of ClusterAdmissionPolicy: %#v", policy), "")
 		return ctrl.Request{}
@@ -191,6 +187,9 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}
 		return []string{policy.Spec.PolicyServer}
 	})
+	if err != nil {
+		return fmt.Errorf("failed enrolling controller with manager: %w", err)
+	}
 	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.AdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
 		policy, ok := object.(*policiesv1alpha2.AdmissionPolicy)
 		if !ok {
@@ -242,7 +241,8 @@ func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy policiesv1alpha2
 	if policy.GetDeletionTimestamp() != nil {
 		// policy not associated with PolicyServer, and scheduled
 		// for deletion, remove finalizer:
-		patch := policy.DeepCopyPolicy()
+		var patch policiesv1alpha2.Policy
+		policy.CopyInto(&patch)
 		controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 		err := r.Client.Patch(context.Background(), patch, client.MergeFrom(policy))
 		if err != nil {
@@ -269,7 +269,7 @@ func (r *PolicyServerReconciler) watchUpdateFunc(e event.UpdateEvent, queue work
 }
 
 func (r *PolicyServerReconciler) watchDeleteFunc(e event.DeleteEvent, queue workqueue.RateLimitingInterface) {
-	policy, ok := convertIntoPolicy(e.Object)
+	policy, ok := e.Object.(policiesv1alpha2.Policy)
 	if ok {
 		queue.Add(ctrl.Request{
 			NamespacedName: client.ObjectKey{
