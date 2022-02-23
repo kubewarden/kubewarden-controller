@@ -7,6 +7,7 @@ repo: github.com/kubewarden/kubewarden-controller
 resources:
 - api:
     crdVersion: v1
+    namespaced: false
   controller: true
   domain: kubewarden.io
   group: policies
@@ -18,6 +19,7 @@ resources:
     webhookVersion: v1
 - api:
     crdVersion: v1
+    namespaced: false
   domain: kubewarden.io
   group: policies
   kind: ClusterAdmissionPolicy
