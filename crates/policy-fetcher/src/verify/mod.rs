@@ -4,6 +4,7 @@ use crate::{policy::Policy, registry::config::DockerConfig};
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign;
+use sigstore::cosign::signature_layers::SignatureLayer;
 use sigstore::cosign::verification_constraint::VerificationConstraintVec;
 use sigstore::cosign::ClientBuilder;
 use sigstore::cosign::CosignCapabilities;
@@ -258,4 +259,217 @@ fn verify_signatures_against_settings(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config::{AnyOf, Signature, Subject, VerificationSettings};
+    use cosign::signature_layers::CertificateSubject;
+    use sigstore::{cosign::signature_layers::CertificateSignature, simple_signing::SimpleSigning};
+
+    fn build_signature_layers_keyless(
+        issuer: Option<String>,
+        subject: CertificateSubject,
+    ) -> SignatureLayer {
+        let pub_key = r#"-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELKhD7F5OKy77Z582Y6h0u1J3GNA+
+kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
+-----END PUBLIC KEY-----"#;
+        let verification_key = sigstore::crypto::CosignVerificationKey::from_pem(
+            pub_key.as_bytes(),
+            sigstore::crypto::SignatureDigestAlgorithm::default(),
+        )
+        .expect("Cannot create CosignVerificationKey");
+
+        let raw_data = r#"{"critical":{"identity":{"docker-reference":"registry-testing.svc.lan/kubewarden/disallow-service-nodeport"},"image":{"docker-manifest-digest":"sha256:5f481572d088dc4023afb35fced9530ced3d9b03bf7299c6f492163cb9f0452e"},"type":"cosign container image signature"},"optional":null}"#;
+        let raw_data = raw_data.as_bytes().to_vec();
+        let signature = "MEUCIGqWScz7s9aP2sGXNFKeqivw3B6kPRs56AITIHnvd5igAiEA1kzbaV2Y5yPE81EN92NUFOl31LLJSvwsjFQ07m2XqaA=".to_string();
+
+        let simple_signing: SimpleSigning =
+            serde_json::from_slice(&raw_data).expect("Cannot deserialize SimpleSigning");
+
+        let certificate_signature = Some(CertificateSignature {
+            verification_key,
+            issuer,
+            subject,
+        });
+
+        SignatureLayer {
+            simple_signing,
+            oci_digest: "not relevant".to_string(),
+            certificate_signature,
+            bundle: None,
+            signature,
+            raw_data,
+        }
+    }
+
+    fn generic_issuer(issuer: &str, subject_str: &str) -> config::Signature {
+        let subject = Subject::Equal(subject_str.to_string());
+        Signature::GenericIssuer {
+            issuer: issuer.to_string(),
+            subject,
+            annotations: None,
+        }
+    }
+
+    fn signature_layer(issuer: &str, subject_str: &str) -> SignatureLayer {
+        let certificate_subject = CertificateSubject::Email(subject_str.to_string());
+        build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject)
+    }
+
+    #[test]
+    fn test_verify_settings() {
+        // build verification config:
+        let signatures_all_of: Vec<Signature> = vec![generic_issuer(
+            "https://github.com/login/oauth",
+            "user1@provider.com",
+        )];
+        let signatures_any_of: Vec<Signature> = vec![generic_issuer(
+            "https://github.com/login/oauth",
+            "user2@provider.com",
+        )];
+        let verification_settings: VerificationSettings = VerificationSettings {
+            api_version: "v1".to_string(),
+            all_of: Some(signatures_all_of),
+            any_of: Some(AnyOf {
+                minimum_matches: 1,
+                signatures: signatures_any_of,
+            }),
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![
+            signature_layer("https://github.com/login/oauth", "user1@provider.com"),
+            signature_layer("https://github.com/login/oauth", "user2@provider.com"),
+        ];
+
+        assert!(
+            verify_signatures_against_settings(&verification_settings, &trusted_layers).is_ok()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Image verification failed: no signatures to verify")]
+    fn test_verify_settings_missing_both_any_of_all_of() {
+        // build verification config:
+        let verification_settings: VerificationSettings = VerificationSettings {
+            api_version: "v1".to_string(),
+            all_of: None,
+            any_of: None,
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![signature_layer(
+            "https://github.com/login/oauth",
+            "user-unrelated@provider.com",
+        )];
+
+        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Image verification failed: No Signature Layer passed verification")]
+    fn test_verify_settings_not_maching_all_of() {
+        // build verification config:
+        let signatures_all_of: Vec<Signature> = vec![generic_issuer(
+            "https://github.com/login/oauth",
+            "user1@provider.com",
+        )];
+        let verification_settings: VerificationSettings = VerificationSettings {
+            api_version: "v1".to_string(),
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![signature_layer(
+            "https://github.com/login/oauth",
+            "user-unrelated@provider.com",
+        )];
+
+        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Image verification failed: missing signatures")]
+    fn test_verify_settings_missing_signatures_all_of() {
+        // build verification config:
+        let signatures_all_of: Vec<Signature> = vec![
+            generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
+        ];
+        let verification_settings: VerificationSettings = VerificationSettings {
+            api_version: "v1".to_string(),
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![
+            signature_layer("https://github.com/login/oauth", "user1@provider.com"),
+            signature_layer("https://github.com/login/oauth", "user2@provider.com"),
+        ];
+
+        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Image verification failed: minimum number of signatures not reached"
+    )]
+    fn test_verify_settings_missing_signatures_any_of() {
+        // build verification config:
+        let signatures_any_of: Vec<Signature> = vec![
+            generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
+        ];
+        let verification_settings: VerificationSettings = VerificationSettings {
+            api_version: "v1".to_string(),
+            all_of: None,
+            any_of: Some(AnyOf {
+                minimum_matches: 2,
+                signatures: signatures_any_of,
+            }),
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![signature_layer(
+            "https://github.com/login/oauth",
+            "user1@provider.com",
+        )];
+
+        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    fn test_verify_settings_quorum_signatures_any_of() {
+        // build verification config:
+        let signatures_any_of: Vec<Signature> = vec![
+            generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
+        ];
+        let verification_settings: VerificationSettings = VerificationSettings {
+            api_version: "v1".to_string(),
+            all_of: None,
+            any_of: Some(AnyOf {
+                minimum_matches: 2,
+                signatures: signatures_any_of,
+            }),
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![
+            signature_layer("https://github.com/login/oauth", "user1@provider.com"),
+            signature_layer("https://github.com/login/oauth", "user2@provider.com"),
+        ];
+
+        assert!(
+            verify_signatures_against_settings(&verification_settings, &trusted_layers).is_ok()
+        );
+    }
 }
