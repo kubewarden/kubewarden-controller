@@ -114,6 +114,11 @@ where
 pub fn read_verification_file(path: &Path) -> Result<VerificationSettings> {
     let settings_file = File::open(path)?;
     let vs: VerificationSettings = serde_yaml::from_reader(&settings_file)?;
+    if vs.all_of.is_none() && vs.any_of.is_none() {
+        return Err(anyhow!(
+            "config is missing signatures in both allOf and anyOff list"
+        ));
+    }
     Ok(vs)
 }
 
