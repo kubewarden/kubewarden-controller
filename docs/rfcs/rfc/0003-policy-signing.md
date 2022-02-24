@@ -216,16 +216,20 @@ anyOf: # at least `anyOf.minimumMatches` are required to match
     key: .... # mandatory
   - kind: genericIssuer
     isser: https://github.com/login/oauth
-    subjectEqual: alice@example.com
+    subject:
+      equal: alice@example.com
   - kind: genericIssuer
     issuer: https://token.actions.githubusercontent.com
-    subjectEqual: https://github.com/flavio/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main
+    subject:
+      equal: https://github.com/flavio/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main
   - kind: genericIssuer
     issuer: https://token.actions.githubusercontent.com
-    subjectUrlPrefix: https://github.com/flavio/
+    subject:
+      urlPrefix: https://github.com/flavio/
   - kind: genericIssuer
     issuer: https://token.actions.githubusercontent.com
-    subjectUrlPrefix: https://github.com/kubewarden # <- it will be post-fixed with `/` for security reasons
+    subject:
+      urlPrefix: https://github.com/kubewarden # <- it will be post-fixed with `/` for security reasons
   - kind: githubAction
     owner: flavio   # mandatory
     repo: policy1 # optional
@@ -298,9 +302,9 @@ The `SignatureRequirement` then performs a comparison operation
 abainst the `Subject` attribute of the certificate issued by Fulcio's PKI.
 These are the constrains we plan to offer since the first release:
 
-  * `subjectEqual`: the `Subject` inside of the signature must be
+  * `equal`: the `Subject` inside of the signature must be
     equal to the one specified inside of the `SignatureRequirement`
-  * `subjectUrlPrefix`: the value provided inside of the `SignatureRequirement`
+  * `urlPrefix`: the value provided inside of the `SignatureRequirement`
     is terminated with a `/` char for security reasons, unless it already ends with that. Then this
     value must match with the prefix of the signature's `Subject`.
 
@@ -311,7 +315,8 @@ Performing a strict check of the `Subject`:
 ```yaml
 - kind: genericIssuer
   isser: https://github.com/login/oauth
-  subjectEqual: alice@example.com
+  subject:
+    equal: alice@example.com
 
 ```
 
@@ -338,10 +343,11 @@ Performing a URL check:
 ```yaml
 - kind: genericIssuer
   issuer: https://token.actions.githubusercontent.com
-  subjectUrlPrefix: https://github.com/flavio
+  subject:
+    urlPrefix: https://github.com/flavio
 ```
 
-The string inside of `subjectUrlPrefix` is automatically suffixed with the `/`
+The string inside of `subject.urlPrefix` is automatically suffixed with the `/`
 char, because of that it becomes: `https://github.com/flavio/`.
 
 The following signature is going to satisfy the `SignatureRequirement`
@@ -385,7 +391,7 @@ A lot of users are relying on GitHub Actions to implement their CD pipelines.
 We expect many policies to be signed using the seamless integration that GitHub
 Actions offer.
 
-While these signatures can be verified with the `genericIssuer` and the `subjectUrlPrefix`
+While these signatures can be verified with the `genericIssuer` and the `subject.urlPrefix`
 constrain, we want to offer a better user experience.
 
 Because of that, we provide the `SignatureRequirement` with type `githubAction`:
@@ -469,7 +475,8 @@ anyOf:
     key: ....
   - kind: genericIssuer
     isser: https://github.com/login/oauth
-    subjectEqual: alice@example.com
+    subject:
+      equal: alice@example.com
 ```
 
 With this configuration, all the policies must be satisfy 2 or more `SignatureRequirement`.
@@ -506,7 +513,8 @@ anyOf:
     key: ....
   - kind: genericIssuer
     isser: https://github.com/login/oauth
-    subjectEqual: alice@example.com
+    subject:
+      equal: alice@example.com
 ```
 
 All the policies must be signed by a GitHub Action that was executed inside of the
