@@ -276,8 +276,5 @@ func (r *PolicyServerReconciler) watchDeleteFunc(e event.DeleteEvent, queue work
 				Name: policy.GetPolicyServer(),
 			},
 		})
-	} else {
-		r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
-		queue.Add(ctrl.Request{})
 	}
 }
