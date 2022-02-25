@@ -79,12 +79,12 @@ func TestCreatePoliciesMap(t *testing.T) {
 		t.Error("Policy map must has 2 entries")
 	}
 	expectedPolicies := make(map[string]policyServerConfigEntry)
-	expectedPolicies[validationPolicy.Name] = policyServerConfigEntry{
+	expectedPolicies[validationPolicy.GetUniqueName()] = policyServerConfigEntry{
 		URL:             "registry://blabla/validation-policy:latest",
 		AllowedToMutate: false,
 		Settings:        runtime.RawExtension{},
 	}
-	expectedPolicies[mutatingPolicy.Name] = policyServerConfigEntry{
+	expectedPolicies[mutatingPolicy.GetUniqueName()] = policyServerConfigEntry{
 		URL:             "registry://blabla/mutation-policy:latest",
 		AllowedToMutate: true,
 		Settings:        runtime.RawExtension{},

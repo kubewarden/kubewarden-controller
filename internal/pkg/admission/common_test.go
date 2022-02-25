@@ -13,25 +13,26 @@ import (
 
 func createReconciler() (Reconciler, policiesv1alpha2.ClusterAdmissionPolicy, policiesv1alpha2.ClusterAdmissionPolicy) {
 	admissionPolicyName := "admissionPolicy"
-	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: admissionPolicyName,
-		},
-	}
 	validationPolicy := policiesv1alpha2.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: admissionPolicyName, Finalizers: []string{"kubewarden"}},
 		Spec:       policiesv1alpha2.ClusterAdmissionPolicySpec{Mutating: false, Module: "registry://blabla/validation-policy:latest"},
 	}
-	mutatingPolicyName := "mutatingPolicy"
-	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
+	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mutatingPolicyName,
+			Name: validationPolicy.GetUniqueName(),
 		},
 	}
+	mutatingPolicyName := "mutatingPolicy"
 	mutatingPolicy := policiesv1alpha2.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: mutatingPolicyName, Finalizers: []string{"kubewarden"}},
 		Spec:       policiesv1alpha2.ClusterAdmissionPolicySpec{Mutating: true, Module: "registry://blabla/mutation-policy:latest"},
 	}
+	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: mutatingPolicy.GetUniqueName(),
+		},
+	}
+
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}, &validationPolicy)
 	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, mutatingWebhook, &validationPolicy, &mutatingPolicy).Build()
