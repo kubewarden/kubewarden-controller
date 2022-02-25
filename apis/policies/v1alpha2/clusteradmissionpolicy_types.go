@@ -307,5 +307,5 @@ func (r *ClusterAdmissionPolicy) GetPolicyServer() string {
 }
 
 func (r *ClusterAdmissionPolicy) GetUniqueName() string {
-	return r.Name
+	return "clusterwide-" + r.Name
 }

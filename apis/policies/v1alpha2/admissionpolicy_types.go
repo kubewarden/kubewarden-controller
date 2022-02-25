@@ -225,5 +225,5 @@ func (r *AdmissionPolicy) GetPolicyServer() string {
 }
 
 func (r *AdmissionPolicy) GetUniqueName() string {
-	return r.Namespace + "-" + r.Name
+	return "namespaced-" + r.Namespace + "-" + r.Name
 }
