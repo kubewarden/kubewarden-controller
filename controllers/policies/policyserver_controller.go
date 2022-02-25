@@ -161,20 +161,12 @@ func watchClusterAdmissionPolicy(reconciler *PolicyServerReconciler, object clie
 
 // This is a function called when we detect some create or update event in a
 // ClusterAdmissionPolicy
-func setDefaultClusterAdmissionPolicyStatus(reconciler *PolicyServerReconciler, object client.Object) reconcile.Request {
-	policy, ok := object.(policiesv1alpha2.Policy)
-
-	if !ok {
-		reconciler.Log.Error(fmt.Errorf("object is not type of ClusterAdmissionPolicy: %#v", policy), "")
-		return ctrl.Request{}
-	}
-
+func (r *PolicyServerReconciler) setDefaultClusterAdmissionPolicyStatus(policy policiesv1alpha2.Policy) {
 	policy.SetStatus(policiesv1alpha2.PolicyStatusUnscheduled)
-	err := reconciler.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
+	err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
-		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetUniqueName())
+		r.Log.Error(err, "cannot update status of policy "+policy.GetUniqueName())
 	}
-	return ctrl.Request{NamespacedName: client.ObjectKey{Name: policy.GetPolicyServer()}}
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -261,7 +253,13 @@ func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy policiesv1alpha2
 }
 
 func (r *PolicyServerReconciler) watchCreateFunc(e event.CreateEvent, queue workqueue.RateLimitingInterface) {
-	queue.Add(setDefaultClusterAdmissionPolicyStatus(r, e.Object))
+	policy, ok := e.Object.(policiesv1alpha2.Policy)
+	if !ok {
+		r.Log.Error(fmt.Errorf("object is not type of Policy: %#v", policy), "")
+		return
+	}
+	r.setDefaultClusterAdmissionPolicyStatus(policy)
+	queue.Add(ctrl.Request{NamespacedName: client.ObjectKey{Name: policy.GetPolicyServer()}})
 }
 
 func (r *PolicyServerReconciler) watchUpdateFunc(e event.UpdateEvent, queue workqueue.RateLimitingInterface) {
