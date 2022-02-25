@@ -26,4 +26,5 @@ type Policy interface {
 	GetTimeoutSeconds() *int32
 	GetObjectMeta() *metav1.ObjectMeta
 	GetPolicyServer() string
+	GetUniqueName() string
 }

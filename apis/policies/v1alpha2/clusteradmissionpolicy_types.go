@@ -305,3 +305,7 @@ func (r *ClusterAdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
 func (r *ClusterAdmissionPolicy) GetPolicyServer() string {
 	return r.Spec.PolicyServer
 }
+
+func (r *ClusterAdmissionPolicy) GetUniqueName() string {
+	return r.Name
+}

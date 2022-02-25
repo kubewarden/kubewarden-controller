@@ -164,7 +164,7 @@ func (r *Reconciler) createPoliciesMap(policies []policiesv1alpha2.Policy) map[s
 	policiesMap := make(map[string]policyServerConfigEntry)
 
 	for _, policy := range policies {
-		policiesMap[policy.GetName()] = policyServerConfigEntry{
+		policiesMap[policy.GetUniqueName()] = policyServerConfigEntry{
 			URL:             policy.GetModule(),
 			PolicyMode:      string(policy.GetPolicyMode()),
 			AllowedToMutate: policy.IsMutating(),

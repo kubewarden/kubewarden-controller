@@ -223,3 +223,7 @@ func (r *AdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
 func (r *AdmissionPolicy) GetPolicyServer() string {
 	return r.Spec.PolicyServer
 }
+
+func (r *AdmissionPolicy) GetUniqueName() string {
+	return r.Namespace + "-" + r.Name
+}

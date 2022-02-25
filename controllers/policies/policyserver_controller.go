@@ -142,7 +142,7 @@ func watchClusterAdmissionPolicy(reconciler *PolicyServerReconciler, object clie
 	var policyServers policiesv1alpha2.PolicyServerList
 	err := reconciler.List(context.Background(), &policyServers, client.MatchingFields{constants.PolicyServerIndexName: policy.GetPolicyServer()})
 	if err != nil {
-		reconciler.Log.Error(err, "cannot list PolicyServers corresponding to policy "+policy.GetName())
+		reconciler.Log.Error(err, "cannot list PolicyServers corresponding to policy "+policy.GetUniqueName())
 		return ctrl.Request{}
 	}
 	if len(policyServers.Items) == 0 {
@@ -152,10 +152,10 @@ func watchClusterAdmissionPolicy(reconciler *PolicyServerReconciler, object clie
 	policy.SetStatus(policiesv1alpha2.PolicyStatusPending)
 	err = reconciler.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
-		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetName())
+		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetUniqueName())
 		return ctrl.Request{}
 	}
-	reconciler.Log.Info("policy " + policy.GetName() + " pending")
+	reconciler.Log.Info("policy " + policy.GetUniqueName() + " pending")
 	return ctrl.Request{NamespacedName: client.ObjectKey{Name: policy.GetPolicyServer()}}
 }
 
@@ -172,7 +172,7 @@ func setDefaultClusterAdmissionPolicyStatus(reconciler *PolicyServerReconciler, 
 	policy.SetStatus(policiesv1alpha2.PolicyStatusUnscheduled)
 	err := reconciler.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
-		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetName())
+		reconciler.Log.Error(err, "cannot update status of policy "+policy.GetUniqueName())
 	}
 	return ctrl.Request{NamespacedName: client.ObjectKey{Name: policy.GetPolicyServer()}}
 }
@@ -246,7 +246,7 @@ func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy policiesv1alpha2
 		controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 		err := r.Client.Patch(context.Background(), patch, client.MergeFrom(policy))
 		if err != nil {
-			r.Log.Error(err, "cannot remove finalizer from policy "+policy.GetName())
+			r.Log.Error(err, "cannot remove finalizer from policy "+policy.GetUniqueName())
 		}
 		return ctrl.Request{}
 	}
@@ -254,9 +254,9 @@ func (r *PolicyServerReconciler) reconcileOrphanPolicies(policy policiesv1alpha2
 	policy.SetStatus(policiesv1alpha2.PolicyStatusUnschedulable)
 	err := r.Reconciler.UpdateAdmissionPolicyStatus(context.Background(), policy)
 	if err != nil {
-		r.Log.Error(err, "cannot update status of policy "+policy.GetName())
+		r.Log.Error(err, "cannot update status of policy "+policy.GetUniqueName())
 	}
-	r.Log.Info("policy " + policy.GetName() + " cannot be scheduled: no matching PolicyServer")
+	r.Log.Info("policy " + policy.GetUniqueName() + " cannot be scheduled: no matching PolicyServer")
 	return ctrl.Request{}
 }
 

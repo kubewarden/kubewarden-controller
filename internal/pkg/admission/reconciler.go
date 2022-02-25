@@ -270,8 +270,8 @@ func (r *Reconciler) DeleteAllClusterAdmissionPolicies(ctx context.Context, poli
 		// will not delete it because it has a finalizer. It will add a DeletionTimestamp
 		err := r.Client.Delete(ctx, policy)
 		if err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed deleting pending ClusterAdmissionPolicy %s: %w",
-				policy.GetName(), err)
+			return fmt.Errorf("failed deleting pending Policy %s: %w",
+				policy.GetUniqueName(), err)
 		}
 	}
 	err = r.deleteWebhooksClusterAdmissionPolicies(ctx, policies)
@@ -325,7 +325,7 @@ func (r *Reconciler) enablePolicyWebhook(
 		if err := r.UpdateAdmissionPolicyStatus(ctx, policy); err != nil {
 			return err
 		}
-		r.Log.Info("Policy " + policy.GetName() + " active")
+		r.Log.Info("Policy " + policy.GetUniqueName() + " active")
 	}
 
 	return nil
@@ -365,24 +365,24 @@ func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context,
 			if policy.IsMutating() {
 				mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: policy.GetName(),
+						Name: policy.GetUniqueName(),
 					},
 				}
 				err := r.Client.Delete(ctx, mutatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed deleting webhook of ClusterAdmissionPolicy %s: %w",
-						policy.GetName(), err)
+						policy.GetUniqueName(), err)
 				}
 			} else {
 				validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: policy.GetName(),
+						Name: policy.GetUniqueName(),
 					},
 				}
 				err := r.Client.Delete(ctx, validatingWebhook)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return fmt.Errorf("failed deleting webhook of ClusterAdmissionPolicy %s: %w",
-						policy.GetName(), err)
+					return fmt.Errorf("failed deleting webhook of Policy %s: %w",
+						policy.GetUniqueName(), err)
 				}
 			}
 			var patch policiesv1alpha2.Policy
@@ -390,8 +390,8 @@ func (r *Reconciler) deleteWebhooksClusterAdmissionPolicies(ctx context.Context,
 			controllerutil.RemoveFinalizer(patch, constants.KubewardenFinalizer)
 			err := r.Client.Patch(ctx, patch, client.MergeFrom(policy))
 			if err != nil && !apierrors.IsNotFound(err) {
-				return fmt.Errorf("failed removing finalizers of ClusterAdmissionPolicy %s: %w",
-					policy.GetName(), err)
+				return fmt.Errorf("failed removing finalizers of Policy %s: %w",
+					policy.GetUniqueName(), err)
 			}
 		}
 	}

@@ -41,7 +41,7 @@ func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
 	var originalWebhook admissionregistrationv1.MutatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{
-		Name: policy.GetName(),
+		Name: policy.GetUniqueName(),
 	}, &originalWebhook)
 	if err != nil && apierrors.IsNotFound(err) {
 		return fmt.Errorf("cannot retrieve mutating webhook: %w", err)
@@ -63,7 +63,7 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 	policy v1alpha2.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) *admissionregistrationv1.MutatingWebhookConfiguration {
-	admissionPath := filepath.Join("/validate", policy.GetName())
+	admissionPath := filepath.Join("/validate", policy.GetUniqueName())
 	admissionPort := int32(constants.PolicyServerPort)
 
 	service := admissionregistrationv1.ServiceReference{
@@ -80,14 +80,14 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 	}
 	return &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: policy.GetName(),
+			Name: policy.GetUniqueName(),
 			Labels: map[string]string{
 				"kubewarden": "true",
 			},
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
 			{
-				Name: fmt.Sprintf("%s.kubewarden.admission", policy.GetName()),
+				Name: fmt.Sprintf("%s.kubewarden.admission", policy.GetUniqueName()),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
 					CABundle: admissionSecret.Data[constants.PolicyServerCARootPemName],

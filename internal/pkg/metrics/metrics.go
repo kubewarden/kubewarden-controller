@@ -55,7 +55,7 @@ func RecordPolicyCount(policy v1alpha2.Policy) {
 		failurePolicy = string(*policy.GetFailurePolicy())
 	}
 	commonLabels := []attribute.KeyValue{
-		attribute.String("name", policy.GetName()),
+		attribute.String("name", policy.GetUniqueName()),
 		attribute.String("policy_server", policy.GetPolicyServer()),
 		attribute.String("module", policy.GetModule()),
 		attribute.Bool("mutating", policy.IsMutating()),
