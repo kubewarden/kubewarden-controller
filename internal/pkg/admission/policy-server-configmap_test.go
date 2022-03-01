@@ -5,8 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
 
 func TestArePoliciesEqual(t *testing.T) {
@@ -66,24 +67,24 @@ func TestCreatePoliciesMap(t *testing.T) {
 	reconciler, validationPolicy, mutatingPolicy := createReconciler()
 
 	var policies map[string]policyServerConfigEntry
-	clusterAdmissionPolicies := policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{}}
-	policies = reconciler.createPoliciesMap(&clusterAdmissionPolicies)
+	clusterAdmissionPolicies := []v1alpha2.Policy{}
+	policies = reconciler.createPoliciesMap(clusterAdmissionPolicies)
 	if len(policies) != 0 {
 		t.Error("Empty ClusterAdmissionPolicyList should generate empty policies map")
 	}
 
-	clusterAdmissionPolicies = policiesv1alpha2.ClusterAdmissionPolicyList{Items: []policiesv1alpha2.ClusterAdmissionPolicy{validationPolicy, mutatingPolicy}}
-	policies = reconciler.createPoliciesMap(&clusterAdmissionPolicies)
+	clusterAdmissionPolicies = []v1alpha2.Policy{&validationPolicy, &mutatingPolicy}
+	policies = reconciler.createPoliciesMap(clusterAdmissionPolicies)
 	if len(policies) != 2 {
 		t.Error("Policy map must has 2 entries")
 	}
 	expectedPolicies := make(map[string]policyServerConfigEntry)
-	expectedPolicies[validationPolicy.Name] = policyServerConfigEntry{
+	expectedPolicies[validationPolicy.GetUniqueName()] = policyServerConfigEntry{
 		URL:             "registry://blabla/validation-policy:latest",
 		AllowedToMutate: false,
 		Settings:        runtime.RawExtension{},
 	}
-	expectedPolicies[mutatingPolicy.Name] = policyServerConfigEntry{
+	expectedPolicies[mutatingPolicy.GetUniqueName()] = policyServerConfigEntry{
 		URL:             "registry://blabla/mutation-policy:latest",
 		AllowedToMutate: true,
 		Settings:        runtime.RawExtension{},

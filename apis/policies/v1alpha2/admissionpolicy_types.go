@@ -1,5 +1,6 @@
 /*
 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -21,11 +22,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:Enum=protect;monitor
-type PolicyMode string
-
-// ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
-type ClusterAdmissionPolicySpec struct {
+// AdmissionPolicySpec defines the desired state of AdmissionPolicy
+type AdmissionPolicySpec struct {
 	// PolicyServer identifies an existing PolicyServer resource.
 	// +kubebuilder:default:=default
 	// +optional
@@ -91,52 +89,6 @@ type ClusterAdmissionPolicySpec struct {
 	// +optional
 	MatchPolicy *admissionregistrationv1.MatchPolicyType `json:"matchPolicy,omitempty"`
 
-	// NamespaceSelector decides whether to run the webhook on an object based
-	// on whether the namespace for that object matches the selector. If the
-	// object itself is a namespace, the matching is performed on
-	// object.metadata.labels. If the object is another cluster scoped resource,
-	// it never skips the webhook.
-	//
-	// For example, to run the webhook on any objects whose namespace is not
-	// associated with "runlevel" of "0" or "1";  you will set the selector as
-	// follows:
-	// "namespaceSelector": {
-	//   "matchExpressions": [
-	//     {
-	//       "key": "runlevel",
-	//       "operator": "NotIn",
-	//       "values": [
-	//         "0",
-	//         "1"
-	//       ]
-	//     }
-	//   ]
-	// }
-	//
-	// If instead you want to only run the webhook on any objects whose
-	// namespace is associated with the "environment" of "prod" or "staging";
-	// you will set the selector as follows:
-	// "namespaceSelector": {
-	//   "matchExpressions": [
-	//     {
-	//       "key": "environment",
-	//       "operator": "In",
-	//       "values": [
-	//         "prod",
-	//         "staging"
-	//       ]
-	//     }
-	//   ]
-	// }
-	//
-	// See
-	// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
-	// for more examples of label selectors.
-	//
-	// Default to the empty LabelSelector, which matches everything.
-	// +optional
-	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
-
 	// ObjectSelector decides whether to run the webhook based on if the
 	// object has matching labels. objectSelector is evaluated against both
 	// the oldObject and newObject that would be sent to the webhook, and
@@ -168,144 +120,110 @@ type ClusterAdmissionPolicySpec struct {
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
-const (
-	// PolicyServerConfigMapReconciled represents the condition of the
-	// Policy Server ConfigMap reconciliation
-	PolicyServerConfigMapReconciled PolicyConditionType = "PolicyServerConfigMapReconciled"
-	// ClusterAdmissionPolicyActive represents the condition of the Policy
-	// admission webhook being registered
-	ClusterAdmissionPolicyActive PolicyConditionType = "PolicyActive"
-)
-
-// +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
-type PolicyStatusEnum string
-
-const (
-	// PolicyStatusUnscheduled is a transient state that will continue
-	// to unschedulable or pending. This is the default state.
-	PolicyStatusUnscheduled PolicyStatusEnum = "unscheduled"
-	// PolicyStatusUnschedulable informs that policy server where to
-	// schedule the policy is not available
-	PolicyStatusUnschedulable PolicyStatusEnum = "unschedulable"
-	// PolicyStatusPending informs that the policy server exists,
-	// we are reconciling all resources
-	PolicyStatusPending PolicyStatusEnum = "pending"
-	// PolicyStatusActive informs that the k8s API server should be
-	// forwarding admission review objects to the policy
-	PolicyStatusActive PolicyStatusEnum = "active"
-)
-
-// PolicyStatus defines the observed state of ClusterAdmissionPolicy and AdmissionPolicy
-type PolicyStatus struct {
-	// PolicyStatus represents whether this ClusterAdmissionPolicy is unscheduled,
-	// unschedulable, pending, or active.
-	PolicyStatus PolicyStatusEnum `json:"policyStatus"`
-	// Conditions represent the observed conditions of the
-	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
-	// are: "PolicyServerSecretReconciled",
-	// "PolicyServerConfigMapReconciled",
-	// "PolicyServerDeploymentReconciled",
-	// "PolicyServerServiceReconciled" and
-	// "ClusterAdmissionPolicyActive"
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	// +listType=map
-	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
-// ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:scope=Namespaced
 //+kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="Policy Server",type=string,JSONPath=`.spec.policyServer`,description="Bound to Policy Server"
 //+kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyStatus`,description="Status of the policy"
-type ClusterAdmissionPolicy struct {
+// AdmissionPolicy is the Schema for the admissionpolicies API
+type AdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterAdmissionPolicySpec `json:"spec,omitempty"`
-	Status PolicyStatus               `json:"status,omitempty"`
+	Spec   AdmissionPolicySpec `json:"spec,omitempty"`
+	Status PolicyStatus        `json:"status,omitempty"`
 }
 
-// ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
 //+kubebuilder:object:root=true
-type ClusterAdmissionPolicyList struct {
+
+// AdmissionPolicyList contains a list of AdmissionPolicy
+type AdmissionPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterAdmissionPolicy `json:"items"`
+	Items           []AdmissionPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ClusterAdmissionPolicy{}, &ClusterAdmissionPolicyList{})
+	SchemeBuilder.Register(&AdmissionPolicy{}, &AdmissionPolicyList{})
 }
 
-func (r *ClusterAdmissionPolicy) SetStatus(status PolicyStatusEnum) {
+func (r *AdmissionPolicy) SetStatus(status PolicyStatusEnum) {
 	r.Status.PolicyStatus = status
 }
 
-func (r *ClusterAdmissionPolicy) GetPolicyMode() PolicyMode {
+func (r *AdmissionPolicy) GetPolicyMode() PolicyMode {
 	return r.Spec.Mode
 }
 
-func (r *ClusterAdmissionPolicy) GetModule() string {
+func (r *AdmissionPolicy) GetModule() string {
 	return r.Spec.Module
 }
 
-func (r *ClusterAdmissionPolicy) IsMutating() bool {
+func (r *AdmissionPolicy) IsMutating() bool {
 	return r.Spec.Mutating
 }
 
-func (r *ClusterAdmissionPolicy) GetSettings() runtime.RawExtension {
+func (r *AdmissionPolicy) GetSettings() runtime.RawExtension {
 	return r.Spec.Settings
 }
 
-func (r *ClusterAdmissionPolicy) GetStatus() *PolicyStatus {
+func (r *AdmissionPolicy) GetStatus() *PolicyStatus {
 	return &r.Status
 }
 
-func (r *ClusterAdmissionPolicy) CopyInto(policy *Policy) {
+func (r *AdmissionPolicy) CopyInto(policy *Policy) {
 	*policy = r.DeepCopy()
 }
 
-func (r *ClusterAdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectClass {
+func (r *AdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectClass {
 	return r.Spec.SideEffects
 }
 
-func (r *ClusterAdmissionPolicy) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
+// GetRules returns all rules. Scope is namespaced since AdmissionPolicy just watch for namespace resources
+func (r *AdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
+	namespacedScopeV1 := admissionregistrationv1.NamespacedScope
+	rules := make([]admissionregistrationv1.RuleWithOperations, 0)
+	for _, rule := range r.Spec.Rules {
+		rule.Scope = &namespacedScopeV1
+		rules = append(rules, rule)
+	}
+
+	return rules
+}
+
+func (r *AdmissionPolicy) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
 	return r.Spec.FailurePolicy
 }
 
-func (r *ClusterAdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
+func (r *AdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
 	return r.Spec.MatchPolicy
 }
 
-func (r *ClusterAdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
-	return r.Spec.Rules
+// GetNamespaceSelector returns the namespace of the AdmissionPolicy since it is the only namespace we want the policy to be applied to.
+func (r *AdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
+	return &metav1.LabelSelector{
+		MatchLabels: map[string]string{"kubernetes.io/metadata.name": r.ObjectMeta.Namespace},
+	}
 }
 
-func (r *ClusterAdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
-	return r.Spec.NamespaceSelector
-}
-
-func (r *ClusterAdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
+func (r *AdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
 	return r.Spec.ObjectSelector
 }
 
-func (r *ClusterAdmissionPolicy) GetTimeoutSeconds() *int32 {
+func (r *AdmissionPolicy) GetTimeoutSeconds() *int32 {
 	return r.Spec.TimeoutSeconds
 }
 
-func (r *ClusterAdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
+func (r *AdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
 	return &r.ObjectMeta
 }
 
-func (r *ClusterAdmissionPolicy) GetPolicyServer() string {
+func (r *AdmissionPolicy) GetPolicyServer() string {
 	return r.Spec.PolicyServer
 }
 
-func (r *ClusterAdmissionPolicy) GetUniqueName() string {
-	return "clusterwide-" + r.Name
+func (r *AdmissionPolicy) GetUniqueName() string {
+	return "namespaced-" + r.Namespace + "-" + r.Name
 }
