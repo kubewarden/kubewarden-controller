@@ -221,7 +221,7 @@ impl Registry {
                     )],
                     digest: None,
                 },
-                &b"{}".to_vec(),
+                b"{}".as_ref(),
                 manifest::WASM_CONFIG_MEDIA_TYPE,
                 &registry_auth,
                 None,
