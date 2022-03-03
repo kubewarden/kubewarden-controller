@@ -57,6 +57,14 @@ fn populate_span_with_admission_request_data(adm_req: &AdmissionRequest) {
 fn populate_span_with_policy_evaluation_results(validation: &ValidationResponse) {
     Span::current().record("allowed", &validation.allowed);
     Span::current().record("mutated", &validation.patch.is_some());
+    if let Some(status) = &validation.status {
+        if let Some(code) = &status.code {
+            Span::current().record("response_code", code);
+        }
+        if let Some(message) = &status.message {
+            Span::current().record("response_message", &message.as_str());
+        }
+    }
 }
 // note about tracing: we are manually adding the `policy_id` field
 // because otherwise the automatic "export" would cause the string to be
@@ -81,7 +89,9 @@ fn populate_span_with_policy_evaluation_results(validation: &ValidationResponse)
         resource=tracing::field::Empty,
         allowed=tracing::field::Empty,
         mutated=tracing::field::Empty,
-        ),
+        response_code=tracing::field::Empty,
+        response_message=tracing::field::Empty,
+    ),
     skip_all)]
 async fn handle_post_validate(
     req: Request<Body>,
