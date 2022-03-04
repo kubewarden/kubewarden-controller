@@ -185,5 +185,60 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
 			Mutating:    true,
 		},
+		{
+			Registrator: (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "validateclusteradmissionpolicies.kubewarden.dev",
+			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
+				{
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Update,
+					},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
+						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						Resources:   []string{"clusteradmissionpolicies"},
+					},
+				},
+			},
+			WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+			Mutating:    false,
+		},
+		{
+			Registrator: (&policiesv1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "admissionpolicies.kubewarden.dev",
+			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
+				{
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
+						admissionregistrationv1.Update,
+					},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
+						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						Resources:   []string{"admissionpolicies"},
+					},
+				},
+			},
+			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-admissionpolicy",
+			Mutating:    true,
+		},
+		{
+			Registrator: (&policiesv1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "validateadmissionpolicies.kubewarden.dev",
+			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
+				{
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Update,
+					},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
+						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						Resources:   []string{"admissionpolicies"},
+					},
+				},
+			},
+			WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-admissionpolicy",
+			Mutating:    false,
+		},
 	}
 }

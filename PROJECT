@@ -29,4 +29,12 @@ resources:
     defaulting: true
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: kubewarden.io
+  group: policies
+  kind: AdmissionPolicy
+  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2
+  version: v1alpha2
 version: "3"

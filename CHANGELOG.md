@@ -2,8 +2,23 @@
 ## [Unreleased]
 
 
+<a name="v0.5.0"></a>
+## [v0.5.0] - 2022-03-02
+### Reverts
+- Group kubernetes dependencies
+- Run e2e test in a self-hosted action runner.
+
+### Pull Requests
+- Merge pull request [#177](https://github.com/kubewarden/kubewarden-controller/issues/177) from raulcabello/main
+- Merge pull request [#174](https://github.com/kubewarden/kubewarden-controller/issues/174) from flavio/main
+- Merge pull request [#172](https://github.com/kubewarden/kubewarden-controller/issues/172) from ereslibre/monitor-mode
+- Merge pull request [#168](https://github.com/kubewarden/kubewarden-controller/issues/168) from viccuad/fix-rfc3
+- Merge pull request [#156](https://github.com/kubewarden/kubewarden-controller/issues/156) from kubewarden/renovate/configure
+- Merge pull request [#147](https://github.com/kubewarden/kubewarden-controller/issues/147) from flavio/sigstore-integration-rfc
+
+
 <a name="v0.4.5"></a>
-## [v0.4.5] - 2022-01-24
+## [v0.4.5] - 2022-01-28
 ### Pull Requests
 - Merge pull request [#150](https://github.com/kubewarden/kubewarden-controller/issues/150) from jvanz/main
 
@@ -195,7 +210,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.0...HEAD
+[v0.5.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5...v0.5.0
 [v0.4.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5-rc1...v0.4.5
 [v0.4.5-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.4...v0.4.5-rc1
 [v0.4.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.3...v0.4.4
