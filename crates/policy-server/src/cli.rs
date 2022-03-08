@@ -1,6 +1,6 @@
 use crate::settings::{read_policies_file, read_verification_file, Policy, VerificationSettings};
 use anyhow::{anyhow, Result};
-use clap::{crate_authors, crate_description, crate_name, crate_version, App, Arg};
+use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
@@ -30,8 +30,8 @@ lazy_static! {
         std::env::var("HOSTNAME").unwrap_or_else(|_| String::from("unknown"));
 }
 
-pub(crate) fn build_cli() -> App<'static> {
-    App::new(crate_name!())
+pub(crate) fn build_cli() -> Command<'static> {
+    Command::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())
         .about(crate_description!())
