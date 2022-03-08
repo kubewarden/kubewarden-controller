@@ -425,29 +425,28 @@ fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Optio
 fn verification_options(
     matches: &ArgMatches,
 ) -> Result<(Option<Vec<String>>, Option<VerificationAnnotations>)> {
-    let key_files: Option<Vec<String>>;
-    key_files = matches
+    let key_files: Option<Vec<String>> = matches
         .values_of("verification-key")
         .map(|items| items.into_iter().map(|i| i.to_string()).collect());
 
-    let annotations: Option<VerificationAnnotations>;
-    annotations = match matches.values_of("verification-annotation") {
-        None => None,
-        Some(items) => {
-            let mut values: HashMap<String, String> = HashMap::new();
-            for item in items {
-                let tmp: Vec<_> = item.splitn(2, '=').collect();
-                if tmp.len() == 2 {
-                    values.insert(String::from(tmp[0]), String::from(tmp[1]));
+    let annotations: Option<VerificationAnnotations> =
+        match matches.values_of("verification-annotation") {
+            None => None,
+            Some(items) => {
+                let mut values: HashMap<String, String> = HashMap::new();
+                for item in items {
+                    let tmp: Vec<_> = item.splitn(2, '=').collect();
+                    if tmp.len() == 2 {
+                        values.insert(String::from(tmp[0]), String::from(tmp[1]));
+                    }
+                }
+                if values.is_empty() {
+                    None
+                } else {
+                    Some(values)
                 }
             }
-            if values.is_empty() {
-                None
-            } else {
-                Some(values)
-            }
-        }
-    };
+        };
 
     if key_files.is_none() && annotations.is_some() {
         return Err(anyhow!(
