@@ -179,7 +179,7 @@ fn determine_execution_mode(
         }
         None => {
             // metadata is not set
-            let is_rego_policy = backend_detector.is_rego_policy(&wasm_path.to_path_buf())?;
+            let is_rego_policy = backend_detector.is_rego_policy(wasm_path)?;
             match user_execution_mode {
                 Some(PolicyExecutionMode::Opa) => {
                     if is_rego_policy {
