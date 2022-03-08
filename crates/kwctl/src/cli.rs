@@ -1,4 +1,4 @@
-use clap::{crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg};
+use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
@@ -32,18 +32,18 @@ lazy_static! {
         SIGSTORE_TARGETS_PATH.join("rekor.pub");
 }
 
-pub fn build_cli() -> clap::App<'static> {
-    App::new(crate_name!())
+pub fn build_cli() -> Command<'static> {
+    Command::new(crate_name!())
         .version(crate_version!())
         .author(crate_authors!())
         .about(crate_description!())
         .arg(Arg::new("verbose").short('v').help("Increase verbosity"))
         .subcommand(
-            App::new("policies")
+            Command::new("policies")
                 .about("Lists all downloaded policies")
         )
         .subcommand(
-            App::new("pull")
+            Command::new("pull")
                 .about("Pulls a Kubewarden policy from a given URI")
                 .arg(
                     Arg::new("docker-config-json-path")
@@ -102,7 +102,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("verify")
+            Command::new("verify")
                 .about("Verify a Kubewarden policy from a given URI using Sigstore")
                 .arg(
                     Arg::new("docker-config-json-path")
@@ -155,7 +155,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("push")
+            Command::new("push")
                 .about("Pushes a Kubewarden policy to an OCI registry")
                 .arg(
                     Arg::new("docker-config-json-path")
@@ -198,7 +198,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("rm")
+            Command::new("rm")
                 .about("Removes a Kubewarden policy from the store")
                 .arg(
                     Arg::new("uri")
@@ -208,7 +208,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("run")
+            Command::new("run")
                 .about("Runs a Kubewarden policy from a given URI")
                 .arg(
                     Arg::new("docker-config-json-path")
@@ -289,7 +289,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("annotate")
+            Command::new("annotate")
                 .about("Add Kubewarden metadata to a WebAssembly module")
                 .arg(
                     Arg::new("metadata-path")
@@ -315,7 +315,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("inspect")
+            Command::new("inspect")
                 .about("Inspect Kubewarden policy")
                 .arg(
                     Arg::new("output")
@@ -333,7 +333,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("manifest")
+            Command::new("manifest")
                 .about("Scaffold a Kubernetes resource")
                 .arg(
                     Arg::new("settings-path")
@@ -371,7 +371,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("completions")
+            Command::new("completions")
                 .about("Generate shell completions")
                 .arg(
                     Arg::new("shell")
@@ -384,7 +384,7 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .subcommand(
-            App::new("digest")
+            Command::new("digest")
                 .about("Fetch the digest of its OCI manifest")
                 .arg(
                     Arg::new("uri")
@@ -406,5 +406,6 @@ pub fn build_cli() -> clap::App<'static> {
                 )
         )
         .long_version(VERSION_AND_BUILTINS.as_str())
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
 }
