@@ -1,4 +1,8 @@
 use anyhow::anyhow;
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use tracing::info;
+
 use sigstore::cosign::signature_layers::CertificateSignature;
 use sigstore::cosign::verification_constraint::{
     AnnotationVerifier, PublicKeyVerifier, VerificationConstraint,
@@ -6,8 +10,6 @@ use sigstore::cosign::verification_constraint::{
 use sigstore::cosign::{signature_layers::CertificateSubject, SignatureLayer};
 use sigstore::crypto::SignatureDigestAlgorithm;
 use sigstore::errors::{Result, SigstoreError};
-use std::collections::HashMap;
-use std::convert::TryFrom;
 
 use super::config::Subject;
 
@@ -17,12 +19,14 @@ use super::config::Subject;
 /// matching the provided Public key, and  all the annotations specified.
 #[derive(Debug)]
 pub struct PublicKeyAndAnnotationsVerifier {
+    owner: Option<String>,
     pub_key_verifier: PublicKeyVerifier,
     annotation_verifier: Option<AnnotationVerifier>,
 }
 
 impl PublicKeyAndAnnotationsVerifier {
     pub fn new(
+        owner: Option<&str>,
         key: &str,
         signature_digest_algorithm: SignatureDigestAlgorithm,
         annotations: Option<&HashMap<String, String>>,
@@ -33,6 +37,7 @@ impl PublicKeyAndAnnotationsVerifier {
         });
 
         Ok(Self {
+            owner: owner.map(|r| r.to_owned()),
             pub_key_verifier,
             annotation_verifier,
         })
@@ -46,6 +51,12 @@ impl VerificationConstraint for PublicKeyAndAnnotationsVerifier {
         } else {
             self.pub_key_verifier.verify(sl)?
         };
+        if !outcome && self.owner.is_some() {
+            info!(
+                "pubkey not satisfied for owner {}",
+                self.owner.as_ref().unwrap()
+            );
+        }
         Ok(outcome)
     }
 }
@@ -102,8 +113,18 @@ impl GenericIssuerSubjectVerifier {
             CertificateSubject::Uri(u) => u,
         };
 
-        Some(&self.issuer) == certificate_signature.issuer.as_ref()
-            && expected == certificate_subject
+        let satisfied = Some(&self.issuer) == certificate_signature.issuer.as_ref()
+            && expected == certificate_subject;
+
+        if !satisfied {
+            info!(
+                issuer = ?&self.issuer,
+                expected_value = ?expected,
+                current_value = %certificate_subject,
+                "SubjectEqual not satisfied"
+            );
+        }
+        satisfied
     }
 
     fn verify_subject_url_prefix(
@@ -116,8 +137,18 @@ impl GenericIssuerSubjectVerifier {
             CertificateSubject::Uri(u) => u,
         };
 
-        Some(&self.issuer) == certificate_signature.issuer.as_ref()
-            && certificate_subject.starts_with(&prefix.to_string())
+        let satisfied = Some(&self.issuer) == certificate_signature.issuer.as_ref()
+            && certificate_subject.starts_with(&prefix.to_string());
+
+        if !satisfied {
+            info!(
+                issuer = ?&self.issuer,
+                expected_prefix = %prefix,
+                current_value = %certificate_subject,
+                "SubjectURLPrefix not satisfied"
+            );
+        }
+        satisfied
     }
 }
 
@@ -186,13 +217,25 @@ impl VerificationConstraint for GitHubVerifier {
             None => return Ok(false),
             Some(issuer) => {
                 if issuer != GITHUB_ACTION_ISSUER {
+                    info!(
+                        expected_value = ?GITHUB_ACTION_ISSUER,
+                        current_value = ?issuer,
+                        "issuer not satisfied"
+                    );
                     return Ok(false);
                 }
             }
         };
 
         let signature_url = match &certificate_signature.subject {
-            CertificateSubject::Email(_) => return Ok(false),
+            CertificateSubject::Email(email) => {
+                info!(
+                    expected_value = ?GITHUB_ACTION_ISSUER,
+                    current_value = ?email,
+                    "subject not satisfied, expected URI, got email instead"
+                );
+                return Ok(false);
+            }
             CertificateSubject::Uri(u) => u,
         };
 
@@ -200,11 +243,21 @@ impl VerificationConstraint for GitHubVerifier {
             SigstoreError::VerificationConstraintError(format!("The certificate signature url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_url)))?;
 
         if signature_repo.owner != self.owner {
+            info!(
+                expected_value = ?self.owner,
+                current_value = ?signature_repo.owner,
+                "repo owner not satisfied"
+            );
             return Ok(false);
         }
 
         if let Some(repo) = &self.repo {
             if &signature_repo.repo != repo {
+                info!(
+                    expected_value = ?repo,
+                    current_value = ?signature_repo.repo,
+                    "repo not satisfied"
+                );
                 return Ok(false);
             }
         }
@@ -337,6 +390,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         let (pub_key, sl) = build_signature_layers_pub_key();
 
         let vc = PublicKeyAndAnnotationsVerifier::new(
+            None,
             pub_key,
             SignatureDigestAlgorithm::default(),
             None,
@@ -349,6 +403,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         annotations.insert("key1".into(), "value2".into());
 
         let vc = PublicKeyAndAnnotationsVerifier::new(
+            None,
             pub_key,
             SignatureDigestAlgorithm::default(),
             Some(&annotations),

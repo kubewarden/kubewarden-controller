@@ -53,11 +53,12 @@ impl Signature {
     pub fn verifier(&self) -> Result<Box<dyn VerificationConstraint>> {
         match self {
             Signature::PubKey {
-                owner: _,
+                owner,
                 key,
                 annotations,
             } => {
                 let vc = verification_constraints::PublicKeyAndAnnotationsVerifier::new(
+                    owner.as_ref().map(|r| r.as_str()),
                     key,
                     SignatureDigestAlgorithm::default(),
                     annotations.as_ref(),
