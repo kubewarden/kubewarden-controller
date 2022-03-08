@@ -64,7 +64,7 @@ impl Verifier {
         &mut self,
         url: &str,
         docker_config: Option<DockerConfig>,
-        verification_settings: config::VerificationSettings,
+        verification_config: config::VerificationConfig,
     ) -> Result<String> {
         // obtain image name:
         //
@@ -116,9 +116,9 @@ impl Verifier {
             .trusted_signature_layers(&auth, &source_image_digest, &cosign_signature_image)
             .await?;
 
-        // verify signatures against our settings:
+        // verify signatures against our config:
         //
-        verify_signatures_against_settings(&verification_settings, &trusted_layers)?;
+        verify_signatures_against_config(&verification_config, &trusted_layers)?;
 
         // everything is fine here:
         debug!(
@@ -207,24 +207,24 @@ impl Verifier {
     }
 }
 
-// Verifies the trusted layers against the verification settings passed to it.
-// It does that by creating the verification constraints from the settings, and
+// Verifies the trusted layers against the VerificationConfig passed to it.
+// It does that by creating the verification constraints from the config, and
 // then filtering the trusted_layers with the corresponding constraints.
-fn verify_signatures_against_settings(
-    verification_settings: &config::VerificationSettings,
+fn verify_signatures_against_config(
+    verification_config: &config::VerificationConfig,
     trusted_layers: &[SignatureLayer],
 ) -> Result<()> {
-    // build verification constraints from our settings:
+    // build verification constraints from our config:
     //
     let mut constraints_all_of: VerificationConstraintVec = Vec::new();
     let mut constraints_any_of: VerificationConstraintVec = Vec::new();
 
-    if let Some(ref signatures_all_of) = verification_settings.all_of {
+    if let Some(ref signatures_all_of) = verification_config.all_of {
         for signature in signatures_all_of.iter() {
             constraints_all_of.push(signature.verifier()?);
         }
     }
-    if let Some(ref signatures_any_of) = verification_settings.any_of {
+    if let Some(ref signatures_any_of) = verification_config.any_of {
         for signature in signatures_any_of.signatures.iter() {
             constraints_any_of.push(signature.verifier()?);
         }
@@ -232,14 +232,14 @@ fn verify_signatures_against_settings(
 
     // filter trusted_layers against our verification constraints:
     //
-    if verification_settings.all_of.is_none() && verification_settings.any_of.is_none() {
+    if verification_config.all_of.is_none() && verification_config.any_of.is_none() {
         // deserialized config is already sanitized, and should not reach here anyways
         return Err(anyhow!(
             "Image verification failed: no signatures to verify"
         ));
     }
 
-    if verification_settings.all_of.is_some() {
+    if verification_config.all_of.is_some() {
         if let Err(SigstoreVerifyConstraintsError { .. }) =
             cosign::verify_constraints(trusted_layers, constraints_all_of.iter())
         {
@@ -248,8 +248,8 @@ fn verify_signatures_against_settings(
         }
     }
 
-    if verification_settings.any_of.is_some() {
-        let signatures_any_of = verification_settings.any_of.as_ref().unwrap();
+    if verification_config.any_of.is_some() {
+        let signatures_any_of = verification_config.any_of.as_ref().unwrap();
         if let Err(SigstoreVerifyConstraintsError {
             unsatisfied_constraints,
         }) = cosign::verify_constraints(trusted_layers, constraints_any_of.iter())
@@ -269,7 +269,7 @@ fn verify_signatures_against_settings(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config::{AnyOf, Signature, Subject, VerificationSettings};
+    use config::{AnyOf, Signature, Subject, VerificationConfig};
     use cosign::signature_layers::CertificateSubject;
     use sigstore::{cosign::signature_layers::CertificateSignature, simple_signing::SimpleSigning};
 
@@ -325,7 +325,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     }
 
     #[test]
-    fn test_verify_settings() {
+    fn test_verify_config() {
         // build verification config:
         let signatures_all_of: Vec<Signature> = vec![generic_issuer(
             "https://github.com/login/oauth",
@@ -335,7 +335,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "https://github.com/login/oauth",
             "user2@provider.com",
         )];
-        let verification_settings: VerificationSettings = VerificationSettings {
+        let verification_config: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: Some(signatures_all_of),
             any_of: Some(AnyOf {
@@ -350,16 +350,14 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             signature_layer("https://github.com/login/oauth", "user2@provider.com"),
         ];
 
-        assert!(
-            verify_signatures_against_settings(&verification_settings, &trusted_layers).is_ok()
-        );
+        assert!(verify_signatures_against_config(&verification_config, &trusted_layers).is_ok());
     }
 
     #[test]
     #[should_panic(expected = "Image verification failed: no signatures to verify")]
-    fn test_verify_settings_missing_both_any_of_all_of() {
+    fn test_verify_config_missing_both_any_of_all_of() {
         // build verification config:
-        let verification_settings: VerificationSettings = VerificationSettings {
+        let verification_config: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: None,
             any_of: None,
@@ -371,18 +369,18 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "user-unrelated@provider.com",
         )];
 
-        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "Image verification failed: missing signatures")]
-    fn test_verify_settings_not_maching_all_of() {
+    fn test_verify_config_not_maching_all_of() {
         // build verification config:
         let signatures_all_of: Vec<Signature> = vec![generic_issuer(
             "https://github.com/login/oauth",
             "user1@provider.com",
         )];
-        let verification_settings: VerificationSettings = VerificationSettings {
+        let verification_config: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: Some(signatures_all_of),
             any_of: None,
@@ -394,19 +392,19 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "user-unrelated@provider.com",
         )];
 
-        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "Image verification failed: missing signatures")]
-    fn test_verify_settings_missing_signatures_all_of() {
+    fn test_verify_config_missing_signatures_all_of() {
         // build verification config:
         let signatures_all_of: Vec<Signature> = vec![
             generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
         ];
-        let verification_settings: VerificationSettings = VerificationSettings {
+        let verification_config: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: Some(signatures_all_of),
             any_of: None,
@@ -418,21 +416,21 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             signature_layer("https://github.com/login/oauth", "user2@provider.com"),
         ];
 
-        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
     }
 
     #[test]
     #[should_panic(
         expected = "Image verification failed: minimum number of signatures not reached"
     )]
-    fn test_verify_settings_missing_signatures_any_of() {
+    fn test_verify_config_missing_signatures_any_of() {
         // build verification config:
         let signatures_any_of: Vec<Signature> = vec![
             generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
         ];
-        let verification_settings: VerificationSettings = VerificationSettings {
+        let verification_config: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: None,
             any_of: Some(AnyOf {
@@ -447,18 +445,18 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "user1@provider.com",
         )];
 
-        verify_signatures_against_settings(&verification_settings, &trusted_layers).unwrap();
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
     }
 
     #[test]
-    fn test_verify_settings_quorum_signatures_any_of() {
+    fn test_verify_config_quorum_signatures_any_of() {
         // build verification config:
         let signatures_any_of: Vec<Signature> = vec![
             generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
         ];
-        let verification_settings: VerificationSettings = VerificationSettings {
+        let verification_config: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: None,
             any_of: Some(AnyOf {
@@ -473,8 +471,6 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             signature_layer("https://github.com/login/oauth", "user2@provider.com"),
         ];
 
-        assert!(
-            verify_signatures_against_settings(&verification_settings, &trusted_layers).is_ok()
-        );
+        assert!(verify_signatures_against_config(&verification_config, &trusted_layers).is_ok());
     }
 }

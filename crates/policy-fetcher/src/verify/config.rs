@@ -11,7 +11,7 @@ use crate::verify::verification_constraints;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct VerificationSettings {
+pub struct VerificationConfig {
     pub api_version: String,
     pub all_of: Option<Vec<Signature>>,
     pub any_of: Option<AnyOf>,
@@ -112,15 +112,15 @@ where
     Ok(url)
 }
 
-pub fn read_verification_file(path: &Path) -> Result<VerificationSettings> {
-    let settings_file = File::open(path)?;
-    let vs: VerificationSettings = serde_yaml::from_reader(&settings_file)?;
-    if vs.all_of.is_none() && vs.any_of.is_none() {
+pub fn read_verification_file(path: &Path) -> Result<VerificationConfig> {
+    let config_file = File::open(path)?;
+    let config: VerificationConfig = serde_yaml::from_reader(&config_file)?;
+    if config.all_of.is_none() && config.any_of.is_none() {
         return Err(anyhow!(
             "config is missing signatures in both allOf and anyOff list"
         ));
     }
-    Ok(vs)
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -140,7 +140,7 @@ mod tests {
         #subject:
         #   urlPrefix: https://github.com/kubewarden/
     "#;
-        let _vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
+        let _vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
     }
 
     #[test]
@@ -159,7 +159,7 @@ mod tests {
            urlPrefix: https://github.com/kubewarden
     "#;
 
-        let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
+        let vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
         let signatures: Vec<Signature> = vec![
             Signature::GenericIssuer {
                     issuer: "https://token.actions.githubusercontent.com".to_string(),
@@ -172,7 +172,7 @@ mod tests {
                 annotations: None,
             }
         ];
-        let expected: VerificationSettings = VerificationSettings {
+        let expected: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: Some(signatures),
             any_of: None,
@@ -195,7 +195,7 @@ mod tests {
         subject:
            urlPrefix: https://github.com/kubewarden/ # should deserialize path to kubewarden/
     "#;
-        let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
+        let vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
         let signatures: Vec<Signature> = vec![
             Signature::GenericIssuer {
                 issuer: "https://token.actions.githubusercontent.com".to_string(),
@@ -208,7 +208,7 @@ mod tests {
                 annotations: None,
             },
         ];
-        let expected: VerificationSettings = VerificationSettings {
+        let expected: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
             all_of: Some(signatures),
             any_of: None,
