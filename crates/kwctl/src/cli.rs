@@ -58,6 +58,12 @@ pub fn build_cli() -> Command<'static> {
                     .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)")
                 )
                 .arg(
+                    Arg::new("verification-config-path")
+                    .long("verification-config-path")
+                    .takes_value(true)
+                    .help("YAML file holding verification config information (signatures, public keys...)")
+                )
+                .arg(
                     Arg::new("verification-key")
                     .short('k')
                     .long("verification-key")
@@ -117,13 +123,18 @@ pub fn build_cli() -> Command<'static> {
                     .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)")
                 )
                 .arg(
+                    Arg::new("verification-config-path")
+                    .long("verification-config-path")
+                    .takes_value(true)
+                    .help("YAML file holding verification config information (signatures, public keys...)")
+                )
+                .arg(
                     Arg::new("verification-key")
                     .short('k')
                     .long("verification-key")
                     .multiple_occurrences(true)
                     .number_of_values(1)
                     .takes_value(true)
-                    .required(true)
                     .help("Path to key used to verify the policy. Can be repeated multiple times")
                 )
                 .arg(
@@ -221,6 +232,12 @@ pub fn build_cli() -> Command<'static> {
                     .long("sources-path")
                     .takes_value(true)
                     .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)")
+                )
+                .arg(
+                    Arg::new("verification-config-path")
+                    .long("verification-config-path")
+                    .takes_value(true)
+                    .help("YAML file holding verification config information (signatures, public keys...)")
                 )
                 .arg(
                     Arg::new("request-path")
