@@ -9,12 +9,41 @@ use url::Url;
 
 use crate::verify::verification_constraints;
 
+/// Alias to the type that is currently used to store the
+/// verification settings.
+///
+/// When a new version is created:
+/// * Update this stype to point to the new version
+/// * Implement `TryFrom` that goes from (v - 1) to (v)
+pub type LatestVerificationConfig = VerificationConfigV1;
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct VerificationConfig {
-    pub api_version: String,
+pub struct VerificationConfigV1 {
     pub all_of: Option<Vec<Signature>>,
     pub any_of: Option<AnyOf>,
+}
+
+/// Enum that holds all the known versions of the configuration file
+///
+/// An unsupported version is a object that has `apiVersion` with an
+/// unknown value (e.g: 1000)
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(tag = "apiVersion", rename_all = "camelCase", deny_unknown_fields)]
+pub enum VersionedVerificationConfig {
+    #[serde(rename = "v1")]
+    V1(VerificationConfigV1),
+    #[serde(other)]
+    Unsupported,
+}
+
+/// Enum that distinguish between a well formed (but maybe unknown) version of
+/// the verification config, and something which is "just wrong".
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum VerificationConfig {
+    Versioned(VersionedVerificationConfig),
+    Invalid(serde_json::Value),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -112,9 +141,25 @@ where
     Ok(url)
 }
 
-pub fn read_verification_file(path: &Path) -> Result<VerificationConfig> {
+pub fn read_verification_file(path: &Path) -> Result<LatestVerificationConfig> {
     let config_file = File::open(path)?;
     let config: VerificationConfig = serde_yaml::from_reader(&config_file)?;
+
+    let config = match config {
+        VerificationConfig::Versioned(versioned_config) => match versioned_config {
+            VersionedVerificationConfig::V1(c) => c,
+            VersionedVerificationConfig::Unsupported => {
+                return Err(anyhow!(
+                    "Not a supported configuration version: {:?}",
+                    versioned_config
+                ))
+            }
+        },
+        VerificationConfig::Invalid(value) => {
+            return Err(anyhow!("Not a valid configuration file: {:?}", value))
+        }
+    };
+
     if config.all_of.is_none() && config.any_of.is_none() {
         return Err(anyhow!(
             "config is missing signatures in both allOf and anyOff list"
@@ -128,7 +173,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic(expected = "missing field `subject`")]
     fn test_deserialize_on_missing_signature() {
         let config = r#"---
     apiVersion: v1
@@ -140,7 +184,8 @@ mod tests {
         #subject:
         #   urlPrefix: https://github.com/kubewarden/
     "#;
-        let _vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
+        let vc: VerificationConfig = serde_yaml::from_str(config).unwrap();
+        assert!(matches!(vc, VerificationConfig::Invalid(_)));
     }
 
     #[test]
@@ -159,7 +204,7 @@ mod tests {
            urlPrefix: https://github.com/kubewarden
     "#;
 
-        let vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
+        let vc: VerificationConfig = serde_yaml::from_str(config).unwrap();
         let signatures: Vec<Signature> = vec![
             Signature::GenericIssuer {
                     issuer: "https://token.actions.githubusercontent.com".to_string(),
@@ -172,12 +217,20 @@ mod tests {
                 annotations: None,
             }
         ];
-        let expected: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
-            all_of: Some(signatures),
-            any_of: None,
-        };
-        assert_eq!(vs, expected);
+
+        match vc {
+            VerificationConfig::Versioned(versioned) => match versioned {
+                VersionedVerificationConfig::V1(v1) => {
+                    let expected = VerificationConfigV1 {
+                        all_of: Some(signatures),
+                        any_of: None,
+                    };
+                    assert_eq!(v1, expected);
+                }
+                _ => panic!("not the expected versioned config"),
+            },
+            _ => panic!("got an invalid config"),
+        }
     }
 
     #[test]
@@ -195,7 +248,7 @@ mod tests {
         subject:
            urlPrefix: https://github.com/kubewarden/ # should deserialize path to kubewarden/
     "#;
-        let vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
+        let vc: VerificationConfig = serde_yaml::from_str(config).unwrap();
         let signatures: Vec<Signature> = vec![
             Signature::GenericIssuer {
                 issuer: "https://token.actions.githubusercontent.com".to_string(),
@@ -208,11 +261,19 @@ mod tests {
                 annotations: None,
             },
         ];
-        let expected: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
-            all_of: Some(signatures),
-            any_of: None,
-        };
-        assert_eq!(vs, expected);
+
+        match vc {
+            VerificationConfig::Versioned(versioned) => match versioned {
+                VersionedVerificationConfig::V1(v1) => {
+                    let expected = VerificationConfigV1 {
+                        all_of: Some(signatures),
+                        any_of: None,
+                    };
+                    assert_eq!(v1, expected);
+                }
+                _ => panic!("not the expected versioned config"),
+            },
+            _ => panic!("got an invalid config"),
+        }
     }
 }
