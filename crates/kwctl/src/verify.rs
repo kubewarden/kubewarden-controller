@@ -1,8 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use policy_fetcher::sources::Sources;
+use policy_fetcher::verify::config::LatestVerificationConfig;
 use policy_fetcher::verify::Verifier;
 use policy_fetcher::{policy::Policy, registry::config::DockerConfig};
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
 use tracing::{debug, info};
 
 use crate::sigstore::SigstoreOpts;
@@ -13,23 +14,17 @@ pub(crate) async fn verify(
     url: &str,
     docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
-    annotations: Option<&VerificationAnnotations>,
-    key_file: &str,
+    verification_config: &LatestVerificationConfig,
     sigstore_opts: &SigstoreOpts,
 ) -> Result<String> {
-    debug!(policy = url, ?annotations, ?key_file, "Verifying policy");
+    debug!(policy = url, "Verifying policy");
     let mut verifier = Verifier::new(
         sources.cloned(),
         &sigstore_opts.fulcio_cert,
         &sigstore_opts.rekor_public_key,
     )?;
     let verified_manifest_digest = verifier
-        .verify(
-            url,
-            docker_config.cloned(),
-            annotations.cloned(),
-            &read_key_file(key_file)?,
-        )
+        .verify(url, docker_config.cloned(), verification_config.clone())
         .await?;
 
     info!("Policy successfully verified");
