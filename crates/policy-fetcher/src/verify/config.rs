@@ -11,7 +11,7 @@ use crate::verify::verification_constraints;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct VerificationSettings {
+pub struct VerificationConfig {
     pub api_version: String,
     pub all_of: Option<Vec<Signature>>,
     pub any_of: Option<AnyOf>,
@@ -53,11 +53,12 @@ impl Signature {
     pub fn verifier(&self) -> Result<Box<dyn VerificationConstraint>> {
         match self {
             Signature::PubKey {
-                owner: _,
+                owner,
                 key,
                 annotations,
             } => {
                 let vc = verification_constraints::PublicKeyAndAnnotationsVerifier::new(
+                    owner.as_ref().map(|r| r.as_str()),
                     key,
                     SignatureDigestAlgorithm::default(),
                     annotations.as_ref(),
@@ -111,10 +112,15 @@ where
     Ok(url)
 }
 
-pub fn read_verification_file(path: &Path) -> Result<VerificationSettings> {
-    let settings_file = File::open(path)?;
-    let vs: VerificationSettings = serde_yaml::from_reader(&settings_file)?;
-    Ok(vs)
+pub fn read_verification_file(path: &Path) -> Result<VerificationConfig> {
+    let config_file = File::open(path)?;
+    let config: VerificationConfig = serde_yaml::from_reader(&config_file)?;
+    if config.all_of.is_none() && config.any_of.is_none() {
+        return Err(anyhow!(
+            "config is missing signatures in both allOf and anyOff list"
+        ));
+    }
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -134,7 +140,7 @@ mod tests {
         #subject:
         #   urlPrefix: https://github.com/kubewarden/
     "#;
-        let _vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
+        let _vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
     }
 
     #[test]
@@ -153,23 +159,22 @@ mod tests {
            urlPrefix: https://github.com/kubewarden
     "#;
 
-        let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
-        let mut signatures: Vec<Signature> = Vec::new();
-        signatures.push(
-                Signature::GenericIssuer {
-                        issuer: "https://token.actions.githubusercontent.com".to_string(),
-                        subject: Subject::Equal("https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main".to_string()),
-                        annotations: None
-                    }
-            );
-        signatures.push(Signature::GenericIssuer {
-            issuer: "https://token.actions.githubusercontent.com".to_string(),
-            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
-            annotations: None,
-        });
-        let expected: VerificationSettings = VerificationSettings {
+        let vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
+        let signatures: Vec<Signature> = vec![
+            Signature::GenericIssuer {
+                    issuer: "https://token.actions.githubusercontent.com".to_string(),
+                    subject: Subject::Equal("https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main".to_string()),
+                    annotations: None
+                },
+            Signature::GenericIssuer {
+                issuer: "https://token.actions.githubusercontent.com".to_string(),
+                subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
+                annotations: None,
+            }
+        ];
+        let expected: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
-            all_of: Some(signatures.clone()),
+            all_of: Some(signatures),
             any_of: None,
         };
         assert_eq!(vs, expected);
@@ -190,21 +195,22 @@ mod tests {
         subject:
            urlPrefix: https://github.com/kubewarden/ # should deserialize path to kubewarden/
     "#;
-        let vs: VerificationSettings = serde_yaml::from_str(config).unwrap();
-        let mut signatures: Vec<Signature> = Vec::new();
-        signatures.push(Signature::GenericIssuer {
-            issuer: "https://token.actions.githubusercontent.com".to_string(),
-            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
-            annotations: None,
-        });
-        signatures.push(Signature::GenericIssuer {
-            issuer: "https://yourdomain.com/oauth2".to_string(),
-            subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
-            annotations: None,
-        });
-        let expected: VerificationSettings = VerificationSettings {
+        let vs: VerificationConfig = serde_yaml::from_str(config).unwrap();
+        let signatures: Vec<Signature> = vec![
+            Signature::GenericIssuer {
+                issuer: "https://token.actions.githubusercontent.com".to_string(),
+                subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
+                annotations: None,
+            },
+            Signature::GenericIssuer {
+                issuer: "https://yourdomain.com/oauth2".to_string(),
+                subject: Subject::UrlPrefix(Url::parse("https://github.com/kubewarden/").unwrap()),
+                annotations: None,
+            },
+        ];
+        let expected: VerificationConfig = VerificationConfig {
             api_version: "v1".to_string(),
-            all_of: Some(signatures.clone()),
+            all_of: Some(signatures),
             any_of: None,
         };
         assert_eq!(vs, expected);

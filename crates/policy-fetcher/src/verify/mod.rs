@@ -4,8 +4,11 @@ use crate::{policy::Policy, registry::config::DockerConfig};
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign;
+use sigstore::cosign::signature_layers::SignatureLayer;
 use sigstore::cosign::verification_constraint::VerificationConstraintVec;
+use sigstore::cosign::ClientBuilder;
 use sigstore::cosign::CosignCapabilities;
+use sigstore::errors::SigstoreVerifyConstraintsError;
 
 use std::{convert::TryInto, str::FromStr};
 use tracing::{debug, error, info};
@@ -31,7 +34,7 @@ impl Verifier {
     ) -> Result<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
-        let cosign_client = cosign::ClientBuilder::default()
+        let cosign_client = ClientBuilder::default()
             .with_oci_client_config(client_config)
             .with_fulcio_cert(fulcio_cert)
             .with_rekor_pub_key(rekor_public_key)
@@ -61,7 +64,7 @@ impl Verifier {
         &mut self,
         url: &str,
         docker_config: Option<DockerConfig>,
-        verification_settings: config::VerificationSettings,
+        verification_config: config::VerificationConfig,
     ) -> Result<String> {
         // obtain image name:
         //
@@ -100,24 +103,6 @@ impl Verifier {
             None => sigstore::registry::Auth::Anonymous,
         };
 
-        // build verification constraints from our settings:
-        //
-        let mut constraints_all_of: VerificationConstraintVec = Vec::new();
-        let mut constraints_any_of: VerificationConstraintVec = Vec::new();
-
-        if let Some(ref signatures_all_of) = verification_settings.all_of {
-            for signature in signatures_all_of.iter() {
-                constraints_all_of.push(signature.verifier()?);
-            }
-        }
-        let length_constraints_all_of = constraints_all_of.len();
-
-        if let Some(ref signatures_any_of) = verification_settings.any_of {
-            for signature in signatures_any_of.signatures.iter() {
-                constraints_any_of.push(signature.verifier()?);
-            }
-        }
-
         // obtain all signatures of image:
         //
         // trusted_signature_layers() will error early if cosign_client using
@@ -131,36 +116,11 @@ impl Verifier {
             .trusted_signature_layers(&auth, &source_image_digest, &cosign_signature_image)
             .await?;
 
-        // filter signatures against our constraints:
+        // verify signatures against our config:
         //
-        match cosign::filter_signature_layers(&trusted_layers, constraints_all_of) {
-            Ok(m) if m.is_empty() => {
-                return Err(anyhow!(
-                    "Image verification failed: no matching signature found on AllOf list"
-                ))
-            }
-            Err(e) => return Err(anyhow!("{}", e)),
-            Ok(m) if m.len() < length_constraints_all_of => {
-                return Err(anyhow!(
-                    "Image verification failed: missing signatures in AllOf list"
-                ));
-            }
-            Ok(_) => (), // all_of verified
-        }
+        verify_signatures_against_config(&verification_config, &trusted_layers)?;
 
-        if verification_settings.any_of.is_some() {
-            let signatures_any_of = verification_settings.any_of.unwrap();
-            match cosign::filter_signature_layers(&trusted_layers, constraints_any_of) {
-                Ok(m) if m.len() <= signatures_any_of.minimum_matches.into() => {
-                    return Err(anyhow!(
-                        "Image verification failed: missing signatures in AnyOf list"
-                    ));
-                }
-                Err(e) => return Err(anyhow!("{}", e)),
-                Ok(_) => (), // any_of verified
-            }
-        }
-
+        // everything is fine here:
         debug!(
             policy = url.to_string().as_str(),
             "Policy successfully verified"
@@ -213,9 +173,11 @@ impl Verifier {
             .manifest(&image_immutable_ref, self.sources.as_ref())
             .await?;
 
-        let digests: Vec<String>;
-        if let oci_distribution::manifest::OciManifest::Image(ref image) = manifest {
-            digests = image
+        let digests: Vec<String> = if let oci_distribution::manifest::OciManifest::Image(
+            ref image,
+        ) = manifest
+        {
+            image
                 .layers
                 .iter()
                 .filter_map(|layer| match layer.media_type.as_str() {
@@ -225,7 +187,7 @@ impl Verifier {
                 .collect()
         } else {
             unreachable!("Expected Image, found ImageIndex manifest. This cannot happen, as oci clientConfig.platform_resolver is None and we will error earlier");
-        }
+        };
 
         if digests.len() != 1 {
             error!(manifest = ?manifest, "The manifest is expected to have one WASM layer");
@@ -242,5 +204,273 @@ impl Verifier {
             info!("Local file checksum verification passed");
             Ok(())
         }
+    }
+}
+
+// Verifies the trusted layers against the VerificationConfig passed to it.
+// It does that by creating the verification constraints from the config, and
+// then filtering the trusted_layers with the corresponding constraints.
+fn verify_signatures_against_config(
+    verification_config: &config::VerificationConfig,
+    trusted_layers: &[SignatureLayer],
+) -> Result<()> {
+    // build verification constraints from our config:
+    //
+    let mut constraints_all_of: VerificationConstraintVec = Vec::new();
+    let mut constraints_any_of: VerificationConstraintVec = Vec::new();
+
+    if let Some(ref signatures_all_of) = verification_config.all_of {
+        for signature in signatures_all_of.iter() {
+            constraints_all_of.push(signature.verifier()?);
+        }
+    }
+    if let Some(ref signatures_any_of) = verification_config.any_of {
+        for signature in signatures_any_of.signatures.iter() {
+            constraints_any_of.push(signature.verifier()?);
+        }
+    }
+
+    // filter trusted_layers against our verification constraints:
+    //
+    if verification_config.all_of.is_none() && verification_config.any_of.is_none() {
+        // deserialized config is already sanitized, and should not reach here anyways
+        return Err(anyhow!(
+            "Image verification failed: no signatures to verify"
+        ));
+    }
+
+    if verification_config.all_of.is_some() {
+        if let Err(SigstoreVerifyConstraintsError { .. }) =
+            cosign::verify_constraints(trusted_layers, constraints_all_of.iter())
+        {
+            // TODO build error with list of unsatisfied constraints
+            return Err(anyhow!("Image verification failed: missing signatures"));
+        }
+    }
+
+    if verification_config.any_of.is_some() {
+        let signatures_any_of = verification_config.any_of.as_ref().unwrap();
+        if let Err(SigstoreVerifyConstraintsError {
+            unsatisfied_constraints,
+        }) = cosign::verify_constraints(trusted_layers, constraints_any_of.iter())
+        {
+            let num_satisfied_constraits = constraints_any_of.len() - unsatisfied_constraints.len();
+            if num_satisfied_constraits < signatures_any_of.minimum_matches.into() {
+                // TODO build error with list of unsatisfied constraints
+                return Err(anyhow!(
+                    "Image verification failed: minimum number of signatures not reached"
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config::{AnyOf, Signature, Subject, VerificationConfig};
+    use cosign::signature_layers::CertificateSubject;
+    use sigstore::{cosign::signature_layers::CertificateSignature, simple_signing::SimpleSigning};
+
+    fn build_signature_layers_keyless(
+        issuer: Option<String>,
+        subject: CertificateSubject,
+    ) -> SignatureLayer {
+        let pub_key = r#"-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELKhD7F5OKy77Z582Y6h0u1J3GNA+
+kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
+-----END PUBLIC KEY-----"#;
+        let verification_key = sigstore::crypto::CosignVerificationKey::from_pem(
+            pub_key.as_bytes(),
+            sigstore::crypto::SignatureDigestAlgorithm::default(),
+        )
+        .expect("Cannot create CosignVerificationKey");
+
+        let raw_data = r#"{"critical":{"identity":{"docker-reference":"registry-testing.svc.lan/kubewarden/disallow-service-nodeport"},"image":{"docker-manifest-digest":"sha256:5f481572d088dc4023afb35fced9530ced3d9b03bf7299c6f492163cb9f0452e"},"type":"cosign container image signature"},"optional":null}"#;
+        let raw_data = raw_data.as_bytes().to_vec();
+        let signature = "MEUCIGqWScz7s9aP2sGXNFKeqivw3B6kPRs56AITIHnvd5igAiEA1kzbaV2Y5yPE81EN92NUFOl31LLJSvwsjFQ07m2XqaA=".to_string();
+
+        let simple_signing: SimpleSigning =
+            serde_json::from_slice(&raw_data).expect("Cannot deserialize SimpleSigning");
+
+        let certificate_signature = Some(CertificateSignature {
+            verification_key,
+            issuer,
+            subject,
+        });
+
+        SignatureLayer {
+            simple_signing,
+            oci_digest: "not relevant".to_string(),
+            certificate_signature,
+            bundle: None,
+            signature,
+            raw_data,
+        }
+    }
+
+    fn generic_issuer(issuer: &str, subject_str: &str) -> config::Signature {
+        let subject = Subject::Equal(subject_str.to_string());
+        Signature::GenericIssuer {
+            issuer: issuer.to_string(),
+            subject,
+            annotations: None,
+        }
+    }
+
+    fn signature_layer(issuer: &str, subject_str: &str) -> SignatureLayer {
+        let certificate_subject = CertificateSubject::Email(subject_str.to_string());
+        build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject)
+    }
+
+    #[test]
+    fn test_verify_config() {
+        // build verification config:
+        let signatures_all_of: Vec<Signature> = vec![generic_issuer(
+            "https://github.com/login/oauth",
+            "user1@provider.com",
+        )];
+        let signatures_any_of: Vec<Signature> = vec![generic_issuer(
+            "https://github.com/login/oauth",
+            "user2@provider.com",
+        )];
+        let verification_config: VerificationConfig = VerificationConfig {
+            api_version: "v1".to_string(),
+            all_of: Some(signatures_all_of),
+            any_of: Some(AnyOf {
+                minimum_matches: 1,
+                signatures: signatures_any_of,
+            }),
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![
+            signature_layer("https://github.com/login/oauth", "user1@provider.com"),
+            signature_layer("https://github.com/login/oauth", "user2@provider.com"),
+        ];
+
+        assert!(verify_signatures_against_config(&verification_config, &trusted_layers).is_ok());
+    }
+
+    #[test]
+    #[should_panic(expected = "Image verification failed: no signatures to verify")]
+    fn test_verify_config_missing_both_any_of_all_of() {
+        // build verification config:
+        let verification_config: VerificationConfig = VerificationConfig {
+            api_version: "v1".to_string(),
+            all_of: None,
+            any_of: None,
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![signature_layer(
+            "https://github.com/login/oauth",
+            "user-unrelated@provider.com",
+        )];
+
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Image verification failed: missing signatures")]
+    fn test_verify_config_not_maching_all_of() {
+        // build verification config:
+        let signatures_all_of: Vec<Signature> = vec![generic_issuer(
+            "https://github.com/login/oauth",
+            "user1@provider.com",
+        )];
+        let verification_config: VerificationConfig = VerificationConfig {
+            api_version: "v1".to_string(),
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![signature_layer(
+            "https://github.com/login/oauth",
+            "user-unrelated@provider.com",
+        )];
+
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Image verification failed: missing signatures")]
+    fn test_verify_config_missing_signatures_all_of() {
+        // build verification config:
+        let signatures_all_of: Vec<Signature> = vec![
+            generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
+        ];
+        let verification_config: VerificationConfig = VerificationConfig {
+            api_version: "v1".to_string(),
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![
+            signature_layer("https://github.com/login/oauth", "user1@provider.com"),
+            signature_layer("https://github.com/login/oauth", "user2@provider.com"),
+        ];
+
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Image verification failed: minimum number of signatures not reached"
+    )]
+    fn test_verify_config_missing_signatures_any_of() {
+        // build verification config:
+        let signatures_any_of: Vec<Signature> = vec![
+            generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
+        ];
+        let verification_config: VerificationConfig = VerificationConfig {
+            api_version: "v1".to_string(),
+            all_of: None,
+            any_of: Some(AnyOf {
+                minimum_matches: 2,
+                signatures: signatures_any_of,
+            }),
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![signature_layer(
+            "https://github.com/login/oauth",
+            "user1@provider.com",
+        )];
+
+        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+    }
+
+    #[test]
+    fn test_verify_config_quorum_signatures_any_of() {
+        // build verification config:
+        let signatures_any_of: Vec<Signature> = vec![
+            generic_issuer("https://github.com/login/oauth", "user1@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
+            generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
+        ];
+        let verification_config: VerificationConfig = VerificationConfig {
+            api_version: "v1".to_string(),
+            all_of: None,
+            any_of: Some(AnyOf {
+                minimum_matches: 2,
+                signatures: signatures_any_of,
+            }),
+        };
+
+        // build trusted layers:
+        let trusted_layers: Vec<SignatureLayer> = vec![
+            signature_layer("https://github.com/login/oauth", "user1@provider.com"),
+            signature_layer("https://github.com/login/oauth", "user2@provider.com"),
+        ];
+
+        assert!(verify_signatures_against_config(&verification_config, &trusted_layers).is_ok());
     }
 }

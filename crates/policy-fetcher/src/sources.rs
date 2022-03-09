@@ -104,9 +104,9 @@ impl TryFrom<RawCertificate> for Certificate {
     type Error = anyhow::Error;
 
     fn try_from(raw_certificate: RawCertificate) -> Result<Certificate> {
-        if reqwest::Certificate::from_pem(&raw_certificate.0.as_bytes().to_vec()).is_ok() {
+        if reqwest::Certificate::from_pem(raw_certificate.0.as_bytes()).is_ok() {
             Ok(Certificate::Pem(raw_certificate.0.as_bytes().to_vec()))
-        } else if reqwest::Certificate::from_der(&raw_certificate.0.as_bytes().to_vec()).is_ok() {
+        } else if reqwest::Certificate::from_der(raw_certificate.0.as_bytes()).is_ok() {
             Ok(Certificate::Der(raw_certificate.0.as_bytes().to_vec()))
         } else {
             Err(anyhow!(
@@ -145,13 +145,12 @@ impl From<Sources> for oci_distribution::client::ClientConfig {
             .source_authorities
             .0
             .iter()
-            .map(|(_, certs)| {
+            .flat_map(|(_, certs)| {
                 certs
                     .iter()
                     .map(|c| c.into())
                     .collect::<Vec<oci_distribution::client::Certificate>>()
             })
-            .flatten()
             .collect();
 
         oci_distribution::client::ClientConfig {
@@ -176,13 +175,12 @@ impl From<Sources> for sigstore::registry::ClientConfig {
             .source_authorities
             .0
             .iter()
-            .map(|(_, certs)| {
+            .flat_map(|(_, certs)| {
                 certs
                     .iter()
                     .map(|c| c.into())
                     .collect::<Vec<sigstore::registry::Certificate>>()
             })
-            .flatten()
             .collect();
 
         sigstore::registry::ClientConfig {
