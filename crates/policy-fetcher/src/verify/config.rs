@@ -4,7 +4,7 @@ use sigstore::{
     cosign::verification_constraint::VerificationConstraint, crypto::SignatureDigestAlgorithm,
 };
 use std::boxed::Box;
-use std::{collections::HashMap, fs::File, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 use url::Url;
 
 use crate::verify::verification_constraints;
@@ -43,7 +43,7 @@ pub enum VersionedVerificationConfig {
 #[serde(untagged)]
 pub enum VerificationConfig {
     Versioned(VersionedVerificationConfig),
-    Invalid(serde_json::Value),
+    Invalid(serde_yaml::Value),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -142,10 +142,21 @@ where
 }
 
 pub fn read_verification_file(path: &Path) -> Result<LatestVerificationConfig> {
-    let config_file = File::open(path)?;
-    let config: VerificationConfig = serde_yaml::from_reader(&config_file)?;
+    let config = fs::read_to_string(path)?;
+    build_latest_verification_config(&config)
+}
 
-    let config = match config {
+/// This function builds a `LatestVerificationConfig` starting from YAML representation
+/// of the verification config.
+///
+/// **Note well:** because of how we version our configuration structs, this method is required
+/// to provide helpful error messages to the end users when their configuration has some mistakes.
+/// For example, when the configuration is missing a required attribute.
+/// This methods should be used instead of invoking `serde_yaml` deserialization functions against
+/// the YAML string.
+pub fn build_latest_verification_config(config_str: &str) -> Result<LatestVerificationConfig> {
+    let vc: VerificationConfig = serde_yaml::from_str(config_str)?;
+    let config = match vc {
         VerificationConfig::Versioned(versioned_config) => match versioned_config {
             VersionedVerificationConfig::V1(c) => c,
             VersionedVerificationConfig::Unsupported => {
@@ -155,8 +166,28 @@ pub fn read_verification_file(path: &Path) -> Result<LatestVerificationConfig> {
                 ))
             }
         },
-        VerificationConfig::Invalid(value) => {
-            return Err(anyhow!("Not a valid configuration file: {:?}", value))
+        VerificationConfig::Invalid(mut value) => {
+            // let's try to get a more specific error message
+            // for that we will perform a direct conversion into LatestVerificationConfig,
+            // this is going to provide a more detailed error message to the user, like
+            // "missing field `subject`"
+            let sanitized_value = if value.is_mapping() {
+                // The value includes the `apiVersion` key, which is unknown to the
+                // LatestVerificationConfig type.
+                // We have to remove it to avoid a non-relevant error.
+                let mapping = value.as_mapping_mut().unwrap();
+                let unwanted_key: serde_yaml::Value = "apiVersion".to_string().into();
+                mapping.remove(&unwanted_key);
+
+                // need to convert back to a non-mutable Mapping, there's no From<mut Mapping>
+                let immutable_mapping = mapping.clone();
+                let v: serde_yaml::Value = immutable_mapping.into();
+                v
+            } else {
+                value
+            };
+            let err = serde_yaml::from_value::<LatestVerificationConfig>(sanitized_value);
+            return Err(anyhow!("Not a valid configuration file: {:?}", err));
         }
     };
 
@@ -173,6 +204,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_deserialize_on_broken_yaml() {
+        let config = r#"---
+    foo: [
+    "#;
+        let vc = serde_yaml::from_str::<VerificationConfig>(config);
+        assert!(vc.is_err());
+    }
+
+    #[test]
+    #[should_panic(expected = "missing field `subject`")]
     fn test_deserialize_on_missing_signature() {
         let config = r#"---
     apiVersion: v1
@@ -184,8 +225,7 @@ mod tests {
         #subject:
         #   urlPrefix: https://github.com/kubewarden/
     "#;
-        let vc: VerificationConfig = serde_yaml::from_str(config).unwrap();
-        assert!(matches!(vc, VerificationConfig::Invalid(_)));
+        build_latest_verification_config(config).unwrap();
     }
 
     #[test]
