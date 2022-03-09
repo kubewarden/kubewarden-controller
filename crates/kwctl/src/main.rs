@@ -88,53 +88,43 @@ async fn main() -> Result<()> {
                     Some(destination) => PullDestination::LocalFile(destination),
                     None => PullDestination::MainStore,
                 };
-                let (sources, docker_config) = remote_server_options(matches)?;
-                let (key_files, annotations) = verification_options(matches)?;
-                let sigstore_options = sigstore_options(matches)?;
 
+                let (sources, docker_config) = remote_server_options(matches)?;
+
+                let verification_options = verification_options(matches)?;
                 let mut verified_manifest_digest: Option<String> = None;
-                if let Some(ref sigstore_options) = sigstore_options {
+                if verification_options.is_some() {
+                    let sigstore_options = sigstore_options(matches)?
+                        .ok_or(anyhow!("could not retrieve sigstore options"))?;
                     // verify policy prior to pulling if keys listed, and keep the
-                    // verified manifest digest of last iteration, even if all are
-                    // the same:
-                    if let Some(keys) = key_files {
-                        for key in keys {
-                            verified_manifest_digest = Some(
-                                verify::verify(
-                                    uri,
-                                    docker_config.as_ref(),
-                                    sources.as_ref(),
-                                    annotations.as_ref(),
-                                    &key,
-                                    sigstore_options,
-                                )
-                                .await
-                                .map_err(|e| {
-                                    anyhow!(
-                                        "Policy cannot be validated with key '{}': {:?}",
-                                        key,
-                                        e
-                                    )
-                                })?,
-                            );
-                        }
-                    }
+                    // verified manifest digest:
+                    verified_manifest_digest = Some(
+                        verify::verify(
+                            uri,
+                            docker_config.as_ref(),
+                            sources.as_ref(),
+                            verification_options.as_ref().unwrap(),
+                            &sigstore_options,
+                        )
+                        .await
+                        .map_err(|e| anyhow!("Policy {} cannot be validated: {:?}", uri, e))?,
+                    );
                 }
 
                 let policy =
                     pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
 
-                if let Some(ref sigstore_options) = sigstore_options {
-                    if let Some(digest) = verified_manifest_digest {
-                        verify::verify_local_checksum(
-                            &policy,
-                            docker_config.as_ref(),
-                            sources.as_ref(),
-                            &digest,
-                            sigstore_options,
-                        )
-                        .await?
-                    }
+                if verification_options.is_some() {
+                    let sigstore_options = sigstore_options(matches)?
+                        .ok_or(anyhow!("could not retrieve sigstore options"))?;
+                    verify::verify_local_checksum(
+                        &policy,
+                        docker_config.as_ref(),
+                        sources.as_ref(),
+                        &verified_manifest_digest.unwrap(),
+                        &sigstore_options,
+                    )
+                    .await?
                 }
             };
             Ok(())
@@ -143,31 +133,19 @@ async fn main() -> Result<()> {
             if let Some(matches) = matches.subcommand_matches("verify") {
                 let uri = matches.value_of("uri").unwrap();
                 let (sources, docker_config) = remote_server_options(matches)?;
-                let (key_files, annotations) = verification_options(matches)?;
+                let verification_options = verification_options(matches)?
+                    .ok_or(anyhow!("could not retrieve verification options"))?;
                 let sigstore_options = sigstore_options(matches)?
-                    .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
-
-                match key_files {
-                    Some(keys) => {
-                        for key in keys {
-                            verify::verify(
-                                uri,
-                                docker_config.as_ref(),
-                                sources.as_ref(),
-                                annotations.as_ref(),
-                                &key,
-                                &sigstore_options,
-                            )
-                            .await
-                            .map_err(|e| {
-                                anyhow!("Policy cannot be validated with key '{}': {:?}", key, e)
-                            })?;
-                        }
-                    }
-                    None => {
-                        return Err(anyhow!("keyless verification not yet implemented"));
-                    }
-                }
+                    .ok_or(anyhow!("could not retrieve sigstore options"))?;
+                verify::verify(
+                    uri,
+                    docker_config.as_ref(),
+                    sources.as_ref(),
+                    &verification_options,
+                    &sigstore_options,
+                )
+                .await
+                .map_err(|e| anyhow!("Policy {} cannot be validated: {:?}", uri, e))?;
             };
             Ok(())
         }
@@ -270,36 +248,26 @@ async fn main() -> Result<()> {
                     } else {
                         None
                     };
-                let (key_files, annotations) = verification_options(matches)?;
-                let sigstore_options = sigstore_options(matches)?;
 
+                let verification_options = verification_options(matches)?;
                 let mut verified_manifest_digest: Option<String> = None;
-                if let Some(ref sigstore_options) = sigstore_options {
+                let sigstore_options = sigstore_options(matches)?;
+                if verification_options.is_some() {
                     // verify policy prior to pulling if keys listed, and keep the
-                    // verified manifest digest of last iteration, even if all are
-                    // the same:
-                    if let Some(keys) = key_files {
-                        for key in keys {
-                            verified_manifest_digest = Some(
-                                verify::verify(
-                                    uri,
-                                    docker_config.as_ref(),
-                                    sources.as_ref(),
-                                    annotations.as_ref(),
-                                    &key,
-                                    sigstore_options,
-                                )
-                                .await
-                                .map_err(|e| {
-                                    anyhow!(
-                                        "Policy cannot be validated with key '{}': {:?}",
-                                        key,
-                                        e
-                                    )
-                                })?,
-                            );
-                        }
-                    }
+                    // verified manifest digest:
+                    verified_manifest_digest = Some(
+                        verify::verify(
+                            uri,
+                            docker_config.as_ref(),
+                            sources.as_ref(),
+                            verification_options.as_ref().unwrap(),
+                            &sigstore_options
+                                .clone()
+                                .ok_or(anyhow!("could not retrieve sigstore options"))?,
+                        )
+                        .await
+                        .map_err(|e| anyhow!("Policy {} cannot be validated: {:?}", uri, e))?,
+                    );
                 }
 
                 run::pull_and_run(
