@@ -41,7 +41,7 @@ pub(crate) async fn pull_and_run(
             docker_config,
             sources,
             digest,
-            sigstore_opts.ok_or(anyhow!("could not retrieve sigstore options"))?,
+            sigstore_opts.ok_or_else(|| anyhow!("could not retrieve sigstore options"))?,
         )
         .await?
     }

@@ -140,7 +140,7 @@ async fn main() -> Result<()> {
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let (key_files, annotations) = verification_options(matches)?;
                 let sigstore_options = sigstore_options(matches)?
-                    .ok_or(anyhow!("could not retrieve sigstore options"))?;
+                    .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
 
                 match key_files {
                     Some(keys) => {
