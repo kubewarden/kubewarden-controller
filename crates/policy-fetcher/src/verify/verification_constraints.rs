@@ -51,11 +51,8 @@ impl VerificationConstraint for PublicKeyAndAnnotationsVerifier {
         } else {
             self.pub_key_verifier.verify(sl)?
         };
-        if !outcome && self.owner.is_some() {
-            info!(
-                "pubkey not satisfied for owner {}",
-                self.owner.as_ref().unwrap()
-            );
+        if !outcome {
+            info!(owner = ?&self.owner, "pubkey not satisfied");
         }
         Ok(outcome)
     }
