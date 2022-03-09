@@ -55,7 +55,3 @@ pub(crate) async fn verify_local_checksum(
     info!("Local checksum successfully verified");
     Ok(())
 }
-
-fn read_key_file(path: &str) -> Result<String> {
-    fs::read_to_string(path).map_err(|e| anyhow!("could not read file {}: {:?}", path, e))
-}

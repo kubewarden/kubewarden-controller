@@ -21,16 +21,19 @@ use std::{
 };
 use verify::VerificationAnnotations;
 
-use tracing::debug;
+use tracing::{debug, info};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
-use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::registry::Registry;
 use policy_fetcher::sources::{read_sources_file, Sources};
 use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
+use policy_fetcher::{
+    registry::config::{read_docker_config_json_file, DockerConfig},
+    verify::config::{read_verification_file, LatestVerificationConfig, Signature},
+};
 
 use sigstore::SigstoreOpts;
 
@@ -50,6 +53,8 @@ mod run;
 mod sigstore;
 mod utils;
 mod verify;
+
+pub(crate) const KWCTL_VERIFICATION_CONFIG: &str = "verification-config.yml";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -422,9 +427,39 @@ fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Optio
     Ok((sources, docker_config))
 }
 
-fn verification_options(
+fn verification_options(matches: &ArgMatches) -> Result<Option<LatestVerificationConfig>> {
+    if let Some(verification_config) = build_verification_options_from_flags(matches)? {
+        // flags present, built configmap from them:
+        if matches.is_present("verification-config-path") {
+            return Err(anyhow!(
+                "verification-config-path cannot be used in conjunction with other verification flags"
+            ));
+        }
+        return Ok(Some(verification_config));
+    }
+    if let Some(verification_config_path) = matches.value_of("verification-config-path") {
+        // config flag present, read it:
+        return Ok(Some(read_verification_file(Path::new(
+            &verification_config_path,
+        ))?));
+    } else {
+        let verification_config_path = DEFAULT_ROOT.config_dir().join(KWCTL_VERIFICATION_CONFIG);
+        if Path::exists(&verification_config_path) {
+            // default config flag present, read it:
+            info!(path = ?verification_config_path, "Default verification config present, using it");
+            Ok(Some(read_verification_file(&verification_config_path)?))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+// Takes clap flags and builds a Some(LatestVerificationConfig) containing all
+// passed pub keys and annotations in LatestVerificationConfig.AllOf.
+// If no verification flags where used, it returns a None.
+fn build_verification_options_from_flags(
     matches: &ArgMatches,
-) -> Result<(Option<Vec<String>>, Option<VerificationAnnotations>)> {
+) -> Result<Option<LatestVerificationConfig>> {
     let key_files: Option<Vec<String>> = matches
         .values_of("verification-key")
         .map(|items| items.into_iter().map(|i| i.to_string()).collect());
@@ -448,13 +483,37 @@ fn verification_options(
             }
         };
 
+    if key_files.is_none() && annotations.is_none() {
+        // no verification flags were used, don't create a LatestVerificationConfig
+        return Ok(None);
+    }
+
     if key_files.is_none() && annotations.is_some() {
         return Err(anyhow!(
             "Intending to verify annotations, but no verification keys were passed"
         ));
     }
-
-    Ok((key_files, annotations))
+    let mut signatures: Vec<Signature> = Vec::new();
+    for key_path in key_files.iter().flatten() {
+        let sig = Signature::PubKey {
+            owner: None,
+            key: fs::read_to_string(key_path)
+                .map_err(|e| anyhow!("could not read file {}: {:?}", key_path, e))?
+                .to_string(),
+            annotations: annotations.clone(),
+        };
+        signatures.push(sig);
+    }
+    let signatures_all_of: Option<Vec<Signature>> = if signatures.is_empty() {
+        None
+    } else {
+        Some(signatures)
+    };
+    let verification_config = LatestVerificationConfig {
+        all_of: signatures_all_of,
+        any_of: None,
+    };
+    Ok(Some(verification_config))
 }
 
 fn sigstore_options(matches: &ArgMatches) -> Result<Option<SigstoreOpts>> {
