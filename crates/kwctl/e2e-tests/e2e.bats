@@ -83,8 +83,8 @@ kwctl() {
 
 @test "verify a signed policy from an OCI registry" {
     kwctl verify -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
-    [ "$status" -eq 2 ]
-    [ $(expr "$output" : '.*The following required arguments were not provided:.*') -ne 0 ]
+    [ "$status" -eq 1 ]
+    [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys were passed.*') -ne 0 ]
     kwctl verify -k test-data/sigstore/cosign1.pub -k unexistent-path-to-key.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
     [ $(expr "$output" : '.*No such file or directory.*') -ne 0 ]
@@ -96,11 +96,23 @@ kwctl() {
     [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
     kwctl verify -k test-data/sigstore/cosign3.pub registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
-    [ $(expr "$output" : '.*No signing keys matched given constraints*') -ne 0 ]
+    [ $(expr "$output" : '.*Image verification failed: missing signatures.*') -ne 0 ]
     kwctl verify -k test-data/sigstore/cosign2.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
-    [ $(expr "$output" : '.*No signing keys matched given constraints*') -ne 0 ]
-    # TODO should return instead: Annotation not satisfied missing_annotation="stable"
+    [ $(expr "$output" : '.*Image verification failed: missing signatures.*') -ne 0 ]
+    kwctl verify --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+        --verification-config-path=test-data/sigstore/verification-config.yml \
+        registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    kwctl verify --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+        --verification-config-path=test-data/sigstore/verification-config.yml \
+        registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
+    [ "$status" -eq 1 ]
+    [ $(expr "$output" : '.*Image verification failed: missing signatures.*') -ne 0 ]
+    kwctl verify --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+        --verification-config-path=test-data/sigstore/verification-config-keyless.yml \
+        registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
+    [ "$status" -eq 0 ]
 }
 
 @test "pull a signed policy from an OCI registry" {
@@ -111,6 +123,15 @@ kwctl() {
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
     [ $(expr "$output" : '.*Local checksum successfully verified.*') -ne 0 ]
+    kwctl verify --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+        --verification-config-path=test-data/sigstore/verification-config.yml \
+        registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    kwctl pull --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+        --verification-config-path=test-data/sigstore/verification-config.yml \
+        registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
+    [ "$status" -eq 1 ]
+    [ $(expr "$output" : '.*Image verification failed: missing signatures.*') -ne 0 ]
 }
 
 @test "execute a signed policy from an OCI registry" {
@@ -120,7 +141,17 @@ kwctl() {
     [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
     kwctl run -k test-data/sigstore/cosign1.pub -k test-data/sigstore/cosign3.pub -a env=prod -a stable=true --request-path test-data/privileged-pod.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
-    [ $(expr "$output" : '.*No signing keys matched given constraints*') -ne 0 ]
+    [ $(expr "$output" : '.*Image verification failed: missing signatures.*') -ne 0 ]
+    kwctl run --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+        --verification-config-path=test-data/sigstore/verification-config.yml \
+        --request-path test-data/privileged-pod.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    kwctl run --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+        --verification-config-path=test-data/sigstore/verification-config.yml \
+        --request-path test-data/privileged-pod.json \
+        registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
+    [ "$status" -eq 1 ]
+    [ $(expr "$output" : '.*Image verification failed: missing signatures.*') -ne 0 ]
 }
 
 @test "fetch policy digest from an OCI registry" {
