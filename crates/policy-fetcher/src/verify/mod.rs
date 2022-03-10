@@ -64,7 +64,7 @@ impl Verifier {
         &mut self,
         url: &str,
         docker_config: Option<DockerConfig>,
-        verification_config: config::VerificationConfig,
+        verification_config: config::LatestVerificationConfig,
     ) -> Result<String> {
         // obtain image name:
         //
@@ -211,7 +211,7 @@ impl Verifier {
 // It does that by creating the verification constraints from the config, and
 // then filtering the trusted_layers with the corresponding constraints.
 fn verify_signatures_against_config(
-    verification_config: &config::VerificationConfig,
+    verification_config: &config::LatestVerificationConfig,
     trusted_layers: &[SignatureLayer],
 ) -> Result<()> {
     // build verification constraints from our config:
@@ -269,7 +269,7 @@ fn verify_signatures_against_config(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config::{AnyOf, Signature, Subject, VerificationConfig};
+    use config::{AnyOf, LatestVerificationConfig, Signature, Subject};
     use cosign::signature_layers::CertificateSubject;
     use sigstore::{cosign::signature_layers::CertificateSignature, simple_signing::SimpleSigning};
 
@@ -335,8 +335,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "https://github.com/login/oauth",
             "user2@provider.com",
         )];
-        let verification_config: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
+        let verification_config = LatestVerificationConfig {
             all_of: Some(signatures_all_of),
             any_of: Some(AnyOf {
                 minimum_matches: 1,
@@ -357,8 +356,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     #[should_panic(expected = "Image verification failed: no signatures to verify")]
     fn test_verify_config_missing_both_any_of_all_of() {
         // build verification config:
-        let verification_config: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
+        let verification_config = LatestVerificationConfig {
             all_of: None,
             any_of: None,
         };
@@ -380,8 +378,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "https://github.com/login/oauth",
             "user1@provider.com",
         )];
-        let verification_config: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
+        let verification_config = LatestVerificationConfig {
             all_of: Some(signatures_all_of),
             any_of: None,
         };
@@ -404,8 +401,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
         ];
-        let verification_config: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
+        let verification_config = LatestVerificationConfig {
             all_of: Some(signatures_all_of),
             any_of: None,
         };
@@ -430,8 +426,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
         ];
-        let verification_config: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
+        let verification_config = LatestVerificationConfig {
             all_of: None,
             any_of: Some(AnyOf {
                 minimum_matches: 2,
@@ -456,8 +451,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             generic_issuer("https://github.com/login/oauth", "user2@provider.com"),
             generic_issuer("https://github.com/login/oauth", "user3@provider.com"),
         ];
-        let verification_config: VerificationConfig = VerificationConfig {
-            api_version: "v1".to_string(),
+        let verification_config = LatestVerificationConfig {
             all_of: None,
             any_of: Some(AnyOf {
                 minimum_matches: 2,
