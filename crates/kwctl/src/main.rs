@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
                             &sigstore_options,
                         )
                         .await
-                        .map_err(|e| anyhow!("Policy {} cannot be validated: {:?}", uri, e))?,
+                        .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
                     );
                 }
 
@@ -145,7 +145,7 @@ async fn main() -> Result<()> {
                     &sigstore_options,
                 )
                 .await
-                .map_err(|e| anyhow!("Policy {} cannot be validated: {:?}", uri, e))?;
+                .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?;
             };
             Ok(())
         }
@@ -266,7 +266,7 @@ async fn main() -> Result<()> {
                                 .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?,
                         )
                         .await
-                        .map_err(|e| anyhow!("Policy {} cannot be validated: {:?}", uri, e))?,
+                        .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
                     );
                 }
 
