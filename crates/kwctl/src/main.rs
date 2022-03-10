@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
                 let mut verified_manifest_digest: Option<String> = None;
                 if verification_options.is_some() {
                     let sigstore_options = sigstore_options(matches)?
-                        .ok_or(anyhow!("could not retrieve sigstore options"))?;
+                        .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
                     // verify policy prior to pulling if keys listed, and keep the
                     // verified manifest digest:
                     verified_manifest_digest = Some(
@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
 
                 if verification_options.is_some() {
                     let sigstore_options = sigstore_options(matches)?
-                        .ok_or(anyhow!("could not retrieve sigstore options"))?;
+                        .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
                     verify::verify_local_checksum(
                         &policy,
                         docker_config.as_ref(),
@@ -134,9 +134,9 @@ async fn main() -> Result<()> {
                 let uri = matches.value_of("uri").unwrap();
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let verification_options = verification_options(matches)?
-                    .ok_or(anyhow!("could not retrieve verification options"))?;
+                    .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
                 let sigstore_options = sigstore_options(matches)?
-                    .ok_or(anyhow!("could not retrieve sigstore options"))?;
+                    .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
                 verify::verify(
                     uri,
                     docker_config.as_ref(),
@@ -263,7 +263,7 @@ async fn main() -> Result<()> {
                             verification_options.as_ref().unwrap(),
                             &sigstore_options
                                 .clone()
-                                .ok_or(anyhow!("could not retrieve sigstore options"))?,
+                                .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?,
                         )
                         .await
                         .map_err(|e| anyhow!("Policy {} cannot be validated: {:?}", uri, e))?,
@@ -278,7 +278,7 @@ async fn main() -> Result<()> {
                     &request,
                     settings,
                     &verified_manifest_digest,
-                    sigstore_options.clone().as_ref(),
+                    sigstore_options.as_ref(),
                 )
                 .await?;
             }
