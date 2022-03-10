@@ -28,7 +28,6 @@ use crate::store::Store;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 use url::ParseError;
-use wasmtime::{Engine, Module};
 
 #[derive(Debug)]
 pub enum PullDestination {
@@ -106,7 +105,7 @@ pub async fn fetch_policy(
                 ));
             }
         }
-        Ok(bytes) => return create_file_if_valid(bytes, &destination, url.to_string()),
+        Ok(bytes) => return create_file_if_valid(&bytes, &destination, url.to_string()),
     }
     if let Ok(bytes) = policy_fetcher
         .fetch(
@@ -115,11 +114,11 @@ pub async fn fetch_policy(
         )
         .await
     {
-        return create_file_if_valid(bytes, &destination, url.to_string());
+        return create_file_if_valid(&bytes, &destination, url.to_string());
     }
 
     if let Ok(bytes) = policy_fetcher.fetch(&url, ClientProtocol::Http).await {
-        return create_file_if_valid(bytes, &destination, url.to_string());
+        return create_file_if_valid(&bytes, &destination, url.to_string());
     }
 
     Err(anyhow!("could not pull policy {}", url))
@@ -183,9 +182,16 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
     ))
 }
 
-fn create_file_if_valid(bytes: Vec<u8>, destination: &Path, url: String) -> Result<Policy> {
-    if let Err(err) = Module::validate(&Engine::default(), bytes.as_ref()) {
-        return Err(anyhow!("invalid wasm file: {}", err));
+// Each Wasm file begins with a well known bytes sequence, known as
+// "magic bytes" (see https://en.wikipedia.org/wiki/List_of_file_signatures).
+//
+// The Wasm magic bytes sequence is defined inside of its official specification:
+// https://webassembly.github.io/spec/core/bikeshed/#binary-magic
+const WASM_MAGIC_NUMBER: [u8; 4] = [0x00, 0x61, 0x73, 0x6D];
+
+fn create_file_if_valid(bytes: &[u8], destination: &Path, url: String) -> Result<Policy> {
+    if !bytes.starts_with(&WASM_MAGIC_NUMBER) {
+        return Err(anyhow!("invalid wasm file"));
     };
     fs::write(destination, bytes)?;
 
@@ -198,6 +204,24 @@ fn create_file_if_valid(bytes: Vec<u8>, destination: &Path, url: String) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rstest::*;
+    use std::{fs, path::Path};
+    use tempfile::NamedTempFile;
+
+    fn read_fixture(filename: &Path) -> Vec<u8> {
+        let test_data_file = std::env::current_dir()
+            .expect(&format!(
+                "[test setup error] could not read the current directory"
+            ))
+            .join("tests")
+            .join("test_data")
+            .join(filename);
+
+        fs::read(&test_data_file).expect(&format!(
+            "[test setup error] could not read file {:?}",
+            &test_data_file
+        ))
+    }
 
     fn store_path(path: &str) -> PathBuf {
         Store::default().root.join(path)
@@ -325,5 +349,16 @@ mod tests {
             ),
         );
         Ok(())
+    }
+
+    #[rstest]
+    #[case("simple.wasm", true)]
+    #[case("auth-present.json", false)]
+    fn save_only_wasm_files_to_disk(#[case] fixture_file: &str, #[case] success: bool) {
+        let dest = NamedTempFile::new().expect("Cannot create tmp file");
+        let file_contents = read_fixture(Path::new(fixture_file));
+
+        let outcome = create_file_if_valid(&file_contents, dest.path(), "not relevant".to_string());
+        assert_eq!(outcome.is_ok(), success);
     }
 }
