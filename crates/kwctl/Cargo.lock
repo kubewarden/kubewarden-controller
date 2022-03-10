@@ -2026,7 +2026,7 @@ dependencies = [
  "lazy_static",
  "mdcat",
  "policy-evaluator",
- "policy-fetcher 0.4.3",
+ "policy-fetcher 0.4.3 (git+https://github.com/kubewarden/policy-fetcher?branch=main)",
  "pretty-bytes",
  "prettytable-rs",
  "pulldown-cmark",
@@ -2849,6 +2849,35 @@ dependencies = [
 [[package]]
 name = "policy-fetcher"
 version = "0.4.3"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.4.3#3a205e0ace6b101ed551453cd1ef27f356d46eb9"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-stream",
+ "async-trait",
+ "base64",
+ "directories",
+ "lazy_static",
+ "oci-distribution 0.8.1 (git+https://github.com/kubewarden/oci-distribution?branch=not-yet-merged-patches)",
+ "path-slash",
+ "regex",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.10.2",
+ "sigstore 0.1.0",
+ "tracing",
+ "url 2.2.2",
+ "walkdir",
+ "wasmtime",
+]
+
+[[package]]
+name = "policy-fetcher"
+version = "0.4.3"
+source = "git+https://github.com/kubewarden/policy-fetcher?branch=main#47f4b5dfb273d32e720c42f299ce1b7708892270"
 dependencies = [
  "anyhow",
  "async-std",
@@ -2870,35 +2899,6 @@ dependencies = [
  "tracing",
  "url 2.2.2",
  "walkdir",
- "wasmtime",
-]
-
-[[package]]
-name = "policy-fetcher"
-version = "0.4.3"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.4.3#3a205e0ace6b101ed551453cd1ef27f356d46eb9"
-dependencies = [
- "anyhow",
- "async-std",
- "async-stream",
- "async-trait",
- "base64",
- "directories",
- "lazy_static",
- "oci-distribution 0.8.1 (git+https://github.com/kubewarden/oci-distribution?branch=not-yet-merged-patches)",
- "path-slash",
- "regex",
- "reqwest",
- "rustls",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2 0.10.2",
- "sigstore",
- "tracing",
- "url 2.2.2",
- "walkdir",
- "wasmtime",
 ]
 
 [[package]]
