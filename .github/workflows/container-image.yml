@@ -82,7 +82,7 @@ jobs:
       -
         name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: kubewarden-controller-image-${{ env.TAG_NAME }}
           path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
