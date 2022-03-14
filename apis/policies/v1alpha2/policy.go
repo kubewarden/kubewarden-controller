@@ -7,13 +7,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// +kubebuilder:validation:Enum=unscheduled;pending;active
+// +kubebuilder:validation:Enum=unscheduled;scheduled;pending;active
 type PolicyStatusEnum string
 
 const (
 	// PolicyStatusUnscheduled is a transient state that will continue
-	// to pending. This is the default state.
+	// to scheduled. This is the default state if no policy server is
+	// assigned.
 	PolicyStatusUnscheduled PolicyStatusEnum = "unscheduled"
+	// PolicyStatusScheduled is a transient state that will continue to
+	// pending. This is the default state if a policy server is
+	// assigned.
+	PolicyStatusScheduled PolicyStatusEnum = "scheduled"
 	// PolicyStatusPending informs that the policy server exists,
 	// we are reconciling all resources
 	PolicyStatusPending PolicyStatusEnum = "pending"
