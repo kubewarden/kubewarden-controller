@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use tracing::info;
+use tracing::debug;
 
 use sigstore::cosign::signature_layers::CertificateSignature;
 use sigstore::cosign::verification_constraint::{
@@ -52,7 +52,7 @@ impl VerificationConstraint for PublicKeyAndAnnotationsVerifier {
             self.pub_key_verifier.verify(sl)?
         };
         if !outcome {
-            info!(owner = ?&self.owner, "pubkey not satisfied");
+            debug!(owner = ?&self.owner, "pubkey not satisfied");
         }
         Ok(outcome)
     }
@@ -114,7 +114,7 @@ impl GenericIssuerSubjectVerifier {
             && expected == certificate_subject;
 
         if !satisfied {
-            info!(
+            debug!(
                 issuer = ?&self.issuer,
                 expected_value = ?expected,
                 current_value = %certificate_subject,
@@ -138,7 +138,7 @@ impl GenericIssuerSubjectVerifier {
             && certificate_subject.starts_with(&prefix.to_string());
 
         if !satisfied {
-            info!(
+            debug!(
                 issuer = ?&self.issuer,
                 expected_prefix = %prefix,
                 current_value = %certificate_subject,
@@ -214,7 +214,7 @@ impl VerificationConstraint for GitHubVerifier {
             None => return Ok(false),
             Some(issuer) => {
                 if issuer != GITHUB_ACTION_ISSUER {
-                    info!(
+                    debug!(
                         expected_value = ?GITHUB_ACTION_ISSUER,
                         current_value = ?issuer,
                         "issuer not satisfied"
@@ -226,7 +226,7 @@ impl VerificationConstraint for GitHubVerifier {
 
         let signature_url = match &certificate_signature.subject {
             CertificateSubject::Email(email) => {
-                info!(
+                debug!(
                     expected_value = ?GITHUB_ACTION_ISSUER,
                     current_value = ?email,
                     "subject not satisfied, expected URI, got email instead"
@@ -240,7 +240,7 @@ impl VerificationConstraint for GitHubVerifier {
             SigstoreError::VerificationConstraintError(format!("The certificate signature url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_url)))?;
 
         if signature_repo.owner != self.owner {
-            info!(
+            debug!(
                 expected_value = ?self.owner,
                 current_value = ?signature_repo.owner,
                 "repo owner not satisfied"
@@ -250,7 +250,7 @@ impl VerificationConstraint for GitHubVerifier {
 
         if let Some(repo) = &self.repo {
             if &signature_repo.repo != repo {
-                info!(
+                debug!(
                     expected_value = ?repo,
                     current_value = ?signature_repo.repo,
                     "repo not satisfied"
