@@ -7,10 +7,12 @@ use policy_evaluator::{
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_metadata::Metadata,
 };
-use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
+use policy_fetcher::{
+    registry::config::DockerConfig, sources::Sources, verify::FulcioAndRekorData,
+};
 use std::path::Path;
 
-use crate::{backend::BackendDetector, pull, sigstore::SigstoreOpts, verify};
+use crate::{backend::BackendDetector, pull, verify};
 
 // TODO(ereslibre): arguments to be refactored, and allow to be removed.
 #[allow(clippy::too_many_arguments)]
@@ -22,7 +24,7 @@ pub(crate) async fn pull_and_run(
     request: &str,
     settings: Option<String>,
     verified_manifest_digest: &Option<String>,
-    sigstore_opts: Option<&SigstoreOpts>,
+    fulcio_and_rekor_data: &FulcioAndRekorData,
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
 
@@ -41,7 +43,7 @@ pub(crate) async fn pull_and_run(
             docker_config,
             sources,
             digest,
-            sigstore_opts.ok_or_else(|| anyhow!("could not retrieve sigstore options"))?,
+            fulcio_and_rekor_data,
         )
         .await?
     }
