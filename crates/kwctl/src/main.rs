@@ -32,7 +32,7 @@ use policy_fetcher::store::DEFAULT_ROOT;
 use policy_fetcher::PullDestination;
 use policy_fetcher::{
     registry::config::{read_docker_config_json_file, DockerConfig},
-    verify::config::{read_verification_file, LatestVerificationConfig, Signature},
+    verify::config::{read_verification_file, LatestVerificationConfig, Signature, Subject},
 };
 
 use sigstore::SigstoreOpts;
@@ -451,17 +451,74 @@ fn build_verification_options_from_flags(
             }
         };
 
-    if key_files.is_none() && annotations.is_none() {
+    let cert_email: Option<String> = matches
+        .values_of("cert-email")
+        .map(|items| items.into_iter().map(|i| i.to_string()).collect());
+    let cert_oidc_issuer: Option<String> = matches
+        .values_of("cert-oidc-issuer")
+        .map(|items| items.into_iter().map(|i| i.to_string()).collect());
+
+    let github_owner: Option<String> = matches
+        .values_of("github-owner")
+        .map(|items| items.into_iter().map(|i| i.to_string()).collect());
+    let github_repo: Option<String> = matches
+        .values_of("github-repo")
+        .map(|items| items.into_iter().map(|i| i.to_string()).collect());
+
+    if key_files.is_none()
+        && annotations.is_none()
+        && cert_email.is_none()
+        && cert_oidc_issuer.is_none()
+        && github_owner.is_none()
+        && github_repo.is_none()
+    {
         // no verification flags were used, don't create a LatestVerificationConfig
         return Ok(None);
     }
 
-    if key_files.is_none() && annotations.is_some() {
+    if key_files.is_none()
+        && cert_email.is_none()
+        && cert_oidc_issuer.is_none()
+        && github_owner.is_none()
+        && annotations.is_some()
+    {
         return Err(anyhow!(
-            "Intending to verify annotations, but no verification keys were passed"
+            "Intending to verify annotations, but no verification keys, OIDC issuer or GitHub owner were passed"
         ));
     }
+
+    if github_repo.is_some() && github_owner.is_none() {
+        return Err(anyhow!(
+            "Intending to verify GitHub actions signature, but the repository owner is missing."
+        ));
+    }
+
     let mut signatures: Vec<Signature> = Vec::new();
+
+    if (cert_email.is_some() && cert_oidc_issuer.is_none())
+        || (cert_email.is_none() && cert_oidc_issuer.is_some())
+    {
+        return Err(anyhow!(
+            "Intending to verify OIDC issuer, but no email or issuer were provided. You must pass the email and OIDC issuer to be validated together "
+        ));
+    } else if cert_email.is_some() && cert_oidc_issuer.is_some() {
+        let sig = Signature::GenericIssuer {
+            issuer: cert_oidc_issuer.unwrap(),
+            subject: Subject::Equal(cert_email.unwrap()),
+            annotations: annotations.clone(),
+        };
+        signatures.push(sig)
+    }
+
+    if let Some(repo_owner) = github_owner {
+        let sig = Signature::GithubAction {
+            owner: repo_owner,
+            repo: github_repo,
+            annotations: annotations.clone(),
+        };
+        signatures.push(sig)
+    }
+
     for key_path in key_files.iter().flatten() {
         let sig = Signature::PubKey {
             owner: None,
