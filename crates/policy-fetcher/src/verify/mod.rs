@@ -5,14 +5,14 @@ use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign;
 use sigstore::cosign::signature_layers::SignatureLayer;
-use sigstore::cosign::verification_constraint::VerificationConstraintVec;
 use sigstore::cosign::ClientBuilder;
 use sigstore::cosign::CosignCapabilities;
-use sigstore::errors::SigstoreVerifyConstraintsError;
 
 use std::{convert::TryInto, str::FromStr};
 use tracing::{debug, error, info};
 use url::{ParseError, Url};
+
+use self::config::Signature;
 
 /// This structure simplifies the process of policy verification
 /// using Sigstore
@@ -214,22 +214,6 @@ fn verify_signatures_against_config(
     verification_config: &config::LatestVerificationConfig,
     trusted_layers: &[SignatureLayer],
 ) -> Result<()> {
-    // build verification constraints from our config:
-    //
-    let mut constraints_all_of: VerificationConstraintVec = Vec::new();
-    let mut constraints_any_of: VerificationConstraintVec = Vec::new();
-
-    if let Some(ref signatures_all_of) = verification_config.all_of {
-        for signature in signatures_all_of.iter() {
-            constraints_all_of.push(signature.verifier()?);
-        }
-    }
-    if let Some(ref signatures_any_of) = verification_config.any_of {
-        for signature in signatures_any_of.signatures.iter() {
-            constraints_any_of.push(signature.verifier()?);
-        }
-    }
-
     // filter trusted_layers against our verification constraints:
     //
     if verification_config.all_of.is_none() && verification_config.any_of.is_none() {
@@ -239,27 +223,56 @@ fn verify_signatures_against_config(
         ));
     }
 
-    if verification_config.all_of.is_some() {
-        if let Err(SigstoreVerifyConstraintsError { .. }) =
-            cosign::verify_constraints(trusted_layers, constraints_all_of.iter())
-        {
-            // TODO build error with list of unsatisfied constraints
-            return Err(anyhow!("Image verification failed: missing signatures"));
+    if let Some(ref signatures_all_of) = verification_config.all_of {
+        let unsatisfied_signatures: Vec<&Signature> = signatures_all_of
+            .iter()
+            .filter(|signature| match signature.verifier() {
+                Ok(verifier) => {
+                    let constraints = [verifier];
+                    cosign::verify_constraints(trusted_layers, constraints.iter()).is_err()
+                }
+                Err(error) => {
+                    info!(?error, ?signature, "Cannot create verifier for signature");
+                    true
+                }
+            })
+            .collect();
+        if !unsatisfied_signatures.is_empty() {
+            let mut errormsg = "Image verification failed: missing signatures\n".to_string();
+            errormsg.push_str("The following constraints were not satisfied:\n");
+            for s in unsatisfied_signatures {
+                errormsg.push_str(&serde_yaml::to_string(s)?);
+            }
+            return Err(anyhow!(errormsg));
         }
     }
 
-    if verification_config.any_of.is_some() {
-        let signatures_any_of = verification_config.any_of.as_ref().unwrap();
-        if let Err(SigstoreVerifyConstraintsError {
-            unsatisfied_constraints,
-        }) = cosign::verify_constraints(trusted_layers, constraints_any_of.iter())
+    if let Some(ref signatures_any_of) = verification_config.any_of {
+        let unsatisfied_signatures: Vec<&Signature> = signatures_any_of
+            .signatures
+            .iter()
+            .filter(|signature| match signature.verifier() {
+                Ok(verifier) => {
+                    let constraints = [verifier];
+                    cosign::verify_constraints(trusted_layers, constraints.iter()).is_err()
+                }
+                Err(error) => {
+                    info!(?error, ?signature, "Cannot create verifier for signature");
+                    true
+                }
+            })
+            .collect();
         {
-            let num_satisfied_constraits = constraints_any_of.len() - unsatisfied_constraints.len();
-            if num_satisfied_constraits < signatures_any_of.minimum_matches.into() {
-                // TODO build error with list of unsatisfied constraints
-                return Err(anyhow!(
-                    "Image verification failed: minimum number of signatures not reached"
-                ));
+            let num_satisfied_constraints =
+                signatures_any_of.signatures.len() - unsatisfied_signatures.len();
+            if num_satisfied_constraints < signatures_any_of.minimum_matches.into() {
+                let mut errormsg =
+                    format!("Image verification failed: minimum number of signatures not reached: needed {}, got {}", signatures_any_of.minimum_matches, num_satisfied_constraints);
+                errormsg.push_str("\nThe following constraints were not satisfied:\n");
+                for s in unsatisfied_signatures.iter() {
+                    errormsg.push_str(&serde_yaml::to_string(s)?);
+                }
+                return Err(anyhow!(errormsg));
             }
         }
     }
@@ -371,7 +384,6 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     }
 
     #[test]
-    #[should_panic(expected = "Image verification failed: missing signatures")]
     fn test_verify_config_not_maching_all_of() {
         // build verification config:
         let signatures_all_of: Vec<Signature> = vec![generic_issuer(
@@ -389,11 +401,21 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "user-unrelated@provider.com",
         )];
 
-        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+        let error = verify_signatures_against_config(&verification_config, &trusted_layers);
+        assert!(error.is_err());
+        let expected_msg = r#"Image verification failed: missing signatures
+The following constraints were not satisfied:
+---
+kind: genericIssuer
+issuer: "https://github.com/login/oauth"
+subject:
+  equal: user1@provider.com
+annotations: ~
+"#;
+        assert_eq!(error.unwrap_err().to_string(), expected_msg);
     }
 
     #[test]
-    #[should_panic(expected = "Image verification failed: missing signatures")]
     fn test_verify_config_missing_signatures_all_of() {
         // build verification config:
         let signatures_all_of: Vec<Signature> = vec![
@@ -412,13 +434,21 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             signature_layer("https://github.com/login/oauth", "user2@provider.com"),
         ];
 
-        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+        let error = verify_signatures_against_config(&verification_config, &trusted_layers);
+        assert!(error.is_err());
+        let expected_msg = r#"Image verification failed: missing signatures
+The following constraints were not satisfied:
+---
+kind: genericIssuer
+issuer: "https://github.com/login/oauth"
+subject:
+  equal: user3@provider.com
+annotations: ~
+"#;
+        assert_eq!(error.unwrap_err().to_string(), expected_msg);
     }
 
     #[test]
-    #[should_panic(
-        expected = "Image verification failed: minimum number of signatures not reached"
-    )]
     fn test_verify_config_missing_signatures_any_of() {
         // build verification config:
         let signatures_any_of: Vec<Signature> = vec![
@@ -440,7 +470,24 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "user1@provider.com",
         )];
 
-        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+        let error = verify_signatures_against_config(&verification_config, &trusted_layers);
+        assert!(error.is_err());
+        let expected_msg = r#"Image verification failed: minimum number of signatures not reached: needed 2, got 1
+The following constraints were not satisfied:
+---
+kind: genericIssuer
+issuer: "https://github.com/login/oauth"
+subject:
+  equal: user2@provider.com
+annotations: ~
+---
+kind: genericIssuer
+issuer: "https://github.com/login/oauth"
+subject:
+  equal: user3@provider.com
+annotations: ~
+"#;
+        assert_eq!(error.unwrap_err().to_string(), expected_msg);
     }
 
     #[test]
