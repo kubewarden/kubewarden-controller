@@ -1,5 +1,12 @@
 package constants
 
+var (
+	// DefaultPolicyServer is set to a non empty value if policies that
+	// are missing a policy server should be defaulted to this one
+	// before being persisted.
+	DefaultPolicyServer string
+)
+
 const (
 	// PolicyServer CA Secret
 	PolicyServerTLSCert                  = "policy-server-cert"

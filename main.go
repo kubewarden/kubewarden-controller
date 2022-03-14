@@ -40,6 +40,7 @@ import (
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	policiescontrollers "github.com/kubewarden/kubewarden-controller/controllers/policies"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	//+kubebuilder:scaffold:imports
 )
@@ -70,6 +71,7 @@ func main() {
 	flag.BoolVar(&enableMetrics, "enable-metrics", false,
 		"Enable metrics collection about policy server and cluster admission policies")
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
+	flag.StringVar(&constants.DefaultPolicyServer, "default-policy-server", "", "The default policy server to set on policies before they are persisted")
 	opts := zap.Options{
 		Development: true,
 	}
