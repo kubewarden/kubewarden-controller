@@ -1,4 +1,5 @@
 use anyhow::Result;
+use policy_fetcher::verify::config::{AnyOf, Signature};
 use tokio::sync::oneshot;
 
 /// Holds the response to a waPC evaluation request
@@ -17,6 +18,17 @@ pub enum CallbackRequestType {
     OciManifestDigest {
         /// String pointing to the object (e.g.: `registry.testing.lan/busybox:1.0.0`)
         image: String,
+    },
+    /// Require the verification of the manifest digest of an OCI object (be
+    /// it an image or anything else that can be stored into an OCI registry)
+    /// to be signed by Sigstore
+    SigstoreVerify {
+        /// String pointing to the object (e.g.: `registry.testing.lan/busybox:1.0.0`)
+        image: String,
+        /// All these signatures must be present
+        all_of: Option<Vec<Signature>>,
+        /// A user-defined number of these signatures must be present
+        any_of: Option<AnyOf>,
     },
 }
 

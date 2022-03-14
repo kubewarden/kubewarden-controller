@@ -7,6 +7,7 @@ use tracing::{debug, warn};
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 
 mod oci;
+mod sigstore;
 
 const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 
@@ -130,7 +131,12 @@ impl CallbackHandler {
                                 if let Err(e) = req.response_channel.send(response) {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
-                            }
+                            },
+                            CallbackRequestType::SigstoreVerify{
+                                image: _,
+                                all_of: _,
+                                any_of: _,
+                            } => todo!(),
                         }
                     }
                 },
@@ -161,4 +167,26 @@ async fn get_oci_digest_cached(
     img: &str,
 ) -> Result<cached::Return<String>> {
     oci_client.digest(img).await.map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ settings.hash() }"#,
+    with_cached_flag = true
+)]
+async fn get_sigstore_verification_cached(
+    client: &sigstore::Client,
+    settings: sigstore::IsTrustedSettings,
+) -> Result<cached::Return<bool>> {
+    client.is_trusted(&settings).map(cached::Return::new)
 }
