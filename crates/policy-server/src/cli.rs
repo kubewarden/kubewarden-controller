@@ -1,4 +1,4 @@
-use crate::settings::{read_policies_file, read_verification_file, Policy, VerificationSettings};
+use crate::settings::{read_policies_file, Policy};
 use anyhow::{anyhow, Result};
 use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use itertools::Itertools;
@@ -6,6 +6,7 @@ use lazy_static::lazy_static;
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
 use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
 use policy_fetcher::sources::{read_sources_file, Sources};
+use policy_fetcher::verify::config::{read_verification_file, LatestVerificationConfig};
 use std::{collections::HashMap, net::SocketAddr, path::Path};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -183,28 +184,16 @@ pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Pol
     })
 }
 
-pub(crate) fn verification_settings(matches: &clap::ArgMatches) -> Result<VerificationSettings> {
-    if matches.value_of("verification-path").is_none() {
-        return Err(anyhow!(
+pub(crate) fn verification_settings(
+    matches: &clap::ArgMatches,
+) -> Result<LatestVerificationConfig> {
+    match matches.value_of("verification-path") {
+        None => Err(anyhow!(
             "error parsing arguments: --verification-path must be provided"
-        ));
-    }
-    let verification_file = Path::new(matches.value_of("verification-path").unwrap());
-    match read_verification_file(verification_file) {
-        Err(e) => Err(anyhow!(
-            "error while loading verification info from {:?}: {}",
-            verification_file,
-            e
         )),
-        Ok(vs) => {
-            if vs.verification_keys.is_empty() {
-                Err(anyhow!(
-                    "error while loading verification info from {:?}: contains 0 verification keys",
-                    verification_file,
-                ))
-            } else {
-                Ok(vs)
-            }
+        Some(path) => {
+            let verification_file = Path::new(path);
+            read_verification_file(verification_file)
         }
     }
 }

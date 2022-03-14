@@ -12,8 +12,9 @@ edition = "2018"
 anyhow = "1.0"
 async-stream = "0.3.3"
 itertools = "0.10.3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.13" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.4.3" }
+#TODO change this once policy-fetcher and policy-evaluator uses the latest sigstore-rs changes
+policy-evaluator = { git = "https://github.com/raulcabello/policy-evaluator", branch = "main" }
+policy-fetcher = { git = "https://github.com/raulcabello/policy-fetcher", branch = "main" }
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 clap = { version = "3.0.15", features = [ "cargo", "env" ] }

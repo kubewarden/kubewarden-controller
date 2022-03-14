@@ -6,7 +6,6 @@ use anyhow::Result;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::callback_handler::CallbackHandlerBuilder;
 use policy_evaluator::policy_metadata::Metadata;
-use settings::VerificationSettings;
 use std::path::PathBuf;
 use std::{process, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
@@ -47,11 +46,6 @@ fn main() -> Result<()> {
     let metrics_enabled = matches.is_present("enable-metrics");
     let verify_enabled =
         matches.is_present("enable-verification") || matches.is_present("verification-path");
-    let verification_settings: Option<VerificationSettings> = if verify_enabled {
-        Some(cli::verification_settings(&matches)?)
-    } else {
-        None
-    };
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
@@ -201,38 +195,25 @@ fn main() -> Result<()> {
                     policy = name.as_str(),
                     "verifying policy authenticity and integrity using sigstore"
                 );
-
-                // verify policy prior to pulling for all keys, and keep the
-                // verified manifest digest of last iteration, even if all are
-                // the same:
-                for key_value in verification_settings
-                    .as_ref()
-                    .unwrap()
-                    .verification_keys
-                    .values()
-                {
-                    verified_manifest_digest = Some(
-                        verifier
-                            .verify(
-                                &policy.url,
-                                docker_config.clone(),
-                                verification_settings
-                                    .as_ref()
-                                    .unwrap()
-                                    .verification_annotations
-                                    .clone(),
-                                key_value,
-                            )
-                            .await
-                            .map_err(|e| {
-                                fatal_error(format!(
-                                    "Policy '{}' cannot be verified: {:?}",
-                                    name, e
-                                ))
-                            })
-                            .unwrap(),
-                    );
-                }
+                let verification_config = match cli::verification_settings(&matches) {
+                    Ok(config) => config,
+                    Err(e) => {
+                        fatal_error(format!(
+                            "Cannot create sigstore verification config: {:?}",
+                            e
+                        ));
+                        unreachable!()
+                    }
+                };
+                verified_manifest_digest = Some(
+                    verifier
+                        .verify(&policy.url, docker_config.clone(), verification_config)
+                        .await
+                        .map_err(|e| {
+                            fatal_error(format!("Policy '{}' cannot be verified: {:?}", name, e))
+                        })
+                        .unwrap(),
+                );
                 info!(
                     name = name.as_str(),
                     sha256sum = verified_manifest_digest

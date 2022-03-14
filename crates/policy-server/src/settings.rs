@@ -53,18 +53,6 @@ pub fn read_policies_file(path: &Path) -> Result<HashMap<String, Policy>> {
     Ok(ps)
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct VerificationSettings {
-    pub verification_keys: HashMap<String, String>,
-    pub verification_annotations: Option<HashMap<String, String>>,
-}
-
-pub fn read_verification_file(path: &Path) -> Result<VerificationSettings> {
-    let settings_file = File::open(path)?;
-    let vs: VerificationSettings = serde_yaml::from_reader(&settings_file)?;
-    Ok(vs)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
