@@ -10,7 +10,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-async-stream = "0.3.2"
+async-stream = "0.3.3"
 itertools = "0.10.3"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.13" }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.4.3" }
