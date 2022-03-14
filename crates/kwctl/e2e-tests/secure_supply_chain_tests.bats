@@ -54,7 +54,7 @@ kwctl() {
 @test "[Secure supply chain  tests] verify a signed policy from an OCI registry" {
     kwctl verify -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
-    [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys were passed.*') -ne 0 ]
+    [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys, OIDC issuer or GitHub owner were passed.*') -ne 0 ]
     kwctl verify -k test-data/sigstore/cosign1.pub -k unexistent-path-to-key.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
     [ $(expr "$output" : '.*No such file or directory.*') -ne 0 ]
@@ -88,7 +88,7 @@ kwctl() {
 @test "[Secure supply chain  tests] pull a signed policy from an OCI registry" {
     kwctl pull -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
-    [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys were passed.*') -ne 0 ]
+    [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys, OIDC issuer or GitHub owner were passed.*') -ne 0 ]
     kwctl pull -k test-data/sigstore/cosign1.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
