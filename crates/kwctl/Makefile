@@ -16,12 +16,12 @@ lint:
 test: fmt lint
 	cargo test --workspace
 
-.PHONY: cosign-initialize
-cosign-initialize:
+${HOME}/.sigstore/root/targets/fulcio_v1.crt.pem:
 	cosign initialize
 
 .PHONY: e2e-test
-e2e-test: cosign-initialize
+e2e-test: ${HOME}/.sigstore/root/targets/fulcio_v1.crt.pem
+e2e-test:
 	sh -c 'cd e2e-tests; bats --print-output-on-failure .'
 
 .PHONY: clean

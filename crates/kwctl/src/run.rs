@@ -249,7 +249,7 @@ mod tests {
             metadata,
             user_execution_mode,
             backend_detector,
-            &PathBuf::from("irrelevant.wasm").to_path_buf(),
+            &PathBuf::from("irrelevant.wasm"),
         );
         assert!(mode.is_err());
     }
@@ -271,7 +271,7 @@ mod tests {
             metadata,
             user_execution_mode,
             backend_detector,
-            &PathBuf::from("irrelevant.wasm").to_path_buf(),
+            &PathBuf::from("irrelevant.wasm"),
         );
         assert!(mode.is_ok());
         assert_eq!(PolicyExecutionMode::Opa, mode.unwrap());
@@ -282,7 +282,7 @@ mod tests {
         let user_execution_mode = None;
         let expected_execution_mode = PolicyExecutionMode::Opa;
         let metadata = Some(Metadata {
-            execution_mode: expected_execution_mode.clone(),
+            execution_mode: expected_execution_mode,
             ..Default::default()
         });
 
@@ -295,7 +295,7 @@ mod tests {
             metadata,
             user_execution_mode,
             backend_detector,
-            &PathBuf::from("irrelevant.wasm").to_path_buf(),
+            &PathBuf::from("irrelevant.wasm"),
         );
         assert!(mode.is_ok());
         assert_eq!(expected_execution_mode, mode.unwrap());
