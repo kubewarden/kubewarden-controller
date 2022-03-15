@@ -67,7 +67,7 @@ build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager .
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run . -deployments-namespace kubewarden
+	go run . -deployments-namespace kubewarden --default-policy-server default
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .
