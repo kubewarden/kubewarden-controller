@@ -215,7 +215,7 @@ anyOf: # at least `anyOf.minimumMatches` are required to match
     owner: victor # optional
     key: .... # mandatory
   - kind: genericIssuer
-    isser: https://github.com/login/oauth
+    issuer: https://github.com/login/oauth
     subject:
       equal: alice@example.com
   - kind: genericIssuer
@@ -314,7 +314,7 @@ Performing a strict check of the `Subject`:
 
 ```yaml
 - kind: genericIssuer
-  isser: https://github.com/login/oauth
+  issuer: https://github.com/login/oauth
   subject:
     equal: alice@example.com
 
@@ -474,7 +474,7 @@ anyOf:
     owner: flavio
     key: ....
   - kind: genericIssuer
-    isser: https://github.com/login/oauth
+    issuer: https://github.com/login/oauth
     subject:
       equal: alice@example.com
 ```
@@ -512,7 +512,7 @@ anyOf:
     owner: flavio
     key: ....
   - kind: genericIssuer
-    isser: https://github.com/login/oauth
+    issuer: https://github.com/login/oauth
     subject:
       equal: alice@example.com
 ```
