@@ -2,7 +2,6 @@ use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Com
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
-use std::path::PathBuf;
 
 lazy_static! {
     static ref VERSION_AND_BUILTINS: String = {
@@ -18,18 +17,6 @@ lazy_static! {
             builtins,
         )
     };
-    static ref SIGSTORE_TARGETS_PATH: PathBuf = {
-        directories::BaseDirs::new()
-            .unwrap_or_else(|| panic!("not possible to build base dirs"))
-            .home_dir()
-            .join(".sigstore")
-            .join("root")
-            .join("targets")
-    };
-    pub(crate) static ref SIGSTORE_FULCIO_CERT_PATH: PathBuf =
-        SIGSTORE_TARGETS_PATH.join("fulcio.crt.pem");
-    pub(crate) static ref SIGSTORE_REKOR_PUBLIC_KEY_PATH: PathBuf =
-        SIGSTORE_TARGETS_PATH.join("rekor.pub");
 }
 
 pub fn build_cli() -> Command<'static> {
@@ -75,8 +62,10 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("fulcio-cert-path")
                     .long("fulcio-cert-path")
+                    .multiple_occurrences(true)
+                    .number_of_values(1)
                     .takes_value(true)
-                    .help("Path to the Fulcio certificate")
+                    .help("Path to the Fulcio certificate. Can be repeated multiple times")
                 )
                 .arg(
                     Arg::new("rekor-public-key-path")
@@ -172,8 +161,10 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("fulcio-cert-path")
                     .long("fulcio-cert-path")
+                    .multiple_occurrences(true)
+                    .number_of_values(1)
                     .takes_value(true)
-                    .help("Path to the Fulcio certificate")
+                    .help("Path to the Fulcio certificate. Can be repeated multiple times")
                 )
                 .arg(
                     Arg::new("rekor-public-key-path")
@@ -336,8 +327,10 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("fulcio-cert-path")
                     .long("fulcio-cert-path")
+                    .multiple_occurrences(true)
+                    .number_of_values(1)
                     .takes_value(true)
-                    .help("Path to the Fulcio certificate")
+                    .help("Path to the Fulcio certificate. Can be repeated multiple times")
                 )
                 .arg(
                     Arg::new("rekor-public-key-path")
