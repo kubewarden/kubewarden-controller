@@ -113,6 +113,14 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .help("Download path for the policies"),
         )
         .arg(
+            Arg::new("sigstore-cache-dir")
+                .long("sigstore-cache-dir")
+                .takes_value(true)
+                .default_value("sigstore-data")
+                .env("KUBEWARDEN_SIGSTORE_CACHE_DIR")
+                .help("Directory used to cache sigstore data"),
+        )
+        .arg(
             Arg::new("sources-path")
                 .takes_value(true)
                 .long("sources-path")
