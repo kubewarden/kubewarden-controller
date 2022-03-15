@@ -3,10 +3,7 @@ use crate::{policy::Policy, registry::config::DockerConfig};
 
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
-use sigstore::cosign;
-use sigstore::cosign::signature_layers::SignatureLayer;
-use sigstore::cosign::ClientBuilder;
-use sigstore::cosign::CosignCapabilities;
+use sigstore::cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities};
 
 use std::{convert::TryInto, str::FromStr};
 use tracing::{debug, error, info};
@@ -24,20 +21,74 @@ pub struct Verifier {
 pub mod config;
 pub mod verification_constraints;
 
+/// Define how Fulcio and Rekor data are going to be provided to sigstore cosign client
+pub enum FulcioAndRekorData {
+    /// Data is read from the official Sigstore TUF repository
+    ///
+    /// Note well: we have to rely on the consumer of policy-fetcher library to provide
+    /// an instance of sigstore::tuf::SigstoreRepository instead of creating our own
+    /// object "on-demand". That's because currently (Mar 2022), fetching the contents
+    /// of a TUF repository is a **blocking** operation that cannot be done inside of
+    /// `async` contexes without causing a tokio runtime panic. That happens because
+    /// the `tough` library, used by sigstore-rs, performs a blocking fetch.
+    ///
+    /// Note well: for end users of this library, there's no need to depend on sigstore-rs.
+    /// This library is re-exposing the crate exactly for this purpose:
+    ///
+    /// ```
+    /// use policy_fetcher::sigstore;
+    ///
+    /// let repo: sigstore::tuf::SigstoreRepository;
+    /// ```
+    FromTufRepository {
+        repo: sigstore::tuf::SigstoreRepository,
+    },
+    /// Data is somehow provided by the user, probably by reading it from the
+    /// local filesystem
+    FromCustomData {
+        rekor_public_key: Option<String>,
+        fulcio_certs: Vec<crate::sources::Certificate>,
+    },
+}
+
 impl Verifier {
     /// Creates a new verifier using the `Sources` provided. These are
     /// later used to interact with remote OCI registries.
     pub fn new(
         sources: Option<Sources>,
-        fulcio_cert: &[u8],
-        rekor_public_key: &str,
+        fulcio_and_rekor_data: &FulcioAndRekorData,
     ) -> Result<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
-        let cosign_client = ClientBuilder::default()
-            .with_oci_client_config(client_config)
-            .with_fulcio_cert(fulcio_cert)
-            .with_rekor_pub_key(rekor_public_key)
+        let mut cosign_client_builder =
+            ClientBuilder::default().with_oci_client_config(client_config);
+        match fulcio_and_rekor_data {
+            FulcioAndRekorData::FromTufRepository { repo } => {
+                cosign_client_builder = cosign_client_builder
+                    .with_rekor_pub_key(repo.rekor_pub_key())
+                    .with_fulcio_certs(repo.fulcio_certs());
+            }
+            FulcioAndRekorData::FromCustomData {
+                rekor_public_key,
+                fulcio_certs,
+            } => {
+                if let Some(pk) = rekor_public_key {
+                    cosign_client_builder = cosign_client_builder.with_rekor_pub_key(pk);
+                }
+                if !fulcio_certs.is_empty() {
+                    let certs: Vec<sigstore::registry::Certificate> = fulcio_certs
+                        .iter()
+                        .map(|c| {
+                            let sc: sigstore::registry::Certificate = c.into();
+                            sc
+                        })
+                        .collect();
+                    cosign_client_builder = cosign_client_builder.with_fulcio_certs(&certs);
+                }
+            }
+        }
+
+        let cosign_client = cosign_client_builder
             .build()
             .map_err(|e| anyhow!("could not build a cosign client: {}", e))?;
         Ok(Verifier {
