@@ -1,15 +1,42 @@
----
-verification_keys:
-  key-name-irrelevant: |
-            -----BEGIN PUBLIC KEY-----
-            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEX0HFTtCfTtPmkx5p1RbtwDE1EVzu
-            wjQs1cCRKb5Pz/yUspkQsN3FO4iyWodCy5j3o0CdIJD/1gvq98pf4IG9tA==
-            -----END PUBLIC KEY-----
-  another-key: |
-            -----BEGIN PUBLIC KEY-----
-            MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEX0HFTtCfTtPmkx5p1RbtwDE1EVzu
-            wjQs1cCRKb5Pz/yUspkQsN3FO4iyWodCy5j3o0CdIJD/1gvq98pf4IG9tA==
-            -----END PUBLIC KEY-----
-verification_annotations: # optional
-  env: prod
-  foo: bar
+apiVersion: v1
+
+allOf:
+  - kind: githubAction
+    owner: kubewarden   # mandatory
+    annotations:
+      env: prod
+
+anyOf: # at least `anyOf.minimumMatches` are required to match
+  minimumMatches: 2 # default is 1
+  signatures:
+  - kind: pubKey
+    owner: flavio # optional
+    key: .... # mandatory
+    annotations:  # optional
+      env: prod
+      foo: bar
+  - kind: pubKey
+    owner: victor # optional
+    key: .... # mandatory
+  - kind: genericIssuer
+    issuer: https://github.com/login/oauth
+    subject:
+      equal: alice@example.com
+  - kind: genericIssuer
+    issuer: https://token.actions.githubusercontent.com
+    subject:
+      equal: https://github.com/flavio/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main
+  - kind: genericIssuer
+    issuer: https://token.actions.githubusercontent.com
+    subject:
+      urlPrefix: https://github.com/flavio/
+  - kind: genericIssuer
+    issuer: https://token.actions.githubusercontent.com
+    subject:
+      urlPrefix: https://github.com/kubewarden # <- it will be post-fixed with `/` for security reasons
+  - kind: githubAction
+    owner: flavio   # mandatory
+    repo: policy1 # optional
+  - kind: pubKey
+    owner: alice # optional
+    key: .... # mandatory
