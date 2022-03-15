@@ -18,11 +18,9 @@ mod kube_poller;
 mod metrics;
 mod server;
 mod settings;
+mod sigstore;
 mod utils;
 mod worker;
-
-mod constants;
-use constants::{FULCIO_CRT, REKOR_PUB_KEY};
 
 mod worker_pool;
 use worker_pool::WorkerPool;
@@ -173,24 +171,27 @@ fn main() -> Result<()> {
             status = "init",
             "policies download",
         );
+
+        // Initialize the verifier
+        let mut verifier = if verify_enabled {
+            info!("Fetching sigstore data from remote TUF repository");
+            match crate::sigstore::create_verifier(sources.clone()).await {
+                Err(e) => {
+                    fatal_error(e.to_string());
+                    unreachable!()
+                }
+                Ok(v) => Some(v),
+            }
+        } else {
+            None
+        };
+
         for (name, policy) in policies.iter_mut() {
             debug!(policy = name.as_str(), "download");
 
-            let mut verifier = match policy_fetcher::verify::Verifier::new(
-                sources.clone(),
-                FULCIO_CRT.as_bytes(),
-                REKOR_PUB_KEY,
-            ) {
-                Ok(v) => v,
-                Err(e) => {
-                    fatal_error(format!("Cannot create sigstore verifier: {:?}", e));
-                    unreachable!()
-                }
-            };
-
             let mut verified_manifest_digest: Option<String> = None;
 
-            if verify_enabled {
+            if let Some(ver) = verifier.as_mut() {
                 info!(
                     policy = name.as_str(),
                     "verifying policy authenticity and integrity using sigstore"
@@ -206,8 +207,7 @@ fn main() -> Result<()> {
                     }
                 };
                 verified_manifest_digest = Some(
-                    verifier
-                        .verify(&policy.url, docker_config.clone(), verification_config)
+                    ver.verify(&policy.url, docker_config.clone(), verification_config)
                         .await
                         .map_err(|e| {
                             fatal_error(format!("Policy '{}' cannot be verified: {:?}", name, e))
@@ -234,7 +234,7 @@ fn main() -> Result<()> {
             .await
             {
                 Ok(fetched_policy) => {
-                    if verify_enabled {
+                    if let Some(ver) = verifier.as_mut() {
                         if verified_manifest_digest.is_none() {
                             // when deserializing keys we check that have keys to
                             // verify. We will always have a digest manifest
@@ -242,15 +242,14 @@ fn main() -> Result<()> {
                             unreachable!();
                         }
 
-                        verifier
-                            .verify_local_file_checksum(
-                                &fetched_policy,
-                                docker_config.clone(),
-                                verified_manifest_digest.as_ref().unwrap(),
-                            )
-                            .await
-                            .map_err(|e| fatal_error(e.to_string()))
-                            .unwrap();
+                        ver.verify_local_file_checksum(
+                            &fetched_policy,
+                            docker_config.clone(),
+                            verified_manifest_digest.as_ref().unwrap(),
+                        )
+                        .await
+                        .map_err(|e| fatal_error(e.to_string()))
+                        .unwrap();
                         info!(
                             name = name.as_str(),
                             sha256sum = verified_manifest_digest
