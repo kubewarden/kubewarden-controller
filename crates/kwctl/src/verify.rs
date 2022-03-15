@@ -18,7 +18,7 @@ pub(crate) async fn verify(
     debug!(policy = url, "Verifying policy");
     let mut verifier = Verifier::new(sources.cloned(), fulcio_and_rekor_data)?;
     let verified_manifest_digest = verifier
-        .verify(url, docker_config.cloned(), verification_config.clone())
+        .verify(url, docker_config, verification_config)
         .await?;
 
     info!("Policy successfully verified");
@@ -34,7 +34,7 @@ pub(crate) async fn verify_local_checksum(
 ) -> Result<()> {
     let mut verifier = Verifier::new(sources.cloned(), fulcio_and_rekor_data)?;
     verifier
-        .verify_local_file_checksum(policy, docker_config.cloned(), verified_manifest_digest)
+        .verify_local_file_checksum(policy, docker_config, verified_manifest_digest)
         .await?;
 
     info!("Local checksum successfully verified");

@@ -8,5 +8,5 @@ pub(crate) async fn pull(
     sources: Option<&Sources>,
     destination: PullDestination,
 ) -> Result<Policy> {
-    fetch_policy(uri, destination, docker_config.cloned(), sources).await
+    fetch_policy(uri, destination, docker_config, sources).await
 }
