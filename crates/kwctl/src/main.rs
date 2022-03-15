@@ -11,6 +11,7 @@ extern crate serde_yaml;
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use directories::UserDirs;
+use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -19,6 +20,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+
 use tokio::task::spawn_blocking;
 use verify::VerificationAnnotations;
 
@@ -57,6 +59,16 @@ mod utils;
 mod verify;
 
 pub(crate) const KWCTL_VERIFICATION_CONFIG: &str = "verification-config.yml";
+
+lazy_static! {
+    pub(crate) static ref KWCTL_DEFAULT_VERIFICATION_CONFIG_PATH: String = {
+        policy_fetcher::store::DEFAULT_ROOT
+            .config_dir()
+            .join(KWCTL_VERIFICATION_CONFIG)
+            .display()
+            .to_string()
+    };
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -309,32 +321,44 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("scaffold") => {
-            if let Some(matches) = matches.subcommand_matches("manifest") {
-                let uri = matches.value_of("uri").unwrap();
-                let resource_type = matches.value_of("type").unwrap();
-                if matches.is_present("settings-path") && matches.is_present("settings-json") {
-                    return Err(anyhow!(
-                        "'settings-path' and 'settings-json' cannot be used at the same time"
-                    ));
+            if let Some(matches) = matches.subcommand_matches("scaffold") {
+                if let Some(_matches) = matches.subcommand_matches("verification-config") {
+                    println!("{}", scaffold::verification_config()?);
                 }
-                let settings = if matches.is_present("settings-path") {
-                    matches
-                        .value_of("settings-path")
-                        .map(|settings| -> Result<String> {
-                            fs::read_to_string(settings).map_err(|e| {
-                                anyhow!("Error reading settings from {}: {}", settings, e)
+            }
+            if let Some(matches) = matches.subcommand_matches("scaffold") {
+                if let Some(matches) = matches.subcommand_matches("manifest") {
+                    let uri = matches.value_of("uri").unwrap();
+                    let resource_type = matches.value_of("type").unwrap();
+                    if matches.is_present("settings-path") && matches.is_present("settings-json") {
+                        return Err(anyhow!(
+                            "'settings-path' and 'settings-json' cannot be used at the same time"
+                        ));
+                    }
+                    let settings = if matches.is_present("settings-path") {
+                        matches
+                            .value_of("settings-path")
+                            .map(|settings| -> Result<String> {
+                                fs::read_to_string(settings).map_err(|e| {
+                                    anyhow!("Error reading settings from {}: {}", settings, e)
+                                })
                             })
-                        })
-                        .transpose()?
-                } else if matches.is_present("settings-json") {
-                    Some(String::from(matches.value_of("settings-json").unwrap()))
-                } else {
-                    None
-                };
-                let policy_title = matches.value_of("title");
+                            .transpose()?
+                    } else if matches.is_present("settings-json") {
+                        Some(String::from(matches.value_of("settings-json").unwrap()))
+                    } else {
+                        None
+                    };
+                    let policy_title = matches.value_of("title");
 
-                scaffold::manifest(uri, resource_type, settings, policy_title.map(String::from))?;
-            };
+                    scaffold::manifest(
+                        uri,
+                        resource_type,
+                        settings,
+                        policy_title.map(String::from),
+                    )?;
+                };
+            }
             Ok(())
         }
         Some("completions") => {

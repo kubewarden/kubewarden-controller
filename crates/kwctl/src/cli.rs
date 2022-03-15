@@ -1,6 +1,7 @@
 use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use itertools::Itertools;
 use lazy_static::lazy_static;
+
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
 
 lazy_static! {
@@ -440,40 +441,49 @@ pub fn build_cli() -> Command<'static> {
         )
         .subcommand(
             Command::new("scaffold")
-                .about("Scaffold a Kubernetes resource")
-                .arg(
-                    Arg::new("settings-path")
-                    .long("settings-path")
-                    .short('s')
-                    .takes_value(true)
-                    .help("File containing the settings for this policy")
+                .about("Scaffold a Kubernetes resource or configuration file")
+                .subcommand_required(true)
+                .subcommand(
+                    Command::new("verification-config")
+                        .about("Output a default Sigstore verification configuration file")
                 )
-                .arg(
-                    Arg::new("settings-json")
-                    .long("settings-json")
-                    .takes_value(true)
-                    .help("JSON string containing the settings for this policy")
-                )
-                .arg(
-                    Arg::new("type")
-                    .long("type")
-                    .short('t')
-                    .required(true)
-                    .takes_value(true)
-                    .possible_values(&["ClusterAdmissionPolicy"])
-                    .help("Kubewarden Custom Resource type")
-                )
-                .arg(
-                    Arg::new("uri")
-                        .required(true)
-                        .index(1)
-                        .help("Policy URI. Supported schemes: registry://, https://, file://")
-                )
-                .arg(
-                    Arg::new("title")
-                        .long("title")
-                        .takes_value(true)
-                        .help("Policy title")
+                .subcommand(
+                    Command::new("manifest")
+                        .about("Output a Kubernetes resource manifest")
+                        .arg(
+                            Arg::new("settings-path")
+                            .long("settings-path")
+                            .short('s')
+                            .takes_value(true)
+                            .help("File containing the settings for this policy")
+                        )
+                        .arg(
+                            Arg::new("settings-json")
+                            .long("settings-json")
+                            .takes_value(true)
+                            .help("JSON string containing the settings for this policy")
+                        )
+                        .arg(
+                            Arg::new("type")
+                            .long("type")
+                            .short('t')
+                            .required(true)
+                            .takes_value(true)
+                            .possible_values(&["ClusterAdmissionPolicy"])
+                            .help("Kubewarden Custom Resource type")
+                        )
+                        .arg(
+                            Arg::new("uri")
+                                .required(true)
+                                .index(1)
+                                .help("Policy URI. Supported schemes: registry://, https://, file://")
+                        )
+                        .arg(
+                            Arg::new("title")
+                                .long("title")
+                                .takes_value(true)
+                                .help("Policy title")
+                        )
                 )
         )
         .subcommand(
