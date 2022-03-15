@@ -3,11 +3,10 @@ extern crate kube;
 extern crate policy_evaluator;
 
 use anyhow::Result;
+use lazy_static::lazy_static;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::callback_handler::CallbackHandlerBuilder;
-use policy_evaluator::policy_metadata::Metadata;
-use std::path::PathBuf;
-use std::{process, thread};
+use std::{path::PathBuf, process, sync::RwLock, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
 
@@ -18,7 +17,6 @@ mod kube_poller;
 mod metrics;
 mod server;
 mod settings;
-mod sigstore;
 mod utils;
 mod worker;
 
@@ -27,6 +25,10 @@ use worker_pool::WorkerPool;
 
 mod communication;
 use communication::{EvalRequest, KubePollerBootRequest, WorkerPoolBootRequest};
+
+lazy_static! {
+    static ref TRACE_SYSTEM_INITIALIZED: RwLock<bool> = RwLock::new(false);
+}
 
 fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
@@ -150,9 +152,17 @@ fn main() -> Result<()> {
     rt.block_on(async {
         // Setup the tracing system. This MUST be done inside of a tokio Runtime
         // because some collectors rely on it and would panic otherwise.
-        if let Err(err) = cli::setup_tracing(&matches) {
-            fatal_error(err.to_string());
-        }
+        match cli::setup_tracing(&matches) {
+            Err(err) => {
+                fatal_error(err.to_string());
+                unreachable!();
+            }
+            Ok(_) => {
+                debug!("tracing system ready");
+                let mut w = TRACE_SYSTEM_INITIALIZED.write().unwrap();
+                *w = true;
+            }
+        };
 
         // The unused variable is required so the meter is not dropped early and
         // lives for the whole block lifetime, exporting metrics
@@ -416,8 +426,13 @@ fn main() -> Result<()> {
 }
 
 fn fatal_error(msg: String) {
-    error!("{}", msg);
-    shutdown_tracer_provider();
+    let trace_system_ready = TRACE_SYSTEM_INITIALIZED.read().unwrap();
+    if *trace_system_ready {
+        error!("{}", msg);
+        shutdown_tracer_provider();
+    } else {
+        eprintln!("{}", msg);
+    }
 
     process::exit(1);
 }
