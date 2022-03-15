@@ -20,6 +20,9 @@ mod settings;
 mod utils;
 mod worker;
 
+mod policy_downloader;
+use policy_downloader::Downloader;
+
 mod worker_pool;
 use worker_pool::WorkerPool;
 
@@ -46,6 +49,20 @@ fn main() -> Result<()> {
     let metrics_enabled = matches.is_present("enable-metrics");
     let verify_enabled =
         matches.is_present("enable-verification") || matches.is_present("verification-path");
+    let verification_config = match cli::verification_settings(&matches) {
+        Ok(config) => config,
+        Err(e) => {
+            fatal_error(format!(
+                "Cannot create sigstore verification config: {:?}",
+                e
+            ));
+            unreachable!()
+        }
+    };
+    let sigstore_cache_dir = matches
+        .value_of("sigstore-cache-dir")
+        .map(PathBuf::from)
+        .expect("This should not happen, there's a default value for sigstore-cache-dir");
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
@@ -173,139 +190,30 @@ fn main() -> Result<()> {
         };
 
         // Download policies
-        let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
-        let policies_total = policies.len();
-        info!(
-            download_dir = policies_download_dir,
-            policies_count = policies_total,
-            status = "init",
-            "policies download",
-        );
-
-        // Initialize the verifier
-        let mut verifier = if verify_enabled {
-            info!("Fetching sigstore data from remote TUF repository");
-            match crate::sigstore::create_verifier(sources.clone()).await {
-                Err(e) => {
-                    fatal_error(e.to_string());
-                    unreachable!()
-                }
-                Ok(v) => Some(v),
+        let mut downloader = match Downloader::new(
+            sources,
+            docker_config,
+            verify_enabled,
+            verification_config,
+            sigstore_cache_dir,
+        )
+        .await
+        {
+            Ok(d) => d,
+            Err(e) => {
+                fatal_error(e.to_string());
+                unreachable!()
             }
-        } else {
-            None
         };
 
-        for (name, policy) in policies.iter_mut() {
-            debug!(policy = name.as_str(), "download");
-
-            let mut verified_manifest_digest: Option<String> = None;
-
-            if let Some(ver) = verifier.as_mut() {
-                info!(
-                    policy = name.as_str(),
-                    "verifying policy authenticity and integrity using sigstore"
-                );
-                let verification_config = match cli::verification_settings(&matches) {
-                    Ok(config) => config,
-                    Err(e) => {
-                        fatal_error(format!(
-                            "Cannot create sigstore verification config: {:?}",
-                            e
-                        ));
-                        unreachable!()
-                    }
-                };
-                verified_manifest_digest = Some(
-                    ver.verify(&policy.url, docker_config.clone(), verification_config)
-                        .await
-                        .map_err(|e| {
-                            fatal_error(format!("Policy '{}' cannot be verified: {:?}", name, e))
-                        })
-                        .unwrap(),
-                );
-                info!(
-                    name = name.as_str(),
-                    sha256sum = verified_manifest_digest
-                        .as_ref()
-                        .unwrap_or(&"unknown".to_string())
-                        .as_str(),
-                    status = "verified-signatures",
-                    "policy download",
-                );
-            }
-
-            match policy_fetcher::fetch_policy(
-                &policy.url,
-                policy_fetcher::PullDestination::Store(PathBuf::from(policies_download_dir)),
-                docker_config.clone(),
-                sources.as_ref(),
-            )
+        let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
+        if let Err(e) = downloader
+            .download_policies(&mut policies, policies_download_dir)
             .await
-            {
-                Ok(fetched_policy) => {
-                    if let Some(ver) = verifier.as_mut() {
-                        if verified_manifest_digest.is_none() {
-                            // when deserializing keys we check that have keys to
-                            // verify. We will always have a digest manifest
-                            fatal_error("Verification of policy failed".to_string());
-                            unreachable!();
-                        }
-
-                        ver.verify_local_file_checksum(
-                            &fetched_policy,
-                            docker_config.clone(),
-                            verified_manifest_digest.as_ref().unwrap(),
-                        )
-                        .await
-                        .map_err(|e| fatal_error(e.to_string()))
-                        .unwrap();
-                        info!(
-                            name = name.as_str(),
-                            sha256sum = verified_manifest_digest
-                                .as_ref()
-                                .unwrap_or(&"unknown".to_string())
-                                .as_str(),
-                            status = "verified-local-checksum",
-                            "policy download",
-                        );
-                    }
-
-                    if let Ok(Some(policy_metadata)) =
-                        Metadata::from_path(&fetched_policy.local_path)
-                    {
-                        info!(
-                            name = name.as_str(),
-                            path = fetched_policy.local_path.clone().into_os_string().to_str(),
-                            sha256sum = fetched_policy
-                                .digest()
-                                .unwrap_or_else(|_| "unknown".to_string())
-                                .as_str(),
-                            mutating = policy_metadata.mutating,
-                            "policy download",
-                        );
-                    } else {
-                        info!(
-                            name = name.as_str(),
-                            path = fetched_policy.local_path.clone().into_os_string().to_str(),
-                            sha256sum = fetched_policy
-                                .digest()
-                                .unwrap_or_else(|_| "unknown".to_string())
-                                .as_str(),
-                            "policy download",
-                        );
-                    }
-                    policy.wasm_module_path = fetched_policy.local_path;
-                }
-                Err(e) => {
-                    return fatal_error(format!(
-                        "error while fetching policy {} from {}: {}",
-                        name, policy.url, e
-                    ));
-                }
-            };
+        {
+            fatal_error(e.to_string());
+            unreachable!()
         }
-        info!(status = "done", "policies download");
 
         // Start the kubernetes poller
         info!(status = "init", "kubernetes poller bootstrap");
