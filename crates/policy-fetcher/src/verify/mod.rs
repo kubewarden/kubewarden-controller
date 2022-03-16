@@ -280,7 +280,18 @@ fn verify_signatures_against_config(
             .filter(|signature| match signature.verifier() {
                 Ok(verifier) => {
                     let constraints = [verifier];
-                    cosign::verify_constraints(trusted_layers, constraints.iter()).is_err()
+                    let is_satisfied =
+                        cosign::verify_constraints(trusted_layers, constraints.iter());
+                    match is_satisfied {
+                        Ok(_) => {
+                            debug!(
+                                "Constraint satisfied:\n{}",
+                                &serde_yaml::to_string(signature).unwrap()
+                            );
+                            false
+                        }
+                        Err(_) => true, //filter into unsatisfied_signatures
+                    }
                 }
                 Err(error) => {
                     info!(?error, ?signature, "Cannot create verifier for signature");
