@@ -192,9 +192,7 @@ pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Pol
     })
 }
 
-pub(crate) fn verification_settings(
-    matches: &clap::ArgMatches,
-) -> Result<LatestVerificationConfig> {
+pub(crate) fn verification_config(matches: &clap::ArgMatches) -> Result<LatestVerificationConfig> {
     match matches.value_of("verification-path") {
         None => Err(anyhow!(
             "error parsing arguments: --verification-path must be provided"

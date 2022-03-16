@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     let metrics_enabled = matches.is_present("enable-metrics");
     let verify_enabled =
         matches.is_present("enable-verification") || matches.is_present("verification-path");
-    let verification_config = match cli::verification_settings(&matches) {
+    let verification_config = match cli::verification_config(&matches) {
         Ok(config) => config,
         Err(e) => {
             fatal_error(format!(
