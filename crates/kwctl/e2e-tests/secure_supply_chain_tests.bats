@@ -1,10 +1,8 @@
 #!/usr/bin/env bats
 
-FULCIO_AND_REKORD_DATA_DIR=$(readlink -f ~/.config/kubewarden/fulcio_and_rekor_data)
-
 setup() {
     rm -rf ~/.cache/kubewarden
-    rm -rf ${FULCIO_AND_REKORD_DATA_DIR}
+    rm -rf ~/.config/kubewarden
 }
 
 kwctl() {
@@ -118,6 +116,7 @@ kwctl() {
     [ "$status" -eq 0 ]
 
     # Test TUF integration
+    FULCIO_AND_REKORD_DATA_DIR=$(readlink -f ~/.config/kubewarden/fulcio_and_rekor_data)
     rm -rf ${FULCIO_AND_REKORD_DATA_DIR}
     kwctl verify \
       --verification-config-path=test-data/sigstore/verification-config-keyless.yml \
@@ -190,3 +189,15 @@ kwctl() {
     [ $(expr "$output" : '.*Image verification failed: missing signatures.*') -ne 0 ]
 }
 
+
+@test "[Secure supply chain  tests] generate verification config and verify a Kubewarden policy" {
+    mkdir -p ~/.config/kubewarden
+    run bash -c "cargo run -q -- scaffold verification-config > ~/.config/kubewarden/verification-config.yml"
+
+    kwctl verify \
+      --fulcio-cert-path ~/.sigstore/root/targets/fulcio.crt.pem \
+      --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+      --rekor-public-key-path ~/.sigstore/root/targets/rekor.pub \
+      registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
+    [ "$status" -eq 0 ]
+}

@@ -2,6 +2,7 @@
 
 setup() {
     rm -rf ~/.cache/kubewarden
+    rm -rf ~/.config/kubewarden
 }
 
 kwctl() {
