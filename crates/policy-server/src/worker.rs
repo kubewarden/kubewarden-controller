@@ -73,7 +73,18 @@ impl Worker {
                 }
             });
 
-            let policy_contents = match std::fs::read(&policy.wasm_module_path) {
+            let wasm_module_path = match &policy.wasm_module_path {
+                Some(p) => p,
+                None => {
+                    evs_errors.insert(
+                        policy.url.clone(),
+                        "missing path to local Wasm file".to_string(),
+                    );
+                    continue;
+                }
+            };
+
+            let policy_contents = match std::fs::read(&wasm_module_path) {
                 Ok(policy_contents) => policy_contents,
                 Err(err) => {
                     evs_errors.insert(

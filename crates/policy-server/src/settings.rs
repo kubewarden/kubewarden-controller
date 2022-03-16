@@ -38,7 +38,7 @@ pub struct Policy {
     #[serde(rename = "allowedToMutate")]
     pub allowed_to_mutate: Option<bool>,
     #[serde(skip)]
-    pub wasm_module_path: PathBuf,
+    pub wasm_module_path: Option<PathBuf>,
     #[serde(default)]
     pub settings: Option<HashMap<String, Value>>,
 }
