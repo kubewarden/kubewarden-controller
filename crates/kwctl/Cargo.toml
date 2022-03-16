@@ -3,8 +3,7 @@ name = "kwctl"
 description = "Tool to manage Kubewarden policies"
 version = "0.2.5"
 authors = [
-        "Flavio Castelli <fcastelli@suse.com>",
-        "Rafael Fernández López <rfernandezlopez@suse.com>",
+        "Kubewarden Developers <kubewarden@suse.de>"
 ]
 edition = "2018"
 
