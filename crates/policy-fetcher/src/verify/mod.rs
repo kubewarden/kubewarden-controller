@@ -114,8 +114,8 @@ impl Verifier {
     pub async fn verify(
         &mut self,
         url: &str,
-        docker_config: Option<DockerConfig>,
-        verification_config: config::LatestVerificationConfig,
+        docker_config: Option<&DockerConfig>,
+        verification_config: &config::LatestVerificationConfig,
     ) -> Result<String> {
         // obtain image name:
         //
@@ -135,7 +135,7 @@ impl Verifier {
 
         // obtain registry auth:
         //
-        let auth: sigstore::registry::Auth = match docker_config.clone() {
+        let auth: sigstore::registry::Auth = match docker_config {
             Some(docker_config) => {
                 let sigstore_auth: Option<Result<sigstore::registry::Auth>> = docker_config
                     .auth(image_name)
@@ -169,7 +169,7 @@ impl Verifier {
 
         // verify signatures against our config:
         //
-        verify_signatures_against_config(&verification_config, &trusted_layers)?;
+        verify_signatures_against_config(verification_config, &trusted_layers)?;
 
         // everything is fine here:
         debug!(
@@ -188,7 +188,7 @@ impl Verifier {
     pub async fn verify_local_file_checksum(
         &mut self,
         policy: &Policy,
-        docker_config: Option<DockerConfig>,
+        docker_config: Option<&DockerConfig>,
         verified_manifest_digest: &str,
     ) -> Result<()> {
         let url = match Url::parse(&policy.uri) {
@@ -212,7 +212,7 @@ impl Verifier {
             ));
         }
 
-        let registry = crate::registry::Registry::new(docker_config.as_ref());
+        let registry = crate::registry::Registry::new(docker_config);
         let reference = oci_distribution::Reference::from_str(image_name)?;
         let image_immutable_ref = format!(
             "registry://{}/{}@{}",

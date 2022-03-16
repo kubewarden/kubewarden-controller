@@ -42,7 +42,7 @@ pub enum PullDestination {
 pub async fn fetch_policy(
     url: &str,
     destination: PullDestination,
-    docker_config: Option<DockerConfig>,
+    docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
 ) -> Result<Policy> {
     let url = match Url::parse(url) {
@@ -165,11 +165,11 @@ fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<
 // right struct to interact with it
 fn url_fetcher(
     scheme: &str,
-    docker_config: Option<DockerConfig>,
+    docker_config: Option<&DockerConfig>,
 ) -> Result<Box<dyn PolicyFetcher>> {
     match scheme {
         "http" | "https" => Ok(Box::new(Https::default())),
-        "registry" => Ok(Box::new(Registry::new(docker_config.as_ref()))),
+        "registry" => Ok(Box::new(Registry::new(docker_config))),
         _ => return Err(anyhow!("unknown scheme: {}", scheme)),
     }
 }
@@ -196,7 +196,8 @@ fn create_file_if_valid(bytes: &[u8], destination: &Path, url: String) -> Result
     if !bytes.starts_with(&WASM_MAGIC_NUMBER) {
         return Err(anyhow!("invalid wasm file"));
     };
-    fs::write(destination, bytes)?;
+    fs::write(destination, bytes)
+        .map_err(|e| anyhow!("wasm module cannot be save to {:?}: {}", destination, e))?;
 
     Ok(Policy {
         uri: url,
