@@ -15,7 +15,6 @@ use crate::settings::Policy;
 /// Handles download and verification of policies
 pub(crate) struct Downloader {
     verifier: Option<Verifier>,
-    verification_config: LatestVerificationConfig,
     docker_config: Option<DockerConfig>,
     sources: Option<Sources>,
 }
@@ -35,8 +34,7 @@ impl Downloader {
         sources: Option<Sources>,
         docker_config: Option<DockerConfig>,
         enable_verification: bool,
-        verification_config: LatestVerificationConfig,
-        sigstore_cache_dir: PathBuf,
+        sigstore_cache_dir: Option<PathBuf>,
     ) -> Result<Self> {
         let verifier = if enable_verification {
             info!("Fetching sigstore data from remote TUF repository");
@@ -47,7 +45,6 @@ impl Downloader {
 
         Ok(Downloader {
             verifier,
-            verification_config,
             docker_config,
             sources,
         })
@@ -58,6 +55,7 @@ impl Downloader {
         &mut self,
         policies: &mut HashMap<String, Policy>,
         destination: &str,
+        verification_config: &LatestVerificationConfig,
     ) -> Result<()> {
         let policies_total = policies.len();
         info!(
@@ -83,7 +81,7 @@ impl Downloader {
                     .verify(
                         &policy.url,
                         self.docker_config.as_ref(),
-                        &self.verification_config,
+                        verification_config,
                     )
                     .await
                 {
@@ -187,7 +185,7 @@ impl Downloader {
                     "policy download",
                 );
             }
-            policy.wasm_module_path = fetched_policy.local_path;
+            policy.wasm_module_path = Some(fetched_policy.local_path);
         }
 
         if policy_verification_errors.is_empty() {
@@ -206,15 +204,18 @@ impl Downloader {
 /// TUF repository of the sigstore project
 async fn create_verifier(
     sources: Option<Sources>,
-    sigstore_cache_dir: PathBuf,
+    sigstore_cache_dir: Option<PathBuf>,
 ) -> Result<Verifier> {
-    if !sigstore_cache_dir.exists() {
-        fs::create_dir_all(sigstore_cache_dir.clone())
-            .map_err(|e| anyhow!("Cannot create directory to cache sigstore data: {}", e))?;
+    if let Some(cache_dir) = sigstore_cache_dir.clone() {
+        if !cache_dir.exists() {
+            fs::create_dir_all(cache_dir)
+                .map_err(|e| anyhow!("Cannot create directory to cache sigstore data: {}", e))?;
+        }
     }
 
-    let repo = spawn_blocking(move || {
-        sigstore::tuf::SigstoreRepository::fetch(Some(sigstore_cache_dir.as_path()))
+    let repo = spawn_blocking(move || match sigstore_cache_dir {
+        Some(d) => sigstore::tuf::SigstoreRepository::fetch(Some(d.as_path())),
+        None => sigstore::tuf::SigstoreRepository::fetch(None),
     })
     .await
     .map_err(|e| anyhow!("Cannot spawn blocking task: {}", e))?
@@ -222,4 +223,134 @@ async fn create_verifier(
 
     let fulcio_and_rekor_data = FulcioAndRekorData::FromTufRepository { repo };
     Verifier::new(sources, &fulcio_and_rekor_data)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lazy_static::lazy_static;
+    use std::sync::Mutex;
+    use tempfile::TempDir;
+    use tokio::runtime::Runtime;
+
+    lazy_static! {
+        // Allocate the DOWNLOADER once, this is needed to reduce the execution time
+        // of the unit tests
+        static ref DOWNLOADER: Mutex<Downloader> = Mutex::new({
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async { Downloader::new(None, None, true, None).await.unwrap() })
+        });
+    }
+
+    #[test]
+    fn download_and_verify_success() {
+        let verification_cfg_yml = r#"---
+    allOf:
+      - kind: pubKey
+        owner: pubkey1.pub
+        key: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQiTy5S+2JFvVlhUwWPLziM7iTM2j
+              byLgh2IjpNQN0Uio/9pZOTP/CsJmXoUNshfpTUHd3OxgHgz/6adtf2nBwQ==
+              -----END PUBLIC KEY-----
+        annotations:
+          env: prod
+          stable: "true"
+      - kind: pubKey
+        owner: pubkey2.pub
+        key: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx0HuqSss8DUIIUg3I006b1EQjj3Q
+              igsTrvZ/Q3+h+81DkNJg4LzID1rz0UJFUcdzI5NqlFLSTDIQw0gVKOiK7g==
+              -----END PUBLIC KEY-----
+        annotations:
+          env: prod
+        "#;
+        let verification_config =
+            serde_yaml::from_str::<LatestVerificationConfig>(verification_cfg_yml)
+                .expect("Cannot convert verification config");
+
+        let policies_cfg = r#"
+    pod-privileged:
+      url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    "#;
+
+        let mut policies: HashMap<String, Policy> =
+            serde_yaml::from_str(policies_cfg).expect("Cannot parse policy cfg");
+        for (_, policy) in policies.iter() {
+            assert!(policy.wasm_module_path.is_none());
+        }
+
+        let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
+
+        // This is required to have lazy_static create the object right now,
+        // outside of the tokio runtime. Creating the object inside of the tokio
+        // rutime causes a panic because sigstore-rs' code invokes a `block_on` too
+        let downloader = DOWNLOADER.lock().unwrap();
+        drop(downloader);
+
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            DOWNLOADER
+                .lock()
+                .unwrap()
+                .download_policies(
+                    &mut policies,
+                    policy_download_dir.path().to_str().unwrap(),
+                    &verification_config,
+                )
+                .await
+                .expect("Cannot download policy")
+        });
+
+        for (_, policy) in policies.iter() {
+            assert!(policy.wasm_module_path.is_some());
+            assert!(policy.wasm_module_path.clone().unwrap().exists());
+        }
+    }
+
+    #[test]
+    fn download_and_verify_error() {
+        let verification_cfg_yml = r#"---
+    allOf:
+      - kind: githubAction
+        owner: kubewarden
+       "#;
+        let verification_config =
+            serde_yaml::from_str::<LatestVerificationConfig>(verification_cfg_yml)
+                .expect("Cannot convert verification config");
+
+        let policies_cfg = r#"
+    pod-privileged:
+      url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    "#;
+
+        let mut policies: HashMap<String, Policy> =
+            serde_yaml::from_str(policies_cfg).expect("Cannot parse policy cfg");
+
+        let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
+
+        // This is required to have lazy_static create the object right now,
+        // outside of the tokio runtime. Creating the object inside of the tokio
+        // rutime causes a panic because sigstore-rs' code invokes a `block_on` too
+        let downloader = DOWNLOADER.lock().unwrap();
+        drop(downloader);
+
+        let rt = Runtime::new().unwrap();
+        let err = rt.block_on(async {
+            DOWNLOADER
+                .lock()
+                .unwrap()
+                .download_policies(
+                    &mut policies,
+                    policy_download_dir.path().to_str().unwrap(),
+                    &verification_config,
+                )
+                .await
+                .expect_err("an error was expected")
+        });
+        assert!(err
+            .to_string()
+            .contains("Image verification failed: missing signatures"));
+    }
 }

@@ -194,8 +194,7 @@ fn main() -> Result<()> {
             sources,
             docker_config,
             verify_enabled,
-            verification_config,
-            sigstore_cache_dir,
+            Some(sigstore_cache_dir),
         )
         .await
         {
@@ -208,7 +207,7 @@ fn main() -> Result<()> {
 
         let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
         if let Err(e) = downloader
-            .download_policies(&mut policies, policies_download_dir)
+            .download_policies(&mut policies, policies_download_dir, &verification_config)
             .await
         {
             fatal_error(e.to_string());
