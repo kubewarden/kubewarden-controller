@@ -3,12 +3,10 @@ extern crate kube;
 extern crate policy_evaluator;
 
 use anyhow::Result;
+use lazy_static::lazy_static;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::callback_handler::CallbackHandlerBuilder;
-use policy_evaluator::policy_metadata::Metadata;
-use settings::VerificationSettings;
-use std::path::PathBuf;
-use std::{process, thread};
+use std::{path::PathBuf, process, sync::RwLock, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
 
@@ -22,14 +20,18 @@ mod settings;
 mod utils;
 mod worker;
 
-mod constants;
-use constants::{FULCIO_CRT, REKOR_PUB_KEY};
+mod policy_downloader;
+use policy_downloader::Downloader;
 
 mod worker_pool;
 use worker_pool::WorkerPool;
 
 mod communication;
 use communication::{EvalRequest, KubePollerBootRequest, WorkerPoolBootRequest};
+
+lazy_static! {
+    static ref TRACE_SYSTEM_INITIALIZED: RwLock<bool> = RwLock::new(false);
+}
 
 fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
@@ -47,11 +49,20 @@ fn main() -> Result<()> {
     let metrics_enabled = matches.is_present("enable-metrics");
     let verify_enabled =
         matches.is_present("enable-verification") || matches.is_present("verification-path");
-    let verification_settings: Option<VerificationSettings> = if verify_enabled {
-        Some(cli::verification_settings(&matches)?)
-    } else {
-        None
+    let verification_config = match cli::verification_config(&matches) {
+        Ok(config) => config,
+        Err(e) => {
+            fatal_error(format!(
+                "Cannot create sigstore verification config: {:?}",
+                e
+            ));
+            unreachable!()
+        }
     };
+    let sigstore_cache_dir = matches
+        .value_of("sigstore-cache-dir")
+        .map(PathBuf::from)
+        .expect("This should not happen, there's a default value for sigstore-cache-dir");
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
@@ -158,9 +169,17 @@ fn main() -> Result<()> {
     rt.block_on(async {
         // Setup the tracing system. This MUST be done inside of a tokio Runtime
         // because some collectors rely on it and would panic otherwise.
-        if let Err(err) = cli::setup_tracing(&matches) {
-            fatal_error(err.to_string());
-        }
+        match cli::setup_tracing(&matches) {
+            Err(err) => {
+                fatal_error(err.to_string());
+                unreachable!();
+            }
+            Ok(_) => {
+                debug!("tracing system ready");
+                let mut w = TRACE_SYSTEM_INITIALIZED.write().unwrap();
+                *w = true;
+            }
+        };
 
         // The unused variable is required so the meter is not dropped early and
         // lives for the whole block lifetime, exporting metrics
@@ -171,151 +190,29 @@ fn main() -> Result<()> {
         };
 
         // Download policies
-        let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
-        let policies_total = policies.len();
-        info!(
-            download_dir = policies_download_dir,
-            policies_count = policies_total,
-            status = "init",
-            "policies download",
-        );
-        for (name, policy) in policies.iter_mut() {
-            debug!(policy = name.as_str(), "download");
-
-            let mut verifier = match policy_fetcher::verify::Verifier::new(
-                sources.clone(),
-                FULCIO_CRT.as_bytes(),
-                REKOR_PUB_KEY,
-            ) {
-                Ok(v) => v,
-                Err(e) => {
-                    fatal_error(format!("Cannot create sigstore verifier: {:?}", e));
-                    unreachable!()
-                }
-            };
-
-            let mut verified_manifest_digest: Option<String> = None;
-
-            if verify_enabled {
-                info!(
-                    policy = name.as_str(),
-                    "verifying policy authenticity and integrity using sigstore"
-                );
-
-                // verify policy prior to pulling for all keys, and keep the
-                // verified manifest digest of last iteration, even if all are
-                // the same:
-                for key_value in verification_settings
-                    .as_ref()
-                    .unwrap()
-                    .verification_keys
-                    .values()
-                {
-                    verified_manifest_digest = Some(
-                        verifier
-                            .verify(
-                                &policy.url,
-                                docker_config.clone(),
-                                verification_settings
-                                    .as_ref()
-                                    .unwrap()
-                                    .verification_annotations
-                                    .clone(),
-                                key_value,
-                            )
-                            .await
-                            .map_err(|e| {
-                                fatal_error(format!(
-                                    "Policy '{}' cannot be verified: {:?}",
-                                    name, e
-                                ))
-                            })
-                            .unwrap(),
-                    );
-                }
-                info!(
-                    name = name.as_str(),
-                    sha256sum = verified_manifest_digest
-                        .as_ref()
-                        .unwrap_or(&"unknown".to_string())
-                        .as_str(),
-                    status = "verified-signatures",
-                    "policy download",
-                );
+        let mut downloader = match Downloader::new(
+            sources,
+            docker_config,
+            verify_enabled,
+            Some(sigstore_cache_dir),
+        )
+        .await
+        {
+            Ok(d) => d,
+            Err(e) => {
+                fatal_error(e.to_string());
+                unreachable!()
             }
+        };
 
-            match policy_fetcher::fetch_policy(
-                &policy.url,
-                policy_fetcher::PullDestination::Store(PathBuf::from(policies_download_dir)),
-                docker_config.clone(),
-                sources.as_ref(),
-            )
+        let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
+        if let Err(e) = downloader
+            .download_policies(&mut policies, policies_download_dir, &verification_config)
             .await
-            {
-                Ok(fetched_policy) => {
-                    if verify_enabled {
-                        if verified_manifest_digest.is_none() {
-                            // when deserializing keys we check that have keys to
-                            // verify. We will always have a digest manifest
-                            fatal_error("Verification of policy failed".to_string());
-                            unreachable!();
-                        }
-
-                        verifier
-                            .verify_local_file_checksum(
-                                &fetched_policy,
-                                docker_config.clone(),
-                                verified_manifest_digest.as_ref().unwrap(),
-                            )
-                            .await
-                            .map_err(|e| fatal_error(e.to_string()))
-                            .unwrap();
-                        info!(
-                            name = name.as_str(),
-                            sha256sum = verified_manifest_digest
-                                .as_ref()
-                                .unwrap_or(&"unknown".to_string())
-                                .as_str(),
-                            status = "verified-local-checksum",
-                            "policy download",
-                        );
-                    }
-
-                    if let Ok(Some(policy_metadata)) =
-                        Metadata::from_path(&fetched_policy.local_path)
-                    {
-                        info!(
-                            name = name.as_str(),
-                            path = fetched_policy.local_path.clone().into_os_string().to_str(),
-                            sha256sum = fetched_policy
-                                .digest()
-                                .unwrap_or_else(|_| "unknown".to_string())
-                                .as_str(),
-                            mutating = policy_metadata.mutating,
-                            "policy download",
-                        );
-                    } else {
-                        info!(
-                            name = name.as_str(),
-                            path = fetched_policy.local_path.clone().into_os_string().to_str(),
-                            sha256sum = fetched_policy
-                                .digest()
-                                .unwrap_or_else(|_| "unknown".to_string())
-                                .as_str(),
-                            "policy download",
-                        );
-                    }
-                    policy.wasm_module_path = fetched_policy.local_path;
-                }
-                Err(e) => {
-                    return fatal_error(format!(
-                        "error while fetching policy {} from {}: {}",
-                        name, policy.url, e
-                    ));
-                }
-            };
+        {
+            fatal_error(e.to_string());
+            unreachable!()
         }
-        info!(status = "done", "policies download");
 
         // Start the kubernetes poller
         info!(status = "init", "kubernetes poller bootstrap");
@@ -436,8 +333,13 @@ fn main() -> Result<()> {
 }
 
 fn fatal_error(msg: String) {
-    error!("{}", msg);
-    shutdown_tracer_provider();
+    let trace_system_ready = TRACE_SYSTEM_INITIALIZED.read().unwrap();
+    if *trace_system_ready {
+        error!("{}", msg);
+        shutdown_tracer_provider();
+    } else {
+        eprintln!("{}", msg);
+    }
 
     process::exit(1);
 }

@@ -38,7 +38,7 @@ pub struct Policy {
     #[serde(rename = "allowedToMutate")]
     pub allowed_to_mutate: Option<bool>,
     #[serde(skip)]
-    pub wasm_module_path: PathBuf,
+    pub wasm_module_path: Option<PathBuf>,
     #[serde(default)]
     pub settings: Option<HashMap<String, Value>>,
 }
@@ -51,18 +51,6 @@ pub fn read_policies_file(path: &Path) -> Result<HashMap<String, Policy>> {
     let settings_file = File::open(path)?;
     let ps: HashMap<String, Policy> = serde_yaml::from_reader(&settings_file)?;
     Ok(ps)
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct VerificationSettings {
-    pub verification_keys: HashMap<String, String>,
-    pub verification_annotations: Option<HashMap<String, String>>,
-}
-
-pub fn read_verification_file(path: &Path) -> Result<VerificationSettings> {
-    let settings_file = File::open(path)?;
-    let vs: VerificationSettings = serde_yaml::from_reader(&settings_file)?;
-    Ok(vs)
 }
 
 #[cfg(test)]

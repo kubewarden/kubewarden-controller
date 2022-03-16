@@ -12,8 +12,8 @@ edition = "2018"
 anyhow = "1.0"
 async-stream = "0.3.3"
 itertools = "0.10.3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.13" }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.4.3" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.15" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.6.0" }
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 clap = { version = "3.0.15", features = [ "cargo", "env" ] }
@@ -35,6 +35,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "json"] }
 tracing-futures = "0.2"
 tracing-opentelemetry = "0.17.2"
+
+[dev-dependencies]
+tempfile = "3.3.0"
 
 [patch.crates-io]
 # Forcing base64ct to version 1.1.1 given that version 1.2.0 has been
