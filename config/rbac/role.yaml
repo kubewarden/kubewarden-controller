@@ -45,14 +45,6 @@ rules:
   resources:
   - configmaps
   - secrets
-  verbs:
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - secrets
   - services
   verbs:
   - create
@@ -61,6 +53,7 @@ rules:
   - list
   - patch
   - update
+  - watch
 - apiGroups:
   - policies.kubewarden.io
   resources:
@@ -89,12 +82,9 @@ rules:
   resources:
   - clusteradmissionpolicies
   verbs:
-  - create
   - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - policies.kubewarden.io
@@ -115,12 +105,9 @@ rules:
   resources:
   - policyservers
   verbs:
-  - create
   - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - policies.kubewarden.io
