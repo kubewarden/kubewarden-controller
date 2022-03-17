@@ -47,12 +47,12 @@ mod backend;
 mod cli;
 mod completions;
 mod inspect;
-mod manifest;
 mod policies;
 mod pull;
 mod push;
 mod rm;
 mod run;
+mod scaffold;
 mod utils;
 mod verify;
 
@@ -308,7 +308,7 @@ async fn main() -> Result<()> {
             };
             Ok(())
         }
-        Some("manifest") => {
+        Some("scaffold") => {
             if let Some(matches) = matches.subcommand_matches("manifest") {
                 let uri = matches.value_of("uri").unwrap();
                 let resource_type = matches.value_of("type").unwrap();
@@ -333,7 +333,7 @@ async fn main() -> Result<()> {
                 };
                 let policy_title = matches.value_of("title");
 
-                manifest::manifest(uri, resource_type, settings, policy_title.map(String::from))?;
+                scaffold::manifest(uri, resource_type, settings, policy_title.map(String::from))?;
             };
             Ok(())
         }

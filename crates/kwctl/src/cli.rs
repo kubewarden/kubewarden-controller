@@ -439,7 +439,7 @@ pub fn build_cli() -> Command<'static> {
                 )
         )
         .subcommand(
-            Command::new("manifest")
+            Command::new("scaffold")
                 .about("Scaffold a Kubernetes resource")
                 .arg(
                     Arg::new("settings-path")
