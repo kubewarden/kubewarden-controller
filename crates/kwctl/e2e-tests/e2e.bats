@@ -1,8 +1,13 @@
 #!/usr/bin/env bats
 
 setup() {
-    rm -rf ~/.cache/kubewarden
-    rm -rf ~/.config/kubewarden
+    export KWCTL_TMPDIR=${BATS_TMPDIR}/kwctl # /tmp/kwctl
+
+    export XDG_CONFIG_HOME=${KWCTL_TMPDIR}/.config
+    export XDG_CACHE_HOME=${KWCTL_TMPDIR}/.cache
+    export XDG_DATA_HOME=${KWCTL_TMPDIR}/.local/share
+
+    rm -rf ${KWCTL_TMPDIR} && mkdir -p ${KWCTL_TMPDIR}
 }
 
 kwctl() {
@@ -32,12 +37,12 @@ kwctl() {
 }
 
 @test "pull a policy from HTTPS to a file" {
-    kwctl pull -o /tmp/my-policy.wasm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
+    kwctl pull -o ${KWCTL_TMPDIR}/my-policy.wasm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
     [ "$status" -eq 0 ]
     kwctl policies
     [ "$status" -eq 0 ]
     [ "$output" = "" ]
-    run file /tmp/my-policy.wasm
+    run file ${KWCTL_TMPDIR}/my-policy.wasm
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*WebAssembly.*') -ne 0 ]
 }

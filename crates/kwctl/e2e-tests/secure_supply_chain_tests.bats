@@ -1,8 +1,24 @@
 #!/usr/bin/env bats
 
+redefine_xdg_envvars() {
+    export KWCTL_TMPDIR=${BATS_TMPDIR}/kwctl # /tmp/kwctl
+
+    export XDG_CONFIG_HOME=${KWCTL_TMPDIR}/.config
+    export XDG_CACHE_HOME=${KWCTL_TMPDIR}/.cache
+    export XDG_DATA_HOME=${KWCTL_TMPDIR}/.local/share
+
+    rm -rf ${KWCTL_TMPDIR} && mkdir -p ${KWCTL_TMPDIR}
+}
+
+setup_file() {
+    # once for all tests in file
+    redefine_xdg_envvars
+    cosign initialize
+}
+
 setup() {
-    rm -rf ~/.cache/kubewarden
-    rm -rf ~/.config/kubewarden
+    # before every test
+    redefine_xdg_envvars
 }
 
 kwctl() {
@@ -116,15 +132,15 @@ kwctl() {
     [ "$status" -eq 0 ]
 
     # Test TUF integration
-    FULCIO_AND_REKORD_DATA_DIR=$(readlink -f ~/.config/kubewarden/fulcio_and_rekor_data)
-    rm -rf ${FULCIO_AND_REKORD_DATA_DIR}
+    FULCIO_AND_REKOR_DATA_DIR=$(readlink -f "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data)
+    rm -rf ${FULCIO_AND_REKOR_DATA_DIR}
     kwctl verify \
       --verification-config-path=test-data/sigstore/verification-config-keyless.yml \
       registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
     [ "$status" -eq 0 ]
-    [ -f ${FULCIO_AND_REKORD_DATA_DIR}/fulcio.crt.pem ]
-    [ -f ${FULCIO_AND_REKORD_DATA_DIR}/fulcio_v1.crt.pem ]
-    [ -f ${FULCIO_AND_REKORD_DATA_DIR}/rekor.pub ]
+    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio.crt.pem ]
+    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio_v1.crt.pem ]
+    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/rekor.pub ]
 }
 
 @test "[Secure supply chain  tests] pull a signed policy from an OCI registry" {
@@ -191,8 +207,8 @@ kwctl() {
 
 
 @test "[Secure supply chain  tests] generate verification config and verify a Kubewarden policy" {
-    mkdir -p ~/.config/kubewarden
-    run bash -c "cargo run -q -- scaffold verification-config > ~/.config/kubewarden/verification-config.yml"
+    mkdir -p ${XDG_CONFIG_HOME}/kubewarden
+    run bash -c "cargo run -q -- scaffold verification-config > ${XDG_CONFIG_HOME}/kubewarden/verification-config.yml"
 
     kwctl verify \
       --fulcio-cert-path ~/.sigstore/root/targets/fulcio.crt.pem \
