@@ -80,10 +80,10 @@ func SetPolicyConfigurationCondition(policyServerConfigMap *corev1.ConfigMap, po
 	}
 }
 
-func SetPolicyUniquenessCondition(ctx context.Context, apiReader client.Reader, policyServerConfigMap *corev1.ConfigMap, policyServerDeployment *appsv1.Deployment, conditions *[]metav1.Condition) {
+func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, policyServerDeployment *appsv1.Deployment) bool {
 	replicaSets := appsv1.ReplicaSetList{}
 	if err := apiReader.List(ctx, &replicaSets, client.InNamespace(policyServerDeployment.Namespace)); err != nil {
-		return
+		return false
 	}
 	podTemplateHash := ""
 	for _, replicaSet := range replicaSets.Items {
@@ -93,33 +93,20 @@ func SetPolicyUniquenessCondition(ctx context.Context, apiReader client.Reader, 
 		}
 	}
 	if podTemplateHash == "" {
-		return
+		return false
 	}
 	pods := corev1.PodList{}
 	if err := apiReader.List(ctx, &pods, client.InNamespace(policyServerDeployment.Namespace)); err != nil {
-		return
+		return false
+	}
+	if len(pods.Items) == 0 {
+		return false
 	}
 	for _, pod := range pods.Items {
 		if pod.Labels[appsv1.DefaultDeploymentUniqueLabelKey] != podTemplateHash {
-			apimeta.SetStatusCondition(
-				conditions,
-				metav1.Condition{
-					Type:    string(policiesv1alpha2.PolicyUniquelyReachable),
-					Status:  metav1.ConditionFalse,
-					Reason:  "LatestReplicaSetIsNotUniquelyReachable",
-					Message: "The latest replica set is not uniquely reachable",
-				},
-			)
-			return
+			return false
 		}
 	}
-	apimeta.SetStatusCondition(
-		conditions,
-		metav1.Condition{
-			Type:    string(policiesv1alpha2.PolicyUniquelyReachable),
-			Status:  metav1.ConditionTrue,
-			Reason:  "LatestReplicaSetIsUniquelyReachable",
-			Message: "The latest replica set is uniquely reachable",
-		},
-	)
+
+	return true
 }

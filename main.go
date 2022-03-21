@@ -121,6 +121,7 @@ func main() {
 	reconciler := admission.Reconciler{
 		Client:               mgr.GetClient(),
 		APIReader:            mgr.GetAPIReader(),
+		Log:                  ctrl.Log.WithName("reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
 	}
 

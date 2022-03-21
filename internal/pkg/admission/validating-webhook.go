@@ -22,8 +22,9 @@ import (
 func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 	ctx context.Context,
 	policy v1alpha2.Policy,
-	admissionSecret *corev1.Secret) error {
-	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policy.GetPolicyServer())
+	admissionSecret *corev1.Secret,
+	policyServerNameWithPrefix string) error {
+	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerNameWithPrefix)
 	err := r.Client.Create(ctx, webhook)
 	if err == nil {
 		return nil

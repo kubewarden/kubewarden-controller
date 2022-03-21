@@ -42,21 +42,13 @@ func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
 	}
 
-	if admissionPolicy.DeletionTimestamp != nil {
-		return reconcilePolicyDeletion(ctx, r.Client, &admissionPolicy)
-	}
-
-	return reconcilePolicy(ctx, r.Client, r.Reconciler, &admissionPolicy)
+	return startReconciling(ctx, r.Reconciler.Client, r.Reconciler, &admissionPolicy)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.AdmissionPolicy{}).
-		Watches(
-			&source.Kind{Type: &corev1.ConfigMap{}},
-			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForConfigMap),
-		).
 		Watches(
 			&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPod),
@@ -88,7 +80,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPod(object client.Ob
 		return []reconcile.Request{}
 	}
 	policyServerName, isKubewardenPod := pod.Labels[constants.PolicyServerLabelKey]
-	if !isKubewardenPod {
+	if !isKubewardenPod || pod.DeletionTimestamp != nil {
 		return []reconcile.Request{}
 	}
 	policyServerDeploymentName := naming.PolicyServerDeploymentNameForPolicyServerName(policyServerName)

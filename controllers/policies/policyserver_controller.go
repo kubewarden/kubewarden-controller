@@ -27,7 +27,6 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/log"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -111,6 +110,10 @@ func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policySe
 		}
 		controllerutil.RemoveFinalizer(policyServer, constants.KubewardenFinalizer)
 		if err := r.Update(ctx, policyServer); err != nil {
+			// return if PolicyServer was previously deleted
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, fmt.Errorf("cannot update policy server: %w", err)
 		}
 		return ctrl.Result{}, nil
@@ -144,20 +147,6 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1alpha2.PolicyServer{}).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
-			configMap, ok := object.(*corev1.ConfigMap)
-			if !ok {
-				r.Log.Info("object is not type of ConfigMap: %+v", configMap)
-				return []ctrl.Request{}
-			}
-			return []ctrl.Request{
-				{
-					NamespacedName: client.ObjectKey{
-						Name: configMap.Labels[constants.PolicyServerLabelKey],
-					},
-				},
-			}
-		})).
 		Watches(&source.Kind{Type: &policiesv1alpha2.AdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
 			// The watch will trigger twice per object change; once with the old
 			// object, and once the new object. We need to be mindful when doing

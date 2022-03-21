@@ -42,21 +42,13 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
 	}
 
-	if clusterAdmissionPolicy.DeletionTimestamp != nil {
-		return reconcilePolicyDeletion(ctx, r.Client, &clusterAdmissionPolicy)
-	}
-
-	return reconcilePolicy(ctx, r.Client, r.Reconciler, &clusterAdmissionPolicy)
+	return startReconciling(ctx, r.Reconciler.Client, r.Reconciler, &clusterAdmissionPolicy)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&policiesv1alpha2.AdmissionPolicy{}).
-		Watches(
-			&source.Kind{Type: &corev1.ConfigMap{}},
-			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForConfigMap),
-		).
+		For(&policiesv1alpha2.ClusterAdmissionPolicy{}).
 		Watches(
 			&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
