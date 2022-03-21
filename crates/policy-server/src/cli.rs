@@ -4,9 +4,11 @@ use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Com
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
-use policy_fetcher::registry::config::{read_docker_config_json_file, DockerConfig};
-use policy_fetcher::sources::{read_sources_file, Sources};
-use policy_fetcher::verify::config::{read_verification_file, LatestVerificationConfig};
+use policy_evaluator::policy_fetcher::{
+    registry::config::{read_docker_config_json_file, DockerConfig},
+    sources::{read_sources_file, Sources},
+    verify::config::{read_verification_file, LatestVerificationConfig},
+};
 use std::{collections::HashMap, net::SocketAddr, path::Path};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -192,14 +194,14 @@ pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Pol
     })
 }
 
-pub(crate) fn verification_config(matches: &clap::ArgMatches) -> Result<LatestVerificationConfig> {
+pub(crate) fn verification_config(
+    matches: &clap::ArgMatches,
+) -> Result<Option<LatestVerificationConfig>> {
     match matches.value_of("verification-path") {
-        None => Err(anyhow!(
-            "error parsing arguments: --verification-path must be provided"
-        )),
+        None => Ok(None),
         Some(path) => {
             let verification_file = Path::new(path);
-            read_verification_file(verification_file)
+            Ok(Some(read_verification_file(verification_file)?))
         }
     }
 }

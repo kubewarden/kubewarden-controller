@@ -47,18 +47,13 @@ fn main() -> Result<()> {
     });
 
     let metrics_enabled = matches.is_present("enable-metrics");
-    let verify_enabled =
-        matches.is_present("enable-verification") || matches.is_present("verification-path");
-    let verification_config = match cli::verification_config(&matches) {
-        Ok(config) => config,
-        Err(e) => {
-            fatal_error(format!(
-                "Cannot create sigstore verification config: {:?}",
-                e
-            ));
-            unreachable!()
-        }
-    };
+    let verification_config = cli::verification_config(&matches).unwrap_or_else(|e| {
+        fatal_error(format!(
+            "Cannot create sigstore verification config: {:?}",
+            e
+        ));
+        unreachable!()
+    });
     let sigstore_cache_dir = matches
         .value_of("sigstore-cache-dir")
         .map(PathBuf::from)
@@ -193,7 +188,7 @@ fn main() -> Result<()> {
         let mut downloader = match Downloader::new(
             sources,
             docker_config,
-            verify_enabled,
+            verification_config.is_some(),
             Some(sigstore_cache_dir),
         )
         .await
@@ -207,7 +202,11 @@ fn main() -> Result<()> {
 
         let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
         if let Err(e) = downloader
-            .download_policies(&mut policies, policies_download_dir, &verification_config)
+            .download_policies(
+                &mut policies,
+                policies_download_dir,
+                verification_config.as_ref(),
+            )
             .await
         {
             fatal_error(e.to_string());

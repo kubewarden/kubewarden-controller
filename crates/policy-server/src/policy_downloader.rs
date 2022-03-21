@@ -1,10 +1,13 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::policy_metadata::Metadata;
-use policy_fetcher::{
-    registry::config::DockerConfig,
-    sigstore,
-    sources::Sources,
-    verify::{config::LatestVerificationConfig, FulcioAndRekorData, Verifier},
+use policy_evaluator::{
+    policy_fetcher,
+    policy_fetcher::{
+        registry::config::DockerConfig,
+        sigstore,
+        sources::Sources,
+        verify::{config::LatestVerificationConfig, FulcioAndRekorData, Verifier},
+    },
 };
 use std::{collections::HashMap, fs, path::PathBuf};
 use tokio::task::spawn_blocking;
@@ -55,7 +58,7 @@ impl Downloader {
         &mut self,
         policies: &mut HashMap<String, Policy>,
         destination: &str,
-        verification_config: &LatestVerificationConfig,
+        verification_config: Option<&LatestVerificationConfig>,
     ) -> Result<()> {
         let policies_total = policies.len();
         info!(
@@ -66,6 +69,10 @@ impl Downloader {
         );
 
         let mut policy_verification_errors = vec![];
+        let verification_config = verification_config.unwrap_or(&LatestVerificationConfig {
+            all_of: None,
+            any_of: None,
+        });
 
         for (name, policy) in policies.iter_mut() {
             debug!(policy = name.as_str(), "download");
@@ -297,7 +304,7 @@ mod tests {
                 .download_policies(
                     &mut policies,
                     policy_download_dir.path().to_str().unwrap(),
-                    &verification_config,
+                    Some(&verification_config),
                 )
                 .await
                 .expect("Cannot download policy")
@@ -344,7 +351,7 @@ mod tests {
                 .download_policies(
                     &mut policies,
                     policy_download_dir.path().to_str().unwrap(),
-                    &verification_config,
+                    Some(&verification_config),
                 )
                 .await
                 .expect_err("an error was expected")
