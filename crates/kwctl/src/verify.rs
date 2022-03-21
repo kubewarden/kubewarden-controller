@@ -1,8 +1,10 @@
 use anyhow::Result;
-use policy_fetcher::sources::Sources;
-use policy_fetcher::verify::config::LatestVerificationConfig;
-use policy_fetcher::verify::{FulcioAndRekorData, Verifier};
-use policy_fetcher::{policy::Policy, registry::config::DockerConfig};
+use policy_evaluator::policy_fetcher::{
+    policy::Policy,
+    registry::config::DockerConfig,
+    sources::Sources,
+    verify::{config::LatestVerificationConfig, FulcioAndRekorData, Verifier},
+};
 use std::collections::HashMap;
 use tracing::{debug, info};
 

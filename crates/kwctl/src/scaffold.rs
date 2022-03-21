@@ -6,10 +6,10 @@ use std::convert::TryFrom;
 use validator::Validate;
 
 use policy_evaluator::constants::KUBEWARDEN_ANNOTATION_POLICY_TITLE;
+use policy_evaluator::policy_fetcher::verify::config::{
+    LatestVerificationConfig, Signature, VersionedVerificationConfig,
+};
 use policy_evaluator::policy_metadata::{Metadata, Rule};
-use policy_fetcher::verify::config::LatestVerificationConfig;
-use policy_fetcher::verify::config::Signature;
-use policy_fetcher::verify::config::VersionedVerificationConfig;
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
