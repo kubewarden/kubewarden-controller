@@ -5,10 +5,11 @@ use policy_evaluator::{
     constants::*,
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
+    policy_fetcher::{
+        registry::config::DockerConfig, sources::Sources, verify::FulcioAndRekorData,
+        PullDestination,
+    },
     policy_metadata::Metadata,
-};
-use policy_fetcher::{
-    registry::config::DockerConfig, sources::Sources, verify::FulcioAndRekorData,
 };
 use std::path::Path;
 
@@ -28,14 +29,9 @@ pub(crate) async fn pull_and_run(
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
 
-    let policy = pull::pull(
-        &uri,
-        docker_config,
-        sources,
-        policy_fetcher::PullDestination::MainStore,
-    )
-    .await
-    .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
+    let policy = pull::pull(&uri, docker_config, sources, PullDestination::MainStore)
+        .await
+        .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
 
     if let Some(digest) = verified_manifest_digest {
         verify::verify_local_checksum(

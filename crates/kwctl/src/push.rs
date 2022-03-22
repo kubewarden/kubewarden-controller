@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
+use policy_evaluator::policy_fetcher::{
+    registry::config::DockerConfig, registry::Registry, sources::Sources,
+};
 use policy_evaluator::policy_metadata::Metadata;
-use policy_fetcher::{registry::config::DockerConfig, registry::Registry, sources::Sources};
 use std::{fs, path::PathBuf};
 
 use crate::backend::BackendDetector;

@@ -1,6 +1,8 @@
 use anyhow::Result;
-use policy_fetcher::registry::config::DockerConfig;
-use policy_fetcher::{fetch_policy, policy::Policy, sources::Sources, PullDestination};
+use policy_evaluator::policy_fetcher::registry::config::DockerConfig;
+use policy_evaluator::policy_fetcher::{
+    fetch_policy, policy::Policy, sources::Sources, PullDestination,
+};
 
 pub(crate) async fn pull(
     uri: &str,

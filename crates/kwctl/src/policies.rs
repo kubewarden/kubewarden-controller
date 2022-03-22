@@ -1,7 +1,8 @@
 use anyhow::Result;
-use policy_evaluator::policy_metadata::Metadata as PolicyMetadata;
-use policy_fetcher::policy::Policy;
-use policy_fetcher::store::Store;
+use policy_evaluator::{
+    policy_fetcher::{policy::Policy, store::Store},
+    policy_metadata::Metadata as PolicyMetadata,
+};
 use pretty_bytes::converter::convert;
 use prettytable::{format, Table};
 

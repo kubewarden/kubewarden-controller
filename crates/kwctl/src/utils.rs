@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
-use policy_fetcher::store::Store;
+use policy_evaluator::policy_fetcher::store::Store;
 use regex::Regex;
 use serde_json::json;
 use std::{env, path::PathBuf};

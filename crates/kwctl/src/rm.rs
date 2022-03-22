@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
+use policy_evaluator::policy_fetcher::store::{PolicyPath, Store};
 use std::path::PathBuf;
 
 pub(crate) fn rm(uri: &str) -> Result<()> {
-    let store = policy_fetcher::store::Store::default();
-    let policy_path =
-        store.policy_full_path(uri, policy_fetcher::store::PolicyPath::PrefixAndFilename)?;
+    let store = Store::default();
+    let policy_path = store.policy_full_path(uri, PolicyPath::PrefixAndFilename)?;
     std::fs::remove_file(&policy_path)
         .map_err(|err| anyhow!("could not delete policy {}: {}", uri, err))?;
 

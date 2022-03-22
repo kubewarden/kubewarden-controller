@@ -2,7 +2,6 @@ extern crate anyhow;
 extern crate clap;
 extern crate directories;
 extern crate policy_evaluator;
-extern crate policy_fetcher;
 extern crate pretty_bytes;
 #[macro_use]
 extern crate prettytable;
@@ -29,17 +28,17 @@ use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
-use policy_fetcher::registry::Registry;
-use policy_fetcher::sources::{read_sources_file, Certificate, Sources};
-use policy_fetcher::store::DEFAULT_ROOT;
-use policy_fetcher::PullDestination;
-use policy_fetcher::{
+use policy_evaluator::policy_fetcher::{
     registry::config::{read_docker_config_json_file, DockerConfig},
+    registry::Registry,
     sigstore,
+    sources::{read_sources_file, Certificate, Sources},
+    store::DEFAULT_ROOT,
     verify::{
         config::{read_verification_file, LatestVerificationConfig, Signature, Subject},
         FulcioAndRekorData,
     },
+    PullDestination,
 };
 
 use crate::utils::new_policy_execution_mode_from_str;
@@ -62,7 +61,7 @@ pub(crate) const KWCTL_VERIFICATION_CONFIG: &str = "verification-config.yml";
 
 lazy_static! {
     pub(crate) static ref KWCTL_DEFAULT_VERIFICATION_CONFIG_PATH: String = {
-        policy_fetcher::store::DEFAULT_ROOT
+        DEFAULT_ROOT
             .config_dir()
             .join(KWCTL_VERIFICATION_CONFIG)
             .display()
