@@ -13,7 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 

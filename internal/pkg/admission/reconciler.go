@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 )
 
 type Reconciler struct {
@@ -39,7 +39,7 @@ func (errorList reconcilerErrors) Error() string {
 
 func (r *Reconciler) ReconcileDeletion(
 	ctx context.Context,
-	policyServer *policiesv1alpha2.PolicyServer,
+	policyServer *v1alpha2.PolicyServer,
 ) error {
 	errors := reconcilerErrors{}
 
@@ -53,7 +53,7 @@ func (r *Reconciler) ReconcileDeletion(
 	if err == nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerDeploymentReconciled),
+			string(v1alpha2.PolicyServerDeploymentReconciled),
 			"Policy Server has been deleted",
 		)
 	} else if !apierrors.IsNotFound(err) {
@@ -71,7 +71,7 @@ func (r *Reconciler) ReconcileDeletion(
 	if err == nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerCASecretReconciled),
+			string(v1alpha2.PolicyServerCASecretReconciled),
 			"Policy Server has been deleted",
 		)
 	} else if !apierrors.IsNotFound(err) {
@@ -89,7 +89,7 @@ func (r *Reconciler) ReconcileDeletion(
 	if err == nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerServiceReconciled),
+			string(v1alpha2.PolicyServerServiceReconciled),
 			"Policy Server has been deleted",
 		)
 	} else if !apierrors.IsNotFound(err) {
@@ -107,7 +107,7 @@ func (r *Reconciler) ReconcileDeletion(
 	if err == nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerConfigMapReconciled),
+			string(v1alpha2.PolicyServerConfigMapReconciled),
 			"Policy Server has been deleted",
 		)
 	} else if !apierrors.IsNotFound(err) {
@@ -132,7 +132,7 @@ func setFalseConditionType(
 		metav1.Condition{
 			Type:    conditionType,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(policiesv1alpha2.ReconciliationFailed),
+			Reason:  string(v1alpha2.ReconciliationFailed),
 			Message: message,
 		},
 	)
@@ -144,21 +144,21 @@ func setTrueConditionType(conditions *[]metav1.Condition, conditionType string) 
 		metav1.Condition{
 			Type:   conditionType,
 			Status: metav1.ConditionTrue,
-			Reason: string(policiesv1alpha2.ReconciliationSucceeded),
+			Reason: string(v1alpha2.ReconciliationSucceeded),
 		},
 	)
 }
 
 func (r *Reconciler) Reconcile(
 	ctx context.Context,
-	policyServer *policiesv1alpha2.PolicyServer,
-	policies []policiesv1alpha2.Policy,
+	policyServer *v1alpha2.PolicyServer,
+	policies []v1alpha2.Policy,
 ) error {
 	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerCARootSecretReconciled),
+			string(v1alpha2.PolicyServerCARootSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -167,7 +167,7 @@ func (r *Reconciler) Reconcile(
 	if err := r.reconcileCASecret(ctx, policyServerCARootSecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerCARootSecretReconciled),
+			string(v1alpha2.PolicyServerCARootSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -175,14 +175,14 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1alpha2.PolicyServerCARootSecretReconciled),
+		string(v1alpha2.PolicyServerCARootSecretReconciled),
 	)
 
 	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerCASecretReconciled),
+			string(v1alpha2.PolicyServerCASecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -191,7 +191,7 @@ func (r *Reconciler) Reconcile(
 	if err := r.reconcileCASecret(ctx, policyServerCASecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerCASecretReconciled),
+			string(v1alpha2.PolicyServerCASecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
@@ -199,13 +199,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1alpha2.PolicyServerCASecretReconciled),
+		string(v1alpha2.PolicyServerCASecretReconciled),
 	)
 
 	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, policies); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerConfigMapReconciled),
+			string(v1alpha2.PolicyServerConfigMapReconciled),
 			fmt.Sprintf("error reconciling configmap: %v", err),
 		)
 		return err
@@ -213,13 +213,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1alpha2.PolicyServerConfigMapReconciled),
+		string(v1alpha2.PolicyServerConfigMapReconciled),
 	)
 
 	if err := r.reconcilePolicyServerDeployment(ctx, policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerDeploymentReconciled),
+			string(v1alpha2.PolicyServerDeploymentReconciled),
 			fmt.Sprintf("error reconciling deployment: %v", err),
 		)
 		return err
@@ -227,13 +227,13 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1alpha2.PolicyServerDeploymentReconciled),
+		string(v1alpha2.PolicyServerDeploymentReconciled),
 	)
 
 	if err := r.reconcilePolicyServerService(ctx, policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1alpha2.PolicyServerServiceReconciled),
+			string(v1alpha2.PolicyServerServiceReconciled),
 			fmt.Sprintf("error reconciling service: %v", err),
 		)
 		return err
@@ -241,7 +241,7 @@ func (r *Reconciler) Reconcile(
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1alpha2.PolicyServerServiceReconciled),
+		string(v1alpha2.PolicyServerServiceReconciled),
 	)
 
 	return nil
@@ -256,21 +256,21 @@ const (
 
 // GetPolicies returns all admission policies and cluster admission
 // policies bound to the given policyServer
-func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, getPoliciesBehavior GetPoliciesBehavior) ([]policiesv1alpha2.Policy, error) {
-	var clusterAdmissionPolicies policiesv1alpha2.ClusterAdmissionPolicyList
+func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *v1alpha2.PolicyServer, getPoliciesBehavior GetPoliciesBehavior) ([]v1alpha2.Policy, error) {
+	var clusterAdmissionPolicies v1alpha2.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
 		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
 		return nil, err
 	}
-	var admissionPolicies policiesv1alpha2.AdmissionPolicyList
+	var admissionPolicies v1alpha2.AdmissionPolicyList
 	err = r.Client.List(ctx, &admissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
 		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
 		return nil, err
 	}
 
-	policies := make([]policiesv1alpha2.Policy, 0)
+	policies := make([]v1alpha2.Policy, 0)
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		clusterAdmissionPolicy := clusterAdmissionPolicy
 		if getPoliciesBehavior == SkipDeleted && clusterAdmissionPolicy.DeletionTimestamp != nil {
@@ -293,7 +293,7 @@ func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1al
 // clusterAdmissionPolicy with a Client apt for it.
 func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	ctx context.Context,
-	policy policiesv1alpha2.Policy,
+	policy v1alpha2.Policy,
 ) error {
 	if err := r.Client.Status().Update(ctx, policy); err != nil {
 		return fmt.Errorf("failed to update status of Policy %q, %w", policy.GetObjectMeta(), err)

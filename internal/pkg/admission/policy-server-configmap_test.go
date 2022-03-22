@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 )
 
 func TestArePoliciesEqual(t *testing.T) {

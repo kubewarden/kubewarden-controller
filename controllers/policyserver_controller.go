@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package policies
+package controllers
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"
@@ -54,7 +54,7 @@ type PolicyServerReconciler struct {
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;delete;update;patch
 
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var policyServer policiesv1alpha2.PolicyServer
+	var policyServer v1alpha2.PolicyServer
 	if err := r.Get(ctx, req.NamespacedName, &policyServer); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -80,7 +80,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return reconcileResult, reconcileErr
 }
 
-func (r *PolicyServerReconciler) reconcile(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, policies []policiesv1alpha2.Policy) (ctrl.Result, error) {
+func (r *PolicyServerReconciler) reconcile(ctx context.Context, policyServer *v1alpha2.PolicyServer, policies []v1alpha2.Policy) (ctrl.Result, error) {
 	if err := r.Reconciler.Reconcile(ctx, policyServer, policies); err != nil {
 		if admission.IsPolicyServerNotReady(err) {
 			log.Info("delaying policy registration since policy server is not yet ready")
@@ -94,7 +94,7 @@ func (r *PolicyServerReconciler) reconcile(ctx context.Context, policyServer *po
 	return ctrl.Result{}, nil
 }
 
-func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, policies []policiesv1alpha2.Policy) (ctrl.Result, error) {
+func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policyServer *v1alpha2.PolicyServer, policies []v1alpha2.Policy) (ctrl.Result, error) {
 	someDeletionFailed := false
 	for _, policy := range policies {
 		if err := r.Delete(ctx, policy); err != nil && !apierrors.IsNotFound(err) {
@@ -123,8 +123,8 @@ func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policySe
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.ClusterAdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
-		policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
+	err := mgr.GetFieldIndexer().IndexField(context.Background(), &v1alpha2.ClusterAdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
+		policy, ok := object.(*v1alpha2.ClusterAdmissionPolicy)
 		if !ok {
 			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
 			return []string{}
@@ -134,8 +134,8 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
-	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1alpha2.AdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
-		policy, ok := object.(*policiesv1alpha2.AdmissionPolicy)
+	err = mgr.GetFieldIndexer().IndexField(context.Background(), &v1alpha2.AdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
+		policy, ok := object.(*v1alpha2.AdmissionPolicy)
 		if !ok {
 			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
 			return []string{}
@@ -146,13 +146,13 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
 	err = ctrl.NewControllerManagedBy(mgr).
-		For(&policiesv1alpha2.PolicyServer{}).
-		Watches(&source.Kind{Type: &policiesv1alpha2.AdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+		For(&v1alpha2.PolicyServer{}).
+		Watches(&source.Kind{Type: &v1alpha2.AdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
 			// The watch will trigger twice per object change; once with the old
 			// object, and once the new object. We need to be mindful when doing
 			// Updates since they will invalidate the newever versions of the
 			// object.
-			policy, ok := object.(*policiesv1alpha2.AdmissionPolicy)
+			policy, ok := object.(*v1alpha2.AdmissionPolicy)
 			if !ok {
 				r.Log.Info("object is not type of AdmissionPolicy: %+v", policy)
 				return []ctrl.Request{}
@@ -166,12 +166,12 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				},
 			}
 		})).
-		Watches(&source.Kind{Type: &policiesv1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+		Watches(&source.Kind{Type: &v1alpha2.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
 			// The watch will trigger twice per object change; once with the old
 			// object, and once the new object. We need to be mindful when doing
 			// Updates since they will invalidate the newever versions of the
 			// object.
-			policy, ok := object.(*policiesv1alpha2.ClusterAdmissionPolicy)
+			policy, ok := object.(*v1alpha2.ClusterAdmissionPolicy)
 			if !ok {
 				r.Log.Info("object is not type of ClusterAdmissionPolicy: %+v", policy)
 				return []ctrl.Request{}

@@ -1,11 +1,27 @@
-package policies
+/*
+Copyright 2022.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controllers
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/go-logr/logr"
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
@@ -34,7 +50,7 @@ type AdmissionPolicyReconciler struct {
 
 // Reconcile reconciles admission policies
 func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var admissionPolicy policiesv1alpha2.AdmissionPolicy
+	var admissionPolicy v1alpha2.AdmissionPolicy
 	if err := r.Reconciler.APIReader.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -48,7 +64,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&policiesv1alpha2.AdmissionPolicy{}).
+		For(&v1alpha2.AdmissionPolicy{}).
 		Watches(
 			&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPod),
@@ -66,10 +82,9 @@ func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForConfigMap(object cli
 	if _, isKubewardenConfigmap := configMap.Labels[constants.PolicyServerLabelKey]; !isKubewardenConfigmap {
 		return []reconcile.Request{}
 	}
-	res := []reconcile.Request{}
 	policyMap, err := getPolicyMapFromConfigMap(configMap)
 	if err != nil {
-		return res
+		return []reconcile.Request{}
 	}
 	return policyMap.ToAdmissionPolicyReconcileRequests()
 }

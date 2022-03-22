@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +22,7 @@ import (
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
-func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
+func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *v1alpha2.PolicyServer) error {
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
@@ -47,7 +47,7 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 	return r.updatePolicyServerDeployment(ctx, policyServer, deployment)
 }
 
-func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer) error {
+func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *v1alpha2.PolicyServer) error {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
 	unstructuredObj := &unstructured.Unstructured{}
@@ -76,7 +76,7 @@ func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, pol
 	return nil
 }
 
-func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1alpha2.PolicyServer, newDeployment *appsv1.Deployment) error {
+func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *v1alpha2.PolicyServer, newDeployment *appsv1.Deployment) error {
 	originalDeployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
@@ -123,7 +123,7 @@ func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, n
 	return reflect.DeepEqual(annotationsWithoutRestart, newDeployment.Spec.Template.Annotations)
 }
 
-func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1alpha2.PolicyServer) *appsv1.Deployment {
+func (r *Reconciler) deployment(configMapVersion string, policyServer *v1alpha2.PolicyServer) *appsv1.Deployment {
 	const (
 		certsVolumeName                  = "certs"
 		policiesConfigContainerPath      = "/config"
