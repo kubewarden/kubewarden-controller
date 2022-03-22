@@ -314,7 +314,7 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.15#a9e9123bf16cd2308a4d20aff13c8446f96d0c96"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.16#e535c7ffcf4d66d650769f582f9206d58bb263aa"
 dependencies = [
  "anyhow",
  "base64",
@@ -2406,8 +2406,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.2.15"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.15#a9e9123bf16cd2308a4d20aff13c8446f96d0c96"
+version = "0.2.16"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.16#e535c7ffcf4d66d650769f582f9206d58bb263aa"
 dependencies = [
  "anyhow",
  "base64",
@@ -2475,7 +2475,6 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "policy-evaluator",
- "policy-fetcher",
  "rustls",
  "rustls-pemfile 0.3.0",
  "serde",
