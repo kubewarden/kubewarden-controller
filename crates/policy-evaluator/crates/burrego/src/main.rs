@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use clap::{crate_authors, crate_name, crate_version, App, AppSettings, Arg};
+use clap::{crate_authors, crate_name, crate_version, Arg, Command};
 use serde_json::json;
 use std::{fs::File, io::BufReader, path::PathBuf, process};
 
@@ -10,8 +10,8 @@ use tracing_subscriber::{fmt, EnvFilter};
 mod opa;
 use opa::wasm::Evaluator;
 
-pub(crate) fn build_cli() -> App<'static> {
-    App::new(crate_name!())
+pub(crate) fn build_cli() -> Command<'static> {
+    Command::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())
         .about("evaluate a OPA policy")
@@ -22,7 +22,7 @@ pub(crate) fn build_cli() -> App<'static> {
                 .help("Increase verbosity"),
         )
         .subcommand(
-            App::new("eval")
+            Command::new("eval")
                 .about("evaluate a OPA policy")
                 .arg(
                     Arg::new("input")
@@ -58,8 +58,8 @@ pub(crate) fn build_cli() -> App<'static> {
                         .help("Path to the wasm file containing the policy"),
                 ),
         )
-        .subcommand(App::new("builtins").about("List the supported builtins"))
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand(Command::new("builtins").about("List the supported builtins"))
+        .arg_required_else_help(true)
 }
 
 fn main() -> Result<()> {
