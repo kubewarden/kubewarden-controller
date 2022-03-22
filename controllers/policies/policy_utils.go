@@ -19,6 +19,7 @@ package policies
 import (
 	"context"
 	"fmt"
+	"time"
 
 	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
@@ -110,7 +111,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 				Message: "The latest replica set is not uniquely reachable",
 			},
 		)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Second}, nil
 	}
 
 	secret := corev1.Secret{}
