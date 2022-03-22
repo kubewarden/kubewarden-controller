@@ -274,9 +274,11 @@ fn verify_signatures_against_config(
         ));
     }
 
+    use rayon::prelude::*;
+
     if let Some(ref signatures_all_of) = verification_config.all_of {
         let unsatisfied_signatures: Vec<&Signature> = signatures_all_of
-            .iter()
+            .par_iter()
             .filter(|signature| match signature.verifier() {
                 Ok(verifier) => {
                     let constraints = [verifier];
@@ -312,7 +314,7 @@ fn verify_signatures_against_config(
     if let Some(ref signatures_any_of) = verification_config.any_of {
         let unsatisfied_signatures: Vec<&Signature> = signatures_any_of
             .signatures
-            .iter()
+            .par_iter()
             .filter(|signature| match signature.verifier() {
                 Ok(verifier) => {
                     let constraints = [verifier];

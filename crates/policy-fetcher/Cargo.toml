@@ -31,6 +31,7 @@ sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features =
 tracing = "0.1.32"
 url = { version = "2.2.2", features = ["serde"] }
 walkdir = "2"
+rayon = "1.5.1"
 
 [dev-dependencies]
 rstest = "0.12.0"
