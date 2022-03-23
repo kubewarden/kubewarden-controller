@@ -62,6 +62,5 @@ executed succesfully.
 ### Consider bumping the helm-chart
 
 Now that the policy-server has a new tag released, consider bumping
-the controller
-[`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-controller),
-so by default it will deploy the latest version of the policy server.
+the version in the kubewarden-defaults
+[`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-defaults).
