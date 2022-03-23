@@ -69,6 +69,14 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 			&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
 		).
+		// Despite this policy server watch is not strictly necessary, we
+		// include it for the integration tests, so that we identify
+		// policy server creations even when the controller-manager is not
+		// present (so no pods end up being created)
+		Watches(
+			&source.Kind{Type: &v1alpha2.PolicyServer{}},
+			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPolicyServer),
+		).
 		Complete(r)
 
 	return errors.Wrap(err, "failed enrolling controller with manager")
@@ -99,6 +107,23 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ob
 	configMap := corev1.ConfigMap{}
 	err := r.Reconciler.APIReader.Get(context.TODO(), client.ObjectKey{
 		Namespace: pod.ObjectMeta.Namespace,
+		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
+	}, &configMap)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+	return r.findClusterAdmissionPoliciesForConfigMap(&configMap)
+}
+
+func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicyServer(object client.Object) []reconcile.Request {
+	policyServer, ok := object.(*v1alpha2.PolicyServer)
+	if !ok {
+		return []reconcile.Request{}
+	}
+	policyServerDeploymentName := naming.PolicyServerDeploymentNameForPolicyServerName(policyServer.Name)
+	configMap := corev1.ConfigMap{}
+	err := r.Reconciler.APIReader.Get(context.TODO(), client.ObjectKey{
+		Namespace: r.Reconciler.DeploymentsNamespace,
 		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
 	}, &configMap)
 	if err != nil {

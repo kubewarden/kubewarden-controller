@@ -38,7 +38,7 @@ func createReconciler() (Reconciler, v1alpha2.ClusterAdmissionPolicy, v1alpha2.C
 	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, mutatingWebhook, &validationPolicy, &mutatingPolicy).Build()
 	reconciler := Reconciler{
 		Client:               cl,
-		DeploymentsNamespace: namespace,
+		DeploymentsNamespace: "kubewarden",
 	}
 	return reconciler, validationPolicy, mutatingPolicy
 }

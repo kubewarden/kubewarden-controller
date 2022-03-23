@@ -57,8 +57,16 @@ lint: deps
 deps:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.44.2
 
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
+.PHONY: test
+test: unit-tests integration-tests ## Run tests.
+
+.PHONY: unit-tests
+unit-tests: manifests generate fmt vet envtest ## Run unit tests.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./internal/... -test.v -coverprofile cover.out
+
+.PHONY: integration-tests
+integration-tests: manifests generate fmt vet envtest ## Run integration tests.
+	ACK_GINKGO_DEPRECATIONS=1.16.4 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./apis/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
 
 ##@ Build
 

@@ -18,11 +18,14 @@ package controllers
 
 import (
 	"context"
+	"log"
 	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,6 +48,11 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
+var reconciler admission.Reconciler
+
+const (
+	DeploymentsNamespace = "kubewarden-integration-tests"
+)
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -83,11 +91,11 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler := admission.Reconciler{
+	reconciler = admission.Reconciler{
 		Client:               k8sManager.GetClient(),
 		APIReader:            k8sManager.GetClient(),
 		Log:                  ctrl.Log.WithName("reconciler"),
-		DeploymentsNamespace: "kubewarden-integration-tests",
+		DeploymentsNamespace: DeploymentsNamespace,
 	}
 
 	err = (&AdmissionPolicyReconciler{
@@ -96,6 +104,29 @@ var _ = BeforeSuite(func() {
 		Reconciler: reconciler,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
+
+	err = (&ClusterAdmissionPolicyReconciler{
+		Client:     k8sManager.GetClient(),
+		Scheme:     k8sManager.GetScheme(),
+		Reconciler: reconciler,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&PolicyServerReconciler{
+		Client:     k8sManager.GetClient(),
+		Scheme:     k8sManager.GetScheme(),
+		Reconciler: reconciler,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	// Create the integration tests deployments namespace
+	if err := k8sClient.Create(ctx, &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: DeploymentsNamespace,
+		},
+	}); err != nil {
+		log.Fatalf("could not create namespace %q needed for the integration tests", DeploymentsNamespace)
+	}
 
 	go func() {
 		defer GinkgoRecover()
