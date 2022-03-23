@@ -2,6 +2,45 @@
 ## [Unreleased]
 
 
+<a name="v0.2.7"></a>
+## [v0.2.7] - 2022-03-23
+### Bug Fixes
+- Enable verification if `--verification-path` is passed
+- **deps:** update rust crate tokio-rustls to 0.23.3
+- **deps:** update rust crate async-stream to 0.3.3
+
+### Features
+- fetch sigstore data from remote TUF repo
+- Add keyless verification by supporting verification-config.yml
+- add info to traces about why a resource was rejected by a policy
+- implement policy modes
+
+### Pull Requests
+- Merge pull request [#223](https://github.com/kubewarden/policy-server/issues/223) from ereslibre/consume-policy-fetcher-through-policy-evaluator
+- Merge pull request [#221](https://github.com/kubewarden/policy-server/issues/221) from kubewarden/renovate/all-patch
+- Merge pull request [#222](https://github.com/kubewarden/policy-server/issues/222) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#215](https://github.com/kubewarden/policy-server/issues/215) from flavio/improve-policy-verification
+- Merge pull request [#212](https://github.com/kubewarden/policy-server/issues/212) from kubewarden/renovate/all-patch
+- Merge pull request [#213](https://github.com/kubewarden/policy-server/issues/213) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#209](https://github.com/kubewarden/policy-server/issues/209) from flavio/fix-clap-deprecation
+- Merge pull request [#201](https://github.com/kubewarden/policy-server/issues/201) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#204](https://github.com/kubewarden/policy-server/issues/204) from kubewarden/renovate/all-patch
+- Merge pull request [#200](https://github.com/kubewarden/policy-server/issues/200) from kubewarden/renovate/all-patch
+- Merge pull request [#194](https://github.com/kubewarden/policy-server/issues/194) from ereslibre/monitor-mode
+- Merge pull request [#193](https://github.com/kubewarden/policy-server/issues/193) from ereslibre/not-flatten-settings
+- Merge pull request [#191](https://github.com/kubewarden/policy-server/issues/191) from kubewarden/renovate/all-patch
+- Merge pull request [#192](https://github.com/kubewarden/policy-server/issues/192) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#187](https://github.com/kubewarden/policy-server/issues/187) from ereslibre/bump-dependencies
+- Merge pull request [#182](https://github.com/kubewarden/policy-server/issues/182) from kubewarden/dependabot/cargo/rustls-pemfile-0.3.0
+- Merge pull request [#183](https://github.com/kubewarden/policy-server/issues/183) from kubewarden/dependabot/cargo/futures-util-0.3.21
+- Merge pull request [#159](https://github.com/kubewarden/policy-server/issues/159) from kubewarden/dependabot/cargo/policy-evaluator-v0.2.10
+- Merge pull request [#163](https://github.com/kubewarden/policy-server/issues/163) from kubewarden/dependabot/cargo/k8s-openapi-0.14.0
+- Merge pull request [#174](https://github.com/kubewarden/policy-server/issues/174) from kubewarden/dependabot/cargo/tokio-1.16.1
+- Merge pull request [#180](https://github.com/kubewarden/policy-server/issues/180) from kubewarden/dependabot/cargo/tracing-0.1.30
+- Merge pull request [#178](https://github.com/kubewarden/policy-server/issues/178) from kubewarden/dependabot/cargo/clap-3.0.14
+- Merge pull request [#175](https://github.com/kubewarden/policy-server/issues/175) from viccuad/enable-verification
+
+
 <a name="v0.2.6"></a>
 ## [v0.2.6] - 2022-01-28
 ### Pull Requests
@@ -220,7 +259,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.6...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.7...HEAD
+[v0.2.7]: https://github.com/kubewarden/policy-server/compare/v0.2.6...v0.2.7
 [v0.2.6]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc2...v0.2.6
 [v0.2.6-rc2]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc1...v0.2.6-rc2
 [v0.2.6-rc1]: https://github.com/kubewarden/policy-server/compare/v0.2.5...v0.2.6-rc1
