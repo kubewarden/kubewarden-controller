@@ -2,13 +2,28 @@
 ## [Unreleased]
 
 
+<a name="v0.5.1"></a>
+## [v0.5.1] - 2022-03-24
+### Features
+- set KUBEWARDEN_SIGSTORE_CACHE_DIR on deployment
+
+### Pull Requests
+- Merge pull request [#193](https://github.com/kubewarden/kubewarden-controller/issues/193) from viccuad/0.5.0-sigstore-cache-dir
+- Merge pull request [#191](https://github.com/kubewarden/kubewarden-controller/issues/191) from kubewarden/renovate/actions-upload-artifact-3.x
+- Merge pull request [#187](https://github.com/kubewarden/kubewarden-controller/issues/187) from kubewarden/renovate/actions-checkout-3.x
+- Merge pull request [#188](https://github.com/kubewarden/kubewarden-controller/issues/188) from kubewarden/renovate/actions-setup-go-3.x
+- Merge pull request [#176](https://github.com/kubewarden/kubewarden-controller/issues/176) from ereslibre/policy-reports
+- Merge pull request [#183](https://github.com/kubewarden/kubewarden-controller/issues/183) from raulcabello/main
+
+
 <a name="v0.5.0"></a>
-## [v0.5.0] - 2022-03-02
+## [v0.5.0] - 2022-03-03
 ### Reverts
 - Group kubernetes dependencies
 - Run e2e test in a self-hosted action runner.
 
 ### Pull Requests
+- Merge pull request [#181](https://github.com/kubewarden/kubewarden-controller/issues/181) from raulcabello/main
 - Merge pull request [#177](https://github.com/kubewarden/kubewarden-controller/issues/177) from raulcabello/main
 - Merge pull request [#174](https://github.com/kubewarden/kubewarden-controller/issues/174) from flavio/main
 - Merge pull request [#172](https://github.com/kubewarden/kubewarden-controller/issues/172) from ereslibre/monitor-mode
@@ -210,7 +225,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.1...HEAD
+[v0.5.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5...v0.5.0
 [v0.4.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5-rc1...v0.4.5
 [v0.4.5-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.4...v0.4.5-rc1
