@@ -191,10 +191,10 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		secretsContainerPath             = "/pki"
 		imagePullSecretVolumeName        = "imagepullsecret"
 		dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
+		policyStoreVolume                = "policy-store"
+		policyStoreVolumePath            = "/tmp"
+		sigstoreCacheDirPath             = "/tmp/sigstore-data"
 	)
-
-	policyStoreVolume := "policy-store"
-	policyStoreVolumePath := "/tmp"
 
 	admissionContainer := corev1.Container{
 		Name:  policyServer.NameWithPrefix(),
@@ -235,6 +235,10 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			{
 				Name:  "KUBEWARDEN_POLICIES",
 				Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
+			},
+			{
+				Name:  "KUBEWARDEN_SIGSTORE_CACHE_DIR",
+				Value: sigstoreCacheDirPath,
 			},
 		}, policyServer.Spec.Env...),
 		ReadinessProbe: &corev1.Probe{
