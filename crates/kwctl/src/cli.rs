@@ -501,7 +501,7 @@ pub fn build_cli() -> Command<'static> {
         )
         .subcommand(
             Command::new("digest")
-                .about("Fetch the digest of its OCI manifest")
+                .about("Fetch digest from the OCI manifest of a policy")
                 .arg(
                     Arg::new("uri")
                         .required(true)
