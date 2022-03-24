@@ -98,6 +98,9 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 
 	policyServerDeployment := appsv1.Deployment{}
 	if err := reconciler.APIReader.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: naming.PolicyServerDeploymentNameForPolicyServerName(policy.GetPolicyServer())}, &policyServerDeployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, errors.Wrap(err, "could not read policy server Deployment")
 	}
 
