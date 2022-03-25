@@ -438,6 +438,18 @@ pub fn build_cli() -> Command<'static> {
                         .index(1)
                         .help("Policy URI. Supported schemes: registry://, https://, file://")
                 )
+                .arg(
+                    Arg::new("sources-path")
+                        .long("sources-path")
+                        .takes_value(true)
+                        .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)")
+                )
+                .arg(
+                    Arg::new("docker-config-json-path")
+                        .long("docker-config-json-path")
+                        .takes_value(true)
+                        .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
+                )
         )
         .subcommand(
             Command::new("scaffold")

@@ -1,5 +1,7 @@
+use crate::{DockerConfig, Registry, Sources};
 use anyhow::{anyhow, Result};
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
+use oci_distribution::manifest::{OciImageManifest, OciManifest};
 use policy_evaluator::{
     constants::*, policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata,
 };
@@ -8,20 +10,38 @@ use pulldown_cmark::{Options, Parser};
 use std::convert::TryFrom;
 use syntect::parsing::SyntaxSet;
 
-pub(crate) fn inspect(uri: &str, output: OutputType) -> Result<()> {
+pub(crate) async fn inspect(
+    uri: &str,
+    output: OutputType,
+    sources: Option<Sources>,
+    docker_config: Option<DockerConfig>,
+) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
     let wasm_path = crate::utils::wasm_path(uri.as_str())?;
-    let printer = get_printer(output);
+    let printer = get_printer(&output);
 
     let metadata = Metadata::from_path(&wasm_path)
         .map_err(|e| anyhow!("Error parsing policy metadata: {}", e))?;
+
+    let signatures = fetch_signatures_manifest(uri.as_str(), sources, docker_config).await;
+
     match metadata {
-        Some(metadata) => printer.print(&metadata),
-        None => Err(anyhow!(
+        Some(metadata) => printer.print(&metadata)?,
+        None => return Err(anyhow!(
             "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
             uri
         )),
+    };
+
+    if let Some(signatures) = signatures {
+        println!();
+        println!("Sigstore signatures");
+        println!();
+        let sigstore_printer = get_signatures_printer(output);
+        sigstore_printer.print(&signatures);
     }
+
+    Ok(())
 }
 
 pub(crate) enum OutputType {
@@ -41,7 +61,7 @@ impl TryFrom<Option<&str>> for OutputType {
     }
 }
 
-fn get_printer(output_type: OutputType) -> Box<dyn MetadataPrinter> {
+fn get_printer(output_type: &OutputType) -> Box<dyn MetadataPrinter> {
     match output_type {
         OutputType::Yaml => Box::new(MetadataYamlPrinter {}),
         OutputType::Pretty => Box::new(MetadataPrettyPrinter {}),
@@ -187,5 +207,108 @@ impl MetadataPrinter for MetadataPrettyPrinter {
         self.print_metadata_rules(metadata)?;
         println!();
         self.print_metadata_usage(metadata)
+    }
+}
+
+fn get_signatures_printer(output_type: OutputType) -> Box<dyn SignaturesPrinter> {
+    match output_type {
+        OutputType::Yaml => Box::new(SignaturesYamlPrinter {}),
+        OutputType::Pretty => Box::new(SignaturesPrettyPrinter {}),
+    }
+}
+
+trait SignaturesPrinter {
+    fn print(&self, signatures: &OciImageManifest);
+}
+
+struct SignaturesPrettyPrinter {}
+
+impl SignaturesPrinter for SignaturesPrettyPrinter {
+    fn print(&self, signatures: &OciImageManifest) {
+        for layer in &signatures.layers {
+            let mut table = Table::new();
+            table.set_format(FormatBuilder::new().padding(0, 1).build());
+            table.add_row(row![Fmbl -> "Digest: ", layer.digest]);
+            table.add_row(row![Fmbl -> "Media type: ", layer.media_type]);
+            table.add_row(row![Fmbl -> "Size: ", layer.size]);
+            if let Some(annotations) = &layer.annotations {
+                table.add_row(row![Fmbl -> "Annotations"]);
+                for annotation in annotations.iter() {
+                    table.add_row(row![Fgbl -> annotation.0, annotation.1]);
+                }
+            }
+            table.printstd();
+            println!();
+        }
+    }
+}
+
+struct SignaturesYamlPrinter {}
+
+impl SignaturesPrinter for SignaturesYamlPrinter {
+    fn print(&self, signatures: &OciImageManifest) {
+        let signatures_yaml = serde_yaml::to_string(signatures);
+        if let Ok(signatures_yaml) = signatures_yaml {
+            println!("{}", signatures_yaml)
+        }
+    }
+}
+
+async fn fetch_signatures_manifest(
+    uri: &str,
+    sources: Option<Sources>,
+    docker_config: Option<DockerConfig>,
+) -> Option<OciImageManifest> {
+    let registry = Registry::new(docker_config.as_ref());
+    let digest = registry.manifest_digest(uri, sources.as_ref()).await.ok()?;
+    let signature_url = get_signature_url(uri.to_string(), digest.as_str())?;
+    let manifest = registry
+        .manifest(signature_url.as_str(), sources.as_ref())
+        .await
+        .ok()?;
+
+    match manifest {
+        OciManifest::Image(img) => Some(img),
+        _ => None,
+    }
+}
+
+// simulate cosign triangulate output. Use the manifest digest, which returns the sha256 of the manifest content, then replace ':' with '-' and append '.sig'
+fn get_signature_url(mut uri: String, digest: &str) -> Option<String> {
+    let mut signatures_tag = digest.replace(':', "-");
+    signatures_tag.push_str(".sig");
+    let last_colon_index = uri.rfind(':')?;
+    uri.replace_range(last_colon_index + 1.., signatures_tag.as_str());
+
+    Some(uri)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
+    "sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5",
+    Some(String::from("registry://ghcr.io/kubewarden/tests/pod-privileged:sha256-0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5.sig")))]
+    #[case("ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
+    "sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5",
+    Some(String::from("ghcr.io/kubewarden/tests/pod-privileged:sha256-0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5.sig")))]
+    #[case(
+        "not_valid",
+        "sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5",
+        None
+    )]
+    fn test_get_signature_url(
+        #[case] input_url: &str,
+        #[case] input_digest: &str,
+        #[case] expected: Option<String>,
+    ) {
+        assert_eq!(
+            get_signature_url(input_url.to_string(), input_digest),
+            expected
+        )
     }
 }
