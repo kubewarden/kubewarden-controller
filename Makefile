@@ -66,6 +66,10 @@ unit-tests: manifests generate fmt vet envtest ## Run unit tests.
 integration-tests: manifests generate fmt vet envtest ## Run integration tests.
 	ACK_GINKGO_DEPRECATIONS=1.16.4 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./apis/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
 
+.PHONY: generate-crds
+generate-crds: manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
+	$(KUSTOMIZE) build config/crd -o generated-crds # If -o points to a folder, kustomize saves them as several files instead of 1
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.

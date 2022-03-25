@@ -23,3 +23,6 @@ testbin/*
 *.swp
 *.swo
 *~
+
+# Manually generated crds. Directory is needed though
+generated-crds/*
