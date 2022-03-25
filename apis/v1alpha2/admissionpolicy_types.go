@@ -120,14 +120,16 @@ type AdmissionPolicySpec struct {
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
+// AdmissionPolicy is the Schema for the admissionpolicies API
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Namespaced
 //+kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="Policy Server",type=string,JSONPath=`.spec.policyServer`,description="Bound to Policy Server"
 //+kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
+//+kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.mode`,description="Policy deployment mode"
+//+kubebuilder:printcolumn:name="Observed mode",type=string,JSONPath=`.status.mode`,description="Policy deployment mode observed on the assigned Policy Server"
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyStatus`,description="Status of the policy"
-// AdmissionPolicy is the Schema for the admissionpolicies API
 type AdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -155,6 +157,10 @@ func (r *AdmissionPolicy) SetStatus(status PolicyStatusEnum) {
 
 func (r *AdmissionPolicy) GetPolicyMode() PolicyMode {
 	return r.Spec.Mode
+}
+
+func (r *AdmissionPolicy) SetPolicyModeStatus(policyMode PolicyModeStatus) {
+	r.Status.PolicyMode = policyMode
 }
 
 func (r *AdmissionPolicy) GetModule() string {

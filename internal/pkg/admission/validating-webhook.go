@@ -13,18 +13,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
+	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 //+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch
 
-func (r *Reconciler) reconcileValidatingWebhookConfiguration(
+func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 	ctx context.Context,
 	policy v1alpha2.Policy,
 	admissionSecret *corev1.Secret,
-	policyServerName string) error {
-	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerName)
+	policyServerNameWithPrefix string) error {
+	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerNameWithPrefix)
 	err := r.Client.Create(ctx, webhook)
 	if err == nil {
 		return nil

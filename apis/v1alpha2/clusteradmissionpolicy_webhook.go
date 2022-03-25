@@ -53,6 +53,9 @@ var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ClusterAdmissionPolicy) Default() {
 	clusteradmissionpolicylog.Info("default", "name", r.Name)
+	if r.Spec.PolicyServer == "" {
+		r.Spec.PolicyServer = constants.DefaultPolicyServer
+	}
 	if r.ObjectMeta.DeletionTimestamp == nil {
 		controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
 	}

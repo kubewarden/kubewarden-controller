@@ -168,52 +168,6 @@ type ClusterAdmissionPolicySpec struct {
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
-const (
-	// PolicyServerConfigMapReconciled represents the condition of the
-	// Policy Server ConfigMap reconciliation
-	PolicyServerConfigMapReconciled PolicyConditionType = "PolicyServerConfigMapReconciled"
-	// ClusterAdmissionPolicyActive represents the condition of the Policy
-	// admission webhook being registered
-	ClusterAdmissionPolicyActive PolicyConditionType = "PolicyActive"
-)
-
-// +kubebuilder:validation:Enum=unscheduled;unschedulable;pending;active
-type PolicyStatusEnum string
-
-const (
-	// PolicyStatusUnscheduled is a transient state that will continue
-	// to unschedulable or pending. This is the default state.
-	PolicyStatusUnscheduled PolicyStatusEnum = "unscheduled"
-	// PolicyStatusUnschedulable informs that policy server where to
-	// schedule the policy is not available
-	PolicyStatusUnschedulable PolicyStatusEnum = "unschedulable"
-	// PolicyStatusPending informs that the policy server exists,
-	// we are reconciling all resources
-	PolicyStatusPending PolicyStatusEnum = "pending"
-	// PolicyStatusActive informs that the k8s API server should be
-	// forwarding admission review objects to the policy
-	PolicyStatusActive PolicyStatusEnum = "active"
-)
-
-// PolicyStatus defines the observed state of ClusterAdmissionPolicy and AdmissionPolicy
-type PolicyStatus struct {
-	// PolicyStatus represents whether this ClusterAdmissionPolicy is unscheduled,
-	// unschedulable, pending, or active.
-	PolicyStatus PolicyStatusEnum `json:"policyStatus"`
-	// Conditions represent the observed conditions of the
-	// ClusterAdmissionPolicy resource.  Known .status.conditions.types
-	// are: "PolicyServerSecretReconciled",
-	// "PolicyServerConfigMapReconciled",
-	// "PolicyServerDeploymentReconciled",
-	// "PolicyServerServiceReconciled" and
-	// "ClusterAdmissionPolicyActive"
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	// +listType=map
-	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
 // ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -221,6 +175,8 @@ type PolicyStatus struct {
 //+kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="Policy Server",type=string,JSONPath=`.spec.policyServer`,description="Bound to Policy Server"
 //+kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
+//+kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.mode`,description="Policy deployment mode"
+//+kubebuilder:printcolumn:name="Observed mode",type=string,JSONPath=`.status.mode`,description="Policy deployment mode observed on the assigned Policy Server"
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyStatus`,description="Status of the policy"
 type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -248,6 +204,10 @@ func (r *ClusterAdmissionPolicy) SetStatus(status PolicyStatusEnum) {
 
 func (r *ClusterAdmissionPolicy) GetPolicyMode() PolicyMode {
 	return r.Spec.Mode
+}
+
+func (r *ClusterAdmissionPolicy) SetPolicyModeStatus(policyMode PolicyModeStatus) {
+	r.Status.PolicyMode = policyMode
 }
 
 func (r *ClusterAdmissionPolicy) GetModule() string {

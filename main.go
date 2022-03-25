@@ -26,17 +26,21 @@ import (
 
 	"github.com/ereslibre/kube-webhook-wrapper/webhookwrapper"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	policiesv1alpha2 "github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
-	policiescontrollers "github.com/kubewarden/kubewarden-controller/controllers/policies"
+	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	controllers "github.com/kubewarden/kubewarden-controller/controllers"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	//+kubebuilder:scaffold:imports
 )
@@ -48,7 +52,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(policiesv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(v1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -67,16 +71,17 @@ func main() {
 	flag.BoolVar(&enableMetrics, "enable-metrics", false,
 		"Enable metrics collection about policy server and cluster admission policies")
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
+	flag.StringVar(&constants.DefaultPolicyServer, "default-policy-server", "", "The default policy server to set on policies before they are persisted")
 	opts := zap.Options{
 		Development: true,
 	}
-	opts.BindFlags(flag.CommandLine)
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	flag.StringVar(&deploymentsNamespace,
 		"deployments-namespace",
 		"",
 		"The namespace where the kubewarden resources will be created.")
+	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	environment := readEnvironment()
 
@@ -101,6 +106,7 @@ func main() {
 			HealthProbeBindAddress: probeAddr,
 			LeaderElection:         enableLeaderElection,
 			LeaderElectionID:       "a4ddbf36.kubewarden.io",
+			ClientDisableCacheFor:  []client.Object{&corev1.ConfigMap{}, &appsv1.Deployment{}},
 		},
 		setupLog,
 		environment.developmentMode,
@@ -114,16 +120,38 @@ func main() {
 
 	reconciler := admission.Reconciler{
 		Client:               mgr.GetClient(),
+		APIReader:            mgr.GetAPIReader(),
+		Log:                  ctrl.Log.WithName("reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
 	}
 
-	if err = (&policiescontrollers.PolicyServerReconciler{
+	if err = (&controllers.PolicyServerReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
-		Log:        ctrl.Log.WithName("controllers").WithName("policies").WithName("ClusterAdmissionPolicy"),
+		Log:        ctrl.Log.WithName("policy-server-reconciler"),
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.AdmissionPolicyReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Log:        ctrl.Log.WithName("admission-policy-reconciler"),
+		Reconciler: reconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.ClusterAdmissionPolicyReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Log:        ctrl.Log.WithName("cluster-admission-policy-reconciler"),
+		Reconciler: reconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
 		os.Exit(1)
 	}
 
@@ -148,8 +176,8 @@ func main() {
 func webhooks() []webhookwrapper.WebhookRegistrator {
 	return []webhookwrapper.WebhookRegistrator{
 		{
-			Registrator: (&policiesv1alpha2.PolicyServer{}).SetupWebhookWithManager,
-			Name:        "policyservers.kubewarden.dev",
+			Registrator: (&v1alpha2.PolicyServer{}).SetupWebhookWithManager,
+			Name:        "mutate-policyservers.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{
@@ -157,8 +185,8 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
-						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						APIGroups:   []string{v1alpha2.GroupVersion.Group},
+						APIVersions: []string{v1alpha2.GroupVersion.Version},
 						Resources:   []string{"policyservers"},
 					},
 				},
@@ -167,8 +195,8 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 			Mutating:    true,
 		},
 		{
-			Registrator: (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
-			Name:        "clusteradmissionpolicies.kubewarden.dev",
+			Registrator: (&v1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "mutate-clusteradmissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{
@@ -176,8 +204,8 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
-						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						APIGroups:   []string{v1alpha2.GroupVersion.Group},
+						APIVersions: []string{v1alpha2.GroupVersion.Version},
 						Resources:   []string{"clusteradmissionpolicies"},
 					},
 				},
@@ -186,16 +214,17 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 			Mutating:    true,
 		},
 		{
-			Registrator: (&policiesv1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
-			Name:        "validateclusteradmissionpolicies.kubewarden.dev",
+			Registrator: (&v1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "validate-clusteradmissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
-						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						APIGroups:   []string{v1alpha2.GroupVersion.Group},
+						APIVersions: []string{v1alpha2.GroupVersion.Version},
 						Resources:   []string{"clusteradmissionpolicies"},
 					},
 				},
@@ -204,8 +233,8 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 			Mutating:    false,
 		},
 		{
-			Registrator: (&policiesv1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
-			Name:        "admissionpolicies.kubewarden.dev",
+			Registrator: (&v1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "mutate-admissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{
@@ -213,8 +242,8 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
-						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						APIGroups:   []string{v1alpha2.GroupVersion.Group},
+						APIVersions: []string{v1alpha2.GroupVersion.Version},
 						Resources:   []string{"admissionpolicies"},
 					},
 				},
@@ -223,16 +252,16 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 			Mutating:    true,
 		},
 		{
-			Registrator: (&policiesv1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
-			Name:        "validateadmissionpolicies.kubewarden.dev",
+			Registrator: (&v1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
+			Name:        "validate-admissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
 					Operations: []admissionregistrationv1.OperationType{
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{policiesv1alpha2.GroupVersion.Group},
-						APIVersions: []string{policiesv1alpha2.GroupVersion.Version},
+						APIGroups:   []string{v1alpha2.GroupVersion.Group},
+						APIVersions: []string{v1alpha2.GroupVersion.Version},
 						Resources:   []string{"admissionpolicies"},
 					},
 				},

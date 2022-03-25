@@ -1,5 +1,12 @@
 package constants
 
+var (
+	// DefaultPolicyServer is set to a non empty value if policies that
+	// are missing a policy server should be defaulted to this one
+	// before being persisted.
+	DefaultPolicyServer string
+)
+
 const (
 	// PolicyServer CA Secret
 	PolicyServerTLSCert                  = "policy-server-cert"
@@ -10,12 +17,13 @@ const (
 	PolicyServerCARootPrivateKeyCertName = "policy-server-root-ca-privatekey-cert"
 
 	// PolicyServer Deployment
-	PolicyServerEnableMetricsEnvVar        = "KUBEWARDEN_ENABLE_METRICS"
-	PolicyServerDeploymentConfigAnnotation = "config/version"
-	PolicyServerPort                       = 8443
-	PolicyServerMetricsPortEnvVar          = "KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT"
-	PolicyServerMetricsPort                = 8080
-	PolicyServerReadinessProbe             = "/readiness"
+	PolicyServerEnableMetricsEnvVar                 = "KUBEWARDEN_ENABLE_METRICS"
+	PolicyServerDeploymentConfigVersionAnnotation   = "kubewarden/config-version"
+	PolicyServerDeploymentPodSpecConfigVersionLabel = "kubewarden/config-version"
+	PolicyServerPort                                = 8443
+	PolicyServerMetricsPortEnvVar                   = "KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT"
+	PolicyServerMetricsPort                         = 8080
+	PolicyServerReadinessProbe                      = "/readiness"
 
 	// PolicyServer ConfigMap
 	PolicyServerConfigPoliciesEntry         = "policies.yml"
@@ -28,12 +36,11 @@ const (
 	PolicyServerVerificationConfigContainerPath = "/verification"
 
 	// Label
-	AppLabelKey              = "app"
-	PolicyServerNameLabelKey = "policy-server-name"
+	AppLabelKey          = "app"
+	PolicyServerLabelKey = "kubewarden/policy-server"
 
 	// Index
-	PolicyServerIndexKey  = "policyServer"
-	PolicyServerIndexName = "name"
+	PolicyServerIndexKey = ".spec.policyServer"
 
 	// Finalizers
 	KubewardenFinalizer = "kubewarden"

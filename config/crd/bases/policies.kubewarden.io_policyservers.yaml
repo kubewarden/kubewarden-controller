@@ -16,7 +16,16 @@ spec:
     singular: policyserver
   scope: Cluster
   versions:
-  - name: v1alpha2
+  - additionalPrinterColumns:
+    - description: Policy Server replicas
+      jsonPath: .spec.replicas
+      name: Replicas
+      type: string
+    - description: Policy Server image
+      jsonPath: .spec.image
+      name: Image
+      type: string
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: PolicyServer is the Schema for the policyservers API

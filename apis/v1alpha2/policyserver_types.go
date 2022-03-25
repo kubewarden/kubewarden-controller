@@ -76,21 +76,24 @@ const (
 	ReconciliationSucceeded ReconciliationTransitionReason = "ReconciliationSucceeded"
 )
 
-type PolicyConditionType string
+type PolicyServerConditionType string
 
 const (
 	// PolicyServerCASecretReconciled represents the condition of the
 	// Policy Server Secret reconciliation
-	PolicyServerCASecretReconciled PolicyConditionType = "PolicyCAServerSecretReconciled"
+	PolicyServerCASecretReconciled PolicyServerConditionType = "CASecretReconciled"
 	// PolicyServerCARootSecretReconciled represents the condition of the
 	// Policy Server CA Root Secret reconciliation
-	PolicyServerCARootSecretReconciled PolicyConditionType = "PolicyCARootServerSecretReconciled" // nolint:gosec
+	PolicyServerCARootSecretReconciled PolicyServerConditionType = "CARootSecretReconciled"
+	// PolicyServerConfigMapReconciled represents the condition of the
+	// Policy Server ConfigMap reconciliation
+	PolicyServerConfigMapReconciled PolicyServerConditionType = "ConfigMapReconciled"
 	// PolicyServerDeploymentReconciled represents the condition of the
 	// Policy Server Deployment reconciliation
-	PolicyServerDeploymentReconciled PolicyConditionType = "PolicyServerDeploymentReconciled"
+	PolicyServerDeploymentReconciled PolicyServerConditionType = "DeploymentReconciled"
 	// PolicyServerServiceReconciled represents the condition of the
 	// Policy Server Service reconciliation
-	PolicyServerServiceReconciled PolicyConditionType = "PolicyServerServiceReconciled"
+	PolicyServerServiceReconciled PolicyServerConditionType = "ServiceReconciled"
 )
 
 // PolicyServerStatus defines the observed state of PolicyServer
@@ -110,6 +113,8 @@ type PolicyServerStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicas`,description="Policy Server replicas"
+//+kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`,description="Policy Server image"
 
 // PolicyServer is the Schema for the policyservers API
 type PolicyServer struct {
