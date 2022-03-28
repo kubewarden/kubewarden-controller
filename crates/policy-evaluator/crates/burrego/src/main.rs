@@ -125,6 +125,9 @@ fn main() -> Result<()> {
                 let (major, minor) = evaluator.opa_abi_version()?;
                 debug!(major, minor, "OPA Wasm ABI");
 
+                let entrypoints = evaluator.entrypoints()?;
+                debug!(?entrypoints, "OPA entrypoints");
+
                 let not_implemented_builtins = evaluator.not_implemented_builtins()?;
                 if !not_implemented_builtins.is_empty() {
                     eprintln!("Cannot evaluate policy, these builtins are not yet implemented:");
