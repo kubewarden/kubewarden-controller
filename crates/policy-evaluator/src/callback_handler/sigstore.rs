@@ -1,10 +1,12 @@
 use anyhow::{anyhow, Result};
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::Config as SDKVerificationConfig;
 use olpc_cjson::CanonicalFormatter;
 use policy_fetcher::sources::Sources;
-use policy_fetcher::verify::config::{AnyOf, Signature};
-use policy_fetcher::verify::Verifier;
+use policy_fetcher::verify::config::{AnyOf, Signature, VerificationConfigV1};
+use policy_fetcher::verify::{FulcioAndRekorData, Verifier};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
+use std::convert::TryFrom;
 use tracing::error;
 
 pub(crate) struct Client {
@@ -14,18 +16,38 @@ pub(crate) struct Client {
 impl Client {
     pub fn new(
         sources: Option<Sources>,
-        fulcio_cert: &[u8],
-        rekor_public_key: &str,
+        fulcio_and_rekor_data: &FulcioAndRekorData,
     ) -> Result<Self> {
-        let verifier = Verifier::new(sources, fulcio_cert, rekor_public_key)?;
+        let verifier = Verifier::new(sources, fulcio_and_rekor_data)?;
         Ok(Client { verifier })
     }
 
-    pub fn is_trusted(&self, settings: &IsTrustedSettings) -> Result<bool> {
+    pub fn is_trusted(&self, config: &SDKVerificationConfig) -> Result<bool> {
         if !settings.has_constraints() {
             return Err(anyhow!("Must provide value for at least all_of or any_of"));
         }
         Err(anyhow::anyhow!("boom"))
+    }
+}
+
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification as sdk_verification;
+
+fn convertSDKVerificationConfig(sdk_config: sdk_verification::Config) -> Result<VerificationConfigV1> {
+    match sdk_config {
+        sdk_verification::Config::Versioned(versioned_config) => {
+            match versioned_config {
+                sdk_verification::VersionedConfig::V1(v1_config) {
+                    Ok(VerificationConfigV1{
+                        all_of: v1_config.all_of,
+                        any_of: v1_config.any_of,
+                    })
+                },
+                sdk_verification::VersionedConfig::Invalid() => Err(anyhow!("Cannot conver an invalid SDK versioned config")),
+            }
+        },
+        sdk_verification::Config::Invalid => Err(anyhow!(
+            "Cannot convert an invalid SDK verification config",
+        )),
     }
 }
 

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
+use policy_fetcher::kubewarden_policy_sdk::metadata::ProtocolVersion;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;

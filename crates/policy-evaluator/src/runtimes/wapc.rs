@@ -7,15 +7,16 @@ use tracing::{debug, error};
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
 
-use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
+use crate::callback_requests::{CallbackRequest, CallbackResponse};
 use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::validation_response::ValidationResponse;
 
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
-use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
-use kubewarden_policy_sdk::settings::SettingsValidationResponse;
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
+use policy_fetcher::kubewarden_policy_sdk::metadata::ProtocolVersion;
+use policy_fetcher::kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+use policy_fetcher::kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
 lazy_static! {
     pub(crate) static ref WAPC_POLICY_MAPPING: RwLock<HashMap<u64, Policy>> =
@@ -52,6 +53,9 @@ pub(crate) fn host_callback(
                 }
             },
             "oci" => match operation {
+                "verify" => {
+                    todo!()
+                }
                 "manifest_digest" => {
                     let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
                     let policy = policy_mapping.get(&policy_id).unwrap();

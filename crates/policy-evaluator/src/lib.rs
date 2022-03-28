@@ -24,5 +24,5 @@ pub mod validation_response;
 // consumers of these libraries along with the `policy-evaluator`, so
 // they can access these crates through the `policy-evaluator` itself,
 // streamlining their dependencies as well.
-pub use kubewarden_policy_sdk::metadata::ProtocolVersion;
 pub use policy_fetcher;
+pub use policy_fetcher::kubewarden_policy_sdk::metadata::ProtocolVersion;

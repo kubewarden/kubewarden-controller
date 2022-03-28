@@ -4,7 +4,9 @@ use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
 
-use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
+use crate::callback_requests::{CallbackRequest, CallbackResponse};
+
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 
 mod oci;
 mod sigstore;
@@ -80,6 +82,7 @@ impl CallbackHandlerBuilder {
 /// code in order to be fulfilled.
 pub struct CallbackHandler {
     oci_client: oci::Client,
+    //sigstore_client: sigstore.Client,
     rx: mpsc::Receiver<CallbackRequest>,
     tx: mpsc::Sender<CallbackRequest>,
     shutdown_channel: oneshot::Receiver<()>,
@@ -134,8 +137,7 @@ impl CallbackHandler {
                             },
                             CallbackRequestType::SigstoreVerify{
                                 image: _,
-                                all_of: _,
-                                any_of: _,
+                                config: _,
                             } => todo!(),
                         }
                     }
