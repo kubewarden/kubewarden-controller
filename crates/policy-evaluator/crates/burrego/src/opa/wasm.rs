@@ -425,6 +425,10 @@ impl Evaluator {
             })
     }
 
+    pub fn entrypoints(&mut self) -> Result<HashMap<String, i32>> {
+        self.policy.entrypoints(&mut self.store, &self.memory)
+    }
+
     pub fn evaluate(
         &mut self,
         entrypoint_id: i32,
