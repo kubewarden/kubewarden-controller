@@ -2,12 +2,26 @@
 ## [Unreleased]
 
 
+<a name="v0.5.2"></a>
+## [v0.5.2] - 2022-03-25
+### Bug Fixes
+- Disable conversion webhooks on CRDs, not needed
+- Disable cert-manager ca injection patches in CRDs
+- **samples:** jaeger is no longer valid as a log format
+
+### Pull Requests
+- Merge pull request [#196](https://github.com/kubewarden/kubewarden-controller/issues/196) from viccuad/fix-crds
+- Merge pull request [#195](https://github.com/kubewarden/kubewarden-controller/issues/195) from viccuad/no-cainjection-crds
+- Merge pull request [#175](https://github.com/kubewarden/kubewarden-controller/issues/175) from ereslibre/up-to-date-observed-condition
+
+
 <a name="v0.5.1"></a>
 ## [v0.5.1] - 2022-03-24
 ### Features
 - set KUBEWARDEN_SIGSTORE_CACHE_DIR on deployment
 
 ### Pull Requests
+- Merge pull request [#194](https://github.com/kubewarden/kubewarden-controller/issues/194) from viccuad/sigstore-release
 - Merge pull request [#193](https://github.com/kubewarden/kubewarden-controller/issues/193) from viccuad/0.5.0-sigstore-cache-dir
 - Merge pull request [#191](https://github.com/kubewarden/kubewarden-controller/issues/191) from kubewarden/renovate/actions-upload-artifact-3.x
 - Merge pull request [#187](https://github.com/kubewarden/kubewarden-controller/issues/187) from kubewarden/renovate/actions-checkout-3.x
@@ -225,7 +239,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.2...HEAD
+[v0.5.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.1...v0.5.2
 [v0.5.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5...v0.5.0
 [v0.4.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5-rc1...v0.4.5
