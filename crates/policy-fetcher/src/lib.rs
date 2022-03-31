@@ -30,6 +30,7 @@ use tracing::debug;
 use url::ParseError;
 
 // re-export for usage by kwctl, policy-server, policy-evaluator,...
+pub use oci_distribution;
 pub use sigstore;
 
 #[derive(Debug)]
