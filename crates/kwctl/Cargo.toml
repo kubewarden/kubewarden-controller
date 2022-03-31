@@ -36,7 +36,6 @@ url = "2.2.2"
 validator = { version = "0.14", features = ["derive"] }
 walrus = "0.19.0"
 wasmparser = "0.83.0"
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "0f717968093a5415f428503d741dedf24ea97948", default-features = false, features =  ["rustls-tls"] }
 
 [dev-dependencies]
 tempfile = "3.3.0"
