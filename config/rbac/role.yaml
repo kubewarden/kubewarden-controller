@@ -55,6 +55,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - policies.kubewarden.io
   resources:
   - admissionpolicies
