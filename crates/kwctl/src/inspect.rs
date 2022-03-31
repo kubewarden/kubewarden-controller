@@ -2,12 +2,14 @@ use crate::{DockerConfig, Registry, Sources};
 use anyhow::{anyhow, Result};
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
 use oci_distribution::manifest::{OciImageManifest, OciManifest};
+use policy_evaluator::policy_fetcher::sigstore::cosign::{ClientBuilder, CosignCapabilities};
+use policy_evaluator::policy_fetcher::sigstore::registry::{Auth, ClientConfig};
 use policy_evaluator::{
     constants::*, policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata,
 };
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use syntect::parsing::SyntaxSet;
 
 pub(crate) async fn inspect(
@@ -33,12 +35,28 @@ pub(crate) async fn inspect(
         )),
     };
 
-    if let Some(signatures) = signatures {
-        println!();
-        println!("Sigstore signatures");
-        println!();
-        let sigstore_printer = get_signatures_printer(output);
-        sigstore_printer.print(&signatures);
+    match signatures {
+        Ok(signatures) => {
+            if let Some(signatures) = signatures {
+                println!();
+                println!("Sigstore signatures");
+                println!();
+                let sigstore_printer = get_signatures_printer(output);
+                sigstore_printer.print(&signatures);
+            }
+        }
+        Err(error) => {
+            println!();
+            if error
+                .to_string()
+                .as_str()
+                .starts_with("OCI API error: manifest unknown on")
+            {
+                println!("No sigstore signatures found");
+            } else {
+                println!("Cannot determine if the policy has been signed. There was an error while attempting to fetch its signatures from the remote registry: {} ", error)
+            }
+        }
     }
 
     Ok(())
@@ -258,57 +276,43 @@ async fn fetch_signatures_manifest(
     uri: &str,
     sources: Option<Sources>,
     docker_config: Option<DockerConfig>,
-) -> Option<OciImageManifest> {
+) -> Result<Option<OciImageManifest>> {
     let registry = Registry::new(docker_config.as_ref());
-    let digest = registry.manifest_digest(uri, sources.as_ref()).await.ok()?;
-    let signature_url = get_signature_url(uri.to_string(), digest.as_str())?;
+    let client_config: ClientConfig = sources.clone().unwrap_or_default().into();
+    let mut client = ClientBuilder::default()
+        .with_oci_client_config(client_config)
+        .build()?;
+    let image_name = uri
+        .strip_prefix("registry://")
+        .ok_or_else(|| anyhow!("invalid uri"))?;
+
+    let auth: Auth = match docker_config {
+        Some(docker_config) => {
+            let sigstore_auth: Option<Result<Auth>> = docker_config
+                .auth(image_name)
+                .map_err(|e| anyhow!("Cannot build Auth object for image '{}': {:?}", uri, e))?
+                .map(|ra| {
+                    let a: Result<Auth> = TryInto::<Auth>::try_into(ra);
+                    a
+                });
+
+            match sigstore_auth {
+                None => Auth::Anonymous,
+                Some(sa) => sa?,
+            }
+        }
+        None => Auth::Anonymous,
+    };
+
+    let (cosign_signature_image, _source_image_digest) =
+        client.triangulate(image_name, &auth).await?;
+
     let manifest = registry
-        .manifest(signature_url.as_str(), sources.as_ref())
-        .await
-        .ok()?;
+        .manifest(cosign_signature_image.as_str(), sources.as_ref())
+        .await?;
 
     match manifest {
-        OciManifest::Image(img) => Some(img),
-        _ => None,
-    }
-}
-
-// simulate cosign triangulate output. Use the manifest digest, which returns the sha256 of the manifest content, then replace ':' with '-' and append '.sig'
-fn get_signature_url(mut uri: String, digest: &str) -> Option<String> {
-    let mut signatures_tag = digest.replace(':', "-");
-    signatures_tag.push_str(".sig");
-    let last_colon_index = uri.rfind(':')?;
-    uri.replace_range(last_colon_index + 1.., signatures_tag.as_str());
-
-    Some(uri)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use rstest::rstest;
-
-    #[rstest]
-    #[case("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
-    "sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5",
-    Some(String::from("registry://ghcr.io/kubewarden/tests/pod-privileged:sha256-0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5.sig")))]
-    #[case("ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
-    "sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5",
-    Some(String::from("ghcr.io/kubewarden/tests/pod-privileged:sha256-0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5.sig")))]
-    #[case(
-        "not_valid",
-        "sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5",
-        None
-    )]
-    fn test_get_signature_url(
-        #[case] input_url: &str,
-        #[case] input_digest: &str,
-        #[case] expected: Option<String>,
-    ) {
-        assert_eq!(
-            get_signature_url(input_url.to_string(), input_digest),
-            expected
-        )
+        OciManifest::Image(img) => Ok(Some(img)),
+        _ => Ok(None),
     }
 }
