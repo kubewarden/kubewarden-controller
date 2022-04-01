@@ -1,15 +1,17 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
-use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
+use policy_fetcher::{registry::config::DockerConfig, sigstore, sources::Sources};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackResponse};
 
+use crate::callback_handler::sigstore_verification::IsTrustedSettings;
 use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
+use policy_fetcher::verify::FulcioAndRekorData;
 
 mod oci;
-mod sigstore;
+mod sigstore_verification;
 
 const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 
@@ -67,9 +69,18 @@ impl CallbackHandlerBuilder {
             return Err(anyhow!("shutdown_channel_rx not provided"));
         }
 
-        let oci_client = oci::Client::new(self.oci_sources, self.docker_config);
+        let oci_client = oci::Client::new(self.oci_sources.clone(), self.docker_config.clone());
+        let repo = sigstore::tuf::SigstoreRepository::fetch(None)?;
+        let fulcio_and_rekor_data = FulcioAndRekorData::FromTufRepository { repo };
+        let sigstore_client = sigstore_verification::Client::new(
+            self.oci_sources.clone(),
+            self.docker_config.clone(),
+            &fulcio_and_rekor_data,
+        )?;
+
         Ok(CallbackHandler {
             oci_client,
+            sigstore_client,
             tx,
             rx,
             shutdown_channel: self.shutdown_channel.unwrap(),
@@ -82,7 +93,7 @@ impl CallbackHandlerBuilder {
 /// code in order to be fulfilled.
 pub struct CallbackHandler {
     oci_client: oci::Client,
-    //sigstore_client: sigstore.Client,
+    sigstore_client: sigstore_verification::Client,
     rx: mpsc::Receiver<CallbackRequest>,
     tx: mpsc::Sender<CallbackRequest>,
     shutdown_channel: oneshot::Receiver<()>,
@@ -136,9 +147,27 @@ impl CallbackHandler {
                                 }
                             },
                             CallbackRequestType::SigstoreVerify{
-                                image: _,
-                                config: _,
-                            } => todo!(),
+                                image,
+                                config,
+                            } => {
+                                let is_trusted_settings = IsTrustedSettings::new(image.clone(), config);
+                                let response = get_sigstore_verification_cached(&mut self.sigstore_client, &is_trusted_settings)
+                                    .await
+                                    .map(|is_trusted| {
+                                        if is_trusted.was_cached {
+                                            debug!(?image, "Got sigstore verification from cache");
+                                        } else {
+                                            debug!(?image, "Got sigstore verification by querying remote registry");
+                                        }
+                                    let is_trusted_byte: u8 = is_trusted.value.into();
+                                        CallbackResponse {
+                                        payload: vec!(is_trusted_byte)
+                                    }});
+
+                                if let Err(e) = req.response_channel.send(response) {
+                                    warn!("callback handler: cannot send response back: {:?}", e);
+                                }
+                                },
                         }
                     }
                 },
@@ -187,8 +216,8 @@ async fn get_oci_digest_cached(
     with_cached_flag = true
 )]
 async fn get_sigstore_verification_cached(
-    client: &sigstore::Client,
-    settings: sigstore::IsTrustedSettings,
+    client: &mut sigstore_verification::Client,
+    settings: &sigstore_verification::IsTrustedSettings,
 ) -> Result<cached::Return<bool>> {
-    client.is_trusted(&settings).map(cached::Return::new)
+    client.is_trusted(settings).await.map(cached::Return::new)
 }

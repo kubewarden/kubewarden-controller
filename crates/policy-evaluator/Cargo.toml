@@ -38,6 +38,7 @@ wasmparser = "0.84.0"
 # version of `wapc` has been pushed to crates.io.
 wapc = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
 wasmtime-provider = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
+url = "2.2.2"
 
 [dev-dependencies]
 assert-json-diff = "2.0.1"
