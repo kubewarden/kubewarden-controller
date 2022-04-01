@@ -20,7 +20,7 @@ pub(crate) async fn inspect(
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
     let wasm_path = crate::utils::wasm_path(uri.as_str())?;
-    let printer = get_printer(&output);
+    let metadata_printer = MetadataPrinter::from(&output);
 
     let metadata = Metadata::from_path(&wasm_path)
         .map_err(|e| anyhow!("Error parsing policy metadata: {}", e))?;
@@ -28,7 +28,7 @@ pub(crate) async fn inspect(
     let signatures = fetch_signatures_manifest(uri.as_str(), sources, docker_config).await;
 
     match metadata {
-        Some(metadata) => printer.print(&metadata)?,
+        Some(metadata) => metadata_printer.print(&metadata)?,
         None => return Err(anyhow!(
             "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
             uri
@@ -41,7 +41,7 @@ pub(crate) async fn inspect(
                 println!();
                 println!("Sigstore signatures");
                 println!();
-                let sigstore_printer = get_signatures_printer(output);
+                let sigstore_printer = SignaturesPrinter::from(&output);
                 sigstore_printer.print(&signatures);
             }
         }
@@ -79,30 +79,38 @@ impl TryFrom<Option<&str>> for OutputType {
     }
 }
 
-fn get_printer(output_type: &OutputType) -> Box<dyn MetadataPrinter> {
-    match output_type {
-        OutputType::Yaml => Box::new(MetadataYamlPrinter {}),
-        OutputType::Pretty => Box::new(MetadataPrettyPrinter {}),
+enum MetadataPrinter {
+    Yaml,
+    Pretty,
+}
+
+impl From<&OutputType> for MetadataPrinter {
+    fn from(output_type: &OutputType) -> Self {
+        match output_type {
+            OutputType::Yaml => Self::Yaml,
+            OutputType::Pretty => Self::Pretty
+        }
     }
 }
 
-trait MetadataPrinter {
-    fn print(&self, metadata: &Metadata) -> Result<()>;
-}
-
-struct MetadataYamlPrinter {}
-
-impl MetadataPrinter for MetadataYamlPrinter {
-    fn print(&self, metadata: &Metadata) -> Result<()> {
-        let metadata_yaml = serde_yaml::to_string(&metadata)?;
-        println!("{}", metadata_yaml);
-        Ok(())
+impl MetadataPrinter {
+    fn print(&self, metadata: &Metadata) -> Result<()>{
+        match self {
+            MetadataPrinter::Yaml => {
+                let metadata_yaml = serde_yaml::to_string(metadata)?;
+                println!("{}", metadata_yaml);
+                Ok(())
+            }
+            MetadataPrinter::Pretty => {
+                self.print_metadata_generic_info(metadata)?;
+                println!();
+                self.print_metadata_rules(metadata)?;
+                println!();
+                self.print_metadata_usage(metadata)
+            }
+        }
     }
-}
 
-struct MetadataPrettyPrinter {}
-
-impl MetadataPrettyPrinter {
     fn annotation_to_row_key(&self, text: &str) -> String {
         let mut out = String::from(text);
         out.push(':');
@@ -218,56 +226,46 @@ impl MetadataPrettyPrinter {
     }
 }
 
-impl MetadataPrinter for MetadataPrettyPrinter {
-    fn print(&self, metadata: &Metadata) -> Result<()> {
-        self.print_metadata_generic_info(metadata)?;
-        println!();
-        self.print_metadata_rules(metadata)?;
-        println!();
-        self.print_metadata_usage(metadata)
-    }
+enum SignaturesPrinter {
+    Yaml,
+    Pretty,
 }
 
-fn get_signatures_printer(output_type: OutputType) -> Box<dyn SignaturesPrinter> {
-    match output_type {
-        OutputType::Yaml => Box::new(SignaturesYamlPrinter {}),
-        OutputType::Pretty => Box::new(SignaturesPrettyPrinter {}),
-    }
-}
-
-trait SignaturesPrinter {
-    fn print(&self, signatures: &OciImageManifest);
-}
-
-struct SignaturesPrettyPrinter {}
-
-impl SignaturesPrinter for SignaturesPrettyPrinter {
-    fn print(&self, signatures: &OciImageManifest) {
-        for layer in &signatures.layers {
-            let mut table = Table::new();
-            table.set_format(FormatBuilder::new().padding(0, 1).build());
-            table.add_row(row![Fmbl -> "Digest: ", layer.digest]);
-            table.add_row(row![Fmbl -> "Media type: ", layer.media_type]);
-            table.add_row(row![Fmbl -> "Size: ", layer.size]);
-            if let Some(annotations) = &layer.annotations {
-                table.add_row(row![Fmbl -> "Annotations"]);
-                for annotation in annotations.iter() {
-                    table.add_row(row![Fgbl -> annotation.0, annotation.1]);
-                }
-            }
-            table.printstd();
-            println!();
+impl From<&OutputType> for SignaturesPrinter {
+    fn from(output_type: &OutputType) -> Self {
+        match output_type {
+            OutputType::Yaml => Self::Yaml,
+            OutputType::Pretty => Self::Pretty
         }
     }
 }
 
-struct SignaturesYamlPrinter {}
-
-impl SignaturesPrinter for SignaturesYamlPrinter {
+impl SignaturesPrinter {
     fn print(&self, signatures: &OciImageManifest) {
-        let signatures_yaml = serde_yaml::to_string(signatures);
-        if let Ok(signatures_yaml) = signatures_yaml {
-            println!("{}", signatures_yaml)
+        match self {
+            SignaturesPrinter::Yaml => {
+                let signatures_yaml = serde_yaml::to_string(signatures);
+                if let Ok(signatures_yaml) = signatures_yaml {
+                    println!("{}", signatures_yaml)
+                }
+            }
+            SignaturesPrinter::Pretty => {
+                    for layer in &signatures.layers {
+                        let mut table = Table::new();
+                        table.set_format(FormatBuilder::new().padding(0, 1).build());
+                        table.add_row(row![Fmbl -> "Digest: ", layer.digest]);
+                        table.add_row(row![Fmbl -> "Media type: ", layer.media_type]);
+                        table.add_row(row![Fmbl -> "Size: ", layer.size]);
+                        if let Some(annotations) = &layer.annotations {
+                            table.add_row(row![Fmbl -> "Annotations"]);
+                            for annotation in annotations.iter() {
+                                table.add_row(row![Fgbl -> annotation.0, annotation.1]);
+                            }
+                        }
+                        table.printstd();
+                        println!();
+                    }
+            }
         }
     }
 }
