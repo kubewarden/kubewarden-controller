@@ -88,13 +88,13 @@ impl From<&OutputType> for MetadataPrinter {
     fn from(output_type: &OutputType) -> Self {
         match output_type {
             OutputType::Yaml => Self::Yaml,
-            OutputType::Pretty => Self::Pretty
+            OutputType::Pretty => Self::Pretty,
         }
     }
 }
 
 impl MetadataPrinter {
-    fn print(&self, metadata: &Metadata) -> Result<()>{
+    fn print(&self, metadata: &Metadata) -> Result<()> {
         match self {
             MetadataPrinter::Yaml => {
                 let metadata_yaml = serde_yaml::to_string(metadata)?;
@@ -235,7 +235,7 @@ impl From<&OutputType> for SignaturesPrinter {
     fn from(output_type: &OutputType) -> Self {
         match output_type {
             OutputType::Yaml => Self::Yaml,
-            OutputType::Pretty => Self::Pretty
+            OutputType::Pretty => Self::Pretty,
         }
     }
 }
@@ -250,21 +250,21 @@ impl SignaturesPrinter {
                 }
             }
             SignaturesPrinter::Pretty => {
-                    for layer in &signatures.layers {
-                        let mut table = Table::new();
-                        table.set_format(FormatBuilder::new().padding(0, 1).build());
-                        table.add_row(row![Fmbl -> "Digest: ", layer.digest]);
-                        table.add_row(row![Fmbl -> "Media type: ", layer.media_type]);
-                        table.add_row(row![Fmbl -> "Size: ", layer.size]);
-                        if let Some(annotations) = &layer.annotations {
-                            table.add_row(row![Fmbl -> "Annotations"]);
-                            for annotation in annotations.iter() {
-                                table.add_row(row![Fgbl -> annotation.0, annotation.1]);
-                            }
+                for layer in &signatures.layers {
+                    let mut table = Table::new();
+                    table.set_format(FormatBuilder::new().padding(0, 1).build());
+                    table.add_row(row![Fmbl -> "Digest: ", layer.digest]);
+                    table.add_row(row![Fmbl -> "Media type: ", layer.media_type]);
+                    table.add_row(row![Fmbl -> "Size: ", layer.size]);
+                    if let Some(annotations) = &layer.annotations {
+                        table.add_row(row![Fmbl -> "Annotations"]);
+                        for annotation in annotations.iter() {
+                            table.add_row(row![Fgbl -> annotation.0, annotation.1]);
                         }
-                        table.printstd();
-                        println!();
                     }
+                    table.printstd();
+                    println!();
+                }
             }
         }
     }
