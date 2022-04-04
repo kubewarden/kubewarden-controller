@@ -1,9 +1,13 @@
 use crate::{DockerConfig, Registry, Sources};
 use anyhow::{anyhow, Result};
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
-use policy_evaluator::policy_fetcher::oci_distribution::manifest::{OciImageManifest, OciManifest};
-use policy_evaluator::policy_fetcher::sigstore::cosign::{ClientBuilder, CosignCapabilities};
-use policy_evaluator::policy_fetcher::sigstore::registry::{Auth, ClientConfig};
+use policy_evaluator::policy_fetcher::{
+    oci_distribution::manifest::{OciImageManifest, OciManifest},
+    sigstore::{
+        cosign::{ClientBuilder, CosignCapabilities},
+        registry::{Auth, ClientConfig},
+    },
+};
 use policy_evaluator::{
     constants::*, policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata,
 };
