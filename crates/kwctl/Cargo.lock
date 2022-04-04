@@ -368,7 +368,7 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.16#e535c7ffcf4d66d650769f582f9206d58bb263aa"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.17#dd9458d29f4ac24840a931bcedd9518d085c509d"
 dependencies = [
  "anyhow",
  "base64",
@@ -2813,8 +2813,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.2.16"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.16#e535c7ffcf4d66d650769f582f9206d58bb263aa"
+version = "0.2.17"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.2.17#dd9458d29f4ac24840a931bcedd9518d085c509d"
 dependencies = [
  "anyhow",
  "base64",
@@ -2839,8 +2839,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.6.0"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.6.0#b53e7f9ced222a3ede6c8368645f5d57859d4921"
+version = "0.6.1"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.6.1#75dfde5f6ecc619147646d55d48ab9ce84e1b5b8"
 dependencies = [
  "anyhow",
  "async-std",
@@ -2851,6 +2851,7 @@ dependencies = [
  "lazy_static",
  "oci-distribution",
  "path-slash",
+ "rayon",
  "regex",
  "reqwest",
  "rustls",
