@@ -80,15 +80,20 @@ func SetPolicyConfigurationCondition(policyServerConfigMap *corev1.ConfigMap, po
 	}
 }
 
+func isLatestReplicaSetFromPolicyServerDeployment(replicaSet *appsv1.ReplicaSet, policyServerDeployment *appsv1.Deployment) bool {
+	return replicaSet.Annotations[constants.KubernetesRevisionAnnotation] == policyServerDeployment.Annotations[constants.KubernetesRevisionAnnotation] &&
+		replicaSet.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] == policyServerDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation]
+}
+
 func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, policyServerDeployment *appsv1.Deployment) bool {
 	replicaSets := appsv1.ReplicaSetList{}
-	if err := apiReader.List(ctx, &replicaSets, client.InNamespace(policyServerDeployment.Namespace)); err != nil {
+	if err := apiReader.List(ctx, &replicaSets, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
 		return false
 	}
 	podTemplateHash := ""
-	for _, replicaSet := range replicaSets.Items {
-		if replicaSet.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] == policyServerDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] {
-			podTemplateHash = replicaSet.Labels[appsv1.DefaultDeploymentUniqueLabelKey]
+	for index := range replicaSets.Items {
+		if isLatestReplicaSetFromPolicyServerDeployment(&replicaSets.Items[index], policyServerDeployment) {
+			podTemplateHash = replicaSets.Items[index].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 			break
 		}
 	}
@@ -96,7 +101,7 @@ func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, pol
 		return false
 	}
 	pods := corev1.PodList{}
-	if err := apiReader.List(ctx, &pods, client.InNamespace(policyServerDeployment.Namespace)); err != nil {
+	if err := apiReader.List(ctx, &pods, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
 		return false
 	}
 	if len(pods.Items) == 0 {
@@ -110,7 +115,6 @@ func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, pol
 			return false
 		}
 	}
-
 	return true
 }
 

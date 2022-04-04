@@ -130,6 +130,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 			return ctrl.Result{}, errors.Wrap(err, "error reconciling validating webhook")
 		}
 	}
+	policy.SetStatus(v1alpha2.PolicyStatusActive)
 
 	apimeta.SetStatusCondition(
 		&policy.GetStatus().Conditions,
@@ -140,7 +141,6 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 			Message: "The latest replica set is uniquely reachable",
 		},
 	)
-	policy.SetStatus(v1alpha2.PolicyStatusActive)
 
 	return ctrl.Result{}, nil
 }

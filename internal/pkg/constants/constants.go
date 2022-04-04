@@ -44,4 +44,7 @@ const (
 
 	// Finalizers
 	KubewardenFinalizer = "kubewarden"
+
+	// Kubernetes
+	KubernetesRevisionAnnotation = "deployment.kubernetes.io/revision"
 )
