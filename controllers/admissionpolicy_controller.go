@@ -40,6 +40,7 @@ import (
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:groups=apps,resources=replicasets;deployments,verbs=get;list;watch
 
 // AdmissionPolicyReconciler reconciles an AdmissionPolicy object
 type AdmissionPolicyReconciler struct {
