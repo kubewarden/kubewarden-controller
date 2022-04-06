@@ -82,6 +82,15 @@ func startReconciling(ctx context.Context, client client.Client, reconciler admi
 }
 
 func reconcilePolicy(ctx context.Context, client client.Client, reconciler admission.Reconciler, policy v1alpha2.Policy) (ctrl.Result, error) {
+	apimeta.SetStatusCondition(
+		&policy.GetStatus().Conditions,
+		metav1.Condition{
+			Type:    string(v1alpha2.PolicyActive),
+			Status:  metav1.ConditionFalse,
+			Reason:  "PolicyActive",
+			Message: "The policy webhook has not been created",
+		},
+	)
 	if policy.GetPolicyServer() == "" {
 		policy.SetStatus(v1alpha2.PolicyStatusUnscheduled)
 		return ctrl.Result{}, nil
@@ -104,19 +113,6 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		return ctrl.Result{}, errors.Wrap(err, "could not read policy server Deployment")
 	}
 
-	if !isPolicyUniquelyReachable(ctx, client, &policyServerDeployment) {
-		apimeta.SetStatusCondition(
-			&policy.GetStatus().Conditions,
-			metav1.Condition{
-				Type:    string(v1alpha2.PolicyUniquelyReachable),
-				Status:  metav1.ConditionFalse,
-				Reason:  "LatestReplicaSetIsNotUniquelyReachable",
-				Message: "The latest replica set is not uniquely reachable",
-			},
-		)
-		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Second}, nil
-	}
-
 	secret := corev1.Secret{}
 	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "cannot find policy server secret")
@@ -130,7 +126,20 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 			return ctrl.Result{}, errors.Wrap(err, "error reconciling validating webhook")
 		}
 	}
-	policy.SetStatus(v1alpha2.PolicyStatusActive)
+	setPolicyAsActive(policy)
+
+	if !isPolicyUniquelyReachable(ctx, client, &policyServerDeployment) {
+		apimeta.SetStatusCondition(
+			&policy.GetStatus().Conditions,
+			metav1.Condition{
+				Type:    string(v1alpha2.PolicyUniquelyReachable),
+				Status:  metav1.ConditionFalse,
+				Reason:  "LatestReplicaSetIsNotUniquelyReachable",
+				Message: "The latest replica set is not uniquely reachable",
+			},
+		)
+		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Second}, nil
+	}
 
 	apimeta.SetStatusCondition(
 		&policy.GetStatus().Conditions,
@@ -143,6 +152,18 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 	)
 
 	return ctrl.Result{}, nil
+}
+func setPolicyAsActive(policy v1alpha2.Policy) {
+	policy.SetStatus(v1alpha2.PolicyStatusActive)
+	apimeta.SetStatusCondition(
+		&policy.GetStatus().Conditions,
+		metav1.Condition{
+			Type:    string(v1alpha2.PolicyActive),
+			Status:  metav1.ConditionTrue,
+			Reason:  "PolicyActive",
+			Message: "The policy webhook has been created",
+		},
+	)
 }
 
 func getPolicyServer(ctx context.Context, client client.Client, policy v1alpha2.Policy) (*v1alpha2.PolicyServer, error) {
