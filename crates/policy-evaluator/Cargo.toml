@@ -31,7 +31,7 @@ tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 validator = { version = "0.14", features = ["derive"] }
-wasmparser = "0.82.0"
+wasmparser = "0.84.0"
 # Given we are using a git repository, we need to point both
 # dependencies to the same tag. Otherwise, traits that are shared by
 # both crates are considered different. This can be removed once a new
