@@ -87,7 +87,7 @@ var _ = Describe("Given an AdmissionPolicy", func() {
 							k8sClient.Create(ctx, policyServer(policyServerName)),
 						).To(HaveSucceededOrAlreadyExisted())
 					})
-					It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusPending), func() {
+					It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusActive), func() {
 						Eventually(func(g Gomega) (*v1alpha2.AdmissionPolicy, error) {
 							return getFreshAdmissionPolicy(policyNamespace, policyName)
 						}, 30*time.Second, 250*time.Millisecond).Should(
@@ -95,7 +95,7 @@ var _ = Describe("Given an AdmissionPolicy", func() {
 								func(admissionPolicy *v1alpha2.AdmissionPolicy) v1alpha2.PolicyStatusEnum {
 									return admissionPolicy.Status.PolicyStatus
 								},
-								Equal(v1alpha2.PolicyStatusPending),
+								Equal(v1alpha2.PolicyStatusActive),
 							),
 						)
 					})
