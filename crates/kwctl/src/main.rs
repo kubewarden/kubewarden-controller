@@ -314,8 +314,9 @@ async fn main() -> Result<()> {
             if let Some(matches) = matches.subcommand_matches("inspect") {
                 let uri = matches.value_of("uri").unwrap();
                 let output = inspect::OutputType::try_from(matches.value_of("output"))?;
+                let (sources, docker_config) = remote_server_options(matches)?;
 
-                inspect::inspect(uri, output)?;
+                inspect::inspect(uri, output, sources, docker_config).await?;
             };
             Ok(())
         }

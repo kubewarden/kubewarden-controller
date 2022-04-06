@@ -1,27 +1,69 @@
+use crate::{DockerConfig, Registry, Sources};
 use anyhow::{anyhow, Result};
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
+use policy_evaluator::policy_fetcher::{
+    oci_distribution::manifest::{OciImageManifest, OciManifest},
+    sigstore::{
+        cosign::{ClientBuilder, CosignCapabilities},
+        registry::{Auth, ClientConfig},
+    },
+};
 use policy_evaluator::{
     constants::*, policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata,
 };
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use syntect::parsing::SyntaxSet;
 
-pub(crate) fn inspect(uri: &str, output: OutputType) -> Result<()> {
+pub(crate) async fn inspect(
+    uri: &str,
+    output: OutputType,
+    sources: Option<Sources>,
+    docker_config: Option<DockerConfig>,
+) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
     let wasm_path = crate::utils::wasm_path(uri.as_str())?;
-    let printer = get_printer(output);
+    let metadata_printer = MetadataPrinter::from(&output);
 
     let metadata = Metadata::from_path(&wasm_path)
         .map_err(|e| anyhow!("Error parsing policy metadata: {}", e))?;
+
+    let signatures = fetch_signatures_manifest(uri.as_str(), sources, docker_config).await;
+
     match metadata {
-        Some(metadata) => printer.print(&metadata),
-        None => Err(anyhow!(
+        Some(metadata) => metadata_printer.print(&metadata)?,
+        None => return Err(anyhow!(
             "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
             uri
         )),
+    };
+
+    match signatures {
+        Ok(signatures) => {
+            if let Some(signatures) = signatures {
+                println!();
+                println!("Sigstore signatures");
+                println!();
+                let sigstore_printer = SignaturesPrinter::from(&output);
+                sigstore_printer.print(&signatures);
+            }
+        }
+        Err(error) => {
+            println!();
+            if error
+                .to_string()
+                .as_str()
+                .starts_with("OCI API error: manifest unknown on")
+            {
+                println!("No sigstore signatures found");
+            } else {
+                println!("Cannot determine if the policy has been signed. There was an error while attempting to fetch its signatures from the remote registry: {} ", error)
+            }
+        }
     }
+
+    Ok(())
 }
 
 pub(crate) enum OutputType {
@@ -41,30 +83,38 @@ impl TryFrom<Option<&str>> for OutputType {
     }
 }
 
-fn get_printer(output_type: OutputType) -> Box<dyn MetadataPrinter> {
-    match output_type {
-        OutputType::Yaml => Box::new(MetadataYamlPrinter {}),
-        OutputType::Pretty => Box::new(MetadataPrettyPrinter {}),
+enum MetadataPrinter {
+    Yaml,
+    Pretty,
+}
+
+impl From<&OutputType> for MetadataPrinter {
+    fn from(output_type: &OutputType) -> Self {
+        match output_type {
+            OutputType::Yaml => Self::Yaml,
+            OutputType::Pretty => Self::Pretty,
+        }
     }
 }
 
-trait MetadataPrinter {
-    fn print(&self, metadata: &Metadata) -> Result<()>;
-}
-
-struct MetadataYamlPrinter {}
-
-impl MetadataPrinter for MetadataYamlPrinter {
+impl MetadataPrinter {
     fn print(&self, metadata: &Metadata) -> Result<()> {
-        let metadata_yaml = serde_yaml::to_string(&metadata)?;
-        println!("{}", metadata_yaml);
-        Ok(())
+        match self {
+            MetadataPrinter::Yaml => {
+                let metadata_yaml = serde_yaml::to_string(metadata)?;
+                println!("{}", metadata_yaml);
+                Ok(())
+            }
+            MetadataPrinter::Pretty => {
+                self.print_metadata_generic_info(metadata)?;
+                println!();
+                self.print_metadata_rules(metadata)?;
+                println!();
+                self.print_metadata_usage(metadata)
+            }
+        }
     }
-}
 
-struct MetadataPrettyPrinter {}
-
-impl MetadataPrettyPrinter {
     fn annotation_to_row_key(&self, text: &str) -> String {
         let mut out = String::from(text);
         out.push(':');
@@ -180,12 +230,91 @@ impl MetadataPrettyPrinter {
     }
 }
 
-impl MetadataPrinter for MetadataPrettyPrinter {
-    fn print(&self, metadata: &Metadata) -> Result<()> {
-        self.print_metadata_generic_info(metadata)?;
-        println!();
-        self.print_metadata_rules(metadata)?;
-        println!();
-        self.print_metadata_usage(metadata)
+enum SignaturesPrinter {
+    Yaml,
+    Pretty,
+}
+
+impl From<&OutputType> for SignaturesPrinter {
+    fn from(output_type: &OutputType) -> Self {
+        match output_type {
+            OutputType::Yaml => Self::Yaml,
+            OutputType::Pretty => Self::Pretty,
+        }
+    }
+}
+
+impl SignaturesPrinter {
+    fn print(&self, signatures: &OciImageManifest) {
+        match self {
+            SignaturesPrinter::Yaml => {
+                let signatures_yaml = serde_yaml::to_string(signatures);
+                if let Ok(signatures_yaml) = signatures_yaml {
+                    println!("{}", signatures_yaml)
+                }
+            }
+            SignaturesPrinter::Pretty => {
+                for layer in &signatures.layers {
+                    let mut table = Table::new();
+                    table.set_format(FormatBuilder::new().padding(0, 1).build());
+                    table.add_row(row![Fmbl -> "Digest: ", layer.digest]);
+                    table.add_row(row![Fmbl -> "Media type: ", layer.media_type]);
+                    table.add_row(row![Fmbl -> "Size: ", layer.size]);
+                    if let Some(annotations) = &layer.annotations {
+                        table.add_row(row![Fmbl -> "Annotations"]);
+                        for annotation in annotations.iter() {
+                            table.add_row(row![Fgbl -> annotation.0, annotation.1]);
+                        }
+                    }
+                    table.printstd();
+                    println!();
+                }
+            }
+        }
+    }
+}
+
+async fn fetch_signatures_manifest(
+    uri: &str,
+    sources: Option<Sources>,
+    docker_config: Option<DockerConfig>,
+) -> Result<Option<OciImageManifest>> {
+    let registry = Registry::new(docker_config.as_ref());
+    let client_config: ClientConfig = sources.clone().unwrap_or_default().into();
+    let mut client = ClientBuilder::default()
+        .with_oci_client_config(client_config)
+        .build()?;
+    let image_name = uri
+        .strip_prefix("registry://")
+        .ok_or_else(|| anyhow!("invalid uri"))?;
+
+    let auth: Auth = match docker_config {
+        Some(docker_config) => {
+            let sigstore_auth: Option<Result<Auth>> = docker_config
+                .auth(image_name)
+                .map_err(|e| anyhow!("Cannot build Auth object for image '{}': {:?}", uri, e))?
+                .map(|ra| {
+                    let a: Result<Auth> = TryInto::<Auth>::try_into(ra);
+                    a
+                });
+
+            match sigstore_auth {
+                None => Auth::Anonymous,
+                Some(sa) => sa?,
+            }
+        }
+        None => Auth::Anonymous,
+    };
+
+    let (cosign_signature_image, _source_image_digest) =
+        client.triangulate(image_name, &auth).await?;
+
+    let manifest = registry
+        .manifest(cosign_signature_image.as_str(), sources.as_ref())
+        .await?;
+
+    match manifest {
+        OciManifest::Image(img) => Ok(Some(img)),
+        _ => Ok(None),
     }
 }
