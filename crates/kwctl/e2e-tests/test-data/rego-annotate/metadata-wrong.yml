@@ -1,0 +1,28 @@
+rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["services"]
+    operations: ["CREATE", "UPDATE"]
+mutating: false
+contextAware: false
+annotations:
+  io.kubewarden.policy.title: disallow-service-loadbalancer
+  io.kubewarden.policy.description: Prevent the creation of Service resources of type `LoadBalancer`
+  io.kubewarden.policy.author: Flavio Castelli
+  io.kubewarden.policy.url: https://github.com/kubewarden/disallow-service-loadbalancer-policy
+  io.kubewarden.policy.source: https://github.com/kubewarden/disallow-service-loadbalancer-policy
+  io.kubewarden.policy.license: Apache-2.0
+  io.kubewarden.policy.usage: |
+    This policy works by inspecting `type` of `Service` resources and prevents the
+    creation of Services with type `LoadBalancer`.
+
+    Kubernetes network policies have no control over what is being exposed
+    via these type of Services. Moreover, on public clouds, the creation of
+    `LoadBalancer` Services leads to additional charges.
+
+    Because of that, it's usually a safer choice to have
+    tighter control over the creation of these type of Services.
+
+    # Configuration
+
+    This policy doesn't take any configuration value.

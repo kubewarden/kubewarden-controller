@@ -93,3 +93,12 @@ kwctl() {
     kwctl digest ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
     [[ "$output" == "ghcr.io/kubewarden/policies/pod-privileged:v0.1.9@sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5" ]]
 }
+
+@test "annotate rego policy" {
+    kwctl annotate -m test-data/rego-annotate/metadata-correct.yml test-data/rego-annotate/no-default-namespace-rego.wasm -o /dev/null
+    [ "$status" -eq 0 ]
+
+    kwctl annotate -m test-data/rego-annotate/metadata-wrong.yml test-data/rego-annotate/no-default-namespace-rego.wasm -o /dev/null
+    [ "$status" -ne 0 ]
+    [[ "$output" == "Error: Wrong value inside of policy's metatada for 'executionMode'. This policy has been created using Rego" ]]
+}

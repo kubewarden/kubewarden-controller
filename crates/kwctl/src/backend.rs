@@ -25,7 +25,7 @@ fn rego_policy_detector(wasm_path: PathBuf) -> Result<bool> {
     for payload in wasmparser::Parser::new(0).parse_all(&data) {
         if let wasmparser::Payload::ExportSection(s) = payload? {
             for export in s {
-                if export?.field.starts_with("opa_") {
+                if export?.name.starts_with("opa_") {
                     return Ok(true);
                 }
             }
