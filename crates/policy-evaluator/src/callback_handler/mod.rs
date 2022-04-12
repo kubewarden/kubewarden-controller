@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use policy_fetcher::{registry::config::DockerConfig, sigstore, sources::Sources};
+use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackResponse};
 
-use crate::callback_handler::sigstore_verification::IsTrustedSettings;
 use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 use policy_fetcher::verify::FulcioAndRekorData;
 
@@ -146,18 +146,18 @@ impl CallbackHandler {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
                             },
-                            CallbackRequestType::SigstoreVerify{
+                            CallbackRequestType::SigstorePubKeyVerify {
                                 image,
-                                config,
+                                pub_keys,
+                                annotations,
                             } => {
-                                let is_trusted_settings = IsTrustedSettings::new(image.clone(), config);
-                                let response = get_sigstore_verification_cached(&mut self.sigstore_client, &is_trusted_settings)
+                                let response = get_sigstore_pub_key_verification_cached(&mut self.sigstore_client, image.clone(), pub_keys, annotations)
                                     .await
                                     .map(|is_trusted| {
                                         if is_trusted.was_cached {
-                                            debug!(?image, "Got sigstore verification from cache");
+                                            debug!(?image, "Got sigstore pub keys verification from cache");
                                         } else {
-                                            debug!(?image, "Got sigstore verification by querying remote registry");
+                                            debug!(?image, "Got sigstore pub keys verification by querying remote registry");
                                         }
                                     let is_trusted_byte: u8 = is_trusted.value.into();
                                         CallbackResponse {
@@ -212,12 +212,17 @@ async fn get_oci_digest_cached(
     result = true,
     sync_writes = true,
     key = "String",
-    convert = r#"{ settings.hash() }"#,
+    convert = r#"{ format!("{}{:?}{:?}", image, pub_keys, annotations)}"#,
     with_cached_flag = true
 )]
-async fn get_sigstore_verification_cached(
+async fn get_sigstore_pub_key_verification_cached(
     client: &mut sigstore_verification::Client,
-    settings: &sigstore_verification::IsTrustedSettings,
+    image: String,
+    pub_keys: Vec<String>,
+    annotations: HashMap<String, String>,
 ) -> Result<cached::Return<bool>> {
-    client.is_trusted(settings).await.map(cached::Return::new)
+    client
+        .is_pub_key_trusted(image, pub_keys, annotations)
+        .await
+        .map(cached::Return::new)
 }
