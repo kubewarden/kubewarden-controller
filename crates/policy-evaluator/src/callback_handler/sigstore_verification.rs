@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::KeylessInfo;
 use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::{FulcioAndRekorData, Verifier};
@@ -26,7 +27,7 @@ impl Client {
         &mut self,
         image: String,
         pub_keys: Vec<String>,
-        annotations: HashMap<String, String>,
+        annotations: Option<HashMap<String, String>>,
     ) -> Result<bool> {
         if pub_keys.is_empty() {
             return Err(anyhow!("Must provide at least one pub key"));
@@ -34,6 +35,26 @@ impl Client {
         let result = self
             .verifier
             .verify_pub_key(self.docker_config.as_ref(), image, pub_keys, annotations)
+            .await;
+
+        match result {
+            Ok(_) => Ok(true),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn is_keyless_trusted(
+        &mut self,
+        image: String,
+        keyless: Vec<KeylessInfo>,
+        annotations: Option<HashMap<String, String>>,
+    ) -> Result<bool> {
+        if keyless.is_empty() {
+            return Err(anyhow!("Must provide keyless info"));
+        }
+        let result = self
+            .verifier
+            .verify_keyless_exact_match(self.docker_config.as_ref(), image, keyless, annotations)
             .await;
 
         match result {

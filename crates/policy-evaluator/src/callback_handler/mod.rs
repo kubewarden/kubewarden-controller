@@ -7,6 +7,7 @@ use tracing::{debug, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackResponse};
 
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::KeylessInfo;
 use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 use policy_fetcher::verify::FulcioAndRekorData;
 
@@ -168,6 +169,28 @@ impl CallbackHandler {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
                                 },
+                            CallbackRequestType::SigstoreKeylessVerify {
+                                image,
+                                keyless,
+                                annotations,
+                            } => {
+                                let response = get_sigstore_keyless_verification_cached(&mut self.sigstore_client, image.clone(), keyless, annotations)
+                                    .await
+                                    .map(|is_trusted| {
+                                        if is_trusted.was_cached {
+                                            debug!(?image, "Got sigstore pub keys verification from cache");
+                                        } else {
+                                            debug!(?image, "Got sigstore pub keys verification by querying remote registry");
+                                        }
+                                    let is_trusted_byte: u8 = is_trusted.value.into();
+                                        CallbackResponse {
+                                        payload: vec!(is_trusted_byte)
+                                    }});
+
+                                if let Err(e) = req.response_channel.send(response) {
+                                    warn!("callback handler: cannot send response back: {:?}", e);
+                                }
+                                },
                         }
                     }
                 },
@@ -219,10 +242,37 @@ async fn get_sigstore_pub_key_verification_cached(
     client: &mut sigstore_verification::Client,
     image: String,
     pub_keys: Vec<String>,
-    annotations: HashMap<String, String>,
+    annotations: Option<HashMap<String, String>>,
 ) -> Result<cached::Return<bool>> {
     client
         .is_pub_key_trusted(image, pub_keys, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}", image, keyless, annotations)}"#,
+    with_cached_flag = true
+)]
+async fn get_sigstore_keyless_verification_cached(
+    client: &mut sigstore_verification::Client,
+    image: String,
+    keyless: Vec<KeylessInfo>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<bool>> {
+    client
+        .is_keyless_trusted(image, keyless, annotations)
         .await
         .map(cached::Return::new)
 }

@@ -54,7 +54,7 @@ pub(crate) fn host_callback(
                 }
             },
             "oci" => match operation {
-                "v1/verify/pubkeys" => {
+                "v1/verify" => {
                     let req_type: CallbackRequestType =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
                     let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
