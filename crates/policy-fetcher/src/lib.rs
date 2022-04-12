@@ -30,6 +30,7 @@ use tracing::debug;
 use url::ParseError;
 
 // re-export for usage by kwctl, policy-server, policy-evaluator,...
+pub use kubewarden_policy_sdk;
 pub use oci_distribution;
 pub use sigstore;
 
