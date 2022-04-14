@@ -8,9 +8,10 @@ use sigstore::cosign::{self, signature_layers::SignatureLayer, ClientBuilder, Co
 use std::collections::HashMap;
 
 use crate::verify::config::{LatestVerificationConfig, Signature, Subject};
+use oci_distribution::Reference;
+use std::convert::TryFrom;
 use std::{convert::TryInto, str::FromStr};
 use tracing::{debug, error, info};
-use url::{ParseError, Url};
 
 /// This structure simplifies the process of policy verification
 /// using Sigstore
@@ -159,19 +160,16 @@ impl Verifier {
     ) -> Result<String> {
         // obtain image name:
         //
-        let url = match Url::parse(image_url) {
-            Ok(u) => Ok(u),
-            Err(ParseError::RelativeUrlWithoutBase) => {
-                Url::parse(format!("registry://{}", image_url).as_str())
-            }
-            Err(e) => Err(e),
-        }?;
-        if url.scheme() != "registry" {
+        let image_name = match image_url.strip_prefix("registry://") {
+            None => image_url,
+            Some(url) => url,
+        };
+        if let Err(e) = Reference::try_from(image_name) {
             return Err(anyhow!(
-                "Verification works only with 'registry://' protocol"
+                "Verification only works with OCI images: Not a valid oci image {}",
+                e
             ));
         }
-        let image_name = url.as_str().strip_prefix("registry://").unwrap();
 
         // obtain registry auth:
         //
@@ -179,7 +177,13 @@ impl Verifier {
             Some(docker_config) => {
                 let sigstore_auth: Option<Result<sigstore::registry::Auth>> = docker_config
                     .auth(image_name)
-                    .map_err(|e| anyhow!("Cannot build Auth object for image '{}': {:?}", url, e))?
+                    .map_err(|e| {
+                        anyhow!(
+                            "Cannot build Auth object for image '{}': {:?}",
+                            image_url,
+                            e
+                        )
+                    })?
                     .map(|ra| {
                         let a: Result<sigstore::registry::Auth> =
                             TryInto::<sigstore::registry::Auth>::try_into(ra);
@@ -213,7 +217,7 @@ impl Verifier {
 
         // everything is fine here:
         debug!(
-            policy = url.to_string().as_str(),
+            policy = image_url.to_string().as_str(),
             "Policy successfully verified"
         );
         Ok(source_image_digest)
@@ -231,19 +235,16 @@ impl Verifier {
         docker_config: Option<&DockerConfig>,
         verified_manifest_digest: &str,
     ) -> Result<()> {
-        let url = match Url::parse(&policy.uri) {
-            Ok(u) => Ok(u),
-            Err(ParseError::RelativeUrlWithoutBase) => {
-                Url::parse(format!("registry://{}", policy.uri).as_str())
-            }
-            Err(e) => Err(e),
-        }?;
-        if url.scheme() != "registry" {
+        let image_name = match policy.uri.strip_prefix("registry://") {
+            None => policy.uri.as_str(),
+            Some(url) => url,
+        };
+        if let Err(e) = Reference::try_from(image_name) {
             return Err(anyhow!(
-                "Verification works only with 'registry://' protocol"
+                "Verification only works with OCI images: Not a valid oci image {}",
+                e
             ));
         }
-        let image_name = url.as_str().strip_prefix("registry://").unwrap();
 
         if !policy.local_path.exists() {
             return Err(anyhow!(
