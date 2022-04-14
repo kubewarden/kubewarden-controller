@@ -7,15 +7,10 @@ use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities};
 use std::collections::HashMap;
 
-use crate::verify::config::Subject;
-use oci_distribution::Reference;
-use sigstore::errors::SigstoreError;
-use std::convert::TryFrom;
+use crate::verify::config::{LatestVerificationConfig, Signature, Subject};
 use std::{convert::TryInto, str::FromStr};
 use tracing::{debug, error, info};
 use url::{ParseError, Url};
-
-use self::config::Signature;
 
 /// This structure simplifies the process of policy verification
 /// using Sigstore
@@ -106,238 +101,68 @@ impl Verifier {
     pub async fn verify_pub_key(
         &mut self,
         docker_config: Option<&DockerConfig>,
-        image: String,
+        image_url: String,
         pub_keys: Vec<String>,
         annotations: Option<HashMap<String, String>>,
     ) -> Result<String> {
-        // obtain image name:
+        // build interim VerificationConfig:
         //
-        let image_name = match image.strip_prefix("registry://") {
-            None => image.as_str(),
-            Some(image) => image,
-        };
-        if let Err(e) = Reference::try_from(image_name) {
-            return Err(anyhow!("Not a valid oci image {}", e));
-        }
-
-        // obtain registry auth:
-        //
-        let auth: sigstore::registry::Auth = match docker_config {
-            Some(docker_config) => {
-                let sigstore_auth: Option<Result<sigstore::registry::Auth>> = docker_config
-                    .auth(image_name)
-                    .map_err(|e| {
-                        anyhow!("Cannot build Auth object for image '{}': {:?}", image, e)
-                    })?
-                    .map(|ra| {
-                        let a: Result<sigstore::registry::Auth> =
-                            TryInto::<sigstore::registry::Auth>::try_into(ra);
-                        a
-                    });
-
-                match sigstore_auth {
-                    None => sigstore::registry::Auth::Anonymous,
-                    Some(sa) => sa?,
-                }
-            }
-            None => sigstore::registry::Auth::Anonymous,
-        };
-
-        // obtain all signatures of image:
-        //
-        // trusted_signature_layers() will error early if cosign_client using
-        // Fulcio,Rekor certs and signatures are not verified
-        //
-        let (cosign_signature_image, source_image_digest) =
-            self.cosign_client.triangulate(image_name, &auth).await?;
-
-        let trusted_layers = self
-            .cosign_client
-            .trusted_signature_layers(&auth, &source_image_digest, &cosign_signature_image)
-            .await?;
-
-        use rayon::prelude::*;
-
-        let signatures: &Vec<Signature> = &pub_keys
-            .into_iter()
-            .map(|pub_key| Signature::PubKey {
+        let mut signatures_all_of: Vec<Signature> = Vec::new();
+        for k in pub_keys.iter() {
+            let signature = Signature::PubKey {
                 owner: None,
-                key: pub_key,
+                key: k.clone(),
                 annotations: annotations.clone(),
-            })
-            .collect();
-
-        let unsatisfied_signatures: Vec<&Signature> = signatures
-            .par_iter()
-            .filter(|signature| {
-                match signature.verifier() {
-                    Ok(verifier) => {
-                        let constraints = [verifier];
-                        let is_satisfied =
-                            cosign::verify_constraints(&trusted_layers, constraints.iter());
-                        match is_satisfied {
-                            Ok(_) => {
-                                debug!(
-                                    "Constraint satisfied:\n{}",
-                                    &serde_yaml::to_string(&signature).unwrap()
-                                );
-                                false
-                            }
-                            Err(_) => true, //filter into unsatisfied_signatures
-                        }
-                    }
-                    Err(error) => {
-                        info!(?error, ?signature, "Cannot create verifier for signature");
-                        true
-                    }
-                }
-            })
-            .collect();
-        if !unsatisfied_signatures.is_empty() {
-            let mut errormsg = "Image verification failed: missing signatures\n".to_string();
-            errormsg.push_str("The following constraints were not satisfied:\n");
-            for s in unsatisfied_signatures {
-                errormsg.push_str(&serde_yaml::to_string(s)?);
-            }
-            return Err(anyhow!(errormsg));
+            };
+            signatures_all_of.push(signature);
         }
+        let verification_config = LatestVerificationConfig {
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
 
-        // everything is fine here:
-        debug!(
-            policy = image.to_string().as_str(),
-            "Policy successfully verified"
-        );
-        Ok(source_image_digest)
+        self.verify(&image_url, docker_config, &verification_config)
+            .await
     }
 
     pub async fn verify_keyless_exact_match(
         &mut self,
         docker_config: Option<&DockerConfig>,
-        image: String,
+        image_url: String,
         keyless: Vec<KeylessInfo>,
         annotations: Option<HashMap<String, String>>,
     ) -> Result<String> {
-        // obtain image name:
+        // Build intering VerificationConfig:
         //
-        let image_name = match image.strip_prefix("registry://") {
-            None => image.as_str(),
-            Some(image) => image,
-        };
-        if let Err(e) = Reference::try_from(image_name) {
-            return Err(anyhow!("Not a valid oci image {}", e));
-        }
-
-        // obtain registry auth:
-        //
-        let auth: sigstore::registry::Auth = match docker_config {
-            Some(docker_config) => {
-                let sigstore_auth: Option<Result<sigstore::registry::Auth>> = docker_config
-                    .auth(image_name)
-                    .map_err(|e| {
-                        anyhow!("Cannot build Auth object for image '{}': {:?}", image, e)
-                    })?
-                    .map(|ra| {
-                        let a: Result<sigstore::registry::Auth> =
-                            TryInto::<sigstore::registry::Auth>::try_into(ra);
-                        a
-                    });
-
-                match sigstore_auth {
-                    None => sigstore::registry::Auth::Anonymous,
-                    Some(sa) => sa?,
-                }
-            }
-            None => sigstore::registry::Auth::Anonymous,
-        };
-
-        // obtain all signatures of image:
-        //
-        // trusted_signature_layers() will error early if cosign_client using
-        // Fulcio,Rekor certs and signatures are not verified
-        //
-        let (cosign_signature_image, source_image_digest) =
-            self.cosign_client.triangulate(image_name, &auth).await?;
-
-        let trusted_layers = match self
-            .cosign_client
-            .trusted_signature_layers(&auth, &source_image_digest, &cosign_signature_image)
-            .await
-        {
-            Ok(trusted_layers) => trusted_layers,
-            Err(SigstoreError::RegistryPullManifestError { .. }) => {
-                return Err(anyhow!("No signatures found for image {}", image_name));
-            }
-            Err(e) => {
-                return Err(anyhow!("{}", e));
-            }
-        };
-
-        use rayon::prelude::*;
-
-        let signatures: &Vec<Signature> = &keyless
-            .into_iter()
-            .map(|signature| Signature::GenericIssuer {
-                issuer: signature.issuer,
-                subject: Subject::Equal(signature.subject),
+        let mut signatures_all_of: Vec<Signature> = Vec::new();
+        for k in keyless.iter() {
+            let signature = Signature::GenericIssuer {
+                issuer: k.issuer.clone(),
+                subject: Subject::Equal(k.subject.clone()),
                 annotations: annotations.clone(),
-            })
-            .collect();
-
-        let unsatisfied_signatures: Vec<&Signature> = signatures
-            .par_iter()
-            .filter(|signature| {
-                match signature.verifier() {
-                    Ok(verifier) => {
-                        let constraints = [verifier];
-                        let is_satisfied =
-                            cosign::verify_constraints(&trusted_layers, constraints.iter());
-                        match is_satisfied {
-                            Ok(_) => {
-                                debug!(
-                                    "Constraint satisfied:\n{}",
-                                    &serde_yaml::to_string(&signature).unwrap()
-                                );
-                                false
-                            }
-                            Err(_) => true, //filter into unsatisfied_signatures
-                        }
-                    }
-                    Err(error) => {
-                        info!(?error, ?signature, "Cannot create verifier for signature");
-                        true
-                    }
-                }
-            })
-            .collect();
-        if !unsatisfied_signatures.is_empty() {
-            let mut errormsg = "Image verification failed: missing signatures\n".to_string();
-            errormsg.push_str("The following constraints were not satisfied:\n");
-            for s in unsatisfied_signatures {
-                errormsg.push_str(&serde_yaml::to_string(s)?);
-            }
-            return Err(anyhow!(errormsg));
+            };
+            signatures_all_of.push(signature);
         }
-
-        // everything is fine here:
-        debug!(
-            policy = image.to_string().as_str(),
-            "Policy successfully verified"
-        );
-        Ok(source_image_digest)
+        let verification_config = LatestVerificationConfig {
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+        self.verify(&image_url, docker_config, &verification_config)
+            .await
     }
 
     pub async fn verify(
         &mut self,
-        url: &str,
+        image_url: &str,
         docker_config: Option<&DockerConfig>,
         verification_config: &config::LatestVerificationConfig,
     ) -> Result<String> {
         // obtain image name:
         //
-        let url = match Url::parse(url) {
+        let url = match Url::parse(image_url) {
             Ok(u) => Ok(u),
             Err(ParseError::RelativeUrlWithoutBase) => {
-                Url::parse(format!("registry://{}", url).as_str())
+                Url::parse(format!("registry://{}", image_url).as_str())
             }
             Err(e) => Err(e),
         }?;
