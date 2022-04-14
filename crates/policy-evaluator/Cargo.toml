@@ -1,6 +1,6 @@
 [package]
 name = "policy-evaluator"
-version = "0.2.17"
+version = "0.2.18"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>"
