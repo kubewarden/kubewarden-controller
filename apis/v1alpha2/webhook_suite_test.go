@@ -30,21 +30,19 @@ import (
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	//+kubebuilder:scaffold:imports
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	registrationv1 "k8s.io/api/admissionregistration/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -150,18 +148,20 @@ func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string
 			Namespace: namespace,
 		},
 		Spec: ClusterAdmissionPolicySpec{
-			PolicyServer: policyServerName,
-			Settings: runtime.RawExtension{
-				Raw: []byte("{}"),
-			},
-			Rules: []registrationv1.RuleWithOperations{{
-				Operations: []registrationv1.OperationType{registrationv1.OperationAll},
-				Rule: registrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{"*"},
-					Resources:   []string{"*/*"},
+			PolicySpec: PolicySpec{
+				PolicyServer: policyServerName,
+				Settings: runtime.RawExtension{
+					Raw: []byte("{}"),
 				},
-			}},
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{"*"},
+						Resources:   []string{"*/*"},
+					},
+				}},
+			},
 		},
 	}
 }

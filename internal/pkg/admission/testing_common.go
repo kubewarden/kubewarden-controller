@@ -3,7 +3,7 @@ package admission
 import (
 	"time"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	kubewardenv1 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -11,11 +11,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func createReconciler() (Reconciler, v1alpha2.ClusterAdmissionPolicy, v1alpha2.ClusterAdmissionPolicy) {
+func createReconciler() (Reconciler, kubewardenv1.ClusterAdmissionPolicy, kubewardenv1.ClusterAdmissionPolicy) {
 	admissionPolicyName := "admissionPolicy"
-	validationPolicy := v1alpha2.ClusterAdmissionPolicy{
+	validationPolicy := kubewardenv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: admissionPolicyName, Finalizers: []string{"kubewarden"}},
-		Spec:       v1alpha2.ClusterAdmissionPolicySpec{Mutating: false, Module: "registry://blabla/validation-policy:latest"},
+		Spec: kubewardenv1.ClusterAdmissionPolicySpec{
+			PolicySpec: kubewardenv1.PolicySpec{
+				Mutating: false,
+				Module:   "registry://blabla/validation-policy:latest",
+			},
+		},
 	}
 	validatingWebhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -23,9 +28,14 @@ func createReconciler() (Reconciler, v1alpha2.ClusterAdmissionPolicy, v1alpha2.C
 		},
 	}
 	mutatingPolicyName := "mutatingPolicy"
-	mutatingPolicy := v1alpha2.ClusterAdmissionPolicy{
+	mutatingPolicy := kubewardenv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: mutatingPolicyName, Finalizers: []string{"kubewarden"}},
-		Spec:       v1alpha2.ClusterAdmissionPolicySpec{Mutating: true, Module: "registry://blabla/mutation-policy:latest"},
+		Spec: kubewardenv1.ClusterAdmissionPolicySpec{
+			PolicySpec: kubewardenv1.PolicySpec{
+				Mutating: true,
+				Module:   "registry://blabla/mutation-policy:latest",
+			},
+		},
 	}
 	mutatingWebhook := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
