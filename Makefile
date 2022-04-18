@@ -3,6 +3,9 @@
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
+# Binary directory
+ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+BIN_DIR := $(abspath $(ROOT_DIR)/bin)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -16,6 +19,23 @@ endif
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
+
+# Tools binaries
+CONTROLLER_GEN_VER := v0.8.0
+CONTROLLER_GEN_BIN := controller-gen
+CONTROLLER_GEN := $(BIN_DIR)/$(CONTROLLER_GEN_BIN)
+
+KUSTOMIZE_VER := v4.5.2
+KUSTOMIZE_BIN := kustomize
+KUSTOMIZE := $(BIN_DIR)/$(KUSTOMIZE_BIN)
+
+SETUP_ENVTEST_VER := v0.0.0-20211110210527-619e6b92dab9
+SETUP_ENVTEST_BIN := setup-envtest
+SETUP_ENVTEST := $(abspath $(BIN_DIR)/$(SETUP_ENVTEST_BIN))
+
+GOLANGCI_LINT_VER := v1.45.2
+GOLANGCI_LINT_BIN := golangci-lint
+GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 
 all: build
 
@@ -35,12 +55,31 @@ all: build
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+## @ Tools
+
+controller-gen: $(CONTROLLER_GEN) ## Install a local copy of controller-gen.
+kustomize: $(KUSTOMIZE) ## Install a local copy of kustomize.
+setup-envtest: $(SETUP_ENVTEST) ## Install a local copy of setup-envtest.
+golangci-lint: $(GOLANGCI_LINT) ## Install a local copy of golang ci-lint.
+
+$(CONTROLLER_GEN): ## Install controller-gen.
+	GOBIN=$(BIN_DIR) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VER)
+
+$(KUSTOMIZE): ## Install kustomize.
+	GOBIN=$(BIN_DIR) go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VER)
+
+$(SETUP_ENVTEST): ## Install setup-envtest.
+	GOBIN=$(BIN_DIR) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VER)
+
+$(GOLANGCI_LINT): ## Install golangci-lint.
+	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER)
+
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: $(CONTROLLER_GEN)  ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: $(CONTROLLER_GEN) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 fmt: ## Run go fmt against code.
@@ -49,25 +88,32 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-lint: deps
-	golangci-lint run
-
-deps:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.44.2
+lint: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run
 
 .PHONY: test
 test: unit-tests integration-tests ## Run tests.
 
-.PHONY: unit-tests
-unit-tests: manifests generate fmt vet envtest ## Run unit tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./internal/... -test.v -coverprofile cover.out
+.PHONY: setup-envtest
+setup-envtest: $(SETUP_ENVTEST) # Build setup-envtest
+	@if [ $(shell go env GOOS) == "darwin" ]; then \
+		$(eval KUBEBUILDER_ASSETS := $(shell $(SETUP_ENVTEST) use --use-env -p path --arch amd64 $(ENVTEST_K8S_VERSION))) \
+		echo "kube-builder assets set using darwin OS"; \
+	else \
+		$(eval KUBEBUILDER_ASSETS := $(shell $(SETUP_ENVTEST) use --use-env -p path $(ENVTEST_K8S_VERSION))) \
+		echo "kube-builder assets set using other OS"; \
+	fi
 
-.PHONY: integration-tests
-integration-tests: manifests generate fmt vet envtest ## Run integration tests.
-	ACK_GINKGO_DEPRECATIONS=1.16.4 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./apis/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
+.PHONY: unit-tests
+unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./internal/... -test.v -coverprofile cover.out
+
+.PHONY: setup-envtest integration-tests
+integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
+	ACK_GINKGO_DEPRECATIONS=1.16.4 KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./apis/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
 
 .PHONY: generate-crds
-generate-crds: manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
+generate-crds: $(KUSTOMIZE) manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
 	mkdir -p generated-crds
 	$(KUSTOMIZE) build config/crd -o generated-crds # If -o points to a folder, kustomize saves them as several files instead of 1
 
@@ -87,32 +133,19 @@ docker-push: ## Push docker image with the manager.
 
 ##@ Deployment
 
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: $(KUSTOMIZE) manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
+uninstall: $(KUSTOMIZE) manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: $(KUSTOMIZE) manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
+undeploy: $(KUSTOMIZE) ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	bash -c "./scripts/removeFinalizersFromCRDs.sh"
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
-
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
-
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
-
-ENVTEST = $(shell pwd)/bin/setup-envtest
-.PHONY: envtest
-envtest: ## Download envtest-setup locally if necessary.
-	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
 ##@ Release
 
