@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: admissionpolicies.policies.kubewarden.io
 spec:
@@ -61,9 +60,9 @@ spec:
                 description: FailurePolicy defines how unrecognized errors and timeout
                   errors from the policy are handled. Allowed values are "Ignore"
                   or "Fail". * "Ignore" means that an error calling the webhook is
-                  ignored and the API   request is allowed to continue. * "Fail" means
-                  that an error calling the webhook causes the admission to   fail
-                  and the API request to be rejected. The default behaviour is "Fail"
+                  ignored and the API request is allowed to continue. * "Fail" means
+                  that an error calling the webhook causes the admission to fail and
+                  the API request to be rejected. The default behaviour is "Fail"
                 type: string
               matchPolicy:
                 description: "matchPolicy defines how the \"rules\" list is used to
@@ -233,6 +232,7 @@ spec:
                   if they match a webhook with sideEffects == Unknown or Some.'
                 type: string
               timeoutSeconds:
+                default: 10
                 description: TimeoutSeconds specifies the timeout for this webhook.
                   After the timeout passes, the webhook call will be ignored or the
                   API call will fail based on the failure policy. The timeout value
@@ -240,6 +240,7 @@ spec:
                 format: int32
                 type: integer
             required:
+            - module
             - mutating
             - rules
             type: object
@@ -257,13 +258,12 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{     // Represents the observations of a
-                    foo's current state.     // Known .status.conditions.type are:
-                    \"Available\", \"Progressing\", and \"Degraded\"     // +patchMergeKey=type
-                    \    // +patchStrategy=merge     // +listType=map     // +listMapKey=type
-                    \    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
-                    \n     // other fields }"
+                    type FooStatus struct{ // Represents the observations of a foo's
+                    current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
                   properties:
                     lastTransitionTime:
                       description: lastTransitionTime is the last time the condition
