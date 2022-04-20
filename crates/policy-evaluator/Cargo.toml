@@ -24,7 +24,7 @@ json-patch = "0.2.6"
 kube = { version = "0.71.0", default-features = false, features = ["client", "rustls-tls"] }
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
-policy-fetcher = { path ="../policy-fetcher" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", branch = "sigstore_container_verification" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
@@ -38,7 +38,6 @@ wasmparser = "0.84.0"
 # version of `wapc` has been pushed to crates.io.
 wapc = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
 wasmtime-provider = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
-url = "2.2.2"
 
 [dev-dependencies]
 assert-json-diff = "2.0.1"
