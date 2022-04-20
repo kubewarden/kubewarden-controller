@@ -245,7 +245,7 @@ async fn get_sigstore_pub_key_verification_cached(
     annotations: Option<HashMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
-        .is_pub_key_trusted(image, pub_keys, annotations)
+        .verify_public_key(image, pub_keys, annotations)
         .await
         .map(cached::Return::new)
 }
@@ -272,7 +272,7 @@ async fn get_sigstore_keyless_verification_cached(
     annotations: Option<HashMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
-        .is_keyless_trusted(image, keyless, annotations)
+        .verify_keyless(image, keyless, annotations)
         .await
         .map(cached::Return::new)
 }

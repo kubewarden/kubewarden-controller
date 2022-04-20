@@ -25,7 +25,7 @@ impl Client {
         })
     }
 
-    pub async fn is_pub_key_trusted(
+    pub async fn verify_public_key(
         &mut self,
         image: String,
         pub_keys: Vec<String>,
@@ -48,7 +48,7 @@ impl Client {
         }
     }
 
-    pub async fn is_keyless_trusted(
+    pub async fn verify_keyless(
         &mut self,
         image: String,
         keyless: Vec<KeylessInfo>,
