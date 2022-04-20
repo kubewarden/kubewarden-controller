@@ -7,7 +7,9 @@ use tracing::{debug, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackResponse};
 
-use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::KeylessInfo;
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::{
+    KeylessInfo, VerificationResponse,
+};
 use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 use policy_fetcher::verify::FulcioAndRekorData;
 
@@ -154,15 +156,14 @@ impl CallbackHandler {
                             } => {
                                 let response = get_sigstore_pub_key_verification_cached(&mut self.sigstore_client, image.clone(), pub_keys, annotations)
                                     .await
-                                    .map(|is_trusted| {
-                                        if is_trusted.was_cached {
+                                    .map(|response| {
+                                        if response.was_cached {
                                             debug!(?image, "Got sigstore pub keys verification from cache");
                                         } else {
                                             debug!(?image, "Got sigstore pub keys verification by querying remote registry");
                                         }
-                                    let is_trusted_byte: u8 = is_trusted.value.into();
                                         CallbackResponse {
-                                        payload: vec!(is_trusted_byte)
+                                        payload: serde_json::to_vec(&response.value).unwrap()
                                     }});
 
                                 if let Err(e) = req.response_channel.send(response) {
@@ -176,15 +177,14 @@ impl CallbackHandler {
                             } => {
                                 let response = get_sigstore_keyless_verification_cached(&mut self.sigstore_client, image.clone(), keyless, annotations)
                                     .await
-                                    .map(|is_trusted| {
-                                        if is_trusted.was_cached {
+                                    .map(|response| {
+                                        if response.was_cached {
                                             debug!(?image, "Got sigstore pub keys verification from cache");
                                         } else {
                                             debug!(?image, "Got sigstore pub keys verification by querying remote registry");
                                         }
-                                    let is_trusted_byte: u8 = is_trusted.value.into();
                                         CallbackResponse {
-                                        payload: vec!(is_trusted_byte)
+                                        payload: serde_json::to_vec(&response.value).unwrap()
                                     }});
 
                                 if let Err(e) = req.response_channel.send(response) {
@@ -243,7 +243,7 @@ async fn get_sigstore_pub_key_verification_cached(
     image: String,
     pub_keys: Vec<String>,
     annotations: Option<HashMap<String, String>>,
-) -> Result<cached::Return<bool>> {
+) -> Result<cached::Return<VerificationResponse>> {
     client
         .is_pub_key_trusted(image, pub_keys, annotations)
         .await
@@ -270,7 +270,7 @@ async fn get_sigstore_keyless_verification_cached(
     image: String,
     keyless: Vec<KeylessInfo>,
     annotations: Option<HashMap<String, String>>,
-) -> Result<cached::Return<bool>> {
+) -> Result<cached::Return<VerificationResponse>> {
     client
         .is_keyless_trusted(image, keyless, annotations)
         .await

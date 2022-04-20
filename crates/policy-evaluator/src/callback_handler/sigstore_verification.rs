@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
-use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::KeylessInfo;
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::{
+    KeylessInfo, VerificationResponse,
+};
 use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::{FulcioAndRekorData, Verifier};
@@ -28,7 +30,7 @@ impl Client {
         image: String,
         pub_keys: Vec<String>,
         annotations: Option<HashMap<String, String>>,
-    ) -> Result<bool> {
+    ) -> Result<VerificationResponse> {
         if pub_keys.is_empty() {
             return Err(anyhow!("Must provide at least one pub key"));
         }
@@ -38,7 +40,10 @@ impl Client {
             .await;
 
         match result {
-            Ok(_) => Ok(true),
+            Ok(digest) => Ok(VerificationResponse {
+                digest,
+                is_trusted: true,
+            }),
             Err(e) => Err(e),
         }
     }
@@ -48,7 +53,7 @@ impl Client {
         image: String,
         keyless: Vec<KeylessInfo>,
         annotations: Option<HashMap<String, String>>,
-    ) -> Result<bool> {
+    ) -> Result<VerificationResponse> {
         if keyless.is_empty() {
             return Err(anyhow!("Must provide keyless info"));
         }
@@ -58,7 +63,10 @@ impl Client {
             .await;
 
         match result {
-            Ok(_) => Ok(true),
+            Ok(digest) => Ok(VerificationResponse {
+                digest,
+                is_trusted: true,
+            }),
             Err(e) => Err(e),
         }
     }
