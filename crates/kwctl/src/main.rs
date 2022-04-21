@@ -25,7 +25,10 @@ use verify::VerificationAnnotations;
 
 use tracing::{debug, info};
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{
+    filter::{EnvFilter, LevelFilter},
+    fmt,
+};
 
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_evaluator::policy_fetcher::{
@@ -75,11 +78,12 @@ async fn main() -> Result<()> {
 
     // setup logging
     let level_filter = if matches.is_present("verbose") {
-        "debug"
+        LevelFilter::DEBUG
     } else {
-        "info"
+        LevelFilter::INFO
     };
-    let filter_layer = EnvFilter::new(level_filter)
+    let filter_layer = EnvFilter::from_default_env()
+        .add_directive(level_filter.into())
         .add_directive("cranelift_codegen=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("cranelift_wasm=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("hyper=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about

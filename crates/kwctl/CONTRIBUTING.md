@@ -2,7 +2,7 @@
 
 ## Making a new release
 
-1. Bump to `version = "vX.Y.Z"` on `cargo.toml`.
+1. Bump to `version = "X.Y.Z"` on `cargo.toml`.
 2. Run `git-chglog --next-tag vX.Y.Z --output CHANGELOG.md`.
 3. Format if needed, commit and open PR (as `main` branch is protected).
 4. Wait for PR to be merged.
