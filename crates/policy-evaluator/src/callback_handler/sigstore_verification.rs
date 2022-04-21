@@ -4,6 +4,7 @@ use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::{
 };
 use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
+use policy_fetcher::verify::config::{LatestVerificationConfig, Signature, Subject};
 use policy_fetcher::verify::{FulcioAndRekorData, Verifier};
 use std::collections::HashMap;
 
@@ -34,9 +35,23 @@ impl Client {
         if pub_keys.is_empty() {
             return Err(anyhow!("Must provide at least one pub key"));
         }
+        let mut signatures_all_of: Vec<Signature> = Vec::new();
+        for k in pub_keys.iter() {
+            let signature = Signature::PubKey {
+                owner: None,
+                key: k.clone(),
+                annotations: annotations.clone(),
+            };
+            signatures_all_of.push(signature);
+        }
+        let verification_config = LatestVerificationConfig {
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+
         let result = self
             .verifier
-            .verify_pub_key(self.docker_config.as_ref(), image, pub_keys, annotations)
+            .verify(&image, self.docker_config.as_ref(), &verification_config)
             .await;
 
         match result {
@@ -57,9 +72,24 @@ impl Client {
         if keyless.is_empty() {
             return Err(anyhow!("Must provide keyless info"));
         }
+        // Build intering VerificationConfig:
+        //
+        let mut signatures_all_of: Vec<Signature> = Vec::new();
+        for k in keyless.iter() {
+            let signature = Signature::GenericIssuer {
+                issuer: k.issuer.clone(),
+                subject: Subject::Equal(k.subject.clone()),
+                annotations: annotations.clone(),
+            };
+            signatures_all_of.push(signature);
+        }
+        let verification_config = LatestVerificationConfig {
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
         let result = self
             .verifier
-            .verify_keyless_exact_match(self.docker_config.as_ref(), image, keyless, annotations)
+            .verify(&image, self.docker_config.as_ref(), &verification_config)
             .await;
 
         match result {
