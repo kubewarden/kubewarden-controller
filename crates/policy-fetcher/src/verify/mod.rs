@@ -99,6 +99,17 @@ impl Verifier {
         })
     }
 
+    /// Verifies the given policy using the LatestVerificationConfig provided by
+    /// the user.
+    ///
+    /// In case of success, returns the manifest digest of the verified policy.
+    ///
+    /// Note well: this method doesn't compare the checksum of a possible local
+    /// file with the one inside of the signed (and verified) manifest, as that
+    /// can only be done with certainty after pulling the policy.
+    ///
+    /// Note well: right now, verification can be done only against policies
+    /// that are stored inside of OCI registries.
     pub async fn verify(
         &mut self,
         image_url: &str,
