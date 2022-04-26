@@ -88,6 +88,8 @@ impl Verifier {
             }
         }
 
+        cosign_client_builder = cosign_client_builder.enable_registry_caching();
+
         let cosign_client = cosign_client_builder
             .build()
             .map_err(|e| anyhow!("could not build a cosign client: {}", e))?;
