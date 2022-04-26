@@ -1,13 +1,11 @@
 use crate::sources::Sources;
 use crate::{policy::Policy, registry::config::DockerConfig};
 
-use crate::kubewarden_policy_sdk::host_capabilities::verification::KeylessInfo;
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities};
-use std::collections::HashMap;
 
-use crate::verify::config::{LatestVerificationConfig, Signature, Subject};
+use crate::verify::config::Signature;
 use oci_distribution::Reference;
 use std::convert::TryFrom;
 use std::{convert::TryInto, str::FromStr};
@@ -97,59 +95,6 @@ impl Verifier {
             cosign_client,
             sources,
         })
-    }
-
-    pub async fn verify_pub_key(
-        &mut self,
-        docker_config: Option<&DockerConfig>,
-        image_url: String,
-        pub_keys: Vec<String>,
-        annotations: Option<HashMap<String, String>>,
-    ) -> Result<String> {
-        // build interim VerificationConfig:
-        //
-        let mut signatures_all_of: Vec<Signature> = Vec::new();
-        for k in pub_keys.iter() {
-            let signature = Signature::PubKey {
-                owner: None,
-                key: k.clone(),
-                annotations: annotations.clone(),
-            };
-            signatures_all_of.push(signature);
-        }
-        let verification_config = LatestVerificationConfig {
-            all_of: Some(signatures_all_of),
-            any_of: None,
-        };
-
-        self.verify(&image_url, docker_config, &verification_config)
-            .await
-    }
-
-    pub async fn verify_keyless_exact_match(
-        &mut self,
-        docker_config: Option<&DockerConfig>,
-        image_url: String,
-        keyless: Vec<KeylessInfo>,
-        annotations: Option<HashMap<String, String>>,
-    ) -> Result<String> {
-        // Build intering VerificationConfig:
-        //
-        let mut signatures_all_of: Vec<Signature> = Vec::new();
-        for k in keyless.iter() {
-            let signature = Signature::GenericIssuer {
-                issuer: k.issuer.clone(),
-                subject: Subject::Equal(k.subject.clone()),
-                annotations: annotations.clone(),
-            };
-            signatures_all_of.push(signature);
-        }
-        let verification_config = LatestVerificationConfig {
-            all_of: Some(signatures_all_of),
-            any_of: None,
-        };
-        self.verify(&image_url, docker_config, &verification_config)
-            .await
     }
 
     pub async fn verify(
