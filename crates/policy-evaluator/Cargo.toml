@@ -1,6 +1,6 @@
 [package]
 name = "policy-evaluator"
-version = "0.2.18"
+version = "0.3.0"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>"
@@ -24,7 +24,7 @@ json-patch = "0.2.6"
 kube = { version = "0.71.0", default-features = false, features = ["client", "rustls-tls"] }
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", branch = "sigstore_container_verification" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.0" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
