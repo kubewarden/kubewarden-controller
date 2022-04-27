@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use kube::Client;
+use policy_evaluator::callback_handler::CallbackHandlerBuilder;
 use policy_evaluator::{
     cluster_context::ClusterContext,
     constants::*,
@@ -12,6 +13,8 @@ use policy_evaluator::{
     policy_metadata::Metadata,
 };
 use std::path::Path;
+use tokio::sync::oneshot;
+use tracing::error;
 
 use crate::{backend::BackendDetector, pull, verify};
 
@@ -78,10 +81,24 @@ pub(crate) async fn pull_and_run(
         }
     })?;
 
+    // This is a channel used to stop the tokio task that is run
+    // inside of the CallbackHandler
+    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
+        oneshot::channel();
+
+    let mut callback_handler = CallbackHandlerBuilder::default()
+        .registry_config(sources.cloned(), docker_config.cloned())
+        .shutdown_channel(callback_handler_shutdown_channel_rx)
+        .fulcio_and_rekor_data(fulcio_and_rekor_data)
+        .build()?;
+
+    let callback_sender_channel = callback_handler.sender_channel();
+
     let mut policy_evaluator = PolicyEvaluatorBuilder::new(policy_id)
         .policy_file(&policy.local_path)?
         .execution_mode(execution_mode)
         .settings(policy_settings)
+        .callback_channel(callback_sender_channel)
         .build()?;
 
     let req_obj = match request {
@@ -107,9 +124,25 @@ pub(crate) async fn pull_and_run(
         ));
     }
 
+    // Spawn the tokio task used by the CallbackHandler
+    let callback_handle = tokio::spawn(async move {
+        callback_handler.loop_eval().await;
+    });
+
     // evaluate request
     let response = policy_evaluator.validate(ValidateRequest::new(req_obj.clone()));
     println!("{}", serde_json::to_string(&response)?);
+
+    // The evaluation is done, we can shutdown the tokio task that is running
+    // the CallbackHandler
+    if callback_handler_shutdown_channel_tx.send(()).is_err() {
+        error!("Cannot shut down the CallbackHandler task");
+    } else if let Err(e) = callback_handle.await {
+        error!(
+            error = e.to_string().as_str(),
+            "Error waiting for the CallbackHandler task"
+        );
+    }
 
     Ok(())
 }
