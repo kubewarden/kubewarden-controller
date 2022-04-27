@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
-use policy_fetcher::{registry::config::DockerConfig, sigstore, sources::Sources};
+use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
@@ -19,25 +19,27 @@ mod sigstore_verification;
 const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 
 /// Helper struct that creates CallbackHandler objects
-pub struct CallbackHandlerBuilder {
+pub struct CallbackHandlerBuilder<'a> {
     oci_sources: Option<Sources>,
     docker_config: Option<DockerConfig>,
     channel_buffer_size: usize,
     shutdown_channel: Option<oneshot::Receiver<()>>,
+    fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
 }
 
-impl Default for CallbackHandlerBuilder {
+impl<'a> Default for CallbackHandlerBuilder<'a> {
     fn default() -> Self {
         CallbackHandlerBuilder {
             oci_sources: None,
             docker_config: None,
             shutdown_channel: None,
             channel_buffer_size: DEFAULT_CHANNEL_BUFF_SIZE,
+            fulcio_and_rekor_data: None,
         }
     }
 }
 
-impl CallbackHandlerBuilder {
+impl<'a> CallbackHandlerBuilder<'a> {
     #![allow(dead_code)]
 
     /// Provide all the information needed to access OCI registries. Optional
@@ -48,6 +50,11 @@ impl CallbackHandlerBuilder {
     ) -> Self {
         self.oci_sources = sources;
         self.docker_config = docker_config;
+        self
+    }
+
+    pub fn fulcio_and_rekor_data(mut self, fulcio_and_rekor_data: &'a FulcioAndRekorData) -> Self {
+        self.fulcio_and_rekor_data = Some(fulcio_and_rekor_data);
         self
     }
 
@@ -71,14 +78,15 @@ impl CallbackHandlerBuilder {
         if self.shutdown_channel.is_none() {
             return Err(anyhow!("shutdown_channel_rx not provided"));
         }
+        if self.fulcio_and_rekor_data.is_none() {
+            return Err(anyhow!("fulcio_and_rekor_data not provided"));
+        }
 
         let oci_client = oci::Client::new(self.oci_sources.clone(), self.docker_config.clone());
-        let repo = sigstore::tuf::SigstoreRepository::fetch(None)?;
-        let fulcio_and_rekor_data = FulcioAndRekorData::FromTufRepository { repo };
         let sigstore_client = sigstore_verification::Client::new(
             self.oci_sources.clone(),
             self.docker_config.clone(),
-            &fulcio_and_rekor_data,
+            self.fulcio_and_rekor_data.unwrap(),
         )?;
 
         Ok(CallbackHandler {
