@@ -1,4 +1,5 @@
 use anyhow::Result;
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 use tokio::sync::oneshot;
 
 /// Holds the response to a waPC evaluation request
@@ -6,18 +7,6 @@ use tokio::sync::oneshot;
 pub struct CallbackResponse {
     /// The data to be given back to the waPC guest
     pub payload: Vec<u8>,
-}
-
-/// Describes the different kinds of request a waPC guest can make to
-/// our host.
-#[derive(Debug)]
-pub enum CallbackRequestType {
-    /// Require the computation of the manifest digest of an OCI object (be
-    /// it an image or anything else that can be stored into an OCI registry)
-    OciManifestDigest {
-        /// String pointing to the object (e.g.: `registry.testing.lan/busybox:1.0.0`)
-        image: String,
-    },
 }
 
 /// A request sent by some synchronous code (usually waPC's host_callback)

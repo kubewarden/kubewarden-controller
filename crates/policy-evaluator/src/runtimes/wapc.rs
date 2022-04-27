@@ -7,15 +7,17 @@ use tracing::{debug, error};
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
 
-use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
+use crate::callback_requests::{CallbackRequest, CallbackResponse};
 use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::validation_response::ValidationResponse;
 
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
-use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
-use kubewarden_policy_sdk::settings::SettingsValidationResponse;
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
+use policy_fetcher::kubewarden_policy_sdk::metadata::ProtocolVersion;
+use policy_fetcher::kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+use policy_fetcher::kubewarden_policy_sdk::settings::SettingsValidationResponse;
+use tokio::sync::oneshot::Receiver;
 
 lazy_static! {
     pub(crate) static ref WAPC_POLICY_MAPPING: RwLock<HashMap<u64, Policy>> =
@@ -52,36 +54,20 @@ pub(crate) fn host_callback(
                 }
             },
             "oci" => match operation {
-                "manifest_digest" => {
-                    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-                    let policy = policy_mapping.get(&policy_id).unwrap();
-
-                    let cb_channel: mpsc::Sender<CallbackRequest> =
-                        if let Some(c) = policy.callback_channel.clone() {
-                            Ok(c)
-                        } else {
-                            error!(
-                                policy_id,
-                                binding,
-                                operation,
-                                "Cannot process waPC request: callback channel not provided"
-                            );
-                            Err(anyhow!(
-                                "Cannot process waPC request: callback channel not provided"
-                            ))
-                        }?;
-
-                    let image = String::from_utf8(payload.to_vec())
-                        .map_err(|_| "Cannot parse given payload as string")?;
-
-                    let (tx, mut rx) = oneshot::channel::<Result<CallbackResponse>>();
+                "v1/verify" => {
+                    let req_type: CallbackRequestType =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                     let req = CallbackRequest {
-                        request: CallbackRequestType::OciManifestDigest {
-                            image: image.clone(),
-                        },
+                        request: req_type,
                         response_channel: tx,
                     };
 
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                "manifest_digest" => {
+                    let image = String::from_utf8(payload.to_vec())
+                        .map_err(|_| "Cannot parse given payload as string")?;
                     debug!(
                         policy_id,
                         binding,
@@ -89,48 +75,12 @@ pub(crate) fn host_callback(
                         image = image.as_str(),
                         "Sending request via callback channel"
                     );
-                    let send_result = cb_channel.try_send(req);
-                    if let Err(e) = send_result {
-                        return Err(format!(
-                            "Error sending request over callback channel: {:?}",
-                            e
-                        )
-                        .into());
-                    }
-
-                    // wait for the response
-                    loop {
-                        match rx.try_recv() {
-                            Ok(msg) => {
-                                return match msg {
-                                    Ok(resp) => Ok(resp.payload),
-                                    Err(e) => {
-                                        error!(
-                                            policy_id,
-                                            binding,
-                                            operation,
-                                            error = e.to_string().as_str(),
-                                            "callback evaluation failed"
-                                        );
-                                        Err(format!("Callback evaluation failure: {:?}", e).into())
-                                    }
-                                }
-                            }
-                            Err(oneshot::error::TryRecvError::Empty) => {
-                                //  do nothing, keep waiting for a reply
-                            }
-                            Err(e) => {
-                                error!(
-                                    policy_id,
-                                    binding,
-                                    operation,
-                                    error = e.to_string().as_str(),
-                                    "Cannot process waPC request: error obtaining response over callback channel"
-                                );
-                                return Err("Error obtaining response over callback channel".into());
-                            }
-                        }
-                    }
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::OciManifestDigest { image },
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
                 }
                 _ => {
                     error!("unknown operation: {}", operation);
@@ -157,6 +107,69 @@ pub(crate) fn host_callback(
         _ => {
             error!("unknown binding: {}", binding);
             Err(format!("unknown binding: {}", binding).into())
+        }
+    }
+}
+
+fn send_request_and_wait_for_response(
+    policy_id: u64,
+    binding: &str,
+    operation: &str,
+    req: CallbackRequest,
+    mut rx: Receiver<Result<CallbackResponse>>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
+    let policy = policy_mapping.get(&policy_id).unwrap();
+
+    let cb_channel: mpsc::Sender<CallbackRequest> = if let Some(c) = policy.callback_channel.clone()
+    {
+        Ok(c)
+    } else {
+        error!(
+            policy_id,
+            binding, operation, "Cannot process waPC request: callback channel not provided"
+        );
+        Err(anyhow!(
+            "Cannot process waPC request: callback channel not provided"
+        ))
+    }?;
+
+    let send_result = cb_channel.try_send(req);
+    if let Err(e) = send_result {
+        return Err(format!("Error sending request over callback channel: {:?}", e).into());
+    }
+
+    // wait for the response
+    loop {
+        match rx.try_recv() {
+            Ok(msg) => {
+                return match msg {
+                    Ok(resp) => Ok(resp.payload),
+                    Err(e) => {
+                        error!(
+                            policy_id,
+                            binding,
+                            operation,
+                            error = e.to_string().as_str(),
+                            "callback evaluation failed"
+                        );
+                        Err(format!("Callback evaluation failure: {:?}", e).into())
+                    }
+                }
+            }
+            Err(oneshot::error::TryRecvError::Empty) => {
+                //  do nothing, keep waiting for a reply
+            }
+            Err(e) => {
+                error!(
+                    policy_id,
+                    binding,
+                    operation,
+                    error = e.to_string().as_str(),
+                    "Cannot process waPC request: error obtaining response over callback channel"
+                );
+                return Err("Error obtaining response over callback channel".into());
+            }
         }
     }
 }

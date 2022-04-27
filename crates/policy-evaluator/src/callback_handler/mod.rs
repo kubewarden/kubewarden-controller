@@ -1,35 +1,45 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
+use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
 
-use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
+use crate::callback_requests::{CallbackRequest, CallbackResponse};
+
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::{
+    KeylessInfo, VerificationResponse,
+};
+use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
+use policy_fetcher::verify::FulcioAndRekorData;
 
 mod oci;
+mod sigstore_verification;
 
 const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 
 /// Helper struct that creates CallbackHandler objects
-pub struct CallbackHandlerBuilder {
+pub struct CallbackHandlerBuilder<'a> {
     oci_sources: Option<Sources>,
     docker_config: Option<DockerConfig>,
     channel_buffer_size: usize,
     shutdown_channel: Option<oneshot::Receiver<()>>,
+    fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
 }
 
-impl Default for CallbackHandlerBuilder {
+impl<'a> Default for CallbackHandlerBuilder<'a> {
     fn default() -> Self {
         CallbackHandlerBuilder {
             oci_sources: None,
             docker_config: None,
             shutdown_channel: None,
             channel_buffer_size: DEFAULT_CHANNEL_BUFF_SIZE,
+            fulcio_and_rekor_data: None,
         }
     }
 }
 
-impl CallbackHandlerBuilder {
+impl<'a> CallbackHandlerBuilder<'a> {
     #![allow(dead_code)]
 
     /// Provide all the information needed to access OCI registries. Optional
@@ -40,6 +50,11 @@ impl CallbackHandlerBuilder {
     ) -> Self {
         self.oci_sources = sources;
         self.docker_config = docker_config;
+        self
+    }
+
+    pub fn fulcio_and_rekor_data(mut self, fulcio_and_rekor_data: &'a FulcioAndRekorData) -> Self {
+        self.fulcio_and_rekor_data = Some(fulcio_and_rekor_data);
         self
     }
 
@@ -60,16 +75,26 @@ impl CallbackHandlerBuilder {
     /// Create a CallbackHandler object
     pub fn build(self) -> Result<CallbackHandler> {
         let (tx, rx) = mpsc::channel::<CallbackRequest>(self.channel_buffer_size);
-        if self.shutdown_channel.is_none() {
-            return Err(anyhow!("shutdown_channel_rx not provided"));
-        }
+        let shutdown_channel = self
+            .shutdown_channel
+            .ok_or_else(|| anyhow!("shutdown_channel_rx not provided"))?;
+        let fulcio_and_rekor_data = self
+            .fulcio_and_rekor_data
+            .ok_or_else(|| anyhow!("fulcio_and_rekor_data not provided"))?;
 
-        let oci_client = oci::Client::new(self.oci_sources, self.docker_config);
+        let oci_client = oci::Client::new(self.oci_sources.clone(), self.docker_config.clone());
+        let sigstore_client = sigstore_verification::Client::new(
+            self.oci_sources.clone(),
+            self.docker_config.clone(),
+            fulcio_and_rekor_data,
+        )?;
+
         Ok(CallbackHandler {
             oci_client,
+            sigstore_client,
             tx,
             rx,
-            shutdown_channel: self.shutdown_channel.unwrap(),
+            shutdown_channel,
         })
     }
 }
@@ -79,6 +104,7 @@ impl CallbackHandlerBuilder {
 /// code in order to be fulfilled.
 pub struct CallbackHandler {
     oci_client: oci::Client,
+    sigstore_client: sigstore_verification::Client,
     rx: mpsc::Receiver<CallbackRequest>,
     tx: mpsc::Sender<CallbackRequest>,
     shutdown_channel: oneshot::Receiver<()>,
@@ -130,7 +156,49 @@ impl CallbackHandler {
                                 if let Err(e) = req.response_channel.send(response) {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
-                            }
+                            },
+                            CallbackRequestType::SigstorePubKeyVerify {
+                                image,
+                                pub_keys,
+                                annotations,
+                            } => {
+                                let response = get_sigstore_pub_key_verification_cached(&mut self.sigstore_client, image.clone(), pub_keys, annotations)
+                                    .await
+                                    .map(|response| {
+                                        if response.was_cached {
+                                            debug!(?image, "Got sigstore pub keys verification from cache");
+                                        } else {
+                                            debug!(?image, "Got sigstore pub keys verification by querying remote registry");
+                                        }
+                                        CallbackResponse {
+                                        payload: serde_json::to_vec(&response.value).unwrap()
+                                    }});
+
+                                if let Err(e) = req.response_channel.send(response) {
+                                    warn!("callback handler: cannot send response back: {:?}", e);
+                                }
+                                },
+                            CallbackRequestType::SigstoreKeylessVerify {
+                                image,
+                                keyless,
+                                annotations,
+                            } => {
+                                let response = get_sigstore_keyless_verification_cached(&mut self.sigstore_client, image.clone(), keyless, annotations)
+                                    .await
+                                    .map(|response| {
+                                        if response.was_cached {
+                                            debug!(?image, "Got sigstore pub keys verification from cache");
+                                        } else {
+                                            debug!(?image, "Got sigstore pub keys verification by querying remote registry");
+                                        }
+                                        CallbackResponse {
+                                        payload: serde_json::to_vec(&response.value).unwrap()
+                                    }});
+
+                                if let Err(e) = req.response_channel.send(response) {
+                                    warn!("callback handler: cannot send response back: {:?}", e);
+                                }
+                                },
                         }
                     }
                 },
@@ -161,4 +229,58 @@ async fn get_oci_digest_cached(
     img: &str,
 ) -> Result<cached::Return<String>> {
     oci_client.digest(img).await.map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}", image, pub_keys, annotations)}"#,
+    with_cached_flag = true
+)]
+async fn get_sigstore_pub_key_verification_cached(
+    client: &mut sigstore_verification::Client,
+    image: String,
+    pub_keys: Vec<String>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_public_key(image, pub_keys, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}", image, keyless, annotations)}"#,
+    with_cached_flag = true
+)]
+async fn get_sigstore_keyless_verification_cached(
+    client: &mut sigstore_verification::Client,
+    image: String,
+    keyless: Vec<KeylessInfo>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_keyless(image, keyless, annotations)
+        .await
+        .map(cached::Return::new)
 }
