@@ -6,6 +6,8 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::callback_handler::CallbackHandlerBuilder;
+use policy_evaluator::policy_fetcher::sigstore;
+use policy_evaluator::policy_fetcher::verify::FulcioAndRekorData;
 use std::{path::PathBuf, process, sync::RwLock, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
@@ -78,9 +80,13 @@ fn main() -> Result<()> {
     let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
         oneshot::channel();
 
+    let repo = sigstore::tuf::SigstoreRepository::fetch(None)?;
+    let fulcio_and_rekor_data = FulcioAndRekorData::FromTufRepository { repo };
+
     let mut callback_handler = CallbackHandlerBuilder::default()
         .registry_config(sources.clone(), docker_config.clone())
         .shutdown_channel(callback_handler_shutdown_channel_rx)
+        .fulcio_and_rekor_data(&fulcio_and_rekor_data)
         .build()?;
     let callback_sender_channel = callback_handler.sender_channel();
 

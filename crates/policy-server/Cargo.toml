@@ -12,7 +12,7 @@ edition = "2018"
 anyhow = "1.0"
 async-stream = "0.3.3"
 itertools = "0.10.3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.2.18" }
+policy-evaluator = { git = "https://github.com/raulcabello/policy-evaluator", branch = "sigstore_container_verification3" }
 kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 clap = { version = "3.0.15", features = [ "cargo", "env" ] }
