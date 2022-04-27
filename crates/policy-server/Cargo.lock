@@ -329,7 +329,7 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/raulcabello/policy-evaluator?branch=sigstore_container_verification3#14d3308d0015de4add290f41afc26b5d81d53884"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.0#6bf71a56cf8db521c0fecc61b6fcde1ab99d5e1c"
 dependencies = [
  "anyhow",
  "base64",
@@ -1730,8 +1730,8 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.3.2"
-source = "git+https://github.com/raulcabello/policy-sdk-rust?branch=sigstore_container_verification#107827f8d8259848534f25eadba1130143c7fbde"
+version = "0.4.0"
+source = "git+https://github.com/kubewarden/policy-sdk-rust?tag=v0.4.0#5a000314ebcc6398f759968bf2822103f08c6dc5"
 dependencies = [
  "anyhow",
  "k8s-openapi 0.14.0",
@@ -2593,8 +2593,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.2.18"
-source = "git+https://github.com/raulcabello/policy-evaluator?branch=sigstore_container_verification3#14d3308d0015de4add290f41afc26b5d81d53884"
+version = "0.3.0"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.0#6bf71a56cf8db521c0fecc61b6fcde1ab99d5e1c"
 dependencies = [
  "anyhow",
  "base64",
@@ -2603,7 +2603,7 @@ dependencies = [
  "hyper",
  "json-patch",
  "kube",
- "kubewarden-policy-sdk 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kubewarden-policy-sdk 0.3.2",
  "lazy_static",
  "policy-fetcher",
  "serde",
@@ -2619,8 +2619,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.6.1"
-source = "git+https://github.com/kubewarden/policy-fetcher?branch=sigstore_container_verification#3ead76d6c18f91e3e1160a1fca7781693dbdc145"
+version = "0.7.0"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.0#97178fca6c93316909f367570d9267f1a92c88e6"
 dependencies = [
  "anyhow",
  "async-std",
@@ -2628,7 +2628,7 @@ dependencies = [
  "async-trait",
  "base64",
  "directories",
- "kubewarden-policy-sdk 0.3.2 (git+https://github.com/raulcabello/policy-sdk-rust?branch=sigstore_container_verification)",
+ "kubewarden-policy-sdk 0.4.0",
  "lazy_static",
  "oci-distribution",
  "path-slash",
@@ -2658,7 +2658,7 @@ dependencies = [
  "itertools 0.10.3",
  "k8s-openapi 0.14.0",
  "kube",
- "kubewarden-policy-sdk 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kubewarden-policy-sdk 0.3.2",
  "lazy_static",
  "num_cpus",
  "opentelemetry",
