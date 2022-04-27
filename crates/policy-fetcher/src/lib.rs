@@ -30,6 +30,7 @@ use tracing::debug;
 use url::ParseError;
 
 // re-export for usage by kwctl, policy-server, policy-evaluator,...
+pub use kubewarden_policy_sdk;
 pub use oci_distribution;
 pub use sigstore;
 
@@ -215,17 +216,17 @@ mod tests {
 
     fn read_fixture(filename: &Path) -> Vec<u8> {
         let test_data_file = std::env::current_dir()
-            .expect(&format!(
-                "[test setup error] could not read the current directory"
-            ))
+            .unwrap_or_else(|_| panic!("[test setup error] could not read the current directory"))
             .join("tests")
             .join("test_data")
             .join(filename);
 
-        fs::read(&test_data_file).expect(&format!(
-            "[test setup error] could not read file {:?}",
-            &test_data_file
-        ))
+        fs::read(&test_data_file).unwrap_or_else(|_| {
+            panic!(
+                "[test setup error] could not read file {:?}",
+                &test_data_file
+            )
+        })
     }
 
     fn store_path(path: &str) -> PathBuf {

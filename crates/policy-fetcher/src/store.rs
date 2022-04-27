@@ -282,23 +282,21 @@ mod tests {
     fn keep_policy_full_path_unix() {
         assert_eq!(
             retrieve_policy_store_path(
-                PathBuf::from("/registry/example.com:1234/some/path").into_iter()
+                PathBuf::from("/registry/example.com:1234/some/path").iter()
             )
             .unwrap(),
             "/registry/example.com:1234/some/path".to_string()
         );
         assert_eq!(
             retrieve_policy_store_path(
-                PathBuf::from("/registry/example.com:1234/some/path/to/policy:tag").into_iter()
+                PathBuf::from("/registry/example.com:1234/some/path/to/policy:tag").iter()
             )
             .unwrap(),
             "/registry/example.com:1234/some/path/to/policy:tag".to_string()
         );
         assert_eq!(
-            retrieve_policy_store_path(
-                PathBuf::from("/https/example.com:1234/some/path").into_iter()
-            )
-            .unwrap(),
+            retrieve_policy_store_path(PathBuf::from("/https/example.com:1234/some/path").iter())
+                .unwrap(),
             "/https/example.com:1234/some/path".to_string()
         );
     }
@@ -324,7 +322,7 @@ mod tests {
                         "path".as_bytes(),
                         base64::URL_SAFE_NO_PAD
                     ))
-                    .into_iter()
+                    .iter()
             )?,
             "/registry/example.com:1234/some/path".to_string()
         );
@@ -355,7 +353,7 @@ mod tests {
                         "policy:tag".as_bytes(),
                         base64::URL_SAFE_NO_PAD
                     ))
-                    .into_iter()
+                    .iter()
             )?,
             "/registry/example.com:1234/some/path/to/policy:tag".to_string()
         );
@@ -378,7 +376,7 @@ mod tests {
                         "path".as_bytes(),
                         base64::URL_SAFE_NO_PAD
                     ))
-                    .into_iter()
+                    .iter()
             )?,
             "/https/example.com:1234/some/path".to_string()
         );
