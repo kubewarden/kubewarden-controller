@@ -177,7 +177,7 @@ impl CallbackHandler {
                                 if let Err(e) = req.response_channel.send(response) {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
-                                },
+                            },
                             CallbackRequestType::SigstoreKeylessVerify {
                                 image,
                                 keyless,
@@ -198,7 +198,25 @@ impl CallbackHandler {
                                 if let Err(e) = req.response_channel.send(response) {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
-                                },
+                            },
+                            CallbackRequestType::DNSLookupHost {
+                                host,
+                            } => {
+                                let response = dns_lookup::lookup_host(&host).map(|ips| {
+                                        let res: Vec<String> = ips
+                                            .iter()
+                                            .map(|ip| ip.to_string())
+                                            .collect();
+                                        CallbackResponse {
+                                            payload: serde_json::to_vec(&res).unwrap()
+                                        }
+                                    }
+                                ).map_err(anyhow::Error::new);
+
+                                if let Err(e) = req.response_channel.send(response) {
+                                    warn!("callback handler: cannot send response back: {:?}", e);
+                                }
+                            },
                         }
                     }
                 },

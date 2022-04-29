@@ -87,6 +87,28 @@ pub(crate) fn host_callback(
                     Err(format!("unknown operation: {}", operation).into())
                 }
             },
+            "net" => match operation {
+                "v1/dns_lookup_host" => {
+                    let host: String = serde_json::from_slice(payload.to_vec().as_ref())?;
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?host,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::DNSLookupHost { host },
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                _ => {
+                    error!("unknown operation: {}", operation);
+                    Err(format!("unknown operation: {}", operation).into())
+                }
+            },
             _ => {
                 error!("unknown namespace: {}", namespace);
                 Err(format!("unknown namespace: {}", namespace).into())
