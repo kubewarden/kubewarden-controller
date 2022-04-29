@@ -329,7 +329,7 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.1#d0e2b3bfe77cd2953fcc88b8677dd30061f964e3"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.2#83acb13a5881dc51e65ce5234af57a48ef19ab93"
 dependencies = [
  "anyhow",
  "base64",
@@ -961,6 +961,18 @@ checksum = "4ebda144c4fe02d1f7ea1a7d9641b6fc6b580adcfa024ae48797ecdeb6825b4d"
 dependencies = [
  "libc",
  "redox_users",
+ "winapi",
+]
+
+[[package]]
+name = "dns-lookup"
+version = "1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53ecafc952c4528d9b51a458d1a8904b81783feff9fde08ab6ed2545ff396872"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "socket2",
  "winapi",
 ]
 
@@ -1693,9 +1705,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.4.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6ed4b76c64427aee2e7d9fb1f4f110c1531722ce43694a8ea82950d57a3eb88"
+checksum = "f90cd545cbfd185874c3d7d8cc0f128bfa38692a894179fbcc5e673fa0ba755c"
 dependencies = [
  "anyhow",
  "k8s-openapi",
@@ -2527,13 +2539,14 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.3.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.1#d0e2b3bfe77cd2953fcc88b8677dd30061f964e3"
+version = "0.3.2"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.2#83acb13a5881dc51e65ce5234af57a48ef19ab93"
 dependencies = [
  "anyhow",
  "base64",
  "burrego",
  "cached 0.30.0",
+ "dns-lookup",
  "hyper",
  "json-patch",
  "kube",
