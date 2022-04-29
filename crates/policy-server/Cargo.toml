@@ -13,7 +13,6 @@ anyhow = "1.0"
 async-stream = "0.3.3"
 itertools = "0.10.3"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.3.0" }
-kubewarden-policy-sdk = "0.3.2"
 lazy_static = "1.4.0"
 clap = { version = "3.0.15", features = [ "cargo", "env" ] }
 futures-util = "0.3.21"
