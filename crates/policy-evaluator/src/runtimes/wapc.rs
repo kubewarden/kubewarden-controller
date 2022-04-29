@@ -65,9 +65,8 @@ pub(crate) fn host_callback(
 
                     send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
                 }
-                "manifest_digest" => {
-                    let image = String::from_utf8(payload.to_vec())
-                        .map_err(|_| "Cannot parse given payload as string")?;
+                "v1/manifest_digest" => {
+                    let image: String = serde_json::from_slice(payload.to_vec().as_ref())?;
                     debug!(
                         policy_id,
                         binding,
