@@ -26,7 +26,6 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -83,7 +82,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *PolicyServerReconciler) reconcile(ctx context.Context, policyServer *v1alpha2.PolicyServer, policies []v1alpha2.Policy) (ctrl.Result, error) {
 	if err := r.Reconciler.Reconcile(ctx, policyServer, policies); err != nil {
 		if admission.IsPolicyServerNotReady(err) {
-			log.Info("delaying policy registration since policy server is not yet ready")
+			r.Log.Info("delaying policy registration since policy server is not yet ready")
 			return ctrl.Result{
 				Requeue:      true,
 				RequeueAfter: time.Second * 5,
