@@ -7,6 +7,7 @@ use sigstore::cosign::{self, signature_layers::SignatureLayer, ClientBuilder, Co
 
 use crate::verify::config::Signature;
 use oci_distribution::Reference;
+use sigstore::errors::SigstoreError;
 use std::convert::TryFrom;
 use std::{convert::TryInto, str::FromStr};
 use tracing::{debug, error, info};
@@ -164,10 +165,22 @@ impl Verifier {
         let (cosign_signature_image, source_image_digest) =
             self.cosign_client.triangulate(image_name, &auth).await?;
 
-        let trusted_layers = self
+        let trusted_layers = match self
             .cosign_client
             .trusted_signature_layers(&auth, &source_image_digest, &cosign_signature_image)
-            .await?;
+            .await
+        {
+            Ok(trusted_layers) => trusted_layers,
+            Err(SigstoreError::RegistryPullManifestError { image: _, error: _ }) => {
+                return Err(anyhow!(
+                    "signatures can't be fetched for image: {} ",
+                    image_name
+                ));
+            }
+            Err(e) => {
+                return Err(anyhow!(e));
+            }
+        };
 
         // verify signatures against our config:
         //
