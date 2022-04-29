@@ -187,7 +187,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *v1alpha2.
 			},
 		}, policyServer.Spec.Env...),
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   constants.PolicyServerReadinessProbe,
 					Port:   intstr.FromInt(constants.PolicyServerPort),
