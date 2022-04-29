@@ -7,10 +7,10 @@ use tracing::{debug, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackResponse};
 
-use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::{
-    KeylessInfo, VerificationResponse,
+use kubewarden_policy_sdk::host_capabilities::{
+    verification::{KeylessInfo, VerificationResponse},
+    CallbackRequestType,
 };
-use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 use policy_fetcher::verify::FulcioAndRekorData;
 
 mod oci;

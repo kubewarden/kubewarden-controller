@@ -8,7 +8,7 @@ use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::validation_response::{ValidationResponse, ValidationResponseStatus};
 use burrego::opa::host_callbacks::HostCallbacks;
 
-use policy_fetcher::kubewarden_policy_sdk::settings::SettingsValidationResponse;
+use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
 use crate::policy_evaluator::RegoPolicyExecutionMode;
 use serde::Deserialize;

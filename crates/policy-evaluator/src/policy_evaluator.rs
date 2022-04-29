@@ -10,8 +10,8 @@ use tokio::sync::mpsc;
 use wapc::WapcHost;
 use wasmtime_provider::WasmtimeEngineProvider;
 
-use policy_fetcher::kubewarden_policy_sdk::metadata::ProtocolVersion;
-use policy_fetcher::kubewarden_policy_sdk::settings::SettingsValidationResponse;
+use kubewarden_policy_sdk::metadata::ProtocolVersion;
+use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
 use crate::callback_requests::CallbackRequest;
 use crate::policy::Policy;
