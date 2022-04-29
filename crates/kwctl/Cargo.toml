@@ -19,7 +19,7 @@ k8s-openapi = { version = "0.14.0", default-features = false, features = ["v1_22
 kube = { version = "0.71.0", default-features = false, features = ["client", "rustls-tls"] }
 lazy_static = "1.4.0"
 mdcat = "0.27.1"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.3.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.3.2" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.8"
 pulldown-cmark = { version = "0.9.1", default-features = false }
