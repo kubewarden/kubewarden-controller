@@ -13,10 +13,10 @@ use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::validation_response::ValidationResponse;
 
-use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
-use policy_fetcher::kubewarden_policy_sdk::metadata::ProtocolVersion;
-use policy_fetcher::kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
-use policy_fetcher::kubewarden_policy_sdk::settings::SettingsValidationResponse;
+use kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
+use kubewarden_policy_sdk::metadata::ProtocolVersion;
+use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use tokio::sync::oneshot::Receiver;
 
 lazy_static! {

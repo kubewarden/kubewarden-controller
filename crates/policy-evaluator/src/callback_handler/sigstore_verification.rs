@@ -1,7 +1,5 @@
 use anyhow::{anyhow, Result};
-use policy_fetcher::kubewarden_policy_sdk::host_capabilities::verification::{
-    KeylessInfo, VerificationResponse,
-};
+use kubewarden_policy_sdk::host_capabilities::verification::{KeylessInfo, VerificationResponse};
 use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::config::{LatestVerificationConfig, Signature, Subject};

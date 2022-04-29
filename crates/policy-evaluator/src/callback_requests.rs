@@ -1,5 +1,5 @@
 use anyhow::Result;
-use policy_fetcher::kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
+use kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 use tokio::sync::oneshot;
 
 /// Holds the response to a waPC evaluation request

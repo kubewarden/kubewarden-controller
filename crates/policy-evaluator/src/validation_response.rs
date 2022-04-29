@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use policy_fetcher::kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
