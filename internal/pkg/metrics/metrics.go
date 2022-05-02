@@ -7,10 +7,10 @@ import (
 
 	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpgrpc"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -25,23 +25,23 @@ const (
 func New(openTelemetryEndpoint string) error {
 	ctx := context.Background()
 
-	driver := otlpgrpc.NewDriver(
-		otlpgrpc.WithInsecure(),
-		otlpgrpc.WithEndpoint(openTelemetryEndpoint),
+	client := otlpmetricgrpc.NewClient(
+		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithEndpoint(openTelemetryEndpoint),
 	)
-	exporter, err := otlp.NewExporter(ctx, driver)
+	exporter, err := otlpmetric.New(ctx, client)
 	if err != nil {
 		return fmt.Errorf("cannot start metric exporter: %w", err)
 	}
 	controller := controller.New(
-		processor.New(
-			simple.NewWithExactDistribution(),
+		processor.NewFactory(
+			simple.NewWithHistogramDistribution(),
 			exporter,
 		),
 		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(2*time.Second),
 	)
-	global.SetMeterProvider(controller.MeterProvider())
+	global.SetMeterProvider(controller)
 	err = controller.Start(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot start metric controller: %w", err)
@@ -49,7 +49,7 @@ func New(openTelemetryEndpoint string) error {
 	return nil
 }
 
-func RecordPolicyCount(policy v1alpha2.Policy) {
+func RecordPolicyCount(policy v1alpha2.Policy) error {
 	failurePolicy := ""
 	if policy.GetFailurePolicy() != nil {
 		failurePolicy = string(*policy.GetFailurePolicy())
@@ -64,11 +64,10 @@ func RecordPolicyCount(policy v1alpha2.Policy) {
 		attribute.String("policy_status", string(policy.GetStatus().PolicyStatus)),
 	}
 	meter := global.Meter(meterName)
-	valueRecorder := metric.Must(meter).
-		NewInt64Counter(
-			policyCounterMetricName,
-			metric.WithDescription(policyCounterMetricDescription),
-		).Bind(commonLabels...)
-	defer valueRecorder.Unbind()
-	valueRecorder.Add(context.Background(), 1)
+	counter, err := meter.SyncInt64().Counter(policyCounterMetricName, instrument.WithDescription(policyCounterMetricDescription))
+	if err != nil {
+		return fmt.Errorf("cannot create the instrument: %w", err)
+	}
+	counter.Add(context.Background(), 1, commonLabels...)
+	return nil
 }
