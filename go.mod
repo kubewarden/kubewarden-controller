@@ -3,19 +3,19 @@ module github.com/kubewarden/kubewarden-controller
 go 1.17
 
 require (
-	github.com/ereslibre/kube-webhook-wrapper v0.0.1
+	github.com/ereslibre/kube-webhook-wrapper v0.0.2
 	github.com/go-logr/logr v1.2.3
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.17.0
+	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.30.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.30.0
 	go.opentelemetry.io/otel/metric v0.30.0
 	go.opentelemetry.io/otel/sdk/metric v0.30.0
-	k8s.io/api v0.23.5
-	k8s.io/apimachinery v0.23.5
+	k8s.io/api v0.23.6
+	k8s.io/apimachinery v0.23.6
 	k8s.io/client-go v0.23.5
 	sigs.k8s.io/controller-runtime v0.11.2
 )
@@ -63,10 +63,10 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.0.0-20211029165221-6e7872819dc8 // indirect
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
