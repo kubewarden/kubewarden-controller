@@ -2,12 +2,34 @@
 ## [Unreleased]
 
 
+<a name="v0.3.2"></a>
+## [v0.3.2] - 2022-05-03
+### Bug Fixes
+- Report the correct version number when doing `kwctl --version`
+- **deps:** minor updates
+
+### Pull Requests
+- Merge pull request [#213](https://github.com/kubewarden/kwctl/issues/213) from kubewarden/renovate/all-patch
+- Merge pull request [#214](https://github.com/kubewarden/kwctl/issues/214) from kubewarden/renovate/lock-file-maintenance
+
+
+<a name="v0.3.1"></a>
+## [v0.3.1] - 2022-04-27
+### Features
+- Support kwctl run for sigstore container verification
+
+### Pull Requests
+- Merge pull request [#209](https://github.com/kubewarden/kwctl/issues/209) from raulcabello/main
+- Merge pull request [#206](https://github.com/kubewarden/kwctl/issues/206) from kubewarden/renovate/lock-file-maintenance
+
+
 <a name="v0.3.0"></a>
 ## [v0.3.0] - 2022-04-21
 ### Bug Fixes
 - Pass tracing levels as LevelFilter type
 
 ### Pull Requests
+- Merge pull request [#204](https://github.com/kubewarden/kwctl/issues/204) from viccuad/road-to-0.3.0
 - Merge pull request [#202](https://github.com/kubewarden/kwctl/issues/202) from kubewarden/renovate/lock-file-maintenance
 - Merge pull request [#201](https://github.com/kubewarden/kwctl/issues/201) from kubewarden/renovate/all-patch
 
@@ -247,7 +269,9 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v0.3.2...HEAD
+[v0.3.2]: https://github.com/kubewarden/kwctl/compare/v0.3.1...v0.3.2
+[v0.3.1]: https://github.com/kubewarden/kwctl/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/kubewarden/kwctl/compare/v0.3.0-rc1...v0.3.0
 [v0.3.0-rc1]: https://github.com/kubewarden/kwctl/compare/v0.2.5...v0.3.0-rc1
 [v0.2.5]: https://github.com/kubewarden/kwctl/compare/v0.2.5-rc4...v0.2.5
