@@ -95,6 +95,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		policy.SetStatus(v1alpha2.PolicyStatusUnscheduled)
 		return ctrl.Result{}, nil
 	}
+
 	policyServer, err := getPolicyServer(ctx, client, policy)
 	if err != nil {
 		policy.SetStatus(v1alpha2.PolicyStatusScheduled)
@@ -112,21 +113,6 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		}
 		return ctrl.Result{}, errors.Wrap(err, "could not read policy server Deployment")
 	}
-
-	secret := corev1.Secret{}
-	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "cannot find policy server secret")
-	}
-	if policy.IsMutating() {
-		if err := reconciler.ReconcileMutatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "error reconciling mutating webhook")
-		}
-	} else {
-		if err := reconciler.ReconcileValidatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "error reconciling validating webhook")
-		}
-	}
-	setPolicyAsActive(policy)
 
 	if !isPolicyUniquelyReachable(ctx, client, &policyServerDeployment) {
 		apimeta.SetStatusCondition(
@@ -151,8 +137,25 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		},
 	)
 
+	secret := corev1.Secret{}
+	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "cannot find policy server secret")
+	}
+
+	if policy.IsMutating() {
+		if err := reconciler.ReconcileMutatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "error reconciling mutating webhook")
+		}
+	} else {
+		if err := reconciler.ReconcileValidatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "error reconciling validating webhook")
+		}
+	}
+	setPolicyAsActive(policy)
+
 	return ctrl.Result{}, nil
 }
+
 func setPolicyAsActive(policy v1alpha2.Policy) {
 	policy.SetStatus(v1alpha2.PolicyStatusActive)
 	apimeta.SetStatusCondition(
