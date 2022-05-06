@@ -20,6 +20,23 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
+const (
+	certsVolumeName                  = "certs"
+	policiesConfigContainerPath      = "/config"
+	policiesFilename                 = "policies.yml"
+	sourcesFilename                  = "sources.yml"
+	verificationFilename             = "verification.yml"
+	policiesVolumeName               = "policies"
+	sourcesVolumeName                = "sources"
+	verificationConfigVolumeName     = "verification"
+	secretsContainerPath             = "/pki"
+	imagePullSecretVolumeName        = "imagepullsecret"
+	dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
+	policyStoreVolume                = "policy-store"
+	policyStoreVolumePath            = "/tmp"
+	sigstoreCacheDirPath             = "/tmp/sigstore-data"
+)
+
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
 func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *v1alpha2.PolicyServer) error {
@@ -123,24 +140,59 @@ func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, n
 	return reflect.DeepEqual(annotationsWithoutRestart, newDeployment.Spec.Template.Annotations)
 }
 
-func (r *Reconciler) deployment(configMapVersion string, policyServer *v1alpha2.PolicyServer) *appsv1.Deployment {
-	const (
-		certsVolumeName                  = "certs"
-		policiesConfigContainerPath      = "/config"
-		policiesFilename                 = "policies.yml"
-		sourcesFilename                  = "sources.yml"
-		verificationFilename             = "verification.yml"
-		policiesVolumeName               = "policies"
-		sourcesVolumeName                = "sources"
-		verificationConfigVolumeName     = "verification"
-		secretsContainerPath             = "/pki"
-		imagePullSecretVolumeName        = "imagepullsecret"
-		dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
-		policyStoreVolume                = "policy-store"
-		policyStoreVolumePath            = "/tmp"
-		sigstoreCacheDirPath             = "/tmp/sigstore-data"
-	)
+func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployment *appsv1.Deployment, policyServer *v1alpha2.PolicyServer) {
+	if policyServer.Spec.VerificationConfig != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: verificationConfigVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: policyServer.Spec.VerificationConfig,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.PolicyServerVerificationConfigEntry,
+								Path: verificationFilename,
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+	if policyServer.Spec.ImagePullSecret != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: imagePullSecretVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: policyServer.Spec.ImagePullSecret,
+					},
+				},
+			},
+		)
+	}
+	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: sourcesVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: policyServer.NameWithPrefix(),
+						},
+					},
+				},
+			},
+		)
+	}
+}
 
+func (r *Reconciler) deployment(configMapVersion string, policyServer *v1alpha2.PolicyServer) *appsv1.Deployment {
 	admissionContainer := corev1.Container{
 		Name:  policyServer.NameWithPrefix(),
 		Image: policyServer.Spec.Image,
@@ -328,55 +380,8 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *v1alpha2.
 			},
 		},
 	}
-	if policyServer.Spec.VerificationConfig != "" {
-		policyServerDeployment.Spec.Template.Spec.Volumes = append(
-			policyServerDeployment.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: verificationConfigVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: policyServer.Spec.VerificationConfig,
-						},
-						Items: []corev1.KeyToPath{
-							{
-								Key:  constants.PolicyServerVerificationConfigEntry,
-								Path: verificationFilename,
-							},
-						},
-					},
-				},
-			},
-		)
-	}
-	if policyServer.Spec.ImagePullSecret != "" {
-		policyServerDeployment.Spec.Template.Spec.Volumes = append(
-			policyServerDeployment.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: imagePullSecretVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: policyServer.Spec.ImagePullSecret,
-					},
-				},
-			},
-		)
-	}
-	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
-		policyServerDeployment.Spec.Template.Spec.Volumes = append(
-			policyServerDeployment.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: sourcesVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: policyServer.NameWithPrefix(),
-						},
-					},
-				},
-			},
-		)
-	}
+
+	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
 
 	return policyServerDeployment
 }
