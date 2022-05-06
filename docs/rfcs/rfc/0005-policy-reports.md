@@ -4,6 +4,7 @@
 | Start Date   | Feb 22nd 2022                                                         |
 | Category     | Policy Enforcement                                                    |
 | RFC PR       | [PR176](https://github.com/kubewarden/kubewarden-controller/pull/176) |
+| State        | **ACCEPTED**                                                          |
 
 # Summary
 [summary]: #summary

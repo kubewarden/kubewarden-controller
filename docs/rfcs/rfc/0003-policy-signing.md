@@ -4,6 +4,7 @@
 | Start Date   | 21 Jan 2022                      |
 | Category     | Security                         |
 | RFC PR       | [#147](https://github.com/kubewarden/kubewarden-controller/pull/147)  |
+| State        | **ACCEPTED**                     |
 
 # Summary
 [summary]: #summary

@@ -4,6 +4,7 @@
 | Start Date   | Jul 22nd 2021                    |
 | Category     | Architecture                     |
 | RFC PR       | [PR46](https://github.com/kubewarden/kubewarden-controller/pull/46)  |
+| State        | **ACCEPTED**                     |
 
 # Summary
 [summary]: #summary
