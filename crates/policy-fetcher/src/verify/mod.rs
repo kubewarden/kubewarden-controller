@@ -172,10 +172,7 @@ impl Verifier {
         {
             Ok(trusted_layers) => trusted_layers,
             Err(SigstoreError::RegistryPullManifestError { image: _, error: _ }) => {
-                return Err(anyhow!(
-                    "signatures can't be fetched for image: {} ",
-                    image_name
-                ));
+                return Err(anyhow!("no signatures found for image: {} ", image_name));
             }
             Err(e) => {
                 return Err(anyhow!(e));
