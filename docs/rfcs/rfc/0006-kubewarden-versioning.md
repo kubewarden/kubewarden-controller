@@ -48,7 +48,9 @@ are about to install or execute.
 > As Kubewarden maintainers we want to define a version skew policy
 > that is easy to be understood and implement.
 > Something similar to what [Kubernetes does](https://kubernetes.io/releases/version-skew-policy/)
+### User story #5
 
+> As a user upgrading Kubewarden to a new version, I want to know if the new version introduces backward incompatible changes and behavior, so I can decide if to upgrade, and how. For example, if upgrading the helm charts in my cluster has backwards-incompatible changes, as I may be forced to redeploy from scratch, halt workloads of do manual tasks. Or if kwctl introduces backwards-incompatible changes, that would necessitate changes to my CI infrastructure.
 # Detailed design
 [design]: #detailed-design
 
