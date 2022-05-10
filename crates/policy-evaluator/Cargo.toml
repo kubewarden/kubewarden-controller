@@ -22,7 +22,7 @@ cached = "0.30.0"
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
 kube = { version = "0.71.0", default-features = false, features = ["client", "rustls-tls"] }
-kubewarden-policy-sdk = "0.4.0"
+kubewarden-policy-sdk = "0.4.2"
 lazy_static = "1.4.0"
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.3" }
 serde_json = "1.0"
