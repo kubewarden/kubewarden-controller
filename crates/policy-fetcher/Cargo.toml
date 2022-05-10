@@ -24,8 +24,8 @@ regex = "1.5.5"
 reqwest = { version = "0.11.10", default-features = false, features = ["rustls-tls"] }
 rustls = "0.20.4"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.80"
-serde_yaml = "0.8.23"
+serde_json = "1.0.81"
+serde_yaml = "0.8.24"
 sha2 = "0.10.2"
 sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "cb3606a9d3d05a5e318bb3837f48c560c01cc2ff" }
 tracing = "0.1.34"
