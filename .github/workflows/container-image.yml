@@ -57,7 +57,7 @@ jobs:
       -
         name: Build and push container image
         if: ${{ inputs.push-image }}
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           file: ./Dockerfile
@@ -71,7 +71,7 @@ jobs:
         # and they run on amd64 arch, let's skip the arm64 build for now.
         name: Build linux/amd64 container image
         if: ${{ inputs.push-image == false }}
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           file: ./Dockerfile
