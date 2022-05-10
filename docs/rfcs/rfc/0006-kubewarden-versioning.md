@@ -90,7 +90,7 @@ Helm charts have two kind of version numbers:
 * `appVersion`: the version of the app that the chart contains
 
 The helm charts will keep their own independence when it comes to
-the `version` attribute.
+the `version` attribute. That is, using semver, which for helm charts helps users be aware of backwards-incompatible changes when upgrading.
 On the other hand, the `appVersion` attribute
 will always be set to the `<Major>.<Minor>` version of the
 Kubewarden stack.
