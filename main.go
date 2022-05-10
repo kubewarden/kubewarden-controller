@@ -60,6 +60,7 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var deploymentsNamespace string
+	var alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool
 	var probeAddr string
 	var enableMetrics bool
 	var openTelemetryEndpoint string
@@ -79,6 +80,10 @@ func main() {
 		"deployments-namespace",
 		"",
 		"The namespace where the kubewarden resources will be created.")
+	flag.BoolVar(&alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
+		"always-accept-admission-reviews-on-deployments-namespace",
+		false,
+		"Always accept admission reviews targeting the deployments-namespace.")
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
@@ -123,6 +128,7 @@ func main() {
 		APIReader:            mgr.GetAPIReader(),
 		Log:                  ctrl.Log.WithName("reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
+		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
 	}
 
 	if err = (&controllers.PolicyServerReconciler{

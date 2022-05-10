@@ -21,10 +21,11 @@ import (
 )
 
 type Reconciler struct {
-	Client               client.Client
-	APIReader            client.Reader
-	DeploymentsNamespace string
-	Log                  logr.Logger
+	Client                                             client.Client
+	APIReader                                          client.Reader
+	DeploymentsNamespace                               string
+	AlwaysAcceptAdmissionReviewsInDeploymentsNamespace bool
+	Log                                                logr.Logger
 }
 
 type reconcilerErrors []error
