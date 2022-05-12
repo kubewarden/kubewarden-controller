@@ -329,7 +329,7 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.0#6bf71a56cf8db521c0fecc61b6fcde1ab99d5e1c"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.1#d0e2b3bfe77cd2953fcc88b8677dd30061f964e3"
 dependencies = [
  "anyhow",
  "base64",
@@ -1610,23 +1610,6 @@ dependencies = [
 
 [[package]]
 name = "k8s-openapi"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcc1f973542059e6d5a6d63de6a9539d0ec784f82b2327f3c1915d33200bc6a4"
-dependencies = [
- "base64",
- "bytes",
- "chrono",
- "http",
- "percent-encoding 2.1.0",
- "serde",
- "serde-value",
- "serde_json",
- "url 2.2.2",
-]
-
-[[package]]
-name = "k8s-openapi"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0489fc937cc7616a9abfa61bf39c250d7e32e1325ef028c8d9278dd24ea395b3"
@@ -1651,7 +1634,7 @@ version = "0.71.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "342744dfeb81fe186b84f485b33f12c6a15d3396987d933b06a566a3db52ca38"
 dependencies = [
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "kube-client",
  "kube-core",
 ]
@@ -1674,7 +1657,7 @@ dependencies = [
  "hyper-rustls",
  "hyper-timeout",
  "jsonpath_lib",
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "kube-core",
  "pem",
  "pin-project",
@@ -1701,7 +1684,7 @@ dependencies = [
  "chrono",
  "form_urlencoded",
  "http",
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "once_cell",
  "serde",
  "serde_json",
@@ -1710,28 +1693,12 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.3.2"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f866fd0ab46019965538c69370bb9c72ac904d66f78f5469c3d56d4d299e1f5"
+checksum = "d6ed4b76c64427aee2e7d9fb1f4f110c1531722ce43694a8ea82950d57a3eb88"
 dependencies = [
  "anyhow",
- "k8s-openapi 0.11.0",
- "num",
- "num-derive",
- "num-traits",
- "serde",
- "serde_json",
- "slog",
- "wapc-guest",
-]
-
-[[package]]
-name = "kubewarden-policy-sdk"
-version = "0.4.0"
-source = "git+https://github.com/kubewarden/policy-sdk-rust?tag=v0.4.0#5a000314ebcc6398f759968bf2822103f08c6dc5"
-dependencies = [
- "anyhow",
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "num",
  "num-derive",
  "num-traits",
@@ -2560,8 +2527,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.3.0"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.0#6bf71a56cf8db521c0fecc61b6fcde1ab99d5e1c"
+version = "0.3.1"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.1#d0e2b3bfe77cd2953fcc88b8677dd30061f964e3"
 dependencies = [
  "anyhow",
  "base64",
@@ -2570,7 +2537,7 @@ dependencies = [
  "hyper",
  "json-patch",
  "kube",
- "kubewarden-policy-sdk 0.3.2",
+ "kubewarden-policy-sdk",
  "lazy_static",
  "policy-fetcher",
  "serde",
@@ -2586,8 +2553,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.7.0"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.0#97178fca6c93316909f367570d9267f1a92c88e6"
+version = "0.7.3"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.3#fb20a708d1bcd4d628dd204610b3ba4f70db2f73"
 dependencies = [
  "anyhow",
  "async-std",
@@ -2595,7 +2562,6 @@ dependencies = [
  "async-trait",
  "base64",
  "directories",
- "kubewarden-policy-sdk 0.4.0",
  "lazy_static",
  "oci-distribution",
  "path-slash",
@@ -2623,7 +2589,7 @@ dependencies = [
  "futures-util",
  "hyper",
  "itertools",
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "kube",
  "lazy_static",
  "num_cpus",
