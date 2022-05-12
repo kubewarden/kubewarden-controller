@@ -250,7 +250,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *v1alpha2.
 	}
 	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
 		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
-			Name:  "ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE",
+			Name:  "KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE",
 			Value: r.DeploymentsNamespace,
 		})
 	}
