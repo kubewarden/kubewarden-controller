@@ -160,6 +160,14 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .required(false)
                 .help("Enable Sigstore verification [env: KUBEWARDEN_ENABLE_VERIFICATION=]"),
         )
+        .arg(
+            Arg::new("always-accept-admission-reviews-on-namespace")
+                .long("always-accept-admission-reviews-on-namespace")
+                .takes_value(true)
+                .env("KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE")
+                .required(false)
+                .help("Always accept AdmissionReviews that target the given namespace [env: KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE]"),
+        )
         .long_version(VERSION_AND_BUILTINS.as_str())
 }
 

@@ -22,6 +22,7 @@ struct PolicyEvaluatorWithSettings {
     policy_evaluator: PolicyEvaluator,
     policy_mode: PolicyMode,
     allowed_to_mutate: bool,
+    always_accept_admission_reviews_on_namespace: Option<String>,
 }
 
 pub(crate) struct Worker {
@@ -51,6 +52,7 @@ impl Worker {
         rx: Receiver<EvalRequest>,
         policies: HashMap<String, Policy>,
         callback_handler_tx: Sender<CallbackRequest>,
+        always_accept_admission_reviews_on_namespace: Option<String>,
     ) -> Result<Worker, PolicyErrors> {
         let mut evs_errors = HashMap::new();
         let mut evs = HashMap::new();
@@ -142,6 +144,8 @@ impl Worker {
                 policy_evaluator,
                 policy_mode: policy.policy_mode.clone(),
                 allowed_to_mutate: policy.allowed_to_mutate.unwrap_or(false),
+                always_accept_admission_reviews_on_namespace:
+                    always_accept_admission_reviews_on_namespace.clone(),
             };
 
             evs.insert(id.to_string(), policy_evaluator_with_settings);
@@ -223,6 +227,7 @@ impl Worker {
                     policy_evaluator,
                     policy_mode,
                     allowed_to_mutate,
+                    always_accept_admission_reviews_on_namespace,
                 }) => match serde_json::to_value(req.req.clone()) {
                     Ok(json) => {
                         let policy_name = policy_evaluator.policy.id.clone();
@@ -237,14 +242,35 @@ impl Worker {
                         } else {
                             None
                         };
-                        let accepted = validation_response.allowed;
-                        let mutated = validation_response.patch.is_some();
                         let validation_response = Worker::validation_response_with_constraints(
                             &req.policy_id,
                             &policy_mode,
                             allowed_to_mutate,
                             validation_response,
                         );
+                        let validation_response =
+                            // If the policy server is configured to
+                            // always accept admission reviews on a
+                            // given namespace, just set the `allowed`
+                            // part of the response to `true` if the
+                            // request matches this namespace. Keep
+                            // the rest of the behaviors unchanged,
+                            // such as checking if the policy is
+                            // allowed to mutate.
+                            if let Some(namespace) = always_accept_admission_reviews_on_namespace {
+                                if req.req.namespace == Some(namespace.to_string()) {
+                                    ValidationResponse {
+                                        allowed: true,
+                                        ..validation_response
+                                    }
+                                } else {
+                                    validation_response
+                                }
+                            } else {
+                                validation_response
+                            };
+                        let accepted = validation_response.allowed;
+                        let mutated = validation_response.patch.is_some();
                         let res = req.resp_chan.send(Some(validation_response));
                         let policy_evaluation = metrics::PolicyEvaluation {
                             policy_name,

@@ -19,6 +19,7 @@ pub(crate) struct WorkerPool {
     api_rx: mpsc::Receiver<EvalRequest>,
     bootstrap_rx: oneshot::Receiver<WorkerPoolBootRequest>,
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
+    always_accept_admission_reviews_on_namespace: Option<String>,
 }
 
 impl WorkerPool {
@@ -26,11 +27,13 @@ impl WorkerPool {
         bootstrap_rx: oneshot::Receiver<WorkerPoolBootRequest>,
         api_rx: mpsc::Receiver<EvalRequest>,
         callback_handler_tx: mpsc::Sender<CallbackRequest>,
+        always_accept_admission_reviews_on_namespace: Option<String>,
     ) -> WorkerPool {
         WorkerPool {
             api_rx,
             bootstrap_rx,
             callback_handler_tx,
+            always_accept_admission_reviews_on_namespace,
         }
     }
 
@@ -56,10 +59,17 @@ impl WorkerPool {
                         let b = barrier.clone();
                         let canary = boot_canary.clone();
                         let callback_handler_tx = self.callback_handler_tx.clone();
+                        let always_accept_admission_reviews_on_namespace =
+                            self.always_accept_admission_reviews_on_namespace.clone();
 
                         let join = thread::spawn(move || -> Result<()> {
                             info!(spawned = n, total = pool_size, "spawning worker");
-                            let worker = match Worker::new(rx, ps, callback_handler_tx) {
+                            let worker = match Worker::new(
+                                rx,
+                                ps,
+                                callback_handler_tx,
+                                always_accept_admission_reviews_on_namespace,
+                            ) {
                                 Ok(w) => w,
                                 Err(e) => {
                                     error!(error = e.to_string().as_str(), "cannot spawn worker");

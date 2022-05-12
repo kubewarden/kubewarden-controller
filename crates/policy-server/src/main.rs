@@ -47,6 +47,9 @@ fn main() -> Result<()> {
         v.parse::<usize>()
             .expect("error parsing the number of workers")
     });
+    let always_accept_admission_reviews_on_namespace = matches
+        .value_of("always-accept-admission-reviews-on-namespace")
+        .map(str::to_string);
 
     let metrics_enabled = matches.is_present("enable-metrics");
     let verification_config = cli::verification_config(&matches).unwrap_or_else(|e| {
@@ -118,6 +121,7 @@ fn main() -> Result<()> {
             worker_pool_bootstrap_req_rx,
             api_rx,
             callback_sender_channel,
+            always_accept_admission_reviews_on_namespace,
         );
         worker_pool.run();
     });
