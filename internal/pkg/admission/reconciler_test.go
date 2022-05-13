@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	kubewardenv1 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -97,5 +98,116 @@ func newReconciler(policies []client.Object) Reconciler {
 	return Reconciler{
 		Client:               cl,
 		DeploymentsNamespace: namespace,
+	}
+}
+
+func TestNamespaceSelectorGenerationAndNotSkipKubewardenNamesapce(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: false,
+	}
+	policy := &kubewardenv1.ClusterAdmissionPolicy{
+		Spec: kubewardenv1.ClusterAdmissionPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      constants.KubernetesNamespaceNameLabel,
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"somenamespace"},
+				},
+				},
+			},
+		},
+	}
+	namespaceSelector := reconciler.webhookNamespaceSelector(policy)
+	if namespaceSelector.MatchExpressions[0].Key != constants.KubernetesNamespaceNameLabel {
+		t.Error("Namespace selector key should not change")
+	}
+	if namespaceSelector.MatchExpressions[0].Operator != metav1.LabelSelectorOpNotIn {
+		t.Error("Namespace selector operator should not change")
+	}
+	if len(namespaceSelector.MatchExpressions[0].Values) != 1 || namespaceSelector.MatchExpressions[0].Values[0] != "somenamespace" {
+		t.Error("Namespace selector values should not change")
+	}
+}
+
+func TestNamespaceSelectorGeneration(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: true,
+	}
+	policy := &kubewardenv1.ClusterAdmissionPolicy{
+		Spec: kubewardenv1.ClusterAdmissionPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      constants.KubernetesNamespaceNameLabel,
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"somenamespace"},
+				},
+				},
+			},
+		},
+	}
+	namespaceSelector := reconciler.webhookNamespaceSelector(policy)
+	if len(namespaceSelector.MatchExpressions) != 2 {
+		t.Errorf("Namespace selector should have only the previous selectors and another one to skip Kuberwarden namespace. Selectors found: %d", len(namespaceSelector.MatchExpressions))
+		return
+	}
+	if namespaceSelector.MatchExpressions[0].Key != constants.KubernetesNamespaceNameLabel {
+		t.Error("Namespace selector key should not change")
+	}
+	if namespaceSelector.MatchExpressions[0].Operator != metav1.LabelSelectorOpNotIn {
+		t.Error("Namespace selector operator should not change")
+	}
+	if len(namespaceSelector.MatchExpressions[0].Values) != 1 || namespaceSelector.MatchExpressions[0].Values[0] != "somenamespace" {
+		t.Error("Namespace selector values should not change")
+	}
+	if namespaceSelector.MatchExpressions[1].Key != constants.KubernetesNamespaceNameLabel {
+		t.Error("Selector to skip Kuberwarden namespace has invalid key")
+	}
+	if namespaceSelector.MatchExpressions[1].Operator != metav1.LabelSelectorOpNotIn {
+		t.Error("Selector to skip Kuberwarden namespace has invalid operator")
+	}
+	if len(namespaceSelector.MatchExpressions[1].Values) != 1 || namespaceSelector.MatchExpressions[1].Values[0] != "kubewarden" {
+		t.Error("Selector to skip Kuberwarden namespace has invalid namespace")
+	}
+}
+
+func TestNamespaceSelectorGenerationWithNilPolicyNamespaceSelector(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: false,
+	}
+	policy := &kubewardenv1.ClusterAdmissionPolicy{
+		Spec: kubewardenv1.ClusterAdmissionPolicySpec{},
+	}
+	namespaceSelector := reconciler.webhookNamespaceSelector(policy)
+	if namespaceSelector != nil {
+		t.Error("No namespace selector should be defined")
+	}
+
+	reconciler = Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: true,
+	}
+	policy = &kubewardenv1.ClusterAdmissionPolicy{
+		Spec: kubewardenv1.ClusterAdmissionPolicySpec{},
+	}
+	namespaceSelector = reconciler.webhookNamespaceSelector(policy)
+	if namespaceSelector.MatchExpressions == nil || len(namespaceSelector.MatchExpressions) != 1 {
+		t.Errorf("Namespace selector should have only the previous selectors and another one to skip Kuberwarden namespace. Selectors found: %d", len(namespaceSelector.MatchExpressions))
+		return
+	}
+	if namespaceSelector.MatchExpressions[0].Key != constants.KubernetesNamespaceNameLabel {
+		t.Error("Selector to skip Kuberwarden namespace has invalid key")
+	}
+	if namespaceSelector.MatchExpressions[0].Operator != metav1.LabelSelectorOpNotIn {
+		t.Error("Selector to skip Kuberwarden namespace has invalid operator")
+	}
+	if len(namespaceSelector.MatchExpressions[0].Values) != 1 || namespaceSelector.MatchExpressions[0].Values[0] != "kubewarden" {
+		t.Error("Selector to skip Kuberwarden namespace has invalid namespace")
 	}
 }
