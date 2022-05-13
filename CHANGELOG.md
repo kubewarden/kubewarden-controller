@@ -2,8 +2,19 @@
 ## [Unreleased]
 
 
+<a name="v0.5.3"></a>
+## [v0.5.3] - 2022-05-13
+### Pull Requests
+- Merge pull request [#216](https://github.com/kubewarden/kubewarden-controller/issues/216) from jvanz/fix-env-var-name
+- Merge pull request [#215](https://github.com/kubewarden/kubewarden-controller/issues/215) from kubewarden/renovate/docker-build-push-action-3.x
+- Merge pull request [#212](https://github.com/kubewarden/kubewarden-controller/issues/212) from ereslibre/always-accept-admission-reviews-on-namespace
+
+
+<a name="v0.5.2"></a>
+## [v0.5.2] - 2022-04-07
+
 <a name="v0.5.2-rc2"></a>
-## [v0.5.2-rc2] - 2022-04-06
+## [v0.5.2-rc2] - 2022-04-07
 
 <a name="v0.5.2-rc"></a>
 ## [v0.5.2-rc] - 2022-03-30
