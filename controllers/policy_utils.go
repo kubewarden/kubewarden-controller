@@ -114,7 +114,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		return ctrl.Result{}, errors.Wrap(err, "could not read policy server Deployment")
 	}
 
-	if !isPolicyUniquelyReachable(ctx, client, &policyServerDeployment) {
+	if !isPolicyUniquelyReachable(ctx, client, &policyServerDeployment, policy.GetUniqueName()) {
 		apimeta.SetStatusCondition(
 			&policy.GetStatus().Conditions,
 			metav1.Condition{
