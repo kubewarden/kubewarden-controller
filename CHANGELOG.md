@@ -2,6 +2,13 @@
 ## [Unreleased]
 
 
+<a name="v0.5.5"></a>
+## [v0.5.5] - 2022-05-17
+### Features
+- check if policy is deployed before setting it to uniquely reachable
+- Reconcile webhook after deployment rollout.
+
+
 <a name="v0.5.4"></a>
 ## [v0.5.4] - 2022-05-13
 ### Pull Requests
