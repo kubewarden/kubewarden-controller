@@ -216,7 +216,8 @@ func (r *Reconciler) createPoliciesMap(admissionPolicies []v1alpha2.Policy) Poli
 	return policies
 }
 
-func (r *Reconciler) createSourcesMap(policyServer *v1alpha2.PolicyServer) (sourcesEntry policyServerSourcesEntry) {
+func (r *Reconciler) createSourcesMap(policyServer *v1alpha2.PolicyServer) policyServerSourcesEntry {
+	sourcesEntry := policyServerSourcesEntry{}
 	sourcesEntry.InsecureSources = policyServer.Spec.InsecureSources
 	if sourcesEntry.InsecureSources == nil {
 		sourcesEntry.InsecureSources = make([]string, 0)
