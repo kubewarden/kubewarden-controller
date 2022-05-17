@@ -80,19 +80,33 @@ func SetPolicyConfigurationCondition(policyServerConfigMap *corev1.ConfigMap, po
 	}
 }
 
-func isLatestReplicaSetFromPolicyServerDeployment(replicaSet *appsv1.ReplicaSet, policyServerDeployment *appsv1.Deployment) bool {
+func isLatestReplicaSetFromPolicyServerDeployment(replicaSet *appsv1.ReplicaSet, policyServerDeployment *appsv1.Deployment, configMapVersion string) bool {
 	return replicaSet.Annotations[constants.KubernetesRevisionAnnotation] == policyServerDeployment.Annotations[constants.KubernetesRevisionAnnotation] &&
-		replicaSet.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] == policyServerDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation]
+		replicaSet.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] == configMapVersion
 }
 
-func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, policyServerDeployment *appsv1.Deployment) bool {
+func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, policyServerDeployment *appsv1.Deployment, policyName string) bool {
+	configMap := corev1.ConfigMap{}
+
+	err := apiReader.Get(ctx, client.ObjectKey{
+		Namespace: policyServerDeployment.Namespace,
+		Name:      policyServerDeployment.Name, // As the deployment name matches the name of the ConfigMap
+	}, &configMap)
+	if err != nil {
+		return false
+	}
+
+	if !isPolicyInConfigMap(configMap, policyName) {
+		return false
+	}
+
 	replicaSets := appsv1.ReplicaSetList{}
 	if err := apiReader.List(ctx, &replicaSets, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
 		return false
 	}
 	podTemplateHash := ""
 	for index := range replicaSets.Items {
-		if isLatestReplicaSetFromPolicyServerDeployment(&replicaSets.Items[index], policyServerDeployment) {
+		if isLatestReplicaSetFromPolicyServerDeployment(&replicaSets.Items[index], policyServerDeployment, configMap.ResourceVersion) {
 			podTemplateHash = replicaSets.Items[index].Labels[appsv1.DefaultDeploymentUniqueLabelKey]
 			break
 		}
@@ -116,6 +130,18 @@ func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, pol
 		}
 	}
 	return true
+}
+
+func isPolicyInConfigMap(configMap corev1.ConfigMap, policyName string) bool {
+	policies, err := getPolicyMapFromConfigMap(&configMap)
+	if err != nil {
+		return false
+	}
+	if _, ok := policies[policyName]; ok {
+		return true
+	}
+
+	return false
 }
 
 func isPodReady(pod corev1.Pod) bool {
