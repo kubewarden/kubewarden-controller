@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="v0.5.4"></a>
+## [v0.5.4] - 2022-05-13
+### Pull Requests
+- Merge pull request [#220](https://github.com/kubewarden/kubewarden-controller/issues/220) from viccuad/pin-golangci-lint
+- Merge pull request [#219](https://github.com/kubewarden/kubewarden-controller/pull/219) from jvanz:skip-kubewarden-namespace
+
 <a name="v0.5.3"></a>
 ## [v0.5.3] - 2022-05-13
 ### Pull Requests
