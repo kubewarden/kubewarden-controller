@@ -35,6 +35,7 @@ linters:
   enable-all: true
   disable:
     - exhaustivestruct
+    - exhaustruct
     - gci
     - gochecknoglobals
     - gochecknoinits
