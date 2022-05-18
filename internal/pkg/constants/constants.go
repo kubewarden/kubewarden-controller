@@ -45,9 +45,6 @@ const (
 	// Finalizers
 	KubewardenFinalizer = "kubewarden"
 
-	// Kubernetes annotations
+	// Kubernetes
 	KubernetesRevisionAnnotation = "deployment.kubernetes.io/revision"
-
-	// Kubernetes labels
-	KubernetesNamespaceNameLabel = "kubernetes.io/metadata.name"
 )
