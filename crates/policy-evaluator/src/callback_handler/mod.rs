@@ -8,6 +8,8 @@ use tracing::{debug, warn};
 use crate::callback_requests::{CallbackRequest, CallbackResponse};
 
 use kubewarden_policy_sdk::host_capabilities::{
+    net::LookupResponse,
+    oci::ManifestDigestResponse,
     verification::{KeylessInfo, VerificationResponse},
     CallbackRequestType,
 };
@@ -143,14 +145,14 @@ impl CallbackHandler {
                             } => {
                                 let response = get_oci_digest_cached(&self.oci_client, &image)
                                     .await
-                                    .map(|digest| {
-                                        if digest.was_cached {
+                                    .map(|response| {
+                                        if response.was_cached {
                                             debug!(?image, "Got image digest from cache");
                                         } else {
                                             debug!(?image, "Got image digest by querying remote registry");
                                         }
                                         CallbackResponse {
-                                        payload: digest.as_bytes().to_vec(),
+                                        payload: serde_json::to_vec(&response.value).unwrap(),
                                     }});
 
                                 if let Err(e) = req.response_channel.send(response) {
@@ -203,10 +205,12 @@ impl CallbackHandler {
                                 host,
                             } => {
                                 let response = dns_lookup::lookup_host(&host).map(|ips| {
-                                        let res: Vec<String> = ips
-                                            .iter()
-                                            .map(|ip| ip.to_string())
-                                            .collect();
+                                        let res = LookupResponse {
+                                            ips: ips
+                                                .iter()
+                                                .map(|ip| ip.to_string())
+                                                .collect(),
+                                        };
                                         CallbackResponse {
                                             payload: serde_json::to_vec(&res).unwrap()
                                         }
@@ -245,8 +249,12 @@ impl CallbackHandler {
 async fn get_oci_digest_cached(
     oci_client: &oci::Client,
     img: &str,
-) -> Result<cached::Return<String>> {
-    oci_client.digest(img).await.map(cached::Return::new)
+) -> Result<cached::Return<ManifestDigestResponse>> {
+    oci_client
+        .digest(img)
+        .await
+        .map(|digest| ManifestDigestResponse { digest })
+        .map(cached::Return::new)
 }
 
 // Sigstore verifications are time expensive, this can cause a massive slow down
