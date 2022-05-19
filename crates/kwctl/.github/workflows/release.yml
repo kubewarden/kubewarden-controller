@@ -14,10 +14,13 @@ jobs:
   build-linux-x86_64:
     name: Build linux (x86_64) binary
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     needs:
       - ci
     steps:
     - uses: actions/checkout@v2
+    - uses: sigstore/cosign-installer@main
     - name: Setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -32,7 +35,11 @@ jobs:
         CC: x86_64-linux-musl-gcc
       run: cargo build --target=x86_64-unknown-linux-musl --release
     - run: mv target/x86_64-unknown-linux-musl/release/kwctl kwctl-linux-x86_64
-    - run: zip -j9 kwctl-linux-x86_64.zip kwctl-linux-x86_64
+    - name: Sign kwctl
+      run: cosign sign-blob kwctl-linux-x86_64 --output-certificate kwctl-linux-x86_64.pem --output-signature kwctl-linux-x86_64.sig
+      env:
+        COSIGN_EXPERIMENTAL: 1
+    - run: zip -j9 kwctl-linux-x86_64.zip kwctl-linux-x86_64 kwctl-linux-x86_64.sig kwctl-linux-x86_64.pem
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
@@ -42,10 +49,13 @@ jobs:
   build-linux-aarch64:
     name: Build linux (aarch64) binary
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     needs:
       - ci
     steps:
     - uses: actions/checkout@v2
+    - uses: sigstore/cosign-installer@main
     - name: Setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -60,7 +70,11 @@ jobs:
         CC: aarch64-linux-musl-gcc
       run: cargo build --target=aarch64-unknown-linux-musl --release
     - run: mv target/aarch64-unknown-linux-musl/release/kwctl kwctl-linux-aarch64
-    - run: zip -j9 kwctl-linux-aarch64.zip kwctl-linux-aarch64
+    - name: Sign kwctl
+      run: cosign sign-blob kwctl-linux-aarch64 --output-certificate kwctl-linux-aarch64.pem --output-signature kwctl-linux-aarch64.sig
+      env:
+        COSIGN_EXPERIMENTAL: 1
+    - run: zip -j9 kwctl-linux-aarch64.zip kwctl-linux-aarch64 kwctl-linux-aarch64.sig kwctl-linux-aarch64.pem
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
@@ -70,10 +84,13 @@ jobs:
   build-darwin-x86_64:
     name: Build darwin (x86_64) binary
     runs-on: macos-latest
+    permissions:
+      id-token: write
     needs:
       - ci
     steps:
     - uses: actions/checkout@v2
+    - uses: sigstore/cosign-installer@main
     - name: Setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -82,7 +99,11 @@ jobs:
     - name: Build kwctl
       run: cargo build --target=x86_64-apple-darwin --release
     - run: mv target/x86_64-apple-darwin/release/kwctl kwctl-darwin-x86_64
-    - run: zip -j9 kwctl-darwin-x86_64.zip kwctl-darwin-x86_64
+    - name: Sign kwctl
+      run: cosign sign-blob kwctl-darwin-x86_64 --output-certificate kwctl-darwin-x86_64.pem --output-signature kwctl-darwin-x86_64.sig
+      env:
+        COSIGN_EXPERIMENTAL: 1
+    - run: zip -j9 kwctl-darwin-x86_64.zip kwctl-darwin-x86_64 kwctl-darwin-x86_64.sig kwctl-darwin-x86_64.pem
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
@@ -92,10 +113,14 @@ jobs:
   build-windows-x86_64:
     name: Build windows (x86_64) binary
     runs-on: windows-latest
+    permissions:
+      id-token: write
     needs:
       - ci
     steps:
     - uses: actions/checkout@v2
+    # TODO change to sigstore once https://github.com/sigstore/cosign-installer/issues/78 is fixed
+    - uses: raulcabello/cosign-installer@main
     - name: Setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -104,8 +129,12 @@ jobs:
     - name: Build kwctl
       run: cargo build --target=x86_64-pc-windows-msvc --release
     - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
+    - name: Sign kwctl
+      run: cosign sign-blob kwctl-windows-x86_64.exe --output-certificate kwctl-windows-x86_64.pem --output-signature kwctl-windows-x86_64.sig
+      env:
+        COSIGN_EXPERIMENTAL: 1
     - run: |
-        "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe
+        "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.sig kwctl-windows-x86_64.pem
       shell: bash
     - name: Upload binary
       uses: actions/upload-artifact@v2
