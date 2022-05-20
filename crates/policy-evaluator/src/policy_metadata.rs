@@ -155,9 +155,9 @@ impl Metadata {
 
     pub fn from_contents(policy: Vec<u8>) -> Result<Option<Metadata>> {
         for payload in Parser::new(0).parse_all(&policy) {
-            if let Payload::CustomSection { name, data, .. } = payload? {
-                if name == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
-                    return Ok(Some(serde_json::from_slice(data)?));
+            if let Payload::CustomSection(reader) = payload? {
+                if reader.name() == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
+                    return Ok(Some(serde_json::from_slice(reader.data())?));
                 }
             }
         }
