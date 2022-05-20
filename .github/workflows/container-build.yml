@@ -33,6 +33,6 @@ jobs:
       - name: Sign the images
         run: |
           cosign sign \
-            ${{needs.build.outputs.repository}}:${{needs.build.outputs.tag}}
+            ${{needs.build.outputs.repository}}@${{needs.build.outputs.digest}}
         env:
           COSIGN_EXPERIMENTAL: 1
