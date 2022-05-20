@@ -137,7 +137,7 @@ fn main() -> Result<()> {
                     process::exit(1);
                 }
 
-                let entrypoint = matches.value_of("entrypoint").or(Some("0")).unwrap();
+                let entrypoint = matches.value_of("entrypoint").unwrap_or("0");
                 let entrypoint_id = match entrypoint.parse() {
                     Ok(id) => id,
                     _ => evaluator.entrypoint_id(&String::from(entrypoint))?,

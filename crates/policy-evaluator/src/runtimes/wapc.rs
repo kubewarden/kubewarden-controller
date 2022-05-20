@@ -65,9 +65,8 @@ pub(crate) fn host_callback(
 
                     send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
                 }
-                "manifest_digest" => {
-                    let image = String::from_utf8(payload.to_vec())
-                        .map_err(|_| "Cannot parse given payload as string")?;
+                "v1/manifest_digest" => {
+                    let image: String = serde_json::from_slice(payload.to_vec().as_ref())?;
                     debug!(
                         policy_id,
                         binding,
@@ -78,6 +77,28 @@ pub(crate) fn host_callback(
                     let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                     let req = CallbackRequest {
                         request: CallbackRequestType::OciManifestDigest { image },
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                _ => {
+                    error!("unknown operation: {}", operation);
+                    Err(format!("unknown operation: {}", operation).into())
+                }
+            },
+            "net" => match operation {
+                "v1/dns_lookup_host" => {
+                    let host: String = serde_json::from_slice(payload.to_vec().as_ref())?;
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?host,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::DNSLookupHost { host },
                         response_channel: tx,
                     };
                     send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
