@@ -20,9 +20,9 @@ directories = "4.0.1"
 lazy_static = "1.4.0"
 oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "0f717968093a5415f428503d741dedf24ea97948", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.1.4"
-regex = "1.5.5"
+regex = "1.5.6"
 reqwest = { version = "0.11.10", default-features = false, features = ["rustls-tls"] }
-rustls = "0.20.4"
+rustls = "0.20.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.81"
 serde_yaml = "0.8.24"
@@ -31,7 +31,7 @@ sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features =
 tracing = "0.1.34"
 url = { version = "2.2.2", features = ["serde"] }
 walkdir = "2"
-rayon = "1.5.2"
+rayon = "1.5.3"
 
 [dev-dependencies]
 rstest = "0.12.0"
