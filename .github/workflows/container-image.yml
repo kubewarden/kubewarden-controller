@@ -30,6 +30,7 @@ jobs:
       repository: ${{ steps.setoutput.outputs.repository }}
       tag: ${{ steps.setoutput.outputs.tag }}
       artifact: ${{ steps.setoutput.outputs.artifact }}
+      digest: ${{ steps.setoutput.outputs.digest }}
     steps:
       -
         name: Checkout code
