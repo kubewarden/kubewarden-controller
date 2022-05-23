@@ -103,7 +103,11 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policySer
 		return fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
 	}
 
-	if shouldUpdatePolicyServerDeployment(originalDeployment, newDeployment) {
+	shouldUpdate, err := shouldUpdatePolicyServerDeployment(policyServer, originalDeployment, newDeployment)
+	if err != nil {
+		return fmt.Errorf("cannot check if it is necessary to update the policy server deployment: %w", err)
+	}
+	if shouldUpdate {
 		patch := originalDeployment.DeepCopy()
 		patch.Spec.Replicas = newDeployment.Spec.Replicas
 		patch.Spec.Template = newDeployment.Spec.Template
@@ -118,13 +122,39 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policySer
 	return nil
 }
 
-func shouldUpdatePolicyServerDeployment(originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) bool {
+func getPolicyServerImageFromDeployment(policyServer *v1alpha2.PolicyServer, deployment *appsv1.Deployment) (string, error) {
+	for containerIndex := range deployment.Spec.Template.Spec.Containers {
+		container := &deployment.Spec.Template.Spec.Containers[containerIndex]
+		if container.Name == policyServer.NameWithPrefix() {
+			return container.Image, nil
+		}
+	}
+	return "", fmt.Errorf("cannot find policy server container")
+}
+
+func isPolicyServerImageChanged(policyServer *v1alpha2.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
+	var oldImage, newImage string
+	var err error
+	if oldImage, err = getPolicyServerImageFromDeployment(policyServer, originalDeployment); err != nil {
+		return false, err
+	}
+	if newImage, err = getPolicyServerImageFromDeployment(policyServer, newDeployment); err != nil {
+		return false, err
+	}
+	return oldImage != newImage, nil
+}
+
+func shouldUpdatePolicyServerDeployment(policyServer *v1alpha2.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
+	containerImageChanged, err := isPolicyServerImageChanged(policyServer, originalDeployment, newDeployment)
+	if err != nil {
+		return false, err
+	}
 	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
-		originalDeployment.Spec.Template.Spec.Containers[0].Image != newDeployment.Spec.Template.Spec.Containers[0].Image ||
+		containerImageChanged ||
 		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
 		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
-		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment)
+		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment), nil
 }
 
 func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) bool {

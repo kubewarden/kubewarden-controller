@@ -4,10 +4,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const policyServerName = "testing"
+const policyServerContainerName = "policy-server-testing"
+const invalidPolicyServerName = "invalid"
 
 func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{})
@@ -31,10 +36,16 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 		{"same nil annotation", createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil), createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil), false},
 	}
 
+	policyServer := &v1alpha2.PolicyServer{
+		Spec: v1alpha2.PolicyServerSpec{
+			Image: "image",
+		},
+	}
+	policyServer.Name = policyServerName
 	for _, test := range tests {
 		tt := test // ensure tt is correctly scoped when used in function literal
 		t.Run(tt.name, func(t *testing.T) {
-			got := shouldUpdatePolicyServerDeployment(tt.original, tt.new)
+			got, _ := shouldUpdatePolicyServerDeployment(policyServer, tt.original, tt.new)
 			if got != tt.expect {
 				t.Errorf("got %t, want %t", got, tt.expect)
 			}
@@ -56,6 +67,7 @@ func createDeployment(replicasInt int, serviceAccount, imagePullSecret, image st
 	container := corev1.Container{
 		Image: image,
 		Env:   env,
+		Name:  policyServerContainerName,
 	}
 	if imagePullSecret != "" {
 		container.VolumeMounts = append(container.VolumeMounts,
@@ -124,4 +136,76 @@ func createDeployment(replicasInt int, serviceAccount, imagePullSecret, image st
 	}
 
 	return policyServerDeployment
+}
+
+func insertContainer(deployment *appsv1.Deployment) {
+	container := corev1.Container{
+		Name:  "container0",
+		Image: "container0image:latest",
+	}
+	containers := []corev1.Container{container}
+	containers = append(containers, deployment.Spec.Template.Spec.Containers...)
+	deployment.Spec.Template.Spec.Containers = containers
+}
+
+func TestGetPolicyServeImageFromDeployment(t *testing.T) {
+	policyServer := v1alpha2.PolicyServer{
+		Spec: v1alpha2.PolicyServerSpec{
+			Image: "image",
+		},
+	}
+	policyServer.Name = policyServerName
+	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, map[string]string{})
+	image, err := getPolicyServerImageFromDeployment(&policyServer, deployment)
+	if err != nil || image != "image" {
+		t.Errorf("The function cannot find the right container image for the policy server container. Expected: 'image', Got: %s", image)
+	}
+	deployment.Spec.Template.Spec.Containers[0].Name = "policy-server-default"
+	image, err = getPolicyServerImageFromDeployment(&policyServer, deployment)
+	if err == nil || image != "" {
+		t.Error("The function should not be able to find the container image. Because there is no container with the policy server name")
+	}
+}
+
+func TestIfPolicyServerImageChanged(t *testing.T) {
+	policyServer := &v1alpha2.PolicyServer{
+		Spec: v1alpha2.PolicyServerSpec{
+			Image: "image",
+		},
+	}
+	policyServer.Name = policyServerName
+	oldDeployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, map[string]string{})
+	newDeployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, map[string]string{})
+	oldDeployment.Spec.Template.Spec.Containers[0].Name = policyServerContainerName
+	newDeployment.Spec.Template.Spec.Containers[0].Name = policyServerContainerName
+
+	changed, err := isPolicyServerImageChanged(policyServer, oldDeployment, newDeployment)
+	if changed || err != nil {
+		t.Errorf("Function should not detect change in the container image. changed: %v, err: %v", changed, err)
+		return
+	}
+	insertContainer(oldDeployment)
+	changed, err = isPolicyServerImageChanged(policyServer, oldDeployment, newDeployment)
+	if changed || err != nil {
+		t.Errorf("Function should not detect change in the container image. changed: %v, err: %v", changed, err)
+		return
+	}
+	insertContainer(newDeployment)
+	changed, err = isPolicyServerImageChanged(policyServer, oldDeployment, newDeployment)
+	if changed || err != nil {
+		t.Errorf("Function should not detect change in the container image. changed: %v, err: %v", changed, err)
+		return
+	}
+	newDeployment.Spec.Template.Spec.Containers[1].Image = "image2"
+	changed, err = isPolicyServerImageChanged(policyServer, oldDeployment, newDeployment)
+	if changed == false || err != nil {
+		t.Errorf("Function should detect change in the container image. changed: %v, err: %s", changed, err)
+		return
+	}
+
+	policyServer.Name = invalidPolicyServerName
+	_, err = isPolicyServerImageChanged(policyServer, oldDeployment, newDeployment)
+	if err == nil {
+		t.Errorf("Function should fail to find the container image.  err: %v", err)
+	}
 }
