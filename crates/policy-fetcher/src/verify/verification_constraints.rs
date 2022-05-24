@@ -183,6 +183,8 @@ pub struct GitHubVerifier {
 }
 
 const GITHUB_ACTION_ISSUER: &str = "https://token.actions.githubusercontent.com";
+const GITHUB_ACTION_SUBJECT_EXAMPLE: &str =
+    "https://github.com/octocat/example/.github/workflows/ci.yml@refs/tags/v0.1.0";
 
 impl GitHubVerifier {
     pub fn new(
@@ -224,10 +226,11 @@ impl VerificationConstraint for GitHubVerifier {
             }
         };
 
-        let signature_url = match &certificate_signature.subject {
+        // the certificate subject must be a valid github URI and not an email
+        let signature_subject = match &certificate_signature.subject {
             CertificateSubject::Email(email) => {
                 debug!(
-                    expected_value = ?GITHUB_ACTION_ISSUER,
+                    expected_value = ?GITHUB_ACTION_SUBJECT_EXAMPLE,
                     current_value = ?email,
                     "subject not satisfied, expected URI, got email instead"
                 );
@@ -235,9 +238,18 @@ impl VerificationConstraint for GitHubVerifier {
             }
             CertificateSubject::Uri(u) => u,
         };
+        GitHubRepo::try_from(signature_subject.as_str()).map_err(|_|
+            SigstoreError::VerificationConstraintError(format!("The certificate subject url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_subject)))?;
 
-        let signature_repo = GitHubRepo::try_from(signature_url.as_str()).map_err(|_|
-            SigstoreError::VerificationConstraintError(format!("The certificate signature url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_url)))?;
+        // the certificate github_workflow_extension must be there and correctly constructed
+        let github_workflow_repository =  match &certificate_signature.github_workflow_repository {
+            Some(workflow_repository) => workflow_repository,
+            None => return Err(SigstoreError::VerificationConstraintError(format!("The certificate is missing the github_workflow_repository extension despite being a GitHub Action one: {}", signature_subject))),
+        };
+
+        let signature_repo = GitHubRepo::try_from(format!("https://github.com/{}", github_workflow_repository).as_str())
+            .map_err(|_|
+            SigstoreError::VerificationConstraintError(format!("The certificate doesn't have a valid github_workflow_repository extension, despite the issuer being the GitHub Action one: {}", github_workflow_repository)))?;
 
         if signature_repo.owner != self.owner {
             debug!(
