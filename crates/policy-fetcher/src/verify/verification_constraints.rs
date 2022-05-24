@@ -183,6 +183,8 @@ pub struct GitHubVerifier {
 }
 
 const GITHUB_ACTION_ISSUER: &str = "https://token.actions.githubusercontent.com";
+const GITHUB_ACTION_SUBJECT_EXAMPLE: &str =
+    "https://github.com/octocat/example/.github/workflows/ci.yml@refs/tags/v0.1.0";
 
 impl GitHubVerifier {
     pub fn new(
@@ -224,10 +226,11 @@ impl VerificationConstraint for GitHubVerifier {
             }
         };
 
-        let signature_url = match &certificate_signature.subject {
+        // the certificate subject must be a valid github URI and not an email
+        let signature_subject = match &certificate_signature.subject {
             CertificateSubject::Email(email) => {
                 debug!(
-                    expected_value = ?GITHUB_ACTION_ISSUER,
+                    expected_value = ?GITHUB_ACTION_SUBJECT_EXAMPLE,
                     current_value = ?email,
                     "subject not satisfied, expected URI, got email instead"
                 );
@@ -235,9 +238,16 @@ impl VerificationConstraint for GitHubVerifier {
             }
             CertificateSubject::Uri(u) => u,
         };
+        GitHubRepo::try_from(signature_subject.as_str()).map_err(|_|
+            SigstoreError::VerificationConstraintError(format!("The certificate subject url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_subject)))?;
 
-        let signature_repo = GitHubRepo::try_from(signature_url.as_str()).map_err(|_|
-            SigstoreError::VerificationConstraintError(format!("The certificate signature url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_url)))?;
+        // the certificate github_workflow_extension must be there and correctly constructed
+        let github_workflow_repository = certificate_signature.github_workflow_repository.as_ref()
+            .ok_or_else(|| SigstoreError::VerificationConstraintError("The certificate is missing the github_workflow_repository extension despite being a GitHub Action one".to_string()))?;
+
+        let signature_repo = GitHubRepo::try_from(format!("https://github.com/{}", github_workflow_repository).as_str())
+            .map_err(|_|
+            SigstoreError::VerificationConstraintError(format!("The certificate doesn't have a valid github_workflow_repository extension, despite the issuer being the GitHub Action one: {}", github_workflow_repository)))?;
 
         if signature_repo.owner != self.owner {
             debug!(
@@ -348,6 +358,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     fn build_signature_layers_keyless(
         issuer: Option<String>,
         subject: CertificateSubject,
+        github_workflow_repository: Option<String>,
     ) -> SignatureLayer {
         let pub_key = r#"-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELKhD7F5OKy77Z582Y6h0u1J3GNA+
@@ -370,6 +381,11 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             verification_key,
             issuer,
             subject,
+            github_workflow_trigger: None,
+            github_workflow_sha: None,
+            github_workflow_name: None,
+            github_workflow_repository,
+            github_workflow_ref: None,
         });
 
         SignatureLayer {
@@ -432,7 +448,8 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 
         let certificate_subject = CertificateSubject::Email(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl =
+            build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
         let vc = GenericIssuerSubjectVerifier::new(issuer, &subject, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
@@ -445,7 +462,8 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 
         let certificate_subject = CertificateSubject::Uri(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl =
+            build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
         let vc = GenericIssuerSubjectVerifier::new(issuer, &subject, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
@@ -458,7 +476,8 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 
         let certificate_subject = CertificateSubject::Email(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl =
+            build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
         let vc = GenericIssuerSubjectVerifier::new(issuer, &subject, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
@@ -473,7 +492,8 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 
         let certificate_subject = CertificateSubject::Email(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl =
+            build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert("key1".into(), "value1".into());
@@ -494,13 +514,16 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         let vc = GenericIssuerSubjectVerifier::new(issuer, &subject, None);
 
         // a signature without issuer - could happen with early signatures of cosign
-        let sl = build_signature_layers_keyless(None, certificate_subject.clone());
+        let sl = build_signature_layers_keyless(None, certificate_subject.clone(), None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(!is_verified);
 
         // a signature with a different issuer
-        let sl =
-            build_signature_layers_keyless(Some("another issuer".to_string()), certificate_subject);
+        let sl = build_signature_layers_keyless(
+            Some("another issuer".to_string()),
+            certificate_subject,
+            None,
+        );
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(!is_verified);
     }
@@ -514,7 +537,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         let vc = GenericIssuerSubjectVerifier::new(issuer, &subject, None);
 
         let another_subject = CertificateSubject::Email("alice@provider.com".to_string());
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), another_subject);
+        let sl = build_signature_layers_keyless(Some(issuer.to_string()), another_subject, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(!is_verified);
     }
@@ -529,7 +552,8 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 
         let certificate_subject = CertificateSubject::Uri(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl =
+            build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
         let vc = GenericIssuerSubjectVerifier::new(issuer, &subject, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
@@ -538,13 +562,15 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 
     #[test]
     fn test_generic_issuer_subject_url_prefix_prevent_abuses() {
-        // signature done inside of `kubewarde-hacker` organization, but we trust only `kubewarden`
+        // signature done inside of `kubewarden-hacker` organization, but we trust only `kubewarden`
         // org
 
         let issuer = "https://token.actions.githubusercontent.com";
         let subject_str = "https://github.com/kubewarden-hacker/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main";
         let certificate_subject = CertificateSubject::Uri(subject_str.to_string());
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+
+        let sl =
+            build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
         // It has a trailing `/`
         let prefix =
@@ -630,30 +656,43 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     fn test_github_verifier_success() {
         let issuer = "https://token.actions.githubusercontent.com";
         let subject_str = "https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main";
+        let github_workflow_repository = "octocat/policy-secure-pod-images";
 
         let certificate_subject = CertificateSubject::Uri(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl = build_signature_layers_keyless(
+            Some(issuer.to_string()),
+            certificate_subject,
+            Some(github_workflow_repository.to_string()),
+        );
 
         // check specifically this owner/repo
-        let vc = GitHubVerifier::new("kubewarden", Some("policy-secure-pod-images"), None);
+        let vc = GitHubVerifier::new("octocat", Some("policy-secure-pod-images"), None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(is_verified);
 
         // anything from this owner is fine
-        let vc = GitHubVerifier::new("kubewarden", None, None);
+        let vc = GitHubVerifier::new("octocat", None, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(is_verified);
     }
 
     #[test]
     fn test_github_verifier_reject() {
+        // we must fail if the github_workflow_repository doesn't match the
+        // owner and repo of the verifier, regardless of subject. This is
+        // specially important when people consume GHA reusable workflows.
         let issuer = "https://token.actions.githubusercontent.com";
         let subject_str = "https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main";
+        let github_workflow_repository = "octocat/policy-secure-pod-images";
 
         let certificate_subject = CertificateSubject::Uri(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl = build_signature_layers_keyless(
+            Some(issuer.to_string()),
+            certificate_subject,
+            Some(github_workflow_repository.to_string()),
+        );
 
         // check specifically this owner/repo
         let vc = GitHubVerifier::new("kubewarden", Some("psp-one"), None);
@@ -670,10 +709,15 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     fn test_github_verifier_reject_because_issuer_url_is_wrong() {
         let issuer = "https://google.com";
         let subject_str = "https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main";
+        let github_workflow_repository = "octocat/policy-secure-pod-images";
 
         let certificate_subject = CertificateSubject::Uri(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl = build_signature_layers_keyless(
+            Some(issuer.to_string()),
+            certificate_subject,
+            Some(github_workflow_repository.to_string()),
+        );
 
         let vc = GitHubVerifier::new("kubewarden", None, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");
@@ -682,12 +726,14 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 
     #[test]
     fn test_github_verifier_reject_because_certificate_subject_does_not_have_url() {
+        // it must have URL, as this is a GH Actions signature
         let issuer = "https://token.actions.githubusercontent.com";
-        let subject_str = "https://github.com/kubewarden/policy-secure-pod-images/.github/workflows/release.yml@refs/heads/main";
+        let subject_str = "octocat@example.com";
 
         let certificate_subject = CertificateSubject::Email(subject_str.to_string());
 
-        let sl = build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject);
+        let sl =
+            build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
         let vc = GitHubVerifier::new("kubewarden", None, None);
         let is_verified = vc.verify(&sl).expect("Should have been successful");

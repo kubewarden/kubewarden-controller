@@ -384,6 +384,11 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             verification_key,
             issuer,
             subject,
+            github_workflow_trigger: None,
+            github_workflow_sha: None,
+            github_workflow_name: None,
+            github_workflow_repository: None,
+            github_workflow_ref: None,
         });
 
         SignatureLayer {
