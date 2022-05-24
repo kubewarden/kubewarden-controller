@@ -119,8 +119,7 @@ jobs:
       - ci
     steps:
     - uses: actions/checkout@v2
-    # TODO change to sigstore once https://github.com/sigstore/cosign-installer/issues/78 is fixed
-    - uses: raulcabello/cosign-installer@main
+    - uses: sigstore/cosign-installer@main
     - name: Setup rust toolchain
       uses: actions-rs/toolchain@v1
       with:
