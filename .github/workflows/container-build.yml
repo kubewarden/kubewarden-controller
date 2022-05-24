@@ -14,3 +14,25 @@ jobs:
     uses: kubewarden/kubewarden-controller/.github/workflows/container-image.yml@main
     with:
       push-image: true
+
+  sign:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
+    needs: build
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: sigstore/cosign-installer@main
+      - name: Sign the images
+        run: |
+          cosign sign \
+            ${{needs.build.outputs.repository}}@${{needs.build.outputs.digest}}
+        env:
+          COSIGN_EXPERIMENTAL: 1

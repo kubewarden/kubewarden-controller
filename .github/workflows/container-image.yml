@@ -16,6 +16,9 @@ on:
       artifact:
         description: "Uploaded artifact with the container tarball"
         value: ${{ jobs.build.outputs.artifact }}
+      digest:
+        description: "Image digest"
+        value: ${{ jobs.build.outputs.digest }}
 
 
 
@@ -27,6 +30,7 @@ jobs:
       repository: ${{ steps.setoutput.outputs.repository }}
       tag: ${{ steps.setoutput.outputs.tag }}
       artifact: ${{ steps.setoutput.outputs.artifact }}
+      digest: ${{ steps.setoutput.outputs.digest }}
     steps:
       -
         name: Checkout code
@@ -57,6 +61,7 @@ jobs:
       -
         name: Build and push container image
         if: ${{ inputs.push-image }}
+        id: build-image
         uses: docker/build-push-action@v3
         with:
           context: .
@@ -93,3 +98,5 @@ jobs:
           echo "::set-output name=repository::ghcr.io/${{github.repository_owner}}/kubewarden-controller"
           echo "::set-output name=tag::${{ env.TAG_NAME }}"
           echo "::set-output name=artifact::kubewarden-controller-image-${{env.TAG_NAME}}"
+          echo "::set-output name=digest::${{ steps.build-image.outputs.digest }}"
+
