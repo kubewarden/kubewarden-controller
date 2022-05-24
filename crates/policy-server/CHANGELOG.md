@@ -2,6 +2,33 @@
 ## [Unreleased]
 
 
+<a name="v0.3.1"></a>
+## [v0.3.1] - 2022-05-24
+### Bug Fixes
+- **deps:** update all patchlevel dependencies
+
+### Features
+- sign container image
+- Allow policy authors to write policies that perform image verification using sigstore
+
+### Pull Requests
+- Merge pull request [#259](https://github.com/kubewarden/policy-server/issues/259) from viccuad/main
+- Merge pull request [#256](https://github.com/kubewarden/policy-server/issues/256) from raulcabello/main
+- Merge pull request [#253](https://github.com/kubewarden/policy-server/issues/253) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#243](https://github.com/kubewarden/policy-server/issues/243) from flavio/support-wapc-dns-lookup
+- Merge pull request [#251](https://github.com/kubewarden/policy-server/issues/251) from raulcabello/main
+- Merge pull request [#250](https://github.com/kubewarden/policy-server/issues/250) from raulcabello/main
+- Merge pull request [#248](https://github.com/kubewarden/policy-server/issues/248) from kubewarden/renovate/all-patch
+- Merge pull request [#249](https://github.com/kubewarden/policy-server/issues/249) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#245](https://github.com/kubewarden/policy-server/issues/245) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#238](https://github.com/kubewarden/policy-server/issues/238) from raulcabello/main
+- Merge pull request [#234](https://github.com/kubewarden/policy-server/issues/234) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#233](https://github.com/kubewarden/policy-server/issues/233) from kubewarden/dependabot/cargo/rustls-pemfile-1.0.0
+- Merge pull request [#229](https://github.com/kubewarden/policy-server/issues/229) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#227](https://github.com/kubewarden/policy-server/issues/227) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#226](https://github.com/kubewarden/policy-server/issues/226) from kubewarden/renovate/lock-file-maintenance
+
+
 <a name="v0.2.7"></a>
 ## [v0.2.7] - 2022-03-23
 ### Bug Fixes
@@ -259,7 +286,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v0.3.1...HEAD
+[v0.3.1]: https://github.com/kubewarden/policy-server/compare/v0.2.7...v0.3.1
 [v0.2.7]: https://github.com/kubewarden/policy-server/compare/v0.2.6...v0.2.7
 [v0.2.6]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc2...v0.2.6
 [v0.2.6-rc2]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc1...v0.2.6-rc2
