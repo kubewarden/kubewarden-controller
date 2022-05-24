@@ -62,6 +62,7 @@ Kubewarden core components, which are exposed to the user are:
 - Kubewarden Controller
 - Policy Server
 - kwctl
+- CRDs
 
 As a second dimension, there are also policies and their respective
 SDK's. This proposal is going to ignore this dimension on purpose,
@@ -159,7 +160,7 @@ The following actions are done:
     
     **Note:** we don't change the `appVersion` attribute
 
-### A major security issue is found inside of Policy Server
+### A major security issue is found inside of Policy Server - case #1
 
 A major security issue is found inside of Policy server.
 Changes are done to both policy server and Kubewarden Controller.
@@ -182,6 +183,38 @@ We proceed with the following actions:
     Because of that, the `version` goes from `0.10.5` to `0.11.0`
   * Update the `appVersion` to be `0.7.0`
 
+### A major security issue is found inside of Policy Server - case #2
+
+A major security issue is found inside of Policy server, but this time
+**no changes** are required inside of the Kubewarden Controller.
+
+Currently the Kubewarden stack version is `v0.6.0`. We decide to release
+a new patch release of Policy Server, tagged as `v0.6.1`.
+
+We proceed with the following actions:
+
+* Tag a new release of Policy Server: `0.6.1`
+* helm chart:
+  * Update all the references to the Policy Server image
+  * Update `version`: we bump the patch number of the helm chart.
+    Because of that, the `version` goes from `0.10.5` to `0.10.6`
+  * Leave the `appVersion` to be `0.6.0`
+
+We will then issue a public statement suggesting all our users to upgrade to
+the latest version of the Policy Server.
+
+Already running containers are not going to be updated unless:
+  * The user has already a solution in place to detect new updates of container images
+  * The user is using something like fleet/flux to deploy Kubewarden via its helm chart.
+    In that case the user probably has something like [updatecli](https://github.com/updatecli),
+    RenovateBot, DependaBot that will notice the new version of the helm chart and
+    automatically propose a bump.
+
+> Note: maybe in this scenario it would be better to actually perform a minor
+> version bump of the whole stack, just to make the users more aware of the security
+> implications.
+
+
 ### A bug is found inside of one of the helm charts
 
 A small fix is done to one of the existing helm charts.
@@ -199,14 +232,90 @@ bumped.
 - The global stack version does not make use of the `Patch`
   attribute of Semantic Versioning. That's because we want to
   leave some freedom to each component of the "public stack".
+- Given the patch level is not used by the "public stack", two users
+  might be running the same version of the kubewarden stack (e.g. `1.2`),
+  but they might be using different images. For example, Alice could be running
+  kubewarden-controller `v1.2.1`, while Bob might be running kubewarden-controller
+  `v1.2.2`.
+
+### A breaking change is introduced
+
+We need to introduce a breaking change, this is something that basically
+breaks a type of contract we exposed to the end user.
+
+Many things could lead to this outcome, for example:
+
+  * We drop a filed from one of our CRDs
+  * We change the configuration format used by the Policy Server
+  * We break the "cli API" of kwctl, old scripts would break because of that.
+
+In any of these cases, we will either perform a major or a minor bump of the
+stack number. We will bump the Kubewarden stack from `0.6.0` to `0.7.0`.
+
+We proceed with the following actions:
+
+* Tag a new release of Kubewarden Controller: `0.7.0`
+* Tag a new release of Policy Server: `0.7.0`
+* Tag a new release of kwctl: `0.7.0`
+* helm chart:
+  * Update all the references to the Kubewarden Controller and
+    Policy Server images
+  * Update `version`: given no significant change to the helm chart is done,
+    we can just do a bump of the patch version.
+    Because of that, the `version` goes from `0.10.5` to `0.10.6`
+  * Update the `appVersion` to be `0.7.0`
 
 # Alternatives
 [alternatives]: #alternatives
 
+## Use CalVer
+
 [This](https://github.com/kubewarden/kubewarden-controller/pull/182)
 rejected proposal.
+
+## Make use of the patch version inside of the Kubewarden stack version number
+
+Another possible solution would be to make use of the `patch` attribute of the universal stack version.
+
+Pros:
+  * All the components have the same version. The `appVersion` inside of the helm
+  chart is reflecting the version of all the container images
+  * There's no ambiguity when talking with a user. Version `v1.2.2` means the
+  same thing for everybody, as opposed to say `v1.2`.
+
+Cons:
+  * A small fix to a single component triggers the release of all the others.
+  * Users might get the feeling to update their cluster because a new patch
+    release has been tagged, but actually no change has been done to the
+    components running inside of the cluster. This could happen with patches done
+    to `kwctl`.
+
+We would need to invest more time and efforts into automating the whole release
+"overlord orchestrator" or just "stash" fixes and push them once they reach a
+certain critical mass (or on a monthly/weekly cadence).
+
+We could also start with this proposal (the one that doesn't make use of the
+patch level inside of the global version) and later make use of the `patch`
+attribute.
 
 # Unresolved questions
 [unresolved]: #unresolved-questions
 
-None
+How can we automate the release process to:
+
+* Reduce the burden on developers
+* Avoid mistakes
+
+We already have automation at the single project level, we would need something
+that orchestrates that.
+
+I would however wait a little before investing time into doing that to understand:
+
+* If this versioning proposal sound, are we going to face unexpected issues?
+* How often does that release happen? What is the trade-off between investing
+  time into automating the "high level orchestrator" vs following a clearly
+  written playbook?
+
+
+
+
