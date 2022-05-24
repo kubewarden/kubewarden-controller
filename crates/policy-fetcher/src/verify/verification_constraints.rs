@@ -242,10 +242,8 @@ impl VerificationConstraint for GitHubVerifier {
             SigstoreError::VerificationConstraintError(format!("The certificate subject url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_subject)))?;
 
         // the certificate github_workflow_extension must be there and correctly constructed
-        let github_workflow_repository =  match &certificate_signature.github_workflow_repository {
-            Some(workflow_repository) => workflow_repository,
-            None => return Err(SigstoreError::VerificationConstraintError(format!("The certificate is missing the github_workflow_repository extension despite being a GitHub Action one: {}", signature_subject))),
-        };
+        let github_workflow_repository = certificate_signature.github_workflow_repository.as_ref()
+            .ok_or_else(|| SigstoreError::VerificationConstraintError("The certificate is missing the github_workflow_repository extension despite being a GitHub Action one".to_string()))?;
 
         let signature_repo = GitHubRepo::try_from(format!("https://github.com/{}", github_workflow_repository).as_str())
             .map_err(|_|
