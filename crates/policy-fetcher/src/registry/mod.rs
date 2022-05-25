@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use oci_distribution::{
     client::{
         Certificate as OciCertificate, CertificateEncoding, Client, ClientConfig,
-        ClientProtocol as OciClientProtocol, ImageData, ImageLayer,
+        ClientProtocol as OciClientProtocol, Config, ImageLayer,
     },
     manifest,
     secrets::RegistryAuth,
@@ -149,6 +149,7 @@ impl Registry {
         Registry::client(cp)
             .fetch_manifest_digest(&reference, &registry_auth)
             .await
+            .map_err(|e| anyhow!(e))
     }
 
     /// Push the policy to the OCI registry specified by `url`.
@@ -211,20 +212,26 @@ impl Registry {
 
         let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
 
+        let layers = vec![ImageLayer::new(
+            policy.to_vec(),
+            manifest::WASM_LAYER_MEDIA_TYPE.to_string(),
+            None,
+        )];
+
+        let config = Config {
+            data: b"{}".to_vec(),
+            media_type: manifest::WASM_CONFIG_MEDIA_TYPE.to_string(),
+            annotations: None,
+        };
+
+        let image_manifest = manifest::OciImageManifest::build(&layers, &config, None);
         Registry::client(client_protocol)
             .push(
                 &reference,
-                &ImageData {
-                    layers: vec![ImageLayer::new(
-                        policy.to_vec(),
-                        manifest::WASM_LAYER_MEDIA_TYPE.to_string(),
-                    )],
-                    digest: None,
-                },
-                b"{}".as_ref(),
-                manifest::WASM_CONFIG_MEDIA_TYPE,
+                &layers,
+                config,
                 &registry_auth,
-                None,
+                Some(image_manifest),
             )
             .await
             .map(|push_response| push_response.manifest_url)
