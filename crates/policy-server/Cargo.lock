@@ -368,7 +368,7 @@ checksum = "a4a45a46ab1f2412e53d3a0ade76ffad2025804294569aae387231a0cd6e0899"
 [[package]]
 name = "burrego"
 version = "0.1.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.3#ab9574c18ca7784995af5eff19070efc116ef500"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.4#8e4d8c9be24cadffad3c8f583f001cbb3b8dea9d"
 dependencies = [
  "anyhow",
  "base64",
@@ -2136,19 +2136,21 @@ dependencies = [
 
 [[package]]
 name = "oci-distribution"
-version = "0.8.1"
-source = "git+https://github.com/krustlet/oci-distribution?rev=0f717968093a5415f428503d741dedf24ea97948#0f717968093a5415f428503d741dedf24ea97948"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8e6c159401471f83bfbd59bf02c8f3da0615d8583d889cac1c594d9d4841c64"
 dependencies = [
- "anyhow",
  "futures-util",
  "hyperx",
  "jwt",
  "lazy_static",
+ "olpc-cjson",
  "regex",
  "reqwest",
  "serde",
  "serde_json",
  "sha2 0.9.9",
+ "thiserror",
  "tokio",
  "tracing",
  "unicase 1.4.2",
@@ -2588,8 +2590,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.3.3"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.3#ab9574c18ca7784995af5eff19070efc116ef500"
+version = "0.3.4"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.3.4#8e4d8c9be24cadffad3c8f583f001cbb3b8dea9d"
 dependencies = [
  "anyhow",
  "base64",
@@ -2615,8 +2617,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.7.4"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.4#87e91bb65aa271dd7566fe2fe9a189c19451856d"
+version = "0.7.5"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.5#70d16e933fd27f10fd47ba67039e79bc75082010"
 dependencies = [
  "anyhow",
  "async-std",
@@ -2643,7 +2645,7 @@ dependencies = [
 
 [[package]]
 name = "policy-server"
-version = "0.3.0"
+version = "0.3.2"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -3341,8 +3343,8 @@ dependencies = [
 
 [[package]]
 name = "sigstore"
-version = "0.2.0"
-source = "git+https://github.com/sigstore/sigstore-rs?rev=a817a40534af55eda5750a46104e6e9f40b31d7a#a817a40534af55eda5750a46104e6e9f40b31d7a"
+version = "0.3.0"
+source = "git+https://github.com/sigstore/sigstore-rs?rev=v0.3.0#e1c0ee24d1f6c2d406b810a676c62b2c9467743e"
 dependencies = [
  "async-trait",
  "base64",
