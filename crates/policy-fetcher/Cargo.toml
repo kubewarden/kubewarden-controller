@@ -1,6 +1,6 @@
 [package]
 name = "policy-fetcher"
-version = "0.7.4"
+version = "0.7.5"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
@@ -18,7 +18,7 @@ async-trait = "0.1.53"
 base64 = "0.13.0"
 directories = "4.0.1"
 lazy_static = "1.4.0"
-oci-distribution = { git = "https://github.com/krustlet/oci-distribution", rev = "0f717968093a5415f428503d741dedf24ea97948", default-features = false, features =  ["rustls-tls"] }
+oci-distribution = { version = "0.9.0", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.1.4"
 regex = "1.5.6"
 reqwest = { version = "0.11.10", default-features = false, features = ["rustls-tls"] }
@@ -27,7 +27,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.81"
 serde_yaml = "0.8.24"
 sha2 = "0.10.2"
-sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "a817a40534af55eda5750a46104e6e9f40b31d7a" }
+sigstore = { git = "https://github.com/sigstore/sigstore-rs", default-features = false, features = ["rustls-tls"], rev = "v0.3.0" }
 tracing = "0.1.34"
 url = { version = "2.2.2", features = ["serde"] }
 walkdir = "2"
