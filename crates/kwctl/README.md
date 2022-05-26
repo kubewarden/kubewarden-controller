@@ -287,7 +287,7 @@ Then start a new shell or run `source ~/.zshrc` once.
 
 kwctl binaries are signed using [Sigstore](https://docs.sigstore.dev/cosign/working_with_blobs/#signing-blobs-as-files). 
 When you download a [kwctl release](https://github.com/kubewarden/kwctl/releases/) each zip file contains two 
-files that can be used for verification: kwctl.sig and kwctl.pem.
+files that can be used for verification: `kwctl.sig` and `kwctl.pem`.
 
 In order to verify kwctl you need cosign installed, and then execute the following command:
 
