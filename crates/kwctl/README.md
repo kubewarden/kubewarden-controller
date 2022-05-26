@@ -282,3 +282,22 @@ rm ~/.zcompdump*
 ```
 
 Then start a new shell or run `source ~/.zshrc` once.
+
+## Verify kwctl binaries
+
+kwctl binaries are signed using [Sigstore](https://docs.sigstore.dev/cosign/working_with_blobs/#signing-blobs-as-files). 
+When you download a [kwctl release](https://github.com/kubewarden/kwctl/releases/) each zip file contains two 
+files that can be used for verification: `kwctl.sig` and `kwctl.pem`.
+
+In order to verify kwctl you need cosign installed, and then execute the following command:
+
+```
+COSIGN_EXPERIMENTAL=1 cosign verify-blob  --signature kwctl-linux-x86_64.sig --cert kwctl-linux-x86_64.pem kwctl-linux-x86_64
+```
+
+The output should be:
+
+```
+tlog entry verified with uuid: 7e5a4fac8f45cdddeafd6901af566b9576be307a06caa3fbc45f91da102214e0 index: 2435066
+Verified OK
+```
