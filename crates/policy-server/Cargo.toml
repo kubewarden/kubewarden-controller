@@ -1,6 +1,6 @@
 [package]
 name = "policy-server"
-version = "0.3.1"
+version = "0.3.2"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
@@ -12,7 +12,7 @@ edition = "2018"
 anyhow = "1.0"
 async-stream = "0.3.3"
 itertools = "0.10.3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.3.3" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.3.4" }
 lazy_static = "1.4.0"
 clap = { version = "3.0.15", features = [ "cargo", "env" ] }
 futures-util = "0.3.21"
