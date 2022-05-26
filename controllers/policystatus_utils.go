@@ -122,9 +122,6 @@ func isPolicyUniquelyReachable(ctx context.Context, apiReader client.Reader, pol
 		return false
 	}
 	for _, pod := range pods.Items {
-		if pod.DeletionTimestamp != nil {
-			continue
-		}
 		if pod.Labels[appsv1.DefaultDeploymentUniqueLabelKey] != podTemplateHash || !isPodReady(pod) {
 			return false
 		}
