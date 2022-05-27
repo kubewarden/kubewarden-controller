@@ -1,5 +1,4 @@
 pub extern crate burrego;
-extern crate kube;
 extern crate wasmparser;
 
 pub mod callback_handler;
@@ -24,5 +23,6 @@ pub mod validation_response;
 // consumers of these libraries along with the `policy-evaluator`, so
 // they can access these crates through the `policy-evaluator` itself,
 // streamlining their dependencies as well.
+pub use kube;
 pub use kubewarden_policy_sdk::metadata::ProtocolVersion;
 pub use policy_fetcher;
