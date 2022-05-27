@@ -1,7 +1,7 @@
 use crate::communication::KubePollerBootRequest;
 use anyhow::{anyhow, Result};
-use kube::Client;
 use policy_evaluator::cluster_context::ClusterContext;
+use policy_evaluator::kube::Client;
 use tokio::{
     sync::oneshot,
     time::{sleep, Duration},
