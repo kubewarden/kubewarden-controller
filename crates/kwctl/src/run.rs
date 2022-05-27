@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
-use kube::Client;
 use policy_evaluator::callback_handler::CallbackHandlerBuilder;
+use policy_evaluator::kube::Client;
 use policy_evaluator::{
     cluster_context::ClusterContext,
     constants::*,
