@@ -1,6 +1,6 @@
 [package]
 name = "policy-evaluator"
-version = "0.3.4"
+version = "0.3.5"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>"
@@ -22,10 +22,11 @@ cached = "0.30.0"
 dns-lookup = "1.0.8"
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
-kube = { version = "0.71.0", default-features = false, features = ["client", "rustls-tls"] }
-kubewarden-policy-sdk = "0.5.0"
+kube = { version = "0.73.0", default-features = false, features = ["client", "rustls-tls"] }
+k8s-openapi = { version = "0.15.0", default-features = false }
+kubewarden-policy-sdk = "0.5.1"
 lazy_static = "1.4.0"
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.5" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.6" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
@@ -33,13 +34,9 @@ tracing = "0.1"
 tracing-futures = "0.2"
 validator = { version = "0.15", features = ["derive"] }
 wasmparser = "0.85.0"
-# Given we are using a git repository, we need to point both
-# dependencies to the same tag. Otherwise, traits that are shared by
-# both crates are considered different. This can be removed once a new
-# version of `wapc` has been pushed to crates.io.
-wapc = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
-wasmtime-provider = { git = "https://github.com/wapc/wapc-rs", tag = "wapc@1.0.0-alpha.1" }
+wapc = "1.0.0"
+wasmtime-provider = "1.0.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0.1"
-k8s-openapi = { version = "0.14.0", default-features = false, features = ["v1_22"] }
+k8s-openapi = { version = "0.15.0", default-features = false, features = ["v1_24"] }
