@@ -1,5 +1,4 @@
 extern crate k8s_openapi;
-extern crate kube;
 extern crate policy_evaluator;
 
 use anyhow::Result;

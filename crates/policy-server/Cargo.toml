@@ -12,12 +12,11 @@ edition = "2018"
 anyhow = "1.0"
 async-stream = "0.3.3"
 itertools = "0.10.3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.3.4" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.3.5" }
 lazy_static = "1.4.0"
 clap = { version = "3.0.15", features = [ "cargo", "env" ] }
 futures-util = "0.3.21"
-kube = { version = "0.71.0", default-features = false, features = ["client", "rustls-tls"] }
-k8s-openapi = { version = "0.14.0", default-features = false, features = ["v1_22"] }
+k8s-openapi = { version = "0.15.0", default-features = false, features = ["v1_24"] }
 hyper = { version = "0.14", features = ["full"] }
 num_cpus = "1.13.1"
 opentelemetry = { version = "0.17", default-features = false, features = ["metrics", "trace", "rt-tokio", "serialize"] }
