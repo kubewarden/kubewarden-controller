@@ -49,6 +49,18 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
+        name: Install Golang
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.17'
+      -
+        name: Install the bom command
+        shell: bash
+        run: go install sigs.k8s.io/bom/cmd/bom@v0.2.2
+      -
+        name: Install Cosign
+        uses: sigstore/cosign-installer@main
+      -
         name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
@@ -84,6 +96,17 @@ jobs:
           outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
+      -
+        name: Create SBOM file
+        shell: bash
+        run: |
+          bom generate -n https://kubewarden.io/kubewarden.spdx -o kubewarden-controller.spdx .
+      -
+        name: Attach SBOM file in the container image
+        shell: bash
+        run: |
+          set -e
+          cosign attach sbom --sbom kubewarden-controller.spdx "ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}"
       -
         name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
