@@ -42,11 +42,13 @@ linters:
     - gocognit
     - godot
     - goerr113
+    - golint
     - gofumpt
     - gomnd
     - maligned
     - nlreturn
     - paralleltest
+    - scopelint
     - testpackage
     - wsl
     - lll # long lines
