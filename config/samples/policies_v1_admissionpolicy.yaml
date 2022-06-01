@@ -1,0 +1,7 @@
+apiVersion: policies.kubewarden.io/v1
+kind: AdmissionPolicy
+metadata:
+  name: admissionpolicy-sample
+spec:
+  # Add fields here
+  foo: bar
