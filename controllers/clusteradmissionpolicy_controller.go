@@ -22,7 +22,6 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 
 	"github.com/go-logr/logr"
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
@@ -67,7 +66,7 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha2.ClusterAdmissionPolicy{}).
+		For(&policiesv1.ClusterAdmissionPolicy{}).
 		Watches(
 			&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
@@ -77,7 +76,7 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 		// policy server creations even when the controller-manager is not
 		// present (so no pods end up being created)
 		Watches(
-			&source.Kind{Type: &v1alpha2.PolicyServer{}},
+			&source.Kind{Type: &policiesv1.PolicyServer{}},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPolicyServer),
 		).
 		Complete(r)
@@ -119,7 +118,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ob
 }
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicyServer(object client.Object) []reconcile.Request {
-	policyServer, ok := object.(*v1alpha2.PolicyServer)
+	policyServer, ok := object.(*policiesv1.PolicyServer)
 	if !ok {
 		return []reconcile.Request{}
 	}

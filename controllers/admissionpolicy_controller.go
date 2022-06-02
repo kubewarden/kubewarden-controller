@@ -22,7 +22,6 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 
 	"github.com/go-logr/logr"
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
@@ -77,7 +76,7 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// policy server creations even when the controller-manager is not
 		// present (so no pods end up being created)
 		Watches(
-			&source.Kind{Type: &v1alpha2.PolicyServer{}},
+			&source.Kind{Type: &policiesv1.PolicyServer{}},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPolicyServer),
 		).
 		Complete(r)
@@ -122,7 +121,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPod(object client.Ob
 }
 
 func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPolicyServer(object client.Object) []reconcile.Request {
-	policyServer, ok := object.(*v1alpha2.PolicyServer)
+	policyServer, ok := object.(*policiesv1.PolicyServer)
 	if !ok {
 		return []reconcile.Request{}
 	}

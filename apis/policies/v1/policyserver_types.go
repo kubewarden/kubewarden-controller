@@ -17,29 +17,105 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // PolicyServerSpec defines the desired state of PolicyServer
 type PolicyServerSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Docker image name.
+	Image string `json:"image"`
 
-	// Foo is an example field of PolicyServer. Edit policyserver_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Replicas is the number of desired replicas.
+	Replicas int32 `json:"replicas"`
+
+	// Annotations is an unstructured key value map stored with a resource that may be
+	// set by external tools to store and retrieve arbitrary metadata. They are not
+	// queryable and should be preserved when modifying objects.
+	// More info: http://kubernetes.io/docs/user-guide/annotations
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// List of environment variables to set in the container.
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// Name of the service account associated with the policy server.
+	// Namespace service account will be used if not specified.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// Name of ImagePullSecret secret in the same namespace, used for pulling
+	// policies from repositories.
+	// +optional
+	ImagePullSecret string `json:"imagePullSecret,omitempty"`
+
+	// List of insecure URIs to policy repositories.
+	// +optional
+	InsecureSources []string `json:"insecureSources,omitempty"`
+
+	// Key value map of registry URIs endpoints to a list of their associated
+	// PEM encoded certificate authorities that have to be used to verify the
+	// certificate used by the endpoint.
+	// +optional
+	SourceAuthorities map[string][]string `json:"sourceAuthorities,omitempty"`
+
+	// Name of VerificationConfig configmap in the same namespace, containing
+	// Sigstore verification configuration. The configuration must be under a
+	// key named verification-config in the Configmap.
+	// +optional
+	VerificationConfig string `json:"verificationConfig,omitempty"`
 }
+
+type ReconciliationTransitionReason string
+
+const (
+	// ReconciliationFailed represents a reconciliation failure
+	ReconciliationFailed ReconciliationTransitionReason = "ReconciliationFailed"
+	// ReconciliationSucceeded represents a reconciliation success
+	ReconciliationSucceeded ReconciliationTransitionReason = "ReconciliationSucceeded"
+)
+
+type PolicyServerConditionType string
+
+const (
+	// PolicyServerCASecretReconciled represents the condition of the
+	// Policy Server Secret reconciliation
+	PolicyServerCASecretReconciled PolicyServerConditionType = "CASecretReconciled"
+	// PolicyServerCARootSecretReconciled represents the condition of the
+	// Policy Server CA Root Secret reconciliation
+	PolicyServerCARootSecretReconciled PolicyServerConditionType = "CARootSecretReconciled"
+	// PolicyServerConfigMapReconciled represents the condition of the
+	// Policy Server ConfigMap reconciliation
+	PolicyServerConfigMapReconciled PolicyServerConditionType = "ConfigMapReconciled"
+	// PolicyServerDeploymentReconciled represents the condition of the
+	// Policy Server Deployment reconciliation
+	PolicyServerDeploymentReconciled PolicyServerConditionType = "DeploymentReconciled"
+	// PolicyServerServiceReconciled represents the condition of the
+	// Policy Server Service reconciliation
+	PolicyServerServiceReconciled PolicyServerConditionType = "ServiceReconciled"
+)
 
 // PolicyServerStatus defines the observed state of PolicyServer
 type PolicyServerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Conditions represent the observed conditions of the
+	// PolicyServer resource.  Known .status.conditions.types
+	// are: "PolicyServerSecretReconciled",
+	// "PolicyServerDeploymentReconciled" and
+	// "PolicyServerServiceReconciled"
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
+//+kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicas`,description="Policy Server replicas"
+//+kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`,description="Policy Server image"
+//+kubebuilder:storageversion
 
 // PolicyServer is the Schema for the policyservers API
 type PolicyServer struct {
@@ -48,6 +124,14 @@ type PolicyServer struct {
 
 	Spec   PolicyServerSpec   `json:"spec,omitempty"`
 	Status PolicyServerStatus `json:"status,omitempty"`
+}
+
+func (ps *PolicyServer) NameWithPrefix() string {
+	return "policy-server-" + ps.Name
+}
+
+func (ps *PolicyServer) AppLabel() string {
+	return "kubewarden-" + ps.NameWithPrefix()
 }
 
 //+kubebuilder:object:root=true

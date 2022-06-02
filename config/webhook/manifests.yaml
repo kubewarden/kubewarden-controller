@@ -57,13 +57,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-policies-kubewarden-io-v1alpha2-policyserver
+      path: /mutate-policies-kubewarden-io-v1-policyserver
   failurePolicy: Fail
   name: mpolicyserver.kb.io
   rules:
   - apiGroups:
     - policies.kubewarden.io
     apiVersions:
+    - v1
     - v1alpha2
     operations:
     - CREATE

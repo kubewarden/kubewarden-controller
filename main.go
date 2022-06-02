@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -38,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	controllers "github.com/kubewarden/kubewarden-controller/controllers"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
@@ -184,7 +184,7 @@ func main() {
 func webhooks() []webhookwrapper.WebhookRegistrator {
 	return []webhookwrapper.WebhookRegistrator{
 		{
-			Registrator: (&v1alpha2.PolicyServer{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.PolicyServer{}).SetupWebhookWithManager,
 			Name:        "mutate-policyservers.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -193,13 +193,13 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"policyservers"},
 					},
 				},
 			},
-			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-policyserver",
+			WebhookPath: "/mutate-policies-kubewarden-io-v1-policyserver",
 			Mutating:    true,
 		},
 		{
