@@ -20,8 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"
@@ -50,7 +50,7 @@ func SetPolicyConfigurationCondition(policyServerConfigMap *corev1.ConfigMap, po
 			apimeta.SetStatusCondition(
 				conditions,
 				metav1.Condition{
-					Type:    string(v1alpha2.PolicyServerConfigurationUpToDate),
+					Type:    string(policiesv1.PolicyServerConfigurationUpToDate),
 					Status:  metav1.ConditionTrue,
 					Reason:  "ConfigurationVersionMatch",
 					Message: "Configuration for this policy is up to date",
@@ -60,7 +60,7 @@ func SetPolicyConfigurationCondition(policyServerConfigMap *corev1.ConfigMap, po
 			apimeta.SetStatusCondition(
 				conditions,
 				metav1.Condition{
-					Type:    string(v1alpha2.PolicyServerConfigurationUpToDate),
+					Type:    string(policiesv1.PolicyServerConfigurationUpToDate),
 					Status:  metav1.ConditionFalse,
 					Reason:  "ConfigurationVersionMismatch",
 					Message: "Configuration for this policy is not up to date",
@@ -71,7 +71,7 @@ func SetPolicyConfigurationCondition(policyServerConfigMap *corev1.ConfigMap, po
 		apimeta.SetStatusCondition(
 			conditions,
 			metav1.Condition{
-				Type:    string(v1alpha2.PolicyServerConfigurationUpToDate),
+				Type:    string(policiesv1.PolicyServerConfigurationUpToDate),
 				Status:  metav1.ConditionFalse,
 				Reason:  "UnknownConfigurationVersion",
 				Message: fmt.Sprintf("Configuration version annotation (%s) in deployment %s is missing", constants.PolicyServerDeploymentConfigVersionAnnotation, policyServerDeployment.GetName()),

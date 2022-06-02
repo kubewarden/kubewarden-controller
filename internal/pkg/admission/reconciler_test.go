@@ -2,9 +2,9 @@ package admission
 
 import (
 	"context"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"testing"
 
-	kubewardenv1 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -28,9 +28,9 @@ func TestGetPolicies(t *testing.T) {
 		{
 			"with cluster and no namespaced policies",
 			[]client.Object{
-				&kubewardenv1.ClusterAdmissionPolicy{
-					Spec: kubewardenv1.ClusterAdmissionPolicySpec{
-						PolicySpec: kubewardenv1.PolicySpec{
+				&policiesv1.ClusterAdmissionPolicy{
+					Spec: policiesv1.ClusterAdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
 							PolicyServer: policyServer,
 						},
 					},
@@ -41,9 +41,9 @@ func TestGetPolicies(t *testing.T) {
 		{
 			"with namespaced and no cluster policies",
 			[]client.Object{
-				&kubewardenv1.AdmissionPolicy{
-					Spec: kubewardenv1.AdmissionPolicySpec{
-						PolicySpec: kubewardenv1.PolicySpec{
+				&policiesv1.AdmissionPolicy{
+					Spec: policiesv1.AdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
 							PolicyServer: policyServer,
 						},
 					},
@@ -54,16 +54,16 @@ func TestGetPolicies(t *testing.T) {
 		{
 			"with cluster and namespaced policies",
 			[]client.Object{
-				&kubewardenv1.ClusterAdmissionPolicy{
-					Spec: kubewardenv1.ClusterAdmissionPolicySpec{
-						PolicySpec: kubewardenv1.PolicySpec{
+				&policiesv1.ClusterAdmissionPolicy{
+					Spec: policiesv1.ClusterAdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
 							PolicyServer: policyServer,
 						},
 					},
 				},
-				&kubewardenv1.AdmissionPolicy{
-					Spec: kubewardenv1.AdmissionPolicySpec{
-						PolicySpec: kubewardenv1.PolicySpec{
+				&policiesv1.AdmissionPolicy{
+					Spec: policiesv1.AdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
 							PolicyServer: policyServer,
 						},
 					},
@@ -76,7 +76,7 @@ func TestGetPolicies(t *testing.T) {
 		ttest := test // ensure ttest is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
 			reconciler := newReconciler(ttest.policies)
-			policies, err := reconciler.GetPolicies(context.Background(), &kubewardenv1.PolicyServer{
+			policies, err := reconciler.GetPolicies(context.Background(), &policiesv1.PolicyServer{
 				ObjectMeta: metav1.ObjectMeta{Name: policyServer},
 			}, IncludeDeleted)
 			if err != nil {
@@ -91,7 +91,7 @@ func TestGetPolicies(t *testing.T) {
 
 func newReconciler(policies []client.Object) Reconciler {
 	customScheme := scheme.Scheme
-	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}, &kubewardenv1.ClusterAdmissionPolicy{}, &kubewardenv1.AdmissionPolicy{}, &kubewardenv1.ClusterAdmissionPolicyList{}, &kubewardenv1.AdmissionPolicyList{})
+	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
 	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(policies...).Build()
 
 	return Reconciler{

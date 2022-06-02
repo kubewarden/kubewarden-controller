@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/onsi/gomega/types"
 	"github.com/pkg/errors"
 
@@ -27,8 +28,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	kubewardenv1 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 )
 
 var (
@@ -37,26 +36,26 @@ var (
 			Name: "some-namespace",
 		},
 	}
-	templatePolicyServer = kubewardenv1.PolicyServer{
-		Spec: kubewardenv1.PolicyServerSpec{
+	templatePolicyServer = policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
 			Image:    "some-registry/some-policy-server:latest",
 			Replicas: 1,
 		},
 	}
-	templateClusterAdmissionPolicy = kubewardenv1.ClusterAdmissionPolicy{
-		Spec: kubewardenv1.ClusterAdmissionPolicySpec{
-			PolicySpec: kubewardenv1.PolicySpec{
+	templateClusterAdmissionPolicy = policiesv1.ClusterAdmissionPolicy{
+		Spec: policiesv1.ClusterAdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
 				Module: "registry://some-registry/some/module:latest",
 				Rules:  []admissionregistrationv1.RuleWithOperations{},
 			},
 		},
 	}
-	templateAdmissionPolicy = kubewardenv1.AdmissionPolicy{
+	templateAdmissionPolicy = policiesv1.AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: someNamespace.Name,
 		},
-		Spec: kubewardenv1.AdmissionPolicySpec{
-			PolicySpec: kubewardenv1.PolicySpec{
+		Spec: policiesv1.AdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
 				Module: "registry://some-registry/some/module:latest",
 				Rules:  []admissionregistrationv1.RuleWithOperations{},
 			},
@@ -80,7 +79,7 @@ func HaveSucceededOrAlreadyExisted() types.GomegaMatcher { //nolint:ireturn
 	)
 }
 
-func policyServer(name string) *kubewardenv1.PolicyServer {
+func policyServer(name string) *policiesv1.PolicyServer {
 	policyServer := templatePolicyServer.DeepCopy()
 	policyServer.Name = name
 	// By adding this finalizer automatically, we ensure that when
@@ -90,7 +89,7 @@ func policyServer(name string) *kubewardenv1.PolicyServer {
 	return policyServer
 }
 
-func admissionPolicyWithPolicyServerName(name, policyServerName string) *kubewardenv1.AdmissionPolicy {
+func admissionPolicyWithPolicyServerName(name, policyServerName string) *policiesv1.AdmissionPolicy {
 	admissionPolicy := templateAdmissionPolicy.DeepCopy()
 	admissionPolicy.Name = name
 	admissionPolicy.Namespace = someNamespace.Name
@@ -102,15 +101,15 @@ func admissionPolicyWithPolicyServerName(name, policyServerName string) *kubewar
 	return admissionPolicy
 }
 
-func getFreshAdmissionPolicy(namespace, name string) (*kubewardenv1.AdmissionPolicy, error) {
-	newAdmissionPolicy := kubewardenv1.AdmissionPolicy{}
+func getFreshAdmissionPolicy(namespace, name string) (*policiesv1.AdmissionPolicy, error) {
+	newAdmissionPolicy := policiesv1.AdmissionPolicy{}
 	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &newAdmissionPolicy); err != nil {
 		return nil, errors.Wrap(err, "could not find admission policy")
 	}
 	return &newAdmissionPolicy, nil
 }
 
-func clusterAdmissionPolicyWithPolicyServerName(name, policyServerName string) *kubewardenv1.ClusterAdmissionPolicy {
+func clusterAdmissionPolicyWithPolicyServerName(name, policyServerName string) *policiesv1.ClusterAdmissionPolicy {
 	clusterAdmissionPolicy := templateClusterAdmissionPolicy.DeepCopy()
 	clusterAdmissionPolicy.Name = name
 	clusterAdmissionPolicy.Spec.PolicyServer = policyServerName
@@ -121,16 +120,16 @@ func clusterAdmissionPolicyWithPolicyServerName(name, policyServerName string) *
 	return clusterAdmissionPolicy
 }
 
-func getFreshClusterAdmissionPolicy(name string) (*kubewardenv1.ClusterAdmissionPolicy, error) {
-	newClusterAdmissionPolicy := kubewardenv1.ClusterAdmissionPolicy{}
+func getFreshClusterAdmissionPolicy(name string) (*policiesv1.ClusterAdmissionPolicy, error) {
+	newClusterAdmissionPolicy := policiesv1.ClusterAdmissionPolicy{}
 	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &newClusterAdmissionPolicy); err != nil {
 		return nil, errors.Wrap(err, "could not find cluster admission policy")
 	}
 	return &newClusterAdmissionPolicy, nil
 }
 
-func getFreshPolicyServer(name string) (*kubewardenv1.PolicyServer, error) {
-	newPolicyServer := kubewardenv1.PolicyServer{}
+func getFreshPolicyServer(name string) (*policiesv1.PolicyServer, error) {
+	newPolicyServer := policiesv1.PolicyServer{}
 	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &newPolicyServer); err != nil {
 		return nil, errors.Wrap(err, "could not find policy server")
 	}

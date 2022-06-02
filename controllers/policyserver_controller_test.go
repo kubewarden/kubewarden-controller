@@ -18,13 +18,13 @@ package controllers
 
 import (
 	"fmt"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
@@ -48,7 +48,7 @@ var _ = Describe("Given a PolicyServer", func() {
 				policyServer, err := getFreshPolicyServer(policyServerName)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(policyServer).ToNot(
-					WithTransform(func(policyServer *v1alpha2.PolicyServer) []string {
+					WithTransform(func(policyServer *policiesv1.PolicyServer) []string {
 						return policyServer.Finalizers
 					}, ContainElement(constants.KubewardenFinalizer)),
 				)
@@ -71,11 +71,11 @@ var _ = Describe("Given a PolicyServer", func() {
 				).To(Succeed())
 			})
 			It("should delete assigned policies", func() {
-				Eventually(func(g Gomega) (*v1alpha2.ClusterAdmissionPolicy, error) {
+				Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
 					return getFreshClusterAdmissionPolicy(policyName)
 				}, 30*time.Second, 250*time.Millisecond).ShouldNot(
 					WithTransform(
-						func(clusterAdmissionPolicy *v1alpha2.ClusterAdmissionPolicy) *metav1.Time {
+						func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) *metav1.Time {
 							return clusterAdmissionPolicy.DeletionTimestamp
 						},
 						BeNil(),
@@ -83,10 +83,10 @@ var _ = Describe("Given a PolicyServer", func() {
 				)
 			})
 			It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
-				Eventually(func(g Gomega) (*v1alpha2.PolicyServer, error) {
+				Eventually(func(g Gomega) (*policiesv1.PolicyServer, error) {
 					return getFreshPolicyServer(policyServerName)
 				}, 30*time.Second, 250*time.Millisecond).ShouldNot(
-					WithTransform(func(policyServer *v1alpha2.PolicyServer) []string {
+					WithTransform(func(policyServer *policiesv1.PolicyServer) []string {
 						return policyServer.Finalizers
 					}, ContainElement(constants.KubewardenFinalizer)),
 				)

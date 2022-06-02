@@ -1,17 +1,17 @@
 package admission
 
 import (
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 func TestMetricsEnabled(t *testing.T) {
 	cases := []struct {
-		policyServer           v1alpha2.PolicyServer
+		policyServer           policiesv1.PolicyServer
 		expectedMetricsEnabled bool
 	}{
 		{
@@ -62,9 +62,9 @@ func TestMetricsEnabled(t *testing.T) {
 	}
 }
 
-func policyServerWithEnvVar(name, value string) v1alpha2.PolicyServer {
-	return v1alpha2.PolicyServer{
-		Spec: v1alpha2.PolicyServerSpec{
+func policyServerWithEnvVar(name, value string) policiesv1.PolicyServer {
+	return policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
 			Env: []corev1.EnvVar{
 				{
 					Name:  name,

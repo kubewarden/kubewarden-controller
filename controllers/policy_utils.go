@@ -22,7 +22,6 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"time"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
@@ -86,7 +85,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 	apimeta.SetStatusCondition(
 		&policy.GetStatus().Conditions,
 		metav1.Condition{
-			Type:    string(v1alpha2.PolicyActive),
+			Type:    string(policiesv1.PolicyActive),
 			Status:  metav1.ConditionFalse,
 			Reason:  "PolicyActive",
 			Message: "The policy webhook has not been created",
@@ -119,7 +118,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		apimeta.SetStatusCondition(
 			&policy.GetStatus().Conditions,
 			metav1.Condition{
-				Type:    string(v1alpha2.PolicyUniquelyReachable),
+				Type:    string(policiesv1.PolicyUniquelyReachable),
 				Status:  metav1.ConditionFalse,
 				Reason:  "LatestReplicaSetIsNotUniquelyReachable",
 				Message: "The latest replica set is not uniquely reachable",
@@ -131,7 +130,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 	apimeta.SetStatusCondition(
 		&policy.GetStatus().Conditions,
 		metav1.Condition{
-			Type:    string(v1alpha2.PolicyUniquelyReachable),
+			Type:    string(policiesv1.PolicyUniquelyReachable),
 			Status:  metav1.ConditionTrue,
 			Reason:  "LatestReplicaSetIsUniquelyReachable",
 			Message: "The latest replica set is uniquely reachable",
@@ -170,8 +169,8 @@ func setPolicyAsActive(policy policiesv1.Policy) {
 	)
 }
 
-func getPolicyServer(ctx context.Context, client client.Client, policy policiesv1.Policy) (*v1alpha2.PolicyServer, error) {
-	policyServer := v1alpha2.PolicyServer{}
+func getPolicyServer(ctx context.Context, client client.Client, policy policiesv1.Policy) (*policiesv1.PolicyServer, error) {
+	policyServer := policiesv1.PolicyServer{}
 	if err := client.Get(ctx, types.NamespacedName{Name: policy.GetPolicyServer()}, &policyServer); err != nil {
 		return nil, errors.Wrap(err, "could not get policy server")
 	}
