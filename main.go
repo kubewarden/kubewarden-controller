@@ -203,7 +203,7 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 			Mutating:    true,
 		},
 		{
-			Registrator: (&v1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
 			Name:        "mutate-clusteradmissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -222,7 +222,7 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 			Mutating:    true,
 		},
 		{
-			Registrator: (&v1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
 			Name:        "validate-clusteradmissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{

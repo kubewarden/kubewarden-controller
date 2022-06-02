@@ -18,9 +18,6 @@ package v1
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -84,30 +81,5 @@ func (r *AdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *AdmissionPolicy) ValidateDelete() error {
 	admissionpolicylog.Info("validate delete", "name", r.Name)
-	return nil
-}
-
-func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
-	if newPolicy.GetPolicyServer() != oldPolicy.GetPolicyServer() {
-		var errs field.ErrorList
-		p := field.NewPath("spec")
-		pp := p.Child("policyServer")
-		errs = append(errs, field.Forbidden(pp, "the field is immutable"))
-
-		return apierrors.NewInvalid(
-			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
-			newPolicy.GetName(), errs)
-	}
-	if newPolicy.GetPolicyMode() == "monitor" && oldPolicy.GetPolicyMode() == "protect" {
-		var errs field.ErrorList
-		p := field.NewPath("spec")
-		pp := p.Child("mode")
-		errs = append(errs, field.Forbidden(pp, "field cannot transition from protect to monitor. Recreate instead."))
-
-		return apierrors.NewInvalid(
-			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
-			newPolicy.GetName(), errs)
-	}
-
 	return nil
 }

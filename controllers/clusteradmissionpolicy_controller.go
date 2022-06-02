@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 
 	"github.com/go-logr/logr"
 	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
@@ -52,7 +53,7 @@ type ClusterAdmissionPolicyReconciler struct {
 
 // Reconcile reconciles admission policies
 func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var clusterAdmissionPolicy v1alpha2.ClusterAdmissionPolicy
+	var clusterAdmissionPolicy policiesv1.ClusterAdmissionPolicy
 	if err := r.Reconciler.APIReader.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil

@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1
 
 import (
 	"fmt"
+	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -92,7 +93,7 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 		errs = append(errs, field.Forbidden(pp, "the field is immutable"))
 
 		return apierrors.NewInvalid(
-			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
+			schema.GroupKind{Group: v1alpha2.GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
 			newPolicy.GetName(), errs)
 	}
 	if newPolicy.GetPolicyMode() == "monitor" && oldPolicy.GetPolicyMode() == "protect" {
@@ -102,7 +103,7 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 		errs = append(errs, field.Forbidden(pp, "field cannot transition from protect to monitor. Recreate instead."))
 
 		return apierrors.NewInvalid(
-			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
+			schema.GroupKind{Group: v1alpha2.GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
 			newPolicy.GetName(), errs)
 	}
 
