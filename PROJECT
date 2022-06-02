@@ -45,7 +45,7 @@ resources:
   version: v1
 - api:
     crdVersion: v1
-    namespaced: true
+    namespaced: false
   domain: kubewarden.io
   group: policies
   kind: ClusterAdmissionPolicy

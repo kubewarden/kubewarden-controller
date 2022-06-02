@@ -212,13 +212,13 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"clusteradmissionpolicies"},
 					},
 				},
 			},
-			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+			WebhookPath: "/mutate-policies-kubewarden-io-v1-clusteradmissionpolicy",
 			Mutating:    true,
 		},
 		{
@@ -231,13 +231,13 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"clusteradmissionpolicies"},
 					},
 				},
 			},
-			WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+			WebhookPath: "/validate-policies-kubewarden-io-v1-clusteradmissionpolicy",
 			Mutating:    false,
 		},
 		{
