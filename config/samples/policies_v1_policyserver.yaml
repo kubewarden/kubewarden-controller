@@ -1,7 +1,12 @@
 apiVersion: policies.kubewarden.io/v1
 kind: PolicyServer
 metadata:
-  name: policyserver-sample
+  name: default
 spec:
-  # Add fields here
-  foo: bar
+  image: ghcr.io/kubewarden/policy-server:latest
+  replicas: 1
+  env:
+    - name: KUBEWARDEN_LOG_LEVEL
+      value: info
+    - name: KUBEWARDEN_LOG_FMT
+      value: text

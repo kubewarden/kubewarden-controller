@@ -1,7 +1,20 @@
 apiVersion: policies.kubewarden.io/v1
 kind: AdmissionPolicy
 metadata:
-  name: admissionpolicy-sample
+  name: psp-capabilities
+  namespace: kubewarden
 spec:
-  # Add fields here
-  foo: bar
+  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.3
+  rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["pods"]
+      operations:
+        - CREATE
+        - UPDATE
+  mutating: true
+  settings:
+    allowed_capabilities:
+      - CHOWN
+    required_drop_capabilities:
+      - NET_ADMIN
