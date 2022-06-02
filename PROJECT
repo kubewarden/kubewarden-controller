@@ -45,10 +45,16 @@ resources:
   version: v1
 - api:
     crdVersion: v1
-    namespaced: false
   domain: kubewarden.io
   group: policies
   kind: ClusterAdmissionPolicy
+  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
+  version: v1
+- api:
+    crdVersion: v1
+  domain: kubewarden.io
+  group: policies
+  kind: PolicyServer
   path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
   version: v1
 version: "3"

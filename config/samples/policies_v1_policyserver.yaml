@@ -1,0 +1,7 @@
+apiVersion: policies.kubewarden.io/v1
+kind: PolicyServer
+metadata:
+  name: policyserver-sample
+spec:
+  # Add fields here
+  foo: bar
