@@ -3,12 +3,12 @@ package admission
 import (
 	"context"
 	"fmt"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"path/filepath"
 	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

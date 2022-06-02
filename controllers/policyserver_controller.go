@@ -19,10 +19,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"time"
 
 	"github.com/go-logr/logr"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/pkg/errors"

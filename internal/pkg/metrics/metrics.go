@@ -3,9 +3,9 @@ package metrics
 import (
 	"context"
 	"fmt"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"time"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"

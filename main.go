@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -39,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	controllers "github.com/kubewarden/kubewarden-controller/controllers"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"

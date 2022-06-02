@@ -1,12 +1,11 @@
 package admission
 
 import (
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
-
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestMetricsEnabled(t *testing.T) {

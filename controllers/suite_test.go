@@ -18,11 +18,11 @@ package controllers
 
 import (
 	"context"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"log"
 	"path/filepath"
 	"testing"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"

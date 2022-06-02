@@ -3,10 +3,10 @@ package admission
 import (
 	"context"
 	"fmt"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"path/filepath"
 	"reflect"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 

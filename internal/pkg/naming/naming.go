@@ -2,6 +2,7 @@ package naming
 
 import (
 	"fmt"
+
 	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
 

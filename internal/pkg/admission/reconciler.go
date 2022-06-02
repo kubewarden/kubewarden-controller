@@ -3,10 +3,10 @@ package admission
 import (
 	"context"
 	"fmt"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"strings"
 
 	"github.com/go-logr/logr"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
