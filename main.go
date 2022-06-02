@@ -18,7 +18,7 @@ package main
 
 import (
 	"flag"
-	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
