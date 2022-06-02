@@ -1,0 +1,7 @@
+apiVersion: policies.kubewarden.io/v1
+kind: ClusterAdmissionPolicy
+metadata:
+  name: clusteradmissionpolicy-sample
+spec:
+  # Add fields here
+  foo: bar
