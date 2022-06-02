@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"time"
 
 	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
@@ -38,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func setPolicyStatus(ctx context.Context, deploymentsNamespace string, apiReader client.Reader, policy v1alpha2.Policy) error {
+func setPolicyStatus(ctx context.Context, deploymentsNamespace string, apiReader client.Reader, policy policiesv1.Policy) error {
 	policyServerDeployment := appsv1.Deployment{}
 	if err := apiReader.Get(ctx, types.NamespacedName{Namespace: deploymentsNamespace, Name: naming.PolicyServerDeploymentNameForPolicyServerName(policy.GetPolicyServer())}, &policyServerDeployment); err != nil {
 		return errors.Wrap(err, "could not get policy server deployment")
@@ -52,12 +53,12 @@ func setPolicyStatus(ctx context.Context, deploymentsNamespace string, apiReader
 	policyMap, err := getPolicyMapFromConfigMap(&policyServerConfigMap)
 	if err == nil {
 		if policyConfig, ok := policyMap[policy.GetUniqueName()]; ok {
-			policy.SetPolicyModeStatus(v1alpha2.PolicyModeStatus(policyConfig.PolicyMode))
+			policy.SetPolicyModeStatus(policiesv1.PolicyModeStatus(policyConfig.PolicyMode))
 		} else {
-			policy.SetPolicyModeStatus(v1alpha2.PolicyModeStatusUnknown)
+			policy.SetPolicyModeStatus(policiesv1.PolicyModeStatusUnknown)
 		}
 	} else {
-		policy.SetPolicyModeStatus(v1alpha2.PolicyModeStatusUnknown)
+		policy.SetPolicyModeStatus(policiesv1.PolicyModeStatusUnknown)
 	}
 
 	policyStatus := policy.GetStatus()
@@ -66,7 +67,7 @@ func setPolicyStatus(ctx context.Context, deploymentsNamespace string, apiReader
 	return nil
 }
 
-func startReconciling(ctx context.Context, client client.Client, reconciler admission.Reconciler, policy v1alpha2.Policy) (ctrl.Result, error) {
+func startReconciling(ctx context.Context, client client.Client, reconciler admission.Reconciler, policy policiesv1.Policy) (ctrl.Result, error) {
 	if policy.GetDeletionTimestamp() != nil {
 		return reconcilePolicyDeletion(ctx, client, policy)
 	}
@@ -81,7 +82,7 @@ func startReconciling(ctx context.Context, client client.Client, reconciler admi
 	return reconcileResult, reconcileErr
 }
 
-func reconcilePolicy(ctx context.Context, client client.Client, reconciler admission.Reconciler, policy v1alpha2.Policy) (ctrl.Result, error) {
+func reconcilePolicy(ctx context.Context, client client.Client, reconciler admission.Reconciler, policy policiesv1.Policy) (ctrl.Result, error) {
 	apimeta.SetStatusCondition(
 		&policy.GetStatus().Conditions,
 		metav1.Condition{
@@ -92,18 +93,18 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		},
 	)
 	if policy.GetPolicyServer() == "" {
-		policy.SetStatus(v1alpha2.PolicyStatusUnscheduled)
+		policy.SetStatus(policiesv1.PolicyStatusUnscheduled)
 		return ctrl.Result{}, nil
 	}
 
 	policyServer, err := getPolicyServer(ctx, client, policy)
 	if err != nil {
-		policy.SetStatus(v1alpha2.PolicyStatusScheduled)
+		policy.SetStatus(policiesv1.PolicyStatusScheduled)
 		//lint:ignore nilerr set status to scheduled if policyServer can't be retrieved, and stop reconciling
 		return ctrl.Result{}, nil
 	}
-	if policy.GetStatus().PolicyStatus != v1alpha2.PolicyStatusActive {
-		policy.SetStatus(v1alpha2.PolicyStatusPending)
+	if policy.GetStatus().PolicyStatus != policiesv1.PolicyStatusActive {
+		policy.SetStatus(policiesv1.PolicyStatusPending)
 	}
 
 	policyServerDeployment := appsv1.Deployment{}
@@ -156,12 +157,12 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 	return ctrl.Result{}, nil
 }
 
-func setPolicyAsActive(policy v1alpha2.Policy) {
-	policy.SetStatus(v1alpha2.PolicyStatusActive)
+func setPolicyAsActive(policy policiesv1.Policy) {
+	policy.SetStatus(policiesv1.PolicyStatusActive)
 	apimeta.SetStatusCondition(
 		&policy.GetStatus().Conditions,
 		metav1.Condition{
-			Type:    string(v1alpha2.PolicyActive),
+			Type:    string(policiesv1.PolicyActive),
 			Status:  metav1.ConditionTrue,
 			Reason:  "PolicyActive",
 			Message: "The policy webhook has been created",
@@ -169,7 +170,7 @@ func setPolicyAsActive(policy v1alpha2.Policy) {
 	)
 }
 
-func getPolicyServer(ctx context.Context, client client.Client, policy v1alpha2.Policy) (*v1alpha2.PolicyServer, error) {
+func getPolicyServer(ctx context.Context, client client.Client, policy policiesv1.Policy) (*v1alpha2.PolicyServer, error) {
 	policyServer := v1alpha2.PolicyServer{}
 	if err := client.Get(ctx, types.NamespacedName{Name: policy.GetPolicyServer()}, &policyServer); err != nil {
 		return nil, errors.Wrap(err, "could not get policy server")
@@ -177,7 +178,7 @@ func getPolicyServer(ctx context.Context, client client.Client, policy v1alpha2.
 	return &policyServer, nil
 }
 
-func reconcilePolicyDeletion(ctx context.Context, client client.Client, policy v1alpha2.Policy) (ctrl.Result, error) {
+func reconcilePolicyDeletion(ctx context.Context, client client.Client, policy policiesv1.Policy) (ctrl.Result, error) {
 	if policy.IsMutating() {
 		if err := reconcileMutatingWebhook(ctx, client, policy); err != nil {
 			return ctrl.Result{}, err
@@ -194,7 +195,7 @@ func reconcilePolicyDeletion(ctx context.Context, client client.Client, policy v
 	return ctrl.Result{}, nil
 }
 
-func reconcileValidatingWebhook(ctx context.Context, client client.Client, admissionPolicy v1alpha2.Policy) error {
+func reconcileValidatingWebhook(ctx context.Context, client client.Client, admissionPolicy policiesv1.Policy) error {
 	webhook := admissionregistrationv1.ValidatingWebhookConfiguration{}
 	err := client.Get(ctx, types.NamespacedName{Name: admissionPolicy.GetUniqueName()}, &webhook)
 	if err == nil {
@@ -207,7 +208,7 @@ func reconcileValidatingWebhook(ctx context.Context, client client.Client, admis
 	return nil
 }
 
-func reconcileMutatingWebhook(ctx context.Context, client client.Client, admissionPolicy v1alpha2.Policy) error {
+func reconcileMutatingWebhook(ctx context.Context, client client.Client, admissionPolicy policiesv1.Policy) error {
 	webhook := admissionregistrationv1.MutatingWebhookConfiguration{}
 	err := client.Get(ctx, types.NamespacedName{Name: admissionPolicy.GetUniqueName()}, &webhook)
 	if err == nil {

@@ -44,7 +44,7 @@ func (r *AdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-admissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1alpha2,name=madmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-admissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1;v1alpha2,name=madmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &AdmissionPolicy{}
 
@@ -59,7 +59,7 @@ func (r *AdmissionPolicy) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1alpha2-admissionpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1alpha2,name=vadmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-admissionpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1alpha2;v1,name=vadmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &AdmissionPolicy{}
 

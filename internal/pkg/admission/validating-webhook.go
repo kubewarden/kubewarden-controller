@@ -3,6 +3,7 @@ package admission
 import (
 	"context"
 	"fmt"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"path/filepath"
 	"reflect"
 
@@ -13,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
@@ -21,7 +21,7 @@ import (
 
 func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 	ctx context.Context,
-	policy v1alpha2.Policy,
+	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerNameWithPrefix string) error {
 	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerNameWithPrefix)
@@ -36,7 +36,7 @@ func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 }
 
 func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
-	policy v1alpha2.Policy,
+	policy policiesv1.Policy,
 	newWebhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
 	var originalWebhook admissionregistrationv1.ValidatingWebhookConfiguration
 
@@ -60,7 +60,7 @@ func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 }
 
 func (r *Reconciler) validatingWebhookConfiguration(
-	policy v1alpha2.Policy,
+	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", policy.GetUniqueName())

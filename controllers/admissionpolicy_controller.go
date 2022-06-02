@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 
 	"github.com/go-logr/logr"
 	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
@@ -52,7 +53,7 @@ type AdmissionPolicyReconciler struct {
 
 // Reconcile reconciles admission policies
 func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var admissionPolicy v1alpha2.AdmissionPolicy
+	var admissionPolicy policiesv1.AdmissionPolicy
 	if err := r.Reconciler.APIReader.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -66,7 +67,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha2.AdmissionPolicy{}).
+		For(&policiesv1.AdmissionPolicy{}).
 		Watches(
 			&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPod),

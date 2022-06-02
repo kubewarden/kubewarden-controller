@@ -13,34 +13,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-policies-kubewarden-io-v1alpha2-admissionpolicy
+      path: /mutate-policies-kubewarden-io-v1-admissionpolicy
   failurePolicy: Fail
   name: madmissionpolicy.kb.io
   rules:
   - apiGroups:
     - policies.kubewarden.io
     apiVersions:
-    - v1alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - admissionpolicies
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-policies-kubewarden-io-v1alpha2-admissionpolicy
-  failurePolicy: Fail
-  name: madmissionpolicy.kb.io
-  rules:
-  - apiGroups:
-    - policies.kubewarden.io
-    apiVersions:
+    - v1
     - v1alpha2
     operations:
     - CREATE
@@ -105,7 +85,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-policies-kubewarden-io-v1alpha2-admissionpolicy
+      path: /validate-policies-kubewarden-io-v1-admissionpolicy
   failurePolicy: Fail
   name: vadmissionpolicy.kb.io
   rules:
@@ -113,27 +93,7 @@ webhooks:
     - policies.kubewarden.io
     apiVersions:
     - v1alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - admissionpolicies
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-policies-kubewarden-io-v1alpha2-admissionpolicy
-  failurePolicy: Fail
-  name: vadmissionpolicy.kb.io
-  rules:
-  - apiGroups:
-    - policies.kubewarden.io
-    apiVersions:
-    - v1alpha2
+    - v1
     operations:
     - CREATE
     - UPDATE
