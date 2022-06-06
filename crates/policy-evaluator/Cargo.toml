@@ -22,7 +22,7 @@ cached = "0.30.0"
 dns-lookup = "1.0.8"
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
-kube = { version = "0.73.0", default-features = false, features = ["client", "rustls-tls"] }
+kube = { version = "0.73.1", default-features = false, features = ["client", "rustls-tls"] }
 k8s-openapi = { version = "0.15.0", default-features = false }
 kubewarden-policy-sdk = "0.5.1"
 lazy_static = "1.4.0"
