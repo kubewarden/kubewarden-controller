@@ -14,6 +14,7 @@ pub struct PolicyEvaluatorBuilder {
     execution_mode: Option<PolicyExecutionMode>,
     settings: Option<serde_json::Map<String, serde_json::Value>>,
     callback_channel: Option<Sender<CallbackRequest>>,
+    wasmtime_cache: bool,
 }
 
 impl PolicyEvaluatorBuilder {
@@ -47,6 +48,12 @@ impl PolicyEvaluatorBuilder {
     /// Sets the policy execution mode
     pub fn execution_mode(mut self, mode: PolicyExecutionMode) -> PolicyEvaluatorBuilder {
         self.execution_mode = Some(mode);
+        self
+    }
+
+    /// Enable Wasmtime cache feature
+    pub fn enable_wasmtime_cache(mut self) -> PolicyEvaluatorBuilder {
+        self.wasmtime_cache = true;
         self
     }
 
@@ -101,6 +108,7 @@ impl PolicyEvaluatorBuilder {
             mode,
             self.settings,
             self.callback_channel,
+            self.wasmtime_cache,
         )
     }
 }

@@ -119,10 +119,22 @@ impl PolicyEvaluator {
         policy_execution_mode: PolicyExecutionMode,
         settings: Option<serde_json::Map<String, serde_json::Value>>,
         callback_channel: Option<mpsc::Sender<CallbackRequest>>,
+        enable_wasmtime_cache: bool,
     ) -> Result<PolicyEvaluator> {
         let (policy, runtime) = match policy_execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
-                let engine = WasmtimeEngineProvider::new(&policy_contents, None)?;
+                let mut wasmtime_config = wasmtime::Config::new();
+                if enable_wasmtime_cache {
+                    wasmtime_config.cache_config_load_default()?;
+                }
+
+                let wasmtime_engine = wasmtime::Engine::new(&wasmtime_config)?;
+
+                let engine = WasmtimeEngineProvider::new_with_engine(
+                    &policy_contents,
+                    wasmtime_engine,
+                    None,
+                )?;
                 let wapc_host = WapcHost::new(Box::new(engine), Some(Box::new(wapc_callback)))?;
                 let policy = PolicyEvaluator::from_contents_internal(
                     id,
