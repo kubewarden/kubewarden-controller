@@ -389,6 +389,11 @@ pub fn build_cli() -> Command<'static> {
                     .help("The runtime to use to execute this policy")
                 )
                 .arg(
+                    Arg::new("disable-wasmtime-cache")
+                    .long("disable-wasmtime-cache")
+                    .help("Turn off usage of wasmtime cache")
+                )
+                .arg(
                     Arg::new("uri")
                         .required(true)
                         .index(1)

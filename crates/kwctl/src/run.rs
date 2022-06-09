@@ -29,6 +29,7 @@ pub(crate) async fn pull_and_run(
     settings: Option<String>,
     verified_manifest_digest: &Option<String>,
     fulcio_and_rekor_data: &FulcioAndRekorData,
+    enable_wasmtime_cache: bool,
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
 
@@ -94,12 +95,15 @@ pub(crate) async fn pull_and_run(
 
     let callback_sender_channel = callback_handler.sender_channel();
 
-    let mut policy_evaluator = PolicyEvaluatorBuilder::new(policy_id)
+    let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new(policy_id)
         .policy_file(&policy.local_path)?
         .execution_mode(execution_mode)
         .settings(policy_settings)
-        .callback_channel(callback_sender_channel)
-        .build()?;
+        .callback_channel(callback_sender_channel);
+    if enable_wasmtime_cache {
+        policy_evaluator_builder = policy_evaluator_builder.enable_wasmtime_cache();
+    }
+    let mut policy_evaluator = policy_evaluator_builder.build()?;
 
     let req_obj = match request {
         serde_json::Value::Object(ref object) => {
