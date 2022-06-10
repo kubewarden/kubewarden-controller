@@ -282,6 +282,8 @@ async fn main() -> Result<()> {
                     );
                 }
 
+                let enable_wasmtime_cache = !matches.is_present("disable-wasmtime-cache");
+
                 run::pull_and_run(
                     uri,
                     execution_mode,
@@ -291,6 +293,7 @@ async fn main() -> Result<()> {
                     settings,
                     &verified_manifest_digest,
                     &fulcio_and_rekor_data,
+                    enable_wasmtime_cache,
                 )
                 .await?;
             }
