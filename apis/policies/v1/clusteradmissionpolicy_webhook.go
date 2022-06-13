@@ -46,7 +46,7 @@ func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error
 	return nil
 }
 
-//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-clusteradmissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create;update,versions=v1;v1alpha2,name=mclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-clusteradmissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create;update,versions=v1,name=mclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
 
