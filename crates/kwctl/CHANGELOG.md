@@ -2,11 +2,55 @@
 ## [Unreleased]
 
 
+<a name="v1.0.0-rc1"></a>
+## [v1.0.0-rc1] - 2022-06-14
+### Pull Requests
+- Merge pull request [#237](https://github.com/kubewarden/kwctl/issues/237) from kubewarden/dependabot/cargo/wasmparser-0.86.0
+- Merge pull request [#238](https://github.com/kubewarden/kwctl/issues/238) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#236](https://github.com/kubewarden/kwctl/issues/236) from flavio/enable-wasmtime-cache
+- Merge pull request [#235](https://github.com/kubewarden/kwctl/issues/235) from kubewarden/renovate/lock-file-maintenance
+
+
+<a name="v0.3.5"></a>
+## [v0.3.5] - 2022-05-31
+### Pull Requests
+- Merge pull request [#234](https://github.com/kubewarden/kwctl/issues/234) from kubewarden/renovate/lock-file-maintenance
+
+
+<a name="v0.3.4"></a>
+## [v0.3.4] - 2022-05-27
+### Features
+- Explain how to verify kwctl binaries
+
+### Pull Requests
+- Merge pull request [#233](https://github.com/kubewarden/kwctl/issues/233) from flavio/release-0.3.4
+- Merge pull request [#230](https://github.com/kubewarden/kwctl/issues/230) from raulcabello/sign
+
+
+<a name="v0.3.3"></a>
+## [v0.3.3] - 2022-05-25
+### Bug Fixes
+- **deps:** update all patchlevel dependencies
+
+### Features
+- sign kwctl binary
+
+### Pull Requests
+- Merge pull request [#232](https://github.com/kubewarden/kwctl/issues/232) from flavio/update-deps
+- Merge pull request [#228](https://github.com/kubewarden/kwctl/issues/228) from raulcabello/sign
+- Merge pull request [#221](https://github.com/kubewarden/kwctl/issues/221) from kubewarden/dependabot/cargo/rstest-0.13.0
+- Merge pull request [#224](https://github.com/kubewarden/kwctl/issues/224) from kubewarden/dependabot/cargo/wasmparser-0.85.0
+- Merge pull request [#220](https://github.com/kubewarden/kwctl/issues/220) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#225](https://github.com/kubewarden/kwctl/issues/225) from kubewarden/renovate/all-patch
+- Merge pull request [#212](https://github.com/kubewarden/kwctl/issues/212) from flavio/support-wapc-dns-lookup
+- Merge pull request [#217](https://github.com/kubewarden/kwctl/issues/217) from kubewarden/renovate/lock-file-maintenance
+
+
 <a name="v0.3.2"></a>
 ## [v0.3.2] - 2022-05-03
 ### Bug Fixes
-- Report the correct version number when doing `kwctl --version`
-- **deps:** minor updates
+- use right version inside of Cargo.toml
+- **deps:** update rust crate clap_complete to 3.1.3
 
 ### Pull Requests
 - Merge pull request [#213](https://github.com/kubewarden/kwctl/issues/213) from kubewarden/renovate/all-patch
@@ -269,7 +313,11 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.0.0-rc1...HEAD
+[v1.0.0-rc1]: https://github.com/kubewarden/kwctl/compare/v0.3.5...v1.0.0-rc1
+[v0.3.5]: https://github.com/kubewarden/kwctl/compare/v0.3.4...v0.3.5
+[v0.3.4]: https://github.com/kubewarden/kwctl/compare/v0.3.3...v0.3.4
+[v0.3.3]: https://github.com/kubewarden/kwctl/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/kubewarden/kwctl/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/kubewarden/kwctl/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/kubewarden/kwctl/compare/v0.3.0-rc1...v0.3.0
