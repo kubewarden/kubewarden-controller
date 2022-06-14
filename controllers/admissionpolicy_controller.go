@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
@@ -52,7 +52,7 @@ type AdmissionPolicyReconciler struct {
 
 // Reconcile reconciles admission policies
 func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var admissionPolicy v1alpha2.AdmissionPolicy
+	var admissionPolicy policiesv1.AdmissionPolicy
 	if err := r.Reconciler.APIReader.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -66,7 +66,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha2.AdmissionPolicy{}).
+		For(&policiesv1.AdmissionPolicy{}).
 		Watches(
 			&source.Kind{Type: &corev1.Pod{}},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPod),
@@ -76,7 +76,7 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// policy server creations even when the controller-manager is not
 		// present (so no pods end up being created)
 		Watches(
-			&source.Kind{Type: &v1alpha2.PolicyServer{}},
+			&source.Kind{Type: &policiesv1.PolicyServer{}},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPolicyServer),
 		).
 		Complete(r)
@@ -121,7 +121,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPod(object client.Ob
 }
 
 func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPolicyServer(object client.Object) []reconcile.Request {
-	policyServer, ok := object.(*v1alpha2.PolicyServer)
+	policyServer, ok := object.(*policiesv1.PolicyServer)
 	if !ok {
 		return []reconcile.Request{}
 	}

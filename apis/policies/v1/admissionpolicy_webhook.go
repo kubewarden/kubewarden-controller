@@ -14,19 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1
 
 import (
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // log is for logging in this package.
@@ -42,7 +41,7 @@ func (r *AdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1alpha2-admissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1alpha2,name=madmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-admissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1;v1alpha2,name=madmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &AdmissionPolicy{}
 
@@ -57,7 +56,7 @@ func (r *AdmissionPolicy) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1alpha2-admissionpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1alpha2,name=vadmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-admissionpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;update,versions=v1alpha2;v1,name=vadmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &AdmissionPolicy{}
 

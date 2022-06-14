@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -49,7 +49,7 @@ func New(openTelemetryEndpoint string) error {
 	return nil
 }
 
-func RecordPolicyCount(policy v1alpha2.Policy) error {
+func RecordPolicyCount(policy policiesv1.Policy) error {
 	failurePolicy := ""
 	if policy.GetFailurePolicy() != nil {
 		failurePolicy = string(*policy.GetFailurePolicy())

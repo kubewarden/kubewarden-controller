@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,8 +36,8 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 		{"same nil annotation", createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil), createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil), false},
 	}
 
-	policyServer := &v1alpha2.PolicyServer{
-		Spec: v1alpha2.PolicyServerSpec{
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
 			Image: "image",
 		},
 	}
@@ -149,8 +149,8 @@ func insertContainer(deployment *appsv1.Deployment) {
 }
 
 func TestGetPolicyServeImageFromDeployment(t *testing.T) {
-	policyServer := v1alpha2.PolicyServer{
-		Spec: v1alpha2.PolicyServerSpec{
+	policyServer := policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
 			Image: "image",
 		},
 	}
@@ -168,8 +168,8 @@ func TestGetPolicyServeImageFromDeployment(t *testing.T) {
 }
 
 func TestIfPolicyServerImageChanged(t *testing.T) {
-	policyServer := &v1alpha2.PolicyServer{
-		Spec: v1alpha2.PolicyServerSpec{
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
 			Image: "image",
 		},
 	}

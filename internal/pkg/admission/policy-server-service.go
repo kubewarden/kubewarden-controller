@@ -6,8 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
-
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +34,7 @@ func init() {
 	}
 }
 
-func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policyServer *v1alpha2.PolicyServer) error {
+func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	err := r.Client.Create(ctx, r.service(policyServer))
 	if err == nil || apierrors.IsAlreadyExists(err) {
 		return nil
@@ -43,7 +42,7 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policySer
 	return fmt.Errorf("cannot reconcile policy-server service: %w", err)
 }
 
-func (r *Reconciler) service(policyServer *v1alpha2.PolicyServer) *corev1.Service {
+func (r *Reconciler) service(policyServer *policiesv1.PolicyServer) *corev1.Service {
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
@@ -81,7 +80,7 @@ func (r *Reconciler) service(policyServer *v1alpha2.PolicyServer) *corev1.Servic
 
 // If an environment variable `KUBEWARDEN_ENABLE_METRICS` is exported -- regardless of its value --,
 // metrics are considered enabled.
-func metricsEnabled(policyServer *v1alpha2.PolicyServer) bool {
+func metricsEnabled(policyServer *policiesv1.PolicyServer) bool {
 	for _, envVar := range policyServer.Spec.Env {
 		if envVar.Name == constants.PolicyServerEnableMetricsEnvVar {
 			return true

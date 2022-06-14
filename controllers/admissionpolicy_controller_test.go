@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"time"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 )
 
 var _ = Describe("Given an AdmissionPolicy", func() {
@@ -45,15 +44,15 @@ var _ = Describe("Given an AdmissionPolicy", func() {
 						k8sClient.Create(ctx, admissionPolicyWithPolicyServerName(policyName, "")),
 					).To(HaveSucceededOrAlreadyExisted())
 				})
-				It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusUnscheduled), func() {
-					Eventually(func(g Gomega) (*v1alpha2.AdmissionPolicy, error) {
+				It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusUnscheduled), func() {
+					Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
 						return getFreshAdmissionPolicy(policyNamespace, policyName)
 					}).Should(
 						WithTransform(
-							func(admissionPolicy *v1alpha2.AdmissionPolicy) v1alpha2.PolicyStatusEnum {
+							func(admissionPolicy *policiesv1.AdmissionPolicy) policiesv1.PolicyStatusEnum {
 								return admissionPolicy.Status.PolicyStatus
 							},
-							Equal(v1alpha2.PolicyStatusUnscheduled),
+							Equal(policiesv1.PolicyStatusUnscheduled),
 						),
 					)
 				})
@@ -69,15 +68,15 @@ var _ = Describe("Given an AdmissionPolicy", func() {
 						k8sClient.Create(ctx, admissionPolicyWithPolicyServerName(policyName, policyServerName)),
 					).To(HaveSucceededOrAlreadyExisted())
 				})
-				It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusScheduled), func() {
-					Eventually(func(g Gomega) (*v1alpha2.AdmissionPolicy, error) {
+				It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusScheduled), func() {
+					Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
 						return getFreshAdmissionPolicy(policyNamespace, policyName)
 					}).Should(
 						WithTransform(
-							func(admissionPolicy *v1alpha2.AdmissionPolicy) v1alpha2.PolicyStatusEnum {
+							func(admissionPolicy *policiesv1.AdmissionPolicy) policiesv1.PolicyStatusEnum {
 								return admissionPolicy.Status.PolicyStatus
 							},
-							Equal(v1alpha2.PolicyStatusScheduled),
+							Equal(policiesv1.PolicyStatusScheduled),
 						),
 					)
 				})
@@ -87,15 +86,15 @@ var _ = Describe("Given an AdmissionPolicy", func() {
 							k8sClient.Create(ctx, policyServer(policyServerName)),
 						).To(HaveSucceededOrAlreadyExisted())
 					})
-					It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusPending), func() {
-						Eventually(func(g Gomega) (*v1alpha2.AdmissionPolicy, error) {
+					It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusPending), func() {
+						Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
 							return getFreshAdmissionPolicy(policyNamespace, policyName)
 						}, 30*time.Second, 250*time.Millisecond).Should(
 							WithTransform(
-								func(admissionPolicy *v1alpha2.AdmissionPolicy) v1alpha2.PolicyStatusEnum {
+								func(admissionPolicy *policiesv1.AdmissionPolicy) policiesv1.PolicyStatusEnum {
 									return admissionPolicy.Status.PolicyStatus
 								},
-								Equal(v1alpha2.PolicyStatusPending),
+								Equal(policiesv1.PolicyStatusPending),
 							),
 						)
 					})

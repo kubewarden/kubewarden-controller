@@ -37,4 +37,28 @@ resources:
   kind: AdmissionPolicy
   path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2
   version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: kubewarden.io
+  group: policies
+  kind: AdmissionPolicy
+  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: false
+  domain: kubewarden.io
+  group: policies
+  kind: ClusterAdmissionPolicy
+  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: false
+  domain: kubewarden.io
+  group: policies
+  kind: PolicyServer
+  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
+  version: v1
 version: "3"

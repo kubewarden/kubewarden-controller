@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,7 +39,7 @@ const (
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
 // component
-func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *v1alpha2.PolicyServer) error {
+func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
@@ -64,7 +64,7 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 	return r.updatePolicyServerDeployment(ctx, policyServer, deployment)
 }
 
-func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *v1alpha2.PolicyServer) error {
+func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
 	unstructuredObj := &unstructured.Unstructured{}
@@ -93,7 +93,7 @@ func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, pol
 	return nil
 }
 
-func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *v1alpha2.PolicyServer, newDeployment *appsv1.Deployment) error {
+func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer, newDeployment *appsv1.Deployment) error {
 	originalDeployment := &appsv1.Deployment{}
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Namespace: r.DeploymentsNamespace,
@@ -122,7 +122,7 @@ func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policySer
 	return nil
 }
 
-func getPolicyServerImageFromDeployment(policyServer *v1alpha2.PolicyServer, deployment *appsv1.Deployment) (string, error) {
+func getPolicyServerImageFromDeployment(policyServer *policiesv1.PolicyServer, deployment *appsv1.Deployment) (string, error) {
 	for containerIndex := range deployment.Spec.Template.Spec.Containers {
 		container := &deployment.Spec.Template.Spec.Containers[containerIndex]
 		if container.Name == policyServer.NameWithPrefix() {
@@ -132,7 +132,7 @@ func getPolicyServerImageFromDeployment(policyServer *v1alpha2.PolicyServer, dep
 	return "", fmt.Errorf("cannot find policy server container")
 }
 
-func isPolicyServerImageChanged(policyServer *v1alpha2.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
+func isPolicyServerImageChanged(policyServer *policiesv1.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
 	var oldImage, newImage string
 	var err error
 	if oldImage, err = getPolicyServerImageFromDeployment(policyServer, originalDeployment); err != nil {
@@ -144,7 +144,7 @@ func isPolicyServerImageChanged(policyServer *v1alpha2.PolicyServer, originalDep
 	return oldImage != newImage, nil
 }
 
-func shouldUpdatePolicyServerDeployment(policyServer *v1alpha2.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
+func shouldUpdatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
 	containerImageChanged, err := isPolicyServerImageChanged(policyServer, originalDeployment, newDeployment)
 	if err != nil {
 		return false, err
@@ -170,7 +170,7 @@ func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, n
 	return reflect.DeepEqual(annotationsWithoutRestart, newDeployment.Spec.Template.Annotations)
 }
 
-func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployment *appsv1.Deployment, policyServer *v1alpha2.PolicyServer) {
+func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer) {
 	if policyServer.Spec.VerificationConfig != "" {
 		policyServerDeployment.Spec.Template.Spec.Volumes = append(
 			policyServerDeployment.Spec.Template.Spec.Volumes,
@@ -222,7 +222,7 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 	}
 }
 
-func (r *Reconciler) deployment(configMapVersion string, policyServer *v1alpha2.PolicyServer) *appsv1.Deployment {
+func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1.PolicyServer) *appsv1.Deployment {
 	admissionContainer := corev1.Container{
 		Name:  policyServer.NameWithPrefix(),
 		Image: policyServer.Spec.Image,

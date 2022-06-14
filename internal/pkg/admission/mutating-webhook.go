@@ -8,12 +8,12 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
@@ -21,7 +21,7 @@ import (
 
 func (r *Reconciler) ReconcileMutatingWebhookConfiguration(
 	ctx context.Context,
-	policy v1alpha2.Policy,
+	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerNameWithPrefix string) error {
 	webhook := r.mutatingWebhookConfiguration(policy, admissionSecret, policyServerNameWithPrefix)
@@ -36,7 +36,7 @@ func (r *Reconciler) ReconcileMutatingWebhookConfiguration(
 }
 
 func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
-	policy v1alpha2.Policy,
+	policy policiesv1.Policy,
 	newWebhook *admissionregistrationv1.MutatingWebhookConfiguration) error {
 	var originalWebhook admissionregistrationv1.MutatingWebhookConfiguration
 
@@ -60,7 +60,7 @@ func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
 }
 
 func (r *Reconciler) mutatingWebhookConfiguration(
-	policy v1alpha2.Policy,
+	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
 	policyServerName string) *admissionregistrationv1.MutatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", policy.GetUniqueName())

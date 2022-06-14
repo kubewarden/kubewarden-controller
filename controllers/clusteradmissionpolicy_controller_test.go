@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"time"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 )
 
 var _ = Describe("Given a ClusterAdmissionPolicy", func() {
@@ -38,15 +37,15 @@ var _ = Describe("Given a ClusterAdmissionPolicy", func() {
 						k8sClient.Create(ctx, clusterAdmissionPolicyWithPolicyServerName(policyName, "")),
 					).To(HaveSucceededOrAlreadyExisted())
 				})
-				It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusUnscheduled), func() {
-					Eventually(func(g Gomega) (*v1alpha2.ClusterAdmissionPolicy, error) {
+				It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusUnscheduled), func() {
+					Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
 						return getFreshClusterAdmissionPolicy(policyName)
 					}).Should(
 						WithTransform(
-							func(clusterAdmissionPolicy *v1alpha2.ClusterAdmissionPolicy) v1alpha2.PolicyStatusEnum {
+							func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) policiesv1.PolicyStatusEnum {
 								return clusterAdmissionPolicy.Status.PolicyStatus
 							},
-							Equal(v1alpha2.PolicyStatusUnscheduled),
+							Equal(policiesv1.PolicyStatusUnscheduled),
 						),
 					)
 				})
@@ -61,15 +60,15 @@ var _ = Describe("Given a ClusterAdmissionPolicy", func() {
 						k8sClient.Create(ctx, clusterAdmissionPolicyWithPolicyServerName(policyName, policyServerName)),
 					).To(HaveSucceededOrAlreadyExisted())
 				})
-				It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusScheduled), func() {
-					Eventually(func(g Gomega) (*v1alpha2.ClusterAdmissionPolicy, error) {
+				It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusScheduled), func() {
+					Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
 						return getFreshClusterAdmissionPolicy(policyName)
 					}).Should(
 						WithTransform(
-							func(clusterAdmissionPolicy *v1alpha2.ClusterAdmissionPolicy) v1alpha2.PolicyStatusEnum {
+							func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) policiesv1.PolicyStatusEnum {
 								return clusterAdmissionPolicy.Status.PolicyStatus
 							},
-							Equal(v1alpha2.PolicyStatusScheduled),
+							Equal(policiesv1.PolicyStatusScheduled),
 						),
 					)
 				})
@@ -79,15 +78,15 @@ var _ = Describe("Given a ClusterAdmissionPolicy", func() {
 							k8sClient.Create(ctx, policyServer(policyServerName)),
 						).To(HaveSucceededOrAlreadyExisted())
 					})
-					It(fmt.Sprintf("should set its policy status to %q", v1alpha2.PolicyStatusPending), func() {
-						Eventually(func(g Gomega) (*v1alpha2.ClusterAdmissionPolicy, error) {
+					It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusPending), func() {
+						Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
 							return getFreshClusterAdmissionPolicy(policyName)
 						}, 30*time.Second, 250*time.Millisecond).Should(
 							WithTransform(
-								func(clusterAdmissionPolicy *v1alpha2.ClusterAdmissionPolicy) v1alpha2.PolicyStatusEnum {
+								func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) policiesv1.PolicyStatusEnum {
 									return clusterAdmissionPolicy.Status.PolicyStatus
 								},
-								Equal(v1alpha2.PolicyStatusPending),
+								Equal(policiesv1.PolicyStatusPending),
 							),
 						)
 					})

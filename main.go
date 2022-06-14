@@ -37,7 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 	controllers "github.com/kubewarden/kubewarden-controller/controllers"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
@@ -53,6 +54,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha2.AddToScheme(scheme))
+	utilruntime.Must(policiesv1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -182,7 +184,7 @@ func main() {
 func webhooks() []webhookwrapper.WebhookRegistrator {
 	return []webhookwrapper.WebhookRegistrator{
 		{
-			Registrator: (&v1alpha2.PolicyServer{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.PolicyServer{}).SetupWebhookWithManager,
 			Name:        "mutate-policyservers.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -191,17 +193,17 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"policyservers"},
 					},
 				},
 			},
-			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-policyserver",
+			WebhookPath: "/mutate-policies-kubewarden-io-v1-policyserver",
 			Mutating:    true,
 		},
 		{
-			Registrator: (&v1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
 			Name:        "mutate-clusteradmissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -210,17 +212,17 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"clusteradmissionpolicies"},
 					},
 				},
 			},
-			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+			WebhookPath: "/mutate-policies-kubewarden-io-v1-clusteradmissionpolicy",
 			Mutating:    true,
 		},
 		{
-			Registrator: (&v1alpha2.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
 			Name:        "validate-clusteradmissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -229,17 +231,17 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"clusteradmissionpolicies"},
 					},
 				},
 			},
-			WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-clusteradmissionpolicy",
+			WebhookPath: "/validate-policies-kubewarden-io-v1-clusteradmissionpolicy",
 			Mutating:    false,
 		},
 		{
-			Registrator: (&v1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.AdmissionPolicy{}).SetupWebhookWithManager,
 			Name:        "mutate-admissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -248,17 +250,17 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"admissionpolicies"},
 					},
 				},
 			},
-			WebhookPath: "/mutate-policies-kubewarden-io-v1alpha2-admissionpolicy",
+			WebhookPath: "/mutate-policies-kubewarden-io-v1-admissionpolicy",
 			Mutating:    true,
 		},
 		{
-			Registrator: (&v1alpha2.AdmissionPolicy{}).SetupWebhookWithManager,
+			Registrator: (&policiesv1.AdmissionPolicy{}).SetupWebhookWithManager,
 			Name:        "validate-admissionpolicies.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -266,13 +268,13 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 						admissionregistrationv1.Update,
 					},
 					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{v1alpha2.GroupVersion.Group},
-						APIVersions: []string{v1alpha2.GroupVersion.Version},
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
 						Resources:   []string{"admissionpolicies"},
 					},
 				},
 			},
-			WebhookPath: "/validate-policies-kubewarden-io-v1alpha2-admissionpolicy",
+			WebhookPath: "/validate-policies-kubewarden-io-v1-admissionpolicy",
 			Mutating:    false,
 		},
 	}

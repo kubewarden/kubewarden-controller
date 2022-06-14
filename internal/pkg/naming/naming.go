@@ -3,7 +3,7 @@ package naming
 import (
 	"fmt"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
+	"github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2"
 )
 
 func PolicyServerDeploymentNameForPolicyServer(policyServer *v1alpha2.PolicyServer) string {

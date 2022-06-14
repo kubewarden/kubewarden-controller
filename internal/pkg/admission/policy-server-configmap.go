@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	v1alpha2 "github.com/kubewarden/kubewarden-controller/apis/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
@@ -48,8 +48,8 @@ type policyServerSourcesEntry struct {
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
 func (r *Reconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
-	policyServer *v1alpha2.PolicyServer,
-	policies []v1alpha2.Policy,
+	policyServer *policiesv1.PolicyServer,
+	policies []policiesv1.Policy,
 ) error {
 	cfg := &corev1.ConfigMap{}
 	err := r.Client.Get(ctx, client.ObjectKey{
@@ -67,8 +67,8 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 }
 
 func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
-	policies []v1alpha2.Policy,
-	policyServer *v1alpha2.PolicyServer) error {
+	policies []policiesv1.Policy,
+	policyServer *policiesv1.PolicyServer) error {
 	newPoliciesMap := r.createPoliciesMap(policies)
 	newSourcesList := r.createSourcesMap(policyServer)
 
@@ -131,8 +131,8 @@ func shouldUpdateSourcesList(currentSourcesYML string, newSources policyServerSo
 
 func (r *Reconciler) createPolicyServerConfigMap(
 	ctx context.Context,
-	policyServer *v1alpha2.PolicyServer,
-	policies []v1alpha2.Policy,
+	policyServer *policiesv1.PolicyServer,
+	policies []policiesv1.Policy,
 ) error {
 	policiesMap := r.createPoliciesMap(policies)
 	policiesYML, err := json.Marshal(policiesMap)
@@ -199,7 +199,7 @@ func (policyConfigEntryMap PolicyConfigEntryMap) ToClusterAdmissionPolicyReconci
 	return res
 }
 
-func (r *Reconciler) createPoliciesMap(admissionPolicies []v1alpha2.Policy) PolicyConfigEntryMap {
+func (r *Reconciler) createPoliciesMap(admissionPolicies []policiesv1.Policy) PolicyConfigEntryMap {
 	policies := PolicyConfigEntryMap{}
 	for _, admissionPolicy := range admissionPolicies {
 		policies[admissionPolicy.GetUniqueName()] = PolicyServerConfigEntry{
@@ -216,7 +216,7 @@ func (r *Reconciler) createPoliciesMap(admissionPolicies []v1alpha2.Policy) Poli
 	return policies
 }
 
-func (r *Reconciler) createSourcesMap(policyServer *v1alpha2.PolicyServer) policyServerSourcesEntry {
+func (r *Reconciler) createSourcesMap(policyServer *policiesv1.PolicyServer) policyServerSourcesEntry {
 	sourcesEntry := policyServerSourcesEntry{}
 	sourcesEntry.InsecureSources = policyServer.Spec.InsecureSources
 	if sourcesEntry.InsecureSources == nil {
@@ -238,7 +238,7 @@ func (r *Reconciler) createSourcesMap(policyServer *v1alpha2.PolicyServer) polic
 	return sourcesEntry
 }
 
-func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *v1alpha2.PolicyServer) (string, error) {
+func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *policiesv1.PolicyServer) (string, error) {
 	// By using Unstructured data we force the client to fetch fresh, uncached
 	// data from the API server
 	unstructuredObj := &unstructured.Unstructured{}
