@@ -2,6 +2,34 @@
 ## [Unreleased]
 
 
+<a name="v1.0.0-rc1"></a>
+## [v1.0.0-rc1] - 2022-06-14
+### Features
+- Add PolicyServer CRD v1
+- Add ClusterAdmissionPolicy v1
+- copy AdmissionPolicy files from v1alpha2 to v1
+- Generate Bill Of Materials (BOM) file. ([#246](https://github.com/kubewarden/kubewarden-controller/issues/246))
+- don't mark policy as uniquely reachable until all terminating pods have disappeared.
+- sign container image
+
+### Reverts
+- remove v1alpha2 from webhooks
+- test: Pin golanci-lint in GHA from latest to 1.45.2
+- Skip Kubewarden namespace in the webhook configuration.
+
+### Pull Requests
+- Merge pull request [#248](https://github.com/kubewarden/kubewarden-controller/issues/248) from viccuad/main
+- Merge pull request [#247](https://github.com/kubewarden/kubewarden-controller/issues/247) from raulcabello/v1-crds
+- Merge pull request [#241](https://github.com/kubewarden/kubewarden-controller/issues/241) from flavio/fix-linter
+- Merge pull request [#239](https://github.com/kubewarden/kubewarden-controller/issues/239) from kubewarden/renovate/docker-setup-qemu-action-2.x
+- Merge pull request [#236](https://github.com/kubewarden/kubewarden-controller/issues/236) from raulcabello/e2e
+- Merge pull request [#232](https://github.com/kubewarden/kubewarden-controller/issues/232) from kubewarden/renovate/docker-login-action-2.x
+- Merge pull request [#233](https://github.com/kubewarden/kubewarden-controller/issues/233) from kubewarden/renovate/docker-setup-buildx-action-2.x
+- Merge pull request [#231](https://github.com/kubewarden/kubewarden-controller/issues/231) from raulcabello/sigstore-sginature
+- Merge pull request [#222](https://github.com/kubewarden/kubewarden-controller/issues/222) from viccuad/update-golangci-lint
+- Merge pull request [#229](https://github.com/kubewarden/kubewarden-controller/issues/229) from jvanz/revert-workaround
+
+
 <a name="v0.5.5"></a>
 ## [v0.5.5] - 2022-05-17
 ### Features
@@ -861,9 +889,14 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.2-rc2...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc1...HEAD
+[v1.0.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.5...v1.0.0-rc1
+[v0.5.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.4...v0.5.5
+[v0.5.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.3...v0.5.4
+[v0.5.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.2-rc2...v0.5.3
 [v0.5.2-rc2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.2-rc...v0.5.2-rc2
-[v0.5.2-rc]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.1...v0.5.2-rc
+[v0.5.2-rc]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.2...v0.5.2-rc
+[v0.5.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.1...v0.5.2
 [v0.5.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5...v0.5.0
 [v0.4.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5-rc1...v0.4.5
