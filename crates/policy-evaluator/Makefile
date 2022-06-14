@@ -8,7 +8,7 @@ fmt:
 
 .PHONY: lint
 lint:
-	cargo clippy -- -D warnings
+	cargo clippy --workspace -- -D warnings
 
 .PHONY: test
 test: fmt lint
