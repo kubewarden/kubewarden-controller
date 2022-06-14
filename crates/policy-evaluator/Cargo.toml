@@ -18,7 +18,7 @@ members = [
 anyhow = "1.0"
 base64 = "0.13.0"
 burrego = { path = "crates/burrego" }
-cached = "0.30.0"
+cached = "0.34.1"
 dns-lookup = "1.0.8"
 hyper = { version = "0.14" }
 json-patch = "0.2.6"
