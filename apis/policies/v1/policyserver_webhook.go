@@ -39,7 +39,7 @@ func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1;v1alpha2,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &PolicyServer{}
 
