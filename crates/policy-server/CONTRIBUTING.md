@@ -29,6 +29,10 @@ component specifically.
 
 ## Tagging a new release
 
+### Bump Cargo.toml version
+
+As usual, first bump the version in `Cargo.toml`.
+
 ### Create a new tag
 
 For creating a new release, first create a new tag:
