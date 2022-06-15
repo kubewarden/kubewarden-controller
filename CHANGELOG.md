@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="v1.0.0-rc2"></a>
+## [v1.0.0-rc2] - 2022-06-15
+### Pull Requests
+- Merge pull request [#250](https://github.com/kubewarden/kubewarden-controller/issues/250) from raulcabello/main
+
+
 <a name="v1.0.0-rc1"></a>
 ## [v1.0.0-rc1] - 2022-06-14
 ### Features
@@ -18,6 +24,7 @@
 - Skip Kubewarden namespace in the webhook configuration.
 
 ### Pull Requests
+- Merge pull request [#249](https://github.com/kubewarden/kubewarden-controller/issues/249) from viccuad/main
 - Merge pull request [#248](https://github.com/kubewarden/kubewarden-controller/issues/248) from viccuad/main
 - Merge pull request [#247](https://github.com/kubewarden/kubewarden-controller/issues/247) from raulcabello/v1-crds
 - Merge pull request [#241](https://github.com/kubewarden/kubewarden-controller/issues/241) from flavio/fix-linter
@@ -38,27 +45,29 @@
 
 
 <a name="v0.5.4"></a>
-## [v0.5.4] - 2022-05-13
+## [v0.5.4] - 2022-05-17
 ### Pull Requests
+- Merge pull request [#221](https://github.com/kubewarden/kubewarden-controller/issues/221) from raulcabello/main
 - Merge pull request [#220](https://github.com/kubewarden/kubewarden-controller/issues/220) from viccuad/pin-golangci-lint
-- Merge pull request [#219](https://github.com/kubewarden/kubewarden-controller/pull/219) from jvanz:skip-kubewarden-namespace
+
 
 <a name="v0.5.3"></a>
 ## [v0.5.3] - 2022-05-13
 ### Pull Requests
+- Merge pull request [#218](https://github.com/kubewarden/kubewarden-controller/issues/218) from jvanz/main
 - Merge pull request [#216](https://github.com/kubewarden/kubewarden-controller/issues/216) from jvanz/fix-env-var-name
 - Merge pull request [#215](https://github.com/kubewarden/kubewarden-controller/issues/215) from kubewarden/renovate/docker-build-push-action-3.x
 - Merge pull request [#212](https://github.com/kubewarden/kubewarden-controller/issues/212) from ereslibre/always-accept-admission-reviews-on-namespace
 
-
-<a name="v0.5.2"></a>
-## [v0.5.2] - 2022-04-07
 
 <a name="v0.5.2-rc2"></a>
 ## [v0.5.2-rc2] - 2022-04-07
 
 <a name="v0.5.2-rc"></a>
 ## [v0.5.2-rc] - 2022-03-30
+
+<a name="v0.5.2"></a>
+## [v0.5.2] - 2022-03-30
 ### Bug Fixes
 - Disable conversion webhooks on CRDs, not needed
 - Disable cert-manager ca injection patches in CRDs
@@ -889,7 +898,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc2...HEAD
+[v1.0.0-rc2]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc1...v1.0.0-rc2
 [v1.0.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.5...v1.0.0-rc1
 [v0.5.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.4...v0.5.5
 [v0.5.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.3...v0.5.4
@@ -901,54 +911,21 @@
 [v0.5.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5...v0.5.0
 [v0.4.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.5-rc1...v0.4.5
 [v0.4.5-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.4...v0.4.5-rc1
-[v0.4.4]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.3.5...v0.4.4
-[kubewarden-controller-0.3.5]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.3.4...kubewarden-controller-0.3.5
-[kubewarden-controller-0.3.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.3...kubewarden-controller-0.3.4
-[v0.4.3]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-crds-0.1.1...v0.4.3
-[kubewarden-crds-0.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.3.3...kubewarden-crds-0.1.1
-[kubewarden-controller-0.3.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.2...kubewarden-controller-0.3.3
+[v0.4.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.3...v0.4.4
+[v0.4.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.2...v0.4.3
 [v0.4.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.1...v0.4.2
-[v0.4.1]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-crds-0.1.0...v0.4.1
-[kubewarden-crds-0.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.3.0...kubewarden-crds-0.1.0
-[kubewarden-controller-0.3.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.0...kubewarden-controller-0.3.0
-[v0.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.2.4...v0.4.0
-[kubewarden-controller-0.2.4]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.2.3...kubewarden-controller-0.2.4
-[kubewarden-controller-0.2.3]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.2.2...kubewarden-controller-0.2.3
-[kubewarden-controller-0.2.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...kubewarden-controller-0.2.2
-[v0.3.2]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.2.1...v0.3.2
-[kubewarden-controller-0.2.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.1...kubewarden-controller-0.2.1
-[v0.3.1]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.2.0...v0.3.1
-[kubewarden-controller-0.2.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.0...kubewarden-controller-0.2.0
-[v0.3.0]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.18...v0.3.0
-[kubewarden-controller-0.1.18]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.17...kubewarden-controller-0.1.18
-[kubewarden-controller-0.1.17]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.3...kubewarden-controller-0.1.17
-[v0.2.3]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.16...v0.2.3
-[kubewarden-controller-0.1.16]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.15...kubewarden-controller-0.1.16
-[kubewarden-controller-0.1.15]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.2...kubewarden-controller-0.1.15
-[v0.2.2]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.14...v0.2.2
-[kubewarden-controller-0.1.14]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.13...kubewarden-controller-0.1.14
-[kubewarden-controller-0.1.13]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.1...kubewarden-controller-0.1.13
-[v0.2.1]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.12...v0.2.1
-[kubewarden-controller-0.1.12]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.0...kubewarden-controller-0.1.12
-[v0.2.0]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.11...v0.2.0
-[kubewarden-controller-0.1.11]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.10...kubewarden-controller-0.1.11
-[kubewarden-controller-0.1.10]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.9...kubewarden-controller-0.1.10
-[kubewarden-controller-0.1.9]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.8...kubewarden-controller-0.1.9
-[kubewarden-controller-0.1.8]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.4...kubewarden-controller-0.1.8
-[v0.1.4]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.7...v0.1.4
-[kubewarden-controller-0.1.7]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.3...kubewarden-controller-0.1.7
+[v0.4.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.4.0...v0.4.1
+[v0.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.2...v0.4.0
+[v0.3.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.1...v0.3.2
+[v0.3.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.3.0...v0.3.1
+[v0.3.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.3...v0.3.0
+[v0.2.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.2...v0.2.3
+[v0.2.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.1...v0.2.2
+[v0.2.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.2.0...v0.2.1
+[v0.2.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.4...v0.2.0
+[v0.1.4]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.1...v0.1.2
-[v0.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.6...v0.1.1
-[kubewarden-controller-0.1.6]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.5...kubewarden-controller-0.1.6
-[kubewarden-controller-0.1.5]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.4...kubewarden-controller-0.1.5
-[kubewarden-controller-0.1.4]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.3...kubewarden-controller-0.1.4
-[kubewarden-controller-0.1.3]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.2...kubewarden-controller-0.1.3
-[kubewarden-controller-0.1.2]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.1...kubewarden-controller-0.1.2
-[kubewarden-controller-0.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.0...kubewarden-controller-0.1.1
-[v0.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/kubewarden-controller-0.1.0...v0.1.0
-[kubewarden-controller-0.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/chimera-controller-0.1.2...kubewarden-controller-0.1.0
-[chimera-controller-0.1.2]: https://github.com/kubewarden/kubewarden-controller/compare/chimera-controller-0.1.1...chimera-controller-0.1.2
-[chimera-controller-0.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/chimera-controller-0.1.0...chimera-controller-0.1.1
-[chimera-controller-0.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.0-rc1...chimera-controller-0.1.0
+[v0.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.0...v0.1.1
+[v0.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/v0.1.0-rc1...v0.1.0
 [v0.1.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.0.1...v0.1.0-rc1
