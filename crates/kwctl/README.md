@@ -183,7 +183,7 @@ This will produce the following output:
 
 ```yaml
 ---
-apiVersion: policies.kubewarden.io/v1alpha2
+apiVersion: policies.kubewarden.io/v1
 kind: ClusterAdmissionPolicy
 metadata:
   name: generated-policy

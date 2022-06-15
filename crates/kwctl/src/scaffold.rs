@@ -35,7 +35,7 @@ impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
     fn try_from(data: ScaffoldData) -> Result<Self, Self::Error> {
         data.metadata.validate()?;
         Ok(ClusterAdmissionPolicy {
-            api_version: String::from("policies.kubewarden.io/v1alpha2"),
+            api_version: String::from("policies.kubewarden.io/v1"),
             kind: String::from("ClusterAdmissionPolicy"),
             metadata: ObjectMeta {
                 name: data.policy_title,
