@@ -486,7 +486,7 @@ pub fn build_cli() -> Command<'static> {
                             .short('t')
                             .required(true)
                             .takes_value(true)
-                            .possible_values(&["ClusterAdmissionPolicy"])
+                            .possible_values(&["ClusterAdmissionPolicy", "AdmissionPolicy"])
                             .help("Kubewarden Custom Resource type")
                         )
                         .arg(
