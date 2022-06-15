@@ -35,13 +35,53 @@ impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
     fn try_from(data: ScaffoldData) -> Result<Self, Self::Error> {
         data.metadata.validate()?;
         Ok(ClusterAdmissionPolicy {
-            api_version: String::from("policies.kubewarden.io/v1alpha2"),
+            api_version: String::from("policies.kubewarden.io/v1"),
             kind: String::from("ClusterAdmissionPolicy"),
             metadata: ObjectMeta {
                 name: data.policy_title,
                 ..Default::default()
             },
             spec: ClusterAdmissionPolicySpec {
+                module: data.uri,
+                settings: data.settings,
+                rules: data.metadata.rules.clone(),
+                mutating: data.metadata.mutating,
+            },
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdmissionPolicy {
+    api_version: String,
+    kind: String,
+    metadata: ObjectMeta,
+    spec: AdmissionPolicySpec,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AdmissionPolicySpec {
+    module: String,
+    settings: serde_yaml::Mapping,
+    rules: Vec<Rule>,
+    mutating: bool,
+}
+
+impl TryFrom<ScaffoldData> for AdmissionPolicy {
+    type Error = anyhow::Error;
+
+    fn try_from(data: ScaffoldData) -> Result<Self, Self::Error> {
+        data.metadata.validate()?;
+        Ok(AdmissionPolicy {
+            api_version: String::from("policies.kubewarden.io/v1"),
+            kind: String::from("AdmissionPolicy"),
+            metadata: ObjectMeta {
+                name: data.policy_title,
+                ..Default::default()
+            },
+            spec: AdmissionPolicySpec {
                 module: data.uri,
                 settings: data.settings,
                 rules: data.metadata.rules.clone(),
@@ -82,7 +122,12 @@ pub(crate) fn manifest(
         settings: settings_yml,
     };
     let resource = match resource_type {
-        "ClusterAdmissionPolicy" => ClusterAdmissionPolicy::try_from(scaffold_data),
+        "ClusterAdmissionPolicy" => {
+            serde_yaml::to_value(ClusterAdmissionPolicy::try_from(scaffold_data)?)
+                .map_err(|e| anyhow!("{}", e))
+        }
+        "AdmissionPolicy" => serde_yaml::to_value(AdmissionPolicy::try_from(scaffold_data)?)
+            .map_err(|e| anyhow!("{}", e)),
         other => Err(anyhow!(
             "Resource {} unknown. Valid types are: ClusterAdmissionPolicy",
             other,
