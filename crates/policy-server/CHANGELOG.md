@@ -2,6 +2,9 @@
 ## [Unreleased]
 
 
+<a name="v1.0.0-rc2"></a>
+## [v1.0.0-rc2] - 2022-06-15
+
 <a name="v1.0.0-rc1"></a>
 ## [v1.0.0-rc1] - 2022-06-14
 ### Bug Fixes
@@ -317,7 +320,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc2...HEAD
+[v1.0.0-rc2]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc1...v1.0.0-rc2
 [v1.0.0-rc1]: https://github.com/kubewarden/policy-server/compare/v0.3.2...v1.0.0-rc1
 [v0.3.2]: https://github.com/kubewarden/policy-server/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/kubewarden/policy-server/compare/v0.3.0...v0.3.1
