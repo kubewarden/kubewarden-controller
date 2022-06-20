@@ -1,6 +1,7 @@
 pub extern crate burrego;
 extern crate wasmparser;
 
+pub mod admission_response;
 pub mod callback_handler;
 pub mod callback_requests;
 pub mod cluster_context;
@@ -11,7 +12,6 @@ pub mod policy_evaluator_builder;
 pub mod policy_metadata;
 mod policy_tracing;
 pub mod runtimes;
-pub mod validation_response;
 
 // API's that expose other crate types (such as Kubewarden Policy SDK
 // or `policy_fetcher`) can either implement their own exposed types,
