@@ -1,26 +1,47 @@
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
+/// This models the admission/v1/AdmissionResponse object of Kubernetes
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct ValidationResponse {
+pub struct AdmissionResponse {
+    /// UID is an identifier for the individual request/response.
+    /// This must be copied over from the corresponding AdmissionRequest.
     pub uid: String,
 
+    /// Allowed indicates whether or not the admission request was permitted.
     pub allowed: bool,
 
+    /// The type of Patch. Currently we only allow "JSONPatch".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub patch_type: Option<String>,
 
+    /// The patch body. Currently we only support "JSONPatch" which implements RFC 6902.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub patch: Option<String>,
 
+    /// Status contains extra details into why an admission request was denied.
+    /// This field IS NOT consulted in any way if "Allowed" is "true".
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<ValidationResponseStatus>,
+    pub status: Option<AdmissionResponseStatus>,
+
+    /// AuditAnnotations is an unstructured key value map set by remote admission controller (e.g. error=image-blacklisted).
+    /// MutatingAdmissionWebhook and ValidatingAdmissionWebhook admission controller will prefix the keys with
+    /// admission webhook name (e.g. imagepolicy.example.com/error=image-blacklisted). AuditAnnotations will be provided by
+    /// the admission webhook to add additional context to the audit log for this request.
+    pub audit_annotations: Option<HashMap<String, String>>,
+
+    /// warnings is a list of warning messages to return to the requesting API client.
+    /// Warning messages describe a problem the client making the API request should correct or be aware of.
+    /// Limit warnings to 120 characters if possible.
+    /// Warnings over 256 characters and large numbers of warnings may be truncated.
+    pub warnings: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct ValidationResponseStatus {
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Clone)]
+pub struct AdmissionResponseStatus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
 
@@ -28,12 +49,12 @@ pub struct ValidationResponseStatus {
     pub code: Option<u16>,
 }
 
-impl ValidationResponse {
-    pub fn reject(uid: String, message: String, code: u16) -> ValidationResponse {
-        ValidationResponse {
+impl AdmissionResponse {
+    pub fn reject(uid: String, message: String, code: u16) -> AdmissionResponse {
+        AdmissionResponse {
             uid,
             allowed: false,
-            status: Some(ValidationResponseStatus {
+            status: Some(AdmissionResponseStatus {
                 message: Some(message),
                 code: Some(code),
             }),
@@ -41,8 +62,8 @@ impl ValidationResponse {
         }
     }
 
-    pub fn reject_internal_server_error(uid: String, message: String) -> ValidationResponse {
-        ValidationResponse::reject(
+    pub fn reject_internal_server_error(uid: String, message: String) -> AdmissionResponse {
+        AdmissionResponse::reject(
             uid,
             format!("internal server error: {}", message),
             hyper::StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
@@ -53,7 +74,7 @@ impl ValidationResponse {
         uid: String,
         req_obj: &serde_json::Value,
         pol_val_resp: &PolicyValidationResponse,
-    ) -> Result<ValidationResponse> {
+    ) -> Result<AdmissionResponse> {
         let patch = match pol_val_resp.mutated_object.clone() {
             Some(mut_obj) => {
                 let diff = json_patch::diff(req_obj, &mut_obj);
@@ -77,7 +98,7 @@ impl ValidationResponse {
         };
 
         let status = if pol_val_resp.message.is_some() || pol_val_resp.code.is_some() {
-            Some(ValidationResponseStatus {
+            Some(AdmissionResponseStatus {
                 message: pol_val_resp.message.clone(),
                 code: pol_val_resp.code,
             })
@@ -85,9 +106,11 @@ impl ValidationResponse {
             None
         };
 
-        Ok(ValidationResponse {
+        Ok(AdmissionResponse {
             uid,
             allowed: pol_val_resp.accepted,
+            warnings: pol_val_resp.warnings.clone(),
+            audit_annotations: pol_val_resp.audit_annotations.clone(),
             patch_type,
             patch,
             status,
@@ -97,6 +120,8 @@ impl ValidationResponse {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use serde_json::json;
 
@@ -106,7 +131,7 @@ mod tests {
         let message = String::from("test message");
         let code: u16 = 500;
 
-        let response = ValidationResponse::reject(uid.clone(), message.clone(), code);
+        let response = AdmissionResponse::reject(uid.clone(), message.clone(), code);
         assert_eq!(response.uid, uid);
         assert_eq!(response.allowed, false);
         assert_eq!(response.patch, None);
@@ -123,16 +148,23 @@ mod tests {
         let message = String::from("test message");
         let code: u16 = 500;
 
+        let mut audit_annotations: HashMap<String, String> = HashMap::new();
+        audit_annotations.insert(String::from("key"), String::from("value"));
+
+        let warnings = vec![String::from("hello"), String::from("world")];
+
         let pol_val_resp = PolicyValidationResponse {
             accepted: false,
             message: Some(message.clone()),
             code: Some(code),
             mutated_object: None,
+            audit_annotations: Some(audit_annotations.clone()),
+            warnings: Some(warnings.clone()),
         };
 
         let req_obj = json!({"hello": "world"});
 
-        let response = ValidationResponse::from_policy_validation_response(
+        let response = AdmissionResponse::from_policy_validation_response(
             uid.clone(),
             &req_obj,
             &pol_val_resp,
@@ -144,6 +176,8 @@ mod tests {
         assert_eq!(response.allowed, false);
         assert_eq!(response.patch, None);
         assert_eq!(response.patch_type, None);
+        assert_eq!(response.audit_annotations, Some(audit_annotations));
+        assert_eq!(response.warnings, Some(warnings));
 
         let status = response.status.unwrap();
         assert_eq!(status.code, Some(code));
@@ -166,9 +200,11 @@ mod tests {
             message: None,
             code: None,
             mutated_object: Some(req_obj.clone()),
+            warnings: None,
+            audit_annotations: None,
         };
 
-        let response = ValidationResponse::from_policy_validation_response(
+        let response = AdmissionResponse::from_policy_validation_response(
             uid.clone(),
             &req_obj,
             &pol_val_resp,
@@ -198,9 +234,11 @@ mod tests {
             message: None,
             code: None,
             mutated_object: Some(mutated_obj),
+            audit_annotations: None,
+            warnings: None,
         };
 
-        let response = ValidationResponse::from_policy_validation_response(
+        let response = AdmissionResponse::from_policy_validation_response(
             uid.clone(),
             &req_obj,
             &pol_val_resp,

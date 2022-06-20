@@ -13,13 +13,13 @@ use wasmtime_provider::WasmtimeEngineProvider;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
+use crate::admission_response::AdmissionResponse;
 use crate::callback_requests::CallbackRequest;
 use crate::policy::Policy;
 use crate::runtimes::burrego::Runtime as BurregoRuntime;
 use crate::runtimes::{
     wapc::host_callback as wapc_callback, wapc::Runtime as WapcRuntime, wapc::WAPC_POLICY_MAPPING,
 };
-use crate::validation_response::ValidationResponse;
 
 #[derive(Copy, Clone, PartialEq, serde::Deserialize, serde::Serialize, Debug)]
 pub enum PolicyExecutionMode {
@@ -199,7 +199,7 @@ impl PolicyEvaluator {
     }
 
     #[tracing::instrument(skip(request))]
-    pub fn validate(&mut self, request: ValidateRequest) -> ValidationResponse {
+    pub fn validate(&mut self, request: ValidateRequest) -> AdmissionResponse {
         match self.runtime {
             Runtime::Wapc(ref mut wapc_host) => {
                 WapcRuntime(wapc_host).validate(&self.settings, &request)

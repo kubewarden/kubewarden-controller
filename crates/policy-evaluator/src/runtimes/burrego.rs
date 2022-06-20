@@ -4,8 +4,8 @@ use tracing::error;
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut crate::policy_evaluator::BurregoEvaluator);
 
+use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
-use crate::validation_response::{ValidationResponse, ValidationResponseStatus};
 use burrego::opa::host_callbacks::HostCallbacks;
 
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
@@ -36,7 +36,7 @@ impl<'a> Runtime<'a> {
         &mut self,
         settings: &PolicySettings,
         request: &ValidateRequest,
-    ) -> ValidationResponse {
+    ) -> AdmissionResponse {
         let uid = request.uid();
 
         // OPA and Gatekeeper expect arguments in different ways. Provide the ones that each expect.
@@ -90,17 +90,17 @@ impl<'a> Runtime<'a> {
                         match evaluation_result {
                             Some(evaluation_result) => {
                                 match serde_json::from_value(evaluation_result.clone()) {
-                                    Ok(evaluation_result) => ValidationResponse {
+                                    Ok(evaluation_result) => AdmissionResponse {
                                         uid: uid.to_string(),
                                         ..evaluation_result
                                     },
-                                    Err(err) => ValidationResponse::reject_internal_server_error(
+                                    Err(err) => AdmissionResponse::reject_internal_server_error(
                                         uid.to_string(),
                                         err.to_string(),
                                     ),
                                 }
                             }
-                            None => ValidationResponse::reject_internal_server_error(
+                            None => AdmissionResponse::reject_internal_server_error(
                                 uid.to_string(),
                                 "cannot interpret OPA policy result".to_string(),
                             ),
@@ -133,16 +133,16 @@ impl<'a> Runtime<'a> {
                             .unwrap_or_default();
 
                         if violations.result.is_empty() {
-                            ValidationResponse {
+                            AdmissionResponse {
                                 uid: uid.to_string(),
                                 allowed: true,
                                 ..Default::default()
                             }
                         } else {
-                            ValidationResponse {
+                            AdmissionResponse {
                                 uid: uid.to_string(),
                                 allowed: false,
-                                status: Some(ValidationResponseStatus {
+                                status: Some(AdmissionResponseStatus {
                                     message: Some(
                                         violations
                                             .result
@@ -164,7 +164,7 @@ impl<'a> Runtime<'a> {
                     error = err.to_string().as_str(),
                     "error evaluating policy with burrego"
                 );
-                ValidationResponse::reject_internal_server_error(uid.to_string(), err.to_string())
+                AdmissionResponse::reject_internal_server_error(uid.to_string(), err.to_string())
             }
         }
     }

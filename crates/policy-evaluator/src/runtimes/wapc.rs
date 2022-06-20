@@ -7,11 +7,11 @@ use tracing::{debug, error};
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
 
+use crate::admission_response::AdmissionResponse;
 use crate::callback_requests::{CallbackRequest, CallbackResponse};
 use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
-use crate::validation_response::ValidationResponse;
 
 use kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
@@ -200,13 +200,13 @@ impl<'a> Runtime<'a> {
         &mut self,
         settings: &PolicySettings,
         request: &ValidateRequest,
-    ) -> ValidationResponse {
+    ) -> AdmissionResponse {
         let uid = request.uid();
 
         let req_obj = match request.0.get("object") {
             Some(req_obj) => req_obj,
             None => {
-                return ValidationResponse::reject(
+                return AdmissionResponse::reject(
                     uid.to_string(),
                     "request doesn't have an 'object' value".to_string(),
                     hyper::StatusCode::BAD_REQUEST.as_u16(),
@@ -226,7 +226,7 @@ impl<'a> Runtime<'a> {
                     error = e.to_string().as_str(),
                     "cannot serialize validation params"
                 );
-                return ValidationResponse::reject_internal_server_error(
+                return AdmissionResponse::reject_internal_server_error(
                     uid.to_string(),
                     e.to_string(),
                 );
@@ -239,7 +239,7 @@ impl<'a> Runtime<'a> {
                     .map_err(|e| anyhow!("cannot deserialize policy validation response: {:?}", e));
                 pol_val_resp
                     .and_then(|pol_val_resp| {
-                        ValidationResponse::from_policy_validation_response(
+                        AdmissionResponse::from_policy_validation_response(
                             uid.to_string(),
                             req_obj,
                             &pol_val_resp,
@@ -250,7 +250,7 @@ impl<'a> Runtime<'a> {
                             error = e.to_string().as_str(),
                             "cannot build validation response from policy result"
                         );
-                        ValidationResponse::reject_internal_server_error(
+                        AdmissionResponse::reject_internal_server_error(
                             uid.to_string(),
                             e.to_string(),
                         )
@@ -258,7 +258,7 @@ impl<'a> Runtime<'a> {
             }
             Err(e) => {
                 error!(error = e.to_string().as_str(), "waPC communication error");
-                ValidationResponse::reject_internal_server_error(uid.to_string(), e.to_string())
+                AdmissionResponse::reject_internal_server_error(uid.to_string(), e.to_string())
             }
         }
     }
