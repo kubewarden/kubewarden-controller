@@ -1,5 +1,5 @@
 use anyhow::Result;
-use policy_evaluator::validation_response::ValidationResponse;
+use policy_evaluator::admission_response::AdmissionResponse;
 use std::collections::HashMap;
 use tokio::sync::oneshot;
 
@@ -10,7 +10,7 @@ use crate::settings::Policy;
 pub(crate) struct EvalRequest {
     pub policy_id: String,
     pub req: AdmissionRequest,
-    pub resp_chan: oneshot::Sender<Option<ValidationResponse>>,
+    pub resp_chan: oneshot::Sender<Option<AdmissionResponse>>,
     pub parent_span: tracing::Span,
 }
 

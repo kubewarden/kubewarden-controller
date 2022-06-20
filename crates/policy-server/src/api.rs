@@ -1,38 +1,11 @@
-use anyhow::anyhow;
-use hyper::{Body, Method, Request, Response, StatusCode};
-use policy_evaluator::validation_response::ValidationResponse;
-use serde_json::json;
+use policy_evaluator::admission_response::AdmissionResponse;
+use std::convert::Infallible;
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info, span::Span, warn};
+use tracing::{debug, error, span::Span, warn};
+use warp::http::StatusCode;
 
-use crate::admission_review::AdmissionRequest;
+use crate::admission_review::{AdmissionRequest, AdmissionReview};
 use crate::communication::EvalRequest;
-
-pub(crate) async fn route(
-    req: hyper::Request<hyper::Body>,
-    tx: mpsc::Sender<EvalRequest>,
-) -> Result<hyper::Response<hyper::Body>, hyper::Error> {
-    match *req.method() {
-        Method::POST => {
-            let path = String::from(req.uri().path());
-            if path.starts_with("/validate/") {
-                handle_post_validate(req, path.trim_start_matches("/validate/").to_string(), tx)
-                    .await
-            } else {
-                handle_not_found().await
-            }
-        }
-        Method::GET => {
-            let path = String::from(req.uri().path());
-            if path == "/readiness" {
-                handle_ready().await
-            } else {
-                handle_not_found().await
-            }
-        }
-        _ => handle_not_found().await,
-    }
-}
 
 fn populate_span_with_admission_request_data(adm_req: &AdmissionRequest) {
     Span::current().record("kind", &adm_req.kind.kind.as_str());
@@ -54,10 +27,10 @@ fn populate_span_with_admission_request_data(adm_req: &AdmissionRequest) {
     );
 }
 
-fn populate_span_with_policy_evaluation_results(validation: &ValidationResponse) {
-    Span::current().record("allowed", &validation.allowed);
-    Span::current().record("mutated", &validation.patch.is_some());
-    if let Some(status) = &validation.status {
+fn populate_span_with_policy_evaluation_results(response: &AdmissionResponse) {
+    Span::current().record("allowed", &response.allowed);
+    Span::current().record("mutated", &response.patch.is_some());
+    if let Some(status) = &response.status {
         if let Some(code) = &status.code {
             Span::current().record("response_code", code);
         }
@@ -66,6 +39,13 @@ fn populate_span_with_policy_evaluation_results(validation: &ValidationResponse)
         }
     }
 }
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ServerErrorResponse {
+    pub message: String,
+}
+
 // note about tracing: we are manually adding the `policy_id` field
 // because otherwise the automatic "export" would cause the string to be
 // double quoted. This would make searching by tag inside of Jaeger ugly.
@@ -93,30 +73,25 @@ fn populate_span_with_policy_evaluation_results(validation: &ValidationResponse)
         response_message=tracing::field::Empty,
     ),
     skip_all)]
-async fn handle_post_validate(
-    req: Request<Body>,
+pub(crate) async fn validation(
     policy_id: String,
+    admission_review: AdmissionReview,
     tx: mpsc::Sender<EvalRequest>,
-) -> Result<Response<Body>, hyper::Error> {
-    let raw = hyper::body::to_bytes(req.into_body()).await?;
-    let raw_str = String::from_utf8(raw.to_vec())
-        .unwrap_or_else(|_| String::from("cannot convert raw request into utf8"));
-
-    let adm_req = match AdmissionRequest::new(raw) {
-        Ok(ar) => {
+) -> Result<impl warp::Reply, Infallible> {
+    let adm_req = match admission_review.request {
+        Some(ar) => {
             debug!(admission_review = %serde_json::to_string(&ar).unwrap().as_str());
             ar
         }
-        Err(e) => {
-            warn!(
-                req = raw_str.as_str(),
-                error = e.to_string().as_str(),
-                "Bad AdmissionReview request"
-            );
+        None => {
+            let message = String::from("No Request object defined inside AdmissionReview object");
+            warn!(error = message.as_str(), "Bad AdmissionReview request");
+            let error_reply = ServerErrorResponse { message };
 
-            let mut bad_req = Response::default();
-            *bad_req.status_mut() = StatusCode::BAD_REQUEST;
-            return Ok(bad_req);
+            return Ok(warp::reply::with_status(
+                warp::reply::json(&error_reply),
+                StatusCode::BAD_REQUEST,
+            ));
         }
     };
     populate_span_with_admission_request_data(&adm_req);
@@ -129,11 +104,14 @@ async fn handle_post_validate(
         parent_span: Span::current(),
     };
     if tx.send(eval_req).await.is_err() {
-        error!("error while sending request from API to Worker pool");
+        let message = String::from("error while sending request from API to Worker pool");
+        error!("{}", message);
 
-        let mut internal_error = Response::default();
-        *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-        return Ok(internal_error);
+        let error_reply = ServerErrorResponse { message };
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&error_reply),
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ));
     }
     let res = resp_rx.await;
 
@@ -141,77 +119,42 @@ async fn handle_post_validate(
         Ok(r) => match r {
             Some(vr) => {
                 populate_span_with_policy_evaluation_results(&vr);
-                let json_payload = match build_ar_response(vr) {
-                    Ok(j) => j,
-                    Err(e) => {
-                        error!(error = e.to_string().as_str(), "error building response");
-                        let mut internal_error = Response::default();
-                        *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                        return Ok(internal_error);
-                    }
-                };
-                debug!(response = json_payload.as_str(), "policy evaluated");
+                let admission_review = AdmissionReview::new_with_response(vr);
+                debug!(response =? admission_review, "policy evaluated");
 
-                match Response::builder()
-                    .header(hyper::header::CONTENT_TYPE, "application/json")
-                    .status(StatusCode::OK)
-                    .body(hyper::Body::from(json_payload))
-                {
-                    Ok(builder) => Ok(builder),
-                    Err(e) => {
-                        error!(
-                            error = e.to_string().as_str(),
-                            "error while building response"
-                        );
-                        let mut internal_error = Response::default();
-                        *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-                        Ok(internal_error)
-                    }
-                }
+                Ok(warp::reply::with_status(
+                    warp::reply::json(&admission_review),
+                    StatusCode::OK,
+                ))
             }
             None => {
-                warn!("requested policy not known");
-                let mut not_found = Response::default();
-                *not_found.status_mut() = StatusCode::NOT_FOUND;
-                Ok(not_found)
+                let message = String::from("requested policy not known");
+                warn!("{}", message);
+
+                let error_reply = ServerErrorResponse { message };
+                Ok(warp::reply::with_status(
+                    warp::reply::json(&error_reply),
+                    StatusCode::NOT_FOUND,
+                ))
             }
         },
         Err(e) => {
             error!(
                 error = e.to_string().as_str(),
-                "cannot get WASM response from channel"
+                "cannot get wasm response from channel"
             );
-            let mut internal_error = Response::default();
-            *internal_error.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
-            Ok(internal_error)
+
+            let error_reply = ServerErrorResponse {
+                message: String::from("broken channel"),
+            };
+            Ok(warp::reply::with_status(
+                warp::reply::json(&error_reply),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
         }
     }
 }
 
-fn build_ar_response(validation_response: ValidationResponse) -> anyhow::Result<String> {
-    let reply = json!({
-        "apiVersion": "admission.k8s.io/v1",
-        "kind": "AdmissionReview",
-        "response": validation_response,
-    });
-
-    serde_json::to_string(&reply).map_err(|e| anyhow!("Error serializing response: {:?}", e))
-}
-
-#[tracing::instrument(fields(host=crate::cli::HOSTNAME.as_str()))]
-async fn handle_not_found() -> Result<Response<Body>, hyper::Error> {
-    info!("request not found");
-    let mut not_found = Response::default();
-    *not_found.status_mut() = StatusCode::NOT_FOUND;
-    Ok(not_found)
-}
-
-async fn handle_ready() -> Result<Response<Body>, hyper::Error> {
-    // Always return HTTP OK
-    // The main has a sync::Barrier that prevents the web server to listen to
-    // incoming requests until all the Workers are ready
-
-    let mut ready = Response::default();
-    *ready.status_mut() = StatusCode::OK;
-    Ok(ready)
+pub(crate) async fn readiness() -> Result<impl warp::Reply, Infallible> {
+    Ok(StatusCode::OK)
 }

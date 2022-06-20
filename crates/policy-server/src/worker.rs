@@ -2,10 +2,10 @@ use anyhow::Result;
 use itertools::Itertools;
 use policy_evaluator::callback_requests::CallbackRequest;
 use policy_evaluator::{
+    admission_response::{AdmissionResponse, AdmissionResponseStatus},
     policy_evaluator::{PolicyEvaluator, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_metadata::Metadata,
-    validation_response::{ValidationResponse, ValidationResponseStatus},
 };
 use std::collections::HashMap;
 use std::time::Instant;
@@ -171,14 +171,14 @@ impl Worker {
         policy_id: &str,
         policy_mode: &PolicyMode,
         allowed_to_mutate: bool,
-        validation_response: ValidationResponse,
-    ) -> ValidationResponse {
+        validation_response: AdmissionResponse,
+    ) -> AdmissionResponse {
         match policy_mode {
             PolicyMode::Protect => {
                 if validation_response.patch.is_some() && !allowed_to_mutate {
-                    ValidationResponse {
+                    AdmissionResponse {
                         allowed: false,
-                        status: Some(ValidationResponseStatus {
+                        status: Some(AdmissionResponseStatus {
                             message: Some(format!("Request rejected by policy {}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.", policy_id)),
                             code: None,
                         }),
@@ -205,7 +205,7 @@ impl Worker {
                     response = format!("{:?}", validation_response).as_str(),
                     "policy evaluation (monitor mode)",
                 );
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     patch_type: None,
                     patch: None,
@@ -258,7 +258,7 @@ impl Worker {
                             // allowed to mutate.
                             if let Some(namespace) = always_accept_admission_reviews_on_namespace {
                                 if req.req.namespace == Some(namespace.to_string()) {
-                                    ValidationResponse {
+                                    AdmissionResponse {
                                         allowed: true,
                                         ..validation_response
                                     }
@@ -292,10 +292,10 @@ impl Worker {
                     Err(e) => {
                         let error_msg = format!("Failed to serialize AdmissionReview: {:?}", e);
                         error!("{}", error_msg);
-                        req.resp_chan.send(Some(ValidationResponse::reject(
+                        req.resp_chan.send(Some(AdmissionResponse::reject(
                             req.policy_id,
                             error_msg,
-                            hyper::StatusCode::BAD_REQUEST.as_u16(),
+                            warp::http::StatusCode::BAD_REQUEST.as_u16(),
                         )))
                     }
                 },
@@ -316,17 +316,17 @@ mod tests {
 
     #[test]
     fn validation_response_with_constraints_not_allowed_to_mutate() {
-        let rejection_response = ValidationResponse {
+        let rejection_response = AdmissionResponse {
             allowed: false,
             patch: None,
             patch_type: None,
-            status: Some(ValidationResponseStatus {
+            status: Some(AdmissionResponseStatus {
                 message: Some("Request rejected by policy policy-id. The policy attempted to mutate the request, but it is currently configured to not allow mutations.".to_string()),
                 ..Default::default()
             }),
             ..Default::default()
         };
-        let accept_response = ValidationResponse {
+        let accept_response = AdmissionResponse {
             allowed: true,
             ..Default::default()
         };
@@ -336,7 +336,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Protect,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
                     patch_type: Some("application/json-patch+json".to_string()),
@@ -351,7 +351,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
                     patch_type: Some("application/json-patch+json".to_string()),
@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn validation_response_with_constraints_monitor_mode() {
-        let admission_response = ValidationResponse {
+        let admission_response = AdmissionResponse {
             allowed: true,
             ..Default::default()
         };
@@ -374,7 +374,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
                     patch_type: Some("application/json-patch+json".to_string()),
@@ -390,7 +390,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
                     patch_type: Some("application/json-patch+json".to_string()),
@@ -405,7 +405,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     ..Default::default()
                 },
@@ -419,9 +419,9 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: false,
-                    status: Some(ValidationResponseStatus {
+                    status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
                     }),
@@ -436,7 +436,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     ..Default::default()
                 },
@@ -449,9 +449,9 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: false,
-                    status: Some(ValidationResponseStatus {
+                    status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
                     }),
@@ -464,7 +464,7 @@ mod tests {
 
     #[test]
     fn validation_response_with_constraints_protect_mode() {
-        let admission_response = ValidationResponse {
+        let admission_response = AdmissionResponse {
             allowed: true,
             ..Default::default()
         };
@@ -474,14 +474,14 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Protect,
                 true,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
                     patch_type: Some("application/json-patch+json".to_string()),
                     ..Default::default()
                 },
             ),
-            ValidationResponse {
+            AdmissionResponse {
                 allowed: true,
                 patch: Some("patch".to_string()),
                 patch_type: Some("application/json-patch+json".to_string()),
@@ -495,18 +495,18 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Protect,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
                     patch_type: Some("application/json-patch+json".to_string()),
                     ..Default::default()
                 },
             ),
-            ValidationResponse {
+            AdmissionResponse {
             allowed: false,
             patch: None,
             patch_type: None,
-            status: Some(ValidationResponseStatus {
+            status: Some(AdmissionResponseStatus {
                 message: Some("Request rejected by policy policy-id. The policy attempted to mutate the request, but it is currently configured to not allow mutations.".to_string()),
                 ..Default::default()
             }),
@@ -520,7 +520,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Protect,
                 true,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     ..Default::default()
                 },
@@ -534,18 +534,18 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Protect,
                 true,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: false,
-                    status: Some(ValidationResponseStatus {
+                    status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
                     }),
                     ..Default::default()
                 },
             ),
-            ValidationResponse {
+            AdmissionResponse {
                     allowed: false,
-                    status: Some(ValidationResponseStatus {
+                    status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
                     }),
@@ -558,7 +558,7 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Protect,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: true,
                     ..Default::default()
                 },
@@ -571,18 +571,18 @@ mod tests {
                 POLICY_ID,
                 &PolicyMode::Protect,
                 false,
-                ValidationResponse {
+                AdmissionResponse {
                     allowed: false,
-                    status: Some(ValidationResponseStatus {
+                    status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
                     }),
                     ..Default::default()
                 },
             ),
-            ValidationResponse {
+            AdmissionResponse {
                     allowed: false,
-                    status: Some(ValidationResponseStatus {
+                    status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
                     }),
