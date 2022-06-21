@@ -304,18 +304,15 @@ fn main() -> Result<()> {
 
         // All is good, we can start listening for incoming requests through the
         // web server
-        let tls_acceptor = if cert_file.is_empty() {
+        let tls_config = if cert_file.is_empty() {
             None
         } else {
-            match server::new_tls_acceptor(&cert_file, &key_file) {
-                Ok(t) => Some(t),
-                Err(e) => {
-                    fatal_error(format!("error while creating tls acceptor: {:?}", e));
-                    unreachable!();
-                }
-            }
+            Some(crate::server::TlsConfig {
+                cert_file: cert_file.to_string(),
+                key_file: key_file.to_string(),
+            })
         };
-        server::run_server(&addr, tls_acceptor, api_tx).await;
+        server::run_server(&addr, tls_config, api_tx).await;
 
         // The evaluation is done, we can shutdown the tokio task that is running
         // the CallbackHandler
