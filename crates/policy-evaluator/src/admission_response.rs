@@ -63,11 +63,7 @@ impl AdmissionResponse {
     }
 
     pub fn reject_internal_server_error(uid: String, message: String) -> AdmissionResponse {
-        AdmissionResponse::reject(
-            uid,
-            format!("internal server error: {}", message),
-            hyper::StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-        )
+        AdmissionResponse::reject(uid, format!("internal server error: {}", message), 500)
     }
 
     pub fn from_policy_validation_response(
