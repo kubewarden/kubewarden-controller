@@ -203,16 +203,8 @@ impl<'a> Runtime<'a> {
     ) -> AdmissionResponse {
         let uid = request.uid();
 
-        let req_obj = match request.0.get("object") {
-            Some(req_obj) => req_obj,
-            None => {
-                return AdmissionResponse::reject(
-                    uid.to_string(),
-                    "request doesn't have an 'object' value".to_string(),
-                    hyper::StatusCode::BAD_REQUEST.as_u16(),
-                );
-            }
-        };
+        //NOTE: object is null for DELETE operations
+        let req_obj = request.0.get("object");
 
         let validate_params = json!({
             "request": request,
