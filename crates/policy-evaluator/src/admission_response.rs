@@ -72,12 +72,29 @@ impl AdmissionResponse {
 
     pub fn from_policy_validation_response(
         uid: String,
-        req_obj: &serde_json::Value,
+        req_obj: Option<&serde_json::Value>,
         pol_val_resp: &PolicyValidationResponse,
     ) -> Result<AdmissionResponse> {
+        if pol_val_resp.mutated_object.is_some() && req_obj.is_none() {
+            let message = "Incoming object is null, which happens only with DELETE operations, but the policy is attempting a mutation. This is not allowed";
+
+            return Ok(AdmissionResponse {
+                uid,
+                allowed: false,
+                warnings: None,
+                audit_annotations: None,
+                patch_type: None,
+                patch: None,
+                status: Some(AdmissionResponseStatus {
+                    message: Some(message.to_string()),
+                    code: None,
+                }),
+            });
+        }
+
         let patch = match pol_val_resp.mutated_object.clone() {
             Some(mut_obj) => {
-                let diff = json_patch::diff(req_obj, &mut_obj);
+                let diff = json_patch::diff(req_obj.unwrap(), &mut_obj);
                 let empty_patch = json_patch::Patch(Vec::<json_patch::PatchOperation>::new());
                 if diff == empty_patch {
                     None
@@ -162,11 +179,11 @@ mod tests {
             warnings: Some(warnings.clone()),
         };
 
-        let req_obj = json!({"hello": "world"});
+        let req_obj = Some(json!({"hello": "world"}));
 
         let response = AdmissionResponse::from_policy_validation_response(
             uid.clone(),
-            &req_obj,
+            req_obj.as_ref(),
             &pol_val_resp,
         );
         assert!(response.is_ok());
@@ -193,20 +210,20 @@ mod tests {
         // equal to the original one
 
         let uid = String::from("UID");
-        let req_obj = json!({"hello": "world"});
+        let req_obj = Some(json!({"hello": "world"}));
 
         let pol_val_resp = PolicyValidationResponse {
             accepted: true,
             message: None,
             code: None,
-            mutated_object: Some(req_obj.clone()),
+            mutated_object: req_obj.clone(),
             warnings: None,
             audit_annotations: None,
         };
 
         let response = AdmissionResponse::from_policy_validation_response(
             uid.clone(),
-            &req_obj,
+            req_obj.as_ref(),
             &pol_val_resp,
         );
         assert!(response.is_ok());
@@ -215,6 +232,33 @@ mod tests {
         assert_eq!(response.uid, uid);
         assert!(response.allowed);
         assert!(response.status.is_none());
+        assert!(response.patch.is_none());
+        assert!(response.patch_type.is_none());
+    }
+
+    #[test]
+    fn mutation_on_delete_operation_is_not_allowed() {
+        let uid = String::from("UID");
+        // DELETE operation have a null 'object'
+        let req_obj = None;
+
+        let pol_val_resp = PolicyValidationResponse {
+            accepted: true,
+            message: None,
+            code: None,
+            mutated_object: Some(json!({"hello": "world"})),
+            warnings: None,
+            audit_annotations: None,
+        };
+
+        let response =
+            AdmissionResponse::from_policy_validation_response(uid.clone(), req_obj, &pol_val_resp);
+        assert!(response.is_ok());
+        let response = response.unwrap();
+
+        assert_eq!(response.uid, uid);
+        assert!(!response.allowed);
+        assert!(response.status.is_some());
         assert!(response.patch.is_none());
         assert!(response.patch_type.is_none());
     }
@@ -240,7 +284,7 @@ mod tests {
 
         let response = AdmissionResponse::from_policy_validation_response(
             uid.clone(),
-            &req_obj,
+            Some(&req_obj),
             &pol_val_resp,
         );
         assert!(response.is_ok());
