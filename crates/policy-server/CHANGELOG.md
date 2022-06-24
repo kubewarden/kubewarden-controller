@@ -1,6 +1,10 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+<a name="v1.0.1"></a>
+## [v1.0.1] - 2022-06-24
+### Bug Fixes
+- keyless image verification
 
 <a name="v1.0.0-rc2"></a>
 ## [v1.0.0-rc2] - 2022-06-15
