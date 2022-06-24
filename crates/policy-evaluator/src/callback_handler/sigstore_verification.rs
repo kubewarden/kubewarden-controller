@@ -51,7 +51,6 @@ impl Client {
             .verifier
             .verify(&image, self.docker_config.as_ref(), &verification_config)
             .await;
-
         match result {
             Ok(digest) => Ok(VerificationResponse {
                 digest,
@@ -70,7 +69,7 @@ impl Client {
         if keyless.is_empty() {
             return Err(anyhow!("Must provide keyless info"));
         }
-        // Build intering VerificationConfig:
+        // Build interim VerificationConfig:
         //
         let mut signatures_all_of: Vec<Signature> = Vec::new();
         for k in keyless.iter() {
@@ -85,6 +84,7 @@ impl Client {
             all_of: Some(signatures_all_of),
             any_of: None,
         };
+
         let result = self
             .verifier
             .verify(&image, self.docker_config.as_ref(), &verification_config)

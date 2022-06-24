@@ -189,9 +189,9 @@ impl CallbackHandler {
                                     .await
                                     .map(|response| {
                                         if response.was_cached {
-                                            debug!(?image, "Got sigstore pub keys verification from cache");
+                                            debug!(?image, "Got sigstore keyless verification from cache");
                                         } else {
-                                            debug!(?image, "Got sigstore pub keys verification by querying remote registry");
+                                            debug!(?image, "Got sigstore keylesss verification by querying remote registry");
                                         }
                                         CallbackResponse {
                                         payload: serde_json::to_vec(&response.value).unwrap()
