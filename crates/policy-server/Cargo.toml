@@ -1,6 +1,6 @@
 [package]
 name = "policy-server"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
@@ -11,7 +11,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 itertools = "0.10.3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.1" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.2" }
 lazy_static = "1.4.0"
 clap = { version = "3.2.5", features = [ "cargo", "env" ] }
 k8s-openapi = { version = "0.15.0", default-features = false, features = ["v1_24"] }
