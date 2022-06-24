@@ -89,7 +89,43 @@ impl Client {
             .verifier
             .verify(&image, self.docker_config.as_ref(), &verification_config)
             .await;
+        match result {
+            Ok(digest) => Ok(VerificationResponse {
+                digest,
+                is_trusted: true,
+            }),
+            Err(e) => Err(e),
+        }
+    }
 
+    pub async fn verify_github_actions(
+        &mut self,
+        image: String,
+        owner: String,
+        repo: Option<String>,
+        annotations: Option<HashMap<String, String>>,
+    ) -> Result<VerificationResponse> {
+        if owner.is_empty() {
+            return Err(anyhow!("Must provide owner info"));
+        }
+        // Build interim VerificationConfig:
+        //
+        let mut signatures_all_of: Vec<Signature> = Vec::new();
+        let signature = Signature::GithubAction {
+            owner: owner.clone(),
+            repo: repo.clone(),
+            annotations: annotations.clone(),
+        };
+        signatures_all_of.push(signature);
+        let verification_config = LatestVerificationConfig {
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+
+        let result = self
+            .verifier
+            .verify(&image, self.docker_config.as_ref(), &verification_config)
+            .await;
         match result {
             Ok(digest) => Ok(VerificationResponse {
                 digest,
