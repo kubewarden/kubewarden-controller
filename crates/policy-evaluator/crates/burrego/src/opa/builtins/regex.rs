@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use core::fmt::Display;
 use regex::{escape as regex_escape, Regex};
+use std::fmt::Write as _; // import without risk of name clashing
 use std::{fmt, str::FromStr};
 
 pub fn split(args: &[serde_json::Value]) -> Result<serde_json::Value> {
@@ -117,7 +118,7 @@ impl Display for ExpressionList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = String::new();
         for expression in self.0.iter() {
-            result.push_str(&format!("{}", expression));
+            write!(result, "{}", expression)?;
         }
         write!(f, "{}", result)
     }
