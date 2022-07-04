@@ -98,6 +98,45 @@ impl Client {
         }
     }
 
+    pub async fn verify_keyless_prefix(
+        &mut self,
+        image: String,
+        keyless: Vec<KeylessInfo>,
+        annotations: Option<HashMap<String, String>>,
+    ) -> Result<VerificationResponse> {
+        if keyless.is_empty() {
+            return Err(anyhow!("Must provide keyless info"));
+        }
+        // Build interim VerificationConfig:
+        //
+        let mut signatures_all_of: Vec<Signature> = Vec::new();
+        for k in keyless.iter() {
+            let prefix = url::Url::parse(&k.subject).expect("Cannot build url prefix");
+            let signature = Signature::GenericIssuer {
+                issuer: k.issuer.clone(),
+                subject: Subject::UrlPrefix(prefix),
+                annotations: annotations.clone(),
+            };
+            signatures_all_of.push(signature);
+        }
+        let verification_config = LatestVerificationConfig {
+            all_of: Some(signatures_all_of),
+            any_of: None,
+        };
+
+        let result = self
+            .verifier
+            .verify(&image, self.docker_config.as_ref(), &verification_config)
+            .await;
+        match result {
+            Ok(digest) => Ok(VerificationResponse {
+                digest,
+                is_trusted: true,
+            }),
+            Err(e) => Err(e),
+        }
+    }
+
     pub async fn verify_github_actions(
         &mut self,
         image: String,

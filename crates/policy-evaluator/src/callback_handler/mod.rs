@@ -201,6 +201,28 @@ impl CallbackHandler {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
                             },
+                            CallbackRequestType::SigstoreKeylessPrefixVerify {
+                                image,
+                                keyless,
+                                annotations,
+                            } => {
+                                let response = get_sigstore_keyless_prefix_verification_cached(&mut self.sigstore_client, image.clone(), keyless, annotations)
+                                    .await
+                                    .map(|response| {
+                                        if response.was_cached {
+                                            debug!(?image, "Got sigstore keyless verification from cache");
+                                        } else {
+                                            debug!(?image, "Got sigstore keylesss verification by querying remote registry");
+                                        }
+                                        CallbackResponse {
+                                        payload: serde_json::to_vec(&response.value).unwrap()
+                                    }});
+
+                                if let Err(e) = req.response_channel.send(response) {
+                                    warn!("callback handler: cannot send response back: {:?}", e);
+                                }
+                            },
+
                             CallbackRequestType::SigstoreGithubActionsVerify {
                                 image,
                                 owner,
@@ -329,6 +351,33 @@ async fn get_sigstore_keyless_verification_cached(
 ) -> Result<cached::Return<VerificationResponse>> {
     client
         .verify_keyless(image, keyless, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}", image, keyless, annotations)}"#,
+    with_cached_flag = true
+)]
+async fn get_sigstore_keyless_prefix_verification_cached(
+    client: &mut sigstore_verification::Client,
+    image: String,
+    keyless: Vec<KeylessInfo>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_keyless_prefix(image, keyless, annotations)
         .await
         .map(cached::Return::new)
 }
