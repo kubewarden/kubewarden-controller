@@ -8,6 +8,7 @@ use std::{
 use tokio::sync::mpsc;
 
 use wapc::WapcHost;
+use wasmtime_provider::wasmtime;
 use wasmtime_provider::WasmtimeEngineProvider;
 
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
