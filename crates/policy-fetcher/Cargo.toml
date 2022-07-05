@@ -34,6 +34,6 @@ walkdir = "2"
 rayon = "1.5.3"
 
 [dev-dependencies]
-rstest = "0.14.0"
+rstest = "0.15.0"
 tempfile = "3.2.0"
 textwrap = "0.15.0"
