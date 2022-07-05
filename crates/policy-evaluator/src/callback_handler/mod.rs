@@ -10,7 +10,7 @@ use crate::callback_requests::{CallbackRequest, CallbackResponse};
 use kubewarden_policy_sdk::host_capabilities::{
     net::LookupResponse,
     oci::ManifestDigestResponse,
-    verification::{KeylessInfo, VerificationResponse},
+    verification::{KeylessInfo, KeylessPrefixInfo, VerificationResponse},
     CallbackRequestType,
 };
 use policy_fetcher::verify::FulcioAndRekorData;
@@ -203,16 +203,16 @@ impl CallbackHandler {
                             },
                             CallbackRequestType::SigstoreKeylessPrefixVerify {
                                 image,
-                                keyless,
+                                keyless_prefix,
                                 annotations,
                             } => {
-                                let response = get_sigstore_keyless_prefix_verification_cached(&mut self.sigstore_client, image.clone(), keyless, annotations)
+                                let response = get_sigstore_keyless_prefix_verification_cached(&mut self.sigstore_client, image.clone(), keyless_prefix, annotations)
                                     .await
                                     .map(|response| {
                                         if response.was_cached {
-                                            debug!(?image, "Got sigstore keyless verification from cache");
+                                            debug!(?image, "Got sigstore keyless prefix verification from cache");
                                         } else {
-                                            debug!(?image, "Got sigstore keylesss verification by querying remote registry");
+                                            debug!(?image, "Got sigstore keylesss prefix verification by querying remote registry");
                                         }
                                         CallbackResponse {
                                         payload: serde_json::to_vec(&response.value).unwrap()
@@ -367,17 +367,17 @@ async fn get_sigstore_keyless_verification_cached(
     result = true,
     sync_writes = true,
     key = "String",
-    convert = r#"{ format!("{}{:?}{:?}", image, keyless, annotations)}"#,
+    convert = r#"{ format!("{}{:?}{:?}", image, keyless_prefix, annotations)}"#,
     with_cached_flag = true
 )]
 async fn get_sigstore_keyless_prefix_verification_cached(
     client: &mut sigstore_verification::Client,
     image: String,
-    keyless: Vec<KeylessInfo>,
+    keyless_prefix: Vec<KeylessPrefixInfo>,
     annotations: Option<HashMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
-        .verify_keyless_prefix(image, keyless, annotations)
+        .verify_keyless_prefix(image, keyless_prefix, annotations)
         .await
         .map(cached::Return::new)
 }
