@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
-use kubewarden_policy_sdk::host_capabilities::verification::{KeylessInfo, VerificationResponse};
+use kubewarden_policy_sdk::host_capabilities::verification::{
+    KeylessInfo, KeylessPrefixInfo, VerificationResponse,
+};
 use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::config::{LatestVerificationConfig, Signature, Subject};
@@ -101,17 +103,17 @@ impl Client {
     pub async fn verify_keyless_prefix(
         &mut self,
         image: String,
-        keyless: Vec<KeylessInfo>,
+        keyless_prefix: Vec<KeylessPrefixInfo>,
         annotations: Option<HashMap<String, String>>,
     ) -> Result<VerificationResponse> {
-        if keyless.is_empty() {
+        if keyless_prefix.is_empty() {
             return Err(anyhow!("Must provide keyless info"));
         }
         // Build interim VerificationConfig:
         //
         let mut signatures_all_of: Vec<Signature> = Vec::new();
-        for k in keyless.iter() {
-            let prefix = url::Url::parse(&k.subject).expect("Cannot build url prefix");
+        for k in keyless_prefix.iter() {
+            let prefix = url::Url::parse(&k.url_prefix).expect("Cannot build url prefix");
             let signature = Signature::GenericIssuer {
                 issuer: k.issuer.clone(),
                 subject: Subject::UrlPrefix(prefix),
