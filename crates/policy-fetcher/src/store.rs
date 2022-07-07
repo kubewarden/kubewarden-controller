@@ -259,7 +259,8 @@ fn transform_policy_store_path<'a>(
             }
         })
         .map_err(|_| anyhow!("cannot compute policy path"))?
-        .to_slash_lossy())
+        .to_slash_lossy()
+        .to_string())
 }
 
 impl Default for Store {
