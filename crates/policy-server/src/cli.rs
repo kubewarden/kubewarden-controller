@@ -57,6 +57,14 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .help("Log output format"),
         )
         .arg(
+            Arg::new("log-no-color")
+                .long("log-no-color")
+                .takes_value(false)
+                .env("KUBEWARDEN_LOG_NO_COLOR")
+                .required(false)
+                .help("Disable colored output for logs [env: KUBEWARDEN_LOG_NO_COLOR=]"),
+        )
+        .arg(
             Arg::new("address")
                 .long("addr")
                 .takes_value(true)
@@ -233,10 +241,15 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
             .with(filter_layer)
             .with(fmt::layer().json())
             .init(),
-        "text" => tracing_subscriber::registry()
-            .with(filter_layer)
-            .with(fmt::layer())
-            .init(),
+        "text" => {
+            let enable_color = !matches.is_present("log-no-color");
+            let layer = fmt::layer().with_ansi(enable_color);
+
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(layer)
+                .init()
+        }
         "otlp" => {
             // Create a new OpenTelemetry pipeline sending events to a
             // OpenTelemetry collector using the OTLP format.
