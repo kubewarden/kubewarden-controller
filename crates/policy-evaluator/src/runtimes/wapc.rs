@@ -13,7 +13,7 @@ use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 
-use kubewarden_policy_sdk::host_capabilities::CallbackRequestType;
+use kubewarden_policy_sdk::host_capabilities::{CallbackRequestType, SigstoreVerificationInputV1, SigstoreVerificationInputV2};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
@@ -54,9 +54,22 @@ pub(crate) fn host_callback(
                 }
             },
             "oci" => match operation {
-                "v1/verify" | "v2/verify" => {
-                    let req_type: CallbackRequestType =
+                "v1/verify" => {
+                    let req: SigstoreVerificationInputV1 =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
+                    let req_type: CallbackRequestType = req.into();
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: req_type,
+                        response_channel: tx,
+                    };
+
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                },
+                "v2/verify" => {
+                    let req: SigstoreVerificationInputV2 =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    let req_type: CallbackRequestType = req.into();
                     let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                     let req = CallbackRequest {
                         request: req_type,
