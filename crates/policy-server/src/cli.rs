@@ -62,7 +62,7 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .takes_value(false)
                 .env("NO_COLOR")
                 .required(false)
-                .help("Disable colored output for logs [env: NO_COLOR=]"),
+                .help("Disable colored output for logs"),
         )
         .arg(
             Arg::new("address")
@@ -109,10 +109,7 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .takes_value(true)
                 .env("KUBEWARDEN_POLICIES")
                 .default_value("policies.yml")
-                .help(
-                    "YAML file holding the policies to be loaded and
-                    their settings",
-                ),
+                .help("YAML file holding the policies to be loaded and their settings"),
         )
         .arg(
             Arg::new("policies-download-dir")
@@ -158,7 +155,7 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .takes_value(false)
                 .env("KUBEWARDEN_ENABLE_METRICS")
                 .required(false)
-                .help("Enable metrics [env: KUBEWARDEN_ENABLE_METRICS=]"),
+                .help("Enable metrics"),
         )
         .arg(
             Arg::new("enable-verification")
@@ -166,7 +163,7 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .takes_value(false)
                 .env("KUBEWARDEN_ENABLE_VERIFICATION")
                 .required(false)
-                .help("Enable Sigstore verification [env: KUBEWARDEN_ENABLE_VERIFICATION=]"),
+                .help("Enable Sigstore verification"),
         )
         .arg(
             Arg::new("always-accept-admission-reviews-on-namespace")
@@ -174,7 +171,7 @@ pub(crate) fn build_cli() -> Command<'static> {
                 .takes_value(true)
                 .env("KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE")
                 .required(false)
-                .help("Always accept AdmissionReviews that target the given namespace [env: KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE]"),
+                .help("Always accept AdmissionReviews that target the given namespace"),
         )
         .long_version(VERSION_AND_BUILTINS.as_str())
 }
