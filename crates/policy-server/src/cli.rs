@@ -60,9 +60,9 @@ pub(crate) fn build_cli() -> Command<'static> {
             Arg::new("log-no-color")
                 .long("log-no-color")
                 .takes_value(false)
-                .env("KUBEWARDEN_LOG_NO_COLOR")
+                .env("NO_COLOR")
                 .required(false)
-                .help("Disable colored output for logs [env: KUBEWARDEN_LOG_NO_COLOR=]"),
+                .help("Disable colored output for logs [env: NO_COLOR=]"),
         )
         .arg(
             Arg::new("address")
