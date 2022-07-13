@@ -233,10 +233,10 @@ impl Worker {
                         let policy_mode = policy_mode.clone();
                         let start_time = Instant::now();
                         let allowed_to_mutate = *allowed_to_mutate;
-                        let validation_response =
+                        let vanilla_validation_response =
                             policy_evaluator.validate(ValidateRequest::new(json));
                         let policy_evaluation_duration = start_time.elapsed();
-                        let error_code = if let Some(status) = &validation_response.status {
+                        let error_code = if let Some(status) = &vanilla_validation_response.status {
                             status.code
                         } else {
                             None
@@ -245,7 +245,7 @@ impl Worker {
                             &req.policy_id,
                             &policy_mode,
                             allowed_to_mutate,
-                            validation_response,
+                            vanilla_validation_response.clone(),
                         );
                         let validation_response =
                             // If the policy server is configured to
@@ -268,8 +268,8 @@ impl Worker {
                             } else {
                                 validation_response
                             };
-                        let accepted = validation_response.allowed;
-                        let mutated = validation_response.patch.is_some();
+                        let accepted = vanilla_validation_response.allowed;
+                        let mutated = vanilla_validation_response.patch.is_some();
                         let res = req.resp_chan.send(Some(validation_response));
                         let policy_evaluation = metrics::PolicyEvaluation {
                             policy_name,
