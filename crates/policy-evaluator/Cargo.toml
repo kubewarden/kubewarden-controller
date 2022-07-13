@@ -21,7 +21,7 @@ burrego = { path = "crates/burrego" }
 cached = "0.36.0"
 dns-lookup = "1.0.8"
 json-patch = "0.2.6"
-kube = { version = "0.73.1", default-features = false, features = ["client", "rustls-tls"] }
+kube = { version = "0.74.0", default-features = false, features = ["client", "rustls-tls"] }
 k8s-openapi = { version = "0.15.0", default-features = false }
 kubewarden-policy-sdk = "0.6.3"
 lazy_static = "1.4.0"
