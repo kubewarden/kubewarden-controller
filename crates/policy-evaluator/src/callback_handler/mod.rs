@@ -5,13 +5,11 @@ use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
 
-use crate::callback_requests::{CallbackRequest, CallbackResponse};
+use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 
+use kubewarden_policy_sdk::host_capabilities::verification::{KeylessInfo, KeylessPrefixInfo};
 use kubewarden_policy_sdk::host_capabilities::{
-    net::LookupResponse,
-    oci::ManifestDigestResponse,
-    verification::{KeylessInfo, KeylessPrefixInfo, VerificationResponse},
-    CallbackRequestType,
+    net::LookupResponse, oci::ManifestDigestResponse, verification::VerificationResponse,
 };
 use policy_fetcher::verify::FulcioAndRekorData;
 
