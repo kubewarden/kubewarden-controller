@@ -2,6 +2,21 @@
 ## [Unreleased]
 
 
+<a name="v1.1.0"></a>
+## [v1.1.0] - 0001-01-01
+
+<a name="v1.0.0"></a>
+## [v1.0.0] - 2022-06-15
+
+<a name="v1.0.0-rc3"></a>
+## [v1.0.0-rc3] - 2022-06-15
+
+<a name="v1.0.0-rc4"></a>
+## [v1.0.0-rc4] - 2022-06-15
+### Pull Requests
+- Merge pull request [#251](https://github.com/kubewarden/kubewarden-controller/issues/251) from viccuad/main
+
+
 <a name="v1.0.0-rc2"></a>
 ## [v1.0.0-rc2] - 2022-06-15
 ### Pull Requests
@@ -898,7 +913,11 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc2...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.1.0...HEAD
+[v1.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0...v1.1.0
+[v1.0.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc3...v1.0.0
+[v1.0.0-rc3]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc4...v1.0.0-rc3
+[v1.0.0-rc4]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc2...v1.0.0-rc4
 [v1.0.0-rc2]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc1...v1.0.0-rc2
 [v1.0.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.5...v1.0.0-rc1
 [v0.5.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.4...v0.5.5
