@@ -1,14 +1,65 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+
+<a name="v1.1.0"></a>
+## [v1.1.0] - 2022-07-14
+### Bug Fixes
+- **deps:** update rust crate serde_yaml to 0.8.25
+
+### Pull Requests
+- Merge pull request [#259](https://github.com/kubewarden/kwctl/issues/259) from viccuad/gha
+- Merge pull request [#255](https://github.com/kubewarden/kwctl/issues/255) from kubewarden/dependabot/cargo/wasmparser-0.87.0
+- Merge pull request [#257](https://github.com/kubewarden/kwctl/issues/257) from kubewarden/renovate/all-patch
+- Merge pull request [#258](https://github.com/kubewarden/kwctl/issues/258) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#256](https://github.com/kubewarden/kwctl/issues/256) from kubewarden/dependabot/cargo/policy-evaluator-v0.4.3
+- Merge pull request [#254](https://github.com/kubewarden/kwctl/issues/254) from kubewarden/dependabot/cargo/regex-1.6.0
+- Merge pull request [#252](https://github.com/kubewarden/kwctl/issues/252) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#253](https://github.com/kubewarden/kwctl/issues/253) from kubewarden/dependabot/cargo/rstest-0.15.0
+
+
 <a name="v1.0.1"></a>
 ## [v1.0.1] - 2022-06-24
 ### Bug Fixes
 - keyless image verification
 
+### Pull Requests
+- Merge pull request [#251](https://github.com/kubewarden/kwctl/issues/251) from raulcabello/bump
+- Merge pull request [#250](https://github.com/kubewarden/kwctl/issues/250) from raulcabello/bump
+
+
+<a name="v1.0.0"></a>
+## [v1.0.0] - 2022-06-22
+### Pull Requests
+- Merge pull request [#249](https://github.com/kubewarden/kwctl/issues/249) from flavio/v1.0.0-release
+
+
+<a name="v1.0.0-rc4"></a>
+## [v1.0.0-rc4] - 2022-06-22
+
+<a name="v1.0.0-rc3"></a>
+## [v1.0.0-rc3] - 2022-06-21
+### Pull Requests
+- Merge pull request [#248](https://github.com/kubewarden/kwctl/issues/248) from flavio/update-policy-evaluator
+- Merge pull request [#246](https://github.com/kubewarden/kwctl/issues/246) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#247](https://github.com/kubewarden/kwctl/issues/247) from kubewarden/dependabot/cargo/rstest-0.14.0
+
+
+<a name="v1.0.0-rc2"></a>
+## [v1.0.0-rc2] - 2022-06-15
+### Features
+- scaffold - generate AdmissionPolicy CR
+- update scaffold to generate v1 CRD
+
+### Pull Requests
+- Merge pull request [#244](https://github.com/kubewarden/kwctl/issues/244) from flavio/update-scaffold
+- Merge pull request [#241](https://github.com/kubewarden/kwctl/issues/241) from flavio/suppress-wasmtime-cache-warnings
+
+
 <a name="v1.0.0-rc1"></a>
 ## [v1.0.0-rc1] - 2022-06-14
 ### Pull Requests
+- Merge pull request [#239](https://github.com/kubewarden/kwctl/issues/239) from viccuad/main
 - Merge pull request [#237](https://github.com/kubewarden/kwctl/issues/237) from kubewarden/dependabot/cargo/wasmparser-0.86.0
 - Merge pull request [#238](https://github.com/kubewarden/kwctl/issues/238) from kubewarden/renovate/lock-file-maintenance
 - Merge pull request [#236](https://github.com/kubewarden/kwctl/issues/236) from flavio/enable-wasmtime-cache
@@ -317,7 +368,13 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.0.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.1.0...HEAD
+[v1.1.0]: https://github.com/kubewarden/kwctl/compare/v1.0.1...v1.1.0
+[v1.0.1]: https://github.com/kubewarden/kwctl/compare/v1.0.0...v1.0.1
+[v1.0.0]: https://github.com/kubewarden/kwctl/compare/v1.0.0-rc4...v1.0.0
+[v1.0.0-rc4]: https://github.com/kubewarden/kwctl/compare/v1.0.0-rc3...v1.0.0-rc4
+[v1.0.0-rc3]: https://github.com/kubewarden/kwctl/compare/v1.0.0-rc2...v1.0.0-rc3
+[v1.0.0-rc2]: https://github.com/kubewarden/kwctl/compare/v1.0.0-rc1...v1.0.0-rc2
 [v1.0.0-rc1]: https://github.com/kubewarden/kwctl/compare/v0.3.5...v1.0.0-rc1
 [v0.3.5]: https://github.com/kubewarden/kwctl/compare/v0.3.4...v0.3.5
 [v0.3.4]: https://github.com/kubewarden/kwctl/compare/v0.3.3...v0.3.4
