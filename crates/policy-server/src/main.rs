@@ -82,13 +82,26 @@ fn main() -> Result<()> {
     let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
         oneshot::channel();
 
-    let repo = sigstore::tuf::SigstoreRepository::fetch(None)?;
-    let fulcio_and_rekor_data = FulcioAndRekorData::FromTufRepository { repo };
+    let fulcio_and_rekor_data = match sigstore::tuf::SigstoreRepository::fetch(None) {
+        Ok(repo) => Some(FulcioAndRekorData::FromTufRepository { repo }),
+        Err(e) => {
+            // We cannot rely on `tracing` yet, because the tracing system has not
+            // been initialized, this has to be done inside of an async block, which
+            // we cannot use yet
+            eprintln!("Cannot fetch TUF repository: {:?}", e);
+            eprintln!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
+            eprintln!(
+                "Sigstore Verifier created without Rekor data: transparency log data won't be used"
+            );
+            eprintln!("Sigstore capabilities are going to be limited");
+            None
+        }
+    };
 
     let mut callback_handler = CallbackHandlerBuilder::default()
         .registry_config(sources.clone(), docker_config.clone())
         .shutdown_channel(callback_handler_shutdown_channel_rx)
-        .fulcio_and_rekor_data(&fulcio_and_rekor_data)
+        .fulcio_and_rekor_data(fulcio_and_rekor_data.as_ref())
         .build()?;
     let callback_sender_channel = callback_handler.sender_channel();
 

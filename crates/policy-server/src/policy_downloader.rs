@@ -225,11 +225,24 @@ async fn create_verifier(
         None => sigstore::tuf::SigstoreRepository::fetch(None),
     })
     .await
-    .map_err(|e| anyhow!("Cannot spawn blocking task: {}", e))?
-    .map_err(|e| anyhow!("Cannot create TUF repository: {}", e))?;
+    .map_err(|e| anyhow!("Cannot spawn blocking task: {}", e))?;
 
-    let fulcio_and_rekor_data = FulcioAndRekorData::FromTufRepository { repo };
-    Verifier::new(sources, &fulcio_and_rekor_data)
+    let fulcio_and_rekor_data = match repo {
+        Ok(repo) => Some(FulcioAndRekorData::FromTufRepository { repo }),
+        Err(e) => {
+            // We cannot rely on `tracing` yet, because the tracing system has not
+            // been initialized, this has to be done inside of an async block, which
+            // we cannot use yet
+            eprintln!("Cannot fetch TUF repository: {:?}", e);
+            eprintln!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
+            eprintln!(
+                "Sigstore Verifier created without Rekor data: transparency log data won't be used"
+            );
+            eprintln!("Sigstore capabilities are going to be limited");
+            None
+        }
+    };
+    Verifier::new(sources, fulcio_and_rekor_data.as_ref())
 }
 
 #[cfg(test)]
