@@ -274,7 +274,6 @@ impl Worker {
                         let policy_evaluation = metrics::PolicyEvaluation {
                             policy_name,
                             policy_mode: policy_mode.into(),
-                            resource_name: req.req.name.unwrap_or_else(|| "unknown".to_string()),
                             resource_namespace: req.req.namespace,
                             resource_kind: req.req.request_kind.unwrap_or_default().kind,
                             resource_request_operation: req.req.operation.clone(),
