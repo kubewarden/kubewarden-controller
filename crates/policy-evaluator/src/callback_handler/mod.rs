@@ -53,8 +53,11 @@ impl<'a> CallbackHandlerBuilder<'a> {
         self
     }
 
-    pub fn fulcio_and_rekor_data(mut self, fulcio_and_rekor_data: &'a FulcioAndRekorData) -> Self {
-        self.fulcio_and_rekor_data = Some(fulcio_and_rekor_data);
+    pub fn fulcio_and_rekor_data(
+        mut self,
+        fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
+    ) -> Self {
+        self.fulcio_and_rekor_data = fulcio_and_rekor_data;
         self
     }
 
@@ -78,15 +81,12 @@ impl<'a> CallbackHandlerBuilder<'a> {
         let shutdown_channel = self
             .shutdown_channel
             .ok_or_else(|| anyhow!("shutdown_channel_rx not provided"))?;
-        let fulcio_and_rekor_data = self
-            .fulcio_and_rekor_data
-            .ok_or_else(|| anyhow!("fulcio_and_rekor_data not provided"))?;
 
         let oci_client = oci::Client::new(self.oci_sources.clone(), self.docker_config.clone());
         let sigstore_client = sigstore_verification::Client::new(
             self.oci_sources.clone(),
             self.docker_config.clone(),
-            fulcio_and_rekor_data,
+            self.fulcio_and_rekor_data,
         )?;
 
         Ok(CallbackHandler {

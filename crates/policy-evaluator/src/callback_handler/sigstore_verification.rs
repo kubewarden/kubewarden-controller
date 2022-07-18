@@ -17,7 +17,7 @@ impl Client {
     pub fn new(
         sources: Option<Sources>,
         docker_config: Option<DockerConfig>,
-        fulcio_and_rekor_data: &FulcioAndRekorData,
+        fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
     ) -> Result<Self> {
         let verifier = Verifier::new(sources, fulcio_and_rekor_data)?;
         Ok(Client {
