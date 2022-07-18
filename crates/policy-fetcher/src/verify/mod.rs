@@ -10,7 +10,7 @@ use oci_distribution::Reference;
 use sigstore::errors::SigstoreError;
 use std::convert::TryFrom;
 use std::{convert::TryInto, str::FromStr};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 /// This structure simplifies the process of policy verification
 /// using Sigstore
@@ -57,22 +57,22 @@ impl Verifier {
     /// later used to interact with remote OCI registries.
     pub fn new(
         sources: Option<Sources>,
-        fulcio_and_rekor_data: &FulcioAndRekorData,
+        fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
     ) -> Result<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
         let mut cosign_client_builder =
             ClientBuilder::default().with_oci_client_config(client_config);
         match fulcio_and_rekor_data {
-            FulcioAndRekorData::FromTufRepository { repo } => {
+            Some(FulcioAndRekorData::FromTufRepository { repo }) => {
                 cosign_client_builder = cosign_client_builder
                     .with_rekor_pub_key(repo.rekor_pub_key())
                     .with_fulcio_certs(repo.fulcio_certs());
             }
-            FulcioAndRekorData::FromCustomData {
+            Some(FulcioAndRekorData::FromCustomData {
                 rekor_public_key,
                 fulcio_certs,
-            } => {
+            }) => {
                 if let Some(pk) = rekor_public_key {
                     cosign_client_builder = cosign_client_builder.with_rekor_pub_key(pk);
                 }
@@ -86,6 +86,11 @@ impl Verifier {
                         .collect();
                     cosign_client_builder = cosign_client_builder.with_fulcio_certs(&certs);
                 }
+            }
+            None => {
+                warn!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
+                warn!("Sigstore Verifier created without Rekor data: transparency log data won't be used");
+                warn!("Sigstore capabilities are going to be limited");
             }
         }
 
