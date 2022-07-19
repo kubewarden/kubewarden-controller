@@ -404,7 +404,7 @@ checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 [[package]]
 name = "burrego"
 version = "0.1.3"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.4#e47bda8e9667e767d7c1fa35d7401f6a6d62e96e"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.5#80f96c08841cab79961aa5683776ebcbfd5bfa7b"
 dependencies = [
  "anyhow",
  "base64",
@@ -2028,9 +2028,9 @@ checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 
 [[package]]
 name = "kube"
-version = "0.73.1"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f68b954ea9ad888de953fb1488bd8f377c4c78d82d4642efa5925189210b50b7"
+checksum = "a527a8001a61d8d470dab27ac650889938760c243903e7cd90faaf7c60a34bdd"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -2039,9 +2039,9 @@ dependencies = [
 
 [[package]]
 name = "kube-client"
-version = "0.73.1"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9150dc7107d9acf4986088f284a0a6dddc5ae37ef1ffdf142f6811dc5998dd58"
+checksum = "c0d48f42df4e8342e9f488c4b97e3759d0042c4e7ab1a853cc285adb44409480"
 dependencies = [
  "base64",
  "bytes",
@@ -2075,9 +2075,9 @@ dependencies = [
 
 [[package]]
 name = "kube-core"
-version = "0.73.1"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc8c429676abe6a73b374438d5ca02caaf9ae7a635441253c589b779fa5d0622"
+checksum = "91f56027f862fdcad265d2e9616af416a355e28a1c620bb709083494753e070d"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -2782,9 +2782,9 @@ dependencies = [
 
 [[package]]
 name = "path-slash"
-version = "0.1.5"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "498a099351efa4becc6a19c72aa9270598e8fd274ca47052e37455241c88b696"
+checksum = "c54014ba3c1880122928735226f78b6f5bf5bd1fed15e41e92cf7aa20278ce28"
 
 [[package]]
 name = "pathdiff"
@@ -3019,8 +3019,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.4.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.4#e47bda8e9667e767d7c1fa35d7401f6a6d62e96e"
+version = "0.4.5"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.5#80f96c08841cab79961aa5683776ebcbfd5bfa7b"
 dependencies = [
  "anyhow",
  "base64",
@@ -3047,8 +3047,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.7.8"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.8#7d710f303b54fb6aa7e971a18a17338fd8feaee9"
+version = "0.7.9"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.9#e3145ce66a2ca952128983f6e3fcc77c41d3a259"
 dependencies = [
  "anyhow",
  "async-std",
@@ -3779,7 +3779,8 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.3.2"
-source = "git+https://github.com/sigstore/sigstore-rs?rev=v0.3.2#8320a7fcb90ed393c3075aa50943ffd1e61e040a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e03665d79a0eba79810d49a6c4f7aa0bcd157d93b50bf89aabf48cb1cb1d74be"
 dependencies = [
  "async-trait",
  "base64",
