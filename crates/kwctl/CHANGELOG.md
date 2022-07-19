@@ -5,9 +5,14 @@
 <a name="v1.1.1"></a>
 ## [v1.1.1] - 2022-07-19
 ### Bug Fixes
+- Disable TUF integration test for now
 - Warn and continue when Sigstore TUF repository is broken
+- **deps:** update rust crate serde_yaml to 0.8.26
 
 ### Pull Requests
+- Merge pull request [#265](https://github.com/kubewarden/kwctl/issues/265) from viccuad/tuf-fix
+- Merge pull request [#263](https://github.com/kubewarden/kwctl/issues/263) from kubewarden/renovate/all-patch
+- Merge pull request [#264](https://github.com/kubewarden/kwctl/issues/264) from kubewarden/renovate/lock-file-maintenance
 - Merge pull request [#262](https://github.com/kubewarden/kwctl/issues/262) from kubewarden/road-to-1.1.0
 
 

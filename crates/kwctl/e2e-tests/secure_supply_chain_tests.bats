@@ -67,18 +67,18 @@ kwctl() {
     [ $(expr "$output" : '.*--sources-path.*') -ne 0 ]
 }
 
-@test "[Secure supply chain  tests] Check TUF integration" {
-    mkdir -p "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data
-    FULCIO_AND_REKOR_DATA_DIR=$(readlink -f "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data)
-    rm -rf ${FULCIO_AND_REKOR_DATA_DIR}
-    kwctl verify \
-      --verification-config-path=test-data/sigstore/verification-config-keyless.yml \
-      registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
-    [ "$status" -eq 0 ]
-    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio.crt.pem ]
-    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio_v1.crt.pem ]
-    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/rekor.pub ]
-}
+# @test "[Secure supply chain  tests] Check TUF integration" {
+#     mkdir -p "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data
+#     FULCIO_AND_REKOR_DATA_DIR=$(readlink -f "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data)
+#     rm -rf ${FULCIO_AND_REKOR_DATA_DIR}
+#     kwctl verify \
+#       --verification-config-path=test-data/sigstore/verification-config-keyless.yml \
+#       registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
+#     [ "$status" -eq 0 ]
+#     [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio.crt.pem ]
+#     [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio_v1.crt.pem ]
+#     [ -f ${FULCIO_AND_REKOR_DATA_DIR}/rekor.pub ]
+# }
 
 @test "[Secure supply chain  tests] verify a signed policy from an OCI registry" {
 
