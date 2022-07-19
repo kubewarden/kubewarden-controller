@@ -2,6 +2,15 @@
 ## [Unreleased]
 
 
+<a name="v1.1.1"></a>
+## [v1.1.1] - 2022-07-19
+### Bug Fixes
+- Warn and continue when Sigstore TUF repository is broken
+
+### Pull Requests
+- Merge pull request [#262](https://github.com/kubewarden/kwctl/issues/262) from kubewarden/road-to-1.1.0
+
+
 <a name="v1.1.0"></a>
 ## [v1.1.0] - 2022-07-14
 ### Bug Fixes
@@ -368,7 +377,8 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.1.1...HEAD
+[v1.1.1]: https://github.com/kubewarden/kwctl/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/kubewarden/kwctl/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/kubewarden/kwctl/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/kubewarden/kwctl/compare/v1.0.0-rc4...v1.0.0
