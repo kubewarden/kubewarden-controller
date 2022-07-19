@@ -23,7 +23,7 @@ use std::{
 use tokio::task::spawn_blocking;
 use verify::VerificationAnnotations;
 
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{
     filter::{EnvFilter, LevelFilter},
@@ -121,7 +121,7 @@ async fn main() -> Result<()> {
                             docker_config.as_ref(),
                             sources.as_ref(),
                             verification_options.as_ref().unwrap(),
-                            &fulcio_and_rekor_data,
+                            fulcio_and_rekor_data.as_ref(),
                         )
                         .await
                         .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
@@ -138,7 +138,7 @@ async fn main() -> Result<()> {
                         docker_config.as_ref(),
                         sources.as_ref(),
                         &verified_manifest_digest.unwrap(),
-                        &fulcio_and_rekor_data,
+                        fulcio_and_rekor_data.as_ref(),
                     )
                     .await?
                 }
@@ -157,7 +157,7 @@ async fn main() -> Result<()> {
                     docker_config.as_ref(),
                     sources.as_ref(),
                     &verification_options,
-                    &fulcio_and_rekor_data,
+                    fulcio_and_rekor_data.as_ref(),
                 )
                 .await
                 .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?;
@@ -276,7 +276,7 @@ async fn main() -> Result<()> {
                             docker_config.as_ref(),
                             sources.as_ref(),
                             verification_options.as_ref().unwrap(),
-                            &fulcio_and_rekor_data,
+                            fulcio_and_rekor_data.as_ref(),
                         )
                         .await
                         .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
@@ -293,7 +293,7 @@ async fn main() -> Result<()> {
                     &request,
                     settings,
                     &verified_manifest_digest,
-                    &fulcio_and_rekor_data,
+                    fulcio_and_rekor_data.as_ref(),
                     enable_wasmtime_cache,
                 )
                 .await?;
@@ -570,7 +570,7 @@ fn build_verification_options_from_flags(
     Ok(Some(verification_config))
 }
 
-async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<FulcioAndRekorData> {
+async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<Option<FulcioAndRekorData>> {
     if matches.is_present("fulcio-cert-path") || matches.is_present("rekor-public-key-path") {
         let mut fulcio_certs: Vec<Certificate> = vec![];
         if let Some(items) = matches.values_of("fulcio-cert-path") {
@@ -594,10 +594,10 @@ async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<FulcioAndRe
             ));
         }
 
-        Ok(FulcioAndRekorData::FromCustomData {
+        Ok(Some(FulcioAndRekorData::FromCustomData {
             fulcio_certs,
             rekor_public_key,
-        })
+        }))
     } else {
         let checkout_path = DEFAULT_ROOT.config_dir().join("fulcio_and_rekor_data");
         if !Path::exists(&checkout_path) {
@@ -606,10 +606,14 @@ async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<FulcioAndRe
 
         let repo =
             spawn_blocking(move || sigstore::tuf::SigstoreRepository::fetch(Some(&checkout_path)))
-                .await
-                .map_err(|e| anyhow!("Error spawning blocking task: {}", e))?
-                .map_err(|e| anyhow!("Cannot create TUF repository: {}", e))?;
-
-        Ok(FulcioAndRekorData::FromTufRepository { repo })
+                .await?;
+        match repo {
+            Ok(repo) => Ok(Some(FulcioAndRekorData::FromTufRepository { repo })),
+            Err(e) => {
+                warn!("Cannot fetch TUF repository: {:?}", e);
+                // policy-fetcher will print the needed follow-up warning messages
+                Ok(None)
+            }
+        }
     }
 }

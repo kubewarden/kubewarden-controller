@@ -28,7 +28,7 @@ pub(crate) async fn pull_and_run(
     request: &str,
     settings: Option<String>,
     verified_manifest_digest: &Option<String>,
-    fulcio_and_rekor_data: &FulcioAndRekorData,
+    fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
     enable_wasmtime_cache: bool,
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;

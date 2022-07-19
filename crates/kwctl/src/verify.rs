@@ -15,7 +15,7 @@ pub(crate) async fn verify(
     docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
     verification_config: &LatestVerificationConfig,
-    fulcio_and_rekor_data: &FulcioAndRekorData,
+    fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
 ) -> Result<String> {
     debug!(policy = url, "Verifying policy");
     let mut verifier = Verifier::new(sources.cloned(), fulcio_and_rekor_data)?;
@@ -32,7 +32,7 @@ pub(crate) async fn verify_local_checksum(
     docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
     verified_manifest_digest: &str,
-    fulcio_and_rekor_data: &FulcioAndRekorData,
+    fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
 ) -> Result<()> {
     let mut verifier = Verifier::new(sources.cloned(), fulcio_and_rekor_data)?;
     verifier
