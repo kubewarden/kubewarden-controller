@@ -67,8 +67,27 @@ kwctl() {
     [ $(expr "$output" : '.*--sources-path.*') -ne 0 ]
 }
 
+@test "[Secure supply chain  tests] Check TUF integration" {
+    mkdir -p "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data
+    FULCIO_AND_REKOR_DATA_DIR=$(readlink -f "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data)
+    rm -rf ${FULCIO_AND_REKOR_DATA_DIR}
+    kwctl verify \
+      --verification-config-path=test-data/sigstore/verification-config-keyless.yml \
+      registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
+    [ "$status" -eq 0 ]
+    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio.crt.pem ]
+    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio_v1.crt.pem ]
+    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/rekor.pub ]
+}
+
 @test "[Secure supply chain  tests] verify a signed policy from an OCI registry" {
-    kwctl verify -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+
+    kwctl verify \
+      --fulcio-cert-path ~/.sigstore/root/targets/fulcio.crt.pem \
+      --fulcio-cert-path ~/.sigstore/root/targets/fulcio_v1.crt.pem \
+      --rekor-public-key-path ~/.sigstore/root/targets/rekor.pub \
+      -a env=prod -a stable=true \
+      registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
     [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys, OIDC issuer or GitHub owner were passed.*') -ne 0 ]
 
@@ -131,24 +150,17 @@ kwctl() {
       registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
     [ "$status" -eq 0 ]
 
-    # Test TUF integration
-    FULCIO_AND_REKOR_DATA_DIR=$(readlink -f "$XDG_CONFIG_HOME"/kubewarden/fulcio_and_rekor_data)
-    rm -rf ${FULCIO_AND_REKOR_DATA_DIR}
-    kwctl verify \
-      --verification-config-path=test-data/sigstore/verification-config-keyless.yml \
-      registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
-    [ "$status" -eq 0 ]
-    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio.crt.pem ]
-    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/fulcio_v1.crt.pem ]
-    [ -f ${FULCIO_AND_REKOR_DATA_DIR}/rekor.pub ]
 }
 
 @test "[Secure supply chain  tests] pull a signed policy from an OCI registry" {
-    kwctl pull -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    kwctl pull \
+      -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 1 ]
     [ $(expr "$output" : '.*Intending to verify annotations, but no verification keys, OIDC issuer or GitHub owner were passed.*') -ne 0 ]
 
-    kwctl pull -k test-data/sigstore/cosign1.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+
+    kwctl pull \
+      -k test-data/sigstore/cosign1.pub -a env=prod -a stable=true registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*Policy successfully verified.*') -ne 0 ]
     [ $(expr "$output" : '.*Local checksum successfully verified.*') -ne 0 ]
