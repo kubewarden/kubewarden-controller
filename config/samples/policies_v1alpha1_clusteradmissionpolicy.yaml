@@ -1,9 +1,9 @@
 apiVersion: policies.kubewarden.io/v1alpha1
 kind: ClusterAdmissionPolicy
 metadata:
-  name: psp-capabilities
+  name: capabilities-psp
 spec:
-  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.9
+  module: registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.8
   rules:
     - apiGroups: [""]
       apiVersions:
