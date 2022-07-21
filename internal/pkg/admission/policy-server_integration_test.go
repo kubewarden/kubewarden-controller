@@ -53,8 +53,9 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 			MinVersion:   tls.VersionTLS12,
 		}
 		server = http.Server{
-			Addr:      ":" + port,
-			TLSConfig: tlsConfig,
+			Addr:              ":" + port,
+			TLSConfig:         tlsConfig,
+			ReadHeaderTimeout: time.Second,
 		}
 		waitGroup.Done()
 		_ = server.ListenAndServeTLS("", "")
