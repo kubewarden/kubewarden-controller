@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
-use policy_fetcher::{registry::config::DockerConfig, sources::Sources};
+use policy_fetcher::sources::Sources;
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
@@ -21,7 +21,6 @@ const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 /// Helper struct that creates CallbackHandler objects
 pub struct CallbackHandlerBuilder<'a> {
     oci_sources: Option<Sources>,
-    docker_config: Option<DockerConfig>,
     channel_buffer_size: usize,
     shutdown_channel: Option<oneshot::Receiver<()>>,
     fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
@@ -31,7 +30,6 @@ impl<'a> Default for CallbackHandlerBuilder<'a> {
     fn default() -> Self {
         CallbackHandlerBuilder {
             oci_sources: None,
-            docker_config: None,
             shutdown_channel: None,
             channel_buffer_size: DEFAULT_CHANNEL_BUFF_SIZE,
             fulcio_and_rekor_data: None,
@@ -43,13 +41,8 @@ impl<'a> CallbackHandlerBuilder<'a> {
     #![allow(dead_code)]
 
     /// Provide all the information needed to access OCI registries. Optional
-    pub fn registry_config(
-        mut self,
-        sources: Option<Sources>,
-        docker_config: Option<DockerConfig>,
-    ) -> Self {
+    pub fn registry_config(mut self, sources: Option<Sources>) -> Self {
         self.oci_sources = sources;
-        self.docker_config = docker_config;
         self
     }
 
@@ -82,10 +75,9 @@ impl<'a> CallbackHandlerBuilder<'a> {
             .shutdown_channel
             .ok_or_else(|| anyhow!("shutdown_channel_rx not provided"))?;
 
-        let oci_client = oci::Client::new(self.oci_sources.clone(), self.docker_config.clone());
+        let oci_client = oci::Client::new(self.oci_sources.clone());
         let sigstore_client = sigstore_verification::Client::new(
             self.oci_sources.clone(),
-            self.docker_config.clone(),
             self.fulcio_and_rekor_data,
         )?;
 
