@@ -98,19 +98,36 @@ impl Registry {
         Client::new(client_protocol.into())
     }
 
+    /// First try to fetch credentials from credential store if present.
+    /// If not present or an error happened, then try to use auth in plain text
+    /// Use Anonymous if no docker config was provided or there is no auth record for this registry
     fn auth(registry: &str, docker_config: Option<&DockerConfig>) -> RegistryAuth {
-        docker_config
-            .as_ref()
-            .and_then(|docker_config| {
-                docker_config.auths.get(registry).map(|auth| {
+        match docker_config {
+            None => RegistryAuth::Anonymous,
+            Some(docker_config) => {
+                if let Some(Ok(auth)) =
+                    &docker_config.get_auth_from_credentials_helper_if_present(registry)
+                {
                     let OwnRegistryAuth::BasicAuth(username, password) = auth;
                     RegistryAuth::Basic(
                         String::from_utf8(username.clone()).unwrap_or_default(),
                         String::from_utf8(password.clone()).unwrap_or_default(),
                     )
-                })
-            })
-            .unwrap_or(RegistryAuth::Anonymous)
+                } else {
+                    docker_config
+                        .auths
+                        .get(registry)
+                        .map(|auth| {
+                            let OwnRegistryAuth::BasicAuth(username, password) = auth;
+                            RegistryAuth::Basic(
+                                String::from_utf8(username.clone()).unwrap_or_default(),
+                                String::from_utf8(password.clone()).unwrap_or_default(),
+                            )
+                        })
+                        .unwrap_or(RegistryAuth::Anonymous)
+                }
+            }
+        }
     }
 
     /// Fetch the manifest of the OCI object referenced by the given url.

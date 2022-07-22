@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
 use oci_distribution::Reference;
 use serde::Deserialize;
+use std::io::Write;
+use std::process::{Command, Stdio};
 use std::{
     collections::HashMap, convert::TryFrom, convert::TryInto, fs::File, path::Path, str::FromStr,
 };
@@ -17,8 +19,10 @@ pub(crate) struct RegistryAuthRaw {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct DockerConfigRaw {
     auths: Option<HashMap<String, RegistryAuthRaw>>,
+    creds_store: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -38,9 +42,17 @@ impl TryFrom<RegistryAuth> for sigstore::registry::Auth {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct CredentialsHelperResponse {
+    username: String,
+    secret: String,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct DockerConfig {
     pub auths: HashMap<String, RegistryAuth>,
+    pub creds_store: Option<String>,
 }
 
 impl DockerConfig {
@@ -50,6 +62,41 @@ impl DockerConfig {
 
         Ok(self.auths.get(reference.registry()).cloned())
     }
+
+    pub fn get_auth_from_credentials_helper_if_present(
+        &self,
+        registry: &str,
+    ) -> Option<Result<RegistryAuth>> {
+        self.creds_store
+            .as_ref()
+            .map(|creds_store| get_auth_from_credentials_helper(creds_store.as_str(), registry))
+    }
+}
+
+fn get_auth_from_credentials_helper(creds_store: &str, registry: &str) -> Result<RegistryAuth> {
+    let mut process = Command::new(format!("docker-credential-{}", creds_store))
+        .arg("get")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()?;
+    let stdin = process
+        .stdin
+        .as_mut()
+        .ok_or_else(|| anyhow!("Can't get stdin for credentials helper"))?;
+    stdin.write_all(registry.as_bytes())?;
+    let res = process.wait_with_output()?;
+    if !res.status.success() {
+        return Err(anyhow!(
+            "Error retrieving credentials from credential store: {}",
+            String::from_utf8(res.stdout).unwrap_or_default()
+        ));
+    }
+
+    let response: CredentialsHelperResponse = serde_json::from_slice(res.stdout.as_slice())?;
+    Ok(RegistryAuth::BasicAuth(
+        response.username.into(),
+        response.secret.into(),
+    ))
 }
 
 impl TryFrom<DockerConfigRaw> for DockerConfig {
@@ -73,7 +120,10 @@ impl TryFrom<DockerConfigRaw> for DockerConfig {
                 .collect(),
             None => HashMap::default(),
         };
-        Ok(DockerConfig { auths })
+        Ok(DockerConfig {
+            auths,
+            creds_store: docker_config.creds_store,
+        })
     }
 }
 
@@ -132,6 +182,7 @@ mod tests {
 
         let docker_config: DockerConfig = DockerConfigRaw {
             auths: Some(HashMap::from_iter(auths)),
+            creds_store: None,
         }
         .try_into()?;
 

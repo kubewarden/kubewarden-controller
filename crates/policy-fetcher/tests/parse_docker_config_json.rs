@@ -20,7 +20,8 @@ fn parses_with_auth_present() {
             auths: HashMap::from_iter(vec![(
                 "https://index.docker.io/v1/".to_string(),
                 RegistryAuth::BasicAuth("username".into(), "token".into())
-            )])
+            )]),
+            creds_store: None,
         }
     )
 }
@@ -33,7 +34,8 @@ fn parses_with_some_auth_missing() {
             auths: HashMap::from_iter(vec![(
                 "example.registry.com".to_string(),
                 RegistryAuth::BasicAuth("username".into(), "token".into())
-            ),])
+            ),]),
+            creds_store: None,
         }
     )
 }
@@ -46,7 +48,8 @@ fn parses_with_invalid_base64() {
             auths: HashMap::from_iter(vec![(
                 "valid-base64.registry.com".to_string(),
                 RegistryAuth::BasicAuth("username".into(), "token".into())
-            ),])
+            ),]),
+            creds_store: None,
         }
     )
 }
@@ -59,7 +62,8 @@ fn parses_with_invalid_username_password() {
             auths: HashMap::from_iter(vec![(
                 "valid-username-password.registry.com".to_string(),
                 RegistryAuth::BasicAuth("username".into(), "token".into())
-            ),])
+            ),]),
+            creds_store: None,
         }
     )
 }
@@ -70,6 +74,21 @@ fn parses_with_missing_auth() {
         docker_config("auths-not-present.json"),
         DockerConfig {
             auths: HashMap::new(),
+            creds_store: None,
+        }
+    )
+}
+
+#[test]
+fn parses_with_present_creds_store() {
+    assert_eq!(
+        docker_config("creds-store-present.json"),
+        DockerConfig {
+            auths: HashMap::from_iter(vec![(
+                "https://index.docker.io/v1/".to_string(),
+                RegistryAuth::BasicAuth("username".into(), "token".into())
+            )]),
+            creds_store: Some("store".to_string()),
         }
     )
 }
