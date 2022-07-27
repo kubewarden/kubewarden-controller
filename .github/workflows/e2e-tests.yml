@@ -15,7 +15,7 @@ jobs:
   run-e2e-tests:
     name: "Tests"
     needs: [build]
-    uses: kubewarden/kubewarden-end-to-end-tests/.github/workflows/e2e-tests.yml@v0.2.2
+    uses: kubewarden/kubewarden-end-to-end-tests/.github/workflows/e2e-tests.yml@main
     with:
       controller-image-repository: ${{ needs.build.outputs.repository }}
       controller-image-tag: ${{ needs.build.outputs.tag }}
