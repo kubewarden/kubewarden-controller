@@ -34,7 +34,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.2.2"
 validator = { version = "0.15", features = ["derive"] }
 walrus = "0.19.0"
-wasmparser = "0.87"
+wasmparser = "0.88"
 
 [dev-dependencies]
 tempfile = "3.3.0"
