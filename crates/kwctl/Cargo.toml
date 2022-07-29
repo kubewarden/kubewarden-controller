@@ -25,7 +25,7 @@ pulldown-cmark = { version = "0.9.1", default-features = false }
 regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8.26"
+serde_yaml = "0.9.1"
 syntect = "4.5.0"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
