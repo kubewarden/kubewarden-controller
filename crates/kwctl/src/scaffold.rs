@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
+use policy_evaluator::validator::Validate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use validator::Validate;
 
 use policy_evaluator::constants::KUBEWARDEN_ANNOTATION_POLICY_TITLE;
 use policy_evaluator::policy_fetcher::verify::config::{
