@@ -330,8 +330,19 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		)
 	}
 	enableReadOnlyFilesystem := true
+	privileged := false
+	runAsNonRoot := true
+	allowPrivilegeEscalation := false
+	capabilities := corev1.Capabilities{
+		Add:  []corev1.Capability{},
+		Drop: []corev1.Capability{"all"},
+	}
 	admissionContainerSecurityContext := corev1.SecurityContext{
-		ReadOnlyRootFilesystem: &enableReadOnlyFilesystem,
+		ReadOnlyRootFilesystem:   &enableReadOnlyFilesystem,
+		Privileged:               &privileged,
+		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+		Capabilities:             &capabilities,
+		RunAsNonRoot:             &runAsNonRoot,
 	}
 	admissionContainer.SecurityContext = &admissionContainerSecurityContext
 
