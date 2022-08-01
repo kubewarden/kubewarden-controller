@@ -209,3 +209,39 @@ func TestIfPolicyServerImageChanged(t *testing.T) {
 		t.Errorf("Function should fail to find the container image.  err: %v", err)
 	}
 }
+
+func TestPolicyServerSecurityContext(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+	}
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+		},
+	}
+	deployment := reconciler.deployment("v1", policyServer)
+
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem == false {
+		t.Error("Policy server container security context should configure to run on a read only root filesystem")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged == true {
+		t.Error("Policy server container should not run in a privileged container")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot == false {
+		t.Error("Policy server container should not run with root user")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation == true {
+		t.Error("Policy server container should not run in container allowed to escalate privileges")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities == nil ||
+		len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add) > 0 ||
+		len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop) != 1 ||
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop[0] != "all" {
+		t.Error("Policy server container should drop all capabilities")
+	}
+}
