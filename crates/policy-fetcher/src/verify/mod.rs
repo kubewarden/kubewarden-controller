@@ -488,12 +488,10 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         assert!(error.is_err());
         let expected_msg = r#"Image verification failed: missing signatures
 The following constraints were not satisfied:
----
 kind: genericIssuer
-issuer: "https://github.com/login/oauth"
-subject:
-  equal: user1@provider.com
-annotations: ~
+issuer: https://github.com/login/oauth
+subject: !equal user1@provider.com
+annotations: null
 "#;
         assert_eq!(error.unwrap_err().to_string(), expected_msg);
     }
@@ -521,12 +519,10 @@ annotations: ~
         assert!(error.is_err());
         let expected_msg = r#"Image verification failed: missing signatures
 The following constraints were not satisfied:
----
 kind: genericIssuer
-issuer: "https://github.com/login/oauth"
-subject:
-  equal: user3@provider.com
-annotations: ~
+issuer: https://github.com/login/oauth
+subject: !equal user3@provider.com
+annotations: null
 "#;
         assert_eq!(error.unwrap_err().to_string(), expected_msg);
     }
@@ -557,18 +553,14 @@ annotations: ~
         assert!(error.is_err());
         let expected_msg = r#"Image verification failed: minimum number of signatures not reached: needed 2, got 1
 The following constraints were not satisfied:
----
 kind: genericIssuer
-issuer: "https://github.com/login/oauth"
-subject:
-  equal: user2@provider.com
-annotations: ~
----
+issuer: https://github.com/login/oauth
+subject: !equal user2@provider.com
+annotations: null
 kind: genericIssuer
-issuer: "https://github.com/login/oauth"
-subject:
-  equal: user3@provider.com
-annotations: ~
+issuer: https://github.com/login/oauth
+subject: !equal user3@provider.com
+annotations: null
 "#;
         assert_eq!(error.unwrap_err().to_string(), expected_msg);
     }
