@@ -1,4 +1,7 @@
-use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
+use clap::{
+    builder::PossibleValuesParser, crate_authors, crate_description, crate_name, crate_version,
+    Arg, ArgAction, Command,
+};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 
@@ -55,7 +58,7 @@ pub fn build_cli() -> Command<'static> {
                     Arg::new("verification-key")
                     .short('k')
                     .long("verification-key")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to key used to verify the policy. Can be repeated multiple times")
@@ -63,7 +66,7 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("fulcio-cert-path")
                     .long("fulcio-cert-path")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to the Fulcio certificate. Can be repeated multiple times")
@@ -78,7 +81,7 @@ pub fn build_cli() -> Command<'static> {
                     Arg::new("verification-annotation")
                     .short('a')
                     .long("verification-annotation")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Annotation in key=value format. Can be repeated multiple times")
@@ -86,7 +89,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("cert-email")
                     .long("cert-email")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Expected email in Fulcio certificate")
@@ -94,7 +96,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("cert-oidc-issuer")
                     .long("cert-oidc-issuer")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Expected OIDC issuer in Fulcio certificates")
@@ -102,7 +103,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("github-owner")
                     .long("github-owner")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("GitHub owner expected in the certificates generated in CD pipelines")
@@ -110,7 +110,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("github-repo")
                     .long("github-repo")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("GitHub repository expected in the certificates generated in CD pipelines")
@@ -154,7 +153,7 @@ pub fn build_cli() -> Command<'static> {
                     Arg::new("verification-key")
                     .short('k')
                     .long("verification-key")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to key used to verify the policy. Can be repeated multiple times")
@@ -162,7 +161,7 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("fulcio-cert-path")
                     .long("fulcio-cert-path")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to the Fulcio certificate. Can be repeated multiple times")
@@ -177,7 +176,7 @@ pub fn build_cli() -> Command<'static> {
                     Arg::new("verification-annotation")
                     .short('a')
                     .long("verification-annotation")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Annotation in key=value format. Can be repeated multiple times")
@@ -185,7 +184,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("cert-email")
                     .long("cert-email")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Expected email in Fulcio certificate")
@@ -193,7 +191,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("cert-oidc-issuer")
                     .long("cert-oidc-issuer")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Expected OIDC issuer in Fulcio certificates")
@@ -201,7 +198,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("github-owner")
                     .long("github-owner")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("GitHub owner expected in the certificates generated in CD pipelines")
@@ -209,7 +205,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("github-repo")
                     .long("github-repo")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("GitHub repository expected in the certificates generated in CD pipelines")
@@ -247,7 +242,7 @@ pub fn build_cli() -> Command<'static> {
                     .long("output")
                     .short('o')
                     .takes_value(true)
-                    .possible_values(&["text", "json"])
+                    .value_parser(PossibleValuesParser::new(["text", "json"]))
                     .default_value("text")
                     .help("Output format")
                 )
@@ -320,7 +315,7 @@ pub fn build_cli() -> Command<'static> {
                     Arg::new("verification-key")
                     .short('k')
                     .long("verification-key")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to key used to verify the policy. Can be repeated multiple times")
@@ -328,7 +323,7 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("fulcio-cert-path")
                     .long("fulcio-cert-path")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Path to the Fulcio certificate. Can be repeated multiple times")
@@ -343,7 +338,7 @@ pub fn build_cli() -> Command<'static> {
                     Arg::new("verification-annotation")
                     .short('a')
                     .long("verification-annotation")
-                    .multiple_occurrences(true)
+                    .action(ArgAction::Append)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Annotation in key=value format. Can be repeated multiple times")
@@ -351,7 +346,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("cert-email")
                     .long("cert-email")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Expected email in Fulcio certificate")
@@ -359,7 +353,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("cert-oidc-issuer")
                     .long("cert-oidc-issuer")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("Expected OIDC issuer in Fulcio certificates")
@@ -367,7 +360,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("github-owner")
                     .long("github-owner")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("GitHub owner expected in the certificates generated in CD pipelines")
@@ -375,7 +367,6 @@ pub fn build_cli() -> Command<'static> {
                 .arg(
                     Arg::new("github-repo")
                     .long("github-repo")
-                    .multiple_occurrences(false)
                     .number_of_values(1)
                     .takes_value(true)
                     .help("GitHub repository expected in the certificates generated in CD pipelines")
@@ -385,7 +376,7 @@ pub fn build_cli() -> Command<'static> {
                     .long("execution-mode")
                     .short('e')
                     .takes_value(true)
-                    .possible_values(&["opa","gatekeeper", "kubewarden"])
+                    .value_parser(PossibleValuesParser::new(["opa","gatekeeper", "kubewarden"]))
                     .help("The runtime to use to execute this policy")
                 )
                 .arg(
@@ -434,7 +425,7 @@ pub fn build_cli() -> Command<'static> {
                     .long("output")
                     .short('o')
                     .takes_value(true)
-                    .possible_values(&["yaml"])
+                    .value_parser(PossibleValuesParser::new(["yaml"]))
                     .help("Output format")
                 )
                 .arg(
@@ -486,7 +477,7 @@ pub fn build_cli() -> Command<'static> {
                             .short('t')
                             .required(true)
                             .takes_value(true)
-                            .possible_values(&["ClusterAdmissionPolicy", "AdmissionPolicy"])
+                            .value_parser(PossibleValuesParser::new(["ClusterAdmissionPolicy", "AdmissionPolicy"]))
                             .help("Kubewarden Custom Resource type")
                         )
                         .arg(
@@ -512,7 +503,7 @@ pub fn build_cli() -> Command<'static> {
                     .short('s')
                     .takes_value(true)
                     .required(true)
-                    .possible_values(&["bash", "fish", "zsh", "elvish", "powershell"])
+                    .value_parser(PossibleValuesParser::new(["bash", "fish", "zsh", "elvish", "powershell"]))
                     .help("Shell type")
                 )
         )

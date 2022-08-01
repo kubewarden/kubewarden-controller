@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
 
     // setup logging
-    let level_filter = if matches.is_present("verbose") {
+    let level_filter = if matches.contains_id("verbose") {
         LevelFilter::DEBUG
     } else {
         LevelFilter::INFO
@@ -98,9 +98,9 @@ async fn main() -> Result<()> {
         Some("policies") => policies::list(),
         Some("pull") => {
             if let Some(matches) = matches.subcommand_matches("pull") {
-                let uri = matches.value_of("uri").unwrap();
+                let uri = matches.get_one::<String>("uri").unwrap();
                 let destination = matches
-                    .value_of("output-path")
+                    .get_one::<String>("output-path")
                     .map(|output| PathBuf::from_str(output).unwrap());
                 let destination = match destination {
                     Some(destination) => PullDestination::LocalFile(destination),
@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
         }
         Some("verify") => {
             if let Some(matches) = matches.subcommand_matches("verify") {
-                let uri = matches.value_of("uri").unwrap();
+                let uri = matches.get_one::<String>("uri").unwrap();
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let verification_options = verification_options(matches)?
                     .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
@@ -167,13 +167,14 @@ async fn main() -> Result<()> {
         Some("push") => {
             if let Some(matches) = matches.subcommand_matches("push") {
                 let (sources, docker_config) = remote_server_options(matches)?;
-                let wasm_uri = crate::utils::map_path_to_uri(matches.value_of("policy").unwrap())?;
+                let wasm_uri =
+                    crate::utils::map_path_to_uri(matches.get_one::<String>("policy").unwrap())?;
                 let wasm_path = crate::utils::wasm_path(wasm_uri.as_str())?;
                 let uri = matches
-                    .value_of("uri")
+                    .get_one::<String>("uri")
                     .map(|u| {
                         if u.starts_with("registry://") {
-                            String::from(u)
+                            u.clone()
                         } else {
                             format!("registry://{}", u)
                         }
@@ -186,7 +187,7 @@ async fn main() -> Result<()> {
                     "policy push"
                 );
 
-                let force = matches.is_present("force");
+                let force = matches.contains_id("force");
 
                 let immutable_ref = push::push(
                     wasm_path,
@@ -197,7 +198,7 @@ async fn main() -> Result<()> {
                 )
                 .await?;
 
-                match matches.value_of("output") {
+                match matches.get_one::<String>("output").map(|s| s.as_str()) {
                     Some("json") => {
                         let mut response: HashMap<&str, String> = HashMap::new();
                         response.insert("immutable_ref", immutable_ref);
@@ -212,15 +213,19 @@ async fn main() -> Result<()> {
         }
         Some("rm") => {
             if let Some(matches) = matches.subcommand_matches("rm") {
-                let uri = matches.value_of("uri").unwrap();
+                let uri = matches.get_one::<String>("uri").unwrap();
                 rm::rm(uri)?;
             }
             Ok(())
         }
         Some("run") => {
             if let Some(matches) = matches.subcommand_matches("run") {
-                let uri = matches.value_of("uri").unwrap();
-                let request = match matches.value_of("request-path").unwrap() {
+                let uri = matches.get_one::<String>("uri").unwrap();
+                let request = match matches
+                    .get_one::<String>("request-path")
+                    .map(|s| s.as_str())
+                    .unwrap()
+                {
                     "-" => {
                         let mut buffer = String::new();
                         io::stdin()
@@ -231,34 +236,34 @@ async fn main() -> Result<()> {
                     request_path => fs::read_to_string(request_path).map_err(|e| {
                         anyhow!(
                             "Error opening request file {}; {}",
-                            matches.value_of("request-path").unwrap(),
+                            matches.get_one::<String>("request-path").unwrap(),
                             e
                         )
                     })?,
                 };
-                if matches.is_present("settings-path") && matches.is_present("settings-json") {
+                if matches.contains_id("settings-path") && matches.contains_id("settings-json") {
                     return Err(anyhow!(
                         "'settings-path' and 'settings-json' cannot be used at the same time"
                     ));
                 }
-                let settings = if matches.is_present("settings-path") {
+                let settings = if matches.contains_id("settings-path") {
                     matches
-                        .value_of("settings-path")
+                        .get_one::<String>("settings-path")
                         .map(|settings| -> Result<String> {
                             fs::read_to_string(settings).map_err(|e| {
                                 anyhow!("Error reading settings from {}: {}", settings, e)
                             })
                         })
                         .transpose()?
-                } else if matches.is_present("settings-json") {
-                    Some(String::from(matches.value_of("settings-json").unwrap()))
+                } else if matches.contains_id("settings-json") {
+                    Some(matches.get_one::<String>("settings-json").unwrap().clone())
                 } else {
                     None
                 };
                 let (sources, docker_config) = remote_server_options(matches)
                     .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
                 let execution_mode: Option<PolicyExecutionMode> =
-                    if let Some(mode_name) = matches.value_of("execution-mode") {
+                    if let Some(mode_name) = matches.get_one::<String>("execution-mode") {
                         Some(new_policy_execution_mode_from_str(mode_name)?)
                     } else {
                         None
@@ -283,7 +288,7 @@ async fn main() -> Result<()> {
                     );
                 }
 
-                let enable_wasmtime_cache = !matches.is_present("disable-wasmtime-cache");
+                let enable_wasmtime_cache = !matches.contains_id("disable-wasmtime-cache");
 
                 run::pull_and_run(
                     uri,
@@ -303,15 +308,15 @@ async fn main() -> Result<()> {
         Some("annotate") => {
             if let Some(matches) = matches.subcommand_matches("annotate") {
                 let wasm_path = matches
-                    .value_of("wasm-path")
+                    .get_one::<String>("wasm-path")
                     .map(|output| PathBuf::from_str(output).unwrap())
                     .unwrap();
                 let metadata_file = matches
-                    .value_of("metadata-path")
+                    .get_one::<String>("metadata-path")
                     .map(|output| PathBuf::from_str(output).unwrap())
                     .unwrap();
                 let destination = matches
-                    .value_of("output-path")
+                    .get_one::<String>("output-path")
                     .map(|output| PathBuf::from_str(output).unwrap())
                     .unwrap();
                 annotate::write_annotation(wasm_path, metadata_file, destination)?;
@@ -320,8 +325,10 @@ async fn main() -> Result<()> {
         }
         Some("inspect") => {
             if let Some(matches) = matches.subcommand_matches("inspect") {
-                let uri = matches.value_of("uri").unwrap();
-                let output = inspect::OutputType::try_from(matches.value_of("output"))?;
+                let uri = matches.get_one::<String>("uri").unwrap();
+                let output = inspect::OutputType::try_from(
+                    matches.get_one::<String>("output").map(|s| s.as_str()),
+                )?;
                 let (sources, docker_config) = remote_server_options(matches)?;
 
                 inspect::inspect(uri, output, sources, docker_config).await?;
@@ -336,48 +343,44 @@ async fn main() -> Result<()> {
             }
             if let Some(matches) = matches.subcommand_matches("scaffold") {
                 if let Some(matches) = matches.subcommand_matches("manifest") {
-                    let uri = matches.value_of("uri").unwrap();
-                    let resource_type = matches.value_of("type").unwrap();
-                    if matches.is_present("settings-path") && matches.is_present("settings-json") {
+                    let uri = matches.get_one::<String>("uri").unwrap();
+                    let resource_type = matches.get_one::<String>("type").unwrap();
+                    if matches.contains_id("settings-path") && matches.contains_id("settings-json")
+                    {
                         return Err(anyhow!(
                             "'settings-path' and 'settings-json' cannot be used at the same time"
                         ));
                     }
-                    let settings = if matches.is_present("settings-path") {
+                    let settings = if matches.contains_id("settings-path") {
                         matches
-                            .value_of("settings-path")
+                            .get_one::<String>("settings-path")
                             .map(|settings| -> Result<String> {
                                 fs::read_to_string(settings).map_err(|e| {
                                     anyhow!("Error reading settings from {}: {}", settings, e)
                                 })
                             })
                             .transpose()?
-                    } else if matches.is_present("settings-json") {
-                        Some(String::from(matches.value_of("settings-json").unwrap()))
+                    } else if matches.contains_id("settings-json") {
+                        Some(matches.get_one::<String>("settings-json").unwrap().clone())
                     } else {
                         None
                     };
-                    let policy_title = matches.value_of("title");
+                    let policy_title = matches.get_one::<String>("title").cloned();
 
-                    scaffold::manifest(
-                        uri,
-                        resource_type,
-                        settings,
-                        policy_title.map(String::from),
-                    )?;
+                    scaffold::manifest(uri, resource_type, settings, policy_title)?;
                 };
             }
             Ok(())
         }
         Some("completions") => {
             if let Some(matches) = matches.subcommand_matches("completions") {
-                completions::completions(matches.value_of("shell").unwrap())?;
+                completions::completions(matches.get_one::<String>("shell").unwrap())?;
             }
             Ok(())
         }
         Some("digest") => {
             if let Some(matches) = matches.subcommand_matches("digest") {
-                let uri = matches.value_of("uri").unwrap();
+                let uri = matches.get_one::<String>("uri").unwrap();
                 let (sources, docker_config) = remote_server_options(matches)?;
                 let registry = Registry::new(docker_config.as_ref());
                 let digest = registry.manifest_digest(uri, sources.as_ref()).await?;
@@ -395,7 +398,7 @@ async fn main() -> Result<()> {
 }
 
 fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Option<DockerConfig>)> {
-    let sources = if let Some(sources_path) = matches.value_of("sources-path") {
+    let sources = if let Some(sources_path) = matches.get_one::<String>("sources-path") {
         Some(read_sources_file(Path::new(&sources_path))?)
     } else {
         let sources_path = DEFAULT_ROOT.config_dir().join("sources.yaml");
@@ -406,35 +409,36 @@ fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Optio
         }
     };
 
-    let docker_config =
-        if let Some(docker_config_json_path) = matches.value_of("docker-config-json-path") {
-            Some(read_docker_config_json_file(Path::new(
-                docker_config_json_path,
-            ))?)
-        } else if let Some(user_dir) = UserDirs::new() {
-            let config_json_path = user_dir.home_dir().join(".docker").join("config.json");
-            if Path::exists(&config_json_path) {
-                Some(read_docker_config_json_file(&config_json_path)?)
-            } else {
-                None
-            }
+    let docker_config = if let Some(docker_config_json_path) =
+        matches.get_one::<String>("docker-config-json-path")
+    {
+        Some(read_docker_config_json_file(Path::new(
+            docker_config_json_path,
+        ))?)
+    } else if let Some(user_dir) = UserDirs::new() {
+        let config_json_path = user_dir.home_dir().join(".docker").join("config.json");
+        if Path::exists(&config_json_path) {
+            Some(read_docker_config_json_file(&config_json_path)?)
         } else {
             None
-        };
+        }
+    } else {
+        None
+    };
     Ok((sources, docker_config))
 }
 
 fn verification_options(matches: &ArgMatches) -> Result<Option<LatestVerificationConfig>> {
     if let Some(verification_config) = build_verification_options_from_flags(matches)? {
         // flags present, built configmap from them:
-        if matches.is_present("verification-config-path") {
+        if matches.contains_id("verification-config-path") {
             return Err(anyhow!(
                 "verification-config-path cannot be used in conjunction with other verification flags"
             ));
         }
         return Ok(Some(verification_config));
     }
-    if let Some(verification_config_path) = matches.value_of("verification-config-path") {
+    if let Some(verification_config_path) = matches.get_one::<String>("verification-config-path") {
         // config flag present, read it:
         return Ok(Some(read_verification_file(Path::new(
             &verification_config_path,
@@ -458,11 +462,11 @@ fn build_verification_options_from_flags(
     matches: &ArgMatches,
 ) -> Result<Option<LatestVerificationConfig>> {
     let key_files: Option<Vec<String>> = matches
-        .values_of("verification-key")
+        .get_many::<String>("verification-key")
         .map(|items| items.into_iter().map(|i| i.to_string()).collect());
 
     let annotations: Option<VerificationAnnotations> =
-        match matches.values_of("verification-annotation") {
+        match matches.get_many::<String>("verification-annotation") {
             None => None,
             Some(items) => {
                 let mut values: HashMap<String, String> = HashMap::new();
@@ -481,17 +485,17 @@ fn build_verification_options_from_flags(
         };
 
     let cert_email: Option<String> = matches
-        .values_of("cert-email")
+        .get_many::<String>("cert-email")
         .map(|items| items.into_iter().map(|i| i.to_string()).collect());
     let cert_oidc_issuer: Option<String> = matches
-        .values_of("cert-oidc-issuer")
+        .get_many::<String>("cert-oidc-issuer")
         .map(|items| items.into_iter().map(|i| i.to_string()).collect());
 
     let github_owner: Option<String> = matches
-        .values_of("github-owner")
+        .get_many::<String>("github-owner")
         .map(|items| items.into_iter().map(|i| i.to_string()).collect());
     let github_repo: Option<String> = matches
-        .values_of("github-repo")
+        .get_many::<String>("github-repo")
         .map(|items| items.into_iter().map(|i| i.to_string()).collect());
 
     if key_files.is_none()
@@ -571,9 +575,9 @@ fn build_verification_options_from_flags(
 }
 
 async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<Option<FulcioAndRekorData>> {
-    if matches.is_present("fulcio-cert-path") || matches.is_present("rekor-public-key-path") {
+    if matches.contains_id("fulcio-cert-path") || matches.contains_id("rekor-public-key-path") {
         let mut fulcio_certs: Vec<Certificate> = vec![];
-        if let Some(items) = matches.values_of("fulcio-cert-path") {
+        if let Some(items) = matches.get_many::<String>("fulcio-cert-path") {
             for item in items {
                 let data = fs::read(item)?;
                 let cert = Certificate::Pem(data);
@@ -581,12 +585,13 @@ async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<Option<Fulc
             }
         };
 
-        let rekor_public_key =
-            if let Some(rekor_public_key_path) = matches.value_of("rekor-public-key-path") {
-                Some(fs::read_to_string(rekor_public_key_path)?)
-            } else {
-                None
-            };
+        let rekor_public_key = if let Some(rekor_public_key_path) =
+            matches.get_one::<String>("rekor-public-key-path")
+        {
+            Some(fs::read_to_string(rekor_public_key_path)?)
+        } else {
+            None
+        };
 
         if fulcio_certs.is_empty() || rekor_public_key.is_none() {
             return Err(anyhow!(
