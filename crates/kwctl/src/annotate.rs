@@ -1,9 +1,9 @@
 use crate::backend::{Backend, BackendDetector};
 use anyhow::{anyhow, Result};
+use policy_evaluator::validator::Validate;
 use policy_evaluator::{constants::*, policy_metadata::Metadata, ProtocolVersion};
 use std::fs::File;
 use std::path::PathBuf;
-use validator::Validate;
 
 pub(crate) fn write_annotation(
     wasm_path: PathBuf,
