@@ -71,6 +71,10 @@ impl DockerConfig {
             .as_ref()
             .map(|creds_store| get_auth_from_credentials_helper(creds_store.as_str(), registry))
     }
+
+    pub fn get_auth_plain_text(&self, registry: &str) -> Option<RegistryAuth> {
+        self.auths.get(registry).cloned()
+    }
 }
 
 fn get_auth_from_credentials_helper(creds_store: &str, registry: &str) -> Result<RegistryAuth> {
@@ -159,6 +163,21 @@ pub fn read_docker_config_json_file(path: &Path) -> Result<DockerConfig> {
 }
 
 #[cfg(test)]
+use mockall::mock;
+
+#[cfg(test)]
+mock! {
+    pub DockerConfig {
+        pub fn get_auth_plain_text(&self, registry: &str) -> Option<RegistryAuth>;
+        pub fn auth(&self, image_url: &str) -> Result<Option<RegistryAuth>>;
+        pub fn get_auth_from_credentials_helper_if_present(&self, registry: &str,) -> Option<Result<RegistryAuth>>;
+    }
+    impl Clone for DockerConfig {
+        fn clone(&self) -> Self;
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -187,6 +206,28 @@ mod tests {
         .try_into()?;
 
         assert_eq!(docker_config.auths.len(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_auth_from_credentials_helper_if_present_when_missing_creds_store() -> Result<()> {
+        let auths = vec![(
+            "authless-registry.example.com".to_string(),
+            RegistryAuthRaw { auth: None },
+        )];
+        let docker_config: DockerConfig = DockerConfigRaw {
+            auths: Some(HashMap::from_iter(auths)),
+            creds_store: None,
+        }
+        .try_into()?;
+
+        assert_eq!(
+            docker_config
+                .get_auth_from_credentials_helper_if_present("registry")
+                .is_none(),
+            true
+        );
 
         Ok(())
     }

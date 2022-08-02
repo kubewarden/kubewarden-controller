@@ -1,5 +1,9 @@
+use crate::policy::Policy;
+#[cfg(not(test))]
+use crate::registry::config::DockerConfig;
+#[cfg(test)]
+use crate::registry::config::MockDockerConfig as DockerConfig;
 use crate::sources::Sources;
-use crate::{policy::Policy, registry::config::DockerConfig};
 
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;

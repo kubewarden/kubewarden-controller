@@ -17,7 +17,12 @@ use tracing::debug;
 use url::Url;
 
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
-use crate::registry::config::{DockerConfig, RegistryAuth as OwnRegistryAuth};
+#[cfg(not(test))]
+use crate::registry::config::DockerConfig;
+#[cfg(test)]
+use crate::registry::config::MockDockerConfig as DockerConfig;
+
+use crate::registry::config::RegistryAuth as OwnRegistryAuth;
 use crate::sources::{Certificate, Sources};
 
 pub mod config;
@@ -115,13 +120,12 @@ impl Registry {
                     )
                 } else {
                     docker_config
-                        .auths
-                        .get(registry)
+                        .get_auth_plain_text(registry)
                         .map(|auth| {
                             let OwnRegistryAuth::BasicAuth(username, password) = auth;
                             RegistryAuth::Basic(
-                                String::from_utf8(username.clone()).unwrap_or_default(),
-                                String::from_utf8(password.clone()).unwrap_or_default(),
+                                String::from_utf8(username).unwrap_or_default(),
+                                String::from_utf8(password).unwrap_or_default(),
                             )
                         })
                         .unwrap_or(RegistryAuth::Anonymous)
@@ -349,6 +353,7 @@ fn build_immutable_ref(image_ref: &str, manifest_url: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockall::predicate::eq;
     use rstest::rstest;
 
     #[rstest(
@@ -473,5 +478,80 @@ mod tests {
             Err(_) => assert!(actual.is_err()),
             Ok(r) => assert_eq!(r, actual.unwrap()),
         }
+    }
+
+    #[test]
+    fn auth_returns_from_credentials_store_if_present() {
+        let mut mock = DockerConfig::default();
+        mock.expect_get_auth_from_credentials_helper_if_present()
+            .with(eq("registry"))
+            .times(1)
+            .returning(|_| {
+                Some(Ok(crate::registry::config::RegistryAuth::BasicAuth(
+                    "username".as_bytes().to_vec(),
+                    "password".as_bytes().to_vec(),
+                )))
+            });
+        mock.expect_get_auth_plain_text()
+            .with(eq("registry"))
+            .times(0)
+            .returning(|_| None);
+        let res = Registry::auth("registry", Some(&mock));
+
+        match res {
+            RegistryAuth::Anonymous => assert!(false, "RegistryAuth should not be anonymous"),
+            RegistryAuth::Basic(username, password) => {
+                assert_eq!(username, "username".to_string());
+                assert_eq!(password, "password".to_string());
+            }
+        }
+    }
+
+    #[test]
+    fn auth_returns_auth_plain_text_when_there_is_no_credentials_store() {
+        let mut mock = DockerConfig::default();
+        mock.expect_get_auth_from_credentials_helper_if_present()
+            .with(eq("registry"))
+            .times(1)
+            .returning(|_| None);
+        mock.expect_get_auth_plain_text()
+            .with(eq("registry"))
+            .times(1)
+            .returning(|_| {
+                Some(crate::registry::config::RegistryAuth::BasicAuth(
+                    "username".as_bytes().to_vec(),
+                    "password".as_bytes().to_vec(),
+                ))
+            });
+        let res = Registry::auth("registry", Some(&mock));
+
+        match res {
+            RegistryAuth::Anonymous => assert!(false, "RegistryAuth should not be anonymous"),
+            RegistryAuth::Basic(username, password) => {
+                assert_eq!(username, "username".to_string());
+                assert_eq!(password, "password".to_string());
+            }
+        }
+    }
+
+    #[test]
+    fn auth_returns_anonymous_when_there_is_no_credentials_store_and_no_auth_plain_text() {
+        let mut mock = DockerConfig::default();
+        mock.expect_get_auth_from_credentials_helper_if_present()
+            .with(eq("registry"))
+            .times(1)
+            .returning(|_| None);
+        mock.expect_get_auth_plain_text()
+            .with(eq("registry"))
+            .times(1)
+            .returning(|_| None);
+        let res = Registry::auth("registry", Some(&mock));
+        assert!(matches!(res, RegistryAuth::Anonymous))
+    }
+
+    #[test]
+    fn auth_returns_anonymous_when_no_docker_config_provided() {
+        let res = Registry::auth("registry", None);
+        assert!(matches!(res, RegistryAuth::Anonymous))
     }
 }

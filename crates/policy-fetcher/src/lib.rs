@@ -20,7 +20,10 @@ use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
 use crate::policy::Policy;
 use crate::registry::build_fully_resolved_reference;
+#[cfg(not(test))]
 use crate::registry::config::DockerConfig;
+#[cfg(test)]
+use crate::registry::config::MockDockerConfig as DockerConfig;
 use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
