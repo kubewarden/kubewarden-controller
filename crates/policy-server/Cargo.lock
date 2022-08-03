@@ -360,7 +360,7 @@ checksum = "37ccbd214614c6783386c1af30caf03192f17891059cecc394b4fb119e363de3"
 [[package]]
 name = "burrego"
 version = "0.1.3"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.5#80f96c08841cab79961aa5683776ebcbfd5bfa7b"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.6#73e692b32d53093e2e64db4fe44a147ed40c3d2c"
 dependencies = [
  "anyhow",
  "base64",
@@ -375,7 +375,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "serde_yaml 0.8.26",
+ "serde_yaml 0.9.1",
  "tracing",
  "tracing-subscriber",
  "url 2.2.2",
@@ -420,13 +420,13 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "0.36.0"
+version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76d9447b2a367383a918fbbe62f6892da68000170c7331003d132b4805b63214"
+checksum = "1fb357e6e99f5d293f67f492dd3eb7f8c4d5ed7c48d22129f3464e57c9dd5394"
 dependencies = [
  "async-trait",
  "async_once",
- "cached_proc_macro 0.13.0",
+ "cached_proc_macro 0.14.0",
  "cached_proc_macro_types",
  "futures",
  "hashbrown 0.12.3",
@@ -451,9 +451,9 @@ dependencies = [
 
 [[package]]
 name = "cached_proc_macro"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4797df465f7409b55bab9ccd1edbf1d279ffdf763772c2804b96740ee72f3b82"
+checksum = "b01c8c46a3494c931456ad652aaab219cccd2785bdf3efbc00f733849d00df03"
 dependencies = [
  "cached_proc_macro_types",
  "darling",
@@ -2673,13 +2673,13 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.4.5"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.5#80f96c08841cab79961aa5683776ebcbfd5bfa7b"
+version = "0.4.6"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.6#73e692b32d53093e2e64db4fe44a147ed40c3d2c"
 dependencies = [
  "anyhow",
  "base64",
  "burrego",
- "cached 0.36.0",
+ "cached 0.37.0",
  "dns-lookup",
  "json-patch",
  "k8s-openapi",
@@ -2695,7 +2695,7 @@ dependencies = [
  "url 2.2.2",
  "validator",
  "wapc",
- "wasmparser 0.87.0",
+ "wasmparser 0.88.0",
  "wasmtime-provider",
 ]
 
@@ -4189,9 +4189,9 @@ dependencies = [
 
 [[package]]
 name = "validator"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f07b0a1390e01c0fc35ebb26b28ced33c9a3808f7f9fbe94d3cc01e233bfeed5"
+checksum = "32ad5bf234c7d3ad1042e5252b7eddb2c4669ee23f32c7dd0e9b7705f07ef591"
 dependencies = [
  "idna 0.2.3",
  "lazy_static",
@@ -4205,9 +4205,9 @@ dependencies = [
 
 [[package]]
 name = "validator_derive"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea7ed5e8cf2b6bdd64a6c4ce851da25388a89327b17b88424ceced6bd5017923"
+checksum = "bc44ca3088bb3ba384d9aecf40c6a23a676ce23e09bdaca2073d99c207f864af"
 dependencies = [
  "if_chain",
  "lazy_static",
@@ -4221,9 +4221,9 @@ dependencies = [
 
 [[package]]
 name = "validator_types"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2ddf34293296847abfc1493b15c6e2f5d3cd19f57ad7d22673bf4c6278da329"
+checksum = "111abfe30072511849c5910134e8baf8dc05de4c0e5903d681cbd5c9c4d611e3"
 dependencies = [
  "proc-macro2",
  "syn",
@@ -4475,9 +4475,9 @@ dependencies = [
 
 [[package]]
 name = "wasmparser"
-version = "0.87.0"
+version = "0.88.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c04e207cd2e8ecb6f9bd28a2cf3119b4c6bfeee6fe3a25cc1daf8041d00a875"
+checksum = "fb8cf7dd82407fe68161bedcd57fde15596f32ebf6e9b3bdbf3ae1da20e38e5e"
 dependencies = [
  "indexmap",
 ]
