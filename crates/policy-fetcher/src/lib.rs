@@ -20,10 +20,6 @@ use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
 use crate::policy::Policy;
 use crate::registry::build_fully_resolved_reference;
-#[cfg(not(test))]
-use crate::registry::config::DockerConfig;
-#[cfg(test)]
-use crate::registry::config::MockDockerConfig as DockerConfig;
 use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
@@ -46,7 +42,6 @@ pub enum PullDestination {
 pub async fn fetch_policy(
     url: &str,
     destination: PullDestination,
-    docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
 ) -> Result<Policy> {
     let url = match Url::parse(url) {
@@ -95,7 +90,7 @@ pub async fn fetch_policy(
         _ => unreachable!(),
     }
     debug!(?url, "pulling policy");
-    let policy_fetcher = url_fetcher(url.scheme(), docker_config)?;
+    let policy_fetcher = url_fetcher(url.scheme())?;
     let sources_default = Sources::default();
     let sources = sources.unwrap_or(&sources_default);
 
@@ -167,13 +162,10 @@ fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<
 
 // Helper function, takes the URL of the policy and allocates the
 // right struct to interact with it
-fn url_fetcher(
-    scheme: &str,
-    docker_config: Option<&DockerConfig>,
-) -> Result<Box<dyn PolicyFetcher>> {
+fn url_fetcher(scheme: &str) -> Result<Box<dyn PolicyFetcher>> {
     match scheme {
         "http" | "https" => Ok(Box::new(Https::default())),
-        "registry" => Ok(Box::new(Registry::new(docker_config))),
+        "registry" => Ok(Box::new(Registry::new())),
         _ => return Err(anyhow!("unknown scheme: {}", scheme)),
     }
 }

@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use docker_credential::DockerCredential;
 use lazy_static::lazy_static;
 use oci_distribution::{
     client::{
@@ -13,19 +14,12 @@ use oci_distribution::{
 use regex::Regex;
 use std::convert::TryFrom;
 use std::str::FromStr;
-use tracing::debug;
+use tracing::{debug, warn};
 use url::Url;
 
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
-#[cfg(not(test))]
-use crate::registry::config::DockerConfig;
-#[cfg(test)]
-use crate::registry::config::MockDockerConfig as DockerConfig;
 
-use crate::registry::config::RegistryAuth as OwnRegistryAuth;
 use crate::sources::{Certificate, Sources};
-
-pub mod config;
 
 lazy_static! {
     static ref SHA256_DIGEST_RE: Regex = Regex::new(r"[A-Fa-f0-9]{64}").unwrap();
@@ -34,9 +28,7 @@ lazy_static! {
 
 // Struct used to reference a WASM module that is hosted on an OCI registry
 #[derive(Default)]
-pub struct Registry {
-    docker_config: Option<DockerConfig>,
-}
+pub struct Registry {}
 
 impl From<&Certificate> for OciCertificate {
     fn from(certificate: &Certificate) -> OciCertificate {
@@ -93,43 +85,31 @@ impl From<ClientProtocol> for ClientConfig {
 }
 
 impl Registry {
-    pub fn new(docker_config: Option<&DockerConfig>) -> Registry {
-        Registry {
-            docker_config: docker_config.cloned(),
-        }
+    pub fn new() -> Registry {
+        Registry {}
     }
 
     fn client(client_protocol: ClientProtocol) -> Client {
         Client::new(client_protocol.into())
     }
 
-    /// First try to fetch credentials from credential store if present.
-    /// If not present or an error happened, then try to use auth in plain text
-    /// Use Anonymous if no docker config was provided or there is no auth record for this registry
-    fn auth(registry: &str, docker_config: Option<&DockerConfig>) -> RegistryAuth {
-        match docker_config {
-            None => RegistryAuth::Anonymous,
-            Some(docker_config) => {
-                if let Some(Ok(auth)) =
-                    &docker_config.get_auth_from_credentials_helper_if_present(registry)
-                {
-                    let OwnRegistryAuth::BasicAuth(username, password) = auth;
-                    RegistryAuth::Basic(
-                        String::from_utf8(username.clone()).unwrap_or_default(),
-                        String::from_utf8(password.clone()).unwrap_or_default(),
-                    )
-                } else {
-                    docker_config
-                        .get_auth_plain_text(registry)
-                        .map(|auth| {
-                            let OwnRegistryAuth::BasicAuth(username, password) = auth;
-                            RegistryAuth::Basic(
-                                String::from_utf8(username).unwrap_or_default(),
-                                String::from_utf8(password).unwrap_or_default(),
-                            )
-                        })
-                        .unwrap_or(RegistryAuth::Anonymous)
+    pub fn auth(registry: &str) -> RegistryAuth {
+        match docker_credential::get_credential(registry) {
+            Ok(credential) => match credential {
+                DockerCredential::IdentityToken(_) => {
+                    warn!("IdentityToken credential not supported. Using anonymous instead");
+                    RegistryAuth::Anonymous
                 }
+                DockerCredential::UsernamePassword(user_name, password) => {
+                    RegistryAuth::Basic(user_name, password)
+                }
+            },
+            Err(error) => {
+                warn!(
+                    "Error: couldn't fetch credentials: {} . Using anonymous instead",
+                    error
+                );
+                RegistryAuth::Anonymous
             }
         }
     }
@@ -145,7 +125,7 @@ impl Registry {
         // `docker.io/library/busybox:latest`
         let reference = build_fully_resolved_reference(url)?;
         let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
-        let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
+        let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
         let cp = crate::client_protocol(&url, &sources)?;
 
@@ -163,7 +143,7 @@ impl Registry {
         // `docker.io/library/busybox:latest`
         let reference = build_fully_resolved_reference(url)?;
         let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
-        let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
+        let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
         let cp = crate::client_protocol(&url, &sources)?;
 
@@ -231,7 +211,7 @@ impl Registry {
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
 
-        let registry_auth = Registry::auth(reference.registry(), self.docker_config.as_ref());
+        let registry_auth = Registry::auth(reference.registry());
 
         let layers = vec![ImageLayer::new(
             policy.to_vec(),
@@ -281,7 +261,7 @@ impl PolicyFetcher for Registry {
         let image_content = Registry::client(client_protocol)
             .pull(
                 &reference,
-                &Registry::auth(&crate::host_and_port(url)?, self.docker_config.as_ref()),
+                &Registry::auth(&crate::host_and_port(url)?),
                 vec![manifest::WASM_LAYER_MEDIA_TYPE],
             )
             .await?
@@ -353,7 +333,6 @@ fn build_immutable_ref(image_ref: &str, manifest_url: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mockall::predicate::eq;
     use rstest::rstest;
 
     #[rstest(
@@ -478,80 +457,5 @@ mod tests {
             Err(_) => assert!(actual.is_err()),
             Ok(r) => assert_eq!(r, actual.unwrap()),
         }
-    }
-
-    #[test]
-    fn auth_returns_from_credentials_store_if_present() {
-        let mut mock = DockerConfig::default();
-        mock.expect_get_auth_from_credentials_helper_if_present()
-            .with(eq("registry"))
-            .times(1)
-            .returning(|_| {
-                Some(Ok(crate::registry::config::RegistryAuth::BasicAuth(
-                    "username".as_bytes().to_vec(),
-                    "password".as_bytes().to_vec(),
-                )))
-            });
-        mock.expect_get_auth_plain_text()
-            .with(eq("registry"))
-            .times(0)
-            .returning(|_| None);
-        let res = Registry::auth("registry", Some(&mock));
-
-        match res {
-            RegistryAuth::Anonymous => assert!(false, "RegistryAuth should not be anonymous"),
-            RegistryAuth::Basic(username, password) => {
-                assert_eq!(username, "username".to_string());
-                assert_eq!(password, "password".to_string());
-            }
-        }
-    }
-
-    #[test]
-    fn auth_returns_auth_plain_text_when_there_is_no_credentials_store() {
-        let mut mock = DockerConfig::default();
-        mock.expect_get_auth_from_credentials_helper_if_present()
-            .with(eq("registry"))
-            .times(1)
-            .returning(|_| None);
-        mock.expect_get_auth_plain_text()
-            .with(eq("registry"))
-            .times(1)
-            .returning(|_| {
-                Some(crate::registry::config::RegistryAuth::BasicAuth(
-                    "username".as_bytes().to_vec(),
-                    "password".as_bytes().to_vec(),
-                ))
-            });
-        let res = Registry::auth("registry", Some(&mock));
-
-        match res {
-            RegistryAuth::Anonymous => assert!(false, "RegistryAuth should not be anonymous"),
-            RegistryAuth::Basic(username, password) => {
-                assert_eq!(username, "username".to_string());
-                assert_eq!(password, "password".to_string());
-            }
-        }
-    }
-
-    #[test]
-    fn auth_returns_anonymous_when_there_is_no_credentials_store_and_no_auth_plain_text() {
-        let mut mock = DockerConfig::default();
-        mock.expect_get_auth_from_credentials_helper_if_present()
-            .with(eq("registry"))
-            .times(1)
-            .returning(|_| None);
-        mock.expect_get_auth_plain_text()
-            .with(eq("registry"))
-            .times(1)
-            .returning(|_| None);
-        let res = Registry::auth("registry", Some(&mock));
-        assert!(matches!(res, RegistryAuth::Anonymous))
-    }
-
-    #[test]
-    fn auth_returns_anonymous_when_no_docker_config_provided() {
-        let res = Registry::auth("registry", None);
-        assert!(matches!(res, RegistryAuth::Anonymous))
     }
 }
