@@ -1,11 +1,10 @@
 [advisories]
 ignore = [
   "RUSTSEC-2020-0071", # `time` localtime_r segfault -- https://rustsec.org/advisories/RUSTSEC-2020-0071
-                       # Ignored because there are not known workarounds or dependency version bump
-                       # at this time. The call to localtime_r is not protected by any lock and can
-                       # cause unsoundness. Read the previous link for more information.
-  "RUSTSEC-2020-0159", # `chrono` localtime_r segfault -- https://rustsec.org/advisories/RUSTSEC-2020-0159
-                       # Ignored because there are not known workarounds or dependency version bump
-                       # at this time. The call to localtime_r is not protected by any lock and can
-                       # cause unsoundness. Read the previous link for more information.
+                       # This vulnerability is currently not affecting chrono 0.4.20+
+                       # See https://github.com/chronotope/chrono/issues/602
+                       # Chrono 0.5 will upgrade this depependency, but this will lead
+                       # to API breakages.
+                       #
+                       # This is a transitive depependency
 ]
