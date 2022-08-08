@@ -21,7 +21,7 @@ opentelemetry = { version = "0.17", default-features = false, features = ["metri
 opentelemetry-otlp = { version = "0.10.0", features = ["metrics", "tonic"] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.1"
+serde_yaml = "0.9.4"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
