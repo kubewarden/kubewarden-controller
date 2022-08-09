@@ -97,7 +97,7 @@ impl Registry {
         match docker_credential::get_credential(registry) {
             Ok(credential) => match credential {
                 DockerCredential::IdentityToken(_) => {
-                    warn!("IdentityToken credential not supported. Using anonymous instead");
+                    warn!(%registry, "IdentityToken credential not supported. Using anonymous instead");
                     RegistryAuth::Anonymous
                 }
                 DockerCredential::UsernamePassword(user_name, password) => {
@@ -106,8 +106,9 @@ impl Registry {
             },
             Err(error) => {
                 warn!(
-                    "Error: couldn't fetch credentials: {} . Using anonymous instead",
-                    error
+                    ?error,
+                    %registry,
+                    "Couldn't fetch credentials. Using anonymous instead"
                 );
                 RegistryAuth::Anonymous
             }
