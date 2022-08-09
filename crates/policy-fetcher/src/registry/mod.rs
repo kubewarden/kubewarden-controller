@@ -105,7 +105,7 @@ impl Registry {
                 }
             },
             Err(error) => {
-                warn!(
+                debug!(
                     ?error,
                     %registry,
                     "Couldn't fetch credentials. Using anonymous instead"
