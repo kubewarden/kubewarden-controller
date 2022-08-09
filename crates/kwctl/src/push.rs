@@ -1,7 +1,5 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_fetcher::{
-    registry::config::DockerConfig, registry::Registry, sources::Sources,
-};
+use policy_evaluator::policy_fetcher::{registry::Registry, sources::Sources};
 use policy_evaluator::policy_metadata::Metadata;
 use std::{fs, path::PathBuf};
 
@@ -10,7 +8,6 @@ use crate::backend::BackendDetector;
 pub(crate) async fn push(
     wasm_path: PathBuf,
     uri: &str,
-    docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
     force: bool,
 ) -> Result<String> {
@@ -31,9 +28,7 @@ pub(crate) async fn push(
     };
 
     let policy = fs::read(&wasm_path).map_err(|e| anyhow!("Cannot open policy file: {:?}", e))?;
-    Registry::new(docker_config)
-        .push(&policy, uri, sources)
-        .await
+    Registry::new().push(&policy, uri, sources).await
 }
 
 fn can_be_force_pushed_without_metadata(
