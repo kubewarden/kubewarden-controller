@@ -396,6 +396,7 @@ fn remote_server_options(matches: &ArgMatches) -> Result<Option<Sources>> {
     };
 
     if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
+        // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility
         env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
     }
 
