@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::verification::{
     KeylessInfo, KeylessPrefixInfo, VerificationResponse,
 };
-use policy_fetcher::registry::config::DockerConfig;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::config::{LatestVerificationConfig, Signature, Subject};
 use policy_fetcher::verify::{FulcioAndRekorData, Verifier};
@@ -10,20 +9,15 @@ use std::collections::HashMap;
 
 pub(crate) struct Client {
     verifier: Verifier,
-    docker_config: Option<DockerConfig>,
 }
 
 impl Client {
     pub fn new(
         sources: Option<Sources>,
-        docker_config: Option<DockerConfig>,
         fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
     ) -> Result<Self> {
         let verifier = Verifier::new(sources, fulcio_and_rekor_data)?;
-        Ok(Client {
-            verifier,
-            docker_config,
-        })
+        Ok(Client { verifier })
     }
 
     pub async fn verify_public_key(
@@ -49,10 +43,7 @@ impl Client {
             any_of: None,
         };
 
-        let result = self
-            .verifier
-            .verify(&image, self.docker_config.as_ref(), &verification_config)
-            .await;
+        let result = self.verifier.verify(&image, &verification_config).await;
         match result {
             Ok(digest) => Ok(VerificationResponse {
                 digest,
@@ -87,10 +78,7 @@ impl Client {
             any_of: None,
         };
 
-        let result = self
-            .verifier
-            .verify(&image, self.docker_config.as_ref(), &verification_config)
-            .await;
+        let result = self.verifier.verify(&image, &verification_config).await;
         match result {
             Ok(digest) => Ok(VerificationResponse {
                 digest,
@@ -126,10 +114,7 @@ impl Client {
             any_of: None,
         };
 
-        let result = self
-            .verifier
-            .verify(&image, self.docker_config.as_ref(), &verification_config)
-            .await;
+        let result = self.verifier.verify(&image, &verification_config).await;
         match result {
             Ok(digest) => Ok(VerificationResponse {
                 digest,
@@ -163,10 +148,7 @@ impl Client {
             any_of: None,
         };
 
-        let result = self
-            .verifier
-            .verify(&image, self.docker_config.as_ref(), &verification_config)
-            .await;
+        let result = self.verifier.verify(&image, &verification_config).await;
         match result {
             Ok(digest) => Ok(VerificationResponse {
                 digest,

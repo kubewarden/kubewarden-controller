@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use policy_fetcher::oci_distribution::Reference;
-use policy_fetcher::{registry::config::DockerConfig, registry::Registry, sources::Sources};
+use policy_fetcher::{registry::Registry, sources::Sources};
 
 /// Helper struct to interact with an OCI registry
 pub(crate) struct Client {
@@ -9,8 +9,8 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub fn new(sources: Option<Sources>, docker_config: Option<DockerConfig>) -> Self {
-        let registry = Registry::new(docker_config.as_ref());
+    pub fn new(sources: Option<Sources>) -> Self {
+        let registry = Registry {};
         Client { sources, registry }
     }
 
