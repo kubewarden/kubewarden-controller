@@ -5,15 +5,15 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego::opa::builtins as opa_builtins;
 use policy_evaluator::policy_fetcher::{
-    registry::config::{read_docker_config_json_file, DockerConfig},
     sources::{read_sources_file, Sources},
     verify::config::{read_verification_file, LatestVerificationConfig},
 };
-use std::{collections::HashMap, net::SocketAddr, path::Path};
+use std::{collections::HashMap, env, net::SocketAddr, path::Path};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
 static SERVICE_NAME: &str = "kubewarden-policy-server";
+const DOCKER_CONFIG_ENV_VAR: &str = "DOCKER_CONFIG";
 
 lazy_static! {
     static ref VERSION_AND_BUILTINS: String = {
@@ -279,9 +279,7 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn remote_server_options(
-    matches: &clap::ArgMatches,
-) -> Result<(Option<Sources>, Option<DockerConfig>)> {
+pub(crate) fn remote_server_options(matches: &clap::ArgMatches) -> Result<Option<Sources>> {
     let sources = match matches.value_of("sources-path") {
         Some(sources_file) => Some(
             read_sources_file(Path::new(sources_file))
@@ -290,18 +288,10 @@ pub(crate) fn remote_server_options(
         None => None,
     };
 
-    let docker_config = match matches.value_of("docker-config-json-path") {
-        Some(docker_config_json_path_file) => Some(
-            read_docker_config_json_file(Path::new(docker_config_json_path_file)).map_err(|e| {
-                anyhow!(
-                    "error while loading docker-config-json-like path from {}: {}",
-                    docker_config_json_path_file,
-                    e
-                )
-            })?,
-        ),
-        None => None,
-    };
+    if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
+        // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility
+        env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
+    }
 
-    Ok((sources, docker_config))
+    Ok(sources)
 }

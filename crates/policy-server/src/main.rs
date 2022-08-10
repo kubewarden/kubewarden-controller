@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     let addr = cli::api_bind_address(&matches)?;
     let (cert_file, key_file) = cli::tls_files(&matches)?;
     let mut policies = cli::policies(&matches)?;
-    let (sources, docker_config) = cli::remote_server_options(&matches)?;
+    let sources = cli::remote_server_options(&matches)?;
     let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
         v.parse::<usize>()
             .expect("error parsing the number of workers")
@@ -99,7 +99,7 @@ fn main() -> Result<()> {
     };
 
     let mut callback_handler = CallbackHandlerBuilder::default()
-        .registry_config(sources.clone(), docker_config.clone())
+        .registry_config(sources.clone())
         .shutdown_channel(callback_handler_shutdown_channel_rx)
         .fulcio_and_rekor_data(fulcio_and_rekor_data.as_ref())
         .build()?;
@@ -209,7 +209,6 @@ fn main() -> Result<()> {
         // Download policies
         let mut downloader = match Downloader::new(
             sources,
-            docker_config,
             verification_config.is_some(),
             Some(sigstore_cache_dir),
         )
