@@ -3,7 +3,6 @@ use policy_evaluator::policy_metadata::Metadata;
 use policy_evaluator::{
     policy_fetcher,
     policy_fetcher::{
-        registry::config::DockerConfig,
         sigstore,
         sources::Sources,
         verify::{config::LatestVerificationConfig, FulcioAndRekorData, Verifier},
@@ -18,7 +17,6 @@ use crate::settings::Policy;
 /// Handles download and verification of policies
 pub(crate) struct Downloader {
     verifier: Option<Verifier>,
-    docker_config: Option<DockerConfig>,
     sources: Option<Sources>,
 }
 
@@ -35,7 +33,6 @@ impl Downloader {
     /// otherwise there will be performance consequences.
     pub async fn new(
         sources: Option<Sources>,
-        docker_config: Option<DockerConfig>,
         enable_verification: bool,
         sigstore_cache_dir: Option<PathBuf>,
     ) -> Result<Self> {
@@ -46,11 +43,7 @@ impl Downloader {
             None
         };
 
-        Ok(Downloader {
-            verifier,
-            docker_config,
-            sources,
-        })
+        Ok(Downloader { verifier, sources })
     }
 
     /// Download all the policies to the given destination
@@ -84,13 +77,7 @@ impl Downloader {
                     policy = name.as_str(),
                     "verifying policy authenticity and integrity using sigstore"
                 );
-                verified_manifest_digest = match ver
-                    .verify(
-                        &policy.url,
-                        self.docker_config.as_ref(),
-                        verification_config,
-                    )
-                    .await
+                verified_manifest_digest = match ver.verify(&policy.url, verification_config).await
                 {
                     Ok(d) => Some(d),
                     Err(e) => {
@@ -114,7 +101,6 @@ impl Downloader {
             let fetched_policy = policy_fetcher::fetch_policy(
                 &policy.url,
                 policy_fetcher::PullDestination::Store(PathBuf::from(destination)),
-                self.docker_config.as_ref(),
                 self.sources.as_ref(),
             )
             .await
@@ -143,7 +129,6 @@ impl Downloader {
                 if let Err(e) = ver
                     .verify_local_file_checksum(
                         &fetched_policy,
-                        self.docker_config.as_ref(),
                         verified_manifest_digest.as_ref().unwrap(),
                     )
                     .await
@@ -258,7 +243,7 @@ mod tests {
         // of the unit tests
         static ref DOWNLOADER: Mutex<Downloader> = Mutex::new({
             let rt = Runtime::new().unwrap();
-            rt.block_on(async { Downloader::new(None, None, true, None).await.unwrap() })
+            rt.block_on(async { Downloader::new(None, true, None).await.unwrap() })
         });
     }
 
