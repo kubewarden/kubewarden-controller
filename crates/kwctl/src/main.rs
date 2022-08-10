@@ -9,12 +9,11 @@ extern crate serde_yaml;
 
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
-use directories::UserDirs;
 use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
     convert::TryFrom,
-    fs,
+    env, fs,
     io::{self, Read},
     path::{Path, PathBuf},
     str::FromStr,
@@ -32,7 +31,6 @@ use tracing_subscriber::{
 
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_evaluator::policy_fetcher::{
-    registry::config::{read_docker_config_json_file, DockerConfig},
     registry::Registry,
     sigstore,
     sources::{read_sources_file, Certificate, Sources},
@@ -61,6 +59,7 @@ mod utils;
 mod verify;
 
 pub(crate) const KWCTL_VERIFICATION_CONFIG: &str = "verification-config.yml";
+const DOCKER_CONFIG_ENV_VAR: &str = "DOCKER_CONFIG";
 
 lazy_static! {
     pub(crate) static ref KWCTL_DEFAULT_VERIFICATION_CONFIG_PATH: String = {
@@ -107,7 +106,7 @@ async fn main() -> Result<()> {
                     None => PullDestination::MainStore,
                 };
 
-                let (sources, docker_config) = remote_server_options(matches)?;
+                let sources = remote_server_options(matches)?;
 
                 let verification_options = verification_options(matches)?;
                 let mut verified_manifest_digest: Option<String> = None;
@@ -118,7 +117,6 @@ async fn main() -> Result<()> {
                     verified_manifest_digest = Some(
                         verify::verify(
                             uri,
-                            docker_config.as_ref(),
                             sources.as_ref(),
                             verification_options.as_ref().unwrap(),
                             fulcio_and_rekor_data.as_ref(),
@@ -128,14 +126,12 @@ async fn main() -> Result<()> {
                     );
                 }
 
-                let policy =
-                    pull::pull(uri, docker_config.as_ref(), sources.as_ref(), destination).await?;
+                let policy = pull::pull(uri, sources.as_ref(), destination).await?;
 
                 if verification_options.is_some() {
                     let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
                     verify::verify_local_checksum(
                         &policy,
-                        docker_config.as_ref(),
                         sources.as_ref(),
                         &verified_manifest_digest.unwrap(),
                         fulcio_and_rekor_data.as_ref(),
@@ -148,13 +144,12 @@ async fn main() -> Result<()> {
         Some("verify") => {
             if let Some(matches) = matches.subcommand_matches("verify") {
                 let uri = matches.get_one::<String>("uri").unwrap();
-                let (sources, docker_config) = remote_server_options(matches)?;
+                let sources = remote_server_options(matches)?;
                 let verification_options = verification_options(matches)?
                     .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
                 let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
                 verify::verify(
                     uri,
-                    docker_config.as_ref(),
                     sources.as_ref(),
                     &verification_options,
                     fulcio_and_rekor_data.as_ref(),
@@ -166,7 +161,7 @@ async fn main() -> Result<()> {
         }
         Some("push") => {
             if let Some(matches) = matches.subcommand_matches("push") {
-                let (sources, docker_config) = remote_server_options(matches)?;
+                let sources = remote_server_options(matches)?;
                 let wasm_uri =
                     crate::utils::map_path_to_uri(matches.get_one::<String>("policy").unwrap())?;
                 let wasm_path = crate::utils::wasm_path(wasm_uri.as_str())?;
@@ -189,14 +184,7 @@ async fn main() -> Result<()> {
 
                 let force = matches.contains_id("force");
 
-                let immutable_ref = push::push(
-                    wasm_path,
-                    &uri,
-                    docker_config.as_ref(),
-                    sources.as_ref(),
-                    force,
-                )
-                .await?;
+                let immutable_ref = push::push(wasm_path, &uri, sources.as_ref(), force).await?;
 
                 match matches.get_one::<String>("output").map(|s| s.as_str()) {
                     Some("json") => {
@@ -260,7 +248,7 @@ async fn main() -> Result<()> {
                 } else {
                     None
                 };
-                let (sources, docker_config) = remote_server_options(matches)
+                let sources = remote_server_options(matches)
                     .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
                 let execution_mode: Option<PolicyExecutionMode> =
                     if let Some(mode_name) = matches.get_one::<String>("execution-mode") {
@@ -278,7 +266,6 @@ async fn main() -> Result<()> {
                     verified_manifest_digest = Some(
                         verify::verify(
                             uri,
-                            docker_config.as_ref(),
                             sources.as_ref(),
                             verification_options.as_ref().unwrap(),
                             fulcio_and_rekor_data.as_ref(),
@@ -293,7 +280,6 @@ async fn main() -> Result<()> {
                 run::pull_and_run(
                     uri,
                     execution_mode,
-                    docker_config.as_ref(),
                     sources.as_ref(),
                     &request,
                     settings,
@@ -329,9 +315,9 @@ async fn main() -> Result<()> {
                 let output = inspect::OutputType::try_from(
                     matches.get_one::<String>("output").map(|s| s.as_str()),
                 )?;
-                let (sources, docker_config) = remote_server_options(matches)?;
+                let sources = remote_server_options(matches)?;
 
-                inspect::inspect(uri, output, sources, docker_config).await?;
+                inspect::inspect(uri, output, sources).await?;
             };
             Ok(())
         }
@@ -381,8 +367,8 @@ async fn main() -> Result<()> {
         Some("digest") => {
             if let Some(matches) = matches.subcommand_matches("digest") {
                 let uri = matches.get_one::<String>("uri").unwrap();
-                let (sources, docker_config) = remote_server_options(matches)?;
-                let registry = Registry::new(docker_config.as_ref());
+                let sources = remote_server_options(matches)?;
+                let registry = Registry::new();
                 let digest = registry.manifest_digest(uri, sources.as_ref()).await?;
                 println!("{}@{}", uri, digest);
             }
@@ -397,7 +383,7 @@ async fn main() -> Result<()> {
     }
 }
 
-fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Option<DockerConfig>)> {
+fn remote_server_options(matches: &ArgMatches) -> Result<Option<Sources>> {
     let sources = if let Some(sources_path) = matches.get_one::<String>("sources-path") {
         Some(read_sources_file(Path::new(&sources_path))?)
     } else {
@@ -409,23 +395,12 @@ fn remote_server_options(matches: &ArgMatches) -> Result<(Option<Sources>, Optio
         }
     };
 
-    let docker_config = if let Some(docker_config_json_path) =
-        matches.get_one::<String>("docker-config-json-path")
-    {
-        Some(read_docker_config_json_file(Path::new(
-            docker_config_json_path,
-        ))?)
-    } else if let Some(user_dir) = UserDirs::new() {
-        let config_json_path = user_dir.home_dir().join(".docker").join("config.json");
-        if Path::exists(&config_json_path) {
-            Some(read_docker_config_json_file(&config_json_path)?)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-    Ok((sources, docker_config))
+    if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
+        // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility
+        env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
+    }
+
+    Ok(sources)
 }
 
 fn verification_options(matches: &ArgMatches) -> Result<Option<LatestVerificationConfig>> {

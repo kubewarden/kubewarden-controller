@@ -6,10 +6,7 @@ use policy_evaluator::{
     constants::*,
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
-    policy_fetcher::{
-        registry::config::DockerConfig, sources::Sources, verify::FulcioAndRekorData,
-        PullDestination,
-    },
+    policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
     policy_metadata::Metadata,
 };
 use std::path::Path;
@@ -23,7 +20,6 @@ use crate::{backend::BackendDetector, pull, verify};
 pub(crate) async fn pull_and_run(
     uri: &str,
     user_execution_mode: Option<PolicyExecutionMode>,
-    docker_config: Option<&DockerConfig>,
     sources: Option<&Sources>,
     request: &str,
     settings: Option<String>,
@@ -33,19 +29,12 @@ pub(crate) async fn pull_and_run(
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
 
-    let policy = pull::pull(&uri, docker_config, sources, PullDestination::MainStore)
+    let policy = pull::pull(&uri, sources, PullDestination::MainStore)
         .await
         .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
 
     if let Some(digest) = verified_manifest_digest {
-        verify::verify_local_checksum(
-            &policy,
-            docker_config,
-            sources,
-            digest,
-            fulcio_and_rekor_data,
-        )
-        .await?
+        verify::verify_local_checksum(&policy, sources, digest, fulcio_and_rekor_data).await?
     }
 
     let metadata = Metadata::from_path(&policy.local_path)?;
@@ -88,7 +77,7 @@ pub(crate) async fn pull_and_run(
         oneshot::channel();
 
     let mut callback_handler = CallbackHandlerBuilder::default()
-        .registry_config(sources.cloned(), docker_config.cloned())
+        .registry_config(sources.cloned())
         .shutdown_channel(callback_handler_shutdown_channel_rx)
         .fulcio_and_rekor_data(fulcio_and_rekor_data)
         .build()?;

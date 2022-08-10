@@ -1,6 +1,7 @@
-use crate::{DockerConfig, Registry, Sources};
+use crate::{Registry, Sources};
 use anyhow::{anyhow, Result};
 use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
+use policy_evaluator::policy_fetcher::oci_distribution::secrets::RegistryAuth;
 use policy_evaluator::policy_fetcher::{
     oci_distribution::manifest::{OciImageManifest, OciManifest},
     sigstore::{
@@ -13,15 +14,10 @@ use policy_evaluator::{
 };
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use syntect::parsing::SyntaxSet;
 
-pub(crate) async fn inspect(
-    uri: &str,
-    output: OutputType,
-    sources: Option<Sources>,
-    docker_config: Option<DockerConfig>,
-) -> Result<()> {
+pub(crate) async fn inspect(uri: &str, output: OutputType, sources: Option<Sources>) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
     let wasm_path = crate::utils::wasm_path(uri.as_str())?;
     let metadata_printer = MetadataPrinter::from(&output);
@@ -29,7 +25,7 @@ pub(crate) async fn inspect(
     let metadata = Metadata::from_path(&wasm_path)
         .map_err(|e| anyhow!("Error parsing policy metadata: {}", e))?;
 
-    let signatures = fetch_signatures_manifest(uri.as_str(), sources, docker_config).await;
+    let signatures = fetch_signatures_manifest(uri.as_str(), sources).await;
 
     match metadata {
         Some(metadata) => metadata_printer.print(&metadata)?,
@@ -277,9 +273,8 @@ impl SignaturesPrinter {
 async fn fetch_signatures_manifest(
     uri: &str,
     sources: Option<Sources>,
-    docker_config: Option<DockerConfig>,
 ) -> Result<Option<OciImageManifest>> {
-    let registry = Registry::new(docker_config.as_ref());
+    let registry = Registry::new();
     let client_config: ClientConfig = sources.clone().unwrap_or_default().into();
     let mut client = ClientBuilder::default()
         .with_oci_client_config(client_config)
@@ -287,23 +282,9 @@ async fn fetch_signatures_manifest(
     let image_name = uri
         .strip_prefix("registry://")
         .ok_or_else(|| anyhow!("invalid uri"))?;
-
-    let auth: Auth = match docker_config {
-        Some(docker_config) => {
-            let sigstore_auth: Option<Result<Auth>> = docker_config
-                .auth(image_name)
-                .map_err(|e| anyhow!("Cannot build Auth object for image '{}': {:?}", uri, e))?
-                .map(|ra| {
-                    let a: Result<Auth> = TryInto::<Auth>::try_into(ra);
-                    a
-                });
-
-            match sigstore_auth {
-                None => Auth::Anonymous,
-                Some(sa) => sa?,
-            }
-        }
-        None => Auth::Anonymous,
+    let auth = match Registry::auth(image_name) {
+        RegistryAuth::Anonymous => Auth::Anonymous,
+        RegistryAuth::Basic(username, password) => Auth::Basic(username, password),
     };
 
     let (cosign_signature_image, _source_image_digest) =
