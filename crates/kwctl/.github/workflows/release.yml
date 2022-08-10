@@ -81,6 +81,37 @@ jobs:
         name: kwctl-linux-aarch64
         path: kwctl-linux-aarch64.zip
 
+  build-darwin-aarch64:
+    name: Build darwin (aarch64) Apple Silicon binary
+    runs-on: macos-latest
+    permissions:
+      id-token: write
+    needs:
+      - ci
+    steps:
+    - uses: actions/checkout@v2
+    - uses: sigstore/cosign-installer@main
+    - name: Setup rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: aarch64-apple-darwin
+        override: true
+    - run: rustup target add aarch64-apple-darwin
+    - name: Build kwctl
+      run: cargo build --target=aarch64-apple-darwin --release
+    - run: mv target/aarch64-apple-darwin/release/kwctl kwctl-darwin-aarch64
+    - name: Sign kwctl
+      run: cosign sign-blob kwctl-darwin-aarch64 --output-certificate kwctl-darwin-aarch64.pem --output-signature kwctl-darwin-aarch64.sig
+      env:
+        COSIGN_EXPERIMENTAL: 1
+    - run: zip -j9 kwctl-darwin-aarch64.zip kwctl-darwin-aarch64 kwctl-darwin-aarch64.sig kwctl-darwin-aarch64.pem
+    - name: Upload binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: kwctl-darwin-aarch64
+        path: kwctl-darwin-aarch64.zip
+
   build-darwin-x86_64:
     name: Build darwin (x86_64) binary
     runs-on: macos-latest
@@ -148,6 +179,7 @@ jobs:
       - build-linux-x86_64
       - build-linux-aarch64
       - build-darwin-x86_64
+      - build-darwin-aarch64
       - build-windows-x86_64
     steps:
     - name: Create Release
@@ -193,6 +225,12 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: kwctl-darwin-x86_64
+
+    - name: Download darwin-aarch64 binary
+      uses: actions/download-artifact@v2
+      with:
+        name: kwctl-darwin-aarch64
+
     - name: Publish darwin-x86_64 binary
       uses: actions/upload-release-asset@v1
       env:
@@ -201,6 +239,16 @@ jobs:
         upload_url: ${{ steps.create-release.outputs.upload_url }}
         asset_name: kwctl-darwin-x86_64.zip
         asset_path: kwctl-darwin-x86_64.zip
+        asset_content_type: application/zip
+
+    - name: Publish darwin-aarch64 binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_name: kwctl-darwin-aarch64.zip
+        asset_path: kwctl-darwin-aarch64.zip
         asset_content_type: application/zip
 
     - name: Download windows-x86_64 binary
