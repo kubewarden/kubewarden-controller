@@ -1,6 +1,24 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+<a name="v1.1.2"></a>
+## [v1.1.2] - 2022-08-10
+### Bug Fixes
+- **deps:** update rust crate serde_yaml to 0.9.4
+- **deps:** update rust crate pulldown-cmark to 0.9.2
+
+### Features
+- Use docker_credential crate instead of DockerConfig
+- Added CI Job to release Apple Silicon binary with the release GH Actions flow
+
+### Pull Requests
+- Merge pull request [#277](https://github.com/kubewarden/kwctl/issues/277) from raulcabello/docker_credential
+- Merge pull request [#276](https://github.com/kubewarden/kwctl/issues/276) from kubewarden/renovate/all-patch
+- Merge pull request [#275](https://github.com/kubewarden/kwctl/issues/275) from flavio/upgrade-deps
+- Merge pull request [#271](https://github.com/kubewarden/kwctl/issues/271) from kubewarden/dependabot/cargo/wasmparser-0.88.0
+- Merge pull request [#272](https://github.com/kubewarden/kwctl/issues/272) from kubewarden/dependabot/cargo/serde_yaml-0.9.1
+- Merge pull request [#273](https://github.com/kubewarden/kwctl/issues/273) from kubewarden/renovate/all-patch
+
 
 <a name="v1.1.1"></a>
 ## [v1.1.1] - 2022-07-19
