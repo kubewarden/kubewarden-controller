@@ -415,9 +415,9 @@ fn verification_options(matches: &ArgMatches) -> Result<Option<LatestVerificatio
     }
     if let Some(verification_config_path) = matches.get_one::<String>("verification-config-path") {
         // config flag present, read it:
-        return Ok(Some(read_verification_file(Path::new(
+        Ok(Some(read_verification_file(Path::new(
             &verification_config_path,
-        ))?));
+        ))?))
     } else {
         let verification_config_path = DEFAULT_ROOT.config_dir().join(KWCTL_VERIFICATION_CONFIG);
         if Path::exists(&verification_config_path) {
