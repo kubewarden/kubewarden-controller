@@ -26,7 +26,7 @@ regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.4"
-syntect = "5.0"
+syntect = { version = "5.0" , default-features = false, features = ["parsing"] }
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
