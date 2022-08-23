@@ -25,8 +25,8 @@ jobs:
     permissions:
       packages: write
       id-token: write
-      #    needs:
-      #- ci
+    needs:
+      - ci
     steps:
       - name: Configure Ubuntu repositories
         run: |
@@ -62,7 +62,6 @@ jobs:
           # The cargo configuration to build static binaries is not working. Thus,
           # update the spec file to ensure that.
           sudo sed -i "s/-dynamic-linker.*/-no-dynamic-linker  -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-no-export-dynamic}/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-          cat /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
 
       - name: Checkout code
         uses: actions/checkout@v2
