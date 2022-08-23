@@ -2,9 +2,11 @@
 name = "policy-server"
 version = "1.1.2"
 authors = [
+  "Kubewarden Developers <kubewarden@suse.de>",
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
-  "Víctor Cuadrado Juan <vcuadradojuan@suse.de>"
+  "Víctor Cuadrado Juan <vcuadradojuan@suse.de>",
+  "José Guilherme Vanz <jguilhermevanz@suse.com>"
 ]
 edition = "2018"
 

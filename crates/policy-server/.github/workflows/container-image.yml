@@ -1,4 +1,4 @@
-name: Build container image
+name: Build policy server
 on:
   push:
     branches:
@@ -28,6 +28,9 @@ jobs:
     needs:
       - ci
     steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@main
+
       - name: Configure Ubuntu repositories
         run: |
           sudo dpkg --add-architecture arm64
@@ -82,11 +85,36 @@ jobs:
           cargo build --release --target ${{ matrix.targetarch }}-unknown-linux-musl
           mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/policy-server policy-server-${{ matrix.targetarch }}
 
-      - name: Upload policy-server
+      - name: Generate SBOM
+        run: |
+          make download-spdx-sbom-generator sbom
+          # SBOM files should have "sbom" in the name due the CLO monitor
+          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+          mv bom-cargo.json policy-server-${{ matrix.targetarch }}-sbom.spdx.json
+
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate policy-server-${{ matrix.targetarch }}-sbom.spdx.cert \
+            --output-signature policy-server-${{ matrix.targetarch }}-sbom.spdx.sig \
+            policy-server-${{ matrix.targetarch }}-sbom.spdx.json
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - name: Upload policy-server binary
         uses: actions/upload-artifact@v2
         with:
           name: policy-server-${{ matrix.targetarch }}
-          path: policy-server-${{ matrix.targetarch }}
+          path: |
+            policy-server-${{ matrix.targetarch }}
+
+      - name: Upload policy-server SBOM files
+        uses: actions/upload-artifact@v2
+        with:
+          name: policy-server-${{ matrix.targetarch }}-sbom
+          path: |
+            policy-server-${{ matrix.targetarch }}-sbom.spdx.json
+            policy-server-${{ matrix.targetarch }}-sbom.spdx.cert
+            policy-server-${{ matrix.targetarch }}-sbom.spdx.sig
 
   build-container-image:
     name: Build policy server container image

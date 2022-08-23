@@ -1,23 +1,49 @@
-name: policy-server release
+name: Release policy server
 on:
-  push:
-    tags:
-    - 'v*'
+  workflow_run:
+    workflows: ["Build policy server"]
+    types:
+      - completed
+    branches:
+      - "v*"
 jobs:
-  ci:
-    uses: kubewarden/policy-server/.github/workflows/tests.yml@main
   release:
     name: Create release
     runs-on: ubuntu-latest
-    needs:
-      - ci
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Download build artifacts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            const matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name.startsWith("policy-server")
+            });
+            for (const artifact of matchArtifact) {
+              let download = await github.rest.actions.downloadArtifact({
+                 owner: context.repo.owner,
+                 repo: context.repo.repo,
+                 artifact_id: artifact.id,
+                 archive_format: 'zip',
+              });
+              let fs = require('fs');
+              file_path = `${process.env.GITHUB_WORKSPACE}/${artifact.name}.zip`;
+              fs.writeFileSync(file_path, Buffer.from(download.data));
+            }
+
       - name: Create release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release policy-server ${{ github.ref }}
+          tag_name: ${{ github.event.workflow_run.head_branch }}
+          name: Release policy-server ${{ github.event.workflow_run.head_branch }}
           draft: false
-          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+          prerelease: ${{ contains(github.event.workflow_run.head_branch, '-alpha') || contains(github.event.workflow_run.head_branch, '-beta') || contains(github.event.workflow_run.head_branch, '-rc') }}
+          files: |
+            policy-server*

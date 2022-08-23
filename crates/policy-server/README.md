@@ -119,3 +119,10 @@ Alternatively, the `policy-server` binary can be built in this way:
 ```shell
 $ make build
 ```
+
+# Software bill of materials
+
+Policy server has its software bill of materials (SBOM) published every release.
+It follows the [SPDX](https://spdx.dev/) version 2.2 format and it can be found
+together with the signature and certificate used to signed it in the
+[release assets](https://github.com/kubewarden/policy-server/releases)
