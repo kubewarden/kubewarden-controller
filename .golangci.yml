@@ -56,6 +56,7 @@ linters:
     - interfacer
     # TODO: enable once we can set some exceptions
     - funlen
+    - ifshort # deprecated
 
 linters-settings:
   cyclop:

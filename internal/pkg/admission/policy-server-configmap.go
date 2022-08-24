@@ -39,7 +39,7 @@ type policyServerSourceAuthority struct {
 	Data string              `json:"data"` // contains a PEM encoded certificate
 }
 
-// nolint:tagliatelle
+//nolint:tagliatelle
 type policyServerSourcesEntry struct {
 	InsecureSources   []string                                 `json:"insecure_sources,omitempty"`
 	SourceAuthorities map[string][]policyServerSourceAuthority `json:"source_authorities,omitempty"`

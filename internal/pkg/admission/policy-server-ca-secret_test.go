@@ -22,7 +22,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	admissionregCA, err := admissionregistration.GenerateCA()
 	generateCACalled := false
 
-	// nolint: wrapcheck
+	//nolint: wrapcheck
 	generateCAFunc := func() (*admissionregistration.CA, error) {
 		generateCACalled = true
 		return admissionregCA, err
@@ -79,7 +79,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	admissionregCA, _ := admissionregistration.GenerateCA()
 	caSecret := &corev1.Secret{Data: map[string][]byte{constants.PolicyServerCARootCACert: admissionregCA.CaCert, constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(admissionregCA.CaPrivateKey)}}
 
-	// nolint:unparam
+	//nolint:unparam
 	generateCertFunc := func(ca []byte, commonName string, extraSANs []string, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
 		generateCertCalled = true
 		return servingCert, servingKey, nil
