@@ -166,7 +166,7 @@ fn url_fetcher(scheme: &str) -> Result<Box<dyn PolicyFetcher>> {
     match scheme {
         "http" | "https" => Ok(Box::new(Https::default())),
         "registry" => Ok(Box::new(Registry::new())),
-        _ => return Err(anyhow!("unknown scheme: {}", scheme)),
+        _ => Err(anyhow!("unknown scheme: {}", scheme)),
     }
 }
 

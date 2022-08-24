@@ -60,7 +60,7 @@ pub enum PolicyPath {
 //         - path
 //           - to
 //             - wasm-module.wasm:1.0.0
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Store {
     pub root: PathBuf,
 }
