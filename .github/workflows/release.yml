@@ -50,7 +50,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          name: Release kubewarden-controller ${{ github.ref }}
+          name: Release kubewarden-controller ${{ GITHUB_REF_NAME }}
           draft: false
           prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           files: |
