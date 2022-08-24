@@ -39,7 +39,7 @@ pub enum VersionedVerificationConfig {
 
 /// Enum that distinguish between a well formed (but maybe unknown) version of
 /// the verification config, and something which is "just wrong".
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum VerificationConfig {
     Versioned(VersionedVerificationConfig),

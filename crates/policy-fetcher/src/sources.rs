@@ -83,7 +83,7 @@ pub struct Sources {
     source_authorities: SourceAuthorities,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Certificate {
     Der(Vec<u8>),
     Pem(Vec<u8>),
