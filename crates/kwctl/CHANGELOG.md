@@ -2,9 +2,13 @@
 ## [Unreleased]
 
 
-<a name="v1.2.0"></a>
-## [v1.2.0] - 2022-08-24
+<a name="v1.1.3"></a>
+## [v1.1.3] - 2022-08-24
+### Reverts
+- Merge pull request [#292](https://github.com/kubewarden/kwctl/issues/292) from viccuad/road-to-1.2.0
+
 ### Pull Requests
+- Merge pull request [#292](https://github.com/kubewarden/kwctl/issues/292) from viccuad/road-to-1.2.0
 - Merge pull request [#288](https://github.com/kubewarden/kwctl/issues/288) from kubewarden/dependabot/cargo/wasmparser-0.89.1
 - Merge pull request [#286](https://github.com/kubewarden/kwctl/issues/286) from kubewarden/dependabot/cargo/prettytable-rs-0.9.0
 - Merge pull request [#285](https://github.com/kubewarden/kwctl/issues/285) from viccuad/main
@@ -413,8 +417,8 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.2.0...HEAD
-[v1.2.0]: https://github.com/kubewarden/kwctl/compare/v1.1.2...v1.2.0
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.1.3...HEAD
+[v1.1.3]: https://github.com/kubewarden/kwctl/compare/v1.1.2...v1.1.3
 [v1.1.2]: https://github.com/kubewarden/kwctl/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/kubewarden/kwctl/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/kubewarden/kwctl/compare/v1.0.1...v1.1.0
