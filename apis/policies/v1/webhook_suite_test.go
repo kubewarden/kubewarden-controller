@@ -123,7 +123,7 @@ var _ = BeforeSuite(func() {
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
 	Eventually(func() error {
-		// nolint:gosec
+		//nolint:gosec
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
 			return fmt.Errorf("failed polling webhook server: %w", err)
@@ -166,7 +166,7 @@ func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string
 	}
 }
 
-// nolint: dupl
+//nolint: dupl
 func deleteClusterAdmissionPolicy(ctx context.Context, name, namespace string) {
 	nsn := types.NamespacedName{
 		Name:      name,
@@ -211,7 +211,7 @@ func makePolicyServerTemplate(name, namespace string) *PolicyServer {
 	}
 }
 
-// nolint: dupl
+//nolint: dupl
 func deletePolicyServer(ctx context.Context, name, namespace string) {
 	nsn := types.NamespacedName{
 		Name:      name,
