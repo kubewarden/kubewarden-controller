@@ -2,24 +2,81 @@
 ## [Unreleased]
 
 
+<a name="v1.1.2"></a>
+## [v1.1.2] - 2022-08-24
+### Bug Fixes
+- **deps:** update all patchlevel dependencies
+- **deps:** update rust crate serde_yaml to 0.9.4
+- **deps:** update rust crate clap to 3.2.16
+- **deps:** update all patchlevel dependencies
+
+### Features
+- use docker_credential crate instead of DockerConfig
+
+### Pull Requests
+- Merge pull request [#308](https://github.com/kubewarden/policy-server/issues/308) from jvanz/main
+- Merge pull request [#303](https://github.com/kubewarden/policy-server/issues/303) from raulcabello/docker_credentials
+- Merge pull request [#300](https://github.com/kubewarden/policy-server/issues/300) from kubewarden/renovate/all-patch
+- Merge pull request [#301](https://github.com/kubewarden/policy-server/issues/301) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#299](https://github.com/kubewarden/policy-server/issues/299) from kubewarden/dependabot/cargo/policy-evaluator-v0.4.6
+- Merge pull request [#297](https://github.com/kubewarden/policy-server/issues/297) from kubewarden/dependabot/cargo/serde_yaml-0.9.1
+- Merge pull request [#295](https://github.com/kubewarden/policy-server/issues/295) from kubewarden/renovate/all-patch
+- Merge pull request [#298](https://github.com/kubewarden/policy-server/issues/298) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#290](https://github.com/kubewarden/policy-server/issues/290) from kubewarden/renovate/all-patch
+- Merge pull request [#291](https://github.com/kubewarden/policy-server/issues/291) from kubewarden/renovate/lock-file-maintenance
+
+
+<a name="v1.1.1"></a>
+## [v1.1.1] - 2022-07-18
+### Bug Fixes
+- Allow fulcio and rekor data to be None
+
+### Pull Requests
+- Merge pull request [#292](https://github.com/kubewarden/policy-server/issues/292) from flavio/allow-fulcio-and-rekor-data-to-be-none
+
+
 <a name="v1.1.0"></a>
 ## [v1.1.0] - 2022-07-14
 ### Bug Fixes
 - cleanup of help output
-- keyless image verification
-- handle all the HTTP server code via warp
 - **deps:** update all patchlevel dependencies
 - **deps:** update all patchlevel dependencies
 
 ### Pull Requests
+- Merge pull request [#289](https://github.com/kubewarden/policy-server/issues/289) from kubewarden/road-to-1.1.0
+- Merge pull request [#286](https://github.com/kubewarden/policy-server/issues/286) from viccuad/gha-bump
 - Merge pull request [#284](https://github.com/kubewarden/policy-server/issues/284) from kubewarden/renovate/lock-file-maintenance
 - Merge pull request [#283](https://github.com/kubewarden/policy-server/issues/283) from kubewarden/renovate/all-patch
 - Merge pull request [#285](https://github.com/kubewarden/policy-server/issues/285) from flavio/log-allow-no-color-text-output
 - Merge pull request [#282](https://github.com/kubewarden/policy-server/issues/282) from flavio/update-to-latest-policy-evaluator
 - Merge pull request [#280](https://github.com/kubewarden/policy-server/issues/280) from kubewarden/renovate/all-patch
+
+
+<a name="v1.0.1"></a>
+## [v1.0.1] - 2022-06-24
+### Bug Fixes
+- keyless image verification
+
+### Pull Requests
 - Merge pull request [#279](https://github.com/kubewarden/policy-server/issues/279) from raulcabello/main
 - Merge pull request [#278](https://github.com/kubewarden/policy-server/issues/278) from raulcabello/main
+
+
+<a name="v1.0.0"></a>
+## [v1.0.0] - 2022-06-22
+### Pull Requests
 - Merge pull request [#277](https://github.com/kubewarden/policy-server/issues/277) from flavio/v1.0.0-release
+
+
+<a name="v1.0.0-rc4"></a>
+## [v1.0.0-rc4] - 2022-06-22
+
+<a name="v1.0.0-rc3"></a>
+## [v1.0.0-rc3] - 2022-06-21
+### Bug Fixes
+- handle all the HTTP server code via warp
+
+### Pull Requests
 - Merge pull request [#276](https://github.com/kubewarden/policy-server/issues/276) from flavio/cleanup-http-server
 
 
@@ -52,25 +109,18 @@
 
 <a name="v0.3.1"></a>
 ## [v0.3.1] - 2022-05-24
+### Bug Fixes
+- **deps:** update all patchlevel dependencies
+
 ### Features
 - sign container image
+- Allow policy authors to write policies that perform image verification using sigstore
 
 ### Pull Requests
 - Merge pull request [#259](https://github.com/kubewarden/policy-server/issues/259) from viccuad/main
 - Merge pull request [#256](https://github.com/kubewarden/policy-server/issues/256) from raulcabello/main
 - Merge pull request [#253](https://github.com/kubewarden/policy-server/issues/253) from kubewarden/renovate/lock-file-maintenance
 - Merge pull request [#243](https://github.com/kubewarden/policy-server/issues/243) from flavio/support-wapc-dns-lookup
-
-
-<a name="v0.3.0"></a>
-## [v0.3.0] - 2022-05-12
-### Bug Fixes
-- **deps:** update all patchlevel dependencies
-
-### Features
-- Allow policy authors to write policies that perform image verification using sigstore
-
-### Pull Requests
 - Merge pull request [#251](https://github.com/kubewarden/policy-server/issues/251) from raulcabello/main
 - Merge pull request [#250](https://github.com/kubewarden/policy-server/issues/250) from raulcabello/main
 - Merge pull request [#248](https://github.com/kubewarden/policy-server/issues/248) from kubewarden/renovate/all-patch
@@ -341,13 +391,18 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.1.0...HEAD
-[v1.1.0]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc2...v1.1.0
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.1.2...HEAD
+[v1.1.2]: https://github.com/kubewarden/policy-server/compare/v1.1.1...v1.1.2
+[v1.1.1]: https://github.com/kubewarden/policy-server/compare/v1.1.0...v1.1.1
+[v1.1.0]: https://github.com/kubewarden/policy-server/compare/v1.0.1...v1.1.0
+[v1.0.1]: https://github.com/kubewarden/policy-server/compare/v1.0.0...v1.0.1
+[v1.0.0]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc4...v1.0.0
+[v1.0.0-rc4]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc3...v1.0.0-rc4
+[v1.0.0-rc3]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc2...v1.0.0-rc3
 [v1.0.0-rc2]: https://github.com/kubewarden/policy-server/compare/v1.0.0-rc1...v1.0.0-rc2
 [v1.0.0-rc1]: https://github.com/kubewarden/policy-server/compare/v0.3.2...v1.0.0-rc1
 [v0.3.2]: https://github.com/kubewarden/policy-server/compare/v0.3.1...v0.3.2
-[v0.3.1]: https://github.com/kubewarden/policy-server/compare/v0.3.0...v0.3.1
-[v0.3.0]: https://github.com/kubewarden/policy-server/compare/v0.2.7...v0.3.0
+[v0.3.1]: https://github.com/kubewarden/policy-server/compare/v0.2.7...v0.3.1
 [v0.2.7]: https://github.com/kubewarden/policy-server/compare/v0.2.6...v0.2.7
 [v0.2.6]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc2...v0.2.6
 [v0.2.6-rc2]: https://github.com/kubewarden/policy-server/compare/v0.2.6-rc1...v0.2.6-rc2
