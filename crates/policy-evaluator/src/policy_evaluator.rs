@@ -22,7 +22,7 @@ use crate::runtimes::{
     wapc::host_callback as wapc_callback, wapc::Runtime as WapcRuntime, wapc::WAPC_POLICY_MAPPING,
 };
 
-#[derive(Copy, Clone, PartialEq, serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize, Debug)]
 pub enum PolicyExecutionMode {
     #[serde(rename = "kubewarden-wapc")]
     KubewardenWapc,
