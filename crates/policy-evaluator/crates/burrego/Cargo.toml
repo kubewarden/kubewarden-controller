@@ -24,7 +24,7 @@ serde_yaml = "0.9.10"
 tracing = "0.1"
 tracing-subscriber = { version= "0.3", features = ["fmt", "env-filter"] }
 url = "2.2.2"
-wasmtime = "0.39.1"
+wasmtime = "0.40"
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"
