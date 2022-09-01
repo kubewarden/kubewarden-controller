@@ -79,3 +79,10 @@ $ kubectl patch clusteradmissionpolicy psp-capabilities -p '{"metadata":{"finali
 
 The [official documentation](https://docs.kubewarden.io) provides more insights
 about how the project works and how to use it.
+
+# Software bill of materials
+
+Kubewarden controller has its software bill of materials (SBOM) published every
+release. It follows the [SPDX](https://spdx.dev/) version 2.2 format and it can be found
+together with the signature and certificate used to signed it in the
+[release assets](https://github.com/kubewarden/kubewarden-controller/releases)
