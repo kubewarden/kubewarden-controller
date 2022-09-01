@@ -152,9 +152,13 @@ It would then be retrieved with an OCI registry client. This would be more
 efficient than pulling full Wasm modules for all policies as in (A).
 
 Airgap installations would consist on mirroring the OCI registry.
+Rancher airgap works by providing a list of images to be mirrored, and
+instructions for using a private registry. We would need to instruct Kubewarden
+users to use an additional OCI private registry, and an OCI-capable client for
+performing the mirroring.
 
-A drawback could be finding OCI registry clients that can deal with these
-formats.
+A drawback could be finding frontend-capable OCI registry clients that can deal
+with these formats.
 
 
 # Unresolved questions
