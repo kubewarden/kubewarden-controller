@@ -13,10 +13,8 @@
 This RFC explains how the Kubewarden policies, either owned by the Kubewarden
 team or 3rd party ones, can be integrated in Rancher Explorer.
 
-For policies owned by the Kubewarden team  it proposes a development workflow
-using git branches and automation. The needed Rancher Helm charts and Rancher
-Packages artifacts metadata is tracked in a separate orphan branch for each
-artifact's repo, and submitted to https://github.com/rancher/charts.
+For policies owned by the Kubewarden team it proposes building Rancher Helm charts
+that will be published under https://github.com/rancher/charts.
 
 For 3rd party policies not owned by the Kubewarden team,
 it proposes using the Artifact Hub API to poll for the metadata stored in
@@ -37,17 +35,15 @@ Problems to solve:
 ## Examples / User Stories
 [examples]: #examples
 
-2. As a user, I want to install one Kubewarden policy owned by the
+1. As a user, I want to install one Kubewarden policy owned by the
    Kubewarden/Rancher team via Rancher Explorer UI.
-3. As a user, I want to install a collection of Kubewarden policies owned by the
-   Kubewarden/Rancher team via the Rancher Explorer UI.
-4. As a Kubewarden developer, I want to allow users to deploy a collection of related policies
+2. As a Kubewarden developer, I want to allow users to deploy a collection of related policies
    in a simple way. For example: "PSP best of", "Security best practices",...
-4. As a user, I want to install 3rd party Kubewarden policies via Rancher
+3. As a user, I want to install 3rd party Kubewarden policies via Rancher
    Explorer UI.
-5. As a Kubewarden developer, I want to release a new Kubewarden chart/policy so
+4. As a Kubewarden developer, I want to release a new Kubewarden chart/policy so
    it can be installed via Rancher Explorer UI.
-6. As a 3rd party developer, I want to release a policy on Artifact Hub so it can
+5. As a 3rd party developer, I want to release a policy on Artifact Hub so it can
    be discovered and installed via Rancher Explorer UI.
 
 # Detailed design
@@ -58,21 +54,17 @@ Problems to solve:
 Follow the process listed in [RFC-9, Rancher integration of Kubewarden
 charts](./0009-rancher-integration-charts.md).
 
-Carry the Helm chart code for the policy in a `rancher-X` orphan branch, where `X`
-is the release tag of the policy being targeted.
-Using these branches allows for easy rebases and cherry-picks, and documentating
-needed changes per commit. This also separates the Rancher vendored code, which
-may be of no interest to policy authors, and may coexist with other vendors.
+Carry the Helm chart code for the policy in a `rancher-chart` folder in the repo.
 
-The resulting charts from `rancher-X` will not be served and released by us, but
-used to build Rancher charts from source by using the
+The resulting chart built from the policy repository will not be served and
+released by us, but used to build Rancher charts from source by using the
 [Package](https://github.com/rancher/charts/blob/dev-v2.6/docs/packages.md)
 format in https://github.com/rancher/charts.
 They will be submitted via a `packages/kubewarden/<policy>.package.yaml`, with
 `package.yaml::commit` pointing to the relevant `rancher-X` branch.
 
 For policy bundles, they can be in their own repository containing the chart
-and modifications in a `rancher-X` branch (e.g: see `kubewarden-defaults`).
+and modifications (e.g: see `kubewarden-defaults` chart).
 
 ## For 3rd party artifacts
 
@@ -86,9 +78,9 @@ the policies with [GET
 and obtain its `name`, `version`, `signed` status, and `data/kubewarden-*`
 information.
 
-Artifacts owned by the Kubewarden team are also present in Artifact Hub, hence
-to avoid listing them twice, they should be skipped if `provider` of the package
-is `kubewarden`, and/or the URL starts with `https://github.com/kubewarden/`.
+Artifacts owned by the Kubewarden team are also present in Artifact Hub. Still,
+they have different provenance, therefore, different support assurances. Hence,
+they should be able to coexist.
 
 # Drawbacks
 [drawbacks]: #drawbacks
@@ -107,13 +99,14 @@ Using the provided Artifact Hub API, given that it doesn't have pagination and
 one needs to query for each package independently, will be inefficient. A cache
 could be implemented.
 
-Obtaining the policies via the API is still missing:
+The following metadata is not obtainable without reading the Wasm binary right
+right now, therefore should be added to `policy/artifacthub-pkg.yml`:
 - Metadata not present in `policy/artifacthub-pkg.yml` yet present in
   `policy/metadata.yml`, namely the array of `rules`.
 - `question.yml` information. Not a problem per se, as 3rd party policies would
   not need Rancher integration.
 
-Airgap installations wouldn't be possible.
+Airgap installations need to catch the Artifact Hub metadata somehow.
 
 # Alternatives
 [alternatives]: #alternatives
@@ -123,13 +116,14 @@ Airgap installations wouldn't be possible.
 It could be possible to save the `questions.yml` metadata in the metadata
 annotations of `annotated-policy.wasm` themselves (the custom section of the
 Wasm module containing raw data, for us with the name
-`KUBEWARDEN_CUSTOM_SECTION_METADATA`).
+`KUBEWARDEN_CUSTOM_SECTION_METADATA`). `rules` metadata is present there
+already.
 
 With this, annotated policies will contain almost all metadata needed.
 Information about if the policy is signed couldn't be included there by
 definition.
 
-Then, Rancher Explorer frontend could make use of a client for OCI registries
+Then, Rancher Explorer could make use of a client for OCI registries
 (such as [oci-registry-js](https://www.npmjs.com/package/oci-registry-js) or a
 wasm-compiled Rust library for example), to pull and cache each Wasm module.
 With [`WebAssembly.Module.customSections()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module/customSections)
@@ -139,6 +133,9 @@ policy.
 This would mean to pull hundreds of megabytes, as it will download the Wasm
 module of the policies, regardless of pagination and caching.
 
+Airgap installations would consist on mirroring the OCI registry (since metadata
+in stored in the Wasm modules).
+
 ## B. Storing policy metadata in the OCI registry
 
 Same as alternative (A), but storing the policies' metadata in the OCI registry
@@ -146,12 +143,15 @@ either under:
 - A new layer, with `config.mediaType` [creating an artifact type
 `application/vnd.oci.yaml-sample.config.v3+yaml`](https://github.com/opencontainers/artifacts/blob/main/artifact-authors.md#defining-a-unique-artifact-type).
   This means pulling layers, and possibly uncompressing them.
-- Or in `manifest.config` (https://github.com/opencontainers/artifacts/blob/main/artifact-authors.md#optional-defining-config-schema)
+- Or in `manifest.config`
+  (https://github.com/opencontainers/artifacts/blob/main/artifact-authors.md#optional-defining-config-schema).
+  Which is not compressed, and whose checksum matches the checksum of the
+  uncompressed contents of the `manifest.config`.
 
 It would then be retrieved with an OCI registry client. This would be more
 efficient than pulling full Wasm modules for all policies as in (A).
 
-Airgap installations would consist on mirroring the registry.
+Airgap installations would consist on mirroring the OCI registry.
 
 A drawback could be finding OCI registry clients that can deal with these
 formats.
