@@ -166,7 +166,7 @@ users to use an additional OCI private registry, and an OCI-capable client for
 performing the mirroring.
 
 A drawback could be finding frontend-capable OCI registry clients that can deal
-with these formats.
+with these formats, and can authenticate against private registries too.
 
 
 # Unresolved questions
