@@ -33,13 +33,13 @@ jobs:
       - name: Create SBOM file
         shell: bash
         run: |
-          bom generate -n https://kubewarden.io/kubewarden.spdx -o kubewarden-controller.spdx .
+          bom generate -n https://kubewarden.io/kubewarden.spdx -o kubewarden-controller-sbom.spdx .
 
       - name: Sign BOM file
         run: |
-          cosign sign-blob --output-certificate kubewarden-controller.spdx.cert \
-            --output-signature kubewarden-controller.spdx.sig \
-            kubewarden-controller.spdx
+          cosign sign-blob --output-certificate kubewarden-controller-sbom.spdx.cert \
+            --output-signature kubewarden-controller-sbom.spdx.sig \
+            kubewarden-controller-sbom.spdx
         env:
           COSIGN_EXPERIMENTAL: 1
 
@@ -54,6 +54,6 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           files: |
-            kubewarden-controller.spdx
-            kubewarden-controller.spdx.cert
-            kubewarden-controller.spdx.sig
+            kubewarden-controller-sbom.spdx
+            kubewarden-controller-sbom.spdx.cert
+            kubewarden-controller-sbom.spdx.sig
