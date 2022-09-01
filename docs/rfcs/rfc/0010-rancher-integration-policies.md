@@ -48,7 +48,7 @@ Problems to solve:
 5. As a Kubewarden developer, I want to release a new Kubewarden chart/policy so
    it can be installed via Rancher Explorer UI.
 6. As a 3rd party developer, I want to release a policy on Artifact Hub so it can
-   be installed via Rancher Explorer UI.
+   be discovered and installed via Rancher Explorer UI.
 
 # Detailed design
 [design]: #detailed-design
