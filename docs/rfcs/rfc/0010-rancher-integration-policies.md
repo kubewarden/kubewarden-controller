@@ -151,6 +151,14 @@ either under:
 It would then be retrieved with an OCI registry client. This would be more
 efficient than pulling full Wasm modules for all policies as in (A).
 
+This means policies would have the metadata saved in both:
+- Wasm module, as of today. Used by `kwctl`, `policy-server`.
+- OCI registry `manifest.config`.
+
+This would mean that policy-related metadata can be dropped from
+`policy/artifacthub-pkg.yml`, which should only contain things related to
+Artifact Hub.
+
 Airgap installations would consist on mirroring the OCI registry.
 Rancher airgap works by providing a list of images to be mirrored, and
 instructions for using a private registry. We would need to instruct Kubewarden
