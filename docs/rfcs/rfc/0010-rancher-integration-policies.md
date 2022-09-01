@@ -39,8 +39,10 @@ Problems to solve:
 
 2. As a user, I want to install one Kubewarden policy owned by the
    Kubewarden/Rancher team via Rancher Explorer UI.
-3. As a user, I want to install several Kubewarden policies owned by the
-   Kubewarden/Rancher team via Rancher Explorer UI.
+3. As a user, I want to install a collection of Kubewarden policies owned by the
+   Kubewarden/Rancher team via the Rancher Explorer UI.
+4. As a Kubewarden developer, I want to allow users to deploy a collection of related policies
+   in a simple way. For example: "PSP best of", "Security best practices",...
 4. As a user, I want to install 3rd party Kubewarden policies via Rancher
    Explorer UI.
 5. As a Kubewarden developer, I want to release a new Kubewarden chart/policy so
