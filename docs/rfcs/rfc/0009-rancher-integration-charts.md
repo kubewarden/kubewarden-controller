@@ -117,7 +117,8 @@ The Kubewarden stack has the following dependencies:
   * `grafana`, `kube-prometheus-stack`: provided by `rancher-monitoring` chart.
   * `jaeger-operator`: provided by `rancher-tracing` chart.
   * `open-telemetry/opentelemetry-operator`: not yet in Rancher's repository. We
-    will need to submit and maintain.
+    will need to submit it (possibly to
+    https://github.com/rancher/partner-charts) and maintain.
   * `kubewarden-defaults`
 
   For the ones depending on CRDs (`kubewarden-defaults`,
