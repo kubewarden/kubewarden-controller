@@ -171,6 +171,10 @@ instructions for using a private registry. We would need to instruct Kubewarden
 users to use an additional OCI private registry, and an OCI-capable client for
 performing the mirroring.
 
+This alternative provides the same implementation for both kubewarden-owner
+policies, Rancher-mirrored policies, and 3rd party policies. Just serve each of
+them on their respective OCI registries.
+
 A drawback could be finding frontend-capable OCI registry clients that can deal
 with these formats, and can authenticate against private registries too.
 
