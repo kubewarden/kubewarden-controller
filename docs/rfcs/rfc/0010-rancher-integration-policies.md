@@ -54,17 +54,27 @@ Problems to solve:
 Follow the process listed in [RFC-9, Rancher integration of Kubewarden
 charts](./0009-rancher-integration-charts.md).
 
-Carry the Helm chart code for the policy in a `rancher-chart` folder in the repo.
+Carry the Helm chart code for the policy in a `rancher-chart` folder in the
+policy repo.
 
-The resulting chart built from the policy repository will not be served and
-released by us, but used to build Rancher charts from source by using the
-[Package](https://github.com/rancher/charts/blob/dev-v2.6/docs/packages.md)
-format in https://github.com/rancher/charts.
-They will be submitted via a `packages/kubewarden/<policy>.package.yaml`, with
-`package.yaml::commit` pointing to the relevant `rancher-X` branch.
+Still, even if the chart will not be released to users, the repository can be
+consumed in Rancher UI (using git URL and branch) for testing the chart itself.
 
 For policy bundles, they can be in their own repository containing the chart
 and modifications (e.g: see `kubewarden-defaults` chart).
+
+The resulting policy chart built from the policy repository will not be served
+and released by us, but used to build Rancher charts from source by using the
+[Package](https://github.com/rancher/charts/blob/dev-v2.6/docs/packages.md)
+format in https://github.com/rancher/charts.
+Policy charts will be submitted via a
+`packages/kubewarden/<policy>.package.yaml`, with `package.yaml::commit`
+pointing to the relevant `rancher-X` branch. Rancher charts are build from those
+`package.yaml` files.
+
+A pull request bot needs to be created to make the submissions to either
+https://github.com/rancher/charts or our own staging fork, by bumping the
+`package.yaml::commit`.
 
 ## For 3rd party artifacts
 
@@ -89,10 +99,6 @@ they should be able to coexist.
 
 Needing new Helm charts to ship policies owned by the Kubewarden team.
 
-A pull request bot needs to be created to make the submissions to
-https://github.com/rancher/charts, and we will need external approvals for
-merging.
-
 ## For 3rd party policies
 
 Using the provided Artifact Hub API, given that it doesn't have pagination and
@@ -100,10 +106,10 @@ one needs to query for each package independently, will be inefficient. A cache
 could be implemented.
 
 The following metadata is not obtainable without reading the Wasm binary right
-right now, therefore should be added to `policy/artifacthub-pkg.yml`:
+now, therefore should be added to `policy/artifacthub-pkg.yml`:
 - Metadata not present in `policy/artifacthub-pkg.yml` yet present in
   `policy/metadata.yml`, namely the array of `rules`.
-- `question.yml` information. Not a problem per se, as 3rd party policies would
+- `questions.yml` information. Not a problem per se, as 3rd party policies would
   not need Rancher integration.
 
 Airgap installations need to catch the Artifact Hub metadata somehow.
@@ -172,5 +178,3 @@ with these formats, and can authenticate against private registries too.
 # Unresolved questions
 [unresolved]: #unresolved-questions
 
-Alternative (B) looks the most promising, but more investigation on a
-frontend-capable OCI registry client needs to be done.
