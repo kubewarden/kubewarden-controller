@@ -18,7 +18,7 @@ members = [
 anyhow = "1.0"
 base64 = "0.13.0"
 burrego = { path = "crates/burrego" }
-cached = "0.38.0"
+cached = "0.39.0"
 dns-lookup = "1.0.8"
 json-patch = "0.2.6"
 kube = { version = "0.74.0", default-features = false, features = ["client", "rustls-tls"] }
