@@ -92,6 +92,10 @@ is a moving target):
 - Provide logo for the chart by settings `icon` in `Chart.yaml`.
 - Rancher automatically creates a list of container images from charts for
   airgap. Adopt Rancher's `repository` and `tag` values in values.yml.
+- Submit list of upstream images to be mirrored to
+  https://github.com/rancher/image-mirror. For normal container images, this is
+  no problem. For Wasm modules, they will not be supported by the Rancher
+  DockerHub repository.
 - Provide our own `serviceaccount`.
 - Define k8s min/max version with `kubeVersion` in `Chart.yaml`.
 - Add scheduling options at a pod (affinity) and node level
@@ -175,3 +179,9 @@ chart>/package.yaml` packages. This increases maintenance costs.
 While soft (optional) dependencies for Kubewarden charts are ok, they are
 implemented directly in Rancher Explorer UI logic, as per Rancher policy. This
 could be improved.
+
+All needed images for the charts need to be mirrored in the Rancher DockerHub
+repository, instead of being consumed from upstream.  For normal container
+images this is no problem, but not so for Wasm modules. We need to raise the
+request to provide a Rancher OCI registry, use Kubewarden's upstream one, or
+else.
