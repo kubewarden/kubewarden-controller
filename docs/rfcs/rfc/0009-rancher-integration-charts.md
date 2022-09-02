@@ -110,18 +110,20 @@ The Kubewarden stack has the following dependencies:
     This annotation accepts `match`, or a hardcoded version (e.g: `1.1.0`)
     We ought to set it to a hardcoded version, to be able to release patch
     versions.  of `kubewarden-controller` independently.
-  * `cert-manager`: considered a precondition of Rancher Explorer and out of
-    its scope.
+  * `cert-manager`: considered a precondition of Rancher Explorer. Rancher
+    instructs users to install it prior to installing Rancher, so we can assume
+    it is always present.
 - Soft (optional) dependencies:
-  `open-telemetry/opentelemetry-operator`
-  `grafana`
-  `kube-prometheus-stack`
-  `jaeger-operator`
-  `kubewarden-defaults`.
+  * `grafana`, `kube-prometheus-stack`: provided by `rancher-monitoring` chart.
+  * `jaeger-operator`: provided by `rancher-tracing` chart.
+  * `open-telemetry/opentelemetry-operator`: not yet in Rancher's repository. We
+    will need to submit and maintain.
+  * `kubewarden-defaults`
 
   For the ones depending on CRDs (`kubewarden-defaults`,
     `opentelemetry-operator`, `jaeger-operator`), Rancher charts follow a 3 step
-  process:
+  process (this process is only for optional dependencies, see previous hard
+  dependencies annotations):
   * Wrap the custom resource in a conditional that is tied to a values.yaml
     parameter.
   * Talk to the Rancher Explorer UI team to implement a solution and create a
@@ -140,10 +142,10 @@ They will be feature branches with parent being the commit tagged `X`. Using
 these branches allows for easy rebases and cherry-picks, and documenting
 needed changes per commit. 
 
-We expect that all changes will be mergable against main, but having the branch
-around as a pointer provides separation of the Rancher vendored code, which may
-be of no interest to upstream policy or Kubewarden chart authors, and may
-coexist with other vendors.
+We expect that all changes will be mergeable against `main`, but having the
+branch around as a pointer provides separation of the Rancher vendored code,
+which may be of no interest to upstream policy or Kubewarden chart authors, and
+may coexist with other vendors.
 
 The resulting charts from `rancher-X` will be used to build Rancher charts from
 source by using the
@@ -169,6 +171,6 @@ chart>/package.yaml` packages. This increases maintenance costs.
 # Unresolved questions
 [unresolved]: #unresolved-questions
 
-While soft dependencies for Kubewarden charts are ok, they are implemented
-directly in Rancher Explorer UI logic, as per Rancher policy. This could be
-improved.
+While soft (optional) dependencies for Kubewarden charts are ok, they are
+implemented directly in Rancher Explorer UI logic, as per Rancher policy. This
+could be improved.
