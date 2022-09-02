@@ -178,3 +178,7 @@ with these formats, and can authenticate against private registries too.
 # Unresolved questions
 [unresolved]: #unresolved-questions
 
+As in RFC-9, all needed images for the charts need to be mirrored in the Rancher
+DockerHub repository, instead of being consumed from upstream. Since policies
+are Wasm modules, we need to raise the request to provide a Rancher OCI
+registry, use Kubewarden's upstream one, or else.
