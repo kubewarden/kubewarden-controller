@@ -8,4 +8,6 @@ ignore = [
                        # Ignored because there are not known workarounds or dependency version bump
                        # at this time. The call to localtime_r is not protected by any lock and can
                        # cause unsoundness. Read the previous link for more information.
+  "RUSTSEC-2021-0139", # This is about `ansi_term` not being maintained anymore
 ]
+
