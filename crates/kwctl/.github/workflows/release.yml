@@ -6,7 +6,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
 jobs:
-
   ci:
     # A branch is required, and cannot be dynamic - https://github.com/actions/runner/issues/1493
     uses: kubewarden/kwctl/.github/workflows/tests.yml@main
@@ -97,6 +96,30 @@ jobs:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
 
+      - name: Generate SBOM
+        run: |
+          make download-spdx-sbom-generator sbom
+          # SBOM files should have "sbom" in the name due the CLO monitor
+          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+          mv bom-cargo.json kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert \
+            --output-signature kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig \
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-linux-${{ matrix.targetarch }}-sbom
+          path: |
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig
+
   build-darwin-aarch64:
     name: Build darwin (aarch64) Apple Silicon binary
     runs-on: macos-latest
@@ -127,6 +150,29 @@ jobs:
       with:
         name: kwctl-darwin-aarch64
         path: kwctl-darwin-aarch64.zip
+    - name: Generate SBOM
+      run: |
+        make SBOM_GENERATOR_TOOL_ARCH=darwin-amd64 download-spdx-sbom-generator sbom
+        # SBOM files should have "sbom" in the name due the CLO monitor
+        # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+        mv bom-cargo.json kwctl-darwin-aarch64-sbom.spdx.json
+
+    - name: Sign BOM file
+      run: |
+        cosign sign-blob --output-certificate kwctl-darwin-aarch64-sbom.spdx.cert \
+          --output-signature kwctl-darwin-aarch64-sbom.spdx.sig \
+          kwctl-darwin-aarch64-sbom.spdx.json
+      env:
+        COSIGN_EXPERIMENTAL: 1
+
+    - name: Upload kwctl SBOM files
+      uses: actions/upload-artifact@v2
+      with:
+        name: kwctl-darwin-aarch64-sbom
+        path: |
+          kwctl-darwin-aarch64-sbom.spdx.json
+          kwctl-darwin-aarch64-sbom.spdx.cert
+          kwctl-darwin-aarch64-sbom.spdx.sig
 
   build-darwin-x86_64:
     name: Build darwin (x86_64) binary
@@ -156,6 +202,29 @@ jobs:
       with:
         name: kwctl-darwin-x86_64
         path: kwctl-darwin-x86_64.zip
+    - name: Generate SBOM
+      run: |
+        make SBOM_GENERATOR_TOOL_ARCH=darwin-amd64 download-spdx-sbom-generator sbom
+        # SBOM files should have "sbom" in the name due the CLO monitor
+        # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+        mv bom-cargo.json kwctl-darwin-x86_64-sbom.spdx.json
+
+    - name: Sign BOM file
+      run: |
+        cosign sign-blob --output-certificate kwctl-darwin-x86_64-sbom.spdx.cert \
+          --output-signature kwctl-darwin-x86_64-sbom.spdx.sig \
+          kwctl-darwin-x86_64-sbom.spdx.json
+      env:
+        COSIGN_EXPERIMENTAL: 1
+
+    - name: Upload kwctl SBOM files
+      uses: actions/upload-artifact@v2
+      with:
+        name: kwctl-darwin-x86_64-sbom
+        path: |
+          kwctl-darwin-x86_64-sbom.spdx.json
+          kwctl-darwin-x86_64-sbom.spdx.cert
+          kwctl-darwin-x86_64-sbom.spdx.sig
 
   build-windows-x86_64:
     name: Build windows (x86_64) binary
@@ -187,6 +256,32 @@ jobs:
       with:
         name: kwctl-windows-x86_64
         path: kwctl-windows-x86_64.exe.zip
+    - name: Generate SBOM
+      run: |
+        # if change the version used, remember to update the default version used for
+        # Mac and Linux in the Makefile.
+        curl -LO https://github.com/opensbom-generator/spdx-sbom-generator/releases/download/v0.0.15/spdx-sbom-generator-v0.0.15-windows-amd64.zip
+        7z e spdx-sbom-generator-v0.0.15-windows-amd64.zip
+        ./spdx-sbom-generator -f json
+
+        # SBOM files should have "sbom" in the name due the CLO monitor
+        # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+        mv bom-cargo.json kwctl-windows-x86_64-sbom.spdx.json
+
+    - name: Sign BOM file
+      run: |
+        cosign sign-blob --output-certificate kwctl-windows-x86_64-sbom.spdx.cert --output-signature kwctl-windows-x86_64-sbom.spdx.sig kwctl-windows-x86_64-sbom.spdx.json
+      env:
+        COSIGN_EXPERIMENTAL: 1
+
+    - name: Upload kwctl SBOM files
+      uses: actions/upload-artifact@v2
+      with:
+        name: kwctl-windows-x86_64-sbom
+        path: |
+          kwctl-windows-x86_64-sbom.spdx.json
+          kwctl-windows-x86_64-sbom.spdx.cert
+          kwctl-windows-x86_64-sbom.spdx.sig
 
   release:
     name: Create release
@@ -197,85 +292,19 @@ jobs:
       - build-darwin-aarch64
       - build-windows-x86_64
     steps:
+    - name: Download all artifact
+      id: download
+      uses: actions/download-artifact@v2
+
     - name: Create Release
       id: create-release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
-        release_name: Release kwctl ${{ github.ref }}
+        name: ${{ github.ref_name }}
         draft: false
         prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
-
-    - name: Download linux-x86_64 binary
-      uses: actions/download-artifact@v2
-      with:
-        name: kwctl-linux-x86_64
-    - name: Publish linux-x86_64 binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-linux-x86_64.zip
-        asset_path: kwctl-linux-x86_64.zip
-        asset_content_type: application/zip
-
-    - name: Download linux-aarch64 binary
-      uses: actions/download-artifact@v2
-      with:
-        name: kwctl-linux-aarch64
-    - name: Publish linux-aarch64 binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-linux-aarch64.zip
-        asset_path: kwctl-linux-aarch64.zip
-        asset_content_type: application/zip
-
-    - name: Download darwin-x86_64 binary
-      uses: actions/download-artifact@v2
-      with:
-        name: kwctl-darwin-x86_64
-
-    - name: Download darwin-aarch64 binary
-      uses: actions/download-artifact@v2
-      with:
-        name: kwctl-darwin-aarch64
-
-    - name: Publish darwin-x86_64 binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-darwin-x86_64.zip
-        asset_path: kwctl-darwin-x86_64.zip
-        asset_content_type: application/zip
-
-    - name: Publish darwin-aarch64 binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-darwin-aarch64.zip
-        asset_path: kwctl-darwin-aarch64.zip
-        asset_content_type: application/zip
-
-    - name: Download windows-x86_64 binary
-      uses: actions/download-artifact@v2
-      with:
-        name: kwctl-windows-x86_64
-    - name: Publish windows-x86_64 binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create-release.outputs.upload_url }}
-        asset_name: kwctl-windows-x86_64.exe.zip
-        asset_path: kwctl-windows-x86_64.exe.zip
-        asset_content_type: application/zip
+        files: |
+          ${{steps.download.outputs.download-path}}/kwctl*/**
