@@ -126,3 +126,10 @@ Policy server has its software bill of materials (SBOM) published every release.
 It follows the [SPDX](https://spdx.dev/) version 2.2 format and it can be found
 together with the signature and certificate used to signed it in the
 [release assets](https://github.com/kubewarden/policy-server/releases)
+
+# Security
+
+The Kubewarden team is security conscious. You can find our threat model
+assessment, responsible disclosure approach and other related things under the
+[*security* section of Kubewarden
+docs](https://docs.kubewarden.io/security/intro).
