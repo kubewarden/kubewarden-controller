@@ -7,4 +7,6 @@ ignore = [
                        # to API breakages.
                        #
                        # This is a transitive depependency
+  "RUSTSEC-2021-0139", # This is about `ansi_term` not being maintained anymore
+                       # This is a transitive depependency
 ]
