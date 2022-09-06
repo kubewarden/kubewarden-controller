@@ -54,17 +54,17 @@ Problems to solve:
 Follow the process listed in [RFC-9, Rancher integration of Kubewarden
 charts](./0009-rancher-integration-charts.md).
 
-Carry the Helm chart code for the policy in a `rancher-chart` folder in the
-policy repo.
+Submit all Helm charts of the policies to
+https://github.com/kubewarden/helm-charts.
 
-Still, even if the chart will not be released to users, the repository can be
-consumed in Rancher UI (using git URL and branch) for testing the chart itself.
+Even if the charts will not be released to users, the repository can be consumed
+in Rancher UI (using git URL and branch) for testing the chart itself.
 
-For policy bundles, they can be in their own repository containing the chart
-and modifications (e.g: see `kubewarden-defaults` chart).
+For policy bundles, they can be in a new chart (e.g: see `kubewarden-defaults`
+chart).
 
-The resulting policy chart built from the policy repository will not be served
-and released by us, but used to build Rancher charts from source by using the
+The resulting policy charts will not be served and released by us, but used to
+build Rancher charts from source by using the
 [Package](https://github.com/rancher/charts/blob/dev-v2.6/docs/packages.md)
 format in https://github.com/rancher/charts.
 Policy charts will be submitted via a
