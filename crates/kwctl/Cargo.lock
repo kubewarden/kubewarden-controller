@@ -417,7 +417,7 @@ dependencies = [
  "serde_yaml 0.9.11",
  "tracing",
  "tracing-subscriber",
- "url 2.2.2",
+ "url 2.3.0",
  "wasmtime",
 ]
 
@@ -1169,7 +1169,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a5019be18538406a43b5419a5501461f0c8b49ea7dfda0cfc32f4e51fc44be1"
 dependencies = [
  "log",
- "url 2.2.2",
+ "url 2.3.0",
 ]
 
 [[package]]
@@ -2066,7 +2066,7 @@ dependencies = [
  "serde_json",
  "serde_yaml 0.8.26",
  "slog",
- "url 2.2.2",
+ "url 2.3.0",
  "wapc-guest",
 ]
 
@@ -2106,7 +2106,7 @@ dependencies = [
  "tracing",
  "tracing-futures",
  "tracing-subscriber",
- "url 2.2.2",
+ "url 2.3.0",
  "walrus",
  "wasmparser 0.90.0",
 ]
@@ -2251,7 +2251,7 @@ dependencies = [
  "tracing-subscriber",
  "tree_magic_mini",
  "ureq",
- "url 2.2.2",
+ "url 2.3.0",
 ]
 
 [[package]]
@@ -2478,7 +2478,7 @@ dependencies = [
  "serde_path_to_error",
  "sha2 0.10.5",
  "thiserror",
- "url 2.2.2",
+ "url 2.3.0",
 ]
 
 [[package]]
@@ -2598,7 +2598,7 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "thiserror",
- "url 2.2.2",
+ "url 2.3.0",
 ]
 
 [[package]]
@@ -2960,7 +2960,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-futures",
- "url 2.2.2",
+ "url 2.3.0",
  "validator",
  "wapc",
  "wasmparser 0.88.0",
@@ -2992,7 +2992,7 @@ dependencies = [
  "sha2 0.10.5",
  "sigstore",
  "tracing",
- "url 2.2.2",
+ "url 2.3.0",
  "walkdir",
 ]
 
@@ -3267,7 +3267,7 @@ dependencies = [
  "tokio-rustls",
  "tokio-util",
  "tower-service",
- "url 2.2.2",
+ "url 2.3.0",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -3723,7 +3723,7 @@ dependencies = [
  "tokio",
  "tough",
  "tracing",
- "url 2.2.2",
+ "url 2.3.0",
  "x509-parser",
 ]
 
@@ -4143,7 +4143,7 @@ dependencies = [
  "snafu",
  "tempfile",
  "untrusted",
- "url 2.2.2",
+ "url 2.3.0",
  "walkdir",
 ]
 
@@ -4395,7 +4395,7 @@ dependencies = [
  "once_cell",
  "rustls",
  "rustls-native-certs",
- "url 2.2.2",
+ "url 2.3.0",
  "webpki",
  "webpki-roots",
 ]
@@ -4413,13 +4413,12 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "2.2.2"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a507c383b2d33b5fc35d1861e77e6b383d158b2da5e14fe51b83dfedf6fd578c"
+checksum = "22fe195a4f217c25b25cb5058ced57059824a678474874038dc88d211bf508d3"
 dependencies = [
  "form_urlencoded",
  "idna 0.2.3",
- "matches",
  "percent-encoding 2.1.0",
  "serde",
 ]
@@ -4436,7 +4435,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "url 2.2.2",
+ "url 2.3.0",
  "validator_derive",
 ]
 
