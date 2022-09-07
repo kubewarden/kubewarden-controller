@@ -86,3 +86,7 @@ Kubewarden controller has its software bill of materials (SBOM) published every
 release. It follows the [SPDX](https://spdx.dev/) version 2.2 format and it can be found
 together with the signature and certificate used to signed it in the
 [release assets](https://github.com/kubewarden/kubewarden-controller/releases)
+
+# Roadmap
+
+[Roadmap](https://github.com/orgs/kubewarden/projects/2) for the Kubewarden project.
