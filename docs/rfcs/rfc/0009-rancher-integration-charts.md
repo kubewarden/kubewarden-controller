@@ -181,7 +181,11 @@ implemented directly in Rancher Explorer UI logic, as per Rancher policy. This
 could be improved.
 
 All needed images for the charts need to be mirrored in the Rancher DockerHub
-repository, instead of being consumed from upstream.  For normal container
+repository, instead of being consumed from upstream. For normal container
 images this is no problem, but not so for Wasm modules. We need to raise the
 request to provide a Rancher OCI registry, use Kubewarden's upstream one, or
 else.
+
+We soft-depend on `open-telemetry/opentelemetry-operator` chart, which is not in
+the Rancher repos. We need to understand who maintains these common charts and
+how.
