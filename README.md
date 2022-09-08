@@ -1,3 +1,5 @@
+[![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-controller)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller)
+
 Kubewarden is a Kubernetes Dynamic Admission Controller that uses policies written
 in WebAssembly.
 
