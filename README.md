@@ -92,3 +92,7 @@ together with the signature and certificate used to signed it in the
 # Roadmap
 
 [Roadmap](https://github.com/orgs/kubewarden/projects/2) for the Kubewarden project.
+
+# Community
+
+- Slack: [#kubewarden](https://kubernetes.slack.com/archives/kubewarden) and [#kubewarden-dev](https://kubernetes.slack.com/archives/kubewarden-dev) 
