@@ -83,7 +83,7 @@ cluster, meaning:
 
 * New Policies might become "interested" about the events happening inside of
   the cluster. New evaluations results will be added to the PolicyReport
-* Existing Kubernetes objects and policies can change over the time: some evaluations
+* Existing Kubernetes objects and policies can change over time: some evaluations
   could change their outcome (pass -> fail and vice versa). The evaluation results
   must reflect that
 * Policies might be deleted/might be no longer "interested" about the Namespace:
