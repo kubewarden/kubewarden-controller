@@ -95,10 +95,11 @@ jobs:
         with:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
-
+      - name: Install SBOM generator tool
+        uses: kubewarden/github-actions/sbom-generator-installer@v1
       - name: Generate SBOM
         run: |
-          make download-spdx-sbom-generator sbom
+          spdx-sbom-generator -f json
           # SBOM files should have "sbom" in the name due the CLO monitor
           # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
           mv bom-cargo.json kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
@@ -120,8 +121,11 @@ jobs:
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig
 
-  build-darwin-aarch64:
-    name: Build darwin (aarch64) Apple Silicon binary
+  build-darwin-binaries:
+    name: Build darwin binary
+    strategy:
+      matrix:
+        targetarch: [ "aarch64", "x86_64" ]
     runs-on: macos-latest
     permissions:
       id-token: write
@@ -134,97 +138,50 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-        target: aarch64-apple-darwin
+        target: ${{ matrix.targetarch }}-apple-darwin
         override: true
-    - run: rustup target add aarch64-apple-darwin
+
+    - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
     - name: Build kwctl
-      run: cargo build --target=aarch64-apple-darwin --release
-    - run: mv target/aarch64-apple-darwin/release/kwctl kwctl-darwin-aarch64
+      run: cargo build --target=${{ matrix.targetarch }}-apple-darwin --release
+    - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
     - name: Sign kwctl
-      run: cosign sign-blob kwctl-darwin-aarch64 --output-certificate kwctl-darwin-aarch64.pem --output-signature kwctl-darwin-aarch64.sig
+      run: cosign sign-blob kwctl-darwin-${{ matrix.targetarch }} --output-certificate kwctl-darwin-${{ matrix.targetarch }}.pem --output-signature kwctl-darwin-${{ matrix.targetarch }}.sig
       env:
         COSIGN_EXPERIMENTAL: 1
-    - run: zip -j9 kwctl-darwin-aarch64.zip kwctl-darwin-aarch64 kwctl-darwin-aarch64.sig kwctl-darwin-aarch64.pem
+    - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.sig kwctl-darwin-${{ matrix.targetarch }}.pem
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
-        name: kwctl-darwin-aarch64
-        path: kwctl-darwin-aarch64.zip
+        name: kwctl-darwin-${{ matrix.targetarch }}
+        path: kwctl-darwin-${{ matrix.targetarch }}.zip
+    - name: Install SBOM generator tool
+      uses: kubewarden/github-actions/sbom-generator-installer@v1
+      with:
+        sbom-generator-arch: darwin-amd64
     - name: Generate SBOM
       run: |
-        make SBOM_GENERATOR_TOOL_ARCH=darwin-amd64 download-spdx-sbom-generator sbom
+        spdx-sbom-generator -f json
         # SBOM files should have "sbom" in the name due the CLO monitor
         # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-        mv bom-cargo.json kwctl-darwin-aarch64-sbom.spdx.json
+        mv bom-cargo.json kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
 
     - name: Sign BOM file
       run: |
-        cosign sign-blob --output-certificate kwctl-darwin-aarch64-sbom.spdx.cert \
-          --output-signature kwctl-darwin-aarch64-sbom.spdx.sig \
-          kwctl-darwin-aarch64-sbom.spdx.json
+        cosign sign-blob --output-certificate kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert \
+          --output-signature kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig \
+          kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
       env:
         COSIGN_EXPERIMENTAL: 1
 
     - name: Upload kwctl SBOM files
       uses: actions/upload-artifact@v2
       with:
-        name: kwctl-darwin-aarch64-sbom
+        name: kwctl-darwin-${{ matrix.targetarch }}-sbom
         path: |
-          kwctl-darwin-aarch64-sbom.spdx.json
-          kwctl-darwin-aarch64-sbom.spdx.cert
-          kwctl-darwin-aarch64-sbom.spdx.sig
-
-  build-darwin-x86_64:
-    name: Build darwin (x86_64) binary
-    runs-on: macos-latest
-    permissions:
-      id-token: write
-    needs:
-      - ci
-    steps:
-    - uses: actions/checkout@v2
-    - uses: sigstore/cosign-installer@main
-    - name: Setup rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - run: rustup target add x86_64-apple-darwin
-    - name: Build kwctl
-      run: cargo build --target=x86_64-apple-darwin --release
-    - run: mv target/x86_64-apple-darwin/release/kwctl kwctl-darwin-x86_64
-    - name: Sign kwctl
-      run: cosign sign-blob kwctl-darwin-x86_64 --output-certificate kwctl-darwin-x86_64.pem --output-signature kwctl-darwin-x86_64.sig
-      env:
-        COSIGN_EXPERIMENTAL: 1
-    - run: zip -j9 kwctl-darwin-x86_64.zip kwctl-darwin-x86_64 kwctl-darwin-x86_64.sig kwctl-darwin-x86_64.pem
-    - name: Upload binary
-      uses: actions/upload-artifact@v2
-      with:
-        name: kwctl-darwin-x86_64
-        path: kwctl-darwin-x86_64.zip
-    - name: Generate SBOM
-      run: |
-        make SBOM_GENERATOR_TOOL_ARCH=darwin-amd64 download-spdx-sbom-generator sbom
-        # SBOM files should have "sbom" in the name due the CLO monitor
-        # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-        mv bom-cargo.json kwctl-darwin-x86_64-sbom.spdx.json
-
-    - name: Sign BOM file
-      run: |
-        cosign sign-blob --output-certificate kwctl-darwin-x86_64-sbom.spdx.cert \
-          --output-signature kwctl-darwin-x86_64-sbom.spdx.sig \
-          kwctl-darwin-x86_64-sbom.spdx.json
-      env:
-        COSIGN_EXPERIMENTAL: 1
-
-    - name: Upload kwctl SBOM files
-      uses: actions/upload-artifact@v2
-      with:
-        name: kwctl-darwin-x86_64-sbom
-        path: |
-          kwctl-darwin-x86_64-sbom.spdx.json
-          kwctl-darwin-x86_64-sbom.spdx.cert
-          kwctl-darwin-x86_64-sbom.spdx.sig
+          kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+          kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert
+          kwctl-darwin-#{{ matrix.targetarch }}-sbom.spdx.sig
 
   build-windows-x86_64:
     name: Build windows (x86_64) binary
@@ -288,8 +245,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-linux-binaries
-      - build-darwin-x86_64
-      - build-darwin-aarch64
+      - build-darwin-binaries
       - build-windows-x86_64
     steps:
     - name: Download all artifact
