@@ -24,8 +24,6 @@ on:
         description: "Image digest"
         value: ${{ jobs.build.outputs.digest }}
 
-
-
 jobs:
   build:
     name: Build container image
@@ -35,6 +33,10 @@ jobs:
       tag: ${{ steps.setoutput.outputs.tag }}
       artifact: ${{ steps.setoutput.outputs.artifact }}
       digest: ${{ steps.setoutput.outputs.digest }}
+    permissions:
+      # needed for cosign:
+      packages: write
+      id-token: write
     steps:
       -
         name: Checkout code
@@ -59,6 +61,7 @@ jobs:
           go-version: '1.17'
       -
         name: Install the bom command
+        if: ${{ inputs.generate-sbom == true }}
         uses: kubewarden/github-actions/kubernetes-bom-installer@v1
       -
         name: Install Cosign
@@ -87,10 +90,13 @@ jobs:
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
       -
+        name: Build linux/amd64 container image into .tar for e2e tests
+        # This step is only triggered from e2e tests, e2e tests consume the
+        # controller image as a tar.
+        #
         # Only build amd64 because buildx does not allow multiple platforms when
         # exporting the image to a tarball. As we use this only for end-to-end tests
         # and they run on amd64 arch, let's skip the arm64 build for now.
-        name: Build linux/amd64 container image
         if: ${{ inputs.push-image == false }}
         uses: docker/build-push-action@v3
         with:
@@ -101,25 +107,85 @@ jobs:
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
       -
-        name: Create SBOM file
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          bom generate -n https://kubewarden.io/kubewarden.spdx -o kubewarden-controller.spdx .
-      -
-        name: Attach SBOM file in the container image
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          set -e
-          cosign attach sbom --sbom kubewarden-controller.spdx "ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}"
-      -
         name: Upload container image to use in other jobs
+        # this step is only triggered from e2e tests, e2e tests consume the
+        # controller image as a tar.
         if: ${{ inputs.push-image == false }}
         uses: actions/upload-artifact@v3
         with:
           name: kubewarden-controller-image-${{ env.TAG_NAME }}
           path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
+      -
+        name: Create directory to store SBOM files of build
+        if: ${{ inputs.generate-sbom == true }}
+        shell: bash
+        run: |
+          mkdir kubewarden-controller-sboms
+      -
+        name: Create SBOM file of build
+        if: ${{ inputs.generate-sbom == true }}
+        shell: bash
+        run: |
+          bom generate -n https://kubewarden.io/kubewarden.spdx \
+            --format json \
+            . > kubewarden-controller-sboms/kubewarden-controller-sbom.spdx
+      -
+        name: Sign SBOM files of build
+        if: ${{ inputs.generate-sbom == true }}
+        run: |
+          cosign sign-blob --output-certificate kubewarden-controller-sboms/kubewarden-controller-sbom.spdx.cert \
+            --output-signature kubewarden-controller-sboms/kubewarden-controller-sbom.spdx.sig \
+            kubewarden-controller-sboms/kubewarden-controller-sbom.spdx
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      -
+        name: Upload SBOM files of build
+        uses: actions/upload-artifact@v2
+        if: ${{ inputs.generate-sbom == true }}
+        with:
+          name: kubewarden-controller-sboms
+          path: |
+            kubewarden-controller-sboms/
+      -
+        name: Create directory to store SBOM files of container image
+        if: ${{ inputs.generate-sbom == true }}
+        shell: bash
+        run: |
+          mkdir kubewarden-controller-container-image-sboms
+      -
+        name: Create SBOM file of container image
+        if: ${{ inputs.generate-sbom == true }}
+        shell: bash
+        run: |
+          bom generate -n https://kubewarden.io/kubewarden.spdx \
+            --format json \
+            --image "ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}" \
+            . > kubewarden-controller-container-image-sboms/kubewarden-controller-container-image-sbom.spdx
+      -
+        name: Sign SBOM files of container image
+        if: ${{ inputs.generate-sbom == true }}
+        run: |
+          cosign sign-blob --output-certificate kubewarden-controller-container-image-sboms/kubewarden-controller-container-image-sbom.spdx.cert \
+            --output-signature kubewarden-controller-container-image-sboms/kubewarden-controller-container-image-sbom.spdx.sig \
+            kubewarden-controller-container-image-sboms/kubewarden-controller-container-image-sbom.spdx
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      -
+        name: Attach SBOM file of build in the container image
+        if: ${{ inputs.generate-sbom == true }}
+        shell: bash
+        run: |
+          set -e
+          cosign attach sbom --sbom kubewarden-controller-container-image-sboms/kubewarden-controller.spdx \
+            "ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}"
+      -
+        name: Upload SBOM files of container image
+        if: ${{ inputs.generate-sbom == true }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: kubewarden-controller-container-image-sboms
+          path: |
+            kubewarden-controller-container-image-sboms/
       -
         id: setoutput
         name: Set output parameters
@@ -128,4 +194,3 @@ jobs:
           echo "::set-output name=tag::${{ env.TAG_NAME }}"
           echo "::set-output name=artifact::kubewarden-controller-image-${{env.TAG_NAME}}"
           echo "::set-output name=digest::${{ steps.build-image.outputs.digest }}"
-
