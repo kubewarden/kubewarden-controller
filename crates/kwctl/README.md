@@ -1,3 +1,5 @@
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl.svg?type=shield)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl?ref=badge_shield)
+
 # `kwctl`
 
 `kwctl` is the go-to CLI tool for [Kubewarden](https://kubewarden.io)
