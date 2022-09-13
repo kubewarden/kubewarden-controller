@@ -1,3 +1,5 @@
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fpolicy-server.svg?type=shield)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fpolicy-server?ref=badge_shield)
+
 > **Note well:** don't forget to checkout [Kubewarden's documentation](https://docs.kubewarden.io)
 > for more information
 
