@@ -33,6 +33,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Retrieve tag name
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo ${{ github.ref }} | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+
       - name: Create SBOM file
         shell: bash
         run: |
@@ -54,8 +59,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          name: Release kubewarden-controller ${{ github.ref }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release kubewarden-controller ${{ env.TAG_NAME }}
           draft: false
           prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           files: |
