@@ -2,6 +2,10 @@ name: Build container image every change.
 
 on:
   workflow_call:
+    outputs:
+      digest:
+        description: "Container image digest"
+        value: ${{jobs.build.outputs.digest}}
   push:
     branches:
       - "*"

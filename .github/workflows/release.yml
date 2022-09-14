@@ -36,7 +36,9 @@ jobs:
       - name: Create SBOM file
         shell: bash
         run: |
-          bom generate -n https://kubewarden.io/kubewarden.spdx -o kubewarden-controller-sbom.spdx .
+          bom generate -n https://kubewarden.io/kubewarden.spdx \
+            --image "ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ needs.container-build.outputs.digest }}" \
+            . > kubewarden-controller-sbom.spdx
 
       - name: Sign BOM file
         run: |
