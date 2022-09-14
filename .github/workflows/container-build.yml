@@ -1,11 +1,10 @@
 name: Build container image every change.
 
 on:
+  workflow_call:
   push:
     branches:
       - "*"
-    tags:
-      - 'v*'
 
 
 jobs:

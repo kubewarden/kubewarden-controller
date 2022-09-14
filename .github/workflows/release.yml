@@ -6,6 +6,8 @@ on:
 jobs:
   ci:
     uses: kubewarden/kubewarden-controller/.github/workflows/ci.yml@main
+  container-build:
+    uses: kubewarden/kubewarden-controller/.github/workflows/container-build.yml@sbom
   release:
     permissions:
       id-token: write
@@ -14,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - ci
+      - container-build
     steps:
       - name: Install Golang
         uses: actions/setup-go@v3
@@ -50,7 +53,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          name: Release kubewarden-controller ${{ GITHUB_REF_NAME }}
+          name: Release kubewarden-controller ${{ github.ref }}
           draft: false
           prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           files: |
