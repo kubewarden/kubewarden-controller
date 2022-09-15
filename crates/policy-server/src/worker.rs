@@ -97,7 +97,7 @@ impl Worker {
                 }
             };
 
-            let policy_metadata = match Metadata::from_contents(policy_contents.clone()) {
+            let policy_metadata = match Metadata::from_contents(&policy_contents) {
                 Ok(policy_metadata) => policy_metadata,
                 Err(err) => {
                     evs_errors.insert(
