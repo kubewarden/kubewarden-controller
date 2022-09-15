@@ -7,7 +7,7 @@ jobs:
   ci:
     uses: kubewarden/kubewarden-controller/.github/workflows/ci.yml@main
   container-build:
-    uses: kubewarden/kubewarden-controller/.github/workflows/container-build.yml@sbom
+    uses: kubewarden/kubewarden-controller/.github/workflows/container-build.yml@main
   release:
     permissions:
       id-token: write
