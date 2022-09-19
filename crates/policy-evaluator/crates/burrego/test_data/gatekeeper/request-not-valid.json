@@ -1,0 +1,26 @@
+{
+  "parameters": {
+    "allowed_namespaces": [
+      "default",
+      "test"
+    ]
+  },
+  "review": {
+    "uid": "1299d386-525b-4032-98ae-1949f69f9cfc",
+    "kind": {
+      "group": "networking.k8s.io",
+      "kind": "Ingress",
+      "version": "v1"
+    },
+    "object": {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "Ingress",
+      "metadata": {
+        "name": "ingress-wildcard-host",
+        "namespace": "kube-system"
+      },
+      "spec": {
+      }
+    }
+  }
+}
