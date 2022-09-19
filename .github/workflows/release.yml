@@ -6,6 +6,8 @@ on:
 jobs:
   ci:
     uses: kubewarden/kubewarden-controller/.github/workflows/ci.yml@main
+  container-build:
+    uses: kubewarden/kubewarden-controller/.github/workflows/container-build.yml@main
   release:
     permissions:
       id-token: write
@@ -14,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - ci
+      - container-build
     steps:
       - name: Install Golang
         uses: actions/setup-go@v3
@@ -30,10 +33,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Retrieve tag name
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo ${{ github.ref }} | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+
       - name: Create SBOM file
         shell: bash
         run: |
-          bom generate -n https://kubewarden.io/kubewarden.spdx -o kubewarden-controller-sbom.spdx .
+          bom generate -n https://kubewarden.io/kubewarden.spdx \
+            --image "ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ needs.container-build.outputs.digest }}" \
+            . > kubewarden-controller-sbom.spdx
 
       - name: Sign BOM file
         run: |
@@ -49,8 +59,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          name: Release kubewarden-controller ${{ GITHUB_REF_NAME }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release kubewarden-controller ${{ env.TAG_NAME }}
           draft: false
           prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           files: |
