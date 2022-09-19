@@ -187,13 +187,16 @@ impl PolicyEvaluator {
         E: Fn() -> Option<u64>,
         P: Fn(String, Option<u64>, Option<mpsc::Sender<CallbackRequest>>) -> Result<Policy>,
     {
-        let policy_id = engine_initializer();
-        let policy = policy_initializer(id, policy_id, callback_channel)?;
+        let instance_id = engine_initializer();
+        let policy = policy_initializer(id, instance_id, callback_channel)?;
         if policy_execution_mode == PolicyExecutionMode::KubewardenWapc {
-            WAPC_POLICY_MAPPING.write().unwrap().insert(
-                policy_id.ok_or_else(|| anyhow!("invalid policy id"))?,
-                policy.clone(),
-            );
+            WAPC_POLICY_MAPPING
+                .write()
+                .expect("cannot write to global WAPC_POLICY_MAPPING")
+                .insert(
+                    instance_id.ok_or_else(|| anyhow!("invalid policy id"))?,
+                    policy.clone(),
+                );
         }
         Ok(policy)
     }
