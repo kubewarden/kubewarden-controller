@@ -82,7 +82,7 @@ impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
 }
 
 pub(crate) struct BurregoEvaluator {
-    pub(crate) evaluator: burrego::opa::wasm::Evaluator,
+    pub(crate) evaluator: burrego::Evaluator,
     pub(crate) entrypoint_id: i32,
     pub(crate) policy_execution_mode: RegoPolicyExecutionMode,
 }
@@ -156,10 +156,9 @@ impl PolicyEvaluator {
                     Policy::new,
                     policy_execution_mode,
                 )?;
-                let evaluator = burrego::opa::wasm::Evaluator::new(
-                    id,
+                let evaluator = burrego::Evaluator::new(
                     &policy_contents,
-                    &crate::runtimes::burrego::DEFAULT_HOST_CALLBACKS,
+                    crate::runtimes::burrego::new_host_callbacks(),
                 )?;
                 let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
                     evaluator,

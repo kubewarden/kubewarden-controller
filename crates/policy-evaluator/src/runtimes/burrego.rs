@@ -1,12 +1,11 @@
 use anyhow::anyhow;
-use lazy_static::lazy_static;
 use tracing::error;
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut crate::policy_evaluator::BurregoEvaluator);
 
 use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
-use burrego::opa::host_callbacks::HostCallbacks;
+use burrego::host_callbacks::HostCallbacks;
 
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 
@@ -14,21 +13,17 @@ use crate::policy_evaluator::RegoPolicyExecutionMode;
 use serde::Deserialize;
 use serde_json::json;
 
-lazy_static! {
-    pub static ref DEFAULT_HOST_CALLBACKS: HostCallbacks = HostCallbacks {
-        opa_abort: Box::new(BurregoHostCallbacks::opa_abort),
-        opa_println: Box::new(BurregoHostCallbacks::opa_println),
-    };
-}
+#[tracing::instrument(level = "error")]
+fn opa_abort(msg: &str) {}
 
-struct BurregoHostCallbacks;
+#[tracing::instrument(level = "info")]
+fn opa_println(msg: &str) {}
 
-impl BurregoHostCallbacks {
-    #[tracing::instrument(level = "error")]
-    fn opa_abort(msg: String) {}
-
-    #[tracing::instrument(level = "info")]
-    fn opa_println(msg: String) {}
+pub(crate) fn new_host_callbacks() -> HostCallbacks {
+    HostCallbacks {
+        opa_abort,
+        opa_println,
+    }
 }
 
 impl<'a> Runtime<'a> {
