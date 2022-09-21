@@ -8,11 +8,20 @@ use policy_evaluator::{
         verify::{config::LatestVerificationConfig, FulcioAndRekorData, Verifier},
     },
 };
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::PathBuf,
+};
 use tokio::task::spawn_blocking;
 use tracing::{debug, info};
 
 use crate::settings::Policy;
+
+/// A Map with the `policy.url` as key,
+/// and a `PathBuf` as value. The `PathBuf` points to the location where
+/// the WebAssembly module has been downloaded.
+pub(crate) type FetchedPolicies = HashMap<String, PathBuf>;
 
 /// Handles download and verification of policies
 pub(crate) struct Downloader {
@@ -49,10 +58,10 @@ impl Downloader {
     /// Download all the policies to the given destination
     pub async fn download_policies(
         &mut self,
-        policies: &mut HashMap<String, Policy>,
+        policies: &HashMap<String, Policy>,
         destination: &str,
         verification_config: Option<&LatestVerificationConfig>,
-    ) -> Result<()> {
+    ) -> Result<FetchedPolicies> {
         let policies_total = policies.len();
         info!(
             download_dir = destination,
@@ -67,8 +76,27 @@ impl Downloader {
             any_of: None,
         });
 
-        for (name, policy) in policies.iter_mut() {
+        // The same WebAssembly module can be referenced by multiple policies,
+        // there's no need to keep downloading and verifying it
+
+        // List of policies that we have already tried to download & verify.
+        // Note: this Set includes both successful downloads and ones that
+        // failed.
+        let mut processed_policies: HashSet<&str> = HashSet::new();
+
+        // List of policies that have been successfully fetched.
+        // This can be a subset of `processed_policies`
+        let mut fetched_policies: FetchedPolicies = HashMap::new();
+
+        for (name, policy) in policies.iter() {
             debug!(policy = name.as_str(), "download");
+            if !processed_policies.insert(policy.url.as_str()) {
+                debug!(
+                    policy = name.as_str(),
+                    "skipping, wasm module alredy processed"
+                );
+                continue;
+            }
 
             let mut verified_manifest_digest: Option<String> = None;
 
@@ -177,12 +205,13 @@ impl Downloader {
                     "policy download",
                 );
             }
-            policy.wasm_module_path = Some(fetched_policy.local_path);
+
+            fetched_policies.insert(policy.url.clone(), fetched_policy.local_path);
         }
 
         if policy_verification_errors.is_empty() {
             info!(status = "done", "policies download");
-            Ok(())
+            Ok(fetched_policies)
         } else {
             Err(anyhow!(
                 "Failed to verify the following policies: {}",
@@ -278,13 +307,12 @@ mod tests {
         let policies_cfg = r#"
     pod-privileged:
       url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    another-pod-privileged:
+      url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     "#;
 
         let mut policies: HashMap<String, Policy> =
             serde_yaml::from_str(policies_cfg).expect("Cannot parse policy cfg");
-        for (_, policy) in policies.iter() {
-            assert!(policy.wasm_module_path.is_none());
-        }
 
         let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
 
@@ -295,7 +323,7 @@ mod tests {
         drop(downloader);
 
         let rt = Runtime::new().unwrap();
-        rt.block_on(async {
+        let fetched_policies = rt.block_on(async {
             DOWNLOADER
                 .lock()
                 .unwrap()
@@ -308,10 +336,10 @@ mod tests {
                 .expect("Cannot download policy")
         });
 
-        for (_, policy) in policies.iter() {
-            assert!(policy.wasm_module_path.is_some());
-            assert!(policy.wasm_module_path.clone().unwrap().exists());
-        }
+        // There are 2 policies defined, but they both reference the same
+        // WebAssembly module. Hence, just one `.wasm` file is going to be
+        // be downloaded
+        assert_eq!(fetched_policies.len(), 1);
     }
 
     #[test]
