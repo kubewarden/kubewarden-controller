@@ -18,7 +18,6 @@ mod kube_poller;
 mod metrics;
 mod server;
 mod settings;
-mod utils;
 mod worker;
 
 mod policy_downloader;
