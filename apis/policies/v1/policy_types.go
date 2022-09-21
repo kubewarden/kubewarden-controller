@@ -34,6 +34,8 @@ type PolicySpec struct {
 	// local file (file://), a remote file served by an HTTP server
 	// (http://, https://), or an artifact served by an OCI-compatible
 	// registry (registry://).
+	// If prefix is missing, it will default to registry:// and use that
+	// internally.
 	// +kubebuilder:validation:Required
 	Module string `json:"module"`
 
