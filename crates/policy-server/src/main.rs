@@ -39,7 +39,7 @@ fn main() -> Result<()> {
     // init some variables based on the cli parameters
     let addr = cli::api_bind_address(&matches)?;
     let (cert_file, key_file) = cli::tls_files(&matches)?;
-    let mut policies = cli::policies(&matches)?;
+    let policies = cli::policies(&matches)?;
     let sources = cli::remote_server_options(&matches)?;
     let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
         v.parse::<usize>()
@@ -221,17 +221,20 @@ fn main() -> Result<()> {
         };
 
         let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
-        if let Err(e) = downloader
+        let fetched_policies = match downloader
             .download_policies(
-                &mut policies,
+                &policies,
                 policies_download_dir,
                 verification_config.as_ref(),
             )
             .await
         {
-            fatal_error(e.to_string());
-            unreachable!()
-        }
+            Ok(fp) => fp,
+            Err(e) => {
+                fatal_error(e.to_string());
+                unreachable!()
+            }
+        };
 
         // Start the kubernetes poller
         info!(status = "init", "kubernetes poller bootstrap");
