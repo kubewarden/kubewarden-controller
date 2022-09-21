@@ -284,6 +284,7 @@ fn main() -> Result<()> {
             oneshot::channel::<Result<()>>();
         let bootstrap_data = WorkerPoolBootRequest {
             policies,
+            fetched_policies,
             pool_size,
             resp_chan: worker_pool_bootstrap_res_tx,
         };
