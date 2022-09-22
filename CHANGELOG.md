@@ -2,8 +2,39 @@
 ## [Unreleased]
 
 
+<a name="v1.1.1"></a>
+## [v1.1.1] - 2022-09-22
+### Bug Fixes
+- tag name in release
+- golangci-lint warning Slowloris attack on tests
+
+### Features
+- add OpenSSF best practices badge
+- Create container image inside of the release workflow
+
+### Pull Requests
+- Merge pull request [#283](https://github.com/kubewarden/kubewarden-controller/issues/283) from viccuad/main
+- Merge pull request [#281](https://github.com/kubewarden/kubewarden-controller/issues/281) from viccuad/main
+- Merge pull request [#280](https://github.com/kubewarden/kubewarden-controller/issues/280) from raulcabello/openssf-permission
+- Merge pull request [#276](https://github.com/kubewarden/kubewarden-controller/issues/276) from raulcabello/sbom
+- Merge pull request [#277](https://github.com/kubewarden/kubewarden-controller/issues/277) from raulcabello/openssf
+- Merge pull request [#273](https://github.com/kubewarden/kubewarden-controller/issues/273) from kubewarden/simplify-ci
+- Merge pull request [#271](https://github.com/kubewarden/kubewarden-controller/issues/271) from olblak/main
+- Merge pull request [#274](https://github.com/kubewarden/kubewarden-controller/issues/274) from raulcabello/fossa-scan
+- Merge pull request [#269](https://github.com/kubewarden/kubewarden-controller/issues/269) from raulcabello/slack
+- Merge pull request [#270](https://github.com/kubewarden/kubewarden-controller/issues/270) from raulcabello/security
+- Merge pull request [#268](https://github.com/kubewarden/kubewarden-controller/issues/268) from flavio/gh-action-use-bom-installer
+- Merge pull request [#267](https://github.com/kubewarden/kubewarden-controller/issues/267) from raulcabello/artifacthub
+- Merge pull request [#266](https://github.com/kubewarden/kubewarden-controller/issues/266) from raulcabello/roadmap
+- Merge pull request [#258](https://github.com/kubewarden/kubewarden-controller/issues/258) from viccuad/rfc-delete
+- Merge pull request [#255](https://github.com/kubewarden/kubewarden-controller/issues/255) from jvanz/main
+
+
 <a name="v1.1.0"></a>
-## [v1.1.0] - 0001-01-01
+## [v1.1.0] - 2022-07-14
+### Pull Requests
+- Merge pull request [#253](https://github.com/kubewarden/kubewarden-controller/issues/253) from kubewarden/road-to-1.1.0
+
 
 <a name="v1.0.0"></a>
 ## [v1.0.0] - 2022-06-15
@@ -913,7 +944,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.1.1...HEAD
+[v1.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0...v1.1.0
 [v1.0.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc3...v1.0.0
 [v1.0.0-rc3]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc4...v1.0.0-rc3
