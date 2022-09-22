@@ -248,7 +248,7 @@ PolicyServerSpec defines the desired state of PolicyServer
 |===
 | Field | Description
 | *`policyServer`* __string__ | PolicyServer identifies an existing PolicyServer resource.
-| *`module`* __string__ | Module is the location of the WASM module to be loaded. Can be a local file (file://), a remote file served by an HTTP server (http://, https://), or an artifact served by an OCI-compatible registry (registry://).
+| *`module`* __string__ | Module is the location of the WASM module to be loaded. Can be a local file (file://), a remote file served by an HTTP server (http://, https://), or an artifact served by an OCI-compatible registry (registry://). If prefix is missing, it will default to registry:// and use that internally.
 | *`mode`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-apis-policies-v1-policymode[$$PolicyMode$$]__ | Mode defines the execution mode of this policy. Can be set to either "protect" or "monitor". If it's empty, it is defaulted to "protect". Transitioning this setting from "monitor" to "protect" is allowed, but is disallowed to transition from "protect" to "monitor". To perform this transition, the policy should be recreated in "monitor" mode instead.
 | *`settings`* __xref:{anchor_prefix}-k8s-io-apimachinery-pkg-runtime-rawextension[$$RawExtension$$]__ | Settings is a free-form object that contains the policy configuration values. x-kubernetes-embedded-resource: false
 | *`rules`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.20/#rulewithoperations-v1-admissionregistration[$$RuleWithOperations$$] array__ | Rules describes what operations on what resources/subresources the webhook cares about. The webhook cares about an operation if it matches _any_ Rule.
