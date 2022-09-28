@@ -1,19 +1,19 @@
 module github.com/kubewarden/kubewarden-controller
 
-go 1.18
+go 1.19
 
 require (
 	github.com/ereslibre/kube-webhook-wrapper v0.0.2
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.9
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.20.1
+	github.com/onsi/gomega v1.20.2
 	github.com/pkg/errors v0.9.1
 	go.opentelemetry.io/otel v1.10.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.31.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.31.0
-	go.opentelemetry.io/otel/metric v0.32.0
-	go.opentelemetry.io/otel/sdk/metric v0.31.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.32.1
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.32.1
+	go.opentelemetry.io/otel/metric v0.32.1
+	go.opentelemetry.io/otel/sdk/metric v0.32.1
 	k8s.io/api v0.25.2
 	k8s.io/apimachinery v0.25.2
 	k8s.io/client-go v0.25.2
