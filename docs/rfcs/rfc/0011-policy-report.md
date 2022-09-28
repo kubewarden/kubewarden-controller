@@ -92,6 +92,12 @@ cluster, meaning:
 * Kubernetes resources might be deleted: the report must be updated to not contain
   any reference to them
 
+
+**Note:** PolicyReport resources contain security/compliance information. Regular
+users of the cluster should only have READ access to them. They should not be
+able to create, delete or change their contents. This can be done with Kubernetes
+RBAC rules.
+
 ## Cluster report
 
 All the Kubernetes resources that are not namespaced, are going to be audited
