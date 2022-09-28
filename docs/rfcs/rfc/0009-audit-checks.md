@@ -52,9 +52,15 @@ cache if evaluation was previously done.
 ## Background Audit Scanner
 
 By default, background audit scanning happens every hour, and it can be configured via the `background-scan` flag.
-It will scan all resources in the cluster for all policies.
+It will scan all resources in the cluster for all policies. It will perform evaluations just for the CREATE operation.
+Background Audit Scanner will not perform any mutation even if the policy has mutation enabled, it will still perform 
+validation for mutating policies.
 When a background audit has finished processing all evaluations it will replace all `PolicyReports` and the `ClusterPolicyReport`
 with the new content. This will remove old entries with resources that are deleted and make sure the reports are up to date. 
+
+There are certain types of policies that we cannot audit in a reliable way. For example, a policy that relies on the userInfo
+section of a request cannot be audited. That's because the userInfo "faked" by the audit is not going to be relevant. Operators
+can disable these policies for the background check using the `backgroundAudit` field
 
 Background Audit Scanner won't perform policy evaluation, it will make a request to `PolicyServer` for evaluating the resources
 instead.
@@ -63,11 +69,12 @@ It should implement a caching mechanism to avoid overloading the Kubernetes api 
 
 A background audit checks consist of the following steps:
 1. Get information about which policies have audit checks enabled
-2. Get the resources configured in the policies with audit checks enabled
+2. Get the resources configured in the policies with audit checks enabled. For `AdmissionPolicies` it will check resources
+within its namespace. For 'ClusterAdmissionPolicies' it will check in all the cluster or use the `namespaceSelector` filter
+if present.
 3. Request the policy evaluation for all resources to the `PolicyServer`
 4. Aggregate all the policies validation results
-5. Publish a `PolicyReport` per namespace
-with the aggregated results and the `ClusterPolicyReport`.
+5. Publish a `PolicyReport` per namespace with the aggregated results and the `ClusterPolicyReport`.
 
 In step 2, after fetching the resources for the first time,  they will be stored in a
 cache and used again in futures audit checks until the *time to live* period expired.
