@@ -17,8 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -97,11 +99,24 @@ func main() {
 	}
 
 	if enableMetrics {
-		if err := metrics.New(openTelemetryEndpoint); err != nil {
+		shutdown, err := metrics.New(openTelemetryEndpoint)
+		if err != nil {
 			setupLog.Error(err, "unable to initialize metrics provider")
 			os.Exit(1)
 		}
 		setupLog.Info("Metrics initialized")
+
+		// cleanly shutdown and flush telemetry on application exit
+		defer func() {
+			// Do not make the application hang when it is shutdown.
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+
+			if err := shutdown(ctx); err != nil {
+				setupLog.Error(err, "Unable to shutdown telemetry")
+				os.Exit(1)
+			}
+		}()
 	}
 
 	mgr, err := webhookwrapper.NewManager(
