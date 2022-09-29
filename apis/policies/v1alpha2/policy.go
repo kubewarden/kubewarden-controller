@@ -75,7 +75,7 @@ type PolicyStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:generate:=false
+// +kubebuilder:object:generate:=false
 type Policy interface {
 	client.Object
 	GetPolicyMode() PolicyMode

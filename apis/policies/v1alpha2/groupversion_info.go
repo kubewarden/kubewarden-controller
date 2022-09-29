@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha2 contains API Schema definitions for the policies v1alpha2 API group
-//+kubebuilder:object:generate=true
-//+groupName=policies.kubewarden.io
+// +kubebuilder:object:generate=true
+// +groupName=policies.kubewarden.io
 package v1alpha2
 
 import (
