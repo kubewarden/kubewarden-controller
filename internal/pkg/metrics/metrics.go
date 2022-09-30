@@ -38,7 +38,7 @@ func New(openTelemetryEndpoint string) (func(context.Context) error, error) {
 	return meterProvider.Shutdown, nil
 }
 
-func RecordPolicyCount(policy policiesv1.Policy) error {
+func RecordPolicyCount(ctx context.Context, policy policiesv1.Policy) error {
 	failurePolicy := ""
 	if policy.GetFailurePolicy() != nil {
 		failurePolicy = string(*policy.GetFailurePolicy())
@@ -57,6 +57,6 @@ func RecordPolicyCount(policy policiesv1.Policy) error {
 	if err != nil {
 		return fmt.Errorf("cannot create the instrument: %w", err)
 	}
-	counter.Add(context.Background(), 1, commonLabels...)
+	counter.Add(ctx, 1, commonLabels...)
 	return nil
 }
