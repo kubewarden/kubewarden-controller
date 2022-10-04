@@ -166,7 +166,7 @@ func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string
 	}
 }
 
-// nolint: dupl
+//nolint:dupl
 func deleteClusterAdmissionPolicy(ctx context.Context, name, namespace string) {
 	nsn := types.NamespacedName{
 		Name:      name,
@@ -211,7 +211,7 @@ func makePolicyServerTemplate(name, namespace string) *PolicyServer {
 	}
 }
 
-// nolint: dupl
+//nolint:dupl
 func deletePolicyServer(ctx context.Context, name, namespace string) {
 	nsn := types.NamespacedName{
 		Name:      name,
