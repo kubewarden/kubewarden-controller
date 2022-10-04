@@ -125,7 +125,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err := mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1.ClusterAdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
 		policy, ok := object.(*policiesv1.ClusterAdmissionPolicy)
 		if !ok {
-			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
+			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", "policy", policy)
 			return []string{}
 		}
 		return []string{policy.Spec.PolicyServer}
@@ -136,7 +136,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1.AdmissionPolicy{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
 		policy, ok := object.(*policiesv1.AdmissionPolicy)
 		if !ok {
-			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicy: %#v", policy)
+			r.Log.Error(nil, "object is not type of AdmissionPolicy: %#v", "policy", policy)
 			return []string{}
 		}
 		return []string{policy.Spec.PolicyServer}
@@ -153,7 +153,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			// object.
 			policy, ok := object.(*policiesv1.AdmissionPolicy)
 			if !ok {
-				r.Log.Info("object is not type of AdmissionPolicy: %+v", policy)
+				r.Log.Info("object is not type of AdmissionPolicy: %+v", "policy", policy)
 				return []ctrl.Request{}
 			}
 
@@ -172,7 +172,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			// object.
 			policy, ok := object.(*policiesv1.ClusterAdmissionPolicy)
 			if !ok {
-				r.Log.Info("object is not type of ClusterAdmissionPolicy: %+v", policy)
+				r.Log.Info("object is not type of ClusterAdmissionPolicy: %+v", "policy", policy)
 				return []ctrl.Request{}
 			}
 
