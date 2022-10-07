@@ -146,7 +146,7 @@ For example, given the previous example, we would end up with:
 
 ### Step 5: attempt to reuse previous evaluation results
 
-Now we have a these information:
+Now we have the following:
 
 * List of policies interested by a certain type of Kubernetes resource, like `Pod`
 * List of Kubernetes resources, `Pod` in this case, defined inside of the Namespace we are auditing
