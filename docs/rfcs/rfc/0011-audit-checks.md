@@ -5,7 +5,7 @@
 | Start Date   | 08/05/2022                        |
 | Category     | enhancement,feature                 |
 | RFC PR       | https://github.com/kubewarden/rfc/pull/10  |
-| State        | **IN REVIEW**                     |
+| State        | **ACCEPTED**                     |
 
 
 # Summary
