@@ -329,7 +329,7 @@ We might want to address this limitation in the future by introducing a more
 complex architecture.
 
 `PolicyReports` size could be big if there are many resources and policies in the same namespace. More info on how big it 
-could be [here](https://github.com/kubewarden/rfc/pull/13#issuecomment-1253744208)
+could be [here](https://github.com/kubewarden/rfc/pull/13#issuecomment-1253744208).
 
 # Alternatives
 
