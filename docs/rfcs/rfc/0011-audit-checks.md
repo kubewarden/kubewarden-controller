@@ -10,7 +10,7 @@
 
 # Summary
 
-The audit checks inspects the resources already deployed in the cluster and flags
+The audit check inspects the resources already deployed in the cluster and flags
 when something violates some policies installed in the cluster.
 
 # Motivation
