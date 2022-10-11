@@ -41,6 +41,54 @@ about the cluster-wide resources.
 
 Details about the `PolicyReport` format can be found inside of this [RFC](https://github.com/kubewarden/rfc/pull/13/files).
 
+## Intrinsic limitations
+
+The audit check looks at an existing Kubernetes resource and determines whether
+this is still compliant with regards to the policies that are currently defined
+inside of the cluster.
+
+### No support for `UPDATE` events
+
+Policies can inspect `CREATE`, `UPDATE` and `DELETE` events. During the audit check,
+we use a currently defined Kubernetes resource and create a fake event that
+involves it.
+
+We can only create meaningful fake events for `CREATE` and `DELETE` operations
+Creating `UPDATE` events would pose the problem of determining which are the
+fake changes to simulate.
+
+Because of that, policies that are interested in `UPDATE` events are not going
+to be considered while doing the audit checks.
+
+### Policies checking user and user group information
+
+Each Kubernetes admission request object contains information about who is the
+Kubernetes user (or service account) that initiated the event and to which groups
+he belongs.
+
+When creating our fake admission requests, the user and groups are going to be
+equal to some hard coded values.
+
+If a policy makes use of username/groups at evaluation time, this policy will not
+produce meaningful evaluation results during the audit checks.
+
+The policy author should make this clear by adding the following annotation
+inside of the `metadata.yml` file of the policy:
+
+```yaml
+io.kubewarden.policy.background_audit: false
+```
+
+This information will be taken into account by `kwctl scaffold` when generating
+the `ClusterPolicyReport` or the `AdmissionPolicy` definition.
+
+### Policies relying on external data
+
+When performing an evaluation, policies can request and use external data.
+
+These policies can be evaluated by the audit checks, but their outcome can
+change over the time depending on the value of the external data.
+
 ## Reducing the scope to keep things simple
 
 In the beginning we should reduce the scope of the audit checks to be able to
@@ -96,12 +144,14 @@ by using the `spec.namespaceSelector` field.
 
 We need to create a dictionary that holds the following information:
 
-  * key: name of the `ClusterAdmissionPolicy`
-  * value: a list containing the names of the namespaces that are relevant to the `ClusterAdmissionPolicy`
+  * key: name of the Namespace
+  * value: a list `ClusterAdmissionPolicy` relevant to this Namespace
 
 This operation can be done by iterating over each `ClusterAdmissionPolicy` and
 performing a "list namespaces" query against the API server that uses the
 same filter specified by the `ClusterAdmissionPolicy`.
+
+> Note: we will consider only policies that inspect `CREATE` events
 
 ### Step 2: find relevant policies
 
