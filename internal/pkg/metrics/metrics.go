@@ -7,13 +7,10 @@ import (
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 const (
@@ -22,34 +19,26 @@ const (
 	policyCounterMetricDescription = "How many policies are installed in the cluster"
 )
 
-func New(openTelemetryEndpoint string) error {
+func New(openTelemetryEndpoint string) (func(context.Context) error, error) {
 	ctx := context.Background()
 
-	client := otlpmetricgrpc.NewClient(
+	exporter, err := otlpmetricgrpc.New(
+		ctx,
 		otlpmetricgrpc.WithInsecure(),
 		otlpmetricgrpc.WithEndpoint(openTelemetryEndpoint),
 	)
-	exporter, err := otlpmetric.New(ctx, client)
 	if err != nil {
-		return fmt.Errorf("cannot start metric exporter: %w", err)
+		return nil, fmt.Errorf("cannot start metric exporter: %w", err)
 	}
-	controller := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exporter,
-		),
-		controller.WithExporter(exporter),
-		controller.WithCollectPeriod(2*time.Second),
-	)
-	global.SetMeterProvider(controller)
-	err = controller.Start(ctx)
-	if err != nil {
-		return fmt.Errorf("cannot start metric controller: %w", err)
-	}
-	return nil
+	meterProvider := metric.NewMeterProvider(metric.WithReader(
+		metric.NewPeriodicReader(exporter, metric.WithInterval(2*time.Second))))
+
+	global.SetMeterProvider(meterProvider)
+
+	return meterProvider.Shutdown, nil
 }
 
-func RecordPolicyCount(policy policiesv1.Policy) error {
+func RecordPolicyCount(ctx context.Context, policy policiesv1.Policy) error {
 	failurePolicy := ""
 	if policy.GetFailurePolicy() != nil {
 		failurePolicy = string(*policy.GetFailurePolicy())
@@ -68,6 +57,6 @@ func RecordPolicyCount(policy policiesv1.Policy) error {
 	if err != nil {
 		return fmt.Errorf("cannot create the instrument: %w", err)
 	}
-	counter.Add(context.Background(), 1, commonLabels...)
+	counter.Add(ctx, 1, commonLabels...)
 	return nil
 }

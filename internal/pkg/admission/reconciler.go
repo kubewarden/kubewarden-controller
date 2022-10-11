@@ -298,7 +298,7 @@ func (r *Reconciler) UpdateAdmissionPolicyStatus(
 	if err := r.Client.Status().Update(ctx, policy); err != nil {
 		return fmt.Errorf("failed to update status of Policy %q, %w", policy.GetObjectMeta(), err)
 	}
-	if err := metrics.RecordPolicyCount(policy); err != nil {
+	if err := metrics.RecordPolicyCount(ctx, policy); err != nil {
 		return fmt.Errorf("failed to record policy mestrics: %w", err)
 	}
 	return nil

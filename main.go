@@ -17,8 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -59,6 +61,9 @@ func init() {
 }
 
 func main() {
+	retcode := 0
+	defer func() { os.Exit(retcode) }()
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var deploymentsNamespace string
@@ -97,11 +102,26 @@ func main() {
 	}
 
 	if enableMetrics {
-		if err := metrics.New(openTelemetryEndpoint); err != nil {
+		shutdown, err := metrics.New(openTelemetryEndpoint)
+		if err != nil {
 			setupLog.Error(err, "unable to initialize metrics provider")
-			os.Exit(1)
+			retcode = 1
+			return
 		}
 		setupLog.Info("Metrics initialized")
+
+		// cleanly shutdown and flush telemetry on application exit
+		defer func() {
+			// Do not make the application hang when it is shutdown.
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+
+			if err := shutdown(ctx); err != nil {
+				setupLog.Error(err, "Unable to shutdown telemetry")
+				retcode = 1
+				return
+			}
+		}()
 	}
 
 	mgr, err := webhookwrapper.NewManager(
@@ -122,7 +142,8 @@ func main() {
 	)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		retcode = 1
+		return
 	}
 
 	reconciler := admission.Reconciler{
@@ -140,7 +161,8 @@ func main() {
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
-		os.Exit(1)
+		retcode = 1
+		return
 	}
 
 	if err = (&controllers.AdmissionPolicyReconciler{
@@ -150,7 +172,8 @@ func main() {
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
-		os.Exit(1)
+		retcode = 1
+		return
 	}
 
 	if err = (&controllers.ClusterAdmissionPolicyReconciler{
@@ -160,24 +183,28 @@ func main() {
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
-		os.Exit(1)
+		retcode = 1
+		return
 	}
 
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+		retcode = 1
+		return
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		retcode = 1
+		return
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		retcode = 1
+		return
 	}
 }
 

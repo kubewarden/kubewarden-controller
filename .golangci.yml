@@ -54,6 +54,7 @@ linters:
     - lll # long lines
     # https://github.com/golangci/golangci-lint/issues/541
     - interfacer
+    - interfacebloat
     # TODO: enable once we can set some exceptions
     - funlen
     - ifshort # deprecated
