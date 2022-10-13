@@ -1,8 +1,6 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Deserializer, Serialize};
-use sigstore::{
-    cosign::verification_constraint::VerificationConstraint, crypto::SignatureDigestAlgorithm,
-};
+use sigstore::cosign::verification_constraint::VerificationConstraint;
 use std::boxed::Box;
 use std::{collections::HashMap, fs, path::Path};
 use url::Url;
@@ -89,7 +87,6 @@ impl Signature {
                 let vc = verification_constraints::PublicKeyAndAnnotationsVerifier::new(
                     owner.as_ref().map(|r| r.as_str()),
                     key,
-                    SignatureDigestAlgorithm::default(),
                     annotations.as_ref(),
                 )
                 .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
