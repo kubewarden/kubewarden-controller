@@ -361,11 +361,9 @@ mod tests {
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELKhD7F5OKy77Z582Y6h0u1J3GNA+
 kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 -----END PUBLIC KEY-----"#;
-        let verification_key = sigstore::crypto::CosignVerificationKey::from_pem(
-            pub_key.as_bytes(),
-            sigstore::crypto::SignatureDigestAlgorithm::default(),
-        )
-        .expect("Cannot create CosignVerificationKey");
+        let verification_key =
+            sigstore::crypto::CosignVerificationKey::try_from_pem(pub_key.as_bytes())
+                .expect("Cannot create CosignVerificationKey");
 
         let raw_data = r#"{"critical":{"identity":{"docker-reference":"registry-testing.svc.lan/kubewarden/disallow-service-nodeport"},"image":{"docker-manifest-digest":"sha256:5f481572d088dc4023afb35fced9530ced3d9b03bf7299c6f492163cb9f0452e"},"type":"cosign container image signature"},"optional":null}"#;
         let raw_data = raw_data.as_bytes().to_vec();

@@ -8,7 +8,6 @@ use sigstore::cosign::verification_constraint::{
     AnnotationVerifier, PublicKeyVerifier, VerificationConstraint,
 };
 use sigstore::cosign::{signature_layers::CertificateSubject, SignatureLayer};
-use sigstore::crypto::SignatureDigestAlgorithm;
 use sigstore::errors::{Result, SigstoreError};
 
 use super::config::Subject;
@@ -28,10 +27,9 @@ impl PublicKeyAndAnnotationsVerifier {
     pub fn new(
         owner: Option<&str>,
         key: &str,
-        signature_digest_algorithm: SignatureDigestAlgorithm,
         annotations: Option<&HashMap<String, String>>,
     ) -> Result<Self> {
-        let pub_key_verifier = PublicKeyVerifier::new(key.as_bytes(), signature_digest_algorithm)?;
+        let pub_key_verifier = PublicKeyVerifier::try_from(key.as_bytes())?;
         let annotation_verifier = annotations.map(|a| AnnotationVerifier {
             annotations: a.to_owned(),
         });
@@ -364,11 +362,9 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELKhD7F5OKy77Z582Y6h0u1J3GNA+
 kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
 -----END PUBLIC KEY-----"#;
-        let verification_key = sigstore::crypto::CosignVerificationKey::from_pem(
-            pub_key.as_bytes(),
-            sigstore::crypto::SignatureDigestAlgorithm::default(),
-        )
-        .expect("Cannot create CosignVerificationKey");
+        let verification_key =
+            sigstore::crypto::CosignVerificationKey::try_from_pem(pub_key.as_bytes())
+                .expect("Cannot create CosignVerificationKey");
 
         let raw_data = r#"{"critical":{"identity":{"docker-reference":"registry-testing.svc.lan/kubewarden/disallow-service-nodeport"},"image":{"docker-manifest-digest":"sha256:5f481572d088dc4023afb35fced9530ced3d9b03bf7299c6f492163cb9f0452e"},"type":"cosign container image signature"},"optional":null}"#;
         let raw_data = raw_data.as_bytes().to_vec();
@@ -402,26 +398,16 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     fn test_public_key_and_annotation_verifier() {
         let (pub_key, sl) = build_signature_layers_pub_key();
 
-        let vc = PublicKeyAndAnnotationsVerifier::new(
-            None,
-            pub_key,
-            SignatureDigestAlgorithm::default(),
-            None,
-        )
-        .expect("Cannot create verification constraint");
+        let vc = PublicKeyAndAnnotationsVerifier::new(None, pub_key, None)
+            .expect("Cannot create verification constraint");
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(is_verified);
 
         let mut annotations: HashMap<String, String> = HashMap::new();
         annotations.insert("key1".into(), "value2".into());
 
-        let vc = PublicKeyAndAnnotationsVerifier::new(
-            None,
-            pub_key,
-            SignatureDigestAlgorithm::default(),
-            Some(&annotations),
-        )
-        .expect("Cannot create verification constraint");
+        let vc = PublicKeyAndAnnotationsVerifier::new(None, pub_key, Some(&annotations))
+            .expect("Cannot create verification constraint");
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(!is_verified);
     }
