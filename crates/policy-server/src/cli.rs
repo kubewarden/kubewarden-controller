@@ -1,5 +1,6 @@
 use crate::settings::{read_policies_file, Policy};
 use anyhow::{anyhow, Result};
+use clap::builder::PossibleValue;
 use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -33,7 +34,7 @@ lazy_static! {
         std::env::var("HOSTNAME").unwrap_or_else(|_| String::from("unknown"));
 }
 
-pub(crate) fn build_cli() -> Command<'static> {
+pub(crate) fn build_cli() -> Command {
     Command::new(crate_name!())
         .author(crate_authors!())
         .version(crate_version!())
@@ -41,25 +42,34 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("log-level")
                 .long("log-level")
-                .takes_value(true)
+                .value_name("LOG_LEVEL")
                 .env("KUBEWARDEN_LOG_LEVEL")
                 .default_value("info")
-                .possible_values(&["trace", "debug", "info", "warn", "error"])
+                .value_parser([
+                    PossibleValue::new("trace"),
+                    PossibleValue::new("debug"),
+                    PossibleValue::new("info"),
+                    PossibleValue::new("warn"),
+                    PossibleValue::new("error"),
+                ])
                 .help("Log level"),
         )
         .arg(
             Arg::new("log-fmt")
                 .long("log-fmt")
-                .takes_value(true)
+                .value_name("LOG_FMT")
                 .env("KUBEWARDEN_LOG_FMT")
                 .default_value("text")
-                .possible_values(&["text", "json", "otlp"])
+                .value_parser([
+                    PossibleValue::new("text"),
+                    PossibleValue::new("json"),
+                    PossibleValue::new("otlp"),
+                ])
                 .help("Log output format"),
         )
         .arg(
             Arg::new("log-no-color")
                 .long("log-no-color")
-                .takes_value(false)
                 .env("NO_COLOR")
                 .required(false)
                 .help("Disable colored output for logs"),
@@ -67,7 +77,7 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("address")
                 .long("addr")
-                .takes_value(true)
+                .value_name("BIND_ADDRESS")
                 .default_value("0.0.0.0")
                 .env("KUBEWARDEN_BIND_ADDRESS")
                 .help("Bind against ADDRESS"),
@@ -75,7 +85,7 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("port")
                 .long("port")
-                .takes_value(true)
+                .value_name("PORT")
                 .default_value("3000")
                 .env("KUBEWARDEN_PORT")
                 .help("Listen on PORT"),
@@ -83,14 +93,14 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("workers")
                 .long("workers")
-                .takes_value(true)
+                .value_name("WORKERS_NUMBER")
                 .env("KUBEWARDEN_WORKERS")
                 .help("Number of workers thread to create"),
         )
         .arg(
             Arg::new("cert-file")
                 .long("cert-file")
-                .takes_value(true)
+                .value_name("CERT_FILE")
                 .default_value("")
                 .env("KUBEWARDEN_CERT_FILE")
                 .help("Path to an X.509 certificate file for HTTPS"),
@@ -98,7 +108,7 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("key-file")
                 .long("key-file")
-                .takes_value(true)
+                .value_name("KEY_FILE")
                 .default_value("")
                 .env("KUBEWARDEN_KEY_FILE")
                 .help("Path to an X.509 private key file for HTTPS"),
@@ -106,7 +116,7 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("policies")
                 .long("policies")
-                .takes_value(true)
+                .value_name("POLICIES_FILE")
                 .env("KUBEWARDEN_POLICIES")
                 .default_value("policies.yml")
                 .help("YAML file holding the policies to be loaded and their settings"),
@@ -114,7 +124,7 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("policies-download-dir")
                 .long("policies-download-dir")
-                .takes_value(true)
+                .value_name("POLICIES_DOWNLOAD_DIR")
                 .default_value(".")
                 .env("KUBEWARDEN_POLICIES_DOWNLOAD_DIR")
                 .help("Download path for the policies"),
@@ -122,37 +132,35 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("sigstore-cache-dir")
                 .long("sigstore-cache-dir")
-                .takes_value(true)
+                .value_name("SIGSTORE_CACHE_DIR")
                 .default_value("sigstore-data")
                 .env("KUBEWARDEN_SIGSTORE_CACHE_DIR")
                 .help("Directory used to cache sigstore data"),
         )
         .arg(
             Arg::new("sources-path")
-                .takes_value(true)
                 .long("sources-path")
-                .takes_value(true)
+                .value_name("SOURCES_PATH")
                 .env("KUBEWARDEN_SOURCES_PATH")
                 .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
         )
         .arg(
             Arg::new("verification-path")
-                .env("KUBEWARDEN_VERIFICATION_CONFIG_PATH")
                 .long("verification-path")
-                .takes_value(true)
+                .value_name("VERIFICATION_CONFIG_PATH")
+                .env("KUBEWARDEN_VERIFICATION_CONFIG_PATH")
                 .help("YAML file holding verification information (URIs, keys, annotations...)"),
         )
         .arg(
             Arg::new("docker-config-json-path")
-                .env("KUBEWARDEN_DOCKER_CONFIG_JSON_PATH")
                 .long("docker-config-json-path")
-                .takes_value(true)
+                .value_name("DOCKER_CONFIG")
+                .env("KUBEWARDEN_DOCKER_CONFIG_JSON_PATH")
                 .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
         )
         .arg(
             Arg::new("enable-metrics")
                 .long("enable-metrics")
-                .takes_value(false)
                 .env("KUBEWARDEN_ENABLE_METRICS")
                 .required(false)
                 .help("Enable metrics"),
@@ -160,7 +168,6 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("enable-verification")
                 .long("enable-verification")
-                .takes_value(false)
                 .env("KUBEWARDEN_ENABLE_VERIFICATION")
                 .required(false)
                 .help("Enable Sigstore verification"),
@@ -168,7 +175,7 @@ pub(crate) fn build_cli() -> Command<'static> {
         .arg(
             Arg::new("always-accept-admission-reviews-on-namespace")
                 .long("always-accept-admission-reviews-on-namespace")
-                .takes_value(true)
+                .value_name("NAMESPACE")
                 .env("KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE")
                 .required(false)
                 .help("Always accept AdmissionReviews that target the given namespace"),
@@ -179,16 +186,16 @@ pub(crate) fn build_cli() -> Command<'static> {
 pub(crate) fn api_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr> {
     format!(
         "{}:{}",
-        matches.value_of("address").unwrap(),
-        matches.value_of("port").unwrap()
+        matches.get_one::<String>("address").unwrap(),
+        matches.get_one::<String>("port").unwrap()
     )
     .parse()
     .map_err(|e| anyhow!("error parsing arguments: {}", e))
 }
 
 pub(crate) fn tls_files(matches: &clap::ArgMatches) -> Result<(String, String)> {
-    let cert_file = String::from(matches.value_of("cert-file").unwrap());
-    let key_file = String::from(matches.value_of("key-file").unwrap());
+    let cert_file = matches.get_one::<String>("cert-file").unwrap().to_owned();
+    let key_file = matches.get_one::<String>("key-file").unwrap().to_owned();
     if cert_file.is_empty() != key_file.is_empty() {
         Err(anyhow!("error parsing arguments: either both --cert-file and --key-file must be provided, or neither"))
     } else {
@@ -197,7 +204,7 @@ pub(crate) fn tls_files(matches: &clap::ArgMatches) -> Result<(String, String)> 
 }
 
 pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Policy>> {
-    let policies_file = Path::new(matches.value_of("policies").unwrap_or("."));
+    let policies_file = Path::new(matches.get_one::<String>("policies").unwrap());
     read_policies_file(policies_file).map_err(|e| {
         anyhow!(
             "error while loading policies from {:?}: {}",
@@ -210,7 +217,7 @@ pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Pol
 pub(crate) fn verification_config(
     matches: &clap::ArgMatches,
 ) -> Result<Option<LatestVerificationConfig>> {
-    match matches.value_of("verification-path") {
+    match matches.get_one::<String>("verification-path") {
         None => Ok(None),
         Some(path) => {
             let verification_file = Path::new(path);
@@ -223,7 +230,7 @@ pub(crate) fn verification_config(
 // because some collectors rely on it and would panic otherwise.
 pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
     // setup logging
-    let filter_layer = EnvFilter::new(matches.value_of("log-level").unwrap_or_default())
+    let filter_layer = EnvFilter::new(matches.get_one::<String>("log-level").unwrap())
         // some of our dependencies generate trace events too, but we don't care about them ->
         // let's filter them
         .add_directive("cranelift_codegen=off".parse().unwrap())
@@ -234,13 +241,13 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
         .add_directive("h2=off".parse().unwrap())
         .add_directive("tower=off".parse().unwrap());
 
-    match matches.value_of("log-fmt").unwrap_or_default() {
+    match matches.get_one::<String>("log-fmt").unwrap().as_str() {
         "json" => tracing_subscriber::registry()
             .with(filter_layer)
             .with(fmt::layer().json())
             .init(),
         "text" => {
-            let enable_color = !matches.is_present("log-no-color");
+            let enable_color = !matches.contains_id("log-no-color");
             let layer = fmt::layer().with_ansi(enable_color);
 
             tracing_subscriber::registry()
@@ -280,7 +287,7 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
 }
 
 pub(crate) fn remote_server_options(matches: &clap::ArgMatches) -> Result<Option<Sources>> {
-    let sources = match matches.value_of("sources-path") {
+    let sources = match matches.get_one::<String>("sources-path") {
         Some(sources_file) => Some(
             read_sources_file(Path::new(sources_file))
                 .map_err(|e| anyhow!("error while loading sources from {}: {}", sources_file, e))?,
