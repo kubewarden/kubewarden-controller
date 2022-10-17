@@ -8,7 +8,6 @@ use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
 extern crate burrego;
-use burrego::opa::wasm::Evaluator;
 
 extern crate clap;
 use clap::Parser;
@@ -64,6 +63,7 @@ fn main() -> Result<()> {
     // setup logging
     let level_filter = if cli.verbose { "debug" } else { "info" };
     let filter_layer = EnvFilter::new(level_filter)
+        .add_directive("wasmtime_cranelift=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("cranelift_codegen=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("cranelift_wasm=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("regalloc=off".parse().unwrap()); // this crate generates lots of tracing events we don't care about
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
     match &cli.command {
         Commands::Builtins => {
             println!("These are the OPA builtins currently supported:");
-            for b in Evaluator::implemented_builtins() {
+            for b in burrego::Evaluator::implemented_builtins() {
                 println!("  - {}", b);
             }
             Ok(())
@@ -106,11 +106,9 @@ fn main() -> Result<()> {
 
             let data_value: serde_json::Value =
                 serde_json::from_str(&data).map_err(|e| anyhow!("Cannot parse data: {:?}", e))?;
-
-            let mut evaluator = Evaluator::from_path(
-                policy.clone(),
+            let mut evaluator = burrego::Evaluator::from_path(
                 &PathBuf::from(policy),
-                &burrego::opa::host_callbacks::DEFAULT_HOST_CALLBACKS,
+                burrego::HostCallbacks::default(),
             )?;
 
             let (major, minor) = evaluator.opa_abi_version()?;

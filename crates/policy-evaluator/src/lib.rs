@@ -27,3 +27,4 @@ pub use kube;
 pub use kubewarden_policy_sdk::metadata::ProtocolVersion;
 pub use policy_fetcher;
 pub use validator;
+pub use wasmtime_provider::wasmtime;

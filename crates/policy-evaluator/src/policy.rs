@@ -13,8 +13,16 @@ use crate::callback_requests::CallbackRequest;
 /// a host waPC function, and handle the request.
 #[derive(Clone)]
 pub struct Policy {
+    /// The policy identifier. This is mostly relevant for Policy Server,
+    /// which uses the identifier provided by the user inside of the `policy.yml`
+    /// file
     pub id: String,
-    policy_id: Option<u64>,
+
+    /// This is relevant only for waPC-based policies. This is the unique ID
+    /// associated to the waPC policy.
+    /// Burrego policies have this field set to `None`
+    instance_id: Option<u64>,
+
     /// Channel used by the synchronous world (the `host_callback` waPC function),
     /// to request the computation of code that can only be run inside of an
     /// asynchronous block
@@ -30,15 +38,15 @@ impl fmt::Debug for Policy {
 
         write!(
             f,
-            r#"Policy {{ id: "{}", policy_id: {:?}, callback_channel: {} }}"#,
-            self.id, self.policy_id, callback_channel,
+            r#"Policy {{ id: "{}", instance_id: {:?}, callback_channel: {} }}"#,
+            self.id, self.instance_id, callback_channel,
         )
     }
 }
 
 impl PartialEq for Policy {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.policy_id == other.policy_id
+        self.id == other.id && self.instance_id == other.instance_id
     }
 }
 
@@ -47,7 +55,7 @@ impl Default for Policy {
     fn default() -> Self {
         Policy {
             id: String::default(),
-            policy_id: None,
+            instance_id: None,
             callback_channel: None,
         }
     }
@@ -61,7 +69,7 @@ impl Policy {
     ) -> Result<Policy> {
         Ok(Policy {
             id,
-            policy_id,
+            instance_id: policy_id,
             callback_channel,
         })
     }

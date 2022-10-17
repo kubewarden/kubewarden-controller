@@ -150,11 +150,11 @@ impl Default for Metadata {
 
 impl Metadata {
     pub fn from_path(path: &Path) -> Result<Option<Metadata>> {
-        Metadata::from_contents(std::fs::read(path)?)
+        Metadata::from_contents(&std::fs::read(path)?)
     }
 
-    pub fn from_contents(policy: Vec<u8>) -> Result<Option<Metadata>> {
-        for payload in Parser::new(0).parse_all(&policy) {
+    pub fn from_contents(policy: &[u8]) -> Result<Option<Metadata>> {
+        for payload in Parser::new(0).parse_all(policy) {
             if let Payload::CustomSection(reader) = payload? {
                 if reader.name() == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
                     return Ok(Some(serde_json::from_slice(reader.data())?));
