@@ -1,22 +1,19 @@
 use anyhow::Result;
 use itertools::Itertools;
 use policy_evaluator::callback_requests::CallbackRequest;
+use policy_evaluator::wasmtime;
 use policy_evaluator::{
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
     policy_evaluator::{PolicyEvaluator, ValidateRequest},
-    policy_evaluator_builder::PolicyEvaluatorBuilder,
-    policy_metadata::Metadata,
 };
-use std::collections::HashMap;
-use std::time::Instant;
-use std::{fmt, iter::FromIterator};
+use std::{collections::HashMap, fmt, time::Instant};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info, info_span};
 
 use crate::communication::EvalRequest;
 use crate::metrics;
 use crate::settings::{Policy, PolicyMode};
-use crate::utils::convert_yaml_map_to_json;
+use crate::worker_pool::PrecompiledPolicies;
 
 struct PolicyEvaluatorWithSettings {
     policy_evaluator: PolicyEvaluator,
@@ -28,6 +25,11 @@ struct PolicyEvaluatorWithSettings {
 pub(crate) struct Worker {
     evaluators: HashMap<String, PolicyEvaluatorWithSettings>,
     channel_rx: Receiver<EvalRequest>,
+
+    // TODO: remove clippy's exception. This is going to be used to
+    // implement the epoch handling
+    #[allow(dead_code)]
+    engine: wasmtime::Engine,
 }
 
 pub struct PolicyErrors(HashMap<String, String>);
@@ -50,95 +52,43 @@ impl Worker {
     )]
     pub(crate) fn new(
         rx: Receiver<EvalRequest>,
-        policies: HashMap<String, Policy>,
+        policies: &HashMap<String, Policy>,
+        precompiled_policies: &PrecompiledPolicies,
+        wasmtime_config: &wasmtime::Config,
         callback_handler_tx: Sender<CallbackRequest>,
         always_accept_admission_reviews_on_namespace: Option<String>,
     ) -> Result<Worker, PolicyErrors> {
         let mut evs_errors = HashMap::new();
         let mut evs = HashMap::new();
 
+        let engine = wasmtime::Engine::new(wasmtime_config).map_err(|e| {
+            let mut errors = HashMap::new();
+            errors.insert(
+                "*".to_string(),
+                format!("Cannot create wasmtime::Engine: {:?}", e),
+            );
+            PolicyErrors(errors)
+        })?;
+
         for (id, policy) in policies.iter() {
-            let settings_json = policy.settings.as_ref().and_then(|settings| {
-                let settings =
-                    serde_yaml::Mapping::from_iter(settings.iter().map(|(key, value)| {
-                        (serde_yaml::Value::String(key.to_string()), value.clone())
-                    }));
-                match convert_yaml_map_to_json(settings) {
-                    Ok(settings) => Some(settings),
-                    Err(err) => {
-                        error!(
-                            error = err.to_string().as_str(),
-                            "cannot convert YAML settings to JSON"
-                        );
-                        None
-                    }
-                }
-            });
-
-            let wasm_module_path = match &policy.wasm_module_path {
-                Some(p) => p,
-                None => {
+            // It's safe to clone the outer engine. This creates a shallow copy
+            let inner_engine = engine.clone();
+            let policy_evaluator = match crate::worker_pool::build_policy_evaluator(
+                id,
+                policy,
+                &inner_engine,
+                precompiled_policies,
+                callback_handler_tx.clone(),
+            ) {
+                Ok(pe) => pe,
+                Err(e) => {
                     evs_errors.insert(
-                        policy.url.clone(),
-                        "missing path to local Wasm file".to_string(),
+                        id.clone(),
+                        format!("[{}] could not create PolicyEvaluator: {:?}", id, e),
                     );
                     continue;
                 }
             };
-
-            let policy_contents = match std::fs::read(&wasm_module_path) {
-                Ok(policy_contents) => policy_contents,
-                Err(err) => {
-                    evs_errors.insert(
-                        policy.url.clone(),
-                        format!("policy contents are invalid: {:?}", err),
-                    );
-                    continue;
-                }
-            };
-
-            let policy_metadata = match Metadata::from_contents(policy_contents.clone()) {
-                Ok(policy_metadata) => policy_metadata,
-                Err(err) => {
-                    evs_errors.insert(
-                        policy.url.clone(),
-                        format!("policy metadata is invalid: {:?}", err),
-                    );
-                    continue;
-                }
-            };
-
-            let policy_execution_mode = policy_metadata.unwrap_or_default().execution_mode;
-
-            let mut policy_evaluator = match PolicyEvaluatorBuilder::new(id.to_string())
-                .policy_contents(&policy_contents)
-                .execution_mode(policy_execution_mode)
-                .settings(settings_json)
-                .callback_channel(callback_handler_tx.clone())
-                .build()
-            {
-                Ok(policy_evaluator) => policy_evaluator,
-                Err(err) => {
-                    evs_errors.insert(
-                        policy.url.clone(),
-                        format!("could not instantiate policy: {:?}", err),
-                    );
-                    continue;
-                }
-            };
-
-            let set_val_rep = policy_evaluator.validate_settings();
-            if !set_val_rep.valid {
-                evs_errors.insert(
-                    policy.url.clone(),
-                    format!(
-                        "settings of policy {} are invalid: {:?}",
-                        policy.url.clone(),
-                        set_val_rep.message
-                    ),
-                );
-                continue;
-            }
 
             let policy_evaluator_with_settings = PolicyEvaluatorWithSettings {
                 policy_evaluator,
@@ -158,6 +108,7 @@ impl Worker {
         Ok(Worker {
             evaluators: evs,
             channel_rx: rx,
+            engine,
         })
     }
 
