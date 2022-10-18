@@ -41,15 +41,17 @@ fn main() -> Result<()> {
     let (cert_file, key_file) = cli::tls_files(&matches)?;
     let policies = cli::policies(&matches)?;
     let sources = cli::remote_server_options(&matches)?;
-    let pool_size = matches.value_of("workers").map_or_else(num_cpus::get, |v| {
-        v.parse::<usize>()
-            .expect("error parsing the number of workers")
-    });
+    let pool_size = matches
+        .get_one::<String>("workers")
+        .map_or_else(num_cpus::get, |v| {
+            v.parse::<usize>()
+                .expect("error parsing the number of workers")
+        });
     let always_accept_admission_reviews_on_namespace = matches
-        .value_of("always-accept-admission-reviews-on-namespace")
-        .map(str::to_string);
+        .get_one::<String>("always-accept-admission-reviews-on-namespace")
+        .map(|s| s.to_owned());
 
-    let metrics_enabled = matches.is_present("enable-metrics");
+    let metrics_enabled = matches.contains_id("enable-metrics");
     let verification_config = cli::verification_config(&matches).unwrap_or_else(|e| {
         fatal_error(format!(
             "Cannot create sigstore verification config: {:?}",
@@ -58,7 +60,7 @@ fn main() -> Result<()> {
         unreachable!()
     });
     let sigstore_cache_dir = matches
-        .value_of("sigstore-cache-dir")
+        .get_one::<String>("sigstore-cache-dir")
         .map(PathBuf::from)
         .expect("This should not happen, there's a default value for sigstore-cache-dir");
 
@@ -220,7 +222,7 @@ fn main() -> Result<()> {
             }
         };
 
-        let policies_download_dir = matches.value_of("policies-download-dir").unwrap();
+        let policies_download_dir = matches.get_one::<String>("policies-download-dir").unwrap();
         let fetched_policies = match downloader
             .download_policies(
                 &policies,

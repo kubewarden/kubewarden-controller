@@ -354,7 +354,7 @@ checksum = "c1ad822118d20d2c234f427000d5acc36eabe1e29a348c89b63dd60b13f28e5d"
 [[package]]
 name = "burrego"
 version = "0.2.0"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.8#47db2bc79b17e9f9b11013f0d9b3e6fc4054c46c"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.9#d65c88b19e2065da6bac233cff1d71607181819a"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -571,25 +571,23 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "3.2.22"
+version = "4.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86447ad904c7fb335a790c9d7fe3d0d971dc523b8ccd1561a520de9a85302750"
+checksum = "6bf8832993da70a4c6d13c581f4463c2bdda27b9bf1c5498dc4365543abe6d6f"
 dependencies = [
  "atty",
  "bitflags",
  "clap_lex",
- "indexmap",
  "once_cell",
  "strsim",
  "termcolor",
- "textwrap",
 ]
 
 [[package]]
 name = "clap_lex"
-version = "0.2.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
+checksum = "0d4198f73e42b4936b35b5bb248d81d2b595ecb170da0bac7655c54eedfa8da8"
 dependencies = [
  "os_str_bytes",
 ]
@@ -1800,9 +1798,9 @@ dependencies = [
 
 [[package]]
 name = "k8s-openapi"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2ae2c04fcee6b01b04e3aadd56bb418932c8e0a9d8a93f48bc68c6bdcdb559d"
+checksum = "6d9455388f4977de4d0934efa9f7d36296295537d774574113a20f6082de03da"
 dependencies = [
  "base64 0.13.0",
  "bytes",
@@ -1820,9 +1818,9 @@ checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 
 [[package]]
 name = "kube"
-version = "0.74.0"
+version = "0.75.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a527a8001a61d8d470dab27ac650889938760c243903e7cd90faaf7c60a34bdd"
+checksum = "9bb19108692aeafebb108fd0a1c381c06ac4c03859652599420975165e939b8a"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -1831,9 +1829,9 @@ dependencies = [
 
 [[package]]
 name = "kube-client"
-version = "0.74.0"
+version = "0.75.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0d48f42df4e8342e9f488c4b97e3759d0042c4e7ab1a853cc285adb44409480"
+checksum = "97e1a80ecd1b1438a2fc004549e155d47250b9e01fbfcf4cfbe9c8b56a085593"
 dependencies = [
  "base64 0.13.0",
  "bytes",
@@ -1867,9 +1865,9 @@ dependencies = [
 
 [[package]]
 name = "kube-core"
-version = "0.74.0"
+version = "0.75.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91f56027f862fdcad265d2e9616af416a355e28a1c620bb709083494753e070d"
+checksum = "f4d780f2bb048eeef64a4c6b2582d26a0fe19e30b4d3cc9e081616e1779c5d47"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -1883,9 +1881,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.6.3"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb4f07471a46151c3272d2ed0e3e62ecbae9b75ff374476c9468b54cd6b20a10"
+checksum = "d6ed69f76f42127ef70cef6a74acc67537c0e88a505c104cd7e2ff79cf3be8ef"
 dependencies = [
  "anyhow",
  "k8s-openapi",
@@ -1894,7 +1892,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_json",
- "serde_yaml 0.8.26",
+ "serde_yaml 0.9.13",
  "slog",
  "url",
  "wapc-guest",
@@ -2743,8 +2741,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.4.8"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.8#47db2bc79b17e9f9b11013f0d9b3e6fc4054c46c"
+version = "0.4.9"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.4.9#d65c88b19e2065da6bac233cff1d71607181819a"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -2765,7 +2763,7 @@ dependencies = [
  "url",
  "validator",
  "wapc",
- "wasmparser 0.90.0",
+ "wasmparser 0.92.0",
  "wasmtime-provider",
 ]
 
@@ -3707,12 +3705,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "textwrap"
-version = "0.15.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "949517c0cf1bf4ee812e2e07e08ab448e3ae0d23472aee8a06c985f0c8815b16"
-
-[[package]]
 name = "thiserror"
 version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4501,9 +4493,9 @@ dependencies = [
 
 [[package]]
 name = "wasmparser"
-version = "0.90.0"
+version = "0.92.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b62c8d843f4423efee314dc75a1049886deba3214f7e7f9ff0e4e58b4d618581"
+checksum = "7da34cec2a8c23db906cdf8b26e988d7a7f0d549eb5d51299129647af61a1b37"
 dependencies = [
  "indexmap",
 ]
