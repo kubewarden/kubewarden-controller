@@ -4,12 +4,11 @@ use clap::{
 };
 use itertools::Itertools;
 use lazy_static::lazy_static;
-
-use policy_evaluator::burrego::opa::builtins as opa_builtins;
+use policy_evaluator::burrego;
 
 lazy_static! {
     static ref VERSION_AND_BUILTINS: String = {
-        let builtins: String = opa_builtins::get_builtins()
+        let builtins: String = burrego::get_builtins()
             .keys()
             .sorted()
             .map(|builtin| format!("  - {}", builtin))
