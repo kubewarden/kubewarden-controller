@@ -11,8 +11,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "3.2", features = [ "cargo", "env" ] }
-clap_complete = "3.2"
+clap = { version = "4.0", features = [ "cargo", "env" ] }
+clap_complete = "4.0"
 directories = "4.0.1"
 itertools = "0.10.5"
 k8s-openapi = { version = "0.16.0", default-features = false, features = ["v1_25"] }
