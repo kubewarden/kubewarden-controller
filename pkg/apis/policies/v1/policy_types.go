@@ -76,6 +76,14 @@ type PolicySpec struct {
 	// incoming requests or not.
 	Mutating bool `json:"mutating"`
 
+	// BackgroundAudit indicates whether a policy should be used or skipped when
+	// performing audit checks. If false, the policy cannot produce meaningful
+	// evaluation results during audit checks and will be skipped.
+	// The default is "true".
+	// +kubebuilder:default:=true
+	// +optional
+	BackgroundAudit bool `json:"backgroundAudit"`
+
 	// matchPolicy defines how the "rules" list is used to match incoming requests.
 	// Allowed values are "Exact" or "Equivalent".
 	//

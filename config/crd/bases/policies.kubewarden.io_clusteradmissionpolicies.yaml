@@ -57,6 +57,13 @@ spec:
           spec:
             description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
             properties:
+              backgroundAudit:
+                default: true
+                description: BackgroundAudit indicates whether a policy should be
+                  used or skipped when performing audit checks. If false, the policy
+                  cannot produce meaningful evaluation results during audit checks
+                  and will be skipped. The default is "true".
+                type: boolean
               contextAwareResources:
                 description: List of Kubernetes resources the policy is allowed to
                   access at evaluation time. Access to these resources is done using
