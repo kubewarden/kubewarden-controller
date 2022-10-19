@@ -24,6 +24,10 @@ spec:
       jsonPath: .spec.mutating
       name: Mutating
       type: boolean
+    - description: Whether the policy is used in audit checks
+      jsonPath: .spec.backgroundAudit
+      name: BackgroundAudit
+      type: boolean
     - description: Policy deployment mode
       jsonPath: .spec.mode
       name: Mode
