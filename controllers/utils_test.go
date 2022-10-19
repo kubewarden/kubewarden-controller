@@ -17,7 +17,7 @@ limitations under the License.
 package controllers
 
 import (
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/onsi/gomega/types"
 	"github.com/pkg/errors"
 

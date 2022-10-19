@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric/global"

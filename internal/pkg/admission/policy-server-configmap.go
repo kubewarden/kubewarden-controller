@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
