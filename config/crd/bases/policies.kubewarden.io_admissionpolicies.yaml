@@ -56,6 +56,13 @@ spec:
           spec:
             description: AdmissionPolicySpec defines the desired state of AdmissionPolicy
             properties:
+              backgroundAudit:
+                default: true
+                description: BackgroundAudit indicates whether a policy should be
+                  used or skipped when performing audit checks. If false, the policy
+                  cannot produce meaningful evaluation results during audit checks
+                  and will be skipped. The default is "true".
+                type: boolean
               failurePolicy:
                 description: FailurePolicy defines how unrecognized errors and timeout
                   errors from the policy are handled. Allowed values are "Ignore"
