@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"

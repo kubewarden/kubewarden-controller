@@ -12,7 +12,7 @@ resources:
   domain: kubewarden.io
   group: policies
   kind: PolicyServer
-  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2
+  path: github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1alpha2
   version: v1alpha2
   webhooks:
     defaulting: true
@@ -23,7 +23,7 @@ resources:
   domain: kubewarden.io
   group: policies
   kind: ClusterAdmissionPolicy
-  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2
+  path: github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1alpha2
   version: v1alpha2
   webhooks:
     defaulting: true
@@ -35,7 +35,7 @@ resources:
   domain: kubewarden.io
   group: policies
   kind: AdmissionPolicy
-  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1alpha2
+  path: github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1alpha2
   version: v1alpha2
 - api:
     crdVersion: v1
@@ -43,7 +43,7 @@ resources:
   domain: kubewarden.io
   group: policies
   kind: AdmissionPolicy
-  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
+  path: github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1
   version: v1
 - api:
     crdVersion: v1
@@ -51,7 +51,7 @@ resources:
   domain: kubewarden.io
   group: policies
   kind: ClusterAdmissionPolicy
-  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
+  path: github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1
   version: v1
 - api:
     crdVersion: v1
@@ -59,6 +59,6 @@ resources:
   domain: kubewarden.io
   group: policies
   kind: PolicyServer
-  path: github.com/kubewarden/kubewarden-controller/apis/policies/v1
+  path: github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1
   version: v1
 version: "3"
