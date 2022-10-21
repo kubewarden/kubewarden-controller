@@ -97,4 +97,5 @@ type Policy interface {
 	GetPolicyServer() string
 	GetUniqueName() string
 	GetContextAwareResources() []ContextAwareResource
+	GetBackgroundAudit() bool
 }

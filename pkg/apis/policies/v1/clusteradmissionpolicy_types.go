@@ -211,3 +211,7 @@ func (r *ClusterAdmissionPolicy) GetUniqueName() string {
 func (r *ClusterAdmissionPolicy) GetContextAwareResources() []ContextAwareResource {
 	return r.Spec.ContextAwareResources
 }
+
+func (r *ClusterAdmissionPolicy) GetBackgroundAudit() bool {
+	return r.Spec.BackgroundAudit
+}
