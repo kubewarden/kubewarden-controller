@@ -145,3 +145,7 @@ func (r *AdmissionPolicy) GetUniqueName() string {
 func (r *AdmissionPolicy) GetContextAwareResources() []ContextAwareResource {
 	return []ContextAwareResource{}
 }
+
+func (r *AdmissionPolicy) GetBackgroundAudit() bool {
+	return r.Spec.BackgroundAudit
+}
