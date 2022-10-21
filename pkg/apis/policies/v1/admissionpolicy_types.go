@@ -141,3 +141,7 @@ func (r *AdmissionPolicy) GetPolicyServer() string {
 func (r *AdmissionPolicy) GetUniqueName() string {
 	return "namespaced-" + r.Namespace + "-" + r.Name
 }
+
+func (r *AdmissionPolicy) GetBackgroundAudit() bool {
+	return r.Spec.BackgroundAudit
+}

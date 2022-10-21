@@ -175,3 +175,7 @@ func (r *ClusterAdmissionPolicy) GetPolicyServer() string {
 func (r *ClusterAdmissionPolicy) GetUniqueName() string {
 	return "clusterwide-" + r.Name
 }
+
+func (r *ClusterAdmissionPolicy) GetBackgroundAudit() bool {
+	return r.Spec.BackgroundAudit
+}
