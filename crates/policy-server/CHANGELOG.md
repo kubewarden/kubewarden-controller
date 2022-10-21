@@ -2,18 +2,45 @@
 ## [Unreleased]
 
 
-<a name="v1.1.2"></a>
-## [v1.1.2] - 2022-08-24
+<a name="v1.3.0-rc1"></a>
+## [v1.3.0-rc1] - 2022-10-21
 ### Bug Fixes
+- optimize policies download
+- update to latest Burrego release
+- small performance improvement
+- **deps:** update all patchlevel dependencies
+- **deps:** update all patchlevel dependencies
 - **deps:** update all patchlevel dependencies
 - **deps:** update rust crate serde_yaml to 0.9.4
 - **deps:** update rust crate clap to 3.2.16
 - **deps:** update all patchlevel dependencies
 
+### Code Refactoring
+- reorganize workers
+- update internal communication struct
+- remove utils module
+
 ### Features
 - use docker_credential crate instead of DockerConfig
 
 ### Pull Requests
+- Merge pull request [#345](https://github.com/kubewarden/policy-server/issues/345) from flavio/main
+- Merge pull request [#343](https://github.com/kubewarden/policy-server/issues/343) from flavio/update-deps
+- Merge pull request [#329](https://github.com/kubewarden/policy-server/issues/329) from flavio/change-workers-architecture
+- Merge pull request [#342](https://github.com/kubewarden/policy-server/issues/342) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#336](https://github.com/kubewarden/policy-server/issues/336) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#332](https://github.com/kubewarden/policy-server/issues/332) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#326](https://github.com/kubewarden/policy-server/issues/326) from kubewarden/renovate/all-patch
+- Merge pull request [#327](https://github.com/kubewarden/policy-server/issues/327) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#323](https://github.com/kubewarden/policy-server/issues/323) from raulcabello/fossa-badge
+- Merge pull request [#322](https://github.com/kubewarden/policy-server/issues/322) from raulcabello/fossa-scan
+- Merge pull request [#321](https://github.com/kubewarden/policy-server/issues/321) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#320](https://github.com/kubewarden/policy-server/issues/320) from jvanz/main
+- Merge pull request [#318](https://github.com/kubewarden/policy-server/issues/318) from kubewarden/renovate/all-patch
+- Merge pull request [#319](https://github.com/kubewarden/policy-server/issues/319) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#316](https://github.com/kubewarden/policy-server/issues/316) from viccuad/security-link
+- Merge pull request [#307](https://github.com/kubewarden/policy-server/issues/307) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#306](https://github.com/kubewarden/policy-server/issues/306) from kubewarden/renovate/all-patch
 - Merge pull request [#308](https://github.com/kubewarden/policy-server/issues/308) from jvanz/main
 - Merge pull request [#303](https://github.com/kubewarden/policy-server/issues/303) from raulcabello/docker_credentials
 - Merge pull request [#300](https://github.com/kubewarden/policy-server/issues/300) from kubewarden/renovate/all-patch
@@ -391,8 +418,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.1.2...HEAD
-[v1.1.2]: https://github.com/kubewarden/policy-server/compare/v1.1.1...v1.1.2
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc1...HEAD
+[v1.3.0-rc1]: https://github.com/kubewarden/policy-server/compare/v1.1.1...v1.3.0-rc1
 [v1.1.1]: https://github.com/kubewarden/policy-server/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/kubewarden/policy-server/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/kubewarden/policy-server/compare/v1.0.0...v1.0.1
