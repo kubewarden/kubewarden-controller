@@ -218,9 +218,6 @@
 
 ### Features
 - show Sigstore signatures on kwctl inspect
-- show Sigstore signatures on kwctl inspect
-- show Sigstore signatures on kwctl inspect
-- show Sigstore signatures on kwctl inspect
 - Add `kwctl scaffold manifest` & `kwctl scaffold verification-config`
 - sigstore - download keys and certs from TUF repo
 - Keyless verification for kwctl {verify,pull,run}
