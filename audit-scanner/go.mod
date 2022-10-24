@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/google/go-cmp v0.5.9
-	github.com/kubewarden/kubewarden-controller v1.1.2-0.20221020074406-d88d0d4d1454
+	github.com/kubewarden/kubewarden-controller v1.1.2-0.20221021125822-dbf0a01df20e
 	github.com/spf13/cobra v1.6.0
 	k8s.io/api v0.25.3
 	k8s.io/apimachinery v0.25.3

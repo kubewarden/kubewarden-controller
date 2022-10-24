@@ -1,11 +1,19 @@
 package cmd
 
 import (
-	"github.com/kubewarden/audit-scanner/internal/client"
+	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/scanner"
 	"github.com/spf13/cobra"
 	"os"
 )
+
+// A Scanner verifies that existing resources don't violate any of the policies
+type Scanner interface {
+	// ScanNamespace scans a given namespace
+	ScanNamespace(namespace string) error
+	// ScanAllNamespaces scan all namespaces
+	ScanAllNamespaces() error
+}
 
 // rootCmd represents the base command when called without any subcommands
 var (
@@ -21,13 +29,13 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			client, err := client.NewClient()
+			fetcher, err := policies.NewFetcher()
 			if err != nil {
 				return err
 			}
-			scanner := scanner.NewScanner(client)
+			scanner := scanner.NewScanner(&fetcher)
 
-			return startScanner(namespace, scanner)
+			return startScanner(namespace, &scanner)
 		},
 	}
 )
@@ -41,7 +49,7 @@ func Execute() {
 	}
 }
 
-func startScanner(namespace string, scanner scanner.Scanner) error {
+func startScanner(namespace string, scanner Scanner) error {
 	if namespace != "" {
 		if err := scanner.ScanNamespace(namespace); err != nil {
 			return err

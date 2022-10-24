@@ -1,4 +1,4 @@
-package client
+package policies
 
 import (
 	"github.com/google/go-cmp/cmp"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestFindNamespacesForAllClusterAdmissionPolicies(t *testing.T) {
-	// default, kubewarden and test namespaces are the only namespaces available in the mock test client
+	// default, kubewarden and test namespaces are the only namespaces available in the mock test Fetcher
 
 	// this policy evaluates resources in all namespaces
 	allNs := policiesv1.ClusterAdmissionPolicy{
@@ -42,18 +42,18 @@ func TestFindNamespacesForAllClusterAdmissionPolicies(t *testing.T) {
 	tests := []struct {
 		name     string
 		policies []k8sClient.Object
-		expect   NamespacePolicies
+		expect   map[string][]policiesv1.Policy
 	}{
 		{"policy available in all ns", []k8sClient.Object{&allNs}, map[string][]policiesv1.Policy{"default": {&allNs}, "test": {&allNs}, "kubewarden": {&allNs}}},
-		{"policy available in test ns", []k8sClient.Object{&testNs}, map[string][]policiesv1.Policy{"test": {&testNs}}},
+		{"policy available in test ns", []k8sClient.Object{&testNs}, map[string][]policiesv1.Policy{"test": {&testNs}, "default": {}, "kubewarden": {}}},
 		{"policies available in all ns and in test ns", []k8sClient.Object{&allNs, &testNs}, map[string][]policiesv1.Policy{"default": {&allNs}, "test": {&allNs, &testNs}, "kubewarden": {&allNs}}},
-		{"no policies availables", []k8sClient.Object{}, map[string][]policiesv1.Policy{}},
+		{"no policies availables", []k8sClient.Object{}, map[string][]policiesv1.Policy{"default": {}, "test": {}, "kubewarden": {}}},
 	}
 
 	for _, test := range tests {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
-			c := client{k8sClient: mockClient(ttest.policies...)}
+			c := Fetcher{client: mockClient(ttest.policies...)}
 			ns, err := c.findNamespacesForAllClusterAdmissionPolicies()
 			if err != nil {
 				t.Errorf("error should be nil:  %s", err.Error())
@@ -66,7 +66,7 @@ func TestFindNamespacesForAllClusterAdmissionPolicies(t *testing.T) {
 }
 
 func TestFindNamespacesForClusterAdmissionPolicy(t *testing.T) {
-	// default, kubewarden and test namespaces are the only namespaces available in the mock test client
+	// default, kubewarden and test namespaces are the only namespaces available in the mock test Fetcher
 
 	// this policy evaluates resources in all namespaces
 	allNs := policiesv1.ClusterAdmissionPolicy{Spec: policiesv1.ClusterAdmissionPolicySpec{
@@ -138,7 +138,7 @@ func TestFindNamespacesForClusterAdmissionPolicy(t *testing.T) {
 	for _, test := range tests {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
-			c := client{k8sClient: mockClient(&ttest.p)}
+			c := Fetcher{client: mockClient(&ttest.p)}
 			namespaces, err := c.findNamespacesForClusterAdmissionPolicy(ttest.p)
 			if err != nil {
 				t.Errorf("error should be nil:  %s", err.Error())
@@ -200,39 +200,13 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 	for _, test := range tests {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
-			c := client{k8sClient: mockClient(ttest.policies...)}
+			c := Fetcher{client: mockClient(ttest.policies...)}
 			policies, err := c.GetPoliciesForANamespace(ttest.namespace)
 			if err != nil {
 				t.Errorf("error should be nil:  %s", err.Error())
 			}
 			if !cmp.Equal(policies, ttest.expect, policySorter, policyComparer) {
 				t.Errorf("expected %v, but got %v", ttest.expect, policies)
-			}
-		})
-	}
-}
-
-func TestCreateOrAppendPolicyIfExist(t *testing.T) {
-	p1 := &policiesv1.ClusterAdmissionPolicy{}
-	p2 := &policiesv1.ClusterAdmissionPolicy{}
-
-	tests := []struct {
-		name   string
-		np     NamespacePolicies
-		ns     string
-		p      policiesv1.Policy
-		expect NamespacePolicies
-	}{
-		{"init if ns doesn't exist", make(NamespacePolicies), "test", p1, NamespacePolicies{"test": []policiesv1.Policy{p1}}},
-		{"appends if exists", NamespacePolicies{"test": []policiesv1.Policy{p1}}, "test", p2, NamespacePolicies{"test": []policiesv1.Policy{p1, p2}}},
-	}
-
-	for _, test := range tests {
-		ttest := test
-		t.Run(ttest.name, func(t *testing.T) {
-			createOrAppendPoliciesIfExist(ttest.np, ttest.ns, ttest.p)
-			if !cmp.Equal(ttest.np, ttest.expect) {
-				t.Errorf("expected %v, but got %v", ttest.expect, ttest.np)
 			}
 		})
 	}

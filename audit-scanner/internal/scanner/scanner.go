@@ -3,27 +3,30 @@ package scanner
 import (
 	"errors"
 	"fmt"
-	"github.com/kubewarden/audit-scanner/internal/client"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 )
 
+// A PoliciesFetcher interacts with the kubernetes api to return Kubewarden policies
+type PoliciesFetcher interface {
+	// GetPoliciesForANamespace gets all policies for a given namespace
+	GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, error)
+	// GetPoliciesForAllNamespaces gets all policies for all namespaces
+	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error)
+}
+
 // A Scanner verifies that existing resources don't violate any of the policies
-type Scanner interface {
-	// ScanNamespace scans a given namespace
-	ScanNamespace(namespace string) error
-	// ScanAllNamespaces scan all namespaces
-	ScanAllNamespaces() error
+type Scanner struct {
+	fetcher PoliciesFetcher
 }
 
-type scanner struct {
-	client client.Client
+// NewScanner creates a new scanner with the PoliciesFetcher provided
+func NewScanner(fetcher PoliciesFetcher) Scanner {
+	return Scanner{fetcher}
 }
 
-func NewScanner(client client.Client) Scanner {
-	return scanner{client: client}
-}
-
-func (s scanner) ScanNamespace(namespace string) error {
-	policies, err := s.client.GetPoliciesForANamespace(namespace)
+// ScanNamespace scans resources for a given namespace
+func (s *Scanner) ScanNamespace(namespace string) error {
+	policies, err := s.fetcher.GetPoliciesForANamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -36,6 +39,7 @@ func (s scanner) ScanNamespace(namespace string) error {
 	return nil
 }
 
-func (s scanner) ScanAllNamespaces() error {
+// ScanAllNamespaces scans resources for all namespaces
+func (s *Scanner) ScanAllNamespaces() error {
 	return errors.New("Scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
