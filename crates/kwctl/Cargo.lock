@@ -435,7 +435,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "serde_yaml 0.9.13",
+ "serde_yaml 0.9.14",
  "tracing",
  "tracing-subscriber",
  "url",
@@ -2320,7 +2320,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_json",
- "serde_yaml 0.9.13",
+ "serde_yaml 0.9.14",
  "slog",
  "url",
  "wapc-guest",
@@ -2337,7 +2337,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.1.3"
+version = "1.3.0-rc1"
 dependencies = [
  "anyhow",
  "clap 4.0.18",
@@ -2355,7 +2355,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "serde_yaml 0.9.13",
+ "serde_yaml 0.9.14",
  "syntect",
  "tempfile",
  "tokio",
@@ -3344,7 +3344,7 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
- "serde_yaml 0.9.13",
+ "serde_yaml 0.9.14",
  "sha2 0.10.6",
  "sigstore",
  "tracing",
@@ -4025,9 +4025,9 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.9.13"
+version = "0.9.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8613d593412a0deb7bbd8de9d908efff5a0cb9ccd8f62c641e7b2ed2f57291d1"
+checksum = "6d232d893b10de3eb7258ff01974d6ee20663d8e833263c99409d4b13a0209da"
 dependencies = [
  "indexmap",
  "itoa 1.0.4",
