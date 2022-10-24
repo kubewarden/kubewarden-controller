@@ -188,11 +188,19 @@ jobs:
         run: |
           mkdir policy-server-container-image-sbom
 
-      - name: Create SBOM file for the container image
+      - name: Create SBOM file for the latest container image
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
         shell: bash
         run: |
           set -e
           bom generate -n https://kubewarden.io/ --image ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-latest.outputs.digest }} -o policy-server-container-image-sbom/policy-server-container-image-sbom.spdx
+
+      - name: Create SBOM file for the tagged container image
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
+        run: |
+          set -e
+          bom generate -n https://kubewarden.io/ --image ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-tag.outputs.digest }} -o policy-server-container-image-sbom/policy-server-container-image-sbom.spdx
 
       - name: Sign container image SBOM file
         run: |
