@@ -15,9 +15,10 @@ const (
 	kubewardenPoliciesVersion = "v1"
 )
 
-// Fetcher fetches Kubewarden policies from the Kubernetes cluster
+// Fetcher fetches Kubewarden policies from the Kubernetes cluster, and filters policies that are auditable.
 type Fetcher struct {
 	client client.Client
+	filter func(policies []policiesv1.Policy) []policiesv1.Policy
 }
 
 // NewFetcher returns a Fetcher. It will try to use in-cluster config, which will work just if audit-scanner is deployed
@@ -29,7 +30,7 @@ func NewFetcher() (Fetcher, error) {
 		return Fetcher{}, err
 	}
 
-	return Fetcher{client}, nil
+	return Fetcher{client: client, filter: filterAuditablePolicies}, nil
 }
 
 // TODO implement this for all ns
@@ -37,7 +38,7 @@ func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error) {
 	return nil, errors.New("Scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
 
-// GetPoliciesForANamespace gets all policies for a given namespace
+// GetPoliciesForANamespace gets all auditable policies for a given namespace
 func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, error) {
 	namespacePolicies, err := f.findNamespacesForAllClusterAdmissionPolicies()
 	if err != nil {
@@ -51,7 +52,7 @@ func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Polic
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
 	}
 
-	return namespacePolicies[namespace], nil
+	return f.filter(namespacePolicies[namespace]), nil
 }
 
 // initializes map with an entry for all namespaces with an empty policies array as value

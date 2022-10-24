@@ -8,9 +8,9 @@ import (
 
 // A PoliciesFetcher interacts with the kubernetes api to return Kubewarden policies
 type PoliciesFetcher interface {
-	// GetPoliciesForANamespace gets all policies for a given namespace
+	// GetPoliciesForANamespace gets all auditable policies for a given namespace
 	GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, error)
-	// GetPoliciesForAllNamespaces gets all policies for all namespaces
+	// GetPoliciesForAllNamespaces gets all auditable policies for all namespaces
 	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error)
 }
 

@@ -151,6 +151,9 @@ func TestFindNamespacesForClusterAdmissionPolicy(t *testing.T) {
 }
 
 func TestGetPoliciesForANamespace(t *testing.T) {
+	mockFilter := func(policies []policiesv1.Policy) []policiesv1.Policy {
+		return policies
+	}
 	// this policy evaluates resources in all namespaces
 	allNsClusterPolicy := policiesv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -200,7 +203,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 	for _, test := range tests {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
-			c := Fetcher{client: mockClient(ttest.policies...)}
+			c := Fetcher{client: mockClient(ttest.policies...), filter: mockFilter}
 			policies, err := c.GetPoliciesForANamespace(ttest.namespace)
 			if err != nil {
 				t.Errorf("error should be nil:  %s", err.Error())
