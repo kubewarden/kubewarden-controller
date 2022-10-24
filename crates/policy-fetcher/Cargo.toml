@@ -14,17 +14,17 @@ edition = "2018"
 anyhow = "1.0"
 async-std = "1.9.0"
 async-stream = "0.3.3"
-async-trait = "0.1.57"
-base64 = "0.13.0"
+async-trait = "0.1.58"
+base64 = "0.13.1"
 directories = "4.0.1"
 lazy_static = "1.4.0"
 oci-distribution = { version = "0.9.3", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.2.1"
 regex = "1.5.6"
 reqwest = { version = "0.11.12", default-features = false, features = ["rustls-tls"] }
-rustls = "0.20.6"
+rustls = "0.20.7"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.86"
+serde_json = "1.0.87"
 serde_yaml = "0.9"
 sha2 = "0.10.6"
 sigstore = { version = "0.5.3", default-features = false, features = ["rustls-tls"] }
@@ -37,4 +37,4 @@ docker_credential = "1.0.1"
 [dev-dependencies]
 rstest = "0.15.0"
 tempfile = "3.2.0"
-textwrap = "0.15.1"
+textwrap = "0.16"
