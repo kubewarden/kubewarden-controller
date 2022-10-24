@@ -131,7 +131,10 @@ jobs:
         uses: actions/checkout@v2
       - name: Download artifacts
         id: download
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
+      - name: Move artifacts to project root
+        run: |
+          mv -v policy-server/* .
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to GitHub Container Registry
