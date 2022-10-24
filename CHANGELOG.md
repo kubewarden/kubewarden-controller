@@ -2,6 +2,20 @@
 ## [Unreleased]
 
 
+<a name="v1.3.0-rc1"></a>
+## [v1.3.0-rc1] - 2022-10-11
+### Bug Fixes
+- Function `RecordPolicyCount` should pass context
+
+### Code Refactoring
+- Allow defer functions to run
+- Changes for `go.opentelemetry.io/otel/sdk` 0.32.1
+
+### Pull Requests
+- Merge pull request [#304](https://github.com/kubewarden/kubewarden-controller/issues/304) from viccuad/bump-1.19
+- Merge pull request [#311](https://github.com/kubewarden/kubewarden-controller/issues/311) from kravciak/main
+
+
 <a name="v1.1.1"></a>
 ## [v1.1.1] - 2022-09-22
 ### Bug Fixes
