@@ -37,4 +37,4 @@ docker_credential = "1.0.1"
 [dev-dependencies]
 rstest = "0.15.0"
 tempfile = "3.2.0"
-textwrap = "0.15.1"
+textwrap = "0.16"
