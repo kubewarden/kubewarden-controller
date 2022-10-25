@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/scanner"
@@ -69,5 +70,5 @@ func startScanner(namespace string, scanner Scanner) error {
 
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
-	rootCmd.Flags().VarP(&level, "loglevel", "l", "level of the logs. Supported values are: ")
+	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 }
