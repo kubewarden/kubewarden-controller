@@ -2,8 +2,13 @@
 ## [Unreleased]
 
 
+<a name="v1.3.0-rc2"></a>
+## [v1.3.0-rc2] - 0001-01-01
+
+Keep the RC number in sync across the different components of the stack
+
 <a name="v1.3.0-rc1"></a>
-## [v1.3.0-rc1] - 2022-10-11
+## [v1.3.0-rc1] - 2022-10-24
 ### Bug Fixes
 - Function `RecordPolicyCount` should pass context
 
@@ -12,6 +17,7 @@
 - Changes for `go.opentelemetry.io/otel/sdk` 0.32.1
 
 ### Pull Requests
+- Merge pull request [#321](https://github.com/kubewarden/kubewarden-controller/issues/321) from flavio/v1.3.0-rc1
 - Merge pull request [#304](https://github.com/kubewarden/kubewarden-controller/issues/304) from viccuad/bump-1.19
 - Merge pull request [#311](https://github.com/kubewarden/kubewarden-controller/issues/311) from kravciak/main
 
