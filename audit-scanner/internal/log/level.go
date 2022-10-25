@@ -7,6 +7,8 @@ import (
 
 var supportedValues = [6]string{zerolog.LevelTraceValue, zerolog.LevelDebugValue, zerolog.LevelInfoValue, zerolog.LevelWarnValue, zerolog.LevelErrorValue, zerolog.LevelFatalValue}
 
+// Level implements the Value interface (https://pkg.go.dev/github.com/spf13/pflag@v1.0.5#Value).
+// Therefore we can get this value from a flag, and show an error if a supported value is not provided
 type Level struct {
 	value string
 }
