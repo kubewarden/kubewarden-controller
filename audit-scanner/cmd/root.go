@@ -33,9 +33,9 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			scanner := scanner.NewScanner(&fetcher)
+			scanner := scanner.NewScanner(fetcher)
 
-			return startScanner(namespace, &scanner)
+			return startScanner(namespace, scanner)
 		},
 	}
 )

@@ -24,13 +24,13 @@ type Fetcher struct {
 // NewFetcher returns a Fetcher. It will try to use in-cluster config, which will work just if audit-scanner is deployed
 // inside a Pod. If in-cluster fails, it will try to fetch the kube config from the home dir. It will return an error
 // if both attempts fail.
-func NewFetcher() (Fetcher, error) {
+func NewFetcher() (*Fetcher, error) {
 	client, err := newClient()
 	if err != nil {
-		return Fetcher{}, err
+		return nil, err
 	}
 
-	return Fetcher{client: client, filter: filterAuditablePolicies}, nil
+	return &Fetcher{client: client, filter: filterAuditablePolicies}, nil
 }
 
 // TODO implement this for all ns

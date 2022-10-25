@@ -20,8 +20,8 @@ type Scanner struct {
 }
 
 // NewScanner creates a new scanner with the PoliciesFetcher provided
-func NewScanner(fetcher PoliciesFetcher) Scanner {
-	return Scanner{fetcher}
+func NewScanner(fetcher PoliciesFetcher) *Scanner {
+	return &Scanner{fetcher}
 }
 
 // ScanNamespace scans resources for a given namespace
