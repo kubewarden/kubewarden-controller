@@ -3,6 +3,7 @@ package policies
 import (
 	"errors"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/rs/zerolog/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -16,6 +17,7 @@ import (
 func newClient() (client.Client, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
+		log.Info().Msg("fetching kube config from home dir")
 		config, err = newConfigFromHomePath()
 		if err != nil {
 			return nil, err

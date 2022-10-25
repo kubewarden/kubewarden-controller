@@ -2,6 +2,7 @@ package policies
 
 import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/rs/zerolog/log"
 	typesv1 "k8s.io/api/admissionregistration/v1"
 )
 
@@ -15,6 +16,12 @@ func filterAuditablePolicies(policies []policiesv1.Policy) []policiesv1.Policy {
 			policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive &&
 			isCreateActionPresentWithoutAllResources(policy) {
 			filteredPolicies = append(filteredPolicies, policy)
+		} else {
+			log.Trace().Str("policy", policy.GetUniqueName()).
+				Bool("backgroundAudit", policy.GetBackgroundAudit()).
+				Bool("active", policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive).
+				Bool("create", isCreateActionPresentWithoutAllResources(policy)).
+				Msg("not auditable policy, skipping!")
 		}
 	}
 

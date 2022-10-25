@@ -3,6 +3,7 @@ package policies
 import (
 	"context"
 	"errors"
+	"fmt"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,18 +36,18 @@ func NewFetcher() (*Fetcher, error) {
 
 // TODO implement this for all ns
 func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error) {
-	return nil, errors.New("Scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
+	return nil, errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
 
 // GetPoliciesForANamespace gets all auditable policies for a given namespace
 func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, error) {
 	namespacePolicies, err := f.findNamespacesForAllClusterAdmissionPolicies()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't fetch ClusterAdmissionPolicies: %v", err)
 	}
 	admissionPolicies, err := f.getAdmissionPolicies(namespace)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't fetch AdmissionPolicies: %v", err)
 	}
 	for _, policy := range admissionPolicies {
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
@@ -61,7 +62,7 @@ func (f *Fetcher) initNamespacePoliciesMap() (map[string][]policiesv1.Policy, er
 	namespaceList := &v1.NamespaceList{}
 	err := f.client.List(context.Background(), namespaceList, &client.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't list namespaces: %v", err)
 	}
 	for _, namespace := range namespaceList.Items {
 		namespacePolicies[namespace.Name] = []policiesv1.Policy{}
@@ -80,14 +81,14 @@ func (f *Fetcher) findNamespacesForAllClusterAdmissionPolicies() (map[string][]p
 	policies := &policiesv1.ClusterAdmissionPolicyList{}
 	err = f.client.List(context.Background(), policies, &client.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't list AdmissionPolicies: %v", err)
 	}
 
 	for _, policy := range policies.Items {
 		policy := policy
 		namespaces, err := f.findNamespacesForClusterAdmissionPolicy(policy)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("can't find namespaces for ClusterAdmissionPolicy %s: %v", policy.Name, err)
 		}
 		for _, namespace := range namespaces {
 			namespacePolicies[namespace.Name] = append(namespacePolicies[namespace.Name], &policy)

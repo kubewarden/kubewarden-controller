@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/scanner"
 	"github.com/spf13/cobra"
@@ -15,6 +16,8 @@ type Scanner interface {
 	ScanAllNamespaces() error
 }
 
+var level logconfig.Level
+
 // rootCmd represents the base command when called without any subcommands
 var (
 	rootCmd = &cobra.Command{
@@ -25,6 +28,7 @@ Each namespace will have a PolicyReport with the outcome of the scan for resourc
 There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			level.SetZeroLogLevel()
 			namespace, err := cmd.Flags().GetString("namespace")
 			if err != nil {
 				return err
@@ -65,4 +69,5 @@ func startScanner(namespace string, scanner Scanner) error {
 
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
+	rootCmd.Flags().VarP(&level, "loglevel", "l", "level of the logs. Supported values are: ")
 }
