@@ -105,14 +105,14 @@ jobs:
           COSIGN_EXPERIMENTAL: 1
 
       - name: Upload policy-server binary
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: policy-server-${{ matrix.targetarch }}
           path: |
             policy-server-${{ matrix.targetarch }}
 
       - name: Upload policy-server SBOM files
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: policy-server-${{ matrix.targetarch }}-sbom
           path: |
