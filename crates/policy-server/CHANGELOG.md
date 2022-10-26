@@ -2,6 +2,35 @@
 ## [Unreleased]
 
 
+<a name="v1.3.0-rc3"></a>
+## [v1.3.0-rc3] - 2022-10-26
+### Bug Fixes
+- add binaries signatures to the same zip file
+
+### Pull Requests
+- Merge pull request [#355](https://github.com/kubewarden/policy-server/issues/355) from kubewarden/jvanz-patch-1
+- Merge pull request [#356](https://github.com/kubewarden/policy-server/issues/356) from flavio/release-one-zip-file-per-arch
+- Merge pull request [#354](https://github.com/kubewarden/policy-server/issues/354) from kubewarden/dependabot/github_actions/actions/upload-artifact-3
+
+
+<a name="v1.3.0-rc2"></a>
+## [v1.3.0-rc2] - 2022-10-25
+### Bug Fixes
+- have a working container image
+- ensure container image has the binary
+- create SBOM for tagged container image
+- **deps:** update rust crate serde_yaml to 0.9.14
+
+### Pull Requests
+- Merge pull request [#353](https://github.com/kubewarden/policy-server/issues/353) from kubewarden/dependabot-gh-actions
+- Merge pull request [#352](https://github.com/kubewarden/policy-server/issues/352) from flavio/fix-container-image-for-real
+- Merge pull request [#351](https://github.com/kubewarden/policy-server/issues/351) from flavio/fix-container-image
+- Merge pull request [#350](https://github.com/kubewarden/policy-server/issues/350) from flavio/fix-sbom-creation-for-released-container-image
+- Merge pull request [#348](https://github.com/kubewarden/policy-server/issues/348) from kubewarden/renovate/all-patch
+- Merge pull request [#349](https://github.com/kubewarden/policy-server/issues/349) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#347](https://github.com/kubewarden/policy-server/issues/347) from flavio/v1.3.0-rc1
+
+
 <a name="v1.3.0-rc1"></a>
 ## [v1.3.0-rc1] - 2022-10-21
 ### Bug Fixes
@@ -418,7 +447,9 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc3...HEAD
+[v1.3.0-rc3]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc2...v1.3.0-rc3
+[v1.3.0-rc2]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc1...v1.3.0-rc2
 [v1.3.0-rc1]: https://github.com/kubewarden/policy-server/compare/v1.1.1...v1.3.0-rc1
 [v1.1.1]: https://github.com/kubewarden/policy-server/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/kubewarden/policy-server/compare/v1.0.1...v1.1.0
