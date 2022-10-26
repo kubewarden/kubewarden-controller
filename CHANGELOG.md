@@ -2,10 +2,17 @@
 ## [Unreleased]
 
 
-<a name="v1.3.0-rc2"></a>
-## [v1.3.0-rc2] - 0001-01-01
+<a name="v1.3.0-rc3"></a>
+## [v1.3.0-rc3] - 2022-10-26
+### Pull Requests
+- Merge pull request [#329](https://github.com/kubewarden/kubewarden-controller/issues/329) from viccuad/bump-deps
 
-Keep the RC number in sync across the different components of the stack
+
+<a name="v1.3.0-rc2"></a>
+## [v1.3.0-rc2] - 2022-10-25
+### Pull Requests
+- Merge pull request [#327](https://github.com/kubewarden/kubewarden-controller/issues/327) from flavio/v1.3.0-rc2
+
 
 <a name="v1.3.0-rc1"></a>
 ## [v1.3.0-rc1] - 2022-10-24
