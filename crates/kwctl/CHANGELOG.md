@@ -2,8 +2,21 @@
 ## [Unreleased]
 
 
+<a name="v1.3.0-rc3"></a>
+## [v1.3.0-rc3] - 2022-10-26
+### Bug Fixes
+- **deps:** update rust crate serde_yaml to 0.9.14
+
+### Pull Requests
+- Merge pull request [#337](https://github.com/kubewarden/kwctl/issues/337) from kubewarden/jvanz-patch-1
+- Merge pull request [#335](https://github.com/kubewarden/kwctl/issues/335) from kubewarden/dependabot/cargo/mdcat-0.29.0
+- Merge pull request [#333](https://github.com/kubewarden/kwctl/issues/333) from kubewarden/renovate/all-patch
+- Merge pull request [#334](https://github.com/kubewarden/kwctl/issues/334) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#329](https://github.com/kubewarden/kwctl/issues/329) from flavio/v1.3.0-rc1
+
+
 <a name="v1.3.0-rc1"></a>
-## [v1.3.0-rc1] - 2022-10-19
+## [v1.3.0-rc1] - 2022-10-21
 ### Bug Fixes
 - **deps:** update all patchlevel dependencies
 - **deps:** update rust crate serde_yaml to 0.9.11
@@ -217,6 +230,9 @@
 - Fix clippy warnings on new clippy version
 
 ### Features
+- show Sigstore signatures on kwctl inspect
+- show Sigstore signatures on kwctl inspect
+- show Sigstore signatures on kwctl inspect
 - show Sigstore signatures on kwctl inspect
 - Add `kwctl scaffold manifest` & `kwctl scaffold verification-config`
 - sigstore - download keys and certs from TUF repo
@@ -446,7 +462,8 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc3...HEAD
+[v1.3.0-rc3]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc1...v1.3.0-rc3
 [v1.3.0-rc1]: https://github.com/kubewarden/kwctl/compare/v1.1.3...v1.3.0-rc1
 [v1.1.3]: https://github.com/kubewarden/kwctl/compare/v1.1.2...v1.1.3
 [v1.1.2]: https://github.com/kubewarden/kwctl/compare/v1.1.1...v1.1.2
