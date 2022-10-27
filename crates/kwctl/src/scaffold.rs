@@ -27,6 +27,7 @@ struct ClusterAdmissionPolicySpec {
     settings: serde_yaml::Mapping,
     rules: Vec<Rule>,
     mutating: bool,
+    background_audit: bool,
 }
 
 impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
@@ -46,6 +47,7 @@ impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
                 settings: data.settings,
                 rules: data.metadata.rules.clone(),
                 mutating: data.metadata.mutating,
+                background_audit: data.metadata.background_audit,
             },
         })
     }
@@ -67,6 +69,7 @@ struct AdmissionPolicySpec {
     settings: serde_yaml::Mapping,
     rules: Vec<Rule>,
     mutating: bool,
+    background_audit: bool,
 }
 
 impl TryFrom<ScaffoldData> for AdmissionPolicy {
@@ -86,6 +89,7 @@ impl TryFrom<ScaffoldData> for AdmissionPolicy {
                 settings: data.settings,
                 rules: data.metadata.rules.clone(),
                 mutating: data.metadata.mutating,
+                background_audit: data.metadata.background_audit,
             },
         })
     }
@@ -204,6 +208,7 @@ mod tests {
             rules: vec![],
             annotations: None,
             mutating: false,
+            background_audit: true,
             context_aware: false,
             execution_mode: Default::default(),
         }
@@ -218,6 +223,7 @@ mod tests {
                 title,
             )])),
             mutating: false,
+            background_audit: true,
             context_aware: false,
             execution_mode: Default::default(),
         }
