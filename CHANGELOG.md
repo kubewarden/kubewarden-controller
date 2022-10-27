@@ -2,9 +2,13 @@
 ## [Unreleased]
 
 
+<a name="v1.3.0"></a>
+## [v1.3.0] - 0001-01-01
+
 <a name="v1.3.0-rc3"></a>
 ## [v1.3.0-rc3] - 2022-10-26
 ### Pull Requests
+- Merge pull request [#330](https://github.com/kubewarden/kubewarden-controller/issues/330) from flavio/1.3.0-rc3
 - Merge pull request [#329](https://github.com/kubewarden/kubewarden-controller/issues/329) from viccuad/bump-deps
 
 
