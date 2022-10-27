@@ -2,12 +2,16 @@
 ## [Unreleased]
 
 
+<a name="v1.3.0"></a>
+## [v1.3.0] - 2022-10-27
+
 <a name="v1.3.0-rc3"></a>
 ## [v1.3.0-rc3] - 2022-10-26
 ### Bug Fixes
 - add binaries signatures to the same zip file
 
 ### Pull Requests
+- Merge pull request [#357](https://github.com/kubewarden/policy-server/issues/357) from flavio/1.3.0-rc3
 - Merge pull request [#355](https://github.com/kubewarden/policy-server/issues/355) from kubewarden/jvanz-patch-1
 - Merge pull request [#356](https://github.com/kubewarden/policy-server/issues/356) from flavio/release-one-zip-file-per-arch
 - Merge pull request [#354](https://github.com/kubewarden/policy-server/issues/354) from kubewarden/dependabot/github_actions/actions/upload-artifact-3
@@ -447,7 +451,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc3...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.3.0...HEAD
+[v1.3.0]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc3...v1.3.0
 [v1.3.0-rc3]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc2...v1.3.0-rc3
 [v1.3.0-rc2]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc1...v1.3.0-rc2
 [v1.3.0-rc1]: https://github.com/kubewarden/policy-server/compare/v1.1.1...v1.3.0-rc1
