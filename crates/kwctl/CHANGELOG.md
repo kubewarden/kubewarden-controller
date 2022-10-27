@@ -2,12 +2,22 @@
 ## [Unreleased]
 
 
+<a name="v1.3.0"></a>
+## [v1.3.0] - 2022-10-27
+### Bug Fixes
+- update cosign version used by GH actions
+
+### Pull Requests
+- Merge pull request [#336](https://github.com/kubewarden/kwctl/issues/336) from kubewarden/dependabot/cargo/wasmparser-0.93.0
+
+
 <a name="v1.3.0-rc3"></a>
 ## [v1.3.0-rc3] - 2022-10-26
 ### Bug Fixes
 - **deps:** update rust crate serde_yaml to 0.9.14
 
 ### Pull Requests
+- Merge pull request [#338](https://github.com/kubewarden/kwctl/issues/338) from flavio/1.3.0-rc3
 - Merge pull request [#337](https://github.com/kubewarden/kwctl/issues/337) from kubewarden/jvanz-patch-1
 - Merge pull request [#335](https://github.com/kubewarden/kwctl/issues/335) from kubewarden/dependabot/cargo/mdcat-0.29.0
 - Merge pull request [#333](https://github.com/kubewarden/kwctl/issues/333) from kubewarden/renovate/all-patch
@@ -59,7 +69,6 @@
 <a name="v1.1.2"></a>
 ## [v1.1.2] - 2022-08-11
 ### Bug Fixes
-- Disable TUF integration test for now
 - **deps:** update rust crate serde_yaml to 0.9.4
 - **deps:** update rust crate pulldown-cmark to 0.9.2
 
@@ -77,16 +86,17 @@
 - Merge pull request [#272](https://github.com/kubewarden/kwctl/issues/272) from kubewarden/dependabot/cargo/serde_yaml-0.9.1
 - Merge pull request [#273](https://github.com/kubewarden/kwctl/issues/273) from kubewarden/renovate/all-patch
 - Merge pull request [#268](https://github.com/kubewarden/kwctl/issues/268) from viccuad/revert-tuf-test
-- Merge pull request [#267](https://github.com/kubewarden/kwctl/issues/267) from viccuad/main
 
 
 <a name="v1.1.1"></a>
 ## [v1.1.1] - 2022-07-19
 ### Bug Fixes
+- Disable TUF integration test for now
 - Warn and continue when Sigstore TUF repository is broken
 - **deps:** update rust crate serde_yaml to 0.8.26
 
 ### Pull Requests
+- Merge pull request [#267](https://github.com/kubewarden/kwctl/issues/267) from viccuad/main
 - Merge pull request [#265](https://github.com/kubewarden/kwctl/issues/265) from viccuad/tuf-fix
 - Merge pull request [#263](https://github.com/kubewarden/kwctl/issues/263) from kubewarden/renovate/all-patch
 - Merge pull request [#264](https://github.com/kubewarden/kwctl/issues/264) from kubewarden/renovate/lock-file-maintenance
@@ -462,7 +472,8 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc3...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.3.0...HEAD
+[v1.3.0]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc3...v1.3.0
 [v1.3.0-rc3]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc1...v1.3.0-rc3
 [v1.3.0-rc1]: https://github.com/kubewarden/kwctl/compare/v1.1.3...v1.3.0-rc1
 [v1.1.3]: https://github.com/kubewarden/kwctl/compare/v1.1.2...v1.1.3
