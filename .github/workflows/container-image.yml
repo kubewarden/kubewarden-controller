@@ -124,8 +124,7 @@ jobs:
         id: setoutput
         name: Set output parameters
         run: |
-          echo "::set-output name=repository::ghcr.io/${{github.repository_owner}}/kubewarden-controller"
-          echo "::set-output name=tag::${{ env.TAG_NAME }}"
-          echo "::set-output name=artifact::kubewarden-controller-image-${{env.TAG_NAME}}"
-          echo "::set-output name=digest::${{ steps.build-image.outputs.digest }}"
-
+          echo "repository=ghcr.io/${{github.repository_owner}}/kubewarden-controller" >> $GITHUB_OUTPUT
+          echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
+          echo "artifact=kubewarden-controller-image-${{env.TAG_NAME}}" >> $GITHUB_OUTPUT
+          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
