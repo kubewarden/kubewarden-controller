@@ -144,7 +144,7 @@ impl MetadataPrinter {
             }
         }
         table.add_row(row![Fgbl -> "mutating:", metadata.mutating]);
-        table.add_row(row![Fgbl -> "backgroundAudit:", metadata.background_audit]);
+        table.add_row(row![Fgbl -> "background audit support:", metadata.background_audit]);
         table.add_row(row![Fgbl -> "context aware:", metadata.context_aware]);
         table.add_row(row![Fgbl -> "execution mode:", metadata.execution_mode]);
         if metadata.execution_mode == PolicyExecutionMode::KubewardenWapc {
