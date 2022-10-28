@@ -129,10 +129,16 @@ pub struct Metadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<HashMap<String, String>>,
     pub mutating: bool,
+    #[serde(default = "_default_true")]
+    pub background_audit: bool,
     #[serde(default)]
     pub context_aware: bool,
     #[serde(default)]
     pub execution_mode: PolicyExecutionMode,
+}
+
+const fn _default_true() -> bool {
+    true
 }
 
 impl Default for Metadata {
@@ -142,6 +148,7 @@ impl Default for Metadata {
             rules: vec![],
             annotations: Some(HashMap::new()),
             mutating: false,
+            background_audit: true,
             context_aware: false,
             execution_mode: PolicyExecutionMode::KubewardenWapc,
         }
@@ -321,11 +328,35 @@ mod tests {
             "protocolVersion": "v1",
             "rules": [ ],
             "mutating": false,
+            "backgroundAudit": true,
             "contextAware": false,
             "executionMode": "kubewarden-wapc",
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
+        assert_json_eq!(expected, actual);
+        Ok(())
+    }
+
+    #[test]
+    fn metadata_backwards_compatibility() -> Result<(), ()> {
+        // missing backgroundAudit on purpose
+        let json_metadata = json!({
+            "protocolVersion": "v1",
+            "rules": [ ],
+            "mutating": false,
+            "contextAware": false,
+            "executionMode": "kubewarden-wapc",
+        });
+
+        let expected = Metadata {
+            protocol_version: Some(ProtocolVersion::V1),
+            annotations: None,
+            background_audit: true,
+            ..Default::default()
+        };
+
+        let actual: Metadata = serde_json::from_value(json_metadata).unwrap();
         assert_json_eq!(expected, actual);
         Ok(())
     }
@@ -367,6 +398,7 @@ mod tests {
                 "io.kubewarden.policy.author": "Flavio Castelli"
             },
             "mutating": false,
+            "backgroundAudit": true,
             "contextAware": false,
             "executionMode": "kubewarden-wapc",
         });
