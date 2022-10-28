@@ -102,6 +102,7 @@ mod tests {
           resources: ["pods"]
           operations: ["CREATE", "UPDATE"]
         mutating: false
+        backgroundAudit: true
         annotations:
           io.kubewarden.policy.title: {}
         "#,
@@ -150,6 +151,7 @@ mod tests {
           resources: ["pods"]
           operations: ["CREATE", "UPDATE"]
         mutating: false
+        backgroundAudit: true
         annotations:
           io.kubewarden.policy.title: {}
           {}: NOT_VALID
@@ -198,6 +200,7 @@ mod tests {
           resources: ["pods"]
           operations: ["CREATE", "UPDATE"]
         mutating: false
+        backgroundAudit: true
         executionMode: kubewarden-wapc
         "#
         );
@@ -238,6 +241,7 @@ mod tests {
           resources: ["pods"]
           operations: ["CREATE", "UPDATE"]
         mutating: false
+        backgroundAudit: true
         executionMode: opa
         "#,
         );
