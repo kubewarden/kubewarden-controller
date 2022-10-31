@@ -5,6 +5,10 @@ on:
     - 'v*'
     branches:
     - 'main'
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   fossa-scan:
     runs-on: ubuntu-latest

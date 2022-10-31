@@ -1,5 +1,8 @@
 name: End-to-end tests
 
+# Declare default permissions as read only.
+permissions: read-all
+
 on:
   workflow_dispatch:
   schedule:
