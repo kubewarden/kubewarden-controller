@@ -70,7 +70,7 @@ jobs:
           sudo sed -i "s/-dynamic-linker.*/-no-dynamic-linker  -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-no-export-dynamic}/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup rust toolchain
         uses: actions-rs/toolchain@v1
@@ -121,7 +121,7 @@ jobs:
      - build-policy-server-binaries
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Download the policy-server artifacts we've built inside of the previous job
       - name: Download policy-server-x86_64 artifacts
