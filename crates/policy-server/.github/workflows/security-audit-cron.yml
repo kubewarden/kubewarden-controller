@@ -2,6 +2,10 @@ name: Security audit cron job
 on:
   schedule:
     - cron: '0 0 * * *'
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   audit:
     runs-on: ubuntu-latest

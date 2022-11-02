@@ -6,6 +6,10 @@ on:
       - completed
     branches:
       - "v*"
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   release:
     name: Create release

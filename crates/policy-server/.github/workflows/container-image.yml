@@ -5,6 +5,10 @@ on:
     - main
     tags:
     - 'v*'
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   ci:
     # A branch is required, and cannot be dynamic - https://github.com/actions/runner/issues/1493
