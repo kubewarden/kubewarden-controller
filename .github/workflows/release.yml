@@ -3,6 +3,10 @@ on:
   push:
     tags:
     - 'v*'
+
+# Declare default permissions as read only.
+permissions: read-all
+
 jobs:
   ci:
     uses: kubewarden/kubewarden-controller/.github/workflows/ci.yml@main
