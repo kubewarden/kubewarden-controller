@@ -5,10 +5,12 @@ on:
     - main
     tags:
     - 'v*'
+
 jobs:
   ci:
     # A branch is required, and cannot be dynamic - https://github.com/actions/runner/issues/1493
     uses: kubewarden/policy-server/.github/workflows/tests.yml@main
+    permissions: read-all
   build-policy-server-binaries:
     name: Build container image
     runs-on: ubuntu-22.04

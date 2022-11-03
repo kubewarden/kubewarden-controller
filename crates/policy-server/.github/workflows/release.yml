@@ -6,9 +6,12 @@ on:
       - completed
     branches:
       - "v*"
+
 jobs:
   release:
     name: Create release
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
