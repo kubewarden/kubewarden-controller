@@ -87,20 +87,20 @@ jobs:
         run: |
           cargo build --release --target ${{ matrix.targetarch }}-unknown-linux-musl
           mkdir policy-server-${{ matrix.targetarch }}
-          mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/policy-server policy-server-${{ matrix.targetarch }}/
+          mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/policy-server policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}
 
       - name: Generate SBOM
         run: |
           spdx-sbom-generator -f json
           # SBOM files should have "sbom" in the name due the CLO monitor
           # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-          mv bom-cargo.json policy-server-${{ matrix.targetarch }}/policy-server.spdx.json
+          mv bom-cargo.json policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.json
 
       - name: Sign BOM file
         run: |
-          cosign sign-blob --output-certificate policy-server-${{ matrix.targetarch }}/policy-server.spdx.cert \
-            --output-signature policy-server-${{ matrix.targetarch }}/policy-server.spdx.sig \
-            policy-server-${{ matrix.targetarch }}/policy-server.spdx.json
+          cosign sign-blob --output-certificate policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.cert \
+            --output-signature policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.sig \
+            policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.json
         env:
           COSIGN_EXPERIMENTAL: 1
 
@@ -136,8 +136,8 @@ jobs:
           path: artifacts-aarch64
       - name: Move binaries to project root
         run: |
-          mv artifacts-x86_64/policy-server policy-server-x86_64
-          mv artifacts-aarch64/policy-server policy-server-aarch64
+          mv artifacts-x86_64/policy-server-x86_64 policy-server-x86_64
+          mv artifacts-aarch64/policy-server-aarch64 policy-server-aarch64
 
       # Prepare docker environment
       - name: Set up QEMU
