@@ -1,8 +1,5 @@
 name: Build container image
 
-# Declare default permissions as read only.
-permissions: read-all
-
 on:
   workflow_call:
     inputs:
@@ -27,11 +24,11 @@ on:
         description: "Image digest"
         value: ${{ jobs.build.outputs.digest }}
 
-
-
 jobs:
   build:
     name: Build container image
+    permissions:
+      packages: write
     runs-on: ubuntu-latest
     outputs:
       repository: ${{ steps.setoutput.outputs.repository }}
