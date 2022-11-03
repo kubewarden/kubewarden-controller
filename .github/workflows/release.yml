@@ -10,8 +10,13 @@ permissions: read-all
 jobs:
   ci:
     uses: kubewarden/kubewarden-controller/.github/workflows/ci.yml@main
+    permissions: read-all
+
   container-build:
     uses: kubewarden/kubewarden-controller/.github/workflows/container-build.yml@main
+    permissions:
+      id-token: write
+      packages: write
   release:
     permissions:
       id-token: write
