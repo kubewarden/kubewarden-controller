@@ -35,6 +35,8 @@ jobs:
               file_path = `${process.env.GITHUB_WORKSPACE}/${artifact.name}.zip`;
               fs.writeFileSync(file_path, Buffer.from(download.data));
             }
+      - name: 'Unzip build artifacts'
+        run: unzip -n "policy-server-*.zip" -d artifacts
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -46,4 +48,4 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.event.workflow_run.head_branch, '-alpha') || contains(github.event.workflow_run.head_branch, '-beta') || contains(github.event.workflow_run.head_branch, '-rc') }}
           files: |
-            policy-server*
+            artifacts/*
