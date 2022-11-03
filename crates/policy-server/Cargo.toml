@@ -13,7 +13,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 itertools = "0.10.5"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.11" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.12" }
 lazy_static = "1.4.0"
 clap = { version = "4.0", features = [ "cargo", "env" ] }
 k8s-openapi = { version = "0.16.0", default-features = false, features = ["v1_25"] }
