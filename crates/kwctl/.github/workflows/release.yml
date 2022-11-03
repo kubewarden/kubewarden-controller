@@ -6,13 +6,11 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
-# Declare default permissions as read only.
-permissions: read-all
-
 jobs:
   ci:
     # A branch is required, and cannot be dynamic - https://github.com/actions/runner/issues/1493
     uses: kubewarden/kwctl/.github/workflows/tests.yml@main
+    permissions: read-all
 
   build-linux-binaries:
     name: Build linux binary
@@ -247,6 +245,8 @@ jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
       - build-linux-binaries
       - build-darwin-binaries
