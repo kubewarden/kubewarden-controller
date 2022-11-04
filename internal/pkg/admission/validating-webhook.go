@@ -95,7 +95,7 @@ func (r *Reconciler) validatingWebhookConfiguration(
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
 				MatchPolicy:             policy.GetMatchPolicy(),
-				NamespaceSelector:       policy.GetNamespaceSelector(),
+				NamespaceSelector:       policy.GetNamespaceSelector(r.DeploymentsNamespace),
 				ObjectSelector:          policy.GetObjectSelector(),
 				SideEffects:             sideEffects,
 				TimeoutSeconds:          policy.GetTimeoutSeconds(),

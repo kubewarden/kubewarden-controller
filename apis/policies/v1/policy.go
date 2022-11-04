@@ -90,7 +90,7 @@ type Policy interface {
 	GetRules() []admissionregistrationv1.RuleWithOperations
 	GetFailurePolicy() *admissionregistrationv1.FailurePolicyType
 	GetMatchPolicy() *admissionregistrationv1.MatchPolicyType
-	GetNamespaceSelector() *metav1.LabelSelector
+	GetNamespaceSelector(deploymentNamespace string) *metav1.LabelSelector
 	GetObjectSelector() *metav1.LabelSelector
 	GetTimeoutSeconds() *int32
 	GetObjectMeta() *metav1.ObjectMeta
