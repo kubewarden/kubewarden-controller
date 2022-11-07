@@ -32,7 +32,7 @@ pub(crate) fn rm(uri: &str) -> Result<()> {
                 #[allow(unused_must_use)]
                 {
                     // try to clean up empty dirs. Ignore errors.
-                    std::fs::remove_dir(store.root.join(&store_component));
+                    std::fs::remove_dir(store.root.join(store_component));
                 }
             });
     }
