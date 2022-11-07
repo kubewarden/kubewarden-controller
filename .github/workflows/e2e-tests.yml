@@ -12,6 +12,8 @@ jobs:
   build:
     name: "Build"
     uses: kubewarden/kubewarden-controller/.github/workflows/container-image.yml@main
+    permissions:
+      packages: write
     with:
       push-image: false
       generate-sbom: false
