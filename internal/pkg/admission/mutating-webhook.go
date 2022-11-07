@@ -95,7 +95,7 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
 				MatchPolicy:             policy.GetMatchPolicy(),
-				NamespaceSelector:       policy.GetNamespaceSelector(),
+				NamespaceSelector:       policy.GetUpdatedNamespaceSelector(r.DeploymentsNamespace),
 				ObjectSelector:          policy.GetObjectSelector(),
 				SideEffects:             sideEffects,
 				TimeoutSeconds:          policy.GetTimeoutSeconds(),
