@@ -9,7 +9,7 @@ import (
 func TestGetNamespaceSelectorWithEmptyNamespaceSelector(t *testing.T) {
 	kubewardenNs := "kubewarden"
 	c := ClusterAdmissionPolicy{}
-	nsSelector := c.GetNamespaceSelector(kubewardenNs)
+	nsSelector := c.GetUpdatedNamespaceSelector(kubewardenNs)
 	isKubewardenNsFound := isNamespaceFoundInSelector(nsSelector, kubewardenNs)
 
 	if !isKubewardenNsFound {
@@ -32,7 +32,7 @@ func TestGetNamespaceSelectorWithExistingMatchExpressions(t *testing.T) {
 			},
 		},
 	}
-	nsSelector := policy.GetNamespaceSelector(kubewardenNs)
+	nsSelector := policy.GetUpdatedNamespaceSelector(kubewardenNs)
 	isKubewardenNsFound := isNamespaceFoundInSelector(nsSelector, kubewardenNs)
 
 	if !isKubewardenNsFound {
