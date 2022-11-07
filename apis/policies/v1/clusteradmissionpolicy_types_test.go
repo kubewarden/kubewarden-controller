@@ -1,8 +1,9 @@
 package v1
 
 import (
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGetNamespaceSelectorWithEmptyNamespaceSelector(t *testing.T) {
@@ -18,7 +19,7 @@ func TestGetNamespaceSelectorWithEmptyNamespaceSelector(t *testing.T) {
 
 func TestGetNamespaceSelectorWithExistingMatchExpressions(t *testing.T) {
 	kubewardenNs := "kubewarden"
-	c := ClusterAdmissionPolicy{
+	policy := ClusterAdmissionPolicy{
 		Spec: ClusterAdmissionPolicySpec{
 			NamespaceSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
@@ -31,7 +32,7 @@ func TestGetNamespaceSelectorWithExistingMatchExpressions(t *testing.T) {
 			},
 		},
 	}
-	nsSelector := c.GetNamespaceSelector(kubewardenNs)
+	nsSelector := policy.GetNamespaceSelector(kubewardenNs)
 	isKubewardenNsFound := isNamespaceFoundInSelector(nsSelector, kubewardenNs)
 
 	if !isKubewardenNsFound {
