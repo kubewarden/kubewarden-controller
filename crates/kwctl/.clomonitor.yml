@@ -1,0 +1,7 @@
+# CLOMonitor metadata file
+# This file must be located at the root of the repository
+
+# Checks exemptions
+exemptions:
+  - check: artifacthub_badge # Check identifier (see https://github.com/cncf/clomonitor/blob/main/docs/checks.md#exemptions)
+    reason: "kwctl is a cli binary, can't be published in ArtifactHub" # Justification of this exemption (mandatory, it will be displayed on the UI)
