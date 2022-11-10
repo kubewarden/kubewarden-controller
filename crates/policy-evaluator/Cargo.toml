@@ -25,7 +25,7 @@ kube = { version = "0.76.0", default-features = false, features = ["client", "ru
 k8s-openapi = { version = "0.16.0", default-features = false }
 kubewarden-policy-sdk = "0.8.2"
 lazy_static = "1.4.0"
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.13" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.14" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
