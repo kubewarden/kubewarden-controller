@@ -527,6 +527,35 @@ pub fn build_cli() -> Command {
                         .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details")
                 )
         )
+        .subcommand(
+            Command::new("save")
+                .about("save policies in tar file")
+                .arg(
+                    Arg::new("policies")
+                        .num_args(1..)
+                        .required(true)
+                        .help("list of policies to save")
+                )
+                .arg(
+                    Arg::new("output")
+                    .long("output")
+                    .short('o')
+                    .required(true)
+                    .value_name("PATH")
+                    .help("path where the file will be stored")
+                )
+
+        )
+        .subcommand(
+            Command::new("load")
+                .about("load policies from tar file")
+                .arg(
+                    Arg::new("input")
+                        .long("input")
+                        .required(true)
+                        .help("load policies from tarball")
+                )
+        )
         .long_version(VERSION_AND_BUILTINS.as_str())
         .subcommand_required(true)
         .arg_required_else_help(true)
