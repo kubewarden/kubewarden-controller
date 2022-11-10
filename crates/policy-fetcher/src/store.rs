@@ -278,6 +278,8 @@ fn is_known_remote_scheme(scheme: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Store;
+    use rstest::rstest;
 
     #[test]
     fn keep_policy_full_path_unix() {
@@ -381,6 +383,43 @@ mod tests {
             )?,
             "/https/example.com:1234/some/path".to_string()
         );
+        Ok(())
+    }
+
+    #[rstest(
+        input_url,
+        input_policy_path,
+        expected_relative_path,
+        case(
+            "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.2.2",
+            PolicyPath::PrefixAndFilename,
+            "registry/ghcr.io/kubewarden/policies/pod-privileged:v0.2.2"
+        ),
+        case(
+            "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm ",
+            PolicyPath::PrefixAndFilename,
+            "https/github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm"
+        ),
+        case(
+            "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.2.2",
+            PolicyPath::PrefixOnly,
+            "registry/ghcr.io/kubewarden/policies"
+        ),
+        case(
+            "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm ",
+            PolicyPath::PrefixOnly,
+            "https/github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6"
+        )
+    )]
+    fn policy_full_path(
+        input_url: &str,
+        input_policy_path: PolicyPath,
+        expected_relative_path: &str,
+    ) -> Result<()> {
+        let default = Store::default();
+        let path = default.policy_full_path(input_url, input_policy_path)?;
+        assert_eq!(default.root.join(expected_relative_path), path);
+
         Ok(())
     }
 }
