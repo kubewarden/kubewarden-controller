@@ -102,3 +102,23 @@ kwctl() {
     [ "$status" -ne 0 ]
     [[ "$output" == "Error: Wrong value inside of policy's metatada for 'executionMode'. This policy has been created using Rego" ]]
 }
+
+@test "save and load" {
+    kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
+    kwctl policies
+    [[ $(echo "$output" | wc -l) -eq 6 ]]
+    [[ "$output" =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9" ]]
+    [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm" ]]
+    kwctl save --output policies.tar.gz registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9 https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
+    kwctl rm registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    kwctl rm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
+    kwctl policies
+    [ "$output" = "" ]
+    kwctl load --input policies.tar.gz
+    kwctl policies
+    [[ $(echo "$output" | wc -l) -eq 6 ]]
+    [[ "$output" =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9" ]]
+    [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm" ]]
+    rm policies.tar.gz
+}
