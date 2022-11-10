@@ -83,7 +83,27 @@ impl Store {
     // filename of the policy will be omitted, otherwise it will be
     // included.
     pub fn policy_full_path(&self, url: &str, policy_path: PolicyPath) -> Result<PathBuf> {
+        let path = self.policy_path(url, policy_path)?;
+
+        Ok(self.root.join(path))
+    }
+
+    // Returns the path of a policy coming from the URL `url`
+    // without the store. If `policy_path` is set to `PrefixOnly`, the
+    // filename of the policy will be omitted, otherwise it will be
+    // included.
+    pub fn policy_path(&self, url: &str, policy_path: PolicyPath) -> Result<PathBuf> {
         let url = Url::parse(url)?;
+        let filename = Store::policy_file_name(&url);
+        let policy_prefix = self.policy_prefix(&url);
+
+        Ok(match policy_path {
+            PolicyPath::PrefixOnly => policy_prefix,
+            PolicyPath::PrefixAndFilename => policy_prefix.join(filename),
+        })
+    }
+
+    fn policy_file_name(url: &Url) -> &str {
         let filename = url.path().split('/').last().unwrap();
 
         // In Windows we encode the filename with base64, so it can
@@ -93,11 +113,7 @@ impl Store {
         let filename: String =
             base64::encode_config(filename.to_string().as_bytes(), base64::URL_SAFE_NO_PAD);
 
-        let policy_prefix = self.policy_prefix(&url);
-        Ok(match policy_path {
-            PolicyPath::PrefixOnly => self.root.join(policy_prefix),
-            PolicyPath::PrefixAndFilename => self.root.join(policy_prefix).join(filename),
-        })
+        filename
     }
 
     // Returns the host and port (if any) as a string.
@@ -419,6 +435,43 @@ mod tests {
         let default = Store::default();
         let path = default.policy_full_path(input_url, input_policy_path)?;
         assert_eq!(default.root.join(expected_relative_path), path);
+
+        Ok(())
+    }
+
+    #[rstest(
+        input_url,
+        input_policy_path,
+        expected_path,
+        case(
+            "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.2.2",
+            PolicyPath::PrefixAndFilename,
+            "registry/ghcr.io/kubewarden/policies/pod-privileged:v0.2.2"
+        ),
+        case(
+            "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm ",
+            PolicyPath::PrefixAndFilename,
+            "https/github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm"
+        ),
+        case(
+            "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.2.2",
+            PolicyPath::PrefixOnly,
+            "registry/ghcr.io/kubewarden/policies"
+        ),
+        case(
+            "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm ",
+            PolicyPath::PrefixOnly,
+            "https/github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6"
+        )
+    )]
+    fn policy_path(
+        input_url: &str,
+        input_policy_path: PolicyPath,
+        expected_path: &str,
+    ) -> Result<()> {
+        let default = Store::default();
+        let path = default.policy_path(input_url, input_policy_path)?;
+        assert_eq!(PathBuf::from(expected_path), path);
 
         Ok(())
     }
