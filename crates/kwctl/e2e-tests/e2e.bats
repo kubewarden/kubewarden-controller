@@ -106,6 +106,8 @@ kwctl() {
 @test "save and load" {
     kwctl pull registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
+    export privileged_registry_sha=$(sha256sum $XDG_CACHE_HOME/kubewarden/store/registry/ghcr.io/kubewarden/tests/pod-privileged:v0.1.9)
+    export privileged_https_sha=$(sha256sum $XDG_CACHE_HOME/kubewarden/store/https/github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm)
     kwctl policies
     [[ $(echo "$output" | wc -l) -eq 6 ]]
     [[ "$output" =~ "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9" ]]
@@ -120,5 +122,7 @@ kwctl() {
     [[ $(echo "$output" | wc -l) -eq 6 ]]
     [[ "$output" =~ "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9" ]]
     [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm" ]]
+    [[ "$privileged_registry_sha" = $(sha256sum $XDG_CACHE_HOME/kubewarden/store/registry/ghcr.io/kubewarden/tests/pod-privileged:v0.1.9) ]]
+    [[ "$privileged_https_sha" = $(sha256sum $XDG_CACHE_HOME/kubewarden/store/https/github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm) ]]
     rm policies.tar.gz
-}
+ }
