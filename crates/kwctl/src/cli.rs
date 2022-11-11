@@ -529,7 +529,7 @@ pub fn build_cli() -> Command {
         )
         .subcommand(
             Command::new("save")
-                .about("save policies in tar file")
+                .about("save policies in tar.gz file")
                 .arg(
                     Arg::new("policies")
                         .num_args(1..)
@@ -548,7 +548,7 @@ pub fn build_cli() -> Command {
         )
         .subcommand(
             Command::new("load")
-                .about("load policies from tar file")
+                .about("load policies from a tar.gz file")
                 .arg(
                     Arg::new("input")
                         .long("input")
