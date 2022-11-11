@@ -391,7 +391,7 @@ async fn main() -> Result<()> {
         Some("load") => {
             if let Some(matches) = matches.subcommand_matches("load") {
                 let input = matches.get_one::<String>("input").unwrap();
-                load(input.to_string())?;
+                load(input)?;
             }
             Ok(())
         }
