@@ -23,7 +23,7 @@ pub struct Evaluator {
 
 impl Evaluator {
     pub fn from_path(policy_path: &Path, host_callbacks: HostCallbacks) -> Result<Evaluator> {
-        Evaluator::new(&std::fs::read(&policy_path)?, host_callbacks)
+        Evaluator::new(&std::fs::read(policy_path)?, host_callbacks)
     }
 
     pub fn new(policy_contents: &[u8], host_callbacks: HostCallbacks) -> Result<Evaluator> {
