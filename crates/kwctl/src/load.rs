@@ -8,10 +8,13 @@ use tar::Archive;
 pub(crate) fn load(source_path: &str) -> Result<()> {
     let default_store = Store::default();
     let destination_path = default_store.root;
-    let tar_gz = File::open(source_path).map_err(|e| anyhow!("cannot open file {}: {}", source_path, e))?;
+    let tar_gz =
+        File::open(source_path).map_err(|e| anyhow!("cannot open file {}: {}", source_path, e))?;
     let tar = GzDecoder::new(tar_gz);
     let mut archive = Archive::new(tar);
-    archive.unpack(destination_path).map_err(|e| anyhow!("cannot unpack file {}: {}", source_path, e))?;
+    archive
+        .unpack(destination_path)
+        .map_err(|e| anyhow!("cannot unpack file {}: {}", source_path, e))?;
 
     Ok(())
 }
