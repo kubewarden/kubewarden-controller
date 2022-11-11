@@ -541,7 +541,7 @@ pub fn build_cli() -> Command {
                     .long("output")
                     .short('o')
                     .required(true)
-                    .value_name("PATH")
+                    .value_name("FILE")
                     .help("path where the file will be stored")
                 )
 
