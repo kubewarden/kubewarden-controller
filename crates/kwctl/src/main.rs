@@ -9,6 +9,7 @@ extern crate serde_yaml;
 
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
@@ -29,6 +30,8 @@ use tracing_subscriber::{
     fmt,
 };
 
+use crate::load::load;
+use crate::save::save;
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_evaluator::policy_fetcher::{
     registry::Registry,
@@ -49,11 +52,13 @@ mod backend;
 mod cli;
 mod completions;
 mod inspect;
+mod load;
 mod policies;
 mod pull;
 mod push;
 mod rm;
 mod run;
+mod save;
 mod scaffold;
 mod utils;
 mod verify;
@@ -371,6 +376,22 @@ async fn main() -> Result<()> {
                 let registry = Registry::new();
                 let digest = registry.manifest_digest(uri, sources.as_ref()).await?;
                 println!("{}@{}", uri, digest);
+            }
+            Ok(())
+        }
+        Some("save") => {
+            if let Some(matches) = matches.subcommand_matches("save") {
+                let policies = matches.get_many::<String>("policies").unwrap();
+                let output = matches.get_one::<String>("output").unwrap();
+
+                save(policies.collect_vec(), output)?;
+            }
+            Ok(())
+        }
+        Some("load") => {
+            if let Some(matches) = matches.subcommand_matches("load") {
+                let input = matches.get_one::<String>("input").unwrap();
+                load(input)?;
             }
             Ok(())
         }
