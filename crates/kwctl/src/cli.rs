@@ -529,7 +529,7 @@ pub fn build_cli() -> Command {
         )
         .subcommand(
             Command::new("save")
-                .about("save policies in tar.gz file")
+                .about("save policies to a tar.gz file")
                 .arg(
                     Arg::new("policies")
                         .num_args(1..)
