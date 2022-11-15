@@ -96,6 +96,10 @@ together with the signature and certificate used to signed it in the
 
 [Roadmap](https://github.com/orgs/kubewarden/projects/2) for the Kubewarden project.
 
+# Governance
+
+See our [governance document](https://github.com/kubewarden/rfc/blob/main/rfc/0013-governance.md).
+
 # Community
 
 - Slack: [#kubewarden](https://kubernetes.slack.com/archives/kubewarden) and [#kubewarden-dev](https://kubernetes.slack.com/archives/kubewarden-dev) 
