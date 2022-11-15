@@ -79,8 +79,11 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         }
     };
 
-    let unix_epoch =
-        DateTime::<chrono::Utc>::from_utc(chrono::NaiveDateTime::from_timestamp(0, 0), chrono::Utc);
+    let unix_epoch = DateTime::<chrono::Utc>::from_utc(
+        chrono::NaiveDateTime::from_timestamp_opt(0, 0)
+            .ok_or_else(|| anyhow!("cannot create timestamp"))?,
+        chrono::Utc,
+    );
     let dt = unix_epoch
         .checked_add_signed(Duration::nanoseconds(nanoseconds))
         .ok_or_else(|| anyhow!("time.date: overflow when building date"))?
@@ -90,8 +93,11 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 }
 
 pub fn date_local(ns: i64) -> Result<serde_json::Value> {
-    let unix_epoch =
-        DateTime::<chrono::Utc>::from_utc(chrono::NaiveDateTime::from_timestamp(0, 0), chrono::Utc);
+    let unix_epoch = DateTime::<chrono::Utc>::from_utc(
+        chrono::NaiveDateTime::from_timestamp_opt(0, 0)
+            .ok_or_else(|| anyhow!("cannot create timestamp"))?,
+        chrono::Utc,
+    );
     let dt = unix_epoch
         .checked_add_signed(Duration::nanoseconds(ns))
         .ok_or_else(|| anyhow!("time.date: overflow when building date"))?
