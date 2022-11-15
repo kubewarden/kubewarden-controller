@@ -103,8 +103,8 @@ impl Store {
         })
     }
 
-    fn policy_file_name(url: &Url) -> &str {
-        let filename = url.path().split('/').last().unwrap();
+    fn policy_file_name(url: &Url) -> String {
+        let filename = url.path().split('/').last().unwrap().to_string();
 
         // In Windows we encode the filename with base64, so it can
         // contain special characters like `:` that are not allowed in
