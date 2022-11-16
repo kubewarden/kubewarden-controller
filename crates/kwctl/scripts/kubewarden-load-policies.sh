@@ -24,30 +24,26 @@ pushPolicy() {
 
 while [[ $# -gt 0 ]]; do
     key="$1"
+    shift
     case $key in
         -r|--registry)
-        registry="$2"
-        shift # past argument
+        registry="$1"
         shift # past value
         ;;
         -l|--policies-list)
-        list="$2"
-        shift # past argument
+        list="$1"
         shift # past value
         ;;
         -p|--policies)
-        policies="$2"
-        shift # past argument
+        policies="$1"
         shift # past value
         ;;
         -s|--sources-path)
-        sourcesPath="$2"
-        shift # past argument
+        sourcesPath="$1"
         shift # past value
         ;;
         -h|--help)
         help="true"
-        shift
         ;;
         *)
         usage
