@@ -59,7 +59,7 @@ if [[ -v help ]]; then
     usage
     exit 0
 fi
-if [[ -z $registry ]]; then
+if [[ -z ${registry:-} ]]; then
     usage
     exit 1
 fi
