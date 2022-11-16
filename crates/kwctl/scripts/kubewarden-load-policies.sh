@@ -16,9 +16,9 @@ usage () {
 pushPolicy() {
     newPolicyUrl=$1
     if [[ -n $sourcesPath ]]; then
-        kwctl push $policy $newPolicyUrl --sources-path $sourcesPath
+        kwctl push "$policy" "$newPolicyUrl" --sources-path "$sourcesPath"
     else
-        kwctl push $policy $newPolicyUrl
+        kwctl push "$policy" "$newPolicyUrl"
     fi
 }
 
@@ -64,24 +64,23 @@ if [[ -z $registry ]]; then
     exit 1
 fi
 
-kwctl load --input ${policies}
+kwctl load --input "${policies}"
 
 policies=()
-while read policy; do
+while read -r policy; do
     policies+=("${policy}");
-done < ${list}
+done < "${list}"
 
 for policy in "${policies[@]}"; do
     if [[ $policy == registry://* ]]; then
-       oldPolicyUrl=$(awk -Fregistry:// '{print $2}' <<< $policy)
+       oldPolicyUrl=$(awk -Fregistry:// '{print $2}' <<< "$policy")
        oldRegistry=$(echo "$oldPolicyUrl" | cut -f1 -d"/")
        newPolicyUrl="registry://${oldPolicyUrl/$oldRegistry/$registry}"
-       pushPolicy $newPolicyUrl
+       pushPolicy "$newPolicyUrl"
     fi
     if [[ $policy == https://* ]]; then
-       oldPolicyUrl=$(awk -Fhttps:// '{print $2}' <<< $policy)
-       oldPolicyUrlWithoutDomain=$(awk -F/ '{print $2}' <<< $policy)
+       oldPolicyUrl=$(awk -Fhttps:// '{print $2}' <<< "$policy")
        newPolicyUrl="registry://$registry/${oldPolicyUrl#*/}"
-       pushPolicy $newPolicyUrl
+       pushPolicy "$newPolicyUrl"
     fi
 done

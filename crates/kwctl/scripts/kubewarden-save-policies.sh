@@ -11,7 +11,6 @@ usage () {
     echo "  [-h|--help] Usage message"
 }
 
-POSITIONAL=()
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
@@ -41,16 +40,17 @@ if [[ -v help ]]; then
     exit 0
 fi
 
-pulled=""
+pulled=()
 while IFS= read -r i; do
     [ -z "${i}" ] && continue
     if kwctl pull "${i}" > /dev/null 2>&1; then
         echo "Policy pull success: ${i}"
-        pulled="${pulled} ${i}"
+        pulled+=("${i}")
     else
         echo "Policy pull failed: ${i}"
     fi
 done < "${list}"
 
-echo "Creating ${policies} with $(echo ${pulled} | wc -w | tr -d '[:space:]') policies"
-kwctl  save $(echo ${pulled}) --output ${policies}
+echo "Creating ${policies} with ${#pulled[@]} policies"
+kwctl save "${pulled[@]}" --output "${policies}"
+
