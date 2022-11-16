@@ -25,7 +25,6 @@ while [[ $# -gt 0 ]]; do
         ;;
         -h|--help)
         help="true"
-        shift
         ;;
         *)
         usage
