@@ -34,3 +34,11 @@ jobs:
         if: always()
         run: |
           docker rm -f ${{ env.CONTAINER_ID }}
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - run: shellcheck $(find scripts/ -name '*.sh')
