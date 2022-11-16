@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 policies="kubewarden-policies.tar.gz"
 list="kubewarden-policies.txt"
 
@@ -53,13 +55,13 @@ while [[ $# -gt 0 ]]; do
         ;;
     esac
 done
+if [[ -v help ]]; then
+    usage
+    exit 0
+fi
 if [[ -z $registry ]]; then
     usage
     exit 1
-fi
-if [[ $help ]]; then
-    usage
-    exit 0
 fi
 
 kwctl load --input ${policies}

@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 policies="kubewarden-policies.tar.gz"
 list="kubewarden-policies.txt"
 
@@ -34,7 +36,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ $help ]]; then
+if [[ -v help ]]; then
     usage
     exit 0
 fi
