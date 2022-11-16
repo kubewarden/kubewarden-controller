@@ -1,4 +1,4 @@
-name: Airgap e2e test
+name: Airgap
 on:
   - push
   - pull_request
@@ -7,7 +7,7 @@ on:
 permissions: read-all
 
 jobs:
-  airgap-test:
+  airgap-e2e-test:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
@@ -19,13 +19,13 @@ jobs:
       - name: Install kwctl
         run: cargo install --path .
       - name: Save policies
-        run: ./kubewarden-save-policies.sh --policies-list e2e-tests/airgap/policies.txt --policies policies.tar.gz
+        run: ./scripts/kubewarden-save-policies.sh --policies-list e2e-tests/airgap/policies.txt --policies policies.tar.gz
       - name: Remove policies from store
         run: |
           kwctl rm registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
           kwctl rm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm
       - name: Load policies
-        run: ./kubewarden-load-policies.sh --policies policies.tar.gz --policies-list e2e-tests/airgap/policies.txt --registry localhost:5000 --sources-path e2e-tests/airgap/insecure.yml
+        run: ./scripts/kubewarden-load-policies.sh --policies policies.tar.gz --policies-list e2e-tests/airgap/policies.txt --registry localhost:5000 --sources-path e2e-tests/airgap/insecure.yml
       - name: Verify policies in local registry
         run: |
           kwctl pull registry://localhost:5000/kubewarden/policies/capabilities-psp:v0.1.9 --sources-path e2e-tests/airgap/insecure.yml
