@@ -73,12 +73,16 @@ done < "${list}"
 
 for policy in "${policies[@]}"; do
     if [[ $policy == registry://* ]]; then
+       # replace registry with the one provided as parameter.
+       # e.g. registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9 -> registry://localhost:5000/kubewarden/policies/capabilities-psp:v0.1.9
        oldPolicyUrl=$(awk -Fregistry:// '{print $2}' <<< "$policy")
        oldRegistry=$(echo "$oldPolicyUrl" | cut -f1 -d"/")
        newPolicyUrl="registry://${oldPolicyUrl/$oldRegistry/$registry}"
        pushPolicy "$newPolicyUrl"
     fi
     if [[ $policy == https://* ]]; then
+       # replace registry with the one provided as parameter.
+       # e.g. https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm -> registry://localhost:5000/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm
        oldPolicyUrl=$(awk -Fhttps:// '{print $2}' <<< "$policy")
        newPolicyUrl="registry://$registry/${oldPolicyUrl#*/}"
        pushPolicy "$newPolicyUrl"
