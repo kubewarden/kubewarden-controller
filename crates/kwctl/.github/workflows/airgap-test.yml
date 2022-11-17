@@ -1,0 +1,44 @@
+name: Airgap
+on:
+  - push
+  - pull_request
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  airgap-e2e-test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.5.0
+      - name: Run registry
+        run: |
+          export CONTAINER_ID=$(docker run -d -p 5000:5000 --name registry registry:2) 
+          echo "CONTAINER_ID=${CONTAINER_ID}" >> $GITHUB_ENV
+      - name: Install kwctl
+        run: cargo install --path .
+      - name: Save policies
+        run: ./scripts/kubewarden-save-policies.sh --policies-list e2e-tests/airgap/policies.txt --policies policies.tar.gz
+      - name: Remove policies from store
+        run: |
+          kwctl rm registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+          kwctl rm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm
+      - name: Load policies
+        run: ./scripts/kubewarden-load-policies.sh --policies policies.tar.gz --policies-list e2e-tests/airgap/policies.txt --registry localhost:5000 --sources-path e2e-tests/airgap/insecure.yml
+      - name: Verify policies in local registry
+        run: |
+          kwctl pull registry://localhost:5000/kubewarden/tests/pod-privileged:v0.1.9 --sources-path e2e-tests/airgap/insecure.yml
+          kwctl pull registry://localhost:5000/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm --sources-path e2e-tests/airgap/insecure.yml
+      - name: Clean up - delete registry
+        if: always()
+        run: |
+          docker rm -f ${{ env.CONTAINER_ID }}
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - run: shellcheck $(find scripts/ -name '*.sh')
