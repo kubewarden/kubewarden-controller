@@ -161,3 +161,231 @@ impl CertificatePool {
         chains
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::callback_handler::verify_certificate;
+    use chrono::Utc;
+    use kubewarden_policy_sdk::host_capabilities::crypto::{Certificate, CertificateEncoding};
+    use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
+
+    const ROOT_CA1_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIICSTCCAfCgAwIBAgIUQS1sQWI6HCOK5vsO2DDHqWZER7swCgYIKoZIzj0EAwIw
+gYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdCYXZhcmlhMRIwEAYDVQQHEwlOdXJl
+bWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4xGzAZBgNVBAsTEkt1YmV3YXJkZW4g
+Um9vdCBDQTEbMBkGA1UEAxMSS3ViZXdhcmRlbiBSb290IENBMB4XDTIyMTEyNTE2
+MTcwMFoXDTI3MTEyNDE2MTcwMFowgYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdC
+YXZhcmlhMRIwEAYDVQQHEwlOdXJlbWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4x
+GzAZBgNVBAsTEkt1YmV3YXJkZW4gUm9vdCBDQTEbMBkGA1UEAxMSS3ViZXdhcmRl
+biBSb290IENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaCb4QEa4/4rTYBoK
+Bqfjiuc7bzGbOPox4WIA9UJaTRbdD9vEaxCKDztvAZfv8txr6rJJE/mkFqkXJZoP
+NADD2aNCMEAwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+BBYEFPuoSG9XuAy5MN3cpZmptH8pfu0PMAoGCCqGSM49BAMCA0cAMEQCIH6foAtH
+M1glopoEWuk7LbCR5Zsg7Yhv+otAWbP8uQunAiB7bXV4HbW9Y5dDVn4uHvJ3j9Jc
+6gBcoi4XVyawLUiZkQ==
+-----END CERTIFICATE-----";
+
+    // this intermediate certificate was built using ROOT_CA1_PEM
+    const INTERMEDIATE_CA1_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIIClDCCAjmgAwIBAgIUAzsJl3TEWqsFlWPNbJgt0X5heawwCgYIKoZIzj0EAwIw
+gYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdCYXZhcmlhMRIwEAYDVQQHEwlOdXJl
+bWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4xGzAZBgNVBAsTEkt1YmV3YXJkZW4g
+Um9vdCBDQTEbMBkGA1UEAxMSS3ViZXdhcmRlbiBSb290IENBMB4XDTIyMTEyNTE2
+MTcwMFoXDTMyMTEyMjE2MTcwMFowgZIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdC
+YXZhcmlhMRIwEAYDVQQHEwlOdXJlbWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4x
+IzAhBgNVBAsTGkt1YmV3YXJkZW4gSW50ZXJtZWRpYXRlIENBMSMwIQYDVQQDExpL
+dWJld2FyZGVuIEludGVybWVkaWF0ZSBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH
+A0IABO9YOVQTb1GgIgYprNIfqDNwGHfXc0PJ7Nmf/+zypBGOoGeldLA44aVWQyAj
+VXbEHR27G4LdtYhwMmLUyk1iqrqjezB5MA4GA1UdDwEB/wQEAwIBBjATBgNVHSUE
+DDAKBggrBgEFBQcDAzASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBRxoNzy
+5uxNFY0wnkUe73yehMn5kzAfBgNVHSMEGDAWgBT7qEhvV7gMuTDd3KWZqbR/KX7t
+DzAKBggqhkjOPQQDAgNJADBGAiEAk2kTo4YrCNuUhCsV/3ziu8PHX+b6Rf8G6Nkz
+3jKQjYsCIQDpKd/2J7gKujk2mtWZkNiEvmP1JspVjR+OumHpWBLV+Q==
+-----END CERTIFICATE-----";
+
+    const ROOT_CA2_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIICSzCCAfCgAwIBAgIUOZnBI4X6K3lySVpSwViYgIQwii0wCgYIKoZIzj0EAwIw
+gYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdCYXZhcmlhMRIwEAYDVQQHEwlOdXJl
+bWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4xGzAZBgNVBAsTEkt1YmV3YXJkZW4g
+Um9vdCBDQTEbMBkGA1UEAxMSS3ViZXdhcmRlbiBSb290IENBMB4XDTIyMTEyNTE2
+MTgwMFoXDTI3MTEyNDE2MTgwMFowgYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdC
+YXZhcmlhMRIwEAYDVQQHEwlOdXJlbWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4x
+GzAZBgNVBAsTEkt1YmV3YXJkZW4gUm9vdCBDQTEbMBkGA1UEAxMSS3ViZXdhcmRl
+biBSb290IENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0+9UZU48ZVwDyJel
+ti1DseAdbHngQwcouX9eSb9yDe1JCcDWA3VttgoHA3D85lZ4x6eIgNiiId1x3Qcm
+8etlpqNCMEAwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0O
+BBYEFGiLnKXIbexCZ6hgSfI78yti0XBeMAoGCCqGSM49BAMCA0kAMEYCIQCUT5FU
+Ig4B8SE3NuUhOTpsO6NUJBSuj73tHU7o6BQrIwIhAJzPeTZWJK10gO7aG6jjI4io
+rwDBTtan3a2vXpmAbOmg
+-----END CERTIFICATE-----";
+
+    // cert with notAfter=Nov 25 16:19:00 2022 GMT
+    const INTERMEDIATE_CA2_EXPIRED_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIICkzCCAjmgAwIBAgIUNVpbvakL2qlht3uMDUg2iHnV50cwCgYIKoZIzj0EAwIw
+gYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdCYXZhcmlhMRIwEAYDVQQHEwlOdXJl
+bWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4xGzAZBgNVBAsTEkt1YmV3YXJkZW4g
+Um9vdCBDQTEbMBkGA1UEAxMSS3ViZXdhcmRlbiBSb290IENBMB4XDTIyMTEyNTE3
+MDQwMFoXDTIyMTEyNTE3MDUwMFowgZIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdC
+YXZhcmlhMRIwEAYDVQQHEwlOdXJlbWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4x
+IzAhBgNVBAsTGkt1YmV3YXJkZW4gSW50ZXJtZWRpYXRlIENBMSMwIQYDVQQDExpL
+dWJld2FyZGVuIEludGVybWVkaWF0ZSBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH
+A0IABMrPXVqh2LOLdE/J2fZIcDWZe6xaLGb61AOykiyN3yd1hwL2PSYL6vFGhrZ4
+oMFvodJKdC2tXFjyrRQeI5tJdPujezB5MA4GA1UdDwEB/wQEAwIBBjATBgNVHSUE
+DDAKBggrBgEFBQcDAzASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBT0OaT5
+auXyLvYjL9T9tJejtfAYMTAfBgNVHSMEGDAWgBRoi5ylyG3sQmeoYEnyO/MrYtFw
+XjAKBggqhkjOPQQDAgNIADBFAiEAvs57i6LNa44NntViOfyPIDEPtjzuGR1tWThL
+1Hs3KgYCIFDHSvzZkIk1LtW+oHdiWzd7nWrcZcdfsTbMK5NIR2B4
+-----END CERTIFICATE-----";
+
+    // cert with not_before=2035-01-05T00:00:00Z
+    const INTERMEDIATE_CA_NOT_BEFORE_PEM: &str = "-----BEGIN CERTIFICATE-----
+MIICkzCCAjmgAwIBAgIUWzgNojMNxpg7g23KELyQzv4vE1MwCgYIKoZIzj0EAwIw
+gYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdCYXZhcmlhMRIwEAYDVQQHEwlOdXJl
+bWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4xGzAZBgNVBAsTEkt1YmV3YXJkZW4g
+Um9vdCBDQTEbMBkGA1UEAxMSS3ViZXdhcmRlbiBSb290IENBMB4XDTM1MDEwNTAw
+MDAwMFoXDTM2MDEwNTAwMDAwMFowgZIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdC
+YXZhcmlhMRIwEAYDVQQHEwlOdXJlbWJlcmcxEzARBgNVBAoTCkt1YmV3YXJkZW4x
+IzAhBgNVBAsTGkt1YmV3YXJkZW4gSW50ZXJtZWRpYXRlIENBMSMwIQYDVQQDExpL
+dWJld2FyZGVuIEludGVybWVkaWF0ZSBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH
+A0IABOU504/MZROTH4Ybl8pmQV8TYymk/c51bQS9kqyWyeI19s2G12UvXvb0yfjn
+gvLZaM/S3k4rv2HA8uBsu7dfvu6jezB5MA4GA1UdDwEB/wQEAwIBBjATBgNVHSUE
+DDAKBggrBgEFBQcDAzASBgNVHRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBReXEAv
+EHuCFAQE5thiOSoEqilZAzAfBgNVHSMEGDAWgBR1uDPhKH7EjlGO2axbPKlTgy8j
+iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
+3ka2eiMCIBIMXVLY+XGEHNdarxDj8XKQurNf6Nngs0nU+5ggyF4F
+-----END CERTIFICATE-----";
+
+    #[test]
+    fn certificate_is_trusted() -> anyhow::Result<()> {
+        // use the correct CA chain
+        let ca_cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: ROOT_CA1_PEM.as_bytes().to_vec(),
+        };
+        let cert_chain = vec![ca_cert];
+        let cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: INTERMEDIATE_CA1_PEM.as_bytes().to_vec(),
+        };
+        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+            cert,
+            cert_chain: Some(cert_chain),
+            not_after: None,
+        };
+        assert!(verify_certificate(req)?);
+        Ok(())
+    }
+
+    #[test]
+    fn certificate_is_not_trusted() -> anyhow::Result<()> {
+        // Use a CA chain unrelated to the cert
+        let ca_cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: ROOT_CA2_PEM.as_bytes().to_vec(),
+        };
+        let cert_chain = vec![ca_cert];
+        let cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: INTERMEDIATE_CA1_PEM.as_bytes().to_vec(),
+        };
+        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+            cert,
+            cert_chain: Some(cert_chain),
+            not_after: None,
+        };
+        assert_eq!(
+            verify_certificate(req).unwrap_err().to_string(),
+            "Certificate not issued by a trusted root"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn certificate_is_trusted_no_chain() -> anyhow::Result<()> {
+        let cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: INTERMEDIATE_CA1_PEM.as_bytes().to_vec(),
+        };
+        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+            cert,
+            cert_chain: None,
+            not_after: None,
+        };
+        assert!(verify_certificate(req)?);
+        Ok(())
+    }
+
+    #[test]
+    fn certificate_is_expired_but_we_dont_check() -> anyhow::Result<()> {
+        let ca_cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: ROOT_CA2_PEM.as_bytes().to_vec(),
+        };
+        let cert_chain = vec![ca_cert];
+        let cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
+        };
+        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+            cert,
+            cert_chain: Some(cert_chain),
+            not_after: None, // not checking expiration
+        };
+        assert!(verify_certificate(req)?);
+        Ok(())
+    }
+
+    #[test]
+    fn certificate_malformed_not_after() -> anyhow::Result<()> {
+        let cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
+        };
+        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+            cert,
+            cert_chain: None,
+            not_after: Some("malformed".to_string()),
+        };
+        assert_eq!(
+            verify_certificate(req).unwrap_err().to_string(),
+            "Timestamp not_after is not in RFC3339 format"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn certificate_is_expired() -> anyhow::Result<()> {
+        let cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
+        };
+        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+            cert,
+            cert_chain: None,
+            not_after: Some(Utc::now().to_rfc3339()),
+        };
+        assert_eq!(
+            verify_certificate(req).unwrap_err().to_string(),
+            "Certificate is being used after its expiration date"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn certificate_is_used_before_notbefore_date() -> anyhow::Result<()> {
+        let cert = Certificate {
+            encoding: CertificateEncoding::Pem,
+            data: INTERMEDIATE_CA_NOT_BEFORE_PEM.as_bytes().to_vec(),
+        };
+        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+            cert,
+            cert_chain: None,
+            not_after: None,
+        };
+        assert_eq!(
+            verify_certificate(req).unwrap_err().to_string(),
+            "Certificate is being used before its validity date"
+        );
+        Ok(())
+    }
+}
