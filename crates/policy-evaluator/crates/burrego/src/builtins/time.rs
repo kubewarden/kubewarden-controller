@@ -138,7 +138,10 @@ mod test {
 
     #[test]
     fn date_with_tz() {
-        let input_dt = chrono_tz::US::Pacific.ymd(1990, 5, 6).and_hms(12, 30, 45);
+        let input_dt = match chrono_tz::US::Pacific.with_ymd_and_hms(1990, 5, 6, 12, 30, 45) {
+            chrono::LocalResult::Single(dt) => dt,
+            _ => panic!("didn't get the expected datetime object"),
+        };
 
         let args: Vec<serde_json::Value> = vec![json!([input_dt.timestamp_nanos(), "US/Pacific"])];
 
