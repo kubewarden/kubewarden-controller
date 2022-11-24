@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
+use itertools::Itertools;
 use policy_fetcher::sources::Sources;
 use std::collections::HashMap;
 use tokio::sync::{mpsc, oneshot};
@@ -12,6 +13,7 @@ use kubewarden_policy_sdk::host_capabilities::{
     net::LookupResponse, oci::ManifestDigestResponse, verification::VerificationResponse,
 };
 use policy_fetcher::verify::FulcioAndRekorData;
+use sha2::{Digest, Sha256};
 
 mod oci;
 mod sigstore_verification;
@@ -212,7 +214,6 @@ impl CallbackHandler {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
                             },
-
                             CallbackRequestType::SigstoreGithubActionsVerify {
                                 image,
                                 owner,
@@ -226,6 +227,29 @@ impl CallbackHandler {
                                             debug!(?image, "Got sigstore GHA verification from cache");
                                         } else {
                                             debug!(?image, "Got sigstore GHA verification by querying remote registry");
+                                        }
+                                        CallbackResponse {
+                                        payload: serde_json::to_vec(&response.value).unwrap()
+                                    }});
+
+                                if let Err(e) = req.response_channel.send(response) {
+                                    warn!("callback handler: cannot send response back: {:?}", e);
+                                }
+                            },
+                            CallbackRequestType::SigstoreCertificateVerify {
+                                image,
+                                certificate,
+                                certificate_chain,
+                                require_rekor_bundle,
+                                annotations
+                            } => {
+                                let response = get_sigstore_certificate_verification_cached(&mut self.sigstore_client, &image, &certificate, certificate_chain.as_deref(), require_rekor_bundle, annotations)
+                                    .await
+                                    .map(|response| {
+                                        if response.was_cached {
+                                            debug!(?image, "Got sigstore certificate verification from cache");
+                                        } else {
+                                            debug!(?image, "Computed sigstore certificate verification");
                                         }
                                         CallbackResponse {
                                         payload: serde_json::to_vec(&response.value).unwrap()
@@ -396,6 +420,69 @@ async fn get_sigstore_github_actions_verification_cached(
 ) -> Result<cached::Return<VerificationResponse>> {
     client
         .verify_github_actions(image, owner, repo, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+fn get_sigstore_certificate_verification_cache_key(
+    image: &str,
+    certificate: &[u8],
+    certificate_chain: Option<&[Vec<u8>]>,
+    require_rekor_bundle: bool,
+    annotations: Option<&HashMap<String, String>>,
+) -> String {
+    let mut hasher = Sha256::new();
+
+    hasher.update(image);
+    hasher.update(certificate);
+
+    if let Some(certs) = certificate_chain {
+        for c in certs {
+            hasher.update(c);
+        }
+    };
+
+    if require_rekor_bundle {
+        hasher.update(b"1");
+    } else {
+        hasher.update(b"0");
+    };
+
+    if let Some(a) = annotations {
+        for key in a.keys().sorted() {
+            hasher.update(key);
+            hasher.update(b"\n");
+            hasher.update(a.get(key).expect("key not found"));
+        }
+    };
+
+    format!("{:x}", hasher.finalize())
+}
+
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}", get_sigstore_certificate_verification_cache_key(image, certificate, certificate_chain, require_rekor_bundle, annotations.as_ref()))}"#,
+    with_cached_flag = true
+)]
+async fn get_sigstore_certificate_verification_cached(
+    client: &mut sigstore_verification::Client,
+    image: &str,
+    certificate: &[u8],
+    certificate_chain: Option<&[Vec<u8>]>,
+    require_rekor_bundle: bool,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_certificate(
+            image,
+            certificate,
+            certificate_chain,
+            require_rekor_bundle,
+            annotations,
+        )
         .await
         .map(cached::Return::new)
 }
