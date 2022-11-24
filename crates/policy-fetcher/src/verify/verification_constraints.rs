@@ -310,7 +310,10 @@ impl TryFrom<&str> for GitHubRepo {
 mod tests {
     use super::*;
     use rstest::rstest;
-    use sigstore::{cosign::signature_layers::CertificateSignature, simple_signing::SimpleSigning};
+    use sigstore::{
+        cosign::payload::simple_signing::SimpleSigning,
+        cosign::signature_layers::CertificateSignature,
+    };
 
     fn build_signature_layers_pub_key<'a>() -> (&'a str, SignatureLayer) {
         // All this data has been taken by looking at real artifacts produced by
@@ -347,7 +350,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
                 oci_digest: "not relevant".to_string(),
                 certificate_signature: None,
                 bundle: None,
-                signature,
+                signature: Some(signature),
                 raw_data,
             },
         )
@@ -389,7 +392,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             oci_digest: "not relevant".to_string(),
             certificate_signature,
             bundle: None,
-            signature,
+            signature: Some(signature),
             raw_data,
         }
     }
