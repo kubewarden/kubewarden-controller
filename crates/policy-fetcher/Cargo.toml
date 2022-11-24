@@ -21,10 +21,10 @@ lazy_static = "1.4.0"
 oci-distribution = { version = "0.9.3", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.2.1"
 regex = "1.5.6"
-reqwest = { version = "0.11.12", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.11.13", default-features = false, features = ["rustls-tls"] }
 rustls = "0.20.7"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.87"
+serde_json = "1.0.89"
 serde_yaml = "0.9"
 sha2 = "0.10.6"
 sigstore = { version = "0.5.3", default-features = false, features = ["rustls-tls"] }
