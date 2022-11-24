@@ -57,7 +57,7 @@ pub enum FulcioAndRekorData {
 }
 
 impl Verifier {
-    /// Craetes a new verifier that leverages an already existing
+    /// Creates a new verifier that leverages an already existing
     /// Cosign client.
     pub fn new_from_cosign_client(
         cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
