@@ -11,14 +11,15 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "4.0", features = [ "cargo", "env" ] }
 clap_complete = "4.0"
+clap = { version = "4.0", features = [ "cargo", "env" ] }
 directories = "4.0.1"
+flate2 = "1.0.24"
 itertools = "0.10.5"
 k8s-openapi = { version = "0.16.0", default-features = false, features = ["v1_25"] }
 lazy_static = "1.4.0"
 mdcat = "0.29"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.14" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.15" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.9"
 pulldown-cmark = { version = "0.9.2", default-features = false }
@@ -27,6 +28,7 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.14"
 syntect = { version = "5.0" , default-features = false, features = ["parsing"] }
+tar = "0.4.38"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
@@ -34,9 +36,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.3.1"
 walrus = "0.19.0"
 wasmparser = "0.95"
-flate2 = "1.0.24"
-tar = "0.4.38"
 
 [dev-dependencies]
-tempfile = "3.3.0"
 rstest = "0.15.0"
+tempfile = "3.3.0"
