@@ -1,8 +1,10 @@
 package scanner
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/kubewarden/audit-scanner/internal/resources"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog/log"
 )
@@ -15,21 +17,26 @@ type PoliciesFetcher interface {
 	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error)
 }
 
+type ResourcesFetcher interface {
+	GetResourcesForPolicies(ctx context.Context, policies []policiesv1.Policy, namespace string) ([]resources.AuditableResources, error)
+}
+
 // A Scanner verifies that existing resources don't violate any of the policies
 type Scanner struct {
-	fetcher PoliciesFetcher
+	policiesFetcher  PoliciesFetcher
+	resourcesFetcher ResourcesFetcher
 }
 
 // NewScanner creates a new scanner with the PoliciesFetcher provided
-func NewScanner(fetcher PoliciesFetcher) *Scanner {
-	return &Scanner{fetcher}
+func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher) *Scanner {
+	return &Scanner{policiesFetcher, resourcesFetcher}
 }
 
 // ScanNamespace scans resources for a given namespace
 func (s *Scanner) ScanNamespace(namespace string) error {
 	log.Info().Str("namespace", namespace).Msg("scan started")
 
-	policies, err := s.fetcher.GetPoliciesForANamespace(namespace)
+	policies, err := s.policiesFetcher.GetPoliciesForANamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -39,6 +46,23 @@ func (s *Scanner) ScanNamespace(namespace string) error {
 	fmt.Println("The following policies were found for the namespace " + namespace)
 	for _, policy := range policies {
 		fmt.Println(policy.GetName())
+	}
+
+	auditableResources, err := s.resourcesFetcher.GetResourcesForPolicies(context.Background(), policies, namespace)
+
+	if err != nil {
+		return err
+	}
+
+	for _, resource := range auditableResources {
+		fmt.Println("Policies: ")
+		for _, policy := range resource.Policies {
+			fmt.Println(policy.GetName())
+		}
+		for _, resource := range resource.Resources {
+			fmt.Println(resource)
+		}
+		fmt.Println("---------------------")
 	}
 
 	return nil
