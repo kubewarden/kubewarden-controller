@@ -12,12 +12,14 @@ use oci_distribution::Reference;
 use sigstore::errors::SigstoreError;
 use std::convert::TryFrom;
 use std::str::FromStr;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
 /// This structure simplifies the process of policy verification
 /// using Sigstore
 pub struct Verifier {
-    cosign_client: sigstore::cosign::Client,
+    cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
     sources: Option<Sources>,
 }
 
@@ -55,6 +57,18 @@ pub enum FulcioAndRekorData {
 }
 
 impl Verifier {
+    /// Creates a new verifier that leverages an already existing
+    /// Cosign client.
+    pub fn new_from_cosign_client(
+        cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
+        sources: Option<Sources>,
+    ) -> Self {
+        Self {
+            cosign_client,
+            sources,
+        }
+    }
+
     /// Creates a new verifier using the `Sources` provided. These are
     /// later used to interact with remote OCI registries.
     pub fn new(
@@ -102,7 +116,7 @@ impl Verifier {
             .build()
             .map_err(|e| anyhow!("could not build a cosign client: {}", e))?;
         Ok(Verifier {
-            cosign_client,
+            cosign_client: Arc::new(Mutex::new(cosign_client)),
             sources,
         })
     }
@@ -123,56 +137,8 @@ impl Verifier {
         image_url: &str,
         verification_config: &config::LatestVerificationConfig,
     ) -> Result<String> {
-        // obtain image name:
-        //
-        let image_name = match image_url.strip_prefix("registry://") {
-            None => image_url,
-            Some(url) => url,
-        };
-        if let Err(e) = Reference::try_from(image_name) {
-            return Err(anyhow!(
-                "Verification only works with OCI images: Not a valid oci image {}",
-                e
-            ));
-        }
-
-        // obtain registry auth:
-        let auth = Registry::auth(image_url);
-
-        let sigstore_auth = match auth {
-            RegistryAuth::Anonymous => sigstore::registry::Auth::Anonymous,
-            RegistryAuth::Basic(username, password) => {
-                sigstore::registry::Auth::Basic(username, password)
-            }
-        };
-
-        // obtain all signatures of image:
-        //
-        // trusted_signature_layers() will error early if cosign_client using
-        // Fulcio,Rekor certs and signatures are not verified
-        //
-        let (cosign_signature_image, source_image_digest) = self
-            .cosign_client
-            .triangulate(image_name, &sigstore_auth)
-            .await?;
-
-        let trusted_layers = match self
-            .cosign_client
-            .trusted_signature_layers(
-                &sigstore_auth,
-                &source_image_digest,
-                &cosign_signature_image,
-            )
-            .await
-        {
-            Ok(trusted_layers) => trusted_layers,
-            Err(SigstoreError::RegistryPullManifestError { image: _, error: _ }) => {
-                return Err(anyhow!("no signatures found for image: {} ", image_name));
-            }
-            Err(e) => {
-                return Err(anyhow!(e));
-            }
-        };
+        let (source_image_digest, trusted_layers) =
+            fetch_sigstore_remote_data(&self.cosign_client, image_url).await?;
 
         // verify signatures against our config:
         //
@@ -261,9 +227,9 @@ impl Verifier {
     }
 }
 
-// Verifies the trusted layers against the VerificationConfig passed to it.
-// It does that by creating the verification constraints from the config, and
-// then filtering the trusted_layers with the corresponding constraints.
+/// Verifies the trusted layers against the VerificationConfig passed to it.
+/// It does that by creating the verification constraints from the config, and
+/// then filtering the trusted_layers with the corresponding constraints.
 fn verify_signatures_against_config(
     verification_config: &config::LatestVerificationConfig,
     trusted_layers: &[SignatureLayer],
@@ -346,12 +312,72 @@ fn verify_signatures_against_config(
     Ok(())
 }
 
+/// Fetch the sigstore signature data
+/// Returns:
+/// * String holding the source image digest
+/// * List of signature layers
+pub async fn fetch_sigstore_remote_data(
+    cosign_client_input: &Arc<Mutex<cosign::Client>>,
+    image_url: &str,
+) -> Result<(String, Vec<SignatureLayer>)> {
+    let mut cosign_client = cosign_client_input.lock().await;
+
+    // obtain image name:
+    let image_name = match image_url.strip_prefix("registry://") {
+        None => image_url,
+        Some(url) => url,
+    };
+    if let Err(e) = Reference::try_from(image_name) {
+        return Err(anyhow!(
+            "Verification only works with OCI images: Not a valid oci image {}",
+            e
+        ));
+    }
+
+    // obtain registry auth:
+    let auth = Registry::auth(image_url);
+
+    let sigstore_auth = match auth {
+        RegistryAuth::Anonymous => sigstore::registry::Auth::Anonymous,
+        RegistryAuth::Basic(username, password) => {
+            sigstore::registry::Auth::Basic(username, password)
+        }
+    };
+
+    // obtain all signatures of image:
+    //
+    // trusted_signature_layers() will error early if cosign_client using
+    // Fulcio,Rekor certs and signatures are not verified
+    let (cosign_signature_image, source_image_digest) = cosign_client
+        .triangulate(image_name, &sigstore_auth)
+        .await?;
+
+    // get trusted layers
+    let layers = cosign_client
+        .trusted_signature_layers(
+            &sigstore_auth,
+            &source_image_digest,
+            &cosign_signature_image,
+        )
+        .await
+        .map_err(|e| match e {
+            SigstoreError::RegistryPullManifestError { image: _, error: _ } => {
+                anyhow!("no signatures found for image: {} ", image_name)
+            }
+            e => anyhow!(e),
+        })?;
+    Ok((source_image_digest, layers))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use config::{AnyOf, LatestVerificationConfig, Signature, Subject};
     use cosign::signature_layers::CertificateSubject;
-    use sigstore::{cosign::signature_layers::CertificateSignature, simple_signing::SimpleSigning};
+    use sigstore::{
+        cosign::payload::simple_signing::SimpleSigning,
+        cosign::signature_layers::CertificateSignature,
+    };
 
     fn build_signature_layers_keyless(
         issuer: Option<String>,
@@ -388,7 +414,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             oci_digest: "not relevant".to_string(),
             certificate_signature,
             bundle: None,
-            signature,
+            signature: Some(signature),
             raw_data,
         }
     }
