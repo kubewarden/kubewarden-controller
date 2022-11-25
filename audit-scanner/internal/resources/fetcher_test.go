@@ -1,56 +1,141 @@
 package resources
 
 import (
+	"context"
 	"github.com/google/go-cmp/cmp"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes/scheme"
 	"testing"
 )
 
-func TestFindGVRMap(t *testing.T) {
-	// policies for testing
-	p1 := policiesv1.AdmissionPolicy{
-		Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-			Rules: []admissionregistrationv1.RuleWithOperations{admissionregistrationv1.RuleWithOperations{
-				Operations: nil,
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{""},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"pods"},
-				},
+const (
+	kubewardenPoliciesGroup   = "policies.kubewarden.io"
+	kubewardenPoliciesVersion = "v1"
+)
+
+// policies for testing
+var p1 = policiesv1.AdmissionPolicy{
+	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{""},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"pods"},
 			},
+		},
+		},
+	}},
+}
+
+var p2 = policiesv1.ClusterAdmissionPolicy{
+	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{"", "apps"},
+				APIVersions: []string{"v1", "alphav1"},
+				Resources:   []string{"pods", "deployments"},
 			},
-		}},
+		},
+		},
+	}},
+}
+
+var p3 = policiesv1.AdmissionPolicy{
+	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{"", "apps"},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"pods", "deployments"},
+			},
+		},
+		},
+	}},
+}
+
+func TestGetResourcesForPolicies(t *testing.T) {
+	pod1 := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "podDefault",
+			Namespace: "default",
+		},
+		Spec: v1.PodSpec{},
+	}
+	pod2 := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "podKubewarden",
+			Namespace: "kubewarden",
+		},
+		Spec: v1.PodSpec{},
+	}
+	deployment1 := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "deploymentDefault",
+			Namespace: "default",
+		},
+		Spec: appsv1.DeploymentSpec{},
+	}
+	customScheme := scheme.Scheme
+	customScheme.AddKnownTypes(schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
+	metav1.AddToGroupVersion(customScheme, schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion})
+
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &p1, &pod1, &pod2, &deployment1)
+
+	unstructuredPod1 := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Pod",
+		"metadata": map[string]interface{}{
+			"name":              "podDefault",
+			"namespace":         "default",
+			"creationTimestamp": nil,
+		},
+		"spec": map[string]interface{}{
+			"containers": nil,
+		},
+		"status": map[string]interface{}{},
 	}
 
-	p2 := policiesv1.AdmissionPolicy{
-		Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-			Rules: []admissionregistrationv1.RuleWithOperations{admissionregistrationv1.RuleWithOperations{
-				Operations: nil,
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"", "apps"},
-					APIVersions: []string{"v1", "alphav1"},
-					Resources:   []string{"pods", "deployments"},
-				},
-			},
-			},
-		}},
+	expectedP1 := []AuditableResources{{
+		Policies:  []policiesv1.Policy{&p1},
+		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
+	}}
+
+	fetcher := Fetcher{dynamicClient}
+
+	tests := []struct {
+		name     string
+		policies []policiesv1.Policy
+		expect   []AuditableResources
+	}{
+		{"policy1 (just pods)", []policiesv1.Policy{&p1}, expectedP1},
+		{"no policies", []policiesv1.Policy{}, []AuditableResources{}},
 	}
 
-	p3 := policiesv1.AdmissionPolicy{
-		Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-			Rules: []admissionregistrationv1.RuleWithOperations{admissionregistrationv1.RuleWithOperations{
-				Operations: nil,
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"", "apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"pods", "deployments"},
-				},
-			},
-			},
-		}},
+	for _, test := range tests {
+		ttest := test
+		t.Run(ttest.name, func(t *testing.T) {
+			resources, err := fetcher.GetResourcesForPolicies(context.Background(), ttest.policies, "default")
+			if err != nil {
+				t.Errorf("error shouldn't have happend " + err.Error())
+			}
+			if !cmp.Equal(resources, ttest.expect) {
+				t.Errorf("expected %v, but got %v", ttest.expect, resources)
+			}
+		})
 	}
+}
+
+func TestCreateGVRPolicyMap(t *testing.T) {
 
 	// all posible combination of GVR (Group, Version, Resource) for p1, p2 and p3
 	gvr1 := schema.GroupVersionResource{
@@ -144,8 +229,9 @@ func TestFindGVRMap(t *testing.T) {
 	for _, test := range tests {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
-			if !cmp.Equal(createGVRPolicyMap(ttest.policies), ttest.expect) {
-				t.Errorf("expected %v, but got %v", ttest.expect, createGVRPolicyMap(ttest.policies))
+			gvrPolicyMap := createGVRPolicyMap(ttest.policies)
+			if !cmp.Equal(gvrPolicyMap, ttest.expect) {
+				t.Errorf("expected %v, but got %v", ttest.expect, gvrPolicyMap)
 			}
 		})
 	}

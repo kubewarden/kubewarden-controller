@@ -54,6 +54,7 @@ func (s *Scanner) ScanNamespace(namespace string) error {
 		return err
 	}
 
+	// TODO this is for debugging, it should be remove in future steps!
 	for _, resource := range auditableResources {
 		fmt.Println("Policies: ")
 		for _, policy := range resource.Policies {
@@ -64,6 +65,12 @@ func (s *Scanner) ScanNamespace(namespace string) error {
 		}
 		fmt.Println("---------------------")
 	}
+
+	// TODO for next steps:
+	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need
+	// to evaluate them. You need to create the AdmissionReview request using the resource which is an unstructured.
+	// unstructured nested functions might help with that https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
+	// or the UnstructuredContent() method that returns a map
 
 	return nil
 }
