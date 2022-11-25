@@ -71,6 +71,18 @@ kwctl() {
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
 }
 
+@test "benchmark a policy" {
+    kwctl bench \
+      --warm-up-time 1 \
+      --measurement-time 1 \
+      --num-resamples 2 \
+      --num-samples 2 \
+      --request-path test-data/privileged-pod-admission-review.json \
+      registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*validate.*warming up.*') -ne 0 ]
+}
+
 @test "remove a policy from the policy store" {
     kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
     kwctl pull https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
