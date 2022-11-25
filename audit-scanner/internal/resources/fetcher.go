@@ -92,6 +92,8 @@ func createGVRPolicyMap(policies []policiesv1.Policy) map[schema.GroupVersionRes
 	return resources
 }
 
+// All resources that matches the rules must be evaluated. Since rules provides an array of groups, another of version
+// and another of resources we need to create all possible GVR from these arrays.
 func addPolicyResources(resources map[schema.GroupVersionResource][]policiesv1.Policy, policy policiesv1.Policy) {
 	for _, rules := range policy.GetRules() {
 		for _, resource := range rules.Resources {
