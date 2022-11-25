@@ -15,26 +15,27 @@ use tracing::error;
 
 use crate::{backend::BackendDetector, pull, verify};
 
-// TODO(ereslibre): arguments to be refactored, and allow to be removed.
-#[allow(clippy::too_many_arguments)]
-pub(crate) async fn pull_and_run(
-    uri: &str,
-    user_execution_mode: Option<PolicyExecutionMode>,
-    sources: Option<&Sources>,
-    request: &str,
-    settings: Option<String>,
-    verified_manifest_digest: &Option<String>,
-    fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
-    enable_wasmtime_cache: bool,
-) -> Result<()> {
-    let uri = crate::utils::map_path_to_uri(uri)?;
+pub(crate) struct PullAndRunSettings<'a> {
+    pub uri: &'a str,
+    pub user_execution_mode: Option<PolicyExecutionMode>,
+    pub sources: Option<&'a Sources>,
+    pub request: &'a str,
+    pub settings: Option<&'a str>,
+    pub verified_manifest_digest: Option<&'a str>,
+    pub fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
+    pub enable_wasmtime_cache: bool,
+}
 
-    let policy = pull::pull(&uri, sources, PullDestination::MainStore)
+pub(crate) async fn pull_and_run(cfg: PullAndRunSettings<'_>) -> Result<()> {
+    let uri = crate::utils::map_path_to_uri(cfg.uri)?;
+
+    let policy = pull::pull(&uri, cfg.sources, PullDestination::MainStore)
         .await
         .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
 
-    if let Some(digest) = verified_manifest_digest {
-        verify::verify_local_checksum(&policy, sources, digest, fulcio_and_rekor_data).await?
+    if let Some(digest) = cfg.verified_manifest_digest {
+        verify::verify_local_checksum(&policy, cfg.sources, digest, cfg.fulcio_and_rekor_data)
+            .await?
     }
 
     let metadata = Metadata::from_path(&policy.local_path)?;
@@ -54,20 +55,20 @@ pub(crate) async fn pull_and_run(
     }
     let policy_id = read_policy_title_from_metadata(&metadata).unwrap_or_else(|| uri.clone());
 
-    let request = serde_json::from_str::<serde_json::Value>(request)?;
+    let request = serde_json::from_str::<serde_json::Value>(cfg.request)?;
 
     let execution_mode = determine_execution_mode(
         metadata.clone(),
-        user_execution_mode,
+        cfg.user_execution_mode,
         BackendDetector::default(),
         &policy.local_path,
     )?;
 
-    let policy_settings = settings.map_or(Ok(None), |settings| {
+    let policy_settings = cfg.settings.map_or(Ok(None), |settings| {
         if settings.is_empty() {
             Ok(None)
         } else {
-            serde_yaml::from_str(&settings)
+            serde_yaml::from_str(settings)
         }
     })?;
 
@@ -77,9 +78,9 @@ pub(crate) async fn pull_and_run(
         oneshot::channel();
 
     let mut callback_handler = CallbackHandlerBuilder::default()
-        .registry_config(sources.cloned())
+        .registry_config(cfg.sources.cloned())
         .shutdown_channel(callback_handler_shutdown_channel_rx)
-        .fulcio_and_rekor_data(fulcio_and_rekor_data)
+        .fulcio_and_rekor_data(cfg.fulcio_and_rekor_data)
         .build()?;
 
     let callback_sender_channel = callback_handler.sender_channel();
@@ -89,7 +90,7 @@ pub(crate) async fn pull_and_run(
         .execution_mode(execution_mode)
         .settings(policy_settings)
         .callback_channel(callback_sender_channel);
-    if enable_wasmtime_cache {
+    if cfg.enable_wasmtime_cache {
         policy_evaluator_builder = policy_evaluator_builder.enable_wasmtime_cache();
     }
     let mut policy_evaluator = policy_evaluator_builder.build()?;

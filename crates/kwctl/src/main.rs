@@ -282,7 +282,21 @@ async fn main() -> Result<()> {
 
                 let enable_wasmtime_cache = !matches.contains_id("disable-wasmtime-cache");
 
-                run::pull_and_run(
+                let pull_and_run_settings = run::PullAndRunSettings {
+                    uri,
+                    user_execution_mode: execution_mode,
+                    sources: sources.as_ref(),
+                    request: &request,
+                    settings: settings.as_deref(),
+                    verified_manifest_digest: verified_manifest_digest.as_deref(),
+                    fulcio_and_rekor_data: fulcio_and_rekor_data.as_ref(),
+                    enable_wasmtime_cache,
+                };
+
+                run::pull_and_run(pull_and_run_settings).await?;
+            }
+            Ok(())
+        }
                     uri,
                     execution_mode,
                     sources.as_ref(),
