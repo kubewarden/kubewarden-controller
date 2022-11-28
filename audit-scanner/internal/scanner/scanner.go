@@ -62,6 +62,7 @@ func (s *Scanner) ScanNamespace(namespace string) error {
 		}
 		for _, resource := range resource.Resources {
 			fmt.Println(resource)
+			fmt.Println("........")
 		}
 		fmt.Println("---------------------")
 	}
