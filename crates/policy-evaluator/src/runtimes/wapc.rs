@@ -8,7 +8,7 @@ use tracing::{debug, error};
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
 
 use crate::admission_response::AdmissionResponse;
-use crate::callback_handler::verify_certificate;
+use crate::callback_handler::{verify_certificate, BoolWithReason};
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
@@ -129,8 +129,20 @@ pub(crate) fn host_callback(
                 "v1/is_certificate_trusted" => {
                     let req: CertificateVerificationRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
-                    let response = CertificateVerificationResponse {
-                        trusted: verify_certificate(req)?,
+                    let response: CertificateVerificationResponse = match verify_certificate(req) {
+                        Ok(b) => match b {
+                            BoolWithReason::True => CertificateVerificationResponse {
+                                trusted: true,
+                                reason: "".to_string(),
+                            },
+                            BoolWithReason::False(reason) => CertificateVerificationResponse {
+                                trusted: false,
+                                reason,
+                            },
+                        },
+                        Err(e) => {
+                            return Err(format!("Error when verifying certificate: {}", e).into())
+                        }
                     };
                     Ok(serde_json::to_vec(&response)?)
                 }

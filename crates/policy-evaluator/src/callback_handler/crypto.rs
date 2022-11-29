@@ -11,10 +11,17 @@ struct CertificatePool {
     intermediates: Vec<picky::x509::Cert>,
 }
 
+#[derive(Debug)]
+/// Used as return of verify_certificate()
+pub enum BoolWithReason {
+    True,
+    False(String),
+}
+
 /// verify_certificate verifies the validity of the certificate, and if it is
 /// trusted with the provided certificate chain.
 /// If the provided certificate chain is empty, it is treated as trusted.
-pub fn verify_certificate(req: CertificateVerificationRequest) -> Result<bool> {
+pub fn verify_certificate(req: CertificateVerificationRequest) -> Result<BoolWithReason> {
     // verify validity:
     let pc = match req.cert.encoding {
         CertificateEncoding::Pem => {
@@ -42,8 +49,8 @@ pub fn verify_certificate(req: CertificateVerificationRequest) -> Result<bool> {
                 picky::x509::date::UtcDate::from(zulu_not_after);
 
             if pc.valid_not_after().lt(&p_not_after) {
-                return Err(anyhow!(
-                    "Certificate is being used after its expiration date"
+                return Ok(BoolWithReason::False(
+                    "Certificate is being used after its expiration date".to_string(),
                 ));
             }
         }
@@ -54,8 +61,8 @@ pub fn verify_certificate(req: CertificateVerificationRequest) -> Result<bool> {
 
     let now = picky::x509::date::UtcDate::now();
     if pc.valid_not_before().gt(&now) {
-        return Err(anyhow!(
-            "Certificate is being used before its validity date"
+        return Ok(BoolWithReason::False(
+            "Certificate is being used before its validity date".to_string(),
         ));
     }
 
@@ -64,10 +71,14 @@ pub fn verify_certificate(req: CertificateVerificationRequest) -> Result<bool> {
         let mut certs = vec![];
         certs.append(&mut certch);
         let cert_pool = CertificatePool::from_certificates(&certs)?;
-        cert_pool.verify(&pc)?
+        if !cert_pool.verify(&pc) {
+            return Ok(BoolWithReason::False(
+                "Certificate is not trusted by the provided cert chain".to_string(),
+            ));
+        }
     }
 
-    Ok(true)
+    Ok(BoolWithReason::True)
 }
 
 impl CertificatePool {
@@ -107,9 +118,8 @@ impl CertificatePool {
         })
     }
 
-    fn verify(&self, cert: &picky::x509::Cert) -> Result<()> {
-        let verified = self
-            .create_chains_for_all_certificates()
+    fn verify(&self, cert: &picky::x509::Cert) -> bool {
+        self.create_chains_for_all_certificates()
             .iter()
             .any(|chain| {
                 cert.verifier()
@@ -117,13 +127,7 @@ impl CertificatePool {
                     .exact_date(&cert.valid_not_before())
                     .verify()
                     .is_ok()
-            });
-
-        if verified {
-            Ok(())
-        } else {
-            Err(anyhow!("Certificate not issued by a trusted root"))
-        }
+            })
     }
 
     fn create_chains_for_all_certificates(&self) -> Vec<Vec<&picky::x509::Cert>> {
@@ -145,7 +149,7 @@ impl CertificatePool {
 
 #[cfg(test)]
 mod tests {
-    use crate::callback_handler::verify_certificate;
+    use crate::callback_handler::{verify_certificate, BoolWithReason};
     use chrono::Utc;
     use kubewarden_policy_sdk::host_capabilities::crypto::{Certificate, CertificateEncoding};
     use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
@@ -237,7 +241,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
 -----END CERTIFICATE-----";
 
     #[test]
-    fn certificate_is_trusted() -> anyhow::Result<()> {
+    fn certificate_is_trusted() {
         // use the correct CA chain
         let ca_cert = Certificate {
             encoding: CertificateEncoding::Pem,
@@ -253,12 +257,11 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: Some(cert_chain),
             not_after: None,
         };
-        assert!(verify_certificate(req)?);
-        Ok(())
+        assert!(matches!(verify_certificate(req), Ok(BoolWithReason::True)));
     }
 
     #[test]
-    fn certificate_is_not_trusted() -> anyhow::Result<()> {
+    fn certificate_is_not_trusted() {
         // Use a CA chain unrelated to the cert
         let ca_cert = Certificate {
             encoding: CertificateEncoding::Pem,
@@ -274,15 +277,15 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: Some(cert_chain),
             not_after: None,
         };
-        assert_eq!(
-            verify_certificate(req).unwrap_err().to_string(),
-            "Certificate not issued by a trusted root"
-        );
-        Ok(())
+        let _reason = "Certificate is not trusted by the provided cert chain".to_string();
+        assert!(matches!(
+            verify_certificate(req),
+            Ok(BoolWithReason::False(_reason))
+        ));
     }
 
     #[test]
-    fn certificate_is_trusted_no_chain() -> anyhow::Result<()> {
+    fn certificate_is_trusted_no_chain() {
         let cert = Certificate {
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA1_PEM.as_bytes().to_vec(),
@@ -292,12 +295,11 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: None,
             not_after: None,
         };
-        assert!(verify_certificate(req)?);
-        Ok(())
+        assert!(matches!(verify_certificate(req), Ok(BoolWithReason::True)));
     }
 
     #[test]
-    fn certificate_is_expired_but_we_dont_check() -> anyhow::Result<()> {
+    fn certificate_is_expired_but_we_dont_check() {
         let ca_cert = Certificate {
             encoding: CertificateEncoding::Pem,
             data: ROOT_CA2_PEM.as_bytes().to_vec(),
@@ -312,12 +314,11 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: Some(cert_chain),
             not_after: None, // not checking expiration
         };
-        assert!(verify_certificate(req)?);
-        Ok(())
+        assert!(matches!(verify_certificate(req), Ok(BoolWithReason::True)));
     }
 
     #[test]
-    fn certificate_malformed_not_after() -> anyhow::Result<()> {
+    fn certificate_malformed_not_after() {
         let cert = Certificate {
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
@@ -331,11 +332,10 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             verify_certificate(req).unwrap_err().to_string(),
             "Timestamp not_after is not in RFC3339 format"
         );
-        Ok(())
     }
 
     #[test]
-    fn certificate_is_expired() -> anyhow::Result<()> {
+    fn certificate_is_expired() {
         let cert = Certificate {
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
@@ -345,15 +345,15 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: None,
             not_after: Some(Utc::now().to_rfc3339()),
         };
-        assert_eq!(
-            verify_certificate(req).unwrap_err().to_string(),
-            "Certificate is being used after its expiration date"
-        );
-        Ok(())
+        let _reason = "Certificate is being used after its expiration date".to_string();
+        assert!(matches!(
+            verify_certificate(req),
+            Ok(BoolWithReason::False(_reason))
+        ));
     }
 
     #[test]
-    fn certificate_is_used_before_notbefore_date() -> anyhow::Result<()> {
+    fn certificate_is_used_before_notbefore_date() {
         let cert = Certificate {
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA_NOT_BEFORE_PEM.as_bytes().to_vec(),
@@ -363,10 +363,10 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: None,
             not_after: None,
         };
-        assert_eq!(
-            verify_certificate(req).unwrap_err().to_string(),
-            "Certificate is being used before its validity date"
-        );
-        Ok(())
+        let _reason = "Certificate is being used before its validity date".to_string();
+        assert!(matches!(
+            verify_certificate(req),
+            Ok(BoolWithReason::False(_reason))
+        ));
     }
 }
