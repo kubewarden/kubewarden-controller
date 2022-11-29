@@ -80,7 +80,7 @@ impl CertificatePool {
             let pc = match c.encoding {
                 CertificateEncoding::Pem => {
                     let pem_str = String::from_utf8(c.data.clone())
-                        .map_err(|_| anyhow!("Certificate is not PEM encoded"))?;
+                        .map_err(|_| anyhow!("Certificate PEM data is not UTF8 encoded"))?;
                     picky::x509::Cert::from_pem_str(&pem_str)
                 }
                 CertificateEncoding::Der => picky::x509::Cert::from_der(&c.data),
