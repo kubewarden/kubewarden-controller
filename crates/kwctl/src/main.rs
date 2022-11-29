@@ -49,6 +49,7 @@ use crate::utils::new_policy_execution_mode_from_str;
 
 mod annotate;
 mod backend;
+mod bench;
 mod cli;
 mod completions;
 mod inspect;
@@ -213,89 +214,52 @@ async fn main() -> Result<()> {
         }
         Some("run") => {
             if let Some(matches) = matches.subcommand_matches("run") {
-                let uri = matches.get_one::<String>("uri").unwrap();
-                let request = match matches
-                    .get_one::<String>("request-path")
-                    .map(|s| s.as_str())
-                    .unwrap()
-                {
-                    "-" => {
-                        let mut buffer = String::new();
-                        io::stdin()
-                            .read_to_string(&mut buffer)
-                            .map_err(|e| anyhow!("Error reading request from stdin: {}", e))?;
-                        buffer
-                    }
-                    request_path => fs::read_to_string(request_path).map_err(|e| {
-                        anyhow!(
-                            "Error opening request file {}; {}",
-                            matches.get_one::<String>("request-path").unwrap(),
-                            e
-                        )
-                    })?,
-                };
-                if matches.contains_id("settings-path") && matches.contains_id("settings-json") {
-                    return Err(anyhow!(
-                        "'settings-path' and 'settings-json' cannot be used at the same time"
-                    ));
-                }
-                let settings = if matches.contains_id("settings-path") {
-                    matches
-                        .get_one::<String>("settings-path")
-                        .map(|settings| -> Result<String> {
-                            fs::read_to_string(settings).map_err(|e| {
-                                anyhow!("Error reading settings from {}: {}", settings, e)
-                            })
-                        })
-                        .transpose()?
-                } else if matches.contains_id("settings-json") {
-                    Some(matches.get_one::<String>("settings-json").unwrap().clone())
-                } else {
-                    None
-                };
-                let sources = remote_server_options(matches)
-                    .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
-                let execution_mode: Option<PolicyExecutionMode> =
-                    if let Some(mode_name) = matches.get_one::<String>("execution-mode") {
-                        Some(new_policy_execution_mode_from_str(mode_name)?)
-                    } else {
-                        None
-                    };
+                let pull_and_run_settings = parse_pull_and_run_settings(matches).await?;
+                run::pull_and_run(&pull_and_run_settings).await?;
+            }
+            Ok(())
+        }
+        Some("bench") => {
+            if let Some(matches) = matches.subcommand_matches("bench") {
+                use std::time::Duration;
 
-                let verification_options = verification_options(matches)?;
-                let mut verified_manifest_digest: Option<String> = None;
-                let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
-                if verification_options.is_some() {
-                    // verify policy prior to pulling if keys listed, and keep the
-                    // verified manifest digest:
-                    verified_manifest_digest = Some(
-                        verify::verify(
-                            uri,
-                            sources.as_ref(),
-                            verification_options.as_ref().unwrap(),
-                            fulcio_and_rekor_data.as_ref(),
-                        )
-                        .await
-                        .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
-                    );
+                let pull_and_run_settings = parse_pull_and_run_settings(matches).await?;
+                let mut benchmark_cfg = tiny_bench::BenchmarkConfig::default();
+
+                if let Some(measurement_time) = matches.get_one::<String>("measurement_time") {
+                    let duration: u64 = measurement_time.parse().map_err(|e| {
+                        anyhow!("Cannot convert 'measurement-time' to seconds: {:?}", e)
+                    })?;
+                    benchmark_cfg.measurement_time = Duration::from_secs(duration);
+                }
+                if let Some(num_resamples) = matches.get_one::<String>("num_resamples") {
+                    let num: usize = num_resamples.parse().map_err(|e| {
+                        anyhow!("Cannot convert 'num-resamples' to number: {:?}", e)
+                    })?;
+                    benchmark_cfg.num_resamples = num;
+                }
+                if let Some(num_samples) = matches.get_one::<String>("num_samples") {
+                    let num: usize = num_samples
+                        .parse()
+                        .map_err(|e| anyhow!("Cannot convert 'num-samples' to number: {:?}", e))?;
+                    benchmark_cfg.num_resamples = num;
+                }
+                if let Some(warm_up_time) = matches.get_one::<String>("warm_up_time") {
+                    let duration: u64 = warm_up_time.parse().map_err(|e| {
+                        anyhow!("Cannot convert 'warm-up-time' to seconds: {:?}", e)
+                    })?;
+                    benchmark_cfg.warm_up_time = Duration::from_secs(duration);
                 }
 
-                let enable_wasmtime_cache = !matches.contains_id("disable-wasmtime-cache");
-
-                run::pull_and_run(
-                    uri,
-                    execution_mode,
-                    sources.as_ref(),
-                    &request,
-                    settings,
-                    &verified_manifest_digest,
-                    fulcio_and_rekor_data.as_ref(),
-                    enable_wasmtime_cache,
-                )
+                bench::pull_and_bench(&bench::PullAndBenchSettings {
+                    pull_and_run_settings,
+                    benchmark_cfg,
+                })
                 .await?;
             }
             Ok(())
         }
+
         Some("annotate") => {
             if let Some(matches) = matches.subcommand_matches("annotate") {
                 let wasm_path = matches
@@ -451,9 +415,9 @@ fn verification_options(matches: &ArgMatches) -> Result<Option<LatestVerificatio
     }
 }
 
-// Takes clap flags and builds a Some(LatestVerificationConfig) containing all
-// passed pub keys and annotations in LatestVerificationConfig.AllOf.
-// If no verification flags where used, it returns a None.
+/// Takes clap flags and builds a Some(LatestVerificationConfig) containing all
+/// passed pub keys and annotations in LatestVerificationConfig.AllOf.
+/// If no verification flags where used, it returns a None.
 fn build_verification_options_from_flags(
     matches: &ArgMatches,
 ) -> Result<Option<LatestVerificationConfig>> {
@@ -568,6 +532,88 @@ fn build_verification_options_from_flags(
         any_of: None,
     };
     Ok(Some(verification_config))
+}
+
+/// Takes clap flags and builds a Result<run::PullAndRunSettings> instance
+async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAndRunSettings> {
+    let uri = matches.get_one::<String>("uri").unwrap();
+    let request = match matches
+        .get_one::<String>("request-path")
+        .map(|s| s.as_str())
+        .unwrap()
+    {
+        "-" => {
+            let mut buffer = String::new();
+            io::stdin()
+                .read_to_string(&mut buffer)
+                .map_err(|e| anyhow!("Error reading request from stdin: {}", e))?;
+            buffer
+        }
+        request_path => fs::read_to_string(request_path).map_err(|e| {
+            anyhow!(
+                "Error opening request file {}; {}",
+                matches.get_one::<String>("request-path").unwrap(),
+                e
+            )
+        })?,
+    };
+    if matches.contains_id("settings-path") && matches.contains_id("settings-json") {
+        return Err(anyhow!(
+            "'settings-path' and 'settings-json' cannot be used at the same time"
+        ));
+    }
+    let settings = if matches.contains_id("settings-path") {
+        matches
+            .get_one::<String>("settings-path")
+            .map(|settings| -> Result<String> {
+                fs::read_to_string(settings)
+                    .map_err(|e| anyhow!("Error reading settings from {}: {}", settings, e))
+            })
+            .transpose()?
+    } else if matches.contains_id("settings-json") {
+        Some(matches.get_one::<String>("settings-json").unwrap().clone())
+    } else {
+        None
+    };
+    let sources = remote_server_options(matches)
+        .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
+    let execution_mode: Option<PolicyExecutionMode> =
+        if let Some(mode_name) = matches.get_one::<String>("execution-mode") {
+            Some(new_policy_execution_mode_from_str(mode_name)?)
+        } else {
+            None
+        };
+
+    let verification_options = verification_options(matches)?;
+    let mut verified_manifest_digest: Option<String> = None;
+    let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
+    if verification_options.is_some() {
+        // verify policy prior to pulling if keys listed, and keep the
+        // verified manifest digest:
+        verified_manifest_digest = Some(
+            verify::verify(
+                uri,
+                sources.as_ref(),
+                verification_options.as_ref().unwrap(),
+                fulcio_and_rekor_data.as_ref(),
+            )
+            .await
+            .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
+        );
+    }
+
+    let enable_wasmtime_cache = !matches.contains_id("disable-wasmtime-cache");
+
+    Ok(run::PullAndRunSettings {
+        uri: uri.to_owned(),
+        user_execution_mode: execution_mode,
+        sources,
+        request,
+        settings,
+        verified_manifest_digest,
+        fulcio_and_rekor_data,
+        enable_wasmtime_cache,
+    })
 }
 
 async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<Option<FulcioAndRekorData>> {

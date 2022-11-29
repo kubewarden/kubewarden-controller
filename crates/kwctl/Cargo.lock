@@ -2379,6 +2379,7 @@ dependencies = [
  "syntect",
  "tar",
  "tempfile",
+ "tiny-bench",
  "tokio",
  "tracing",
  "tracing-futures",
@@ -4516,6 +4517,12 @@ checksum = "d967f99f534ca7e495c575c62638eebc2898a8c84c119b89e250477bc4ba16b2"
 dependencies = [
  "time-core",
 ]
+
+[[package]]
+name = "tiny-bench"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b5d366a619c58cc621169d481d049b286553c87ba10c17f1ceef2274f9b8ab7"
 
 [[package]]
 name = "tinyvec"

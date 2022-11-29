@@ -29,11 +29,11 @@ kwctl() {
 }
 
 @test "pull a policy from an OCI registry" {
-    kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    kwctl pull registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 0 ]
     kwctl policies
     [ "$status" -eq 0 ]
-    [[ "$output" =~ "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9" ]]
+    [[ "$output" =~ "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9" ]]
 }
 
 @test "pull a policy from HTTPS to a file" {
@@ -48,27 +48,39 @@ kwctl() {
 }
 
 @test "execute a remote policy that is allowed" {
-    kwctl run --request-path test-data/unprivileged-pod.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    kwctl run --request-path test-data/unprivileged-pod.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
 }
 
 @test "execute a remote policy that is rejected" {
-    kwctl run --request-path test-data/privileged-pod.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    kwctl run --request-path test-data/privileged-pod.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
 }
 
 @test "execute a remote policy that is allowed with AdmissionReview object as the root document" {
-    kwctl run --request-path test-data/unprivileged-pod-admission-review.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    kwctl run --request-path test-data/unprivileged-pod-admission-review.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
 }
 
 @test "execute a remote policy that is rejected with AdmissionReview object as the root document" {
-    kwctl run --request-path test-data/privileged-pod-admission-review.json registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
+    kwctl run --request-path test-data/privileged-pod-admission-review.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+}
+
+@test "benchmark a policy" {
+    kwctl bench \
+      --warm-up-time 1 \
+      --measurement-time 1 \
+      --num-resamples 2 \
+      --num-samples 2 \
+      --request-path test-data/privileged-pod-admission-review.json \
+      registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*validate.*warming up.*') -ne 0 ]
 }
 
 @test "remove a policy from the policy store" {
@@ -88,10 +100,10 @@ kwctl() {
 }
 
 @test "fetch policy digest from an OCI registry" {
-    kwctl digest registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
-    [[ "$output" == "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9@sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5" ]]
-    kwctl digest ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
-    [[ "$output" == "ghcr.io/kubewarden/policies/pod-privileged:v0.1.9@sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5" ]]
+    kwctl digest registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [[ "$output" == "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9@sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5" ]]
+    kwctl digest ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [[ "$output" == "ghcr.io/kubewarden/tests/pod-privileged:v0.1.9@sha256:0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5" ]]
 }
 
 @test "annotate rego policy" {

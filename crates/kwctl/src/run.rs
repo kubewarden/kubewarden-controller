@@ -1,9 +1,10 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::callback_handler::CallbackHandlerBuilder;
-use policy_evaluator::kube::Client;
 use policy_evaluator::{
+    callback_handler::{CallbackHandler, CallbackHandlerBuilder},
     cluster_context::ClusterContext,
     constants::*,
+    kube::Client,
+    policy_evaluator::PolicyEvaluator,
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
@@ -15,25 +16,34 @@ use tracing::error;
 
 use crate::{backend::BackendDetector, pull, verify};
 
-// TODO(ereslibre): arguments to be refactored, and allow to be removed.
-#[allow(clippy::too_many_arguments)]
-pub(crate) async fn pull_and_run(
-    uri: &str,
-    user_execution_mode: Option<PolicyExecutionMode>,
-    sources: Option<&Sources>,
-    request: &str,
-    settings: Option<String>,
-    verified_manifest_digest: &Option<String>,
-    fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
-    enable_wasmtime_cache: bool,
-) -> Result<()> {
-    let uri = crate::utils::map_path_to_uri(uri)?;
+pub(crate) struct PullAndRunSettings {
+    pub uri: String,
+    pub user_execution_mode: Option<PolicyExecutionMode>,
+    pub sources: Option<Sources>,
+    pub request: String,
+    pub settings: Option<String>,
+    pub verified_manifest_digest: Option<String>,
+    pub fulcio_and_rekor_data: Option<FulcioAndRekorData>,
+    pub enable_wasmtime_cache: bool,
+}
+
+pub(crate) struct RunEnv {
+    pub policy_evaluator: PolicyEvaluator,
+    pub req_obj: serde_json::Value,
+    pub callback_handler: CallbackHandler,
+    pub callback_handler_shutdown_channel_tx: oneshot::Sender<()>,
+}
+
+pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> {
+    let uri = crate::utils::map_path_to_uri(&cfg.uri)?;
+    let sources = cfg.sources.as_ref();
+    let fulcio_and_rekor_data = cfg.fulcio_and_rekor_data.as_ref();
 
     let policy = pull::pull(&uri, sources, PullDestination::MainStore)
         .await
         .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
 
-    if let Some(digest) = verified_manifest_digest {
+    if let Some(digest) = cfg.verified_manifest_digest.as_ref() {
         verify::verify_local_checksum(&policy, sources, digest, fulcio_and_rekor_data).await?
     }
 
@@ -54,20 +64,20 @@ pub(crate) async fn pull_and_run(
     }
     let policy_id = read_policy_title_from_metadata(&metadata).unwrap_or_else(|| uri.clone());
 
-    let request = serde_json::from_str::<serde_json::Value>(request)?;
+    let request = serde_json::from_str::<serde_json::Value>(&cfg.request)?;
 
     let execution_mode = determine_execution_mode(
         metadata.clone(),
-        user_execution_mode,
+        cfg.user_execution_mode,
         BackendDetector::default(),
         &policy.local_path,
     )?;
 
-    let policy_settings = settings.map_or(Ok(None), |settings| {
+    let policy_settings = cfg.settings.as_ref().map_or(Ok(None), |settings| {
         if settings.is_empty() {
             Ok(None)
         } else {
-            serde_yaml::from_str(&settings)
+            serde_yaml::from_str(settings)
         }
     })?;
 
@@ -76,8 +86,8 @@ pub(crate) async fn pull_and_run(
     let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
         oneshot::channel();
 
-    let mut callback_handler = CallbackHandlerBuilder::default()
-        .registry_config(sources.cloned())
+    let callback_handler = CallbackHandlerBuilder::default()
+        .registry_config(cfg.sources.clone())
         .shutdown_channel(callback_handler_shutdown_channel_rx)
         .fulcio_and_rekor_data(fulcio_and_rekor_data)
         .build()?;
@@ -89,23 +99,39 @@ pub(crate) async fn pull_and_run(
         .execution_mode(execution_mode)
         .settings(policy_settings)
         .callback_channel(callback_sender_channel);
-    if enable_wasmtime_cache {
+    if cfg.enable_wasmtime_cache {
         policy_evaluator_builder = policy_evaluator_builder.enable_wasmtime_cache();
     }
-    let mut policy_evaluator = policy_evaluator_builder.build()?;
+    let policy_evaluator = policy_evaluator_builder.build()?;
 
     let req_obj = match request {
         serde_json::Value::Object(ref object) => {
             if object.get("kind").and_then(serde_json::Value::as_str) == Some("AdmissionReview") {
                 object
                     .get("request")
+                    .cloned()
                     .ok_or_else(|| anyhow!("invalid admission review object"))
             } else {
-                Ok(&request)
+                Ok(request)
             }
         }
         _ => Err(anyhow!("request to evaluate is invalid")),
     }?;
+
+    Ok(RunEnv {
+        policy_evaluator,
+        req_obj,
+        callback_handler,
+        callback_handler_shutdown_channel_tx,
+    })
+}
+
+pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
+    let run_env = prepare_run_env(cfg).await?;
+    let mut policy_evaluator = run_env.policy_evaluator;
+    let mut callback_handler = run_env.callback_handler;
+    let callback_handler_shutdown_channel_tx = run_env.callback_handler_shutdown_channel_tx;
+    let req_obj = run_env.req_obj;
 
     // validate the settings given by the user
     let settings_validation_response = policy_evaluator.validate_settings();
@@ -123,7 +149,7 @@ pub(crate) async fn pull_and_run(
     });
 
     // evaluate request
-    let response = policy_evaluator.validate(ValidateRequest::new(req_obj.clone()));
+    let response = policy_evaluator.validate(ValidateRequest::new(req_obj));
     println!("{}", serde_json::to_string(&response)?);
 
     // The evaluation is done, we can shutdown the tokio task that is running
