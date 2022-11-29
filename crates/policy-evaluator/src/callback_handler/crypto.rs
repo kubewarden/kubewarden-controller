@@ -18,7 +18,7 @@ pub fn verify_certificate(req: CertificateVerificationRequest) -> Result<bool> {
     // verify validity:
     let pc = match req.cert.encoding {
         CertificateEncoding::Pem => {
-            let pem_str = String::from_utf8(req.cert.data.clone())
+            let pem_str = String::from_utf8(req.cert.data)
                 .map_err(|_| anyhow!("Certificate is not PEM encoded"))?;
             picky::x509::Cert::from_pem_str(&pem_str)
         }
@@ -64,10 +64,7 @@ pub fn verify_certificate(req: CertificateVerificationRequest) -> Result<bool> {
         let mut certs = vec![];
         certs.append(&mut certch);
         let cert_pool = CertificatePool::from_certificates(&certs)?;
-        match req.cert.encoding {
-            CertificateEncoding::Der => cert_pool.verify_der_cert(&req.cert.data)?,
-            CertificateEncoding::Pem => cert_pool.verify_pem_cert(&req.cert.data)?,
-        }
+        cert_pool.verify(&pc)?
     }
 
     Ok(true)
@@ -108,22 +105,6 @@ impl CertificatePool {
             trusted_roots,
             intermediates,
         })
-    }
-
-    /// Ensures the given certificate has been issued by one of the trusted root certificates
-    /// An `Err` is returned when the verification fails.
-    fn verify_pem_cert(&self, cert_pem: &[u8]) -> Result<()> {
-        let cert_pem_str = std::str::from_utf8(cert_pem)
-            .map_err(|_| anyhow!("Cannot convert cert back to string"))?;
-        let cert = picky::x509::Cert::from_pem_str(cert_pem_str)?;
-        self.verify(&cert)
-    }
-
-    /// Ensures the given certificate has been issued by one of the trusted root certificates
-    /// An `Err` is returned when the verification fails.
-    fn verify_der_cert(&self, bytes: &[u8]) -> Result<()> {
-        let cert = picky::x509::Cert::from_der(bytes)?;
-        self.verify(&cert)
     }
 
     fn verify(&self, cert: &picky::x509::Cert) -> Result<()> {
