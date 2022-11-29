@@ -17,7 +17,7 @@ func filterAuditablePolicies(policies []policiesv1.Policy) []policiesv1.Policy {
 			isCreateActionPresentWithoutAllResources(policy) {
 			filteredPolicies = append(filteredPolicies, policy)
 		} else {
-			log.Trace().Str("policy", policy.GetUniqueName()).
+			log.Debug().Str("policy", policy.GetUniqueName()).
 				Bool("backgroundAudit", policy.GetBackgroundAudit()).
 				Bool("active", policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive).
 				Bool("create", isCreateActionPresentWithoutAllResources(policy)).

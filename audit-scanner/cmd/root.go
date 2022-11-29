@@ -4,6 +4,7 @@ import (
 	"fmt"
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
+	"github.com/kubewarden/audit-scanner/internal/resources"
 	"github.com/kubewarden/audit-scanner/internal/scanner"
 	"github.com/spf13/cobra"
 	"os"
@@ -34,11 +35,15 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			fetcher, err := policies.NewFetcher()
+			policiesFetcher, err := policies.NewFetcher()
 			if err != nil {
 				return err
 			}
-			scanner := scanner.NewScanner(fetcher)
+			resourcesFetcher, err := resources.NewFetcher()
+			if err != nil {
+				return err
+			}
+			scanner := scanner.NewScanner(policiesFetcher, resourcesFetcher)
 
 			return startScanner(namespace, scanner)
 		},
