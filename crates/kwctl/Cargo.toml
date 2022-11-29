@@ -18,7 +18,7 @@ flate2 = "1.0.24"
 itertools = "0.10.5"
 k8s-openapi = { version = "0.16.0", default-features = false, features = ["v1_25"] }
 lazy_static = "1.4.0"
-mdcat = "0.29"
+mdcat = "0.30"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.15" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.9"
