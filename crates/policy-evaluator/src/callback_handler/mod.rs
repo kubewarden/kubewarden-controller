@@ -15,8 +15,11 @@ use kubewarden_policy_sdk::host_capabilities::{
 use policy_fetcher::verify::FulcioAndRekorData;
 use sha2::{Digest, Sha256};
 
+mod crypto;
 mod oci;
 mod sigstore_verification;
+
+pub use crypto::verify_certificate;
 
 const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 
