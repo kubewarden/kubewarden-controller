@@ -274,6 +274,8 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: Some(cert_chain),
             not_after: None,
         };
+
+        // compiler thinks 'reason' is unused, doesn't detect it's used in 'matches!()'
         let _reason = "Certificate is not trusted by the provided cert chain".to_string();
         assert!(matches!(
             verify_certificate(req),
@@ -342,6 +344,8 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: None,
             not_after: Some(Utc::now().to_rfc3339()),
         };
+
+        // compiler thinks 'reason' is unused, doesn't detect it's used in 'matches!()'
         let _reason = "Certificate is being used after its expiration date".to_string();
         assert!(matches!(
             verify_certificate(req),
@@ -360,6 +364,8 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: None,
             not_after: None,
         };
+
+        // compiler thinks 'reason' is unused, doesn't detect it's used in 'matches!()'
         let _reason = "Certificate is being used before its validity date".to_string();
         assert!(matches!(
             verify_certificate(req),
