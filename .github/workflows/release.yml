@@ -62,17 +62,54 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: 1
 
-      - name: Create release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get release ID from the release created by release drafter
+        uses: actions/github-script@v6
         with:
-          tag_name: ${{ env.TAG_NAME }}
-          name: Release kubewarden-controller ${{ env.TAG_NAME }}
-          draft: false
-          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
-          files: |
-            kubewarden-controller-sbom.spdx
-            kubewarden-controller-sbom.spdx.cert
-            kubewarden-controller-sbom.spdx.sig
+          script: |
+            let releases = await github.rest.repos.listReleases({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+            });
+            for (const release of releases.data) {
+              if (release.draft) {
+                      core.info(release)
+                      core.exportVariable('RELEASE_ID', release.id)
+                      return
+              }
+            }
+            core.setFailed(`Draft release not found`)
+
+      - name: Upload release assets
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let fs = require('fs');
+            let files = ['kubewarden-controller-sbom.spdx', 'kubewarden-controller-sbom.spdx.cert', 'kubewarden-controller-sbom.spdx.sig']
+            const {RELEASE_ID} = process.env
+
+            for (const file of files) {
+              let file_data = fs.readFileSync(file);
+
+              github.rest.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: `${RELEASE_ID}`,
+                name: file,
+                data: file_data,
+              });
+            }
+
+      - name: Publish release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const {RELEASE_ID} = process.env
+            const {TAG_NAME} = process.env
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: `${RELEASE_ID}`,
+              draft: false,
+              tag_name: `${TAG_NAME}`,
+              name: `${TAG_NAME}`
+            });
