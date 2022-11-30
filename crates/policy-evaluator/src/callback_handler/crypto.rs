@@ -249,7 +249,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA1_PEM.as_bytes().to_vec(),
         };
-        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+        let req = CertificateVerificationRequest {
             cert,
             cert_chain: Some(cert_chain),
             not_after: None,
@@ -269,7 +269,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA1_PEM.as_bytes().to_vec(),
         };
-        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+        let req = CertificateVerificationRequest {
             cert,
             cert_chain: Some(cert_chain),
             not_after: None,
@@ -287,7 +287,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA1_PEM.as_bytes().to_vec(),
         };
-        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+        let req = CertificateVerificationRequest {
             cert,
             cert_chain: None,
             not_after: None,
@@ -306,7 +306,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
         };
-        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+        let req = CertificateVerificationRequest {
             cert,
             cert_chain: Some(cert_chain),
             not_after: None, // not checking expiration
@@ -320,7 +320,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
         };
-        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+        let req = CertificateVerificationRequest {
             cert,
             cert_chain: None,
             not_after: Some("malformed".to_string()),
@@ -337,7 +337,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA2_EXPIRED_PEM.as_bytes().to_vec(),
         };
-        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+        let req = CertificateVerificationRequest {
             cert,
             cert_chain: None,
             not_after: Some(Utc::now().to_rfc3339()),
@@ -355,7 +355,7 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             encoding: CertificateEncoding::Pem,
             data: INTERMEDIATE_CA_NOT_BEFORE_PEM.as_bytes().to_vec(),
         };
-        let req: CertificateVerificationRequest = CertificateVerificationRequest {
+        let req = CertificateVerificationRequest {
             cert,
             cert_chain: None,
             not_after: None,
