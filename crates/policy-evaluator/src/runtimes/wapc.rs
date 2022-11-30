@@ -8,14 +8,14 @@ use tracing::{debug, error};
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
 
 use crate::admission_response::AdmissionResponse;
-use crate::callback_handler::{verify_certificate, BoolWithReason};
+use crate::callback_handler::verify_certificate;
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 
 use kubewarden_policy_sdk::host_capabilities::{
-    crypto_v1::CertificateVerificationRequest, crypto_v1::CertificateVerificationResponse,
+    crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
@@ -130,16 +130,7 @@ pub(crate) fn host_callback(
                     let req: CertificateVerificationRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
                     let response: CertificateVerificationResponse = match verify_certificate(req) {
-                        Ok(b) => match b {
-                            BoolWithReason::True => CertificateVerificationResponse {
-                                trusted: true,
-                                reason: "".to_string(),
-                            },
-                            BoolWithReason::False(reason) => CertificateVerificationResponse {
-                                trusted: false,
-                                reason,
-                            },
-                        },
+                        Ok(b) => b.into(),
                         Err(e) => {
                             return Err(format!("Error when verifying certificate: {}", e).into())
                         }

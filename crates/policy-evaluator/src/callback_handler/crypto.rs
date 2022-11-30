@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, FixedOffset, Utc};
-use kubewarden_policy_sdk::host_capabilities::crypto::{Certificate, CertificateEncoding};
+use kubewarden_policy_sdk::host_capabilities::crypto::{
+    BoolWithReason, Certificate, CertificateEncoding,
+};
 use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
 use tracing::debug;
 
@@ -9,13 +11,6 @@ use tracing::debug;
 struct CertificatePool {
     trusted_roots: Vec<picky::x509::Cert>,
     intermediates: Vec<picky::x509::Cert>,
-}
-
-#[derive(Debug)]
-/// Used as return of verify_certificate()
-pub enum BoolWithReason {
-    True,
-    False(String),
 }
 
 /// verify_certificate verifies the validity of the certificate, and if it is
@@ -149,9 +144,11 @@ impl CertificatePool {
 
 #[cfg(test)]
 mod tests {
-    use crate::callback_handler::{verify_certificate, BoolWithReason};
+    use crate::callback_handler::verify_certificate;
     use chrono::Utc;
-    use kubewarden_policy_sdk::host_capabilities::crypto::{Certificate, CertificateEncoding};
+    use kubewarden_policy_sdk::host_capabilities::crypto::{
+        BoolWithReason, Certificate, CertificateEncoding,
+    };
     use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
 
     const ROOT_CA1_PEM: &str = "-----BEGIN CERTIFICATE-----

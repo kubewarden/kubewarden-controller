@@ -19,7 +19,7 @@ mod crypto;
 mod oci;
 mod sigstore_verification;
 
-pub use crypto::{verify_certificate, BoolWithReason};
+pub use crypto::verify_certificate;
 
 const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 
