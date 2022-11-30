@@ -15,7 +15,7 @@ use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 
 use kubewarden_policy_sdk::host_capabilities::{
-    crypto_v1::CertificateVerificationRequest, crypto_v1::CertificateVerificationResponse,
+    crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
@@ -129,8 +129,11 @@ pub(crate) fn host_callback(
                 "v1/is_certificate_trusted" => {
                     let req: CertificateVerificationRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
-                    let response = CertificateVerificationResponse {
-                        trusted: verify_certificate(req)?,
+                    let response: CertificateVerificationResponse = match verify_certificate(req) {
+                        Ok(b) => b.into(),
+                        Err(e) => {
+                            return Err(format!("Error when verifying certificate: {}", e).into())
+                        }
                     };
                     Ok(serde_json::to_vec(&response)?)
                 }
