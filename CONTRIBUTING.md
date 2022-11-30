@@ -87,25 +87,6 @@ KUBEWARDEN_DEVELOPMENT_MODE=1 \
   make run
 ```
 
-## Commit titles
-
-Commit titles matter when a release is tagged and the changelog is
-generated.
-
-The changelog will skip all commits that do not follow a specific
-structure. The structure of the commit title is as follows:
-
-- `type(scope): subject`
-
-Scope is optional. Some commit title examples that would be included
-in the changelog:
-
-- `feat: this is a feature that involves several components`
-- `feat(docs): allow users to report documentation errors`
-- `perf(policy-server): cache policy results`
-- `fix(controller): properly update ClusterAdmissionPolicy status subresource`
-- `refactor(policy-server): move common code to external crates`
-
 ## Tagging a new release
 
 ### Make sure CRD docs are updated:
@@ -117,29 +98,6 @@ $ # commit resulting changes
 ```
 
 ### Create a new tag
-
-#### Requirements
-
-It is required to have the
-[`git-chglog`](https://github.com/git-chglog/git-chglog) project
-installed for automatic changelog generation to work. Install it like
-so:
-
-```console
-$ go get -u github.com/git-chglog/git-chglog/cmd/git-chglog@v0.14.2
-```
-
-For creating a new release, first create a new tag:
-
-```console
-git-chglog --next-tag vX.Y.Z -o CHANGELOG.md
-```
-
-This will update the `CHANGELOG.md` file without yet commiting it. You should
-only stage changes to the new version, and format them as needed.
-
-
-### Push new tag to the upstream repository
 
 Assuming your official kubewarden remote is called `upstream`:
 
@@ -158,7 +116,7 @@ have been started:
 1. Push a tagged container image with the build of the project
 
 For a release to be complete, all these tasks should have been
-executed succesfully.
+executed successfully.
 
 ### Consider bumping the helm-chart
 
