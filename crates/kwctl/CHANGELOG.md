@@ -2,12 +2,71 @@
 ## [Unreleased]
 
 
+<a name="v1.4.0-rc1"></a>
+## [v1.4.0-rc1] - 2022-12-01
+### Bug Fixes
+- ensure e2e tests are not using public policies
+- shellchecks errors in airgap scripts
+- **deps:** update rust crate flate2 to 1.0.25
+
+### Code Refactoring
+- cleanup the `pull_and_run` API
+- use tests policies in e2e test
+- move shift out of switch block
+- move airga scripts to scripst folder
+
+### Features
+- implement the "bench" command
+- support certificate based verification
+- add airgap scripts to releases
+- add shellcheck to github action
+- kubewarden-load-policies.sh
+- kubewarden-save-policies.sh
+
+### Pull Requests
+- Merge pull request [#371](https://github.com/kubewarden/kwctl/issues/371) from kubewarden/dependabot/cargo/policy-evaluator-v0.4.16
+- Merge pull request [#369](https://github.com/kubewarden/kwctl/issues/369) from kubewarden/renovate/all-patch
+- Merge pull request [#372](https://github.com/kubewarden/kwctl/issues/372) from kubewarden/dependabot/cargo/mdcat-0.30.1
+- Merge pull request [#370](https://github.com/kubewarden/kwctl/issues/370) from kubewarden/dependabot/cargo/rstest-0.16.0
+- Merge pull request [#368](https://github.com/kubewarden/kwctl/issues/368) from flavio/add-bench-command
+- Merge pull request [#367](https://github.com/kubewarden/kwctl/issues/367) from flavio/sigstore-cert-verification
+- Merge pull request [#357](https://github.com/kubewarden/kwctl/issues/357) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#364](https://github.com/kubewarden/kwctl/issues/364) from raulcabello/scripts
+- Merge pull request [#359](https://github.com/kubewarden/kwctl/issues/359) from kubewarden/dependabot/cargo/wasmparser-0.95.0
+- Merge pull request [#358](https://github.com/kubewarden/kwctl/issues/358) from kubewarden/dependabot/cargo/tokio-1.22.0
+- Merge pull request [#354](https://github.com/kubewarden/kwctl/issues/354) from raulcabello/save-load-script
+
+
+<a name="v1.3.1"></a>
+## [v1.3.1] - 2022-11-15
+### Code Refactoring
+- add more description to save/load errors
+- change source_path var to &str
+- change save output arg value_name to FILE
+
+### Features
+- add save and load commands
+- Support metadata.backgroundAudit
+
+### Pull Requests
+- Merge pull request [#355](https://github.com/kubewarden/kwctl/issues/355) from raulcabello/bump-evaluator
+- Merge pull request [#352](https://github.com/kubewarden/kwctl/issues/352) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#349](https://github.com/kubewarden/kwctl/issues/349) from kubewarden/dependabot/cargo/wasmparser-0.94.0
+- Merge pull request [#348](https://github.com/kubewarden/kwctl/issues/348) from raulcabello/save
+- Merge pull request [#347](https://github.com/kubewarden/kwctl/issues/347) from viccuad/clomonitor-exemptions
+- Merge pull request [#345](https://github.com/kubewarden/kwctl/issues/345) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#344](https://github.com/kubewarden/kwctl/issues/344) from raulcabello/ghaction-fix
+- Merge pull request [#342](https://github.com/kubewarden/kwctl/issues/342) from kubewarden/renovate/lock-file-maintenance
+- Merge pull request [#339](https://github.com/kubewarden/kwctl/issues/339) from viccuad/feat-audit
+
+
 <a name="v1.3.0"></a>
 ## [v1.3.0] - 2022-10-27
 ### Bug Fixes
 - update cosign version used by GH actions
 
 ### Pull Requests
+- Merge pull request [#340](https://github.com/kubewarden/kwctl/issues/340) from flavio/v1.3.0
 - Merge pull request [#336](https://github.com/kubewarden/kwctl/issues/336) from kubewarden/dependabot/cargo/wasmparser-0.93.0
 
 
@@ -15,6 +74,9 @@
 ## [v1.3.0-rc3] - 2022-10-26
 ### Bug Fixes
 - **deps:** update rust crate serde_yaml to 0.9.14
+- **deps:** update all patchlevel dependencies
+- **deps:** update rust crate serde_yaml to 0.9.11
+- **deps:** update rust crate serde_yaml to 0.9.10
 
 ### Pull Requests
 - Merge pull request [#338](https://github.com/kubewarden/kwctl/issues/338) from flavio/1.3.0-rc3
@@ -23,16 +85,6 @@
 - Merge pull request [#333](https://github.com/kubewarden/kwctl/issues/333) from kubewarden/renovate/all-patch
 - Merge pull request [#334](https://github.com/kubewarden/kwctl/issues/334) from kubewarden/renovate/lock-file-maintenance
 - Merge pull request [#329](https://github.com/kubewarden/kwctl/issues/329) from flavio/v1.3.0-rc1
-
-
-<a name="v1.3.0-rc1"></a>
-## [v1.3.0-rc1] - 2022-10-21
-### Bug Fixes
-- **deps:** update all patchlevel dependencies
-- **deps:** update rust crate serde_yaml to 0.9.11
-- **deps:** update rust crate serde_yaml to 0.9.10
-
-### Pull Requests
 - Merge pull request [#328](https://github.com/kubewarden/kwctl/issues/328) from flavio/update-deps
 - Merge pull request [#315](https://github.com/kubewarden/kwctl/issues/315) from kubewarden/renovate/lock-file-maintenance
 - Merge pull request [#300](https://github.com/kubewarden/kwctl/issues/300) from kubewarden/renovate/all-patch
@@ -472,10 +524,11 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.4.0-rc1...HEAD
+[v1.4.0-rc1]: https://github.com/kubewarden/kwctl/compare/v1.3.1...v1.4.0-rc1
+[v1.3.1]: https://github.com/kubewarden/kwctl/compare/v1.3.0...v1.3.1
 [v1.3.0]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc3...v1.3.0
-[v1.3.0-rc3]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc1...v1.3.0-rc3
-[v1.3.0-rc1]: https://github.com/kubewarden/kwctl/compare/v1.1.3...v1.3.0-rc1
+[v1.3.0-rc3]: https://github.com/kubewarden/kwctl/compare/v1.1.3...v1.3.0-rc3
 [v1.1.3]: https://github.com/kubewarden/kwctl/compare/v1.1.2...v1.1.3
 [v1.1.2]: https://github.com/kubewarden/kwctl/compare/v1.1.1...v1.1.2
 [v1.1.1]: https://github.com/kubewarden/kwctl/compare/v1.1.0...v1.1.1
