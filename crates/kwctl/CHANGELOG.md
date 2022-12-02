@@ -2,6 +2,9 @@
 ## [Unreleased]
 
 
+<a name="v1.4.0"></a>
+## [v1.4.0] - 2022-12-02
+
 <a name="v1.4.0-rc1"></a>
 ## [v1.4.0-rc1] - 2022-12-01
 ### Bug Fixes
@@ -24,6 +27,8 @@
 - kubewarden-save-policies.sh
 
 ### Pull Requests
+- Merge pull request [#374](https://github.com/kubewarden/kwctl/issues/374) from viccuad/release-1.4.0-rc1
+- Merge pull request [#373](https://github.com/kubewarden/kwctl/issues/373) from kubewarden/dependabot/cargo/policy-evaluator-v0.4.17
 - Merge pull request [#371](https://github.com/kubewarden/kwctl/issues/371) from kubewarden/dependabot/cargo/policy-evaluator-v0.4.16
 - Merge pull request [#369](https://github.com/kubewarden/kwctl/issues/369) from kubewarden/renovate/all-patch
 - Merge pull request [#372](https://github.com/kubewarden/kwctl/issues/372) from kubewarden/dependabot/cargo/mdcat-0.30.1
@@ -524,7 +529,8 @@
 - Merge pull request [#12](https://github.com/kubewarden/kwctl/issues/12) from ereslibre/drop-uri-named-arg
 
 
-[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.4.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/kwctl/compare/v1.4.0...HEAD
+[v1.4.0]: https://github.com/kubewarden/kwctl/compare/v1.4.0-rc1...v1.4.0
 [v1.4.0-rc1]: https://github.com/kubewarden/kwctl/compare/v1.3.1...v1.4.0-rc1
 [v1.3.1]: https://github.com/kubewarden/kwctl/compare/v1.3.0...v1.3.1
 [v1.3.0]: https://github.com/kubewarden/kwctl/compare/v1.3.0-rc3...v1.3.0
