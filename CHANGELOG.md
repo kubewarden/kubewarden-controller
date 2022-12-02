@@ -2,8 +2,14 @@
 ## [Unreleased]
 
 
+<a name="v1.4.0"></a>
+## [v1.4.0] - 2022-12-02
+### Pull Requests
+- Merge pull request [#359](https://github.com/kubewarden/kubewarden-controller/issues/359) from viccuad/main
+
+
 <a name="v1.4.0-rc1"></a>
-## [v1.4.0-rc1] - 2022-11-15
+## [v1.4.0-rc1] - 2022-12-02
 ### Bug Fixes
 - change import order to fix lint error
 - exclude kubewarden namespace in webhooks
@@ -1000,7 +1006,8 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.4.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.4.0...HEAD
+[v1.4.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.4.0-rc1...v1.4.0
 [v1.4.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v1.3.0...v1.4.0-rc1
 [v1.3.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.3.0-rc3...v1.3.0
 [v1.3.0-rc3]: https://github.com/kubewarden/kubewarden-controller/compare/v1.3.0-rc2...v1.3.0-rc3
