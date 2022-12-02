@@ -2,6 +2,9 @@
 ## [Unreleased]
 
 
+<a name="v1.4.0"></a>
+## [v1.4.0] - 2022-12-02
+
 <a name="v1.4.0-rc1"></a>
 ## [v1.4.0-rc1] - 2022-12-01
 ### Features
@@ -483,7 +486,8 @@
 - Merge pull request [#9](https://github.com/kubewarden/policy-server/issues/9) from cmurphy/fix-uid
 
 
-[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.4.0-rc1...HEAD
+[Unreleased]: https://github.com/kubewarden/policy-server/compare/v1.4.0...HEAD
+[v1.4.0]: https://github.com/kubewarden/policy-server/compare/v1.4.0-rc1...v1.4.0
 [v1.4.0-rc1]: https://github.com/kubewarden/policy-server/compare/v1.3.0...v1.4.0-rc1
 [v1.3.0]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc3...v1.3.0
 [v1.3.0-rc3]: https://github.com/kubewarden/policy-server/compare/v1.3.0-rc2...v1.3.0-rc3
