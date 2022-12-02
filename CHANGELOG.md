@@ -2,8 +2,33 @@
 ## [Unreleased]
 
 
+<a name="v1.4.0-rc1"></a>
+## [v1.4.0-rc1] - 2022-11-15
+### Bug Fixes
+- change import order to fix lint error
+- exclude kubewarden namespace in webhooks
+
+### Code Refactoring
+- rename GetNamespaceSelector to GetUpdatedNamespaceSelector
+
+### Features
+- add permission to each job
+
+### Pull Requests
+- Merge pull request [#349](https://github.com/kubewarden/kubewarden-controller/issues/349) from viccuad/main
+- Merge pull request [#342](https://github.com/kubewarden/kubewarden-controller/issues/342) from viccuad/fossa-badge
+- Merge pull request [#338](https://github.com/kubewarden/kubewarden-controller/issues/338) from raulcabello/controller-bug
+- Merge pull request [#340](https://github.com/kubewarden/kubewarden-controller/issues/340) from kravciak/permwrite
+- Merge pull request [#335](https://github.com/kubewarden/kubewarden-controller/issues/335) from raulcabello/ghaction-fix
+- Merge pull request [#334](https://github.com/kubewarden/kubewarden-controller/issues/334) from raulcabello/token-permission
+- Merge pull request [#331](https://github.com/kubewarden/kubewarden-controller/issues/331) from kravciak/warning
+
+
 <a name="v1.3.0"></a>
-## [v1.3.0] - 0001-01-01
+## [v1.3.0] - 2022-10-27
+### Pull Requests
+- Merge pull request [#332](https://github.com/kubewarden/kubewarden-controller/issues/332) from flavio/v1.3.0
+
 
 <a name="v1.3.0-rc3"></a>
 ## [v1.3.0-rc3] - 2022-10-26
@@ -67,14 +92,14 @@
 - Merge pull request [#253](https://github.com/kubewarden/kubewarden-controller/issues/253) from kubewarden/road-to-1.1.0
 
 
-<a name="v1.0.0"></a>
-## [v1.0.0] - 2022-06-15
-
 <a name="v1.0.0-rc3"></a>
 ## [v1.0.0-rc3] - 2022-06-15
 
 <a name="v1.0.0-rc4"></a>
 ## [v1.0.0-rc4] - 2022-06-15
+
+<a name="v1.0.0"></a>
+## [v1.0.0] - 2022-06-15
 ### Pull Requests
 - Merge pull request [#251](https://github.com/kubewarden/kubewarden-controller/issues/251) from viccuad/main
 
@@ -975,12 +1000,17 @@
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2021-01-18
 
-[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/kubewarden/kubewarden-controller/compare/v1.4.0-rc1...HEAD
+[v1.4.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v1.3.0...v1.4.0-rc1
+[v1.3.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.3.0-rc3...v1.3.0
+[v1.3.0-rc3]: https://github.com/kubewarden/kubewarden-controller/compare/v1.3.0-rc2...v1.3.0-rc3
+[v1.3.0-rc2]: https://github.com/kubewarden/kubewarden-controller/compare/v1.3.0-rc1...v1.3.0-rc2
+[v1.3.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v1.1.1...v1.3.0-rc1
 [v1.1.1]: https://github.com/kubewarden/kubewarden-controller/compare/v1.1.0...v1.1.1
-[v1.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0...v1.1.0
-[v1.0.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc3...v1.0.0
+[v1.1.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc3...v1.1.0
 [v1.0.0-rc3]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc4...v1.0.0-rc3
-[v1.0.0-rc4]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc2...v1.0.0-rc4
+[v1.0.0-rc4]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0...v1.0.0-rc4
+[v1.0.0]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc2...v1.0.0
 [v1.0.0-rc2]: https://github.com/kubewarden/kubewarden-controller/compare/v1.0.0-rc1...v1.0.0-rc2
 [v1.0.0-rc1]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.5...v1.0.0-rc1
 [v0.5.5]: https://github.com/kubewarden/kubewarden-controller/compare/v0.5.4...v0.5.5
