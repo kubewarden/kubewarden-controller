@@ -558,6 +558,12 @@ pub fn build_cli() -> Command {
                     .value_name("SECONDS")
                     .help("How long the bench should warm up")
                 )
+                .arg(
+                    Arg::new("dump_results_to_disk")
+                    .long("dump-results-to-disk")
+                    .help("Puts results in target/tiny-bench/label/.. if target can be found. used for comparing previous runs")
+                )
+
                 // The next ones are exactly like the `run` args
                 .arg(
                     Arg::new("docker-config-json-path")

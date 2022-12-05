@@ -250,6 +250,7 @@ async fn main() -> Result<()> {
                     })?;
                     benchmark_cfg.warm_up_time = Duration::from_secs(duration);
                 }
+                benchmark_cfg.dump_results_to_disk = matches.contains_id("dump_results_to_disk");
 
                 bench::pull_and_bench(&bench::PullAndBenchSettings {
                     pull_and_run_settings,
