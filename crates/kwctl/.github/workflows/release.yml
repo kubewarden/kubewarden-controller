@@ -142,56 +142,56 @@ jobs:
     needs:
       - ci
     steps:
-    - uses: actions/checkout@v2
-    - uses: sigstore/cosign-installer@main
-    - name: Setup rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: ${{ matrix.targetarch }}-apple-darwin
-        override: true
+      - uses: actions/checkout@v2
+      - uses: sigstore/cosign-installer@main
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.targetarch }}-apple-darwin
+          override: true
 
-    - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
-    - name: Build kwctl
-      run: cargo build --target=${{ matrix.targetarch }}-apple-darwin --release
-    - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
-    - name: Sign kwctl
-      run: cosign sign-blob kwctl-darwin-${{ matrix.targetarch }} --output-certificate kwctl-darwin-${{ matrix.targetarch }}.pem --output-signature kwctl-darwin-${{ matrix.targetarch }}.sig
-      env:
-        COSIGN_EXPERIMENTAL: 1
-    - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.sig kwctl-darwin-${{ matrix.targetarch }}.pem
-    - name: Upload binary
-      uses: actions/upload-artifact@v2
-      with:
-        name: kwctl-darwin-${{ matrix.targetarch }}
-        path: kwctl-darwin-${{ matrix.targetarch }}.zip
-    - name: Install SBOM generator tool
-      uses: kubewarden/github-actions/sbom-generator-installer@v1
-      with:
-        sbom-generator-arch: darwin-amd64
-    - name: Generate SBOM
-      run: |
-        spdx-sbom-generator -f json
-        # SBOM files should have "sbom" in the name due the CLO monitor
-        # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-        mv bom-cargo.json kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+      - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
+      - name: Build kwctl
+        run: cargo build --target=${{ matrix.targetarch }}-apple-darwin --release
+      - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
+      - name: Sign kwctl
+        run: cosign sign-blob kwctl-darwin-${{ matrix.targetarch }} --output-certificate kwctl-darwin-${{ matrix.targetarch }}.pem --output-signature kwctl-darwin-${{ matrix.targetarch }}.sig
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.sig kwctl-darwin-${{ matrix.targetarch }}.pem
+      - name: Upload binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-darwin-${{ matrix.targetarch }}
+          path: kwctl-darwin-${{ matrix.targetarch }}.zip
+      - name: Install SBOM generator tool
+        uses: kubewarden/github-actions/sbom-generator-installer@v1
+        with:
+          sbom-generator-arch: darwin-amd64
+      - name: Generate SBOM
+        run: |
+          spdx-sbom-generator -f json
+          # SBOM files should have "sbom" in the name due the CLO monitor
+          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+          mv bom-cargo.json kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
 
-    - name: Sign BOM file
-      run: |
-        cosign sign-blob --output-certificate kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert \
-          --output-signature kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig \
-          kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
-      env:
-        COSIGN_EXPERIMENTAL: 1
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert \
+            --output-signature kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig \
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+        env:
+          COSIGN_EXPERIMENTAL: 1
 
-    - name: Upload kwctl SBOM files
-      uses: actions/upload-artifact@v2
-      with:
-        name: kwctl-darwin-${{ matrix.targetarch }}-sbom
-        path: |
-          kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
-          kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert
-          kwctl-darwin-#{{ matrix.targetarch }}-sbom.spdx.sig
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-darwin-${{ matrix.targetarch }}-sbom
+          path: |
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert
+            kwctl-darwin-#{{ matrix.targetarch }}-sbom.spdx.sig
 
   build-windows-x86_64:
     name: Build windows (x86_64) binary
@@ -201,54 +201,54 @@ jobs:
     needs:
       - ci
     steps:
-    - uses: actions/checkout@v2
-    - uses: sigstore/cosign-installer@main
-    - name: Setup rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - run: rustup target add x86_64-pc-windows-msvc
-    - name: Build kwctl
-      run: cargo build --target=x86_64-pc-windows-msvc --release
-    - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
-    - name: Sign kwctl
-      run: cosign sign-blob kwctl-windows-x86_64.exe --output-certificate kwctl-windows-x86_64.pem --output-signature kwctl-windows-x86_64.sig
-      env:
-        COSIGN_EXPERIMENTAL: 1
-    - run: |
-        "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.sig kwctl-windows-x86_64.pem
-      shell: bash
-    - name: Upload binary
-      uses: actions/upload-artifact@v2
-      with:
-        name: kwctl-windows-x86_64
-        path: kwctl-windows-x86_64.exe.zip
-    - name: Generate SBOM
-      run: |
-        # if change the version used, remember to update the default version used for
-        # Mac and Linux in the Makefile.
-        curl -LO https://github.com/opensbom-generator/spdx-sbom-generator/releases/download/v0.0.15/spdx-sbom-generator-v0.0.15-windows-amd64.zip
-        7z e spdx-sbom-generator-v0.0.15-windows-amd64.zip
-        ./spdx-sbom-generator -f json
+      - uses: actions/checkout@v2
+      - uses: sigstore/cosign-installer@main
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: rustup target add x86_64-pc-windows-msvc
+      - name: Build kwctl
+        run: cargo build --target=x86_64-pc-windows-msvc --release
+      - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
+      - name: Sign kwctl
+        run: cosign sign-blob kwctl-windows-x86_64.exe --output-certificate kwctl-windows-x86_64.pem --output-signature kwctl-windows-x86_64.sig
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      - run: |
+          "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.sig kwctl-windows-x86_64.pem
+        shell: bash
+      - name: Upload binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-windows-x86_64
+          path: kwctl-windows-x86_64.exe.zip
+      - name: Generate SBOM
+        run: |
+          # if change the version used, remember to update the default version used for
+          # Mac and Linux in the Makefile.
+          curl -LO https://github.com/opensbom-generator/spdx-sbom-generator/releases/download/v0.0.15/spdx-sbom-generator-v0.0.15-windows-amd64.zip
+          7z e spdx-sbom-generator-v0.0.15-windows-amd64.zip
+          ./spdx-sbom-generator -f json
 
-        # SBOM files should have "sbom" in the name due the CLO monitor
-        # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-        mv bom-cargo.json kwctl-windows-x86_64-sbom.spdx.json
+          # SBOM files should have "sbom" in the name due the CLO monitor
+          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+          mv bom-cargo.json kwctl-windows-x86_64-sbom.spdx.json
 
-    - name: Sign BOM file
-      run: |
-        cosign sign-blob --output-certificate kwctl-windows-x86_64-sbom.spdx.cert --output-signature kwctl-windows-x86_64-sbom.spdx.sig kwctl-windows-x86_64-sbom.spdx.json
-      env:
-        COSIGN_EXPERIMENTAL: 1
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate kwctl-windows-x86_64-sbom.spdx.cert --output-signature kwctl-windows-x86_64-sbom.spdx.sig kwctl-windows-x86_64-sbom.spdx.json
+        env:
+          COSIGN_EXPERIMENTAL: 1
 
-    - name: Upload kwctl SBOM files
-      uses: actions/upload-artifact@v2
-      with:
-        name: kwctl-windows-x86_64-sbom
-        path: |
-          kwctl-windows-x86_64-sbom.spdx.json
-          kwctl-windows-x86_64-sbom.spdx.cert
-          kwctl-windows-x86_64-sbom.spdx.sig
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-windows-x86_64-sbom
+          path: |
+            kwctl-windows-x86_64-sbom.spdx.json
+            kwctl-windows-x86_64-sbom.spdx.cert
+            kwctl-windows-x86_64-sbom.spdx.sig
 
   release:
     name: Create release
@@ -260,19 +260,72 @@ jobs:
       - build-darwin-binaries
       - build-windows-x86_64
     steps:
-    - name: Download all artifact
-      id: download
-      uses: actions/download-artifact@v2
+      - name: Download all artifact
+        id: download
+        uses: actions/download-artifact@v2
 
-    - name: Create Release
-      id: create-release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        name: ${{ github.ref_name }}
-        draft: false
-        prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
-        files: |
-          ${{steps.download.outputs.download-path}}/kwctl*/**
+      - name: Retrieve tag name
+        run: |
+          echo TAG_NAME=$(echo ${{ github.ref }} | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+
+      - name: Get release ID from the release created by release drafter
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let releases = await github.rest.repos.listReleases({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+            });
+            for (const release of releases.data) {
+              if (release.draft) {
+                      core.info(`${release}`)
+                      core.exportVariable('RELEASE_ID', release.id)
+                      return
+              }
+            }
+            core.setFailed(`Draft release not found`)
+
+      - name: Upload release assets
+        uses: actions/github-script@v6
+        env:
+          DOWNLOAD_PATH: "${{steps.download.outputs.download-path}}"
+        with:
+          script: |
+            const {RELEASE_ID, DOWNLOAD_PATH} = process.env
+            core.info(`${RELEASE_ID} - ${DOWNLOAD_PATH}`)
+            let fs = require('fs');
+            let path = require('path');
+            const patterns = [
+              `${DOWNLOAD_PATH}/kwctl-linux-*/*`,
+              `${DOWNLOAD_PATH}/kwctl-darwin-*/*`,
+              `${DOWNLOAD_PATH}/kwctl-windows-*/*`,
+            ]
+            let globber = await glob.create(patterns.join('\n'))
+            let files =  await globber.glob()
+            for (const file of files) {
+              core.info(file)
+              let file_data = fs.readFileSync(file);
+
+              github.rest.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: `${RELEASE_ID}`,
+                name: path.basename(file),
+                data: file_data,
+              });
+            }
+
+      - name: Publish release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const {RELEASE_ID} = process.env
+            const {TAG_NAME} = process.env
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: `${RELEASE_ID}`,
+              draft: false,
+              tag_name: `${TAG_NAME}`,
+              name: `${TAG_NAME}`
+            });
