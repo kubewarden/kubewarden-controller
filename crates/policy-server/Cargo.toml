@@ -8,7 +8,7 @@ authors = [
   "Víctor Cuadrado Juan <vcuadradojuan@suse.de>",
   "José Guilherme Vanz <jguilhermevanz@suse.com>"
 ]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
