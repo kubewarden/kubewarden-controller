@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.66"
-base64 = "0.13.1"
+base64 = "0.20.0"
 chrono = "0.4.23"
 chrono-tz = "0.8.1"
 gtmpl = "0.7.1"
