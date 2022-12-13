@@ -4,7 +4,7 @@ use policy_evaluator::{
     cluster_context::ClusterContext,
     constants::*,
     kube::Client,
-    policy_evaluator::PolicyEvaluator,
+    policy_evaluator::{Evaluator, PolicyEvaluator},
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
