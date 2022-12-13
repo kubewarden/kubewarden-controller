@@ -36,7 +36,7 @@ tracing-futures = "0.2"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.3.1"
 walrus = "0.19.0"
-wasmparser = "0.95"
+wasmparser = "0.96"
 
 [dev-dependencies]
 rstest = "0.16.0"
