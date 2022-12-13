@@ -5,8 +5,8 @@ use warp::http::StatusCode;
 
 use crate::admission_review::AdmissionRequest;
 
-mod validation;
-pub(crate) use validation::validation;
+mod audit_and_validation;
+pub(crate) use audit_and_validation::{audit, validation};
 
 pub(crate) fn populate_span_with_admission_request_data(adm_req: &AdmissionRequest) {
     Span::current().record("kind", adm_req.kind.kind.as_str());

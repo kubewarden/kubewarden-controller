@@ -7,12 +7,19 @@ use crate::admission_review::AdmissionRequest;
 use crate::policy_downloader::FetchedPolicies;
 use crate::settings::Policy;
 
+#[derive(Debug, Clone)]
+pub(crate) enum RequestOrigin {
+    Validate,
+    Audit,
+}
+
 #[derive(Debug)]
 pub(crate) struct EvalRequest {
     pub policy_id: String,
     pub req: AdmissionRequest,
     pub resp_chan: oneshot::Sender<Option<AdmissionResponse>>,
     pub parent_span: tracing::Span,
+    pub request_origin: RequestOrigin,
 }
 
 /// Holds the bootstrap parameters of a worker pool
