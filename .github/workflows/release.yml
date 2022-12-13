@@ -42,10 +42,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Generate CRDs
+        run: |
+          make generate-crds
+          tar -czf CRDS.tar.gz -C generated-crds $(ls generated-crds)
+
       - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          echo TAG_NAME=$(echo ${{ github.ref }} | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+          echo TAG_NAME=$(echo ${{ github.ref_name }}) >> $GITHUB_ENV
 
       - name: Create SBOM file
         shell: bash
@@ -61,6 +66,22 @@ jobs:
             kubewarden-controller-sbom.spdx
         env:
           COSIGN_EXPERIMENTAL: 1
+
+      - name: Get latest release tag
+        id: get_last_release_tag
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let release = await github.rest.repos.getLatestRelease({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+            });
+
+            if (release.status  === 200 ) {
+              core.setOutput('old_release_tag', release.data.tag_name)
+              return
+            }
+            core.setFailed("Cannot find latest release")
 
       - name: Get release ID from the release created by release drafter
         uses: actions/github-script@v6
@@ -80,23 +101,28 @@ jobs:
             core.setFailed(`Draft release not found`)
 
       - name: Upload release assets
+        id: upload_release_assets
         uses: actions/github-script@v6
         with:
           script: |
             let fs = require('fs');
-            let files = ['kubewarden-controller-sbom.spdx', 'kubewarden-controller-sbom.spdx.cert', 'kubewarden-controller-sbom.spdx.sig']
+            let files = ['kubewarden-controller-sbom.spdx', 'kubewarden-controller-sbom.spdx.cert', 'kubewarden-controller-sbom.spdx.sig', "CRDS.tar.gz"]
             const {RELEASE_ID} = process.env
 
             for (const file of files) {
               let file_data = fs.readFileSync(file);
 
-              github.rest.repos.uploadReleaseAsset({
+              let response = await github.rest.repos.uploadReleaseAsset({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 release_id: `${RELEASE_ID}`,
                 name: file,
                 data: file_data,
               });
+              // store the crds asset id used it in the helm chart update
+              if (file === "CRDS.tar.gz") {
+                core.setOutput('crds_asset_id', response.data.id)
+              }
             }
 
       - name: Publish release
@@ -113,3 +139,11 @@ jobs:
               tag_name: `${TAG_NAME}`,
               name: `${TAG_NAME}`
             });
+
+      - name: Trigger chart update
+        uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588
+        with:
+          token: ${{ secrets.HELM_CHART_REPO_ACCESS_TOKEN }}
+          repository: "${{github.repository_owner}}/helm-charts"
+          event-type: update-chart
+          client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}", "crds_asset_id": "${{steps.upload_release_assets.outputs.crds_asset_id}}"}'
