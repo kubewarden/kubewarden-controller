@@ -85,6 +85,13 @@ pub(crate) enum Runtime {
     Burrego(Box<BurregoEvaluator>),
 }
 
+pub trait Evaluator {
+    fn validate(&mut self, request: ValidateRequest) -> AdmissionResponse;
+    fn validate_settings(&mut self) -> SettingsValidationResponse;
+    fn protocol_version(&mut self) -> Result<ProtocolVersion>;
+    fn policy_id(&self) -> String;
+}
+
 pub struct PolicyEvaluator {
     pub(crate) runtime: Runtime,
     pub(crate) settings: PolicySettings,
@@ -100,9 +107,13 @@ impl fmt::Debug for PolicyEvaluator {
     }
 }
 
-impl PolicyEvaluator {
+impl Evaluator for PolicyEvaluator {
+    fn policy_id(&self) -> String {
+        self.policy.id.clone()
+    }
+
     #[tracing::instrument(skip(request))]
-    pub fn validate(&mut self, request: ValidateRequest) -> AdmissionResponse {
+    fn validate(&mut self, request: ValidateRequest) -> AdmissionResponse {
         match self.runtime {
             Runtime::Wapc(ref mut wapc_host) => {
                 WapcRuntime(wapc_host).validate(&self.settings, &request)
@@ -114,7 +125,7 @@ impl PolicyEvaluator {
     }
 
     #[tracing::instrument]
-    pub fn validate_settings(&mut self) -> SettingsValidationResponse {
+    fn validate_settings(&mut self) -> SettingsValidationResponse {
         let settings_str = match serde_json::to_string(&self.settings) {
             Ok(settings) => settings,
             Err(err) => {
@@ -135,7 +146,7 @@ impl PolicyEvaluator {
         }
     }
 
-    pub fn protocol_version(&mut self) -> Result<ProtocolVersion> {
+    fn protocol_version(&mut self) -> Result<ProtocolVersion> {
         match &mut self.runtime {
             Runtime::Wapc(ref mut wapc_host) => WapcRuntime(wapc_host).protocol_version(),
             _ => Err(anyhow!(
