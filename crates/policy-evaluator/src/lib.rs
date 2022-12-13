@@ -24,6 +24,7 @@ pub mod runtimes;
 // they can access these crates through the `policy-evaluator` itself,
 // streamlining their dependencies as well.
 pub use kube;
+pub use kubewarden_policy_sdk;
 pub use kubewarden_policy_sdk::metadata::ProtocolVersion;
 pub use policy_fetcher;
 pub use validator;
