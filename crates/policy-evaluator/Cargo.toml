@@ -16,7 +16,7 @@ members = [
 
 [dependencies]
 anyhow = "1.0"
-base64 = "0.13.1"
+base64 = "0.20.0"
 burrego = { path = "crates/burrego" }
 cached = "0.40.0"
 dns-lookup = "1.0.8"
