@@ -18,7 +18,7 @@ async-trait = "0.1.59"
 base64 = "0.20"
 directories = "4.0.1"
 lazy_static = "1.4.0"
-oci-distribution = { version = "0.9.3", default-features = false, features =  ["rustls-tls"] }
+oci-distribution = { version = "0.9.4", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.2.1"
 regex = "1.5.6"
 reqwest = { version = "0.11.13", default-features = false, features = ["rustls-tls"] }
