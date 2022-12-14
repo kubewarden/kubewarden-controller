@@ -296,6 +296,7 @@ jobs:
             let fs = require('fs');
             let path = require('path');
             const patterns = [
+              `${DOWNLOAD_PATH}/kwctl-airgap-scripts/*`,
               `${DOWNLOAD_PATH}/kwctl-linux-*/*`,
               `${DOWNLOAD_PATH}/kwctl-darwin-*/*`,
               `${DOWNLOAD_PATH}/kwctl-windows-*/*`,
