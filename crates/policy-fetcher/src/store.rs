@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
-#[cfg(target_os = "windows")]
-use base64;
+use base64::engine::fast_portable;
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use path_slash::PathBufExt;
@@ -18,6 +17,11 @@ lazy_static! {
         ProjectDirs::from("io.kubewarden", "", "kubewarden").unwrap();
     pub static ref DEFAULT_STORE_ROOT: PathBuf = DEFAULT_ROOT.cache_dir().join("store");
 }
+
+/// A base64 engine that uses URL_SAFE alphabet and escapes using no padding
+/// For performance reasons, it's recommended to cache its creation
+pub const BASE64_ENGINE: fast_portable::FastPortable =
+    fast_portable::FastPortable::from(&base64::alphabet::URL_SAFE, fast_portable::NO_PAD);
 
 pub enum PolicyPath {
     PrefixOnly,
@@ -110,8 +114,7 @@ impl Store {
         // contain special characters like `:` that are not allowed in
         // the filesystem
         #[cfg(target_os = "windows")]
-        let filename: String =
-            base64::encode_config(filename.to_string().as_bytes(), base64::URL_SAFE_NO_PAD);
+        let filename: String = base64_encode_no_pad(filename.to_string().as_bytes());
 
         filename
     }
@@ -136,10 +139,7 @@ impl Store {
         // contain special characters like `:` that are not allowed in
         // the filesystem
         #[cfg(target_os = "windows")]
-        let host_and_port = base64::encode_config(
-            host_and_port.to_string().as_bytes(),
-            base64::URL_SAFE_NO_PAD,
-        );
+        let host_and_port = base64_encode_no_pad(host_and_port.to_string().as_bytes());
 
         host_and_port
     }
@@ -157,7 +157,7 @@ impl Store {
         // they can contain special characters like `:` that are not
         // allowed in the filesystem
         #[cfg(target_os = "windows")]
-        let path = path.map(|path| base64::encode_config(path.as_bytes(), base64::URL_SAFE_NO_PAD));
+        let path = path.map(|path| base64_encode_no_pad(path.as_bytes()));
 
         #[cfg(not(target_os = "windows"))]
         let path = path.map(String::from);
@@ -172,7 +172,7 @@ impl Store {
     fn decode_base64(encoded_str: &[u8]) -> Result<String> {
         let encoded_str =
             ::std::str::from_utf8(encoded_str).map_err(|_| anyhow!("invalid string encoding"))?;
-        let decoded_str = base64::decode_config(encoded_str, base64::URL_SAFE_NO_PAD)
+        let decoded_str = base64_decode_no_pad(encoded_str.as_bytes())
             .map_err(|_| anyhow!("invalid base64 encoding"))?;
         ::std::str::from_utf8(&decoded_str)
             .map_err(|_| anyhow!("invalid string encoding"))
@@ -232,6 +232,15 @@ fn retrieve_policy_name_and_tag(filename: OsString) -> Result<String> {
     } else {
         Ok(filename.to_str().unwrap().to_string())
     }
+}
+
+fn base64_decode_no_pad(input: &[u8]) -> Result<Vec<u8>, base64::DecodeError> {
+    base64::decode_engine(input, &BASE64_ENGINE)
+}
+
+#[allow(dead_code)]
+fn base64_encode_no_pad(input: &[u8]) -> String {
+    base64::encode_engine(input, &BASE64_ENGINE)
 }
 
 // Use conditional compilation to decide implementation based on the
@@ -325,22 +334,10 @@ mod tests {
         assert_eq!(
             transform_policy_store_path(
                 PathBuf::new()
-                    .join(base64::encode_config(
-                        "registry".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "example.com:1234".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "some".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "path".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
+                    .join(base64_encode_no_pad("registry".as_bytes()))
+                    .join(base64_encode_no_pad("example.com:1234".as_bytes(),))
+                    .join(base64_encode_no_pad("some".as_bytes(),))
+                    .join(base64_encode_no_pad("path".as_bytes(),))
                     .iter()
             )?,
             "/registry/example.com:1234/some/path".to_string()
@@ -348,30 +345,12 @@ mod tests {
         assert_eq!(
             transform_policy_store_path(
                 PathBuf::new()
-                    .join(base64::encode_config(
-                        "registry".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "example.com:1234".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "some".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "path".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "to".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "policy:tag".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
+                    .join(base64_encode_no_pad("registry".as_bytes(),))
+                    .join(base64_encode_no_pad("example.com:1234".as_bytes(),))
+                    .join(base64_encode_no_pad("some".as_bytes(),))
+                    .join(base64_encode_no_pad("path".as_bytes(),))
+                    .join(base64_encode_no_pad("to".as_bytes(),))
+                    .join(base64_encode_no_pad("policy:tag".as_bytes(),))
                     .iter()
             )?,
             "/registry/example.com:1234/some/path/to/policy:tag".to_string()
@@ -379,22 +358,10 @@ mod tests {
         assert_eq!(
             transform_policy_store_path(
                 PathBuf::new()
-                    .join(base64::encode_config(
-                        "https".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "example.com:1234".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "some".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
-                    .join(base64::encode_config(
-                        "path".as_bytes(),
-                        base64::URL_SAFE_NO_PAD
-                    ))
+                    .join(base64_encode_no_pad("https".as_bytes(),))
+                    .join(base64_encode_no_pad("example.com:1234".as_bytes(),))
+                    .join(base64_encode_no_pad("some".as_bytes(),))
+                    .join(base64_encode_no_pad("path".as_bytes(),))
                     .iter()
             )?,
             "/https/example.com:1234/some/path".to_string()
