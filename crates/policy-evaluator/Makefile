@@ -1,14 +1,16 @@
+KUBE_API_VERSION?=1.24
+
 .PHONY: build
 build:
-	cargo build --release
+	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo build --release
 
 .PHONY: fmt
 fmt:
-	cargo fmt --all -- --check
+	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo fmt --all -- --check
 
 .PHONY: lint
 lint:
-	cargo clippy --workspace -- -D warnings
+	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo clippy --workspace -- -D warnings
 
 .PHONY: test
 test: fmt lint
