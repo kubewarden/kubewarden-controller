@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_evaluator::ValidateRequest;
+use policy_evaluator::policy_evaluator::{Evaluator, ValidateRequest};
 use tiny_bench::{bench_with_configuration_labeled, BenchmarkConfig};
 use tracing::error;
 

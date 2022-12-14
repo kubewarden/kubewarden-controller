@@ -1,7 +1,9 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::{
-    policy_evaluator::PolicyExecutionMode, policy_evaluator_builder::PolicyEvaluatorBuilder,
-    policy_metadata::Metadata, ProtocolVersion,
+    policy_evaluator::{Evaluator, PolicyExecutionMode},
+    policy_evaluator_builder::PolicyEvaluatorBuilder,
+    policy_metadata::Metadata,
+    ProtocolVersion,
 };
 use std::path::{Path, PathBuf};
 
