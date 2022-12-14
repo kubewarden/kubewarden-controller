@@ -38,6 +38,12 @@ url = "2.3.1"
 walrus = "0.19.0"
 wasmparser = "0.96"
 
+# This is required to have reqwest built using the `rustls-tls-native-roots`
+# feature across all the transitive dependencies of kwctl
+# This is required to have kwctl use the system certificates instead of the
+# ones bundled inside of rustls
+reqwest = { version = "0", default-features = false, features = ["rustls-tls-native-roots"] }
+
 [dev-dependencies]
 rstest = "0.16.0"
 tempfile = "3.3.0"
