@@ -2349,7 +2349,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -5167,16 +5167,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5a4460aa3e271fa180b6a5d003e728f3963fb30e3ba0fa7c9634caa06049328"
 dependencies = [
  "indexmap",
-]
-
-[[package]]
-name = "wasmparser"
-version = "0.95.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2ea896273ea99b15132414be1da01ab0d8836415083298ecaffbe308eaac87a"
-dependencies = [
- "indexmap",
- "url",
 ]
 
 [[package]]
