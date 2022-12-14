@@ -1,5 +1,11 @@
 pub mod base64url {
     use anyhow::{anyhow, Result};
+    use base64::engine::fast_portable;
+
+    /// A base64 engine that uses URL_SAFE alphabet and escapes using no padding
+    /// For performance reasons, it's recommended to cache its creation
+    pub const BASE64_ENGINE: fast_portable::FastPortable =
+        fast_portable::FastPortable::from(&base64::alphabet::URL_SAFE, fast_portable::NO_PAD);
 
     pub fn encode_no_pad(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
@@ -12,7 +18,7 @@ pub mod base64url {
             .as_str()
             .ok_or_else(|| anyhow!("base64url.encode_no_pad: 1st parameter is not a string"))?;
 
-        let res = base64::encode_config(input, base64::URL_SAFE_NO_PAD);
+        let res = base64::encode_engine(input, &BASE64_ENGINE);
 
         serde_json::to_value(res).map_err(|e| {
             anyhow!(
@@ -36,12 +42,13 @@ pub mod base64url {
             assert!(actual.is_ok());
 
             let actual = actual.unwrap();
-            assert_eq!(
-                json!(base64::encode_config(input, base64::URL_SAFE_NO_PAD)),
-                actual
-            );
+            assert_eq!(json!(base64::encode_engine(input, &BASE64_ENGINE)), actual);
+
+            let engine_with_pad: fast_portable::FastPortable =
+                fast_portable::FastPortable::from(&base64::alphabet::URL_SAFE, fast_portable::PAD);
+
             assert_ne!(
-                json!(base64::encode_config(input, base64::URL_SAFE)),
+                json!(base64::encode_engine(input, &engine_with_pad)),
                 actual
             );
         }
