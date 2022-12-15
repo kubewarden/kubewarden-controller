@@ -34,7 +34,7 @@ autolabeler:
     title: '/.*!:.*/'
   - label: 'area/dependencies'
     title: 'chore(deps)'
-  - label: 'kind/enhancement'
+  - label: 'kind/feature'
     title: 'feat'
   - label: 'kind/bug'
     title: 'fix'
