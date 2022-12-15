@@ -51,11 +51,11 @@ version-resolver:
       - 'kind/minor'
       - 'kind/feature'
       - 'kind/enhancement'
-      - 'area/dependencies'
   patch:
     labels:
       - 'kind/patch'
       - 'kind/fix'
       - 'kind/bug'
       - 'kind/chore'
+      - 'area/dependencies'
   default: patch
