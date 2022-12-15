@@ -81,12 +81,11 @@ pub(crate) struct AdmissionRequest {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use std::collections::BTreeMap;
 
-    #[test]
-    fn good_input() {
+    pub(crate) fn build_admission_review() -> AdmissionReview {
         let input = r#"
             { 
                 "request": {
@@ -117,6 +116,12 @@ mod tests {
         "#;
 
         let ar: AdmissionReview = serde_json::from_str(input).expect("deserialization should work");
+        ar
+    }
+
+    #[test]
+    fn good_input() {
+        let ar = build_admission_review();
         let request = ar.request.expect("request should be set");
 
         assert_eq!(request.uid, "hello");

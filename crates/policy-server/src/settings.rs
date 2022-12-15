@@ -217,7 +217,7 @@ example:
                 .settings
                 .as_ref()
                 .unwrap()
-                .into_iter()
+                .iter()
                 .map(|(key, value)| (serde_yaml::Value::String(key.clone()), value.clone())),
         ));
         assert!(json_data.is_ok());
@@ -243,7 +243,7 @@ example:
                 .settings
                 .as_ref()
                 .unwrap()
-                .into_iter()
+                .iter()
                 .map(|(key, value)| (serde_yaml::Value::String(key.clone()), value.clone())),
         ));
         assert!(json_data.is_ok());

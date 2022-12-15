@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::{
     callback_requests::CallbackRequest,
-    policy_evaluator::{PolicyEvaluator, PolicyExecutionMode},
+    policy_evaluator::{Evaluator, PolicyEvaluator, PolicyExecutionMode},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_metadata::Metadata,
     wasmtime,
@@ -166,7 +166,7 @@ impl WorkerPool {
 
             let join = thread::spawn(move || -> Result<()> {
                 info!(spawned = n, total = pool_size, "spawning worker");
-                let worker = match Worker::new(
+                let mut worker = match Worker::new(
                     rx,
                     &policies,
                     &modules,

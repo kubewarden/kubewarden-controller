@@ -19,7 +19,7 @@ lazy_static = "1.4.0"
 num_cpus = "1.13.1"
 opentelemetry-otlp = { version = "0.10.0", features = ["metrics", "tonic"] }
 opentelemetry = { version = "0.17", default-features = false, features = ["metrics", "trace", "rt-tokio", "serialize"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.4.17" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.5.0" }
 rayon = "1.6"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -32,4 +32,5 @@ tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 warp = { version = "0.3.3", default_features = false, features = [ "multipart", "tls"] }
 
 [dev-dependencies]
+rstest = "0.16"
 tempfile = "3.3.0"
