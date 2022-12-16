@@ -23,5 +23,5 @@ lint: $(GOLANGCI_LINT)
 unit-tests: fmt vet ## Run unit tests.
 	go test ./internal/... -test.v -coverprofile cover.out
 
-build: fmt vet lint ## Build manager binary.
+build: fmt vet lint ## Build audit-scanner binary.
 	go build -o bin/audit-scanner .
