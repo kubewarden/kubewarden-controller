@@ -10,6 +10,22 @@ use crate::policy::Policy;
 use crate::policy_evaluator::{BurregoEvaluator, PolicyEvaluator, PolicyExecutionMode, Runtime};
 use crate::runtimes::{wapc::host_callback as wapc_callback, wapc::WAPC_POLICY_MAPPING};
 
+/// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
+///
+/// There are two kind of deadlines that apply to waPC modules:
+///
+/// * waPC initialization code: this is the code defined by the module inside
+///   of the `wapc_init` or the `_start` functions
+/// * user function: the actual waPC guest function written by an user
+#[derive(Clone, Copy, Debug)]
+struct EpochDeadlines {
+    /// Deadline for waPC initialization code. Expressed in number of epoch ticks
+    wapc_init: u64,
+
+    /// Deadline for user-defined waPC function computation. Expressed in number of epoch ticks
+    wapc_func: u64,
+}
+
 /// Helper Struct that creates a `PolicyEvaluator` object
 #[derive(Default)]
 pub struct PolicyEvaluatorBuilder {
@@ -22,6 +38,7 @@ pub struct PolicyEvaluatorBuilder {
     settings: Option<serde_json::Map<String, serde_json::Value>>,
     callback_channel: Option<mpsc::Sender<CallbackRequest>>,
     wasmtime_cache: bool,
+    epoch_deadlines: Option<EpochDeadlines>,
 }
 
 impl PolicyEvaluatorBuilder {
@@ -89,6 +106,38 @@ impl PolicyEvaluatorBuilder {
         s: Option<serde_json::Map<String, serde_json::Value>>,
     ) -> PolicyEvaluatorBuilder {
         self.settings = s;
+        self
+    }
+
+    /// Enable Wasmtime [epoch-based interruptions](wasmtime::Config::epoch_interruption) and set
+    /// the deadlines to be enforced
+    ///
+    /// Two kind of deadlines have to be set:
+    ///
+    /// * `wapc_init_deadline`: the number of ticks the waPC initialization code can take before the
+    ///   code is interrupted. This is the code usually defined inside of the `wapc_init`/`_start`
+    ///   functions
+    /// * `wapc_func_deadline`: the number of ticks any regular waPC guest function can run before
+    ///   its terminated by the host
+    ///
+    /// Both these limits are expressed using the number of ticks that are allowed before the
+    /// WebAssembly execution is interrupted.
+    /// It's up to the embedder of waPC to define how much time a single tick is granted. This could
+    /// be 1 second, 10 nanoseconds, or whatever the user prefers.
+    ///
+    /// **Warning:** when providing an instance of `wasmtime::Engine` via the
+    /// `WasmtimeEngineProvider::engine` helper, ensure the `wasmtime::Engine`
+    /// has been created with the `epoch_interruption` feature enabled
+    #[must_use]
+    pub fn enable_epoch_interruptions(
+        mut self,
+        wapc_init_deadline: u64,
+        wapc_func_deadline: u64,
+    ) -> Self {
+        self.epoch_deadlines = Some(EpochDeadlines {
+            wapc_init: wapc_init_deadline,
+            wapc_func: wapc_func_deadline,
+        });
         self
     }
 
@@ -161,6 +210,9 @@ impl PolicyEvaluatorBuilder {
                     if self.wasmtime_cache {
                         wasmtime_config.cache_config_load_default()?;
                     }
+                    if self.epoch_deadlines.is_some() {
+                        wasmtime_config.epoch_interruption(true);
+                    }
 
                     wasmtime::Engine::new(&wasmtime_config)
                 },
@@ -183,10 +235,15 @@ impl PolicyEvaluatorBuilder {
 
         let (policy, runtime) = match execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
-                let engine_provider = WasmtimeEngineProviderBuilder::new()
+                let mut builder = WasmtimeEngineProviderBuilder::new()
                     .engine(engine)
-                    .module(module)
-                    .build()?;
+                    .module(module);
+                if let Some(deadlines) = self.epoch_deadlines {
+                    builder = builder
+                        .enable_epoch_interruptions(deadlines.wapc_init, deadlines.wapc_func);
+                }
+
+                let engine_provider = builder.build()?;
 
                 let wapc_host =
                     WapcHost::new(Box::new(engine_provider), Some(Box::new(wapc_callback)))?;
@@ -210,11 +267,15 @@ impl PolicyEvaluatorBuilder {
                     execution_mode,
                 )?;
 
-                let evaluator = burrego::Evaluator::from_engine_and_module(
-                    engine,
-                    module,
-                    crate::runtimes::burrego::new_host_callbacks(),
-                )?;
+                let mut builder = burrego::EvaluatorBuilder::default()
+                    .engine(&engine)
+                    .module(module)
+                    .host_callbacks(crate::runtimes::burrego::new_host_callbacks());
+
+                if let Some(deadlines) = self.epoch_deadlines {
+                    builder = builder.enable_epoch_interruptions(deadlines.wapc_func);
+                }
+                let evaluator = builder.build()?;
 
                 let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
                     evaluator,
