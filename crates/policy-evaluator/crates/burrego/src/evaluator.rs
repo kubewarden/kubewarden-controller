@@ -6,7 +6,6 @@ use crate::stack_helper::StackHelper;
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
 use tracing::debug;
 use wasmtime::{Engine, Instance, Linker, Memory, MemoryType, Module, Store};
 
@@ -19,24 +18,18 @@ pub struct Evaluator {
     instance: Instance,
     memory: Memory,
     policy: Policy,
+    /// used to tune the [epoch
+    /// interruption](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
+    /// feature of wasmtime
+    epoch_deadline: Option<u64>,
 }
 
 impl Evaluator {
-    pub fn from_path(policy_path: &Path, host_callbacks: HostCallbacks) -> Result<Evaluator> {
-        Evaluator::new(&std::fs::read(policy_path)?, host_callbacks)
-    }
-
-    pub fn new(policy_contents: &[u8], host_callbacks: HostCallbacks) -> Result<Evaluator> {
-        let engine = Engine::default();
-        let module = Module::new(&engine, policy_contents)?;
-
-        Self::from_engine_and_module(engine, module, host_callbacks)
-    }
-
-    pub fn from_engine_and_module(
+    pub(crate) fn from_engine_and_module(
         engine: Engine,
         module: Module,
         host_callbacks: HostCallbacks,
+        epoch_deadline: Option<u64>,
     ) -> Result<Evaluator> {
         let mut linker = Linker::<Option<StackHelper>>::new(&engine);
 
@@ -61,6 +54,9 @@ impl Evaluator {
         let policy = Policy::new(&instance, &mut store, &memory)?;
         _ = store.data_mut().insert(stack_helper);
 
+        if let Some(deadline) = epoch_deadline {
+            store.set_epoch_deadline(deadline);
+        }
         let used_builtins: String = policy
             .builtins(&mut store, &memory)?
             .keys()
@@ -76,6 +72,7 @@ impl Evaluator {
             instance,
             memory,
             policy,
+            epoch_deadline,
         };
 
         let not_implemented_builtins = evaluator.not_implemented_builtins()?;
@@ -144,6 +141,9 @@ impl Evaluator {
     }
 
     pub fn entrypoints(&mut self) -> Result<HashMap<String, i32>> {
+        if let Some(deadline) = self.epoch_deadline {
+            self.store.set_epoch_deadline(deadline);
+        }
         self.policy.entrypoints(&mut self.store, &self.memory)
     }
 
@@ -169,12 +169,18 @@ impl Evaluator {
             data = serde_json::to_string(&data)?.as_str(),
             "setting policy data"
         );
+        if let Some(deadline) = self.epoch_deadline {
+            self.store.set_epoch_deadline(deadline);
+        }
         self.policy.set_data(&mut self.store, &self.memory, data)?;
 
         debug!(
             input = serde_json::to_string(&input)?.as_str(),
             "attempting evaluation"
         );
+        if let Some(deadline) = self.epoch_deadline {
+            self.store.set_epoch_deadline(deadline);
+        }
         self.policy
             .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
             .map_err(|e| anyhow!("Evaluation error: {:?}", e))
