@@ -53,6 +53,7 @@ func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Polic
 		return nil, fmt.Errorf("can't fetch AdmissionPolicies: %v", err)
 	}
 	for _, policy := range admissionPolicies {
+		policy := policy
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
 	}
 
