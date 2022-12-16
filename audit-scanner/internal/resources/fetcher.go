@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,13 +68,12 @@ func (f *Fetcher) GetResourcesForPolicies(ctx context.Context, policies []polici
 func (f *Fetcher) getResourcesDynamically(ctx context.Context,
 	group string, version string, resource string, namespace string) (
 	*unstructured.UnstructuredList, error) {
-
-	resourceId := schema.GroupVersionResource{
+	resourceID := schema.GroupVersionResource{
 		Group:    group,
 		Version:  version,
 		Resource: resource,
 	}
-	list, err := f.dynamicClient.Resource(resourceId).Namespace(namespace).
+	list, err := f.dynamicClient.Resource(resourceID).Namespace(namespace).
 		List(ctx, metav1.ListOptions{})
 
 	if err != nil {

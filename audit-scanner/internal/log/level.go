@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+
 	"github.com/rs/zerolog"
 )
 

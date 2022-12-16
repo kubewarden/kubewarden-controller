@@ -2,6 +2,8 @@ package resources
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -12,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-	"testing"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 // policies for testing
-var p1 = policiesv1.AdmissionPolicy{
+var policy1 = policiesv1.AdmissionPolicy{
 	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
 		Rules: []admissionregistrationv1.RuleWithOperations{{
 			Operations: nil,
@@ -35,7 +36,7 @@ var p1 = policiesv1.AdmissionPolicy{
 	}},
 }
 
-var p2 = policiesv1.ClusterAdmissionPolicy{
+var policy2 = policiesv1.ClusterAdmissionPolicy{
 	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
 		Rules: []admissionregistrationv1.RuleWithOperations{{
 			Operations: nil,
@@ -49,7 +50,7 @@ var p2 = policiesv1.ClusterAdmissionPolicy{
 	}},
 }
 
-var p3 = policiesv1.AdmissionPolicy{
+var policy3 = policiesv1.AdmissionPolicy{
 	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
 		Rules: []admissionregistrationv1.RuleWithOperations{{
 			Operations: nil,
@@ -89,7 +90,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 	customScheme.AddKnownTypes(schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
 	metav1.AddToGroupVersion(customScheme, schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion})
 
-	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &p1, &pod1, &pod2, &deployment1)
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &deployment1)
 
 	unstructuredPod1 := map[string]interface{}{
 		"apiVersion": "v1",
@@ -106,7 +107,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 	}
 
 	expectedP1 := []AuditableResources{{
-		Policies:  []policiesv1.Policy{&p1},
+		Policies:  []policiesv1.Policy{&policy1},
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
 	}}
 
@@ -117,7 +118,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		policies []policiesv1.Policy
 		expect   []AuditableResources
 	}{
-		{"policy1 (just pods)", []policiesv1.Policy{&p1}, expectedP1},
+		{"policy1 (just pods)", []policiesv1.Policy{&policy1}, expectedP1},
 		{"no policies", []policiesv1.Policy{}, []AuditableResources{}},
 	}
 
@@ -126,7 +127,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		t.Run(ttest.name, func(t *testing.T) {
 			resources, err := fetcher.GetResourcesForPolicies(context.Background(), ttest.policies, "default")
 			if err != nil {
-				t.Errorf("error shouldn't have happend " + err.Error())
+				t.Errorf("error shouldn't have happened " + err.Error())
 			}
 			if !cmp.Equal(resources, ttest.expect) {
 				t.Errorf("expected %v, but got %v", ttest.expect, resources)
@@ -136,7 +137,6 @@ func TestGetResourcesForPolicies(t *testing.T) {
 }
 
 func TestCreateGVRPolicyMap(t *testing.T) {
-
 	// all posible combination of GVR (Group, Version, Resource) for p1, p2 and p3
 	gvr1 := schema.GroupVersionResource{
 		Group:    "",
@@ -183,46 +183,46 @@ func TestCreateGVRPolicyMap(t *testing.T) {
 
 	expectedP1andP2 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
 
-	expectedP1andP2[gvr1] = []policiesv1.Policy{&p1, &p2}
-	expectedP1andP2[gvr2] = []policiesv1.Policy{&p2}
-	expectedP1andP2[gvr3] = []policiesv1.Policy{&p2}
-	expectedP1andP2[gvr4] = []policiesv1.Policy{&p2}
-	expectedP1andP2[gvr5] = []policiesv1.Policy{&p2}
-	expectedP1andP2[gvr6] = []policiesv1.Policy{&p2}
-	expectedP1andP2[gvr7] = []policiesv1.Policy{&p2}
-	expectedP1andP2[gvr8] = []policiesv1.Policy{&p2}
+	expectedP1andP2[gvr1] = []policiesv1.Policy{&policy1, &policy2}
+	expectedP1andP2[gvr2] = []policiesv1.Policy{&policy2}
+	expectedP1andP2[gvr3] = []policiesv1.Policy{&policy2}
+	expectedP1andP2[gvr4] = []policiesv1.Policy{&policy2}
+	expectedP1andP2[gvr5] = []policiesv1.Policy{&policy2}
+	expectedP1andP2[gvr6] = []policiesv1.Policy{&policy2}
+	expectedP1andP2[gvr7] = []policiesv1.Policy{&policy2}
+	expectedP1andP2[gvr8] = []policiesv1.Policy{&policy2}
 
 	expectedP1P2andP3 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
 
-	expectedP1P2andP3[gvr1] = []policiesv1.Policy{&p1, &p2, &p3}
-	expectedP1P2andP3[gvr2] = []policiesv1.Policy{&p2, &p3}
-	expectedP1P2andP3[gvr3] = []policiesv1.Policy{&p2}
-	expectedP1P2andP3[gvr4] = []policiesv1.Policy{&p2}
-	expectedP1P2andP3[gvr5] = []policiesv1.Policy{&p2, &p3}
-	expectedP1P2andP3[gvr6] = []policiesv1.Policy{&p2, &p3}
-	expectedP1P2andP3[gvr7] = []policiesv1.Policy{&p2}
-	expectedP1P2andP3[gvr8] = []policiesv1.Policy{&p2}
+	expectedP1P2andP3[gvr1] = []policiesv1.Policy{&policy1, &policy2, &policy3}
+	expectedP1P2andP3[gvr2] = []policiesv1.Policy{&policy2, &policy3}
+	expectedP1P2andP3[gvr3] = []policiesv1.Policy{&policy2}
+	expectedP1P2andP3[gvr4] = []policiesv1.Policy{&policy2}
+	expectedP1P2andP3[gvr5] = []policiesv1.Policy{&policy2, &policy3}
+	expectedP1P2andP3[gvr6] = []policiesv1.Policy{&policy2, &policy3}
+	expectedP1P2andP3[gvr7] = []policiesv1.Policy{&policy2}
+	expectedP1P2andP3[gvr8] = []policiesv1.Policy{&policy2}
 
 	expectedP1andP3 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
 
-	expectedP1andP3[gvr1] = []policiesv1.Policy{&p1, &p3}
-	expectedP1andP3[gvr2] = []policiesv1.Policy{&p3}
-	expectedP1andP3[gvr5] = []policiesv1.Policy{&p3}
-	expectedP1andP3[gvr6] = []policiesv1.Policy{&p3}
+	expectedP1andP3[gvr1] = []policiesv1.Policy{&policy1, &policy3}
+	expectedP1andP3[gvr2] = []policiesv1.Policy{&policy3}
+	expectedP1andP3[gvr5] = []policiesv1.Policy{&policy3}
+	expectedP1andP3[gvr6] = []policiesv1.Policy{&policy3}
 
 	expectedP1 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
 
-	expectedP1[gvr1] = []policiesv1.Policy{&p1}
+	expectedP1[gvr1] = []policiesv1.Policy{&policy1}
 
 	tests := []struct {
 		name     string
 		policies []policiesv1.Policy
 		expect   map[schema.GroupVersionResource][]policiesv1.Policy
 	}{
-		{"policy1 (just pods) and policy2 (pods, deployments, v1 and alphav1)", []policiesv1.Policy{&p1, &p2}, expectedP1andP2},
-		{"policy1 (just pods), policy2 (pods, deployments, v1 and alphav1) and policy3 (pods, deployments, v1)", []policiesv1.Policy{&p1, &p2, &p3}, expectedP1P2andP3},
-		{"policy1 (just pods) and policy3 (pods, deployments, v1)", []policiesv1.Policy{&p1, &p3}, expectedP1andP3},
-		{"policy1 (just pods)", []policiesv1.Policy{&p1}, expectedP1},
+		{"policy1 (just pods) and policy2 (pods, deployments, v1 and alphav1)", []policiesv1.Policy{&policy1, &policy2}, expectedP1andP2},
+		{"policy1 (just pods), policy2 (pods, deployments, v1 and alphav1) and policy3 (pods, deployments, v1)", []policiesv1.Policy{&policy1, &policy2, &policy3}, expectedP1P2andP3},
+		{"policy1 (just pods) and policy3 (pods, deployments, v1)", []policiesv1.Policy{&policy1, &policy3}, expectedP1andP3},
+		{"policy1 (just pods)", []policiesv1.Policy{&policy1}, expectedP1},
 		{"empty array", []policiesv1.Policy{}, make(map[schema.GroupVersionResource][]policiesv1.Policy)},
 	}
 
@@ -235,5 +235,4 @@ func TestCreateGVRPolicyMap(t *testing.T) {
 			}
 		})
 	}
-
 }

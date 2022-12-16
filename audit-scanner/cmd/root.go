@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/resources"
 	"github.com/kubewarden/audit-scanner/internal/scanner"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // A Scanner verifies that existing resources don't violate any of the policies

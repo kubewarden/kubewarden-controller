@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/kubewarden/audit-scanner/internal/resources"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog/log"
@@ -78,5 +79,5 @@ func (s *Scanner) ScanNamespace(namespace string) error {
 
 // ScanAllNamespaces scans resources for all namespaces
 func (s *Scanner) ScanAllNamespaces() error {
-	return errors.New("Scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
+	return errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }

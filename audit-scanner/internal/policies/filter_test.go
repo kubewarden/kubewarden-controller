@@ -1,10 +1,11 @@
 package policies
 
 import (
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	"testing"
 )
 
 func TestFilterAuditablePolicies(t *testing.T) {
@@ -85,5 +86,4 @@ func TestFilterAuditablePolicies(t *testing.T) {
 			}
 		})
 	}
-
 }
