@@ -12,6 +12,10 @@ fmt:
 lint:
 	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo clippy --workspace -- -D warnings
 
+.PHONY: check
+check:
+	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo check
+
 .PHONY: test
 test: fmt lint
 	cargo test --workspace
