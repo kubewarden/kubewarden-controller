@@ -1,11 +1,18 @@
 use anyhow::{anyhow, Result};
+use kubewarden_policy_sdk::host_capabilities::{
+    crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
+    SigstoreVerificationInputV1, SigstoreVerificationInputV2,
+};
+use kubewarden_policy_sdk::metadata::ProtocolVersion;
+use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
+use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use lazy_static::lazy_static;
 use serde_json::json;
 use std::{collections::HashMap, convert::TryFrom, sync::RwLock};
+use tokio::sync::oneshot::Receiver;
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error};
-
-pub(crate) struct Runtime<'a>(pub(crate) &'a mut wapc::WapcHost);
+use tracing::{debug, error, info};
+use wasmtime_provider::wasmtime;
 
 use crate::admission_response::AdmissionResponse;
 use crate::callback_handler::verify_certificate;
@@ -14,19 +21,19 @@ use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 
-use kubewarden_policy_sdk::host_capabilities::{
-    crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
-    SigstoreVerificationInputV1, SigstoreVerificationInputV2,
-};
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
-use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
-use kubewarden_policy_sdk::settings::SettingsValidationResponse;
-use tokio::sync::oneshot::Receiver;
+pub(crate) struct Runtime<'a>(pub(crate) &'a mut WapcStack);
 
 lazy_static! {
     pub(crate) static ref WAPC_POLICY_MAPPING: RwLock<HashMap<u64, Policy>> =
         RwLock::new(HashMap::with_capacity(64));
 }
+
+/// Error message returned by wasmtime_provider when the guest execution
+/// is interrupted because of epoch deadline is exceeded.
+///
+/// Unfortunately, wasmtime_provider doesn't return a typed error, hence we have
+/// to look for this text
+const WAPC_EPOCH_INTERRUPTION_ERR_MSG: &str = "guest code interrupted, execution deadline exceeded";
 
 pub(crate) fn host_callback(
     policy_id: u64,
@@ -229,6 +236,84 @@ fn send_request_and_wait_for_response(
     }
 }
 
+pub(crate) struct WapcStack {
+    engine: wasmtime::Engine,
+    module: wasmtime::Module,
+    epoch_deadlines: Option<crate::policy_evaluator_builder::EpochDeadlines>,
+    wapc_host: wapc::WapcHost,
+}
+
+impl WapcStack {
+    pub(crate) fn new(
+        engine: wasmtime::Engine,
+        module: wasmtime::Module,
+        epoch_deadlines: Option<crate::policy_evaluator_builder::EpochDeadlines>,
+    ) -> Result<Self> {
+        let wapc_host = Self::setup_wapc_host(engine.clone(), module.clone(), epoch_deadlines)?;
+
+        Ok(Self {
+            engine,
+            module,
+            epoch_deadlines,
+            wapc_host,
+        })
+    }
+
+    /// Provision a new wapc_host. Useful for starting from a clean slate
+    /// after an epoch deadline interruption is raised.
+    ///
+    /// This method takes care of de-registering the old wapc_host and
+    /// registering the new one inside of the global WAPC_POLICY_MAPPING
+    /// variable.
+    pub(crate) fn reset(&mut self) -> Result<()> {
+        // Create a new wapc_host
+        let new_wapc_host = Self::setup_wapc_host(
+            self.engine.clone(),
+            self.module.clone(),
+            self.epoch_deadlines,
+        )?;
+        let old_wapc_host_id = self.wapc_host.id();
+
+        // Remove the old policy from WAPC_POLICY_MAPPING and add the new one
+        // We need a write lock to do that
+        {
+            let mut map = WAPC_POLICY_MAPPING
+                .write()
+                .expect("cannot get write access to WAPC_POLICY_MAPPING");
+            let policy = map.remove(&old_wapc_host_id).ok_or_else(|| {
+                anyhow!("cannot find old waPC policy with id {}", old_wapc_host_id)
+            })?;
+            map.insert(new_wapc_host.id(), policy);
+        }
+
+        self.wapc_host = new_wapc_host;
+
+        Ok(())
+    }
+
+    fn setup_wapc_host(
+        engine: wasmtime::Engine,
+        module: wasmtime::Module,
+        epoch_deadlines: Option<crate::policy_evaluator_builder::EpochDeadlines>,
+    ) -> Result<wapc::WapcHost> {
+        let mut builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+            .engine(engine)
+            .module(module);
+        if let Some(deadlines) = epoch_deadlines {
+            builder = builder.enable_epoch_interruptions(deadlines.wapc_init, deadlines.wapc_func);
+        }
+
+        let engine_provider = builder.build()?;
+        let wapc_host =
+            wapc::WapcHost::new(Box::new(engine_provider), Some(Box::new(host_callback)))?;
+        Ok(wapc_host)
+    }
+
+    pub fn wapc_host_id(&self) -> u64 {
+        self.wapc_host.id()
+    }
+}
+
 impl<'a> Runtime<'a> {
     pub fn validate(
         &mut self,
@@ -259,7 +344,7 @@ impl<'a> Runtime<'a> {
             }
         };
 
-        match self.0.call("validate", validate_str.as_bytes()) {
+        match self.0.wapc_host.call("validate", validate_str.as_bytes()) {
             Ok(res) => {
                 let pol_val_resp: Result<PolicyValidationResponse> = serde_json::from_slice(&res)
                     .map_err(|e| anyhow!("cannot deserialize policy validation response: {:?}", e));
@@ -284,13 +369,57 @@ impl<'a> Runtime<'a> {
             }
             Err(e) => {
                 error!(error = e.to_string().as_str(), "waPC communication error");
+                if e.to_string()
+                    .as_str()
+                    .contains(WAPC_EPOCH_INTERRUPTION_ERR_MSG)
+                {
+                    // TL;DR: after code execution is interrupted because of an
+                    // epoch deadline being reached, we have to reset the waPC host
+                    // to ensure further invocations of the policy work as expected.
+                    //
+                    // The waPC host is using the wasmtime_provider, which internally
+                    // uses a wasmtime::Engine and a wasmtime::Store.
+                    // The Store keeps track of the stateful data of the policy. When an
+                    // epoch deadline is reached, wasmtime::Engine stops the execution of
+                    // the wasm guest. There's NO CLEANUP code called inside of the guest.
+                    // It's like unplugging the power cord from a turned on computer.
+                    //
+                    // When the guest function is invoked again, the previous state stored
+                    // inside of wasmtime::Store is used.
+                    // That can lead to unexpected issues. For example, if the guest makes
+                    // uses of a Mutex, something like that can happen (I've witnessed that):
+                    //
+                    // * Guest code 1st run:
+                    //   - Mutex.lock
+                    // * Host: interrupt code execution because of epoch deadline
+                    // * Guest code 2nd run:
+                    //   - The Mutex is still locked, because that's what is stored inside
+                    //     of the wasmtime::Store
+                    //   - Guest attempts to `lock` the Mutex -> error is raised
+                    //
+                    // The guest code will stay in this broken state forever. The only
+                    // solution to that is to reinitialize the wasmtime::Store.
+                    // It's hard to provide a facility for that inside of WapcHost, because
+                    // epoch deadline is a feature provided only by the wasmtime backend.
+                    // Hence it's easier to just recreate the wapc_host associated with this
+                    // policy evaluator
+                    if let Err(reset_err) = self.0.reset() {
+                        error!(error = reset_err.to_string().as_str(), "cannot reset waPC stack - further calls to this policy can result in errors");
+                    } else {
+                        info!("wapc_host reset performed after timeout protection was triggered");
+                    }
+                }
                 AdmissionResponse::reject_internal_server_error(uid.to_string(), e.to_string())
             }
         }
     }
 
     pub fn validate_settings(&mut self, settings: String) -> SettingsValidationResponse {
-        match self.0.call("validate_settings", settings.as_bytes()) {
+        match self
+            .0
+            .wapc_host
+            .call("validate_settings", settings.as_bytes())
+        {
             Ok(res) => {
                 let vr: Result<SettingsValidationResponse> = serde_json::from_slice(&res)
                     .map_err(|e| anyhow!("cannot convert response: {:?}", e));
@@ -310,7 +439,7 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn protocol_version(&self) -> Result<ProtocolVersion> {
-        match self.0.call("protocol_version", &[0; 0]) {
+        match self.0.wapc_host.call("protocol_version", &[0; 0]) {
             Ok(res) => ProtocolVersion::try_from(res.clone()).map_err(|e| {
                 anyhow!(
                     "Cannot create ProtocolVersion object from '{:?}': {:?}",

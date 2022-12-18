@@ -2,13 +2,13 @@ use anyhow::{anyhow, Result};
 use std::convert::TryInto;
 use std::path::Path;
 use tokio::sync::mpsc;
-use wapc::WapcHost;
-use wasmtime_provider::{wasmtime, WasmtimeEngineProviderBuilder};
+use wasmtime_provider::wasmtime;
 
 use crate::callback_requests::CallbackRequest;
 use crate::policy::Policy;
-use crate::policy_evaluator::{BurregoEvaluator, PolicyEvaluator, PolicyExecutionMode, Runtime};
-use crate::runtimes::{wapc::host_callback as wapc_callback, wapc::WAPC_POLICY_MAPPING};
+use crate::policy_evaluator::{PolicyEvaluator, PolicyExecutionMode};
+use crate::runtimes::wapc::WAPC_POLICY_MAPPING;
+use crate::runtimes::{burrego::BurregoStack, wapc::WapcStack, Runtime};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
 ///
@@ -18,12 +18,12 @@ use crate::runtimes::{wapc::host_callback as wapc_callback, wapc::WAPC_POLICY_MA
 ///   of the `wapc_init` or the `_start` functions
 /// * user function: the actual waPC guest function written by an user
 #[derive(Clone, Copy, Debug)]
-struct EpochDeadlines {
+pub(crate) struct EpochDeadlines {
     /// Deadline for waPC initialization code. Expressed in number of epoch ticks
-    wapc_init: u64,
+    pub wapc_init: u64,
 
     /// Deadline for user-defined waPC function computation. Expressed in number of epoch ticks
-    wapc_func: u64,
+    pub wapc_func: u64,
 }
 
 /// Helper Struct that creates a `PolicyEvaluator` object
@@ -235,27 +235,17 @@ impl PolicyEvaluatorBuilder {
 
         let (policy, runtime) = match execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
-                let mut builder = WasmtimeEngineProviderBuilder::new()
-                    .engine(engine)
-                    .module(module);
-                if let Some(deadlines) = self.epoch_deadlines {
-                    builder = builder
-                        .enable_epoch_interruptions(deadlines.wapc_init, deadlines.wapc_func);
-                }
+                let wapc_stack = WapcStack::new(engine, module, self.epoch_deadlines)?;
 
-                let engine_provider = builder.build()?;
-
-                let wapc_host =
-                    WapcHost::new(Box::new(engine_provider), Some(Box::new(wapc_callback)))?;
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
                     self.callback_channel.clone(),
-                    || Some(wapc_host.id()),
+                    || Some(wapc_stack.wapc_host_id()),
                     Policy::new,
                     execution_mode,
                 )?;
 
-                let policy_runtime = Runtime::Wapc(wapc_host);
+                let policy_runtime = Runtime::Wapc(wapc_stack);
                 (policy, policy_runtime)
             }
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
@@ -277,11 +267,11 @@ impl PolicyEvaluatorBuilder {
                 }
                 let evaluator = builder.build()?;
 
-                let policy_runtime = Runtime::Burrego(Box::new(BurregoEvaluator {
+                let policy_runtime = Runtime::Burrego(BurregoStack {
                     evaluator,
                     entrypoint_id: 0, // currently hardcoded to this value
                     policy_execution_mode: execution_mode.try_into()?,
-                }));
+                });
 
                 (policy, policy_runtime)
             }
