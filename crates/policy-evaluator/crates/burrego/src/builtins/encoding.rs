@@ -125,7 +125,7 @@ pub mod urlquery {
             });
         }
         let (_, value) = pairs.next().unwrap();
-        serde_json::to_value(&value).map_err(|e| BurregoError::BuiltinError {
+        serde_json::to_value(value).map_err(|e| BurregoError::BuiltinError {
             name: "urlquery.decode".to_string(),
             message: format!("cannot convert value into JSON: {:?}", e),
         })

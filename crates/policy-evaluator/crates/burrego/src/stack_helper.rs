@@ -59,7 +59,9 @@ impl StackHelper {
             StackHelper::pull_json(store, memory, opa_json_dump_fn, addr)?
                 .as_object()
                 .ok_or_else(|| {
-                    BurregoError::RegoWasmError(format!("OPA builtins didn't return a dictionary"))
+                    BurregoError::RegoWasmError(
+                        "OPA builtins didn't return a dictionary".to_string(),
+                    )
                 })?
                 .iter()
                 .map(|(k, v)| {
