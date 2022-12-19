@@ -14,7 +14,7 @@ edition = "2021"
 anyhow = "1.0"
 async-std = "1.9.0"
 async-stream = "0.3.3"
-async-trait = "0.1.59"
+async-trait = "0.1.60"
 base64 = "0.20"
 directories = "4.0.1"
 lazy_static = "1.4.0"
@@ -24,7 +24,7 @@ regex = "1.5.6"
 reqwest = { version = "0.11.13", default-features = false, features = ["rustls-tls"] }
 rustls = "0.20.7"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.89"
+serde_json = "1.0.91"
 serde_yaml = "0.9"
 sha2 = "0.10.6"
 sigstore = { version = "0.6.0", default-features = false, features = ["rustls-tls"] }
