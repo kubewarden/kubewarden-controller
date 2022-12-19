@@ -24,4 +24,8 @@ pub enum BurregoError {
 
     #[error("Builtin not implemented: {0}")]
     BuiltinNotImplementedError(String),
+
+    /// Wasmtime execution deadline exceeded
+    #[error("guest code interrupted, execution deadline exceeded")]
+    ExecutionDeadlineExceeded,
 }

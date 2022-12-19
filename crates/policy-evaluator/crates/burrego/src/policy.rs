@@ -5,6 +5,23 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use wasmtime::{AsContextMut, Instance, Memory, TypedFunc};
 
+/// Handle errors returned when calling a wasmtime function
+/// The macro looks into the error type and, when an epoch interruption
+/// happens, maps the error to BurregoError::ExecutionDeadlineExceeded
+macro_rules! map_call_error {
+    ($err:expr, $msg:expr) => {{
+        if let Some(trap) = $err.downcast_ref::<wasmtime::Trap>() {
+            if matches!(trap, wasmtime::Trap::Interrupt) {
+                BurregoError::ExecutionDeadlineExceeded
+            } else {
+                BurregoError::WasmEngineError(format!("{}: {:?}", $msg, $err))
+            }
+        } else {
+            BurregoError::WasmEngineError(format!("{}: {:?}", $msg, $err))
+        }
+    }};
+}
+
 pub(crate) struct Policy {
     builtins_fn: TypedFunc<(), i32>,
     entrypoints_fn: TypedFunc<(), i32>,
@@ -147,15 +164,11 @@ impl Policy {
             policy.opa_json_parse_fn,
             &initial_data,
         )?;
+
         policy.base_heap_ptr = policy
             .opa_heap_ptr_get_fn
             .call(store.as_context_mut(), ())
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_heap_ptr_get function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_heap_ptr_get function"))?;
         policy.data_heap_ptr = policy.base_heap_ptr;
 
         Ok(policy)
@@ -169,9 +182,7 @@ impl Policy {
         let addr = self
             .builtins_fn
             .call(store.as_context_mut(), ())
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!("error invoking builtins function: {:?}", e))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking builtins function"))?;
 
         let builtins: HashMap<String, i32> =
             StackHelper::pull_json(store, memory, self.opa_json_dump_fn, addr)?
@@ -199,12 +210,7 @@ impl Policy {
         let addr = self
             .entrypoints_fn
             .call(store.as_context_mut(), ())
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking entrypoints function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking entrypoints function"))?;
         let res =
             StackHelper::pull_json(store.as_context_mut(), memory, self.opa_json_dump_fn, addr)?
                 .as_object()
@@ -231,12 +237,7 @@ impl Policy {
     ) -> Result<()> {
         self.opa_heap_ptr_set_fn
             .call(store.as_context_mut(), self.base_heap_ptr)
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_heap_ptr_set function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_heap_ptr_set function"))?;
         self.data_addr = StackHelper::push_json(
             store.as_context_mut(),
             memory,
@@ -247,12 +248,7 @@ impl Policy {
         self.data_heap_ptr = self
             .opa_heap_ptr_get_fn
             .call(store.as_context_mut(), ())
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_heap_ptr_get function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_heap_ptr_get function"))?;
 
         Ok(())
     }
@@ -267,12 +263,7 @@ impl Policy {
         // Reset the heap pointer before each evaluation
         self.opa_heap_ptr_set_fn
             .call(store.as_context_mut(), self.data_heap_ptr)
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_heap_ptr_set function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_heap_ptr_set function"))?;
 
         // Load the input data
         let input_addr = StackHelper::push_json(
@@ -287,54 +278,29 @@ impl Policy {
         let ctx_addr = self
             .opa_eval_ctx_new_fn
             .call(store.as_context_mut(), ())
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_eval_ctx_new function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_eval_ctx_new function"))?;
         self.opa_eval_ctx_set_input_fn
             .call(store.as_context_mut(), (ctx_addr, input_addr))
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_eval_ctx_set_input function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_eval_ctx_set_input function"))?;
         self.opa_eval_ctx_set_data_fn
             .call(store.as_context_mut(), (ctx_addr, self.data_addr))
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_eval_ctx_set_data function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_eval_ctx_set_data function"))?;
         self.opa_eval_ctx_set_entrypoint_fn
             .call(store.as_context_mut(), (ctx_addr, entrypoint_id))
             .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_eval_ctx_set_entrypoint function: {:?}",
-                    e
-                ))
+                map_call_error!(e, "error invoking opa_eval_ctx_set_entrypoint function")
             })?;
 
         // Perform evaluation
         self.eval_fn
             .call(store.as_context_mut(), ctx_addr)
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!("error invoking opa_eval function: {:?}", e))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_eval function"))?;
 
         // Retrieve the result
         let res_addr = self
             .opa_eval_ctx_get_result_fn
             .call(store.as_context_mut(), ctx_addr)
-            .map_err(|e| {
-                BurregoError::WasmEngineError(format!(
-                    "error invoking opa_eval_ctx_get_result function: {:?}",
-                    e
-                ))
-            })?;
+            .map_err(|e| map_call_error!(e, "error invoking opa_eval_ctx_get_result function"))?;
 
         StackHelper::pull_json(
             store.as_context_mut(),

@@ -10,6 +10,15 @@ use std::collections::{HashMap, HashSet};
 use tracing::debug;
 use wasmtime::{Engine, Instance, Linker, Memory, MemoryType, Module, Store};
 
+macro_rules! set_epoch_deadline_and_call_guest {
+    ($epoch_deadline:expr, $store:expr, $code:block) => {{
+        if let Some(deadline) = $epoch_deadline {
+            $store.set_epoch_deadline(deadline);
+        }
+        $code
+    }};
+}
+
 struct EvaluatorStack {
     store: Store<Option<StackHelper>>,
     instance: Instance,
@@ -44,15 +53,15 @@ impl Evaluator {
         let memory = stack.memory;
         let policy = stack.policy;
 
-        if let Some(deadline) = epoch_deadline {
-            store.set_epoch_deadline(deadline);
-        }
-        let used_builtins: String = policy
-            .builtins(&mut store, &memory)?
-            .keys()
-            .cloned()
-            .collect::<Vec<String>>()
-            .join(", ");
+        let used_builtins = set_epoch_deadline_and_call_guest!(epoch_deadline, store, {
+            policy
+                .builtins(&mut store, &memory)?
+                .keys()
+                .cloned()
+                .collect::<Vec<String>>()
+                .join(", ")
+        });
+
         debug!(used = used_builtins.as_str(), "policy builtins");
 
         let mut evaluator = Evaluator {
@@ -189,10 +198,9 @@ impl Evaluator {
     }
 
     pub fn entrypoints(&mut self) -> Result<HashMap<String, i32>> {
-        if let Some(deadline) = self.epoch_deadline {
-            self.store.set_epoch_deadline(deadline);
-        }
-        self.policy.entrypoints(&mut self.store, &self.memory)
+        set_epoch_deadline_and_call_guest!(self.epoch_deadline, self.store, {
+            self.policy.entrypoints(&mut self.store, &self.memory)
+        })
     }
 
     pub fn evaluate(
@@ -218,10 +226,9 @@ impl Evaluator {
                 .as_str(),
             "setting policy data"
         );
-        if let Some(deadline) = self.epoch_deadline {
-            self.store.set_epoch_deadline(deadline);
-        }
-        self.policy.set_data(&mut self.store, &self.memory, data)?;
+        set_epoch_deadline_and_call_guest!(self.epoch_deadline, self.store, {
+            self.policy.set_data(&mut self.store, &self.memory, data)
+        })?;
 
         debug!(
             input = serde_json::to_string(&input)
@@ -229,11 +236,9 @@ impl Evaluator {
                 .as_str(),
             "attempting evaluation"
         );
-        if let Some(deadline) = self.epoch_deadline {
-            self.store.set_epoch_deadline(deadline);
-        }
-        self.policy
-            .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
-        //.map_err(|e| anyhow!("Evaluation error: {:?}", e))
+        set_epoch_deadline_and_call_guest!(self.epoch_deadline, self.store, {
+            self.policy
+                .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
+        })
     }
 }
