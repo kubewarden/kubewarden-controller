@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
 use std::{collections::HashMap, convert::From};
 
 struct GoTmplValue(gtmpl::Value);
@@ -40,15 +40,22 @@ impl From<serde_json::Value> for GoTmplValue {
 
 pub fn sprintf(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 2 {
-        return Err(anyhow!("Wrong number of arguments given to sprintf"));
+        return Err(BurregoError::BuiltinError {
+            name: "sprintf".to_string(),
+            message: "Wrong number of arguments given".to_string(),
+        });
     }
 
-    let fmt_str = args[0]
-        .as_str()
-        .ok_or_else(|| anyhow!("sprintf: 1st parameter is not a string"))?;
+    let fmt_str = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "sprintf".to_string(),
+        message: "1st parameter is not a string".to_string(),
+    })?;
     let fmt_args: Vec<gtmpl::Value> = args[1]
         .as_array()
-        .ok_or_else(|| anyhow!("sprintf: 2nd parameter is not an array"))?
+        .ok_or_else(|| BurregoError::BuiltinError {
+            name: "sprintf".to_string(),
+            message: "2nd parameter is not an array".to_string(),
+        })?
         .iter()
         .map(|i| {
             let g: GoTmplValue = i.clone().into();
@@ -63,15 +70,19 @@ pub fn sprintf(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     let template_str = format!(r#"{{{{ printf "{}" {}}}}}"#, fmt_str, index_cmds.join(" "));
     let res = gtmpl::template(&template_str, fmt_args.as_slice()).map_err(|e| {
-        anyhow!(
-            "Cannot render go template '{}' with args {:?}: {:?}",
-            template_str,
-            fmt_args,
-            e
-        )
+        BurregoError::BuiltinError {
+            name: "sprintf".to_string(),
+            message: format!(
+                "Cannot render go template '{}' with args {:?}: {:?}",
+                template_str, fmt_args, e
+            ),
+        }
     })?;
 
-    serde_json::to_value(res).map_err(|e| anyhow!("Cannot convert value into JSON: {:?}", e))
+    serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+        name: "sprintf".to_string(),
+        message: format!("Cannot convert value into JSON: {:?}", e),
+    })
 }
 
 #[cfg(test)]

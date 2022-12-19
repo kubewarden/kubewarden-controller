@@ -1,4 +1,5 @@
 mod builtins;
+pub mod errors;
 mod evaluator;
 mod evaluator_builder;
 pub mod host_callbacks;

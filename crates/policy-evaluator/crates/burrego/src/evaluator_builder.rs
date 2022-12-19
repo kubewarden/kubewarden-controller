@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
 use std::path::{Path, PathBuf};
 use wasmtime::{Engine, Module};
 
@@ -46,16 +46,20 @@ impl EvaluatorBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.policy_path.is_some() && self.module.is_some() {
-            return Err(anyhow!(
-                "policy_path and module cannot be set at the same time"
+            return Err(BurregoError::EvaluatorBuilderError(
+                "policy_path and module cannot be set at the same time".to_string(),
             ));
         }
         if self.policy_path.is_none() && self.module.is_none() {
-            return Err(anyhow!("Either policy_path or module must be set"));
+            return Err(BurregoError::EvaluatorBuilderError(
+                "Either policy_path or module must be set".to_string(),
+            ));
         }
 
         if self.host_callbacks.is_none() {
-            return Err(anyhow!("host_callbacks must be set"));
+            return Err(BurregoError::EvaluatorBuilderError(
+                "host_callbacks must be set".to_string(),
+            ));
         }
 
         Ok(())
@@ -71,7 +75,9 @@ impl EvaluatorBuilder {
                 if self.epoch_deadline.is_some() {
                     config.epoch_interruption(true);
                 }
-                Engine::new(&config)?
+                Engine::new(&config).map_err(|e| {
+                    BurregoError::WasmEngineError(format!("cannot create wasmtime Engine: {:?}", e))
+                })?
             }
         };
 
@@ -80,7 +86,10 @@ impl EvaluatorBuilder {
             None => Module::from_file(
                 &engine,
                 self.policy_path.clone().expect("policy_path should be set"),
-            )?,
+            )
+            .map_err(|e| {
+                BurregoError::WasmEngineError(format!("cannot create wasmtime Module: {:?}", e))
+            })?,
         };
 
         let host_callbacks = self

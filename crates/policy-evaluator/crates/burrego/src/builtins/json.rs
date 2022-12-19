@@ -1,26 +1,42 @@
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
 
 pub fn patch(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 2 {
-        return Err(anyhow!("Wrong number of arguments given to json.patch"));
+        return Err(BurregoError::BuiltinError {
+            name: "json.patch".to_string(),
+            message: "wrong number of arguments".to_string(),
+        });
     }
 
     if !args[0].is_object() {
-        return Err(anyhow!("json.patch: 1st parameter is not an object"));
+        return Err(BurregoError::BuiltinError {
+            name: "json.patch".to_string(),
+            message: "1st parameter is not an object".to_string(),
+        });
     }
     let mut obj = args[0].clone();
 
     if !args[1].is_array() {
-        return Err(anyhow!("json.patch: 2nd parameter is not an array"));
+        return Err(BurregoError::BuiltinError {
+            name: "json.patch".to_string(),
+            message: "2nd parameter is not an array".to_string(),
+        });
     }
-    let patches_str = serde_json::to_string(&args[1])
-        .map_err(|_| anyhow!("json.patch: cannot convert 2nd parameter to string"))?;
+    let patches_str = serde_json::to_string(&args[1]).map_err(|_| BurregoError::BuiltinError {
+        name: "json.patch".to_string(),
+        message: "cannot convert 2nd parameter to string".to_string(),
+    })?;
     let patches: json_patch::Patch = serde_json::from_str(&patches_str).unwrap();
 
-    json_patch::patch(&mut obj, &patches)
-        .map_err(|e| anyhow!("json.patch: cannot apply patch: {:?}", e))?;
+    json_patch::patch(&mut obj, &patches).map_err(|e| BurregoError::BuiltinError {
+        name: "json.patch".to_string(),
+        message: format!("cannot apply patch: {:?}", e),
+    })?;
 
-    serde_json::to_value(obj).map_err(|e| anyhow!("Cannot convert value into JSON: {:?}", e))
+    serde_json::to_value(obj).map_err(|e| BurregoError::BuiltinError {
+        name: "json.patch".to_string(),
+        message: format!("cannot convert value into JSON: {:?}", e),
+    })
 }
 
 #[cfg(test)]

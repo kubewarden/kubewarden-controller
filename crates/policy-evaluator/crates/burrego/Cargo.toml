@@ -7,7 +7,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.68"
 base64 = "0.20.0"
 chrono = "0.4.23"
 chrono-tz = "0.8.1"
@@ -21,11 +20,13 @@ semver = "1.0.16"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.91"
 serde_yaml = "0.9.16"
+thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version= "0.3", features = ["fmt", "env-filter"] }
 url = "2.2.2"
 wasmtime = "3.0"
 
 [dev-dependencies]
+anyhow = "1.0"
 assert-json-diff = "2.0.2"
 clap = { version = "4.0", features = [ "derive" ] }

@@ -1,23 +1,30 @@
 use crate::builtins;
+use crate::errors::{BurregoError, Result};
 use crate::host_callbacks::HostCallbacks;
 use crate::opa_host_functions;
 use crate::policy::Policy;
 use crate::stack_helper::StackHelper;
-use anyhow::{anyhow, Result};
+
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use tracing::debug;
 use wasmtime::{Engine, Instance, Linker, Memory, MemoryType, Module, Store};
 
-pub struct Evaluator {
-    #[allow(dead_code)]
-    engine: Engine,
-    #[allow(dead_code)]
-    linker: Linker<Option<StackHelper>>,
+struct EvaluatorStack {
     store: Store<Option<StackHelper>>,
     instance: Instance,
     memory: Memory,
     policy: Policy,
+}
+
+pub struct Evaluator {
+    engine: Engine,
+    module: Module,
+    store: Store<Option<StackHelper>>,
+    instance: Instance,
+    memory: Memory,
+    policy: Policy,
+    host_callbacks: HostCallbacks,
     /// used to tune the [epoch
     /// interruption](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
     /// feature of wasmtime
@@ -31,28 +38,11 @@ impl Evaluator {
         host_callbacks: HostCallbacks,
         epoch_deadline: Option<u64>,
     ) -> Result<Evaluator> {
-        let mut linker = Linker::<Option<StackHelper>>::new(&engine);
-
-        let opa_data_helper: Option<StackHelper> = None;
-        let mut store = Store::new(&engine, opa_data_helper);
-
-        let memory_ty = MemoryType::new(5, None);
-        let memory = Memory::new(&mut store, memory_ty)?;
-        linker.define("env", "memory", memory)?;
-
-        opa_host_functions::add_to_linker(&mut linker)?;
-
-        let instance = linker.instantiate(&mut store, &module)?;
-
-        let stack_helper = StackHelper::new(
-            &instance,
-            &memory,
-            &mut store,
-            host_callbacks.opa_abort,
-            host_callbacks.opa_println,
-        )?;
-        let policy = Policy::new(&instance, &mut store, &memory)?;
-        _ = store.data_mut().insert(stack_helper);
+        let stack = Self::setup(engine.clone(), module.clone(), host_callbacks.clone())?;
+        let mut store = stack.store;
+        let instance = stack.instance;
+        let memory = stack.memory;
+        let policy = stack.policy;
 
         if let Some(deadline) = epoch_deadline {
             store.set_epoch_deadline(deadline);
@@ -67,23 +57,78 @@ impl Evaluator {
 
         let mut evaluator = Evaluator {
             engine,
-            linker,
+            module,
             store,
             instance,
             memory,
             policy,
+            host_callbacks,
             epoch_deadline,
         };
 
         let not_implemented_builtins = evaluator.not_implemented_builtins()?;
         if !not_implemented_builtins.is_empty() {
-            return Err(anyhow!(
-                "missing Rego builtins: {}. Aborting execution.",
-                not_implemented_builtins.iter().join(", ")
+            return Err(BurregoError::MissingRegoBuiltins(
+                not_implemented_builtins.iter().join(", "),
             ));
         }
 
         Ok(evaluator)
+    }
+
+    fn setup(
+        engine: Engine,
+        module: Module,
+        host_callbacks: HostCallbacks,
+    ) -> Result<EvaluatorStack> {
+        let mut linker = Linker::<Option<StackHelper>>::new(&engine);
+
+        let opa_data_helper: Option<StackHelper> = None;
+        let mut store = Store::new(&engine, opa_data_helper);
+
+        let memory_ty = MemoryType::new(5, None);
+        let memory = Memory::new(&mut store, memory_ty)
+            .map_err(|e| BurregoError::WasmEngineError(format!("cannot create memory: {}", e)))?;
+        linker.define("env", "memory", memory).map_err(|e| {
+            BurregoError::WasmEngineError(format!("linker cannot define memory: {}", e))
+        })?;
+
+        opa_host_functions::add_to_linker(&mut linker)?;
+
+        let instance = linker.instantiate(&mut store, &module).map_err(|e| {
+            BurregoError::WasmEngineError(format!("linker cannot create instance: {}", e))
+        })?;
+
+        let stack_helper = StackHelper::new(
+            &instance,
+            &memory,
+            &mut store,
+            host_callbacks.opa_abort,
+            host_callbacks.opa_println,
+        )?;
+        let policy = Policy::new(&instance, &mut store, &memory)?;
+        _ = store.data_mut().insert(stack_helper);
+
+        Ok(EvaluatorStack {
+            memory,
+            store,
+            instance,
+            policy,
+        })
+    }
+
+    pub fn reset(&mut self) -> Result<()> {
+        let stack = Self::setup(
+            self.engine.clone(),
+            self.module.clone(),
+            self.host_callbacks.clone(),
+        )?;
+        self.store = stack.store;
+        self.instance = stack.instance;
+        self.memory = stack.memory;
+        self.policy = stack.policy;
+
+        Ok(())
     }
 
     pub fn opa_abi_version(&mut self) -> Result<(i32, i32)> {
@@ -91,12 +136,16 @@ impl Evaluator {
             .instance
             .get_global(&mut self.store, "opa_wasm_abi_version")
             .and_then(|g| g.get(&mut self.store).i32())
-            .ok_or_else(|| anyhow!("Cannot find OPA Wasm ABI major version"))?;
+            .ok_or_else(|| {
+                BurregoError::RegoWasmError("Cannot find OPA Wasm ABI major version".to_string())
+            })?;
         let minor = self
             .instance
             .get_global(&mut self.store, "opa_wasm_abi_minor_version")
             .and_then(|g| g.get(&mut self.store).i32())
-            .ok_or_else(|| anyhow!("Cannot find OPA Wasm ABI minor version"))?;
+            .ok_or_else(|| {
+                BurregoError::RegoWasmError("Cannot find OPA Wasm ABI minor version".to_string())
+            })?;
 
         Ok((major, minor))
     }
@@ -132,11 +181,10 @@ impl Evaluator {
             .find(|(k, _v)| k == &entrypoint)
             .map(|(_k, v)| *v)
             .ok_or_else(|| {
-                anyhow!(
+                BurregoError::RegoWasmError(format!(
                     "Cannot find the specified entrypoint {} inside of {:?}",
-                    entrypoint,
-                    entrypoints
-                )
+                    entrypoint, entrypoints
+                ))
             })
     }
 
@@ -158,15 +206,16 @@ impl Evaluator {
             .iter()
             .find(|(_k, &v)| v == entrypoint_id)
             .ok_or_else(|| {
-                anyhow!(
+                BurregoError::RegoWasmError(format!(
                     "Cannot find the specified entrypoint {} inside of {:?}",
-                    entrypoint_id,
-                    entrypoints
-                )
+                    entrypoint_id, entrypoints
+                ))
             })?;
 
         debug!(
-            data = serde_json::to_string(&data)?.as_str(),
+            data = serde_json::to_string(&data)
+                .expect("cannot convert data back to json")
+                .as_str(),
             "setting policy data"
         );
         if let Some(deadline) = self.epoch_deadline {
@@ -175,7 +224,9 @@ impl Evaluator {
         self.policy.set_data(&mut self.store, &self.memory, data)?;
 
         debug!(
-            input = serde_json::to_string(&input)?.as_str(),
+            input = serde_json::to_string(&input)
+                .expect("cannot convert input back to JSON")
+                .as_str(),
             "attempting evaluation"
         );
         if let Some(deadline) = self.epoch_deadline {
@@ -183,6 +234,6 @@ impl Evaluator {
         }
         self.policy
             .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
-            .map_err(|e| anyhow!("Evaluation error: {:?}", e))
+        //.map_err(|e| anyhow!("Evaluation error: {:?}", e))
     }
 }
