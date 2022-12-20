@@ -102,7 +102,7 @@ pub mod urlquery {
             return Err(anyhow!("urlquery.decode: internal error 2"));
         }
         let (_, value) = pairs.next().unwrap();
-        serde_json::to_value(&value)
+        serde_json::to_value(value)
             .map_err(|e| anyhow!("urlquery.decode: Cannot convert value into JSON: {:?}", e))
     }
 
