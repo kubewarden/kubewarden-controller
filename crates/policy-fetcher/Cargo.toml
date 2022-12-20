@@ -12,30 +12,30 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-async-std = "1.9.0"
-async-stream = "0.3.3"
-async-trait = "0.1.60"
+async-std = "1.9"
+async-stream = "0.3"
+async-trait = "0.1"
 base64 = "0.20"
-directories = "4.0.1"
-lazy_static = "1.4.0"
+directories = "4.0"
+lazy_static = "1.4"
 oci-distribution = { version = "0.9.4", default-features = false, features =  ["rustls-tls"] }
-path-slash = "0.2.1"
-regex = "1.5.6"
-reqwest = { version = "0.11.13", default-features = false, features = ["rustls-tls"] }
-rustls = "0.20.7"
+path-slash = "0.2"
+regex = "1.5"
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
+rustls = "0.20"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.91"
+serde_json = "1.0"
 serde_yaml = "0.9"
-sha2 = "0.10.6"
-sigstore = { version = "0.6.0", default-features = false, features = ["rustls-tls"] }
-tracing = "0.1.37"
-url = { version = "2.2.2", features = ["serde"] }
+sha2 = "0.10"
+sigstore = { version = "0.6", default-features = false, features = ["rustls-tls"] }
+tracing = "0.1"
+url = { version = "2.2", features = ["serde"] }
 walkdir = "2"
-rayon = "1.5.3"
-docker_credential = "1.0.1"
+rayon = "1.5"
+docker_credential = "1.0"
 tokio = { version = "1", default_features = false }
 
 [dev-dependencies]
-rstest = "0.16.0"
-tempfile = "3.2.0"
+rstest = "0.16"
+tempfile = "3.2"
 textwrap = "0.16"
