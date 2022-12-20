@@ -52,9 +52,9 @@ version-resolver:
       - 'kind/minor'
       - 'kind/feature'
       - 'kind/enhancement'
-      - 'area/dependencies'
   patch:
     labels:
+      - 'area/dependencies'
       - 'kind/patch'
       - 'kind/fix'
       - 'kind/bug'
