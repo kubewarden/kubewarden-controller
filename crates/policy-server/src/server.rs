@@ -37,13 +37,13 @@ mod filters {
 
     pub(crate) fn routes(
         api_tx: Sender<EvalRequest>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         validate(api_tx.clone()).or(audit(api_tx)).or(readiness())
     }
 
     fn validate(
         api_tx: Sender<EvalRequest>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         // POST /validate/:policy_id with JSON body
         warp::path!("validate" / String)
             .and(warp::post())
@@ -54,7 +54,7 @@ mod filters {
 
     fn audit(
         api_tx: Sender<EvalRequest>,
-    ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         // POST /audit/:policy_id with JSON body
         warp::path!("audit" / String)
             .and(warp::post())
@@ -63,7 +63,7 @@ mod filters {
             .and_then(crate::api::audit)
     }
 
-    fn readiness() -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    fn readiness() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         // GET /readiness
         warp::path!("readiness")
             .and(warp::get())
