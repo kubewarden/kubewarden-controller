@@ -79,7 +79,7 @@ impl Store {
     // Creates all directories provided in `path` starting from the
     // root of this store.
     pub fn ensure(&self, path: &Path) -> std::io::Result<()> {
-        std::fs::create_dir_all(&self.root.join(path))
+        std::fs::create_dir_all(self.root.join(path))
     }
 
     // Returns the full path of a policy coming from the URL `url` in
@@ -166,7 +166,7 @@ impl Store {
 
         Path::new(url.scheme())
             .join(Store::host_and_port(url))
-            .join(&path)
+            .join(path)
     }
 
     fn decode_base64(encoded_str: &[u8]) -> Result<String> {

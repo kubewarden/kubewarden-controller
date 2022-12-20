@@ -11,7 +11,7 @@ pub struct Policy {
 
 impl Policy {
     pub fn digest(&self) -> Result<String, std::io::Error> {
-        let d = Sha256::digest(&std::fs::read(&self.local_path)?);
+        let d = Sha256::digest(std::fs::read(&self.local_path)?);
         Ok(format!("{:x}", d))
     }
 }

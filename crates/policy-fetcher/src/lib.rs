@@ -162,6 +162,7 @@ fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<
 
 // Helper function, takes the URL of the policy and allocates the
 // right struct to interact with it
+#[allow(clippy::box_default)]
 fn url_fetcher(scheme: &str) -> Result<Box<dyn PolicyFetcher>> {
     match scheme {
         "http" | "https" => Ok(Box::new(Https::default())),
