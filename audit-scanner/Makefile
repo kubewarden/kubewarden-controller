@@ -19,9 +19,9 @@ vet: ## Run go vet against code.
 lint: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run
 
-.PHONY: test
-test: fmt vet ## Run unit tests.
+.PHONY: unit-tests
+unit-tests: fmt vet ## Run unit tests.
 	go test ./internal/... -test.v -coverprofile cover.out
 
-build: fmt vet lint ## Build manager binary.
+build: fmt vet lint ## Build audit-scanner binary.
 	go build -o bin/audit-scanner .
