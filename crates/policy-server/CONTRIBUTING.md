@@ -2,11 +2,9 @@
 
 ## Commit subjects
 
-Commit subjects are used to determine whether a commit will show up in
-the `CHANGELOG.md`, and under what section.
-
-Commit subjects that don't follow the following pattern will not be
-included in the `CHANGELOG.md`:
+The commit messages may follow the (conventional
+commits standard)[https://www.conventionalcommits.org/en/v1.0.0/].
+For example:
 
 - `type: free form subject`
 
@@ -40,9 +38,6 @@ For creating a new release, first create a new tag:
 ```console
 $ TAG=vX.Y.Z make tag
 ```
-
-This will also update the `CHANGELOG.md` file on a separate commit,
-and tag that commit as the release.
 
 ### Push new tag to the upstream repository
 
