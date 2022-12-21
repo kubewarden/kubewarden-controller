@@ -195,6 +195,34 @@ pub(crate) fn build_cli() -> Command {
                 .default_value("2")
                 .help("Interrupt policy evaluation after the given time"),
         )
+        .arg(
+            Arg::new("daemon")
+                .long("daemon")
+                .env("KUBEWARDEN_DAEMON")
+                .required(false)
+                .help("If set, runs policy-server in detached mode as a daemon"),
+        )
+        .arg(
+            Arg::new("daemon-pid-file")
+                .long("daemon-pid-file")
+                .env("KUBEWARDEN_DAEMON_PID_FILE")
+                .default_value("policy-server.pid")
+                .help("Path to pid file, used only when running in daemon mode"),
+        )
+        .arg(
+            Arg::new("daemon-stdout-file")
+                .long("daemon-stdout-file")
+                .env("KUBEWARDEN_DAEMON_STDOUT_FILE")
+                .required(false)
+                .help("Path to file holding stdout, used only when running in daemon mode"),
+        )
+        .arg(
+            Arg::new("daemon-stderr-file")
+                .long("daemon-stderr-file")
+                .env("KUBEWARDEN_DAEMON_STDERR_FILE")
+                .required(false)
+                .help("Path to file holding stderr, used only when running in daemon mode"),
+        )
         .long_version(VERSION_AND_BUILTINS.as_str())
 }
 
