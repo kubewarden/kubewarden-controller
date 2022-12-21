@@ -25,7 +25,7 @@ clean:
 .PHONY: tag
 tag:
 	@git tag "${TAG}" || (echo "Tag ${TAG} already exists. If you want to retag, delete it manually and re-run this command" && exit 1)
-	@git tag -f "${TAG}"
+	@git tag -s -a -m "${TAG}"  "${TAG}"
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
