@@ -316,6 +316,22 @@ jobs:
               });
             }
 
+      - name: Get previous release tag
+        id: get_previous_release_tag
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let release = await github.rest.repos.getLatestRelease({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+            });
+
+            if (release.status  === 200 ) {
+              core.setOutput('old_release_tag', release.data.tag_name)
+              return
+            }
+            core.setFailed("Cannot find latest release")
+
       - name: Publish release
         uses: actions/github-script@v6
         with:
@@ -330,3 +346,11 @@ jobs:
               tag_name: `${TAG_NAME}`,
               name: `${TAG_NAME}`
             });
+
+      - name: Trigger chart update
+        uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588
+        with:
+          token: ${{ secrets.WORKFLOW_PAT }}
+          repository: "${{github.repository_owner}}/helm-charts"
+          event-type: update-chart
+          client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_previous_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}"}'
