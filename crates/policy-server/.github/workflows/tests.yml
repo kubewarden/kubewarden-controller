@@ -38,6 +38,31 @@ jobs:
           command: test
           args: --workspace
 
+  e2e-tests:
+    name: End to end tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Install venom cli tool
+        run: |
+          INSTALL_DIR=$HOME/.venom
+          mkdir -p $INSTALL_DIR
+          curl https://github.com/ovh/venom/releases/download/v1.1.0/venom.linux-amd64 -L -o $INSTALL_DIR/venom
+          chmod +x $INSTALL_DIR/venom
+          echo $INSTALL_DIR >> $GITHUB_PATH
+      - name: run e2e tests
+        run: |
+          make e2e-tests
+
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
