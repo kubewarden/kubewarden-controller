@@ -62,16 +62,19 @@ jobs:
       - name: run e2e tests
         run: |
           make e2e-tests
-
-      - uses: actions/upload-artifact@v3
+      # upload e2e logs - simplifies debugging
+      - name: upload venom.lom
+        uses: actions/upload-artifact@v3
         with:
           name: venom.log
           path: e2e-tests/venom.log
-      - uses: actions/upload-artifact@v3
+      - name: upload policy-server stdout
+        uses: actions/upload-artifact@v3
         with:
           name: policy-server.stdout.log
           path: e2e-tests/policy-server.out
-      - uses: actions/upload-artifact@v3
+      - name: upload policy-server stderr
+        uses: actions/upload-artifact@v3
         with:
           name: policy-server.stderr.log
           path: e2e-tests/policy-server.err
