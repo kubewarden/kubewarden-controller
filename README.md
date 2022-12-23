@@ -100,6 +100,13 @@ together with the signature and certificate used to signed it in the
 
 See our [governance document](https://github.com/kubewarden/rfc/blob/main/rfc/0013-governance.md).
 
+# Community meeting
+
+The Kubewarden project has decided to organize a monthly community meeting.
+Watch the community communication channels to the announcements about community
+meeting dates.
+
 # Community
 
-- Slack: [#kubewarden](https://kubernetes.slack.com/archives/kubewarden) and [#kubewarden-dev](https://kubernetes.slack.com/archives/kubewarden-dev) 
+- Slack: [#kubewarden](https://kubernetes.slack.com/archives/kubewarden) and [#kubewarden-dev](https://kubernetes.slack.com/archives/kubewarden-dev)
+
