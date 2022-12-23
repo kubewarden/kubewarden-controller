@@ -11,21 +11,7 @@ pod-privileged-monitor-mode:
   settings: {}
 
 sleep:
-  url: file:///home/flavio/hacking/kubernetes/kubewarden/sleeping-policy/annotated-policy.wasm
-  policyMode: protect
-  allowedToMutate: false
-  settings:
-    sleepMilliseconds: 2000
-
-sleep-100ms:
-  url: file:///home/flavio/hacking/kubernetes/kubewarden/sleeping-policy/annotated-policy.wasm
-  policyMode: protect
-  allowedToMutate: false
-  settings:
-    sleepMilliseconds: 100
-
-sleep-2s:
-  url: file:///home/flavio/hacking/kubernetes/kubewarden/sleeping-policy/annotated-policy.wasm
+  url: ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0
   policyMode: protect
   allowedToMutate: false
   settings:
