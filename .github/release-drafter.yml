@@ -20,7 +20,7 @@ exclude-labels:
   - later
   - wontfix
   - kind/question
-  - skip-changelog
+  - release/skip-changelog
 
 change-template: '- $TITLE (#$NUMBER)'
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
