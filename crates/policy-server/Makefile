@@ -25,12 +25,12 @@ test: fmt lint
 
 .PHONY: e2e-tests
 e2e-tests: target/release/policy-server
-	pushd ./e2e-tests && make test
+	make -C ./e2e-tests test
 
 .PHONY: clean
 clean:
 	cargo clean
-	pushd e2e-tests && make clean
+	make -C e2e-tests clean
 
 .PHONY: tag
 tag:
