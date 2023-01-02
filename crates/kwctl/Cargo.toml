@@ -21,7 +21,7 @@ lazy_static = "1.4.0"
 mdcat = "0.30"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.5.0" }
 pretty-bytes = "0.2.2"
-prettytable-rs = "^0.9"
+prettytable-rs = "^0.10"
 pulldown-cmark = { version = "0.9.2", default-features = false }
 regex = "1"
 serde_json = "1.0"
