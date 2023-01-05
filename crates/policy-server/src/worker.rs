@@ -4,7 +4,8 @@ use policy_evaluator::callback_requests::CallbackRequest;
 use policy_evaluator::wasmtime;
 use policy_evaluator::{
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
-    policy_evaluator::{Evaluator, ValidateRequest},
+    policy_evaluator::Evaluator,
+    policy_evaluator::ValidateRequest,
 };
 use std::{collections::HashMap, fmt, time::Instant};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -25,6 +26,11 @@ struct PolicyEvaluatorWithSettings {
 pub(crate) struct Worker {
     evaluators: HashMap<String, PolicyEvaluatorWithSettings>,
     channel_rx: Receiver<EvalRequest>,
+
+    // TODO: remove clippy's exception. This is going to be used to
+    // implement the epoch handling
+    #[allow(dead_code)]
+    engine: wasmtime::Engine,
 }
 
 pub struct PolicyErrors(HashMap<String, String>);
@@ -49,13 +55,21 @@ impl Worker {
         rx: Receiver<EvalRequest>,
         policies: &HashMap<String, Policy>,
         precompiled_policies: &PrecompiledPolicies,
-        engine: wasmtime::Engine,
+        wasmtime_config: &wasmtime::Config,
         callback_handler_tx: Sender<CallbackRequest>,
         always_accept_admission_reviews_on_namespace: Option<String>,
-        policy_evaluation_limit_seconds: Option<u64>,
     ) -> Result<Worker, PolicyErrors> {
         let mut evs_errors = HashMap::new();
         let mut evs = HashMap::new();
+
+        let engine = wasmtime::Engine::new(wasmtime_config).map_err(|e| {
+            let mut errors = HashMap::new();
+            errors.insert(
+                "*".to_string(),
+                format!("Cannot create wasmtime::Engine: {:?}", e),
+            );
+            PolicyErrors(errors)
+        })?;
 
         for (id, policy) in policies.iter() {
             // It's safe to clone the outer engine. This creates a shallow copy
@@ -66,7 +80,6 @@ impl Worker {
                 &inner_engine,
                 precompiled_policies,
                 callback_handler_tx.clone(),
-                policy_evaluation_limit_seconds,
             ) {
                 Ok(pe) => Box::new(pe),
                 Err(e) => {
@@ -96,6 +109,7 @@ impl Worker {
         Ok(Worker {
             evaluators: evs,
             channel_rx: rx,
+            engine,
         })
     }
 
