@@ -64,25 +64,6 @@ fn main() -> Result<()> {
         .map(PathBuf::from)
         .expect("This should not happen, there's a default value for sigstore-cache-dir");
 
-    let policy_evaluation_limit = if matches.contains_id("disable-timeout-protection") {
-        None
-    } else {
-        match matches
-            .get_one::<String>("policy-timeout")
-            .expect("policy-timeout should always be set")
-            .parse::<u64>()
-        {
-            Ok(v) => Some(v),
-            Err(e) => {
-                fatal_error(format!(
-                    "'policy-timeout' value cannot be converted to unsigned int: {}",
-                    e
-                ));
-                unreachable!()
-            }
-        }
-    };
-
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
     // Phase 1: setup the CallbackHandler. This is used by the synchronous    //
@@ -154,7 +135,6 @@ fn main() -> Result<()> {
             api_rx,
             callback_sender_channel,
             always_accept_admission_reviews_on_namespace,
-            policy_evaluation_limit,
         );
         worker_pool.run();
     });

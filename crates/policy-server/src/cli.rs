@@ -180,21 +180,6 @@ pub(crate) fn build_cli() -> Command {
                 .required(false)
                 .help("Always accept AdmissionReviews that target the given namespace"),
         )
-        .arg(
-            Arg::new("disable-timeout-protection")
-                .long("disable-timeout-protection")
-                .env("KUBEWARDEN_DISABLE_TIMEOUT_PROTECTION")
-                .required(false)
-                .help("Disable policy timeout protection"),
-        )
-        .arg(
-            Arg::new("policy-timeout")
-                .long("policy-timeout")
-                .env("KUBEWARDEN_POLICY_TIMEOUT")
-                .value_name("MAXIMUM_EXECUTION_TIME_SECONDS")
-                .default_value("2")
-                .help("Interrupt policy evaluation after the given time"),
-        )
         .long_version(VERSION_AND_BUILTINS.as_str())
 }
 
