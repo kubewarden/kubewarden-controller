@@ -4,3 +4,4 @@
 *.pid
 *.out
 *.err
+e2e-tests-policies
