@@ -141,7 +141,22 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 })
 
-func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string) *ClusterAdmissionPolicy {
+func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string, withRules bool) *ClusterAdmissionPolicy {
+	rules := make([]admissionregistrationv1.RuleWithOperations, 0)
+
+	if withRules {
+		rules = append(rules, admissionregistrationv1.RuleWithOperations{
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{"*"},
+				APIVersions: []string{"*"},
+				Resources:   []string{"*/*"},
+			},
+		})
+	} else {
+		rules = append(rules, admissionregistrationv1.RuleWithOperations{})
+	}
+
 	return &ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -153,14 +168,7 @@ func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string
 				Settings: runtime.RawExtension{
 					Raw: []byte("{}"),
 				},
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{"*"},
-						APIVersions: []string{"*"},
-						Resources:   []string{"*/*"},
-					},
-				}},
+				Rules: rules,
 			},
 		},
 	}
@@ -247,7 +255,7 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 	namespace := "default"
 
 	It("should accept creating ClusterAdmissionPolicy", func() {
-		pol := makeClusterAdmissionPolicyTemplate("policy-test", namespace, "policy-server-foo")
+		pol := makeClusterAdmissionPolicyTemplate("policy-test", namespace, "policy-server-foo", true)
 		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
 		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pol), pol)
 		if err != nil {
@@ -267,7 +275,7 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 	})
 
 	It("should deny updating ClusterAdmissionPolicy if policyServer name is changed", func() {
-		pol := makeClusterAdmissionPolicyTemplate("policy-test2", namespace, "policy-server-bar")
+		pol := makeClusterAdmissionPolicyTemplate("policy-test2", namespace, "policy-server-bar", true)
 		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
 
 		pol.Spec.PolicyServer = "policy-server-changed"
@@ -275,6 +283,24 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 
 		By("deleting the created ClusterAdmissionPolicy")
 		deleteClusterAdmissionPolicy(ctx, "policy-test2", namespace)
+	})
+
+	It("should fail to create a ClusterAdmissionPolicy with only empty rules", func() {
+		pol := makeClusterAdmissionPolicyTemplate("policy-test", namespace, "policy-server-foo", false)
+		err := k8sClient.Create(ctx, pol)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should fail to update to a ClusterAdmissionPolicy with only empty rules", func() {
+		pol := makeClusterAdmissionPolicyTemplate("policy-test", namespace, "policy-server-foo", true)
+		Expect(k8sClient.Create(ctx, pol)).To(Succeed())
+
+		pol.Spec.Rules = []admissionregistrationv1.RuleWithOperations{{}}
+		err := k8sClient.Update(ctx, pol)
+		Expect(err).To(HaveOccurred())
+
+		By("deleting the created ClusterAdmissionPolicy")
+		deleteClusterAdmissionPolicy(ctx, "policy-test", namespace)
 	})
 })
 

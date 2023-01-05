@@ -68,7 +68,8 @@ var _ webhook.Validator = &ClusterAdmissionPolicy{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ClusterAdmissionPolicy) ValidateCreate() error {
 	clusteradmissionpolicylog.Info("validate create", "name", r.Name)
-	return nil
+
+	return validatePolicyCreate(r)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -84,7 +85,42 @@ func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
 	return validatePolicyUpdate(oldPolicy, r)
 }
 
+func validatePolicyCreate(policy Policy) error {
+	return validateRulesField(policy)
+}
+
+// Validates the spec.Rules field for non-empty, webhook-generable rules
+func validateRulesField(policy Policy) error {
+	errs := field.ErrorList{}
+
+	if len(policy.GetRules()) != 0 {
+		rulesField := field.NewPath("spec", "rules")
+		for _, rule := range policy.GetRules() {
+			if len(rule.Operations) == 0 {
+				opField := rulesField.Child("operations")
+				errs = append(errs, field.Required(opField, "a value must be specified"))
+			} else if len(rule.Rule.APIGroups) == 0 || len(rule.Rule.APIVersions) == 0 || len(rule.Rule.Resources) == 0 {
+				errs = append(errs, field.Required(rulesField, "at least one of apiGroups, apiVersions, or resources must have a specified value"))
+			}
+		}
+	}
+
+	if len(errs) != 0 {
+		return apierrors.NewInvalid(
+			policy.GetObjectKind().GroupVersionKind().GroupKind(),
+			policy.GetName(),
+			errs,
+		)
+	}
+
+	return nil
+}
+
 func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
+	if err := validateRulesField(newPolicy); err != nil {
+		return err
+	}
+
 	if newPolicy.GetPolicyServer() != oldPolicy.GetPolicyServer() {
 		var errs field.ErrorList
 		p := field.NewPath("spec")
@@ -95,6 +131,7 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
 			newPolicy.GetName(), errs)
 	}
+
 	if newPolicy.GetPolicyMode() == "monitor" && oldPolicy.GetPolicyMode() == "protect" {
 		var errs field.ErrorList
 		p := field.NewPath("spec")
