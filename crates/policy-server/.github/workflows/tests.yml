@@ -64,19 +64,16 @@ jobs:
           make e2e-tests
       # upload e2e logs - simplifies debugging
       - name: upload venom.lom
-        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: venom.log
           path: e2e-tests/venom.log
       - name: upload policy-server stdout
-        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: policy-server.stdout.log
           path: e2e-tests/policy-server.out
       - name: upload policy-server stderr
-        if: success() || failure()
         uses: actions/upload-artifact@v3
         with:
           name: policy-server.stderr.log
