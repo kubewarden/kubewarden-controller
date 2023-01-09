@@ -63,7 +63,8 @@ var _ webhook.Validator = &AdmissionPolicy{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *AdmissionPolicy) ValidateCreate() error {
 	admissionpolicylog.Info("validate create", "name", r.Name)
-	return nil
+
+	return validateRulesField(r)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
