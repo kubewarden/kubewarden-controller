@@ -14,7 +14,7 @@ use std::{
     path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Barrier,
+        Arc, Barrier, RwLock,
     },
     thread,
     thread::JoinHandle,
@@ -380,6 +380,29 @@ fn verify_policy_settings(
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
     policy_evaluation_limit_seconds: Option<u64>,
 ) -> Result<()> {
+    let tick_thread_lock = Arc::new(RwLock::new(true));
+
+    if policy_evaluation_limit_seconds.is_some() {
+        // start a dedicated thread that send tick events to the
+        // wasmtime engine.
+        // This is used by the wasmtime's epoch_interruption
+        // to keep track of the execution time of each wasm module
+
+        let loop_engine = engine.clone();
+        let keep_going_lock = tick_thread_lock.clone();
+
+        thread::spawn(move || {
+            let one_second = time::Duration::from_secs(1);
+            loop {
+                thread::sleep(one_second);
+                loop_engine.increment_epoch();
+                if !(*keep_going_lock.read().unwrap()) {
+                    break;
+                }
+            }
+        });
+    }
+
     let mut errors = vec![];
     for (id, policy) in policies.iter() {
         let mut policy_evaluator = match build_policy_evaluator(
@@ -404,6 +427,12 @@ fn verify_policy_settings(
             ));
             continue;
         }
+    }
+
+    if policy_evaluation_limit_seconds.is_some() {
+        // Tell the ticker thread loop to stop
+        let mut w = tick_thread_lock.write().unwrap();
+        *w = false;
     }
 
     if errors.is_empty() {
