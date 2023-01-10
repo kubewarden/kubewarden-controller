@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use base64::engine::fast_portable;
+use base64::{alphabet, engine::general_purpose, Engine as _};
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use path_slash::PathBufExt;
@@ -20,8 +20,8 @@ lazy_static! {
 
 /// A base64 engine that uses URL_SAFE alphabet and escapes using no padding
 /// For performance reasons, it's recommended to cache its creation
-pub const BASE64_ENGINE: fast_portable::FastPortable =
-    fast_portable::FastPortable::from(&base64::alphabet::URL_SAFE, fast_portable::NO_PAD);
+pub const BASE64_ENGINE: general_purpose::GeneralPurpose =
+    general_purpose::GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD);
 
 pub enum PolicyPath {
     PrefixOnly,
@@ -235,12 +235,12 @@ fn retrieve_policy_name_and_tag(filename: OsString) -> Result<String> {
 }
 
 fn base64_decode_no_pad(input: &[u8]) -> Result<Vec<u8>, base64::DecodeError> {
-    base64::decode_engine(input, &BASE64_ENGINE)
+    BASE64_ENGINE.decode(input)
 }
 
 #[allow(dead_code)]
 fn base64_encode_no_pad(input: &[u8]) -> String {
-    base64::encode_engine(input, &BASE64_ENGINE)
+    BASE64_ENGINE.encode(input)
 }
 
 // Use conditional compilation to decide implementation based on the
