@@ -1,5 +1,5 @@
 pub mod base64url {
-    use anyhow::{anyhow, Result};
+    use crate::errors::{BurregoError, Result};
     use base64::engine::fast_portable;
 
     /// A base64 engine that uses URL_SAFE alphabet and escapes using no padding
@@ -9,22 +9,22 @@ pub mod base64url {
 
     pub fn encode_no_pad(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!(
-                "base64url.encode_no_pad: wrong number of arguments"
-            ));
+            return Err(BurregoError::BuiltinError {
+                name: "base64url.encode_no_pad".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("base64url.encode_no_pad: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "base64url.encode_no_pad".to_string(),
+            message: "1st parameter is not a string".to_string(),
+        })?;
 
         let res = base64::encode_engine(input, &BASE64_ENGINE);
 
-        serde_json::to_value(res).map_err(|e| {
-            anyhow!(
-                "base64url.encode_no_pad: cannot convert value into JSON: {:?}",
-                e
-            )
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "base64url.encode_no_pad".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
         })
     }
 
@@ -56,104 +56,144 @@ pub mod base64url {
 }
 
 pub mod urlquery {
-    use anyhow::{anyhow, Result};
+    use crate::errors::{BurregoError, Result};
     use std::collections::HashMap;
     use url::Url;
 
     pub fn encode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("urlquery.encode: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "urlquery.encode".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("urlquery.encode: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "urlquery.encode".to_string(),
+            message: "1st parameter is not a string".to_string(),
+        })?;
 
-        let mut url = Url::parse("https://example.com/")
-            .map_err(|e| anyhow!("urlquery.encode: internal error 1 - {:?}", e))?;
+        let mut url =
+            Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
+                name: "urlquery.encode".to_string(),
+                message: format!("internal error 1 - {:?}", e),
+            })?;
         url.set_query(Some(format!("input={}", input).as_str()));
 
-        let res = url
-            .query()
-            .ok_or_else(|| anyhow!("urlquery.encode: internal error 2"))?;
+        let res = url.query().ok_or_else(|| BurregoError::BuiltinError {
+            name: "urlquery.encode".to_string(),
+            message: "internal error 2".to_string(),
+        })?;
         let res = res
             .strip_prefix("input=")
-            .ok_or_else(|| anyhow!("urlquery.encode: internal error 3"))?;
+            .ok_or_else(|| BurregoError::BuiltinError {
+                name: "urlquery.encode".to_string(),
+                message: "internal error 3".to_string(),
+            })?;
 
-        serde_json::to_value(res)
-            .map_err(|e| anyhow!("urlquery.encode: Cannot convert value into JSON: {:?}", e))
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "urlquery.encode".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
+        })
     }
 
     pub fn decode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("urlquery.decode: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "urlquery.decode".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("urlquery.decode: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "urlquery.decode".to_string(),
+            message: "1st parameter is not a string".to_string(),
+        })?;
 
-        let mut url = Url::parse("https://example.com/")
-            .map_err(|e| anyhow!("urlquery.decode: internal error 1 - {:?}", e))?;
+        let mut url =
+            Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
+                name: "urlquery.decode".to_string(),
+                message: format!("internal error 1 - {:?}", e),
+            })?;
         url.set_query(Some(format!("input={}", input).as_str()));
 
         let mut pairs = url.query_pairs();
         if pairs.count() != 1 {
-            return Err(anyhow!("urlquery.decode: internal error 2"));
+            return Err(BurregoError::BuiltinError {
+                name: "urlquery.decode".to_string(),
+                message: "internal error 2".to_string(),
+            });
         }
         let (_, value) = pairs.next().unwrap();
-        serde_json::to_value(value)
-            .map_err(|e| anyhow!("urlquery.decode: Cannot convert value into JSON: {:?}", e))
+        serde_json::to_value(value).map_err(|e| BurregoError::BuiltinError {
+            name: "urlquery.decode".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
+        })
     }
 
     pub fn encode_object(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("urlquery.encode_object: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "urlquery.encode_object".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
         let obj = args[0]
             .as_object()
-            .ok_or_else(|| anyhow!("urlquery.encode_object: 1st parameter is not an object"))?;
+            .ok_or_else(|| BurregoError::BuiltinError {
+                name: "urlquery.encode_object".to_string(),
+                message: "1st parameter is not an object".to_string(),
+            })?;
 
-        let mut url = Url::parse("https://example.com/")
-            .map_err(|e| anyhow!("urlquery.encode_object: internal error 1 - {:?}", e))?;
+        let mut url =
+            Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
+                name: "urlquery.encode_object".to_string(),
+                message: format!("internal error 1 - {:?}", e),
+            })?;
 
         let mut queries: Vec<String> = Vec::new();
         for (key, value) in obj.iter() {
             let value_str = value.as_str();
             if value_str.is_none() {
-                return Err(anyhow!(
-                    "urlquery.encode_object: the value of key {} is not a string",
-                    key
-                ));
+                return Err(BurregoError::BuiltinError {
+                    name: "urlquery.encode_object".to_string(),
+                    message: format!("the value of key {} is not a string", key),
+                });
             }
             queries.push(format!("{}={}", key, value_str.unwrap()));
         }
         url.set_query(Some(queries.join("&").as_str()));
 
-        let res = url
-            .query()
-            .ok_or_else(|| anyhow!("urlquery.encode_object: internal error 2"))?;
+        let res = url.query().ok_or_else(|| BurregoError::BuiltinError {
+            name: "urlquery.encode_object".to_string(),
+            message: "internal error 2".to_string(),
+        })?;
 
-        serde_json::to_value(res).map_err(|e| {
-            anyhow!(
-                "urlquery.encode_object: Cannot convert value into JSON: {:?}",
-                e
-            )
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "urlquery.encode_object".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
         })
     }
 
     pub fn decode_object(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("urlquery.decode_object: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "urlquery.decode_object".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("urlquery.decode: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "urlquery.decode".to_string(),
+            message: "1st parameter is not a string".to_string(),
+        })?;
 
-        let mut url = Url::parse("https://example.com/")
-            .map_err(|e| anyhow!("urlquery.decode_object: internal error 1 - {:?}", e))?;
+        let mut url =
+            Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
+                name: "urlquery.decode_object".to_string(),
+                message: format!("internal error 1 - {:?}", e),
+            })?;
         url.set_query(Some(input));
 
         let mut res: HashMap<String, String> = HashMap::new();
@@ -162,11 +202,9 @@ pub mod urlquery {
             res.insert(String::from(key), String::from(value));
         }
 
-        serde_json::to_value(&res).map_err(|e| {
-            anyhow!(
-                "urlquery.decode_object: Cannot convert value into JSON: {:?}",
-                e
-            )
+        serde_json::to_value(&res).map_err(|e| BurregoError::BuiltinError {
+            name: "urlquery.decode_object".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
         })
     }
 
@@ -250,22 +288,28 @@ pub mod urlquery {
 }
 
 pub mod json {
-    use anyhow::{anyhow, Result};
+    use crate::errors::{BurregoError, Result};
 
     pub fn is_valid(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("json.is_valid: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "json.is_valid".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("json.is_valid: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "json.is_valid".to_string(),
+            message: "1st parameter is not a string".to_string(),
+        })?;
 
         let v: serde_json::Result<serde_json::Value> = serde_json::from_str(input);
         let res = v.is_ok();
 
-        serde_json::to_value(res)
-            .map_err(|e| anyhow!("json.is_valid: cannot convert value into JSON: {:?}", e))
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "json.is_valid".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
+        })
     }
 
     #[cfg(test)]
@@ -294,65 +338,83 @@ pub mod json {
 }
 
 pub mod yaml {
-    use anyhow::{anyhow, Result};
+    use crate::errors::{BurregoError, Result};
 
     pub fn marshal(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("yaml.marshal: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "yaml.marshal".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
         let input: serde_json::Value = args[0].clone();
 
         // convert the generic input json value into a generic yaml value
-        let value: serde_yaml::Value = serde_json::from_value(input).map_err(|e| {
-            anyhow!(
-                "yaml.marshal: cannot convert input object to yaml - {:?}",
-                e
-            )
-        })?;
+        let value: serde_yaml::Value =
+            serde_json::from_value(input).map_err(|e| BurregoError::BuiltinError {
+                name: "yaml.marshal".to_string(),
+                message: format!(" cannot convert input object to yaml - {:?}", e),
+            })?;
 
         // marshal from yaml to string
-        let res = serde_yaml::to_string(&value)
-            .map_err(|e| anyhow!("yaml.marshal: marshal error - {:?}", e))?;
+        let res = serde_yaml::to_string(&value).map_err(|e| BurregoError::BuiltinError {
+            name: "yaml.marshal".to_string(),
 
-        serde_json::to_value(res)
-            .map_err(|e| anyhow!("yaml.marshal: cannot convert result into JSON: {:?}", e))
+            message: format!("marshal error - {:?}", e),
+        })?;
+
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "yaml.marshal".to_string(),
+            message: format!("cannot convert result into JSON: {:?}", e),
+        })
     }
 
     pub fn unmarshal(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("yaml.unmarshal: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "yaml.unmarshal".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("yaml.unmarshal: 1st parameter is not a string"))?;
-
-        let res: serde_json::Value = serde_yaml::from_str(input).map_err(|e| {
-            anyhow!(
-                "yaml.unmarshal: cannot convert input object to json - {:?}",
-                e
-            )
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "yaml.unmarshal".to_string(),
+            message: "1st parameter is not a string".to_string(),
         })?;
 
-        serde_json::to_value(res)
-            .map_err(|e| anyhow!("yaml.unmarshal: cannot convert result into JSON: {:?}", e))
+        let res: serde_json::Value =
+            serde_yaml::from_str(input).map_err(|e| BurregoError::BuiltinError {
+                name: "yaml.unmarshal".to_string(),
+                message: format!("cannot convert input object to json - {:?}", e),
+            })?;
+
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "yaml.unmarshal".to_string(),
+            message: format!("cannot convert result into JSON: {:?}", e),
+        })
     }
 
     pub fn is_valid(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("yaml.is_valid: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "yaml.is_valid".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("yaml.is_valid: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "yaml.is_valid".to_string(),
+            message: "parameter is not a string".to_string(),
+        })?;
 
         let v: serde_yaml::Result<serde_yaml::Value> = serde_yaml::from_str(input);
         let res = v.is_ok();
 
-        serde_json::to_value(res)
-            .map_err(|e| anyhow!("yaml.is_valid: cannot convert value into JSON: {:?}", e))
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "yaml.is_valid".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
+        })
     }
 
     #[cfg(test)]
@@ -430,17 +492,21 @@ number: 42
 }
 
 pub mod hex {
-    use anyhow::{anyhow, Result};
+    use crate::errors::{BurregoError, Result};
     use core::num;
 
     pub fn encode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("hex.encode: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "hex.encode".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("hex.encode: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "hex.encode".to_string(),
+            message: "1st parameter is not a string".to_string(),
+        })?;
 
         let res: Vec<String> = input
             .as_bytes()
@@ -449,30 +515,43 @@ pub mod hex {
             .collect();
         let res = res.join("");
 
-        serde_json::to_value(res)
-            .map_err(|e| anyhow!("hex.encode: cannot convert value into JSON: {:?}", e))
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "hex.encode".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
+        })
     }
 
     pub fn decode(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
-            return Err(anyhow!("hex.decode: wrong number of arguments"));
+            return Err(BurregoError::BuiltinError {
+                name: "hex.decode".to_string(),
+                message: "wrong number of arguments".to_string(),
+            });
         }
 
-        let input = args[0]
-            .as_str()
-            .ok_or_else(|| anyhow!("hex.decode: 1st parameter is not a string"))?;
+        let input = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+            name: "hex.decode".to_string(),
+            message: "1st parameter is not a string".to_string(),
+        })?;
 
         let value: std::result::Result<Vec<u8>, num::ParseIntError> = (0..input.len())
             .step_by(2)
             .map(|i| u8::from_str_radix(&input[i..i + 2], 16))
             .collect();
-        let value = value.map_err(|e| anyhow!("hex.decode: cannot parse input - {:?}", e))?;
+        let value = value.map_err(|e| BurregoError::BuiltinError {
+            name: "hex.decode".to_string(),
+            message: format!("cannot parse input - {:?}", e),
+        })?;
 
-        let res = String::from_utf8(value)
-            .map_err(|e| anyhow!("hex.decode: cannot parse string - {:?}", e))?;
+        let res = String::from_utf8(value).map_err(|e| BurregoError::BuiltinError {
+            name: "hex.decode".to_string(),
+            message: format!("cannot parse string - {:?}", e),
+        })?;
 
-        serde_json::to_value(res)
-            .map_err(|e| anyhow!("hex.decode: cannot convert value into JSON: {:?}", e))
+        serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
+            name: "hex.decode".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
+        })
     }
 
     #[cfg(test)]

@@ -1,17 +1,21 @@
 use anyhow::anyhow;
-use tracing::error;
-
-pub(crate) struct Runtime<'a>(pub(crate) &'a mut crate::policy_evaluator::BurregoEvaluator);
-
-use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
-use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use burrego::host_callbacks::HostCallbacks;
-
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
-
-use crate::policy_evaluator::RegoPolicyExecutionMode;
 use serde::Deserialize;
 use serde_json::json;
+use tracing::error;
+
+use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
+use crate::policy_evaluator::RegoPolicyExecutionMode;
+use crate::policy_evaluator::{PolicySettings, ValidateRequest};
+
+pub(crate) struct BurregoStack {
+    pub evaluator: burrego::Evaluator,
+    pub entrypoint_id: i32,
+    pub policy_execution_mode: RegoPolicyExecutionMode,
+}
+
+pub(crate) struct Runtime<'a>(pub(crate) &'a mut BurregoStack);
 
 #[tracing::instrument(level = "error")]
 fn opa_abort(msg: &str) {}
@@ -156,9 +160,17 @@ impl<'a> Runtime<'a> {
             }
             Err(err) => {
                 error!(
-                    error = err.to_string().as_str(),
+                    error = ?err,
                     "error evaluating policy with burrego"
                 );
+                if matches!(
+                    err,
+                    burrego::errors::BurregoError::ExecutionDeadlineExceeded
+                ) {
+                    if let Err(reset_error) = self.0.evaluator.reset() {
+                        error!(?reset_error, "cannot reset burrego evaluator, further invocations might fail or behave not properly");
+                    }
+                }
                 AdmissionResponse::reject_internal_server_error(uid.to_string(), err.to_string())
             }
         }

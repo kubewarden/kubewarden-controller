@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
 use tracing::{debug, error};
 use wasmtime::{AsContextMut, Caller, Linker};
 
@@ -30,8 +30,8 @@ fn register_opa_abort_func(
                 let stack_helper = caller.data().as_ref().unwrap();
                 let opa_abort_host_callback = stack_helper.opa_abort_host_callback;
 
-                let memory_export = caller.get_export("memory").ok_or_else(|| anyhow!("cannot find 'memory' export"))?;
-                let memory = memory_export.into_memory().ok_or_else(|| anyhow!("'memory' export cannot be converted into a memory object"))?;
+                let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
+                let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
                 let msg = StackHelper::read_string(caller.as_context_mut(), &memory, addr)
                     .map_or_else(
@@ -42,7 +42,10 @@ fn register_opa_abort_func(
 
                 Ok(())
             },
-        )
+        ).map_err(|e| BurregoError::BuiltinError{
+            name: "opa_abort".to_string(),
+            message: e.to_string()
+        })
 }
 
 fn register_opa_println_func(
@@ -55,8 +58,8 @@ fn register_opa_println_func(
             let stack_helper = caller.data().as_ref().unwrap();
             let opa_println_host_callback = stack_helper.opa_println_host_callback;
 
-            let memory_export = caller.get_export("memory").ok_or_else(|| anyhow!("cannot find 'memory' export"))?;
-            let memory = memory_export.into_memory().ok_or_else(|| anyhow!("'memory' export cannot be converted into a memory object"))?;
+            let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
+            let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let msg = StackHelper::read_string(caller.as_context_mut(), &memory, addr)
                 .map_or_else(
@@ -67,7 +70,10 @@ fn register_opa_println_func(
 
             Ok(())
         },
-    )
+    ).map_err(|e| BurregoError::BuiltinError{
+        name: "opa_println".to_string(),
+        message: e.to_string()
+    })
 }
 
 /// env.opa_builtin0 (builtin_id, ctx) addr
@@ -90,25 +96,19 @@ fn register_opa_builtin0_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    anyhow!("opa_builtin0: cannot find builtin {}", builtin_id)
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin0: cannot find builtin {}", builtin_id))
                 })?.clone();
             let args = vec![];
 
-            let memory_export = caller
-                .get_export("memory")
-                .ok_or_else(|| anyhow!("cannot find 'memory' export"))?;
-            let memory = memory_export.into_memory().ok_or_else(|| {
-                anyhow!("'memory' export cannot be converted into a memory object")
-            })?;
-
+            let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
+            let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| anyhow!("Cannot access global builtin helper: {:?}", e))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
 
             let builtin_result = builtin_helper
-                .invoke(&builtin_name, &args)
-                .map_err(|e| anyhow!("error invoking builtin0: {:?}", e))?;
+                .invoke(&builtin_name, &args)?;
 
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
@@ -120,7 +120,9 @@ fn register_opa_builtin0_func(
 
             Ok(addr)
         },
-    )
+    ).map_err(|e| BurregoError::BuiltinError{
+        name: "opa_builtin0".to_string(),
+        message: e.to_string()})
 }
 
 /// env.opa_builtin1(builtin_id, ctx, _1) addr
@@ -146,28 +148,24 @@ fn register_opa_builtin1_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    anyhow!("opa_builtin1: cannot find builtin {}", builtin_id)
+                    BurregoError::BuiltinNotImplementedError(
+                    format!("opa_bunltin1: cannot find builtin {}", builtin_id))
                 })?.clone();
 
-            let memory_export = caller
-                .get_export("memory")
-                .ok_or_else(|| anyhow!("cannot find 'memory' export"))?;
-            let memory = memory_export.into_memory().ok_or_else(|| {
-                anyhow!("'memory' export cannot be converted into a memory object")
-            })?;
+            let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
+            let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
+
 
             let p1 =
                     StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
             let args = vec![p1];
 
-
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| anyhow!("Cannot access global builtin helper: {:?}", e))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
 
             let builtin_result = builtin_helper
-                .invoke(&builtin_name, &args)
-                .map_err(|e| anyhow!("error invoking builtin1: {:?}", e))?;
+                .invoke(&builtin_name, &args)?;
 
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
@@ -179,7 +177,10 @@ fn register_opa_builtin1_func(
 
             Ok(addr)
         },
-    )
+    ).map_err(|e| BurregoError::BuiltinError{
+        name: "opa_bunltin1".to_string(),
+        message: e.to_string(),
+    })
 }
 
 /// env.opa_builtin2 (builtin_id, ctx, _1, _2) addr
@@ -206,15 +207,11 @@ fn register_opa_builtin2_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    anyhow!("opa_builtin2: cannot find builtin {}", builtin_id)
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin2: cannot find builtin {}", builtin_id))
                 })?.clone();
 
-            let memory_export = caller
-                .get_export("memory")
-                .ok_or_else(|| anyhow!("cannot find 'memory' export"))?;
-            let memory = memory_export.into_memory().ok_or_else(|| {
-                anyhow!("'memory' export cannot be converted into a memory object")
-            })?;
+            let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
+            let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let p1 =
                     StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
@@ -223,17 +220,11 @@ fn register_opa_builtin2_func(
 
             let args = vec![p1, p2];
 
-
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| anyhow!("Cannot access global builtin helper: {:?}", e))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
 
-            let builtin_result = builtin_helper
-                .invoke(&builtin_name, &args)
-                .map_err(|e| {
-                    error!(builtin_name, ?args, error=?e, "error invoking builtin2");
-                    anyhow!("error invoking builtin2: {:?}", e)
-                })?;
+            let builtin_result = builtin_helper.invoke(&builtin_name, &args)?;
 
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
@@ -245,7 +236,10 @@ fn register_opa_builtin2_func(
 
             Ok(addr)
         },
-    )
+    ).map_err(|e| BurregoError::BuiltinError{
+        name: "opa_builtin2".to_string(),
+        message: e.to_string()
+    })
 }
 
 /// env.opa_builtin3 (builtin_id, ctx, _1, _2, _3) addr
@@ -273,15 +267,11 @@ fn register_opa_builtin3_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    anyhow!("opa_builtin2: cannot find builtin {}", builtin_id)
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin3: cannot find builtin {}", builtin_id))
                 })?.clone();
 
-            let memory_export = caller
-                .get_export("memory")
-                .ok_or_else(|| anyhow!("cannot find 'memory' export"))?;
-            let memory = memory_export.into_memory().ok_or_else(|| {
-                anyhow!("'memory' export cannot be converted into a memory object")
-            })?;
+            let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
+            let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let p1 =
                     StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
@@ -292,14 +282,11 @@ fn register_opa_builtin3_func(
 
             let args = vec![p1, p2, p3];
 
-
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| anyhow!("Cannot access global builtin helper: {:?}", e))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
 
-            let builtin_result = builtin_helper
-                .invoke(&builtin_name, &args)
-                .map_err(|e| anyhow!("error invoking builtin3: {:?}", e))?;
+            let builtin_result = builtin_helper.invoke(&builtin_name, &args)?;
 
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
@@ -311,7 +298,10 @@ fn register_opa_builtin3_func(
 
             Ok(addr)
         },
-    )
+    ).map_err(|e| BurregoError::BuiltinError{
+        name: "opa_builtin3".to_string(),
+        message: e.to_string(),
+    })
 }
 
 /// env.opa_builtin4 (builtin_id, ctx, _1, _2, _3, _4) addr
@@ -340,15 +330,11 @@ fn register_opa_builtin4_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    anyhow!("opa_builtin2: cannot find builtin {}", builtin_id)
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin4: cannot find builtin {}", builtin_id))
                 })?.clone();
 
-            let memory_export = caller
-                .get_export("memory")
-                .ok_or_else(|| anyhow!("cannot find 'memory' export"))?;
-            let memory = memory_export.into_memory().ok_or_else(|| {
-                anyhow!("'memory' export cannot be converted into a memory object")
-            })?;
+            let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
+            let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let p1 =
                     StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
@@ -361,14 +347,11 @@ fn register_opa_builtin4_func(
 
             let args = vec![p1, p2, p3, p4];
 
-
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| anyhow!("Cannot access global builtin helper: {:?}", e))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
 
-            let builtin_result = builtin_helper
-                .invoke(&builtin_name, &args)
-                .map_err(|e| anyhow!("error invoking builtin4: {:?}", e))?;
+            let builtin_result = builtin_helper.invoke(&builtin_name, &args)?;
 
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
@@ -380,5 +363,8 @@ fn register_opa_builtin4_func(
 
             Ok(addr)
         },
-    )
+    ).map_err(|e| BurregoError::BuiltinError{
+        name: "opa_builtin4".to_string(),
+        message: e.to_string(),
+    })
 }

@@ -106,10 +106,10 @@ fn main() -> Result<()> {
 
             let data_value: serde_json::Value =
                 serde_json::from_str(&data).map_err(|e| anyhow!("Cannot parse data: {:?}", e))?;
-            let mut evaluator = burrego::Evaluator::from_path(
-                &PathBuf::from(policy),
-                burrego::HostCallbacks::default(),
-            )?;
+            let mut evaluator = burrego::EvaluatorBuilder::default()
+                .policy_path(&PathBuf::from(policy))
+                .host_callbacks(burrego::HostCallbacks::default())
+                .build()?;
 
             let (major, minor) = evaluator.opa_abi_version()?;
             debug!(major, minor, "OPA Wasm ABI");

@@ -1,5 +1,6 @@
 use super::{get_builtins, BuiltinFunctionsMap};
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
+
 use lazy_static::lazy_static;
 use std::sync::RwLock;
 use tracing::debug;
@@ -24,11 +25,13 @@ impl BuiltinsHelper {
         let builtin_fn = self
             .builtins
             .get(builtin_name)
-            .ok_or_else(|| anyhow!("Cannot find builtin function with name {}", builtin_name))?;
+            .ok_or_else(|| BurregoError::BuiltinNotImplementedError(builtin_name.to_string()))?;
 
         debug!(
             builtin = builtin_name,
-            args = serde_json::to_string(&args)?.as_str(),
+            args = serde_json::to_string(&args)
+                .expect("cannot convert builtins args to JSON")
+                .as_str(),
             "invoking builtin"
         );
         builtin_fn(args)

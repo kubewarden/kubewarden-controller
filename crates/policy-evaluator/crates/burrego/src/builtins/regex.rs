@@ -1,55 +1,77 @@
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
 use core::fmt::Display;
 use regex::{escape as regex_escape, Regex};
 use std::{fmt, str::FromStr};
 
 pub fn split(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 2 {
-        return Err(anyhow!("Wrong number of arguments given to regex.split"));
+        return Err(BurregoError::BuiltinError {
+            name: "regex.split".to_string(),
+            message: "Wrong number of arguments given".to_string(),
+        });
     }
 
-    let pattern_str = args[0]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.split: 1st parameter is not a string"))?;
-    let string_str = args[1]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.split: 2nd parameter is not a string"))?;
+    let pattern_str = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.split".to_string(),
+        message: "1st parameter is not a string".to_string(),
+    })?;
+    let string_str = args[1].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.split".to_string(),
+        message: "2nd parameter is not a string".to_string(),
+    })?;
 
     serde_json::to_value(
-        Regex::new(pattern_str)?
+        Regex::new(pattern_str)
+            .map_err(|e| BurregoError::BuiltinError {
+                name: "regex.split".to_string(),
+                message: format!(
+                    "cannot build regex from the given pattern string '{}': {:?}",
+                    pattern_str, e
+                ),
+            })?
             .split(string_str)
             .collect::<String>(),
     )
-    .map_err(|e| anyhow!("regex.split: cannot convert result into JSON: {:?}", e))
+    .map_err(|e| BurregoError::BuiltinError {
+        name: "regex.split".to_string(),
+        message: format!("cannot convert result into JSON: {:?}", e),
+    })
 }
 
 pub fn template_match(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 4 {
-        return Err(anyhow!(
-            "Wrong number of arguments given to regex.template_match"
-        ));
+        return Err(BurregoError::BuiltinError {
+            name: "regex.template_match".to_string(),
+            message: "Wrong number of arguments given".to_string(),
+        });
     }
-    let pattern_str = args[0]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.template_match: 1st parameter is not a string"))?;
-    let string_str = args[1]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.template_match: 2nd parameter is not a string"))?;
-    let delimiter_start_str = args[2]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.template_match: 3rd parameter is not a string"))?;
+    let pattern_str = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.template_match".to_string(),
+        message: "1st parameter is not a string".to_string(),
+    })?;
+    let string_str = args[1].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.template_match".to_string(),
+        message: "2nd parameter is not a string".to_string(),
+    })?;
+    let delimiter_start_str = args[2].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.template_match".to_string(),
+        message: "3rd parameter is not a string".to_string(),
+    })?;
     if delimiter_start_str.len() != 1 {
-        return Err(anyhow!(
-            "regex.template_match: 3rd parameter has to be exactly one character long"
-        ));
+        return Err(BurregoError::BuiltinError {
+            name: "regex.template_match".to_string(),
+            message: "3rd parameter has to be exactly one character long".to_string(),
+        });
     }
-    let delimiter_end_str = args[3]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.template_match: 4th parameter is not a string"))?;
+    let delimiter_end_str = args[3].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.template_match".to_string(),
+        message: "4th parameter is not a string".to_string(),
+    })?;
     if delimiter_end_str.len() != 1 {
-        return Err(anyhow!(
-            "regex.template_match: 4th parameter has to be exactly one character long"
-        ));
+        return Err(BurregoError::BuiltinError {
+            name: "regex.template_match".to_string(),
+            message: "4th parameter has to be exactly one character long".to_string(),
+        });
     }
     let computed_regexp = TemplateMatch::regexp_from_template(
         pattern_str,
@@ -59,41 +81,65 @@ pub fn template_match(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         delimiter_end_str.chars().next().unwrap(),
     )?;
     serde_json::to_value(computed_regexp.is_match(string_str)).map_err(|e| {
-        anyhow!(
-            "regex.template_match: cannot convert value into JSON: {:?}",
-            e
-        )
+        BurregoError::BuiltinError {
+            name: "regex.template_match".to_string(),
+            message: format!("cannot convert value into JSON: {:?}", e),
+        }
     })
 }
 
 pub fn find_n(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 3 {
-        return Err(anyhow!("Wrong number of arguments given to regex.find_n"));
+        return Err(BurregoError::BuiltinError {
+            name: "regex.find_n".to_string(),
+            message: "Wrong number of arguments given to ".to_string(),
+        });
     }
-    let pattern_str = args[0]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.find_n: 1st parameter is not a string"))?;
-    let string_str = args[1]
-        .as_str()
-        .ok_or_else(|| anyhow!("regex.find_n: 2nd parameter is not a string"))?;
-    let take_number = args[2]
-        .as_i64()
-        .ok_or_else(|| anyhow!("regex.find_n: 3rd parameter is not a number"))?;
+    let pattern_str = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.find_n".to_string(),
+        message: "1st parameter is not a string".to_string(),
+    })?;
+    let string_str = args[1].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.find_n".to_string(),
+        message: "2nd parameter is not a string".to_string(),
+    })?;
+    let take_number = args[2].as_i64().ok_or_else(|| BurregoError::BuiltinError {
+        name: "regex.find_n".to_string(),
+        message: "3rd parameter is not a number".to_string(),
+    })?;
 
     let take_n = if take_number != -1 {
         take_number as usize
     } else {
-        Regex::new(pattern_str)?.find_iter(string_str).count()
+        Regex::new(pattern_str)
+            .map_err(|e| BurregoError::BuiltinError {
+                name: "regex.find_n".to_string(),
+                message: format!(
+                    "cannot build regex from the given pattern string '{}': {:?}",
+                    pattern_str, e
+                ),
+            })?
+            .find_iter(string_str)
+            .count()
     };
 
-    let matches: Vec<String> = Regex::new(pattern_str)?
+    let matches: Vec<String> = Regex::new(pattern_str)
+        .map_err(|e| BurregoError::BuiltinError {
+            name: "regex.find_n".to_string(),
+            message: format!(
+                "cannot build regex from the given pattern string '{}': {:?}",
+                pattern_str, e
+            ),
+        })?
         .find_iter(string_str)
         .take(take_n)
         .map(|match_| String::from(match_.as_str()))
         .collect();
 
-    serde_json::to_value(matches)
-        .map_err(|e| anyhow!("regex.find_n: cannot convert value into JSON: {:?}", e))
+    serde_json::to_value(matches).map_err(|e| BurregoError::BuiltinError {
+        name: "regex.find_n".to_string(),
+        message: format!("cannot convert value into JSON: {:?}", e),
+    })
 }
 
 struct Expression {
@@ -169,8 +215,10 @@ impl TemplateMatch {
             expressions.0.push(current_expression);
         }
 
-        Regex::from_str(&format!("{}", expressions))
-            .map_err(|e| anyhow!("tried to initialize an invalid regular expression: {:?}", e))
+        Regex::from_str(&format!("{}", expressions)).map_err(|e| BurregoError::BuiltinError {
+            name: "regex".to_string(),
+            message: format!("tried to initialize an invalid regular expression: {:?}", e),
+        })
     }
 }
 
@@ -214,9 +262,9 @@ mod tests {
     fn find_n() -> Result<()> {
         assert_eq!(
             super::find_n(&vec![
-                serde_json::to_value("a.")?,
-                serde_json::to_value("paranormal")?,
-                serde_json::to_value(1)?,
+                serde_json::to_value("a.").unwrap(),
+                serde_json::to_value("paranormal").unwrap(),
+                serde_json::to_value(1).unwrap(),
             ])?
             .as_array()
             .unwrap(),
@@ -225,9 +273,9 @@ mod tests {
 
         assert_eq!(
             super::find_n(&vec![
-                serde_json::to_value("a.")?,
-                serde_json::to_value("paranormal")?,
-                serde_json::to_value(2)?,
+                serde_json::to_value("a.").unwrap(),
+                serde_json::to_value("paranormal").unwrap(),
+                serde_json::to_value(2).unwrap(),
             ])?
             .as_array()
             .unwrap(),
@@ -236,9 +284,9 @@ mod tests {
 
         assert_eq!(
             super::find_n(&vec![
-                serde_json::to_value("a.")?,
-                serde_json::to_value("paranormal")?,
-                serde_json::to_value(10)?,
+                serde_json::to_value("a.").unwrap(),
+                serde_json::to_value("paranormal").unwrap(),
+                serde_json::to_value(10).unwrap(),
             ])?
             .as_array()
             .unwrap(),
@@ -247,9 +295,9 @@ mod tests {
 
         assert_eq!(
             super::find_n(&vec![
-                serde_json::to_value("a.")?,
-                serde_json::to_value("paranormal")?,
-                serde_json::to_value(-1)?,
+                serde_json::to_value("a.").unwrap(),
+                serde_json::to_value("paranormal").unwrap(),
+                serde_json::to_value(-1).unwrap(),
             ])?
             .as_array()
             .unwrap(),
@@ -258,9 +306,9 @@ mod tests {
 
         assert_eq!(
             super::find_n(&vec![
-                serde_json::to_value("nomatch")?,
-                serde_json::to_value("paranormal")?,
-                serde_json::to_value(-1)?,
+                serde_json::to_value("nomatch").unwrap(),
+                serde_json::to_value("paranormal").unwrap(),
+                serde_json::to_value(-1).unwrap(),
             ])?
             .as_array()
             .unwrap(),

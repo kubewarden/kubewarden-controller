@@ -9,6 +9,7 @@ use crate::admission_response::AdmissionResponse;
 use crate::policy::Policy;
 use crate::runtimes::burrego::Runtime as BurregoRuntime;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
+use crate::runtimes::Runtime;
 
 #[derive(Copy, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize, Debug)]
 pub enum PolicyExecutionMode {
@@ -70,20 +71,7 @@ impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
     }
 }
 
-pub(crate) struct BurregoEvaluator {
-    pub(crate) evaluator: burrego::Evaluator,
-    pub(crate) entrypoint_id: i32,
-    pub(crate) policy_execution_mode: RegoPolicyExecutionMode,
-}
-
 pub(crate) type PolicySettings = serde_json::Map<String, serde_json::Value>;
-
-pub(crate) enum Runtime {
-    Wapc(wapc::WapcHost),
-    // The `BurregoEvaluator` variant is boxed since it outsizes the
-    // other variants of this enum.
-    Burrego(Box<BurregoEvaluator>),
-}
 
 pub trait Evaluator {
     fn validate(&mut self, request: ValidateRequest) -> AdmissionResponse;

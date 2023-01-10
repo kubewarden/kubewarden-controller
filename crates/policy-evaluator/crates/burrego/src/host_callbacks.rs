@@ -6,6 +6,7 @@ pub type HostCallback = fn(&str);
 /// HostCallbacks defines a set of pluggable host implementations of
 /// OPA documented imports:
 /// https://www.openpolicyagent.org/docs/latest/wasm/#imports
+#[derive(Clone)]
 pub struct HostCallbacks {
     pub opa_abort: HostCallback,
     pub opa_println: HostCallback,

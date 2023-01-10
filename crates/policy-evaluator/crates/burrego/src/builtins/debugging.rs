@@ -1,14 +1,18 @@
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
 
 #[tracing::instrument(skip(args))]
 pub fn trace(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 1 {
-        return Err(anyhow!("Wrong number of arguments given to trace"));
+        return Err(BurregoError::BuiltinError {
+            name: "trace".to_string(),
+            message: "Wrong number of arguments".to_string(),
+        });
     }
 
-    let message_str = args[0]
-        .as_str()
-        .ok_or_else(|| anyhow!("trace: 1st parameter is not a string"))?;
+    let message_str = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "trace".to_string(),
+        message: "1st parameter is not a string".to_string(),
+    })?;
 
     tracing::debug!("{}", message_str);
 

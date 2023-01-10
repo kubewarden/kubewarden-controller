@@ -1,42 +1,51 @@
-use std::str::FromStr;
-
-use anyhow::{anyhow, Result};
+use crate::errors::{BurregoError, Result};
 use chrono::{self, DateTime, Datelike, Duration, Local};
+use std::str::FromStr;
 
 pub fn now_ns(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if !args.is_empty() {
-        return Err(anyhow!("time.now_ns: wrong number of arguments given"));
+        return Err(BurregoError::BuiltinError {
+            name: "time.now_ns".to_string(),
+            message: "wrong number of arguments given".to_string(),
+        });
     }
     let now = Local::now();
-    serde_json::to_value(now.timestamp_nanos())
-        .map_err(|e| anyhow!("time.now_ns: cannot convert value into JSON: {:?}", e))
+    serde_json::to_value(now.timestamp_nanos()).map_err(|e| BurregoError::BuiltinError {
+        name: "time.now_ns".to_string(),
+        message: format!("cannot convert value into JSON: {:?}", e),
+    })
 }
 
 pub fn parse_rfc3339_ns(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 1 {
-        return Err(anyhow!(
-            "time.parse_rfc3339_ns: wrong number of arguments given"
-        ));
+        return Err(BurregoError::BuiltinError {
+            name: "time.parse_rfc3339_ns".to_string(),
+            message: "wrong number of arguments given".to_string(),
+        });
     }
 
-    let value = args[0]
-        .as_str()
-        .ok_or_else(|| anyhow!("time.parse_rfc3339_ns: 1st parameter is not a string"))?;
+    let value = args[0].as_str().ok_or_else(|| BurregoError::BuiltinError {
+        name: "time.parse_rfc3339_ns".to_string(),
+        message: "1st parameter is not a string".to_string(),
+    })?;
 
-    let dt = DateTime::parse_from_rfc3339(value)
-        .map_err(|e| anyhow!("time.parse_rfc3339_ns: cannot convert {}: {:?}", value, e))?;
+    let dt = DateTime::parse_from_rfc3339(value).map_err(|e| BurregoError::BuiltinError {
+        name: "time.parse_rfc3339_ns".to_string(),
+        message: format!(": cannot convert {}: {:?}", value, e),
+    })?;
 
-    serde_json::to_value(dt.timestamp_nanos()).map_err(|e| {
-        anyhow!(
-            "time.parse_rfc3339_ns: cannot convert value into JSON: {:?}",
-            e
-        )
+    serde_json::to_value(dt.timestamp_nanos()).map_err(|e| BurregoError::BuiltinError {
+        name: "time.parse_rfc3339_ns".to_string(),
+        message: format!("cannot convert value into JSON: {:?}", e),
     })
 }
 
 pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     if args.len() != 1 {
-        return Err(anyhow!("time.date: wrong number of arguments given"));
+        return Err(BurregoError::BuiltinError {
+            name: "time.date".to_string(),
+            message: "wrong number of arguments given".to_string(),
+        });
     }
 
     let nanoseconds: i64;
@@ -44,49 +53,59 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     match args[0].clone() {
         serde_json::Value::Number(val) => {
-            nanoseconds = val
-                .as_i64()
-                .ok_or_else(|| anyhow!("time.date: 1st parameter is not a number"))?;
+            nanoseconds = val.as_i64().ok_or_else(|| BurregoError::BuiltinError {
+                name: "time.date".to_string(),
+                message: "1st parameter is not a number".to_string(),
+            })?;
         }
         serde_json::Value::Array(val) => {
             if val.len() != 2 {
-                return Err(anyhow!(
-                    "time.date: wrong number of items inside of input array"
-                ));
+                return Err(BurregoError::BuiltinError {
+                    name: "time.date".to_string(),
+                    message: "wrong number of items inside of input array".to_string(),
+                });
             }
-            nanoseconds = val[0]
-                .as_i64()
-                .ok_or_else(|| anyhow!("time.date: 1st array item is not a number"))?;
-            let tz_name = val[1]
-                .as_str()
-                .ok_or_else(|| anyhow!("time.date: 2nd array item is not a string"))?;
+            nanoseconds = val[0].as_i64().ok_or_else(|| BurregoError::BuiltinError {
+                name: "time.date".to_string(),
+                message: "1st array item is not a number".to_string(),
+            })?;
+            let tz_name = val[1].as_str().ok_or_else(|| BurregoError::BuiltinError {
+                name: "time.date".to_string(),
+                message: "2nd array item is not a string".to_string(),
+            })?;
             if tz_name == "Local" {
                 return date_local(nanoseconds);
             } else {
-                timezone = chrono_tz::Tz::from_str(tz_name).map_err(|e| {
-                    anyhow!(
-                        "time.date: cannot handle given timezone {}: {:?}",
-                        tz_name,
-                        e
-                    )
-                })?;
+                timezone =
+                    chrono_tz::Tz::from_str(tz_name).map_err(|e| BurregoError::BuiltinError {
+                        name: "time.date".to_string(),
+                        message: format!("cannot handle given timezone {}: {:?}", tz_name, e),
+                    })?;
             }
         }
         _ => {
-            return Err(anyhow!(
-                "time.date: the 1st parameter is neither a number nor an array"
-            ));
+            return Err(BurregoError::BuiltinError {
+                name: "time.date".to_string(),
+                message: "the 1st parameter is neither a number nor an array".to_string(),
+            });
         }
     };
 
     let unix_epoch = DateTime::<chrono::Utc>::from_utc(
-        chrono::NaiveDateTime::from_timestamp_opt(0, 0)
-            .ok_or_else(|| anyhow!("cannot create timestamp"))?,
+        chrono::NaiveDateTime::from_timestamp_opt(0, 0).ok_or_else(|| {
+            BurregoError::BuiltinError {
+                name: "time.date".to_string(),
+                message: "cannot create timestamp".to_string(),
+            }
+        })?,
         chrono::Utc,
     );
     let dt = unix_epoch
         .checked_add_signed(Duration::nanoseconds(nanoseconds))
-        .ok_or_else(|| anyhow!("time.date: overflow when building date"))?
+        .ok_or_else(|| BurregoError::BuiltinError {
+            name: "time.date".to_string(),
+            message: "overflow when building date".to_string(),
+        })?
         .with_timezone(&timezone);
 
     Ok(serde_json::json!([dt.year(), dt.month(), dt.day(),]))
@@ -94,13 +113,20 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
 pub fn date_local(ns: i64) -> Result<serde_json::Value> {
     let unix_epoch = DateTime::<chrono::Utc>::from_utc(
-        chrono::NaiveDateTime::from_timestamp_opt(0, 0)
-            .ok_or_else(|| anyhow!("cannot create timestamp"))?,
+        chrono::NaiveDateTime::from_timestamp_opt(0, 0).ok_or_else(|| {
+            BurregoError::BuiltinError {
+                name: "time.date".to_string(),
+                message: "cannot create timestamp".to_string(),
+            }
+        })?,
         chrono::Utc,
     );
     let dt = unix_epoch
         .checked_add_signed(Duration::nanoseconds(ns))
-        .ok_or_else(|| anyhow!("time.date: overflow when building date"))?
+        .ok_or_else(|| BurregoError::BuiltinError {
+            name: "time.date".to_string(),
+            message: "overflow when building date".to_string(),
+        })?
         .with_timezone(&chrono::Local);
 
     Ok(serde_json::json!([dt.year(), dt.month(), dt.day(),]))
