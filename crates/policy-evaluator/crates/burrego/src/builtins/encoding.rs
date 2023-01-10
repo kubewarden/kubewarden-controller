@@ -1,11 +1,11 @@
 pub mod base64url {
     use crate::errors::{BurregoError, Result};
-    use base64::engine::fast_portable;
+    use base64::{engine::general_purpose, Engine as _};
 
     /// A base64 engine that uses URL_SAFE alphabet and escapes using no padding
     /// For performance reasons, it's recommended to cache its creation
-    pub const BASE64_ENGINE: fast_portable::FastPortable =
-        fast_portable::FastPortable::from(&base64::alphabet::URL_SAFE, fast_portable::NO_PAD);
+    pub const BASE64_ENGINE: general_purpose::GeneralPurpose =
+        general_purpose::GeneralPurpose::new(&base64::alphabet::URL_SAFE, general_purpose::NO_PAD);
 
     pub fn encode_no_pad(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         if args.len() != 1 {
@@ -20,7 +20,7 @@ pub mod base64url {
             message: "1st parameter is not a string".to_string(),
         })?;
 
-        let res = base64::encode_engine(input, &BASE64_ENGINE);
+        let res = BASE64_ENGINE.encode(input);
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "base64url.encode_no_pad".to_string(),
@@ -42,15 +42,14 @@ pub mod base64url {
             assert!(actual.is_ok());
 
             let actual = actual.unwrap();
-            assert_eq!(json!(base64::encode_engine(input, &BASE64_ENGINE)), actual);
+            assert_eq!(json!(BASE64_ENGINE.encode(input)), actual);
 
-            let engine_with_pad: fast_portable::FastPortable =
-                fast_portable::FastPortable::from(&base64::alphabet::URL_SAFE, fast_portable::PAD);
-
-            assert_ne!(
-                json!(base64::encode_engine(input, &engine_with_pad)),
-                actual
+            let engine_with_pad = general_purpose::GeneralPurpose::new(
+                &base64::alphabet::URL_SAFE,
+                general_purpose::PAD,
             );
+
+            assert_ne!(json!(engine_with_pad.encode(input)), actual);
         }
     }
 }
