@@ -454,3 +454,80 @@ impl<'a> Runtime<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{sync, thread, time};
+
+    #[test]
+    fn wapc_epoch_interrutpion_error_msg() {
+        // This unit test makes sure that waPC host error raised when a wasmtime
+        // epoch_interruption happens contains the WAPC_EPOCH_INTERRUPTION_ERR_MSG
+        // string
+        //
+        // The unit test is a bit "low-level", meaning the target are the
+        // wapc libraries we consume, not the "high" level code we expose
+        // as part of policy-evaluator.
+        // This is done to make the whole testing process simple:
+        // * No need to download a wasm module from a registry/commit a ~3Mb
+        //   binary blob to this git repository
+        // * Reduce the code being tested to the bare minimum
+
+        let mut engine_conf = wasmtime::Config::default();
+        engine_conf.epoch_interruption(true);
+        let engine = wasmtime::Engine::new(&engine_conf).expect("cannot create wasmtime engine");
+
+        let wat = include_bytes!("../../test_data/endless_wasm/wapc_endless_loop.wat");
+        let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
+
+        // Create the wapc engine, the code will be interrupted after 10 ticks
+        // happen. We produce 1 tick every 10 milliseconds, see below
+        let wapc_engine_builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
+            .engine(engine.clone())
+            .module(module)
+            .enable_epoch_interruptions(10, 10);
+
+        let wapc_engine = wapc_engine_builder
+            .build()
+            .expect("error creating wasmtime engine provider");
+        let host = wapc::WapcHost::new(Box::new(wapc_engine), Some(Box::new(host_callback)))
+            .expect("cannot create waPC host");
+
+        // Create a lock to break the endless loop of the ticker thread
+        let timer_lock = sync::Arc::new(sync::RwLock::new(false));
+        let quit_lock = timer_lock.clone();
+
+        // Start a thread that ticks the epoch timer of the wasmtime
+        // engine. 1 tick equals 10 milliseconds
+        thread::spawn(move || {
+            let interval = time::Duration::from_millis(10);
+            loop {
+                thread::sleep(interval);
+                engine.increment_epoch();
+                if *quit_lock.read().unwrap() {
+                    break;
+                }
+            }
+        });
+
+        // This triggers an endless loop inside of wasm
+        // If the epoch_interruption doesn't work, this unit test
+        // will never complete
+        let res = host.call("run", "".as_bytes());
+
+        // Tell the ticker thread to quit
+        {
+            let mut w = timer_lock.write().unwrap();
+            *w = true;
+        }
+
+        // Ensure we got back an error from waPC, the error must
+        // contain the WAPC_EPOCH_INTERRUPTION_ERR_MSG string
+        let err = res.unwrap_err();
+        assert!(err
+            .to_string()
+            .as_str()
+            .contains(WAPC_EPOCH_INTERRUPTION_ERR_MSG));
+    }
+}
