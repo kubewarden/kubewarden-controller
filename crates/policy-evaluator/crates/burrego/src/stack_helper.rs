@@ -28,17 +28,17 @@ impl StackHelper {
         opa_println_host_callback: host_callbacks::HostCallback,
     ) -> Result<StackHelper> {
         let opa_json_dump_fn = instance
-            .get_typed_func::<i32, i32, _>(store.as_context_mut(), "opa_json_dump")
+            .get_typed_func::<i32, i32>(store.as_context_mut(), "opa_json_dump")
             .map_err(|e| {
                 BurregoError::RegoWasmError(format!("cannot access opa_json_dump fuction: {:?}", e))
             })?;
         let opa_malloc_fn = instance
-            .get_typed_func::<i32, i32, _>(store.as_context_mut(), "opa_malloc")
+            .get_typed_func::<i32, i32>(store.as_context_mut(), "opa_malloc")
             .map_err(|e| {
                 BurregoError::RegoWasmError(format!("Cannot access opa_malloc fuction: {:?}", e))
             })?;
         let opa_json_parse_fn = instance
-            .get_typed_func::<(i32, i32), i32, _>(store.as_context_mut(), "opa_json_parse")
+            .get_typed_func::<(i32, i32), i32>(store.as_context_mut(), "opa_json_parse")
             .map_err(|e| {
                 BurregoError::RegoWasmError(format!(
                     "Cannot access opa_json_parse fuction: {:?}",
@@ -47,7 +47,7 @@ impl StackHelper {
             })?;
 
         let builtins_fn = instance
-            .get_typed_func::<(), i32, _>(store.as_context_mut(), "builtins")
+            .get_typed_func::<(), i32>(store.as_context_mut(), "builtins")
             .map_err(|e| {
                 BurregoError::RegoWasmError(format!("cannot access builtins function: {:?}", e))
             })?;

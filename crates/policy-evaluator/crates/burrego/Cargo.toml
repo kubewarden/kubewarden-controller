@@ -1,6 +1,6 @@
 [package]
 name = "burrego"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Flavio Castelli <fcastelli@suse.com>"]
 edition = "2021"
 
@@ -24,7 +24,7 @@ thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version= "0.3", features = ["fmt", "env-filter"] }
 url = "2.2.2"
-wasmtime = "3.0"
+wasmtime = "4.0"
 
 [dev-dependencies]
 anyhow = "1.0"
