@@ -1,6 +1,9 @@
 use crate::{Registry, Sources};
 use anyhow::{anyhow, Result};
-use mdcat::{ResourceAccess, TerminalCapabilities, TerminalSize};
+use mdcat::{
+    terminal::{TerminalProgram, TerminalSize},
+    ResourceAccess,
+};
 use policy_evaluator::policy_fetcher::oci_distribution::secrets::RegistryAuth;
 use policy_evaluator::policy_fetcher::{
     oci_distribution::manifest::{OciImageManifest, OciManifest},
@@ -203,8 +206,9 @@ impl MetadataPrinter {
     fn render_markdown(&self, text: &str) -> Result<()> {
         let size = TerminalSize::detect().unwrap_or_default();
         let columns = size.columns;
+        let terminal = TerminalProgram::detect();
         let settings = mdcat::Settings {
-            terminal_capabilities: TerminalCapabilities::detect(),
+            terminal_capabilities: terminal.capabilities(),
             terminal_size: TerminalSize { columns, ..size },
             resource_access: ResourceAccess::LocalOnly,
             syntax_set: SyntaxSet::load_defaults_newlines(),
