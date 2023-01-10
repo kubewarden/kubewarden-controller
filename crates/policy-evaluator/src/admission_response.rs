@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use base64::{engine::general_purpose, Engine as _};
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -96,7 +97,7 @@ impl AdmissionResponse {
                     None
                 } else {
                     let diff_str = serde_json::to_string(&diff)
-                        .map(base64::encode)
+                        .map(|s| general_purpose::STANDARD.encode(s))
                         .map_err(|e| anyhow!("cannot serialize JSONPatch: {:?}", e))?;
                     Some(diff_str)
                 }
@@ -291,7 +292,9 @@ mod tests {
         assert!(response.status.is_none());
         assert_eq!(response.patch_type, Some(String::from("JSONPatch")));
 
-        let patch_decoded_str = base64::decode(response.patch.unwrap()).unwrap();
+        let patch_decoded_str = general_purpose::STANDARD
+            .decode(response.patch.unwrap())
+            .unwrap();
         let patch: json_patch::Patch =
             serde_json::from_slice(patch_decoded_str.as_slice()).unwrap();
         assert_eq!(patch, expected_diff);
