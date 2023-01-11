@@ -44,6 +44,13 @@ containers.
 - The UX of this tool is intended to be as easy and intuitive as
   possible.
 
+## Install
+
+built binaries for `Linux x86_64`, `Windows x86_64`, `MacOS x86_64` and `MacOS
+aarch64 (M1)` are available in [GH Releases](https://github.com/kubewarden/kwctl/releases).
+
+There is also a community-created [Homebrew 🍺 formula for kwctl](https://formulae.brew.sh/formula/kwctl).
+
 ## Usage
 
 These are the commands currently supported by kwctl.
