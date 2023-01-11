@@ -1,13 +1,13 @@
 extern crate k8s_openapi;
 extern crate policy_evaluator;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::callback_handler::CallbackHandlerBuilder;
 use policy_evaluator::policy_fetcher::sigstore;
 use policy_evaluator::policy_fetcher::verify::FulcioAndRekorData;
-use std::{path::PathBuf, process, sync::RwLock, thread};
+use std::{fs, path::PathBuf, process, sync::RwLock, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
 
@@ -63,6 +63,50 @@ fn main() -> Result<()> {
         .get_one::<String>("sigstore-cache-dir")
         .map(PathBuf::from)
         .expect("This should not happen, there's a default value for sigstore-cache-dir");
+
+    let policy_evaluation_limit = if matches.contains_id("disable-timeout-protection") {
+        None
+    } else {
+        match matches
+            .get_one::<String>("policy-timeout")
+            .expect("policy-timeout should always be set")
+            .parse::<u64>()
+        {
+            Ok(v) => Some(v),
+            Err(e) => {
+                fatal_error(format!(
+                    "'policy-timeout' value cannot be converted to unsigned int: {}",
+                    e
+                ));
+                unreachable!()
+            }
+        }
+    };
+
+    // Run in daemon mode if specified by the user
+    if matches.contains_id("daemon") {
+        println!("Running instance as a daemon");
+
+        let mut daemonize = daemonize::Daemonize::new().pid_file(
+            matches
+                .get_one::<String>("daemon-pid-file")
+                .expect("pid-file should always have a value"),
+        );
+        if let Some(stdout_file) = matches.get_one::<String>("daemon-stdout-file") {
+            let file = fs::File::create(stdout_file)
+                .map_err(|e| anyhow!("Cannot create file for daemon stdout: {}", e))?;
+            daemonize = daemonize.stdout(file);
+        }
+        if let Some(stderr_file) = matches.get_one::<String>("daemon-stderr-file") {
+            let file = fs::File::create(stderr_file)
+                .map_err(|e| anyhow!("Cannot create file for daemon stderr: {}", e))?;
+            daemonize = daemonize.stderr(file);
+        }
+        match daemonize.start() {
+            Ok(_) => println!("Detached from shell, now running in background."),
+            Err(e) => fatal_error(format!("Something went wrong while daemonizing: {}", e)),
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
@@ -135,6 +179,7 @@ fn main() -> Result<()> {
             api_rx,
             callback_sender_channel,
             always_accept_admission_reviews_on_namespace,
+            policy_evaluation_limit,
         );
         worker_pool.run();
     });

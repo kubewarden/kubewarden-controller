@@ -1,10 +1,15 @@
+SHELL := /bin/bash
 IMG ?= policy-server:latest
 BINDIR ?= bin
 SBOM_GENERATOR_TOOL_VERSION ?= v0.0.15
 
-.PHONY: build
-build:
+SOURCE_FILES := $(shell test -e src/ && find src -type f)
+
+target/release/policy-server: $(SOURCE_FILES) Cargo.*
 	cargo build --release
+
+.PHONY: build
+build: target/release/policy-server
 
 .PHONY: fmt
 fmt:
@@ -18,9 +23,14 @@ lint:
 test: fmt lint
 	cargo test --workspace
 
+.PHONY: e2e-tests
+e2e-tests: target/release/policy-server
+	make -C ./e2e-tests test
+
 .PHONY: clean
 clean:
 	cargo clean
+	make -C e2e-tests clean
 
 .PHONY: tag
 tag:

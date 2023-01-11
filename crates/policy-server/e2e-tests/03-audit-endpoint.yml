@@ -1,0 +1,37 @@
+name: audit endpoint
+
+testcases:
+
+- name: fixtures
+  steps:
+  - type: readfile
+    path: ./test_data/pod_with_privileged_containers.json
+    assertions:
+    - result.err ShouldBeEmpty
+    vars:
+      pod_with_privileged_containers:
+        from: result.content
+
+- name: The `/validate` endpoint accepts the request because it's in `monitor` mode
+  steps:
+  - type: http
+    method: POST
+    url: http://localhost:3000/validate/pod-privileged-monitor-mode
+    headers:
+      Content-Type: application/json
+    body: "{{ .fixtures.pod_with_privileged_containers }}"
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.response.allowed ShouldEqual true
+
+- name: The `/audit` endpoint rejects the request even if the policy is in `monitor` mode
+  steps:
+    - type: http
+      method: POST
+      url: http://localhost:3000/audit/pod-privileged-monitor-mode
+      headers:
+        Content-Type: application/json
+      body: "{{ .fixtures.pod_with_privileged_containers }}"
+      assertions:
+      - result.statuscode ShouldEqual 200
+      - result.bodyjson.response.allowed ShouldEqual false

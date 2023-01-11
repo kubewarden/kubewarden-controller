@@ -1,0 +1,18 @@
+pod-privileged-protect-mode:
+  url: ghcr.io/kubewarden/tests/pod-privileged:v0.2.1
+  policyMode: protect
+  allowedToMutate: false
+  settings: {}
+
+pod-privileged-monitor-mode:
+  url: ghcr.io/kubewarden/tests/pod-privileged:v0.2.1
+  policyMode: monitor
+  allowedToMutate: false
+  settings: {}
+
+sleep:
+  url: ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0
+  policyMode: protect
+  allowedToMutate: false
+  settings:
+    sleepMilliseconds: 2000

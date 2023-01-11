@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use core::time;
 use policy_evaluator::{
     callback_requests::CallbackRequest,
     policy_evaluator::{Evaluator, PolicyEvaluator, PolicyExecutionMode},
@@ -13,14 +14,14 @@ use std::{
     path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Barrier,
+        Arc, Barrier, RwLock,
     },
     thread,
     thread::JoinHandle,
     vec::Vec,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::communication::{EvalRequest, WorkerPoolBootRequest};
 use crate::policy_downloader::FetchedPolicies;
@@ -70,6 +71,7 @@ pub(crate) struct WorkerPool {
     bootstrap_rx: oneshot::Receiver<WorkerPoolBootRequest>,
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
     always_accept_admission_reviews_on_namespace: Option<String>,
+    policy_evaluation_limit_seconds: Option<u64>,
 }
 
 impl WorkerPool {
@@ -78,17 +80,20 @@ impl WorkerPool {
         api_rx: mpsc::Receiver<EvalRequest>,
         callback_handler_tx: mpsc::Sender<CallbackRequest>,
         always_accept_admission_reviews_on_namespace: Option<String>,
+        policy_evaluation_limit_seconds: Option<u64>,
     ) -> WorkerPool {
         WorkerPool {
             api_rx,
             bootstrap_rx,
             callback_handler_tx,
             always_accept_admission_reviews_on_namespace,
+            policy_evaluation_limit_seconds,
         }
     }
 
     pub(crate) fn run(mut self) {
         let mut worker_tx_chans = Vec::<mpsc::Sender<EvalRequest>>::new();
+        let mut worker_engines = Vec::<wasmtime::Engine>::new();
         let mut join_handles = Vec::<JoinHandle<Result<()>>>::new();
 
         // Phase 1: wait for bootstrap data to be received by the main
@@ -108,8 +113,10 @@ impl WorkerPool {
 
         // To reduce bootstrap time, we will precompile all the WebAssembly
         // modules we are going to use.
-        let wasmtime_config = wasmtime::Config::new();
-        // TODO: enable epoch deadlines
+        let mut wasmtime_config = wasmtime::Config::new();
+        if self.policy_evaluation_limit_seconds.is_some() {
+            wasmtime_config.epoch_interruption(true);
+        }
 
         let engine = match wasmtime::Engine::new(&wasmtime_config) {
             Ok(e) => e,
@@ -136,6 +143,7 @@ impl WorkerPool {
             &bootstrap_data.policies,
             &precompiled_policies,
             self.callback_handler_tx.clone(),
+            self.policy_evaluation_limit_seconds,
         ) {
             error!(?error, "cannot validate policy settings");
             match bootstrap_data.resp_chan.send(Err(error)) {
@@ -151,13 +159,43 @@ impl WorkerPool {
         let barrier = Arc::new(Barrier::new(pool_size + 1));
         let boot_canary = Arc::new(AtomicBool::new(true));
 
+        if let Some(limit) = self.policy_evaluation_limit_seconds {
+            info!(
+                execution_limit_seconds = limit,
+                "policy timeout protection is enabled"
+            );
+        } else {
+            warn!("policy timeout protection is disabled");
+        }
+
         for n in 1..=pool_size {
             let (tx, rx) = mpsc::channel::<EvalRequest>(32);
             worker_tx_chans.push(tx);
 
+            let engine = match wasmtime::Engine::new(&wasmtime_config) {
+                Ok(e) => e,
+                Err(e) => {
+                    if bootstrap_data
+                        .resp_chan
+                        .send(Err(anyhow!(
+                            "cannot create wasmtime engine for one of the workers: {}",
+                            e
+                        )))
+                        .is_err()
+                    {
+                        eprint!(
+                            "cannot create wasmtime engine for one of the workers: {}",
+                            e
+                        );
+                        std::process::exit(1);
+                    };
+                    return;
+                }
+            };
+            worker_engines.push(engine.clone());
+
             let policies = bootstrap_data.policies.clone();
             let modules = precompiled_policies.clone();
-            let wasmtime_config = wasmtime_config.clone();
             let b = barrier.clone();
             let canary = boot_canary.clone();
             let callback_handler_tx = self.callback_handler_tx.clone();
@@ -170,9 +208,10 @@ impl WorkerPool {
                     rx,
                     &policies,
                     &modules,
-                    &wasmtime_config,
+                    engine,
                     callback_handler_tx,
                     always_accept_admission_reviews_on_namespace,
+                    self.policy_evaluation_limit_seconds,
                 ) {
                     Ok(w) => w,
                     Err(e) => {
@@ -217,6 +256,21 @@ impl WorkerPool {
         // We can start waiting for admission review requests to be evaluated
         let mut next_worker_id = 0;
 
+        if self.policy_evaluation_limit_seconds.is_some() {
+            // start a dedicated thread that send tick events to all
+            // the workers. This is used by the wasmtime's epoch_interruption
+            // to keep track of the execution time of each wasm module
+            thread::spawn(move || {
+                let one_second = time::Duration::from_secs(1);
+                loop {
+                    thread::sleep(one_second);
+                    for engine in &worker_engines {
+                        engine.increment_epoch();
+                    }
+                }
+            });
+        }
+
         while let Some(req) = self.api_rx.blocking_recv() {
             let _ = worker_tx_chans[next_worker_id].blocking_send(req);
             next_worker_id += 1;
@@ -237,6 +291,7 @@ pub(crate) fn build_policy_evaluator(
     engine: &wasmtime::Engine,
     policy_modules: &PrecompiledPolicies,
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
+    policy_evaluation_limit_seconds: Option<u64>,
 ) -> Result<PolicyEvaluator> {
     let policy_module = policy_modules.get(policy.url.as_str()).ok_or_else(|| {
         anyhow!(
@@ -248,7 +303,7 @@ pub(crate) fn build_policy_evaluator(
     // See `wasmtime::Module::deserialize` to know why this method is `unsafe`.
     // However, in our context, nothing bad will happen because we have
     // full control of the precompiled module. This is generated by the
-    // WorkerPool thred
+    // WorkerPool thread
     let module =
         unsafe { wasmtime::Module::deserialize(engine, &policy_module.precompiled_module) }
             .map_err(|e| {
@@ -259,12 +314,17 @@ pub(crate) fn build_policy_evaluator(
                 )
             })?;
 
-    let policy_evaluator_builder = PolicyEvaluatorBuilder::new(policy_id.to_string())
+    let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new(policy_id.to_string())
         .engine(engine.clone())
         .policy_module(module)
         .settings(policy.settings_to_json()?)
         .callback_channel(callback_handler_tx)
         .execution_mode(policy_module.execution_mode);
+
+    if let Some(limit) = policy_evaluation_limit_seconds {
+        policy_evaluator_builder =
+            policy_evaluator_builder.enable_epoch_interruptions(limit, limit);
+    }
 
     policy_evaluator_builder.build()
 }
@@ -318,7 +378,31 @@ fn verify_policy_settings(
     policies: &HashMap<String, crate::settings::Policy>,
     policy_modules: &HashMap<String, PrecompiledPolicy>,
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
+    policy_evaluation_limit_seconds: Option<u64>,
 ) -> Result<()> {
+    let tick_thread_lock = Arc::new(RwLock::new(true));
+
+    if policy_evaluation_limit_seconds.is_some() {
+        // start a dedicated thread that send tick events to the
+        // wasmtime engine.
+        // This is used by the wasmtime's epoch_interruption
+        // to keep track of the execution time of each wasm module
+
+        let loop_engine = engine.clone();
+        let keep_going_lock = tick_thread_lock.clone();
+
+        thread::spawn(move || {
+            let one_second = time::Duration::from_secs(1);
+            loop {
+                thread::sleep(one_second);
+                loop_engine.increment_epoch();
+                if !(*keep_going_lock.read().unwrap()) {
+                    break;
+                }
+            }
+        });
+    }
+
     let mut errors = vec![];
     for (id, policy) in policies.iter() {
         let mut policy_evaluator = match build_policy_evaluator(
@@ -327,6 +411,7 @@ fn verify_policy_settings(
             engine,
             policy_modules,
             callback_handler_tx.clone(),
+            policy_evaluation_limit_seconds,
         ) {
             Ok(pe) => pe,
             Err(e) => {
@@ -342,6 +427,12 @@ fn verify_policy_settings(
             ));
             continue;
         }
+    }
+
+    if policy_evaluation_limit_seconds.is_some() {
+        // Tell the ticker thread loop to stop
+        let mut w = tick_thread_lock.write().unwrap();
+        *w = false;
     }
 
     if errors.is_empty() {
