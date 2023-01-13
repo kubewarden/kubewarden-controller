@@ -24,13 +24,30 @@ use crate::registry::Registry;
 use crate::sources::Sources;
 use crate::store::Store;
 
-use std::path::{Path, PathBuf};
+#[macro_use]
+extern crate lazy_static;
+
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 use tracing::debug;
 use url::ParseError;
 
 // re-export for usage by kwctl, policy-server, policy-evaluator,...
 pub use oci_distribution;
 pub use sigstore;
+
+lazy_static! {
+    static ref KNOWN_SCHEMES: HashSet<&'static str> = {
+        let mut s = HashSet::new();
+        s.insert("file");
+        s.insert("http");
+        s.insert("https");
+        s.insert("registry");
+        s
+    };
+}
 
 #[derive(Debug)]
 pub enum PullDestination {
@@ -39,18 +56,30 @@ pub enum PullDestination {
     LocalFile(PathBuf),
 }
 
+fn parse_url(url: &str) -> std::result::Result<reqwest::Url, url::ParseError> {
+    match Url::parse(url) {
+        Ok(u) => {
+            if !KNOWN_SCHEMES.contains(u.scheme()) && !url.contains("://") {
+                // something like "ghcr.io:443/kubewarden/policy1:latest"
+                // is not parsed properly, "ghcr.io" becomes the scheme
+                parse_url(format!("registry://{}", url).as_str())
+            } else {
+                Ok(u)
+            }
+        }
+        Err(ParseError::RelativeUrlWithoutBase) => {
+            Url::parse(format!("registry://{}", url).as_str())
+        }
+        Err(e) => Err(e),
+    }
+}
+
 pub async fn fetch_policy(
     url: &str,
     destination: PullDestination,
     sources: Option<&Sources>,
 ) -> Result<Policy> {
-    let url = match Url::parse(url) {
-        Ok(u) => Ok(u),
-        Err(ParseError::RelativeUrlWithoutBase) => {
-            Url::parse(format!("registry://{}", url).as_str())
-        }
-        Err(e) => Err(e),
-    }?;
+    let url = parse_url(url)?;
     match url.scheme() {
         "file" => {
             // no-op: return early
@@ -226,6 +255,140 @@ mod tests {
 
     fn store_path(path: &str) -> PathBuf {
         Store::default().root.join(path)
+    }
+
+    struct UrlParseDetails {
+        scheme: String,
+        host: Option<String>,
+        port: Option<u16>,
+        path: String,
+    }
+
+    #[rstest]
+    #[case("file:///tmp/policy.wasm", Ok(UrlParseDetails{
+        scheme: "file".to_string(),
+        host: None,
+        port: None,
+        path: "/tmp/policy.wasm".to_string(),
+    }))]
+    #[case("registry://ghcr.io/kubewarden/policies/test:1.2", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("ghcr.io".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test:1.2".to_string(),
+    }))]
+    #[case("ghcr.io/kubewarden/policies/test:1.2", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("ghcr.io".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test:1.2".to_string(),
+    }))]
+    #[case("registry://ghcr.io/kubewarden/policies/test:latest", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("ghcr.io".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test:latest".to_string(),
+    }))]
+    #[case("ghcr.io/kubewarden/policies/test:latest", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("ghcr.io".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test:latest".to_string(),
+    }))]
+    #[case("registry://ghcr.io/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("ghcr.io".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("ghcr.io/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("ghcr.io".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("registry://registry.local.lan/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("registry.local.lan".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("registry.local.lan/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("registry.local.lan".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("registry://registry.local.lan:5000/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("registry.local.lan".to_string()),
+        port: Some(5000),
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("registry.local.lan:5000/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("registry.local.lan".to_string()),
+        port: Some(5000),
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("registry://192.168.1.2/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("192.168.1.2".to_string()),
+        port: None,
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("registry://192.168.1.2:5000/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "registry".to_string(),
+        host: Some("192.168.1.2".to_string()),
+        port: Some(5000),
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("http://192.168.1.2:5000/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "http".to_string(),
+        host: Some("192.168.1.2".to_string()),
+        port: Some(5000),
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    #[case("https://registry.local.lan:5000/kubewarden/policies/test", Ok(UrlParseDetails{
+        scheme: "https".to_string(),
+        host: Some("registry.local.lan".to_string()),
+        port: Some(5000),
+        path: "/kubewarden/policies/test".to_string(),
+    }))]
+    fn url_parsing(#[case] url: &str, #[case] expected: anyhow::Result<UrlParseDetails>) {
+        let res = parse_url(url);
+        println!("{} -> {:?}", url, res);
+        assert_eq!(res.is_ok(), expected.is_ok());
+        if let Ok(u) = res {
+            let expected = expected.unwrap();
+            assert_eq!(
+                u.scheme(),
+                expected.scheme.as_str(),
+                "scheme expectation for {} not met",
+                url
+            );
+
+            assert_eq!(
+                u.host_str().map(|h| h.to_string()),
+                expected.host,
+                "host expectation for {} not met",
+                url
+            );
+
+            assert_eq!(
+                u.port(),
+                expected.port,
+                "port expectation for {} not met",
+                url
+            );
+
+            assert_eq!(
+                u.path(),
+                expected.path.as_str(),
+                "path expectation for {} not met",
+                url
+            );
+        }
     }
 
     #[test]
