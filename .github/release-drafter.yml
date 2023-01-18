@@ -40,6 +40,8 @@ autolabeler:
     title: 'fix'
   - label: 'kind/chore'
     title: 'chore'
+  - label: 'area/dependencies'
+    title: 'build(deps)'
 
 version-resolver:
   major:
