@@ -1,0 +1,30 @@
+name: Continuous integration
+on:
+  push:
+    branches:
+      - "main"
+  workflow_call: {}
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  code-checks:
+    name: Basic source code checks
+    uses: ./.github/workflows/source-code-checks.yml
+  cargo-checks:
+    name: Cargo file checks
+    uses: ./.github/workflows/cargo-file-checks.yml
+  tests:
+    name: Running tests
+    uses: ./.github/workflows/tests.yml
+  build:
+    name: Build kwctl
+    permissions:
+      packages: write
+      id-token: write
+    needs:
+      - code-checks
+      - cargo-checks
+      - tests
+    uses: ./.github/workflows/build.yml

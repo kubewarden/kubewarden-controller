@@ -1,0 +1,242 @@
+name: kwctl build
+on:
+  workflow_call:
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-linux-binaries:
+    name: Build linux binary
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        targetarch: [ "aarch64", "x86_64" ]
+        include:
+          - targetarch: aarch64
+            arch: arm64
+            rustflags: ""
+          - targetarch: x86_64
+            arch: amd64
+            rustflags: "-C target-feature=+crt-static"
+    permissions:
+      packages: write
+      id-token: write
+    steps:
+      - name: Configure Ubuntu repositories
+        run: |
+          sudo dpkg --add-architecture arm64
+
+          sudo sed -i "s/deb h/deb [arch=amd64] h/g" /etc/apt/sources.list
+
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy universe" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates universe" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy multiverse" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates multiverse" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security universe" /etc/apt/sources.list
+          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security multiverse" /etc/apt/sources.list
+
+          sudo apt update -y
+      - name: Install dependencies
+        run: |
+          sudo apt install -y libssl-dev:${{ matrix.arch }}
+
+      - name: Install Musl and configure gcc spec
+        run: |
+          sudo apt install -y musl-dev:${{ matrix.arch }}
+          # patching the .spec file, as by default it has a bug where it tries to
+          # set old_cpp_options but it already exists. using *+cpp_options achieves
+          # the same desired functionality of appending preexisting options
+          sudo sed -i 1d /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
+          sudo sed -i "s/*cpp_options/+cpp_options/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
+          sudo sed -i "s/ %(old_cpp_options)//g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
+
+      - name: Configure gcc spec for x86_64
+        if: ${{ matrix.targetarch == 'x86_64' }}
+        run: |
+          # The cargo configuration to build static binaries is not working. Thus,
+          # update the spec file to ensure that.
+          sudo sed -i "s/-dynamic-linker.*/-no-dynamic-linker  -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-no-export-dynamic}/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
+
+      - uses: sigstore/cosign-installer@main
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install rust target
+        run: rustup target add ${{ matrix.targetarch }}-unknown-linux-musl
+
+      - name: Build kwctl
+        env:
+          CC: ${{ matrix.targetarch }}-linux-musl-gcc
+          RUSTFLAGS: "-C link_arg=-lgcc -C link_arg=-specs -C link_arg=/usr/lib/${{ matrix.targetarch}}-linux-musl/musl-gcc.specs ${{ matrix.rustflags }}"
+        run: |
+          cargo build --release --target ${{ matrix.targetarch }}-unknown-linux-musl
+          mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/kwctl kwctl-linux-${{ matrix.targetarch }}
+
+      - name: Sign kwctl
+        run: cosign sign-blob kwctl-linux-${{ matrix.targetarch }} --output-certificate kwctl-linux-${{ matrix.targetarch}}.pem --output-signature kwctl-linux-${{ matrix.targetarch }}.sig
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      - run: zip -j9 kwctl-linux-${{ matrix.targetarch }}.zip kwctl-linux-${{ matrix.targetarch }} kwctl-linux-${{ matrix.targetarch }}.sig kwctl-linux-${{ matrix.targetarch }}.pem
+      - name: Upload binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-linux-${{ matrix.targetarch }}
+          path: kwctl-linux-${{ matrix.targetarch }}.zip
+      - name: Install SBOM generator tool
+        uses: kubewarden/github-actions/sbom-generator-installer@v1
+      - name: Generate SBOM
+        run: |
+          spdx-sbom-generator -f json
+          # SBOM files should have "sbom" in the name due the CLO monitor
+          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+          mv bom-cargo.json kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert \
+            --output-signature kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig \
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-linux-${{ matrix.targetarch }}-sbom
+          path: |
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig
+
+      - name: Upload kwctl air gap scripts
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-airgap-scripts
+          path: |
+            scripts/kubewarden-load-policies.sh
+            scripts/kubewarden-save-policies.sh
+
+  build-darwin-binaries:
+    name: Build darwin binary
+    strategy:
+      matrix:
+        targetarch: [ "aarch64", "x86_64" ]
+    runs-on: macos-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: sigstore/cosign-installer@main
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.targetarch }}-apple-darwin
+          override: true
+
+      - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
+      - name: Build kwctl
+        run: cargo build --target=${{ matrix.targetarch }}-apple-darwin --release
+      - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
+      - name: Sign kwctl
+        run: cosign sign-blob kwctl-darwin-${{ matrix.targetarch }} --output-certificate kwctl-darwin-${{ matrix.targetarch }}.pem --output-signature kwctl-darwin-${{ matrix.targetarch }}.sig
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.sig kwctl-darwin-${{ matrix.targetarch }}.pem
+      - name: Upload binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-darwin-${{ matrix.targetarch }}
+          path: kwctl-darwin-${{ matrix.targetarch }}.zip
+      - name: Install SBOM generator tool
+        uses: kubewarden/github-actions/sbom-generator-installer@v1
+        with:
+          sbom-generator-arch: darwin-amd64
+      - name: Generate SBOM
+        run: |
+          spdx-sbom-generator -f json
+          # SBOM files should have "sbom" in the name due the CLO monitor
+          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+          mv bom-cargo.json kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert \
+            --output-signature kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig \
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-darwin-${{ matrix.targetarch }}-sbom
+          path: |
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert
+            kwctl-darwin-#{{ matrix.targetarch }}-sbom.spdx.sig
+
+  build-windows-x86_64:
+    name: Build windows (x86_64) binary
+    runs-on: windows-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: sigstore/cosign-installer@main
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: rustup target add x86_64-pc-windows-msvc
+      - name: Build kwctl
+        run: cargo build --target=x86_64-pc-windows-msvc --release
+      - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
+      - name: Sign kwctl
+        run: cosign sign-blob kwctl-windows-x86_64.exe --output-certificate kwctl-windows-x86_64.pem --output-signature kwctl-windows-x86_64.sig
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      - run: |
+          "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.sig kwctl-windows-x86_64.pem
+        shell: bash
+      - name: Upload binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-windows-x86_64
+          path: kwctl-windows-x86_64.exe.zip
+      - name: Generate SBOM
+        run: |
+          # if change the version used, remember to update the default version used for
+          # Mac and Linux in the Makefile.
+          curl -LO https://github.com/opensbom-generator/spdx-sbom-generator/releases/download/v0.0.15/spdx-sbom-generator-v0.0.15-windows-amd64.zip
+          7z e spdx-sbom-generator-v0.0.15-windows-amd64.zip
+          ./spdx-sbom-generator -f json
+
+          # SBOM files should have "sbom" in the name due the CLO monitor
+          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
+          mv bom-cargo.json kwctl-windows-x86_64-sbom.spdx.json
+
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate kwctl-windows-x86_64-sbom.spdx.cert --output-signature kwctl-windows-x86_64-sbom.spdx.sig kwctl-windows-x86_64-sbom.spdx.json
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@v2
+        with:
+          name: kwctl-windows-x86_64-sbom
+          path: |
+            kwctl-windows-x86_64-sbom.spdx.json
+            kwctl-windows-x86_64-sbom.spdx.cert
+            kwctl-windows-x86_64-sbom.spdx.sig
