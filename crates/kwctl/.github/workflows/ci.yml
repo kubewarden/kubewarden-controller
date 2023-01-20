@@ -11,8 +11,10 @@ permissions: read-all
 jobs:
   code-checks:
     name: Basic source code checks
-    needs:
     uses: ./.github/workflows/source-code-checks.yml
+  cargo-checks:
+    name: Cargo file checks
+    uses: ./.github/workflows/cargo-file-checks.yml
   build:
     name: Build kwctl
     permissions:
@@ -20,6 +22,7 @@ jobs:
       id-token: write
     needs:
       - code-checks
+      - cargo-checks
     uses: ./.github/workflows/build.yml
   test:
     name: Test Suite
