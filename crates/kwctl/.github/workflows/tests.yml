@@ -1,0 +1,37 @@
+name: Tests
+on:
+  pull_request: {}
+  workflow_call: {}
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  test:
+    name: Test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+  e2e:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup BATS
+        uses: mig4/setup-bats@v1
+        with:
+          bats-version: 1.5.0
+      - uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: v1.13.1
+      - name: run e2e tests
+        run: make e2e-test
