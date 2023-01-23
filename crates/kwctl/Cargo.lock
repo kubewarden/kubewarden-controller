@@ -2556,6 +2556,7 @@ dependencies = [
  "syntect",
  "tar",
  "tempfile",
+ "time 0.3.20",
  "tiny-bench",
  "tokio",
  "tracing",

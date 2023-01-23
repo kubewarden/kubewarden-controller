@@ -298,6 +298,22 @@ async fn main() -> Result<()> {
                 }
             }
             if let Some(matches) = matches.subcommand_matches("scaffold") {
+                if let Some(artifacthub_matches) = matches.subcommand_matches("artifacthub") {
+                    let metadata_file = artifacthub_matches
+                        .get_one::<String>("metadata-path")
+                        .map(|output| PathBuf::from_str(output).unwrap())
+                        .unwrap();
+                    let version = artifacthub_matches.get_one::<String>("version").unwrap();
+                    let questions_file = artifacthub_matches
+                        .get_one::<String>("questions-path")
+                        .map(|output| PathBuf::from_str(output).unwrap());
+                    println!(
+                        "{}",
+                        scaffold::artifacthub(metadata_file, version, questions_file)?
+                    );
+                }
+            }
+            if let Some(matches) = matches.subcommand_matches("scaffold") {
                 if let Some(matches) = matches.subcommand_matches("manifest") {
                     let uri = matches.get_one::<String>("uri").unwrap();
                     let resource_type = matches.get_one::<String>("type").unwrap();

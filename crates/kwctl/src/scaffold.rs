@@ -4,8 +4,12 @@ use policy_evaluator::validator::Validate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fs::{self, File};
+use std::path::PathBuf;
+use time::OffsetDateTime;
 
 use policy_evaluator::constants::KUBEWARDEN_ANNOTATION_POLICY_TITLE;
+use policy_evaluator::policy_artifacthub::ArtifactHubPkg;
 use policy_evaluator::policy_fetcher::verify::config::{
     LatestVerificationConfig, Signature, VersionedVerificationConfig,
 };
@@ -206,6 +210,43 @@ pub(crate) fn verification_config() -> Result<String> {
         "{}\n{}",
         comment_header,
         serde_yaml::to_string(&kubewarden_verification_config)?
+    ))
+}
+
+pub(crate) fn artifacthub(
+    metadata_path: PathBuf,
+    version: &str,
+    questions_path: Option<PathBuf>,
+) -> Result<String> {
+    let comment_header = r#"# Kubewarden Artifacthub Package config
+#
+# Use this config to submit the policy to https://artifacthub.io.
+#
+# This config can be saved to its default location with:
+#   kwctl scaffold artifacthub > artifacthub-pkg.yml "#
+        .to_string();
+
+    let metadata_file =
+        File::open(metadata_path).map_err(|e| anyhow!("Error opening metadata file: {}", e))?;
+    let metadata: Metadata = serde_yaml::from_reader(&metadata_file)
+        .map_err(|e| anyhow!("Error unmarshalling metadata {}", e))?;
+    let questions_content: String;
+    let questions = match questions_path {
+        Some(path) => {
+            questions_content = fs::read_to_string(path)
+                .map_err(|e| anyhow!("Error reading questions file: {}", e))?;
+            Some(questions_content.as_str())
+        }
+        None => None,
+    };
+
+    let kubewarden_artifacthub_pkg =
+        ArtifactHubPkg::from_metadata(&metadata, version, OffsetDateTime::now_utc(), questions)?;
+
+    Ok(format!(
+        "{}\n{}",
+        comment_header,
+        serde_yaml::to_string(&kubewarden_artifacthub_pkg)?
     ))
 }
 

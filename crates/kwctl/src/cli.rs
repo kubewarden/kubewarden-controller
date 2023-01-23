@@ -454,6 +454,34 @@ pub fn build_cli() -> Command {
                         .about("Output a default Sigstore verification configuration file")
                 )
                 .subcommand(
+                    Command::new("artifacthub")
+                        .about("Output an artifacthub-pkg.yml file from a metadata.yml file")
+                        .arg(
+                            Arg::new("metadata-path")
+                            .long("metadata-path")
+                            .short('m')
+                            .required(true)
+                            .value_name("PATH")
+                            .help("File containing the metadata of the policy")
+                        )
+                        .arg(
+                            Arg::new("version")
+                            .required(true)
+                            .long("version")
+                            .short('v')
+                            .number_of_values(1)
+                            .value_name("VALUE")
+                            .help("Semver version of the policy")
+                        )
+                        .arg(
+                            Arg::new("questions-path")
+                            .long("questions-path")
+                            .short('q')
+                            .value_name("PATH")
+                            .help("File containing the questions-ui content of the policy")
+                        )
+                )
+                .subcommand(
                     Command::new("manifest")
                         .about("Output a Kubernetes resource manifest")
                         .arg(
