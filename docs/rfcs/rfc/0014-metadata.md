@@ -3,7 +3,7 @@
 | Feature Name | Unified metadata                 |
 | Start Date   | Jan 18 2023                      |
 | Category     | [Category]                       |
-| RFC PR       | [fill this in after opening PR]  |
+| RFC PR       | https://github.com/kubewarden/rfc/pull/15  |
 | State        | **ACCEPTED**                         |
 
 
@@ -85,6 +85,8 @@ The following snippet is taken from one of our policies, it
 includes all the mandatory fields:
 
 ```yaml
+---
+# metadata.yml
 rules:
 - apiGroups: [""]
   apiVersions: ["v1"]
@@ -117,6 +119,8 @@ annotations:
 The `artifacthub-pkg.yml` file of the same policy has the following contents:
 
 ```yaml
+---
+# artifacthub-pkg.yml
 version: 0.1.6
 name: verify-image-signatures
 displayName: Verify Image Signatures
