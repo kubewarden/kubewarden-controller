@@ -329,22 +329,11 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		)
 	}
-	enableReadOnlyFilesystem := true
-	privileged := false
-	runAsNonRoot := true
-	allowPrivilegeEscalation := false
-	capabilities := corev1.Capabilities{
-		Add:  []corev1.Capability{},
-		Drop: []corev1.Capability{"all"},
+	if policyServer.Spec.SecurityContexts.Container != nil {
+		admissionContainer.SecurityContext = policyServer.Spec.SecurityContexts.Container
+	} else {
+		admissionContainer.SecurityContext = defaultContainerSecurityContext()
 	}
-	admissionContainerSecurityContext := corev1.SecurityContext{
-		ReadOnlyRootFilesystem:   &enableReadOnlyFilesystem,
-		Privileged:               &privileged,
-		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-		Capabilities:             &capabilities,
-		RunAsNonRoot:             &runAsNonRoot,
-	}
-	admissionContainer.SecurityContext = &admissionContainerSecurityContext
 
 	templateAnnotations := policyServer.Spec.Annotations
 	if templateAnnotations == nil {
@@ -421,8 +410,40 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		},
 	}
+	if policyServer.Spec.SecurityContexts.Pod != nil {
+		policyServerDeployment.Spec.Template.Spec.SecurityContext = policyServer.Spec.SecurityContexts.Pod
+	} else {
+		policyServerDeployment.Spec.Template.Spec.SecurityContext = defaultPodSecurityContext()
+	}
 
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
 
 	return policyServerDeployment
+}
+
+func defaultContainerSecurityContext() *corev1.SecurityContext {
+	enableReadOnlyFilesystem := true
+	privileged := false
+	runAsNonRoot := true
+	allowPrivilegeEscalation := false
+	capabilities := corev1.Capabilities{
+		Add:  []corev1.Capability{},
+		Drop: []corev1.Capability{"all"},
+	}
+	admissionContainerSecurityContext := corev1.SecurityContext{
+		ReadOnlyRootFilesystem:   &enableReadOnlyFilesystem,
+		Privileged:               &privileged,
+		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+		Capabilities:             &capabilities,
+		RunAsNonRoot:             &runAsNonRoot,
+	}
+	return &admissionContainerSecurityContext
+}
+
+func defaultPodSecurityContext() *corev1.PodSecurityContext {
+	runAsNonRoot := true
+	securityContext := corev1.PodSecurityContext{
+		RunAsNonRoot: &runAsNonRoot,
+	}
+	return &securityContext
 }

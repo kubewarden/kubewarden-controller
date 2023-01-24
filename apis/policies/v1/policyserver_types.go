@@ -21,6 +21,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// PolicyServerSecurity defines securityContext configuration to be used in the Policy Server workload
+type PolicyServerSecurity struct {
+	// securityContext definition to be used in the policy server container
+	// +optional
+	Container *corev1.SecurityContext `json:"container,omitempty"`
+	// podSecurityContext definition to be used in the policy server Pod
+	// +optional
+	Pod *corev1.PodSecurityContext `json:"pod,omitempty"`
+}
+
 // PolicyServerSpec defines the desired state of PolicyServer
 type PolicyServerSpec struct {
 	// Docker image name.
@@ -65,6 +75,13 @@ type PolicyServerSpec struct {
 	// key named verification-config in the Configmap.
 	// +optional
 	VerificationConfig string `json:"verificationConfig,omitempty"`
+
+	// Security configuration to be used in the Policy Server workload.
+	// The field allows different configurations for the pod and containers.
+	// This configuration will not be used in containers added by other
+	// controllers (e.g. telemetry sidecars)
+	// +optional
+	SecurityContexts PolicyServerSecurity `json:"securityContexts,omitempty"`
 }
 
 type ReconciliationTransitionReason string
