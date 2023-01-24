@@ -13,6 +13,7 @@ import (
 const policyServerName = "testing"
 const policyServerContainerName = "policy-server-testing"
 const invalidPolicyServerName = "invalid"
+const dropCapabilityAll = "all"
 
 func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{})
@@ -210,38 +211,237 @@ func TestIfPolicyServerImageChanged(t *testing.T) {
 	}
 }
 
-func TestPolicyServerSecurityContext(t *testing.T) {
+func TestPolicyServerWithContainerSecurityContext(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+	}
+	readOnlFileSystem := false
+	privileged := true
+	runAsRoot := false
+	allowPrivilegeEscalation := true
+	capabilities := corev1.Capabilities{
+		Drop: []corev1.Capability{corev1.Capability(dropCapabilityAll)},
+	}
+	containerSecurity := corev1.SecurityContext{
+		ReadOnlyRootFilesystem:   &readOnlFileSystem,
+		Privileged:               &privileged,
+		RunAsNonRoot:             &runAsRoot,
+		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+		Capabilities:             &capabilities,
+	}
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+			SecurityContexts: policiesv1.PolicyServerSecurity{
+				Container: &containerSecurity,
+			},
+		},
+	}
+	deployment := reconciler.deployment("v1", policyServer)
+
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem != readOnlFileSystem {
+		t.Error("Policy server container ReadOnlyRootFilesystem diverge from the expected value")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged != privileged {
+		t.Error("Policy server container Privileged diverge from the expected value")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot != runAsRoot {
+		t.Error("Policy server container RunAsNonRoot diverges from the expected value")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation == nil ||
+		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation != allowPrivilegeEscalation {
+		t.Error("Policy server container AllowPrivilegeEscalation diverge from the expected value")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities == nil ||
+		len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add) > 0 ||
+		len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop) != 1 ||
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop[0] != dropCapabilityAll {
+		t.Error("Policy server container Capabilities diverge from the expected value")
+	}
+}
+
+func TestPolicyServerWithPodSecurityContext(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+	}
+	var user, group int64
+	user = 1000
+	group = 2000
+	podSecurity := corev1.PodSecurityContext{
+		RunAsUser:  &user,
+		RunAsGroup: &group,
+	}
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+			SecurityContexts: policiesv1.PolicyServerSecurity{
+				Pod: &podSecurity,
+			},
+		},
+	}
+	deployment := reconciler.deployment("v1", policyServer)
+
+	if deployment.Spec.Template.Spec.SecurityContext == nil {
+		t.Error("Pod securityContext should be defined ")
+	}
+
+	if deployment.Spec.Template.Spec.SecurityContext != nil {
+		if *deployment.Spec.Template.Spec.SecurityContext.RunAsUser != user {
+			t.Error("Pod RunAsUser diverges from the expected value")
+		}
+		if *deployment.Spec.Template.Spec.SecurityContext.RunAsGroup != group {
+			t.Error("Pod RunAsGroup diverges from the expected value")
+		}
+	}
+}
+
+func TestPolicyServerWithoutSecurityContext(t *testing.T) {
 	reconciler := Reconciler{
 		Client:               nil,
 		DeploymentsNamespace: "kubewarden",
 	}
 	policyServer := &policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
+			Image:            "image",
+			SecurityContexts: policiesv1.PolicyServerSecurity{},
+		},
+	}
+	deployment := reconciler.deployment("v1", policyServer)
+	containerDefaultSecurityContext := defaultContainerSecurityContext()
+	podDefaultSecurityContext := defaultPodSecurityContext()
+
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem != *containerDefaultSecurityContext.ReadOnlyRootFilesystem {
+		t.Error("Policy server container ReadOnlyRootFilesystem diverge from the expected value")
+	}
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged != *containerDefaultSecurityContext.Privileged {
+		t.Error("Policy server container Privileged diverge from the expected value")
+	}
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot != *containerDefaultSecurityContext.RunAsNonRoot {
+		t.Error("Policy server container RunAsNonRoot diverges from the expected value")
+	}
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation != *containerDefaultSecurityContext.AllowPrivilegeEscalation {
+		t.Error("Policy server container AllowPrivilegeEscalation diverge from the expected value")
+	}
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities == containerDefaultSecurityContext.Capabilities {
+		t.Error("Policy server container should have capabilities defined")
+	}
+
+	if *deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot != *podDefaultSecurityContext.RunAsNonRoot {
+		t.Error("Pod RunAsNonRoot should be set to true")
+	}
+}
+
+func TestPolicyServerWithPodAndContainerSecurityContext(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+	}
+	readOnlFileSystem := false
+	privileged := true
+	runAsRoot := false
+	allowPrivilegeEscalation := true
+	capabilities := corev1.Capabilities{
+		Drop: []corev1.Capability{corev1.Capability(dropCapabilityAll)},
+	}
+	var user, group int64
+	user = 1000
+	group = 2000
+	podSecurity := corev1.PodSecurityContext{
+		RunAsUser:  &user,
+		RunAsGroup: &group,
+	}
+	containerSecurity := corev1.SecurityContext{
+		ReadOnlyRootFilesystem:   &readOnlFileSystem,
+		Privileged:               &privileged,
+		RunAsNonRoot:             &runAsRoot,
+		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+		Capabilities:             &capabilities,
+	}
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
 			Image: "image",
+			SecurityContexts: policiesv1.PolicyServerSecurity{
+				Container: &containerSecurity,
+				Pod:       &podSecurity,
+			},
 		},
 	}
 	deployment := reconciler.deployment("v1", policyServer)
 
-	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem == nil ||
-		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem == false {
-		t.Error("Policy server container security context should configure to run on a read only root filesystem")
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem != readOnlFileSystem {
+		t.Error("Policy server container ReadOnlyRootFilesystem diverge from the expected value")
 	}
-	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged == nil ||
-		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged == true {
-		t.Error("Policy server container should not run in a privileged container")
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.Privileged != privileged {
+		t.Error("Policy server container Privileged diverge from the expected value")
 	}
-	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot == nil ||
-		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot == false {
-		t.Error("Policy server container should not run with root user")
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsNonRoot != runAsRoot {
+		t.Error("Policy server container RunAsNonRoot diverges from the expected value")
 	}
-	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation == nil ||
-		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation == true {
-		t.Error("Policy server container should not run in container allowed to escalate privileges")
+	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.AllowPrivilegeEscalation != allowPrivilegeEscalation {
+		t.Error("Policy server container AllowPrivilegeEscalation diverge from the expected value")
 	}
-	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities == nil ||
-		len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add) > 0 ||
-		len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop) != 1 ||
-		deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop[0] != "all" {
-		t.Error("Policy server container should drop all capabilities")
+	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities == nil {
+		t.Error("Policy server container should have capabilities defined")
+	} else {
+		if len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add) > 0 {
+			t.Error("Policy server container should not have 'Add' capabilities defined")
+		}
+		if len(deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop) != 1 ||
+			deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Drop[0] != dropCapabilityAll {
+			t.Error("Policy server container Capabilities should have only one 'All' drop capability")
+		}
+	}
+
+	if deployment.Spec.Template.Spec.SecurityContext == nil {
+		t.Error("Pod securityContext should be defined ")
+		return
+	}
+
+	if *deployment.Spec.Template.Spec.SecurityContext.RunAsUser != user {
+		t.Error("Pod RunAsUser diverges from the expected value")
+	}
+	if *deployment.Spec.Template.Spec.SecurityContext.RunAsGroup != group {
+		t.Error("Pod RunAsGroup diverges from the expected value")
+	}
+}
+
+func TestDefaultContainerSecurityContext(t *testing.T) {
+	securityContext := defaultContainerSecurityContext()
+
+	if *securityContext.ReadOnlyRootFilesystem != true {
+		t.Error("Policy server container ReadOnlyRootFilesystem diverge from the expected value")
+	}
+	if *securityContext.Privileged != false {
+		t.Error("Policy server container Privileged diverge from the expected value")
+	}
+	if *securityContext.RunAsNonRoot != true {
+		t.Error("Policy server container RunAsNonRoot diverges from the expected value")
+	}
+	if *securityContext.AllowPrivilegeEscalation != false {
+		t.Error("Policy server container AllowPrivilegeEscalation diverge from the expected value")
+	}
+	if securityContext.Capabilities == nil {
+		t.Error("Policy server container should have capabilities defined")
+	} else {
+		if len(securityContext.Capabilities.Add) > 0 {
+			t.Error("Policy server container should not have 'Add' capabilities defined")
+		}
+		if len(securityContext.Capabilities.Drop) != 1 ||
+			securityContext.Capabilities.Drop[0] != dropCapabilityAll {
+			t.Error("Policy server container Capabilities should have only one 'All' drop capability")
+		}
+	}
+}
+
+func TestDefaultPodSecurityContext(t *testing.T) {
+	securityContext := defaultPodSecurityContext()
+
+	if *securityContext.RunAsNonRoot != true {
+		t.Error("Pod RunAsNonRoot should be set to true")
 	}
 }
