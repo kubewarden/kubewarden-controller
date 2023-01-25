@@ -41,10 +41,10 @@ fn is_true(b: &bool) -> bool {
     *b
 }
 
-impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
+impl TryFrom<ScaffoldPolicyData> for ClusterAdmissionPolicy {
     type Error = anyhow::Error;
 
-    fn try_from(data: ScaffoldData) -> Result<Self, Self::Error> {
+    fn try_from(data: ScaffoldPolicyData) -> Result<Self, Self::Error> {
         data.metadata.validate()?;
         Ok(ClusterAdmissionPolicy {
             api_version: String::from("policies.kubewarden.io/v1"),
@@ -86,10 +86,10 @@ struct AdmissionPolicySpec {
     background_audit: bool,
 }
 
-impl TryFrom<ScaffoldData> for AdmissionPolicy {
+impl TryFrom<ScaffoldPolicyData> for AdmissionPolicy {
     type Error = anyhow::Error;
 
-    fn try_from(data: ScaffoldData) -> Result<Self, Self::Error> {
+    fn try_from(data: ScaffoldPolicyData) -> Result<Self, Self::Error> {
         data.metadata.validate()?;
         Ok(AdmissionPolicy {
             api_version: String::from("policies.kubewarden.io/v1"),
@@ -110,7 +110,7 @@ impl TryFrom<ScaffoldData> for AdmissionPolicy {
 }
 
 #[derive(Clone)]
-struct ScaffoldData {
+struct ScaffoldPolicyData {
     pub uri: String,
     policy_title: Option<String>,
     metadata: Metadata,
@@ -134,7 +134,7 @@ pub(crate) fn manifest(
     let settings_yml: serde_yaml::Mapping =
         serde_yaml::from_str(&settings.unwrap_or_else(|| String::from("{}")))?;
 
-    let scaffold_data = ScaffoldData {
+    let scaffold_data = ScaffoldPolicyData {
         uri: String::from(uri),
         policy_title: get_policy_title_from_cli_or_metadata(policy_title, &metadata),
         metadata,
@@ -322,7 +322,7 @@ mod tests {
         metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
         assert!(metadata.background_audit);
 
-        let scaffold_data = ScaffoldData {
+        let scaffold_data = ScaffoldPolicyData {
             uri: "not_relevant".to_string(),
             policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
             metadata,
@@ -352,7 +352,7 @@ mod tests {
         metadata.background_audit = false;
         assert!(!metadata.background_audit);
 
-        let scaffold_data = ScaffoldData {
+        let scaffold_data = ScaffoldPolicyData {
             uri: "not_relevant".to_string(),
             policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
             metadata,
