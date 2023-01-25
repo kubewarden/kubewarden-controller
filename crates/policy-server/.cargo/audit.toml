@@ -7,6 +7,8 @@ ignore = [
                        # to API breakages.
                        #
                        # This is a transitive depependency
-  "RUSTSEC-2021-0139", # This is about `ansi_term` not being maintained anymore
-                       # This is a transitive depependency
+  "RUSTSEC-2021-0146", # This is about `twoway` not being maintained anymore
+                       # This is a transitive dependency of `multipart`, which is
+                       # a dependency of `warp`. This is the GH issue that describes
+                       # the problem: # https://github.com/abonander/multipart/issues/143
 ]
