@@ -86,7 +86,7 @@ jobs:
             core.setFailed("Cannot find latest release")
 
       - name: Trigger chart update
-        uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588
+        uses: peter-evans/repository-dispatch@2eb43e89928082df12b208d0e989edc12127e997
         with:
           token: ${{ secrets.WORKFLOW_PAT }}
           repository: "${{github.repository_owner}}/helm-charts"
