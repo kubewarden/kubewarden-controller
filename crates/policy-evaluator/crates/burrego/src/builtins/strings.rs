@@ -65,7 +65,7 @@ pub fn sprintf(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     let mut index_cmds: Vec<String> = Vec::new();
     for i in 0..fmt_args.len() {
-        index_cmds.push(format!("(index . {})", i));
+        index_cmds.push(format!("(index . {i})"));
     }
 
     let template_str = format!(r#"{{{{ printf "{}" {}}}}}"#, fmt_str, index_cmds.join(" "));
@@ -73,15 +73,14 @@ pub fn sprintf(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         BurregoError::BuiltinError {
             name: "sprintf".to_string(),
             message: format!(
-                "Cannot render go template '{}' with args {:?}: {:?}",
-                template_str, fmt_args, e
+                "Cannot render go template '{template_str}' with args {fmt_args:?}: {e:?}"
             ),
         }
     })?;
 
     serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
         name: "sprintf".to_string(),
-        message: format!("Cannot convert value into JSON: {:?}", e),
+        message: format!("Cannot convert value into JSON: {e:?}"),
     })
 }
 

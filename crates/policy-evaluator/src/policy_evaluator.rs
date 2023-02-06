@@ -119,7 +119,7 @@ impl Evaluator for PolicyEvaluator {
             Err(err) => {
                 return SettingsValidationResponse {
                     valid: false,
-                    message: Some(format!("could not marshal settings: {}", err)),
+                    message: Some(format!("could not marshal settings: {err}")),
                 }
             }
         };

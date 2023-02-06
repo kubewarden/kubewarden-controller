@@ -76,7 +76,7 @@ impl EvaluatorBuilder {
                     config.epoch_interruption(true);
                 }
                 Engine::new(&config).map_err(|e| {
-                    BurregoError::WasmEngineError(format!("cannot create wasmtime Engine: {:?}", e))
+                    BurregoError::WasmEngineError(format!("cannot create wasmtime Engine: {e:?}"))
                 })?
             }
         };
@@ -88,7 +88,7 @@ impl EvaluatorBuilder {
                 self.policy_path.clone().expect("policy_path should be set"),
             )
             .map_err(|e| {
-                BurregoError::WasmEngineError(format!("cannot create wasmtime Module: {:?}", e))
+                BurregoError::WasmEngineError(format!("cannot create wasmtime Module: {e:?}"))
             })?,
         };
 

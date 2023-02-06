@@ -19,7 +19,7 @@ pub fn is_valid(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     serde_json::to_value(valid_version).map_err(|e| BurregoError::BuiltinError {
         name: "semver.is_valid".to_string(),
-        message: format!("cannot convert value into JSON: {:?}", e),
+        message: format!("cannot convert value into JSON: {e:?}"),
     })
 }
 
@@ -43,12 +43,12 @@ pub fn compare(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     let version_a = Version::parse(version_a).map_err(|e| BurregoError::BuiltinError {
         name: "semver.compare".to_string(),
-        message: format!("first argument is not a valid semantic version: {:?}", e),
+        message: format!("first argument is not a valid semantic version: {e:?}"),
     })?;
 
     let version_b = Version::parse(version_b).map_err(|e| BurregoError::BuiltinError {
         name: "semver.compare".to_string(),
-        message: format!("second argument is not a valid semantic version: {:?}", e),
+        message: format!("second argument is not a valid semantic version: {e:?}"),
     })?;
 
     let res = match version_a.cmp(&version_b) {
@@ -59,7 +59,7 @@ pub fn compare(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
         name: "semver.compare".to_string(),
-        message: format!("cannot convert value into JSON: {:?}", e),
+        message: format!("cannot convert value into JSON: {e:?}"),
     })
 }
 

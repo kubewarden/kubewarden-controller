@@ -15,7 +15,7 @@ pub fn quote_meta(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     serde_json::to_value(escape(input)).map_err(|e| BurregoError::BuiltinError {
         name: "glob.quote_meta".to_string(),
-        message: format!("cannot convert value into JSON: {:?}", e),
+        message: format!("cannot convert value into JSON: {e:?}"),
     })
 }
 

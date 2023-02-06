@@ -97,15 +97,15 @@ impl Evaluator {
 
         let memory_ty = MemoryType::new(5, None);
         let memory = Memory::new(&mut store, memory_ty)
-            .map_err(|e| BurregoError::WasmEngineError(format!("cannot create memory: {}", e)))?;
+            .map_err(|e| BurregoError::WasmEngineError(format!("cannot create memory: {e}")))?;
         linker.define("env", "memory", memory).map_err(|e| {
-            BurregoError::WasmEngineError(format!("linker cannot define memory: {}", e))
+            BurregoError::WasmEngineError(format!("linker cannot define memory: {e}"))
         })?;
 
         opa_host_functions::add_to_linker(&mut linker)?;
 
         let instance = linker.instantiate(&mut store, &module).map_err(|e| {
-            BurregoError::WasmEngineError(format!("linker cannot create instance: {}", e))
+            BurregoError::WasmEngineError(format!("linker cannot create instance: {e}"))
         })?;
 
         let stack_helper = StackHelper::new(
@@ -191,8 +191,7 @@ impl Evaluator {
             .map(|(_k, v)| *v)
             .ok_or_else(|| {
                 BurregoError::RegoWasmError(format!(
-                    "Cannot find the specified entrypoint {} inside of {:?}",
-                    entrypoint, entrypoints
+                    "Cannot find the specified entrypoint {entrypoint} inside of {entrypoints:?}"
                 ))
             })
     }
@@ -215,8 +214,7 @@ impl Evaluator {
             .find(|(_k, &v)| v == entrypoint_id)
             .ok_or_else(|| {
                 BurregoError::RegoWasmError(format!(
-                    "Cannot find the specified entrypoint {} inside of {:?}",
-                    entrypoint_id, entrypoints
+                    "Cannot find the specified entrypoint {entrypoint_id} inside of {entrypoints:?}"
                 ))
             })?;
 

@@ -52,51 +52,46 @@ impl Policy {
             builtins_fn: instance
                 .get_typed_func::<(), i32>(store.as_context_mut(), "builtins")
                 .map_err(|e| {
-                    BurregoError::RegoWasmError(format!("cannot get builtins function: {:?}", e))
+                    BurregoError::RegoWasmError(format!("cannot get builtins function: {e:?}"))
                 })?,
             entrypoints_fn: instance
                 .get_typed_func::<(), i32>(store.as_context_mut(), "entrypoints")
                 .map_err(|e| {
-                    BurregoError::RegoWasmError(format!("cannot get entrypoints function: {:?}", e))
+                    BurregoError::RegoWasmError(format!("cannot get entrypoints function: {e:?}"))
                 })?,
             opa_heap_ptr_get_fn: instance
                 .get_typed_func::<(), i32>(store.as_context_mut(), "opa_heap_ptr_get")
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_heap_ptr_get function: {:?}",
-                        e
+                        "cannot get opa_heap_ptr_get function: {e:?}"
                     ))
                 })?,
             opa_heap_ptr_set_fn: instance
                 .get_typed_func::<i32, ()>(store.as_context_mut(), "opa_heap_ptr_set")
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_heap_ptr_set function: {:?}",
-                        e
+                        "cannot get opa_heap_ptr_set function: {e:?}"
                     ))
                 })?,
             opa_eval_ctx_new_fn: instance
                 .get_typed_func::<(), i32>(store.as_context_mut(), "opa_eval_ctx_new")
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_eval_ctx_new function: {:?}",
-                        e
+                        "cannot get opa_eval_ctx_new function: {e:?}"
                     ))
                 })?,
             opa_eval_ctx_set_input_fn: instance
                 .get_typed_func::<(i32, i32), ()>(store.as_context_mut(), "opa_eval_ctx_set_input")
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_eval_ctx_set_input function: {:?}",
-                        e
+                        "cannot get opa_eval_ctx_set_input function: {e:?}"
                     ))
                 })?,
             opa_eval_ctx_set_data_fn: instance
                 .get_typed_func::<(i32, i32), ()>(store.as_context_mut(), "opa_eval_ctx_set_data")
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_eval_ctx_set_data function: {:?}",
-                        e
+                        "cannot get opa_eval_ctx_set_data function: {e:?}"
                     ))
                 })?,
             opa_eval_ctx_set_entrypoint_fn: instance
@@ -106,43 +101,37 @@ impl Policy {
                 )
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_eval_ctx_set_entrypoint function: {:?}",
-                        e
+                        "cannot get opa_eval_ctx_set_entrypoint function: {e:?}"
                     ))
                 })?,
             opa_eval_ctx_get_result_fn: instance
                 .get_typed_func::<i32, i32>(store.as_context_mut(), "opa_eval_ctx_get_result")
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_eval_ctx_get_result function: {:?}",
-                        e
+                        "cannot get opa_eval_ctx_get_result function: {e:?}"
                     ))
                 })?,
             opa_json_dump_fn: instance
                 .get_typed_func::<i32, i32>(store.as_context_mut(), "opa_json_dump")
                 .map_err(|e| {
-                    BurregoError::RegoWasmError(format!(
-                        "cannot get opa_json_dump function: {:?}",
-                        e
-                    ))
+                    BurregoError::RegoWasmError(format!("cannot get opa_json_dump function: {e:?}"))
                 })?,
             opa_malloc_fn: instance
                 .get_typed_func::<i32, i32>(store.as_context_mut(), "opa_malloc")
                 .map_err(|e| {
-                    BurregoError::RegoWasmError(format!("cannot get opa_malloc function: {:?}", e))
+                    BurregoError::RegoWasmError(format!("cannot get opa_malloc function: {e:?}"))
                 })?,
             opa_json_parse_fn: instance
                 .get_typed_func::<(i32, i32), i32>(store.as_context_mut(), "opa_json_parse")
                 .map_err(|e| {
                     BurregoError::RegoWasmError(format!(
-                        "cannot get opa_json_parse function: {:?}",
-                        e
+                        "cannot get opa_json_parse function: {e:?}"
                     ))
                 })?,
             eval_fn: instance
                 .get_typed_func::<i32, i32>(store.as_context_mut(), "eval")
                 .map_err(|e| {
-                    BurregoError::RegoWasmError(format!("cannot get eval function: {:?}", e))
+                    BurregoError::RegoWasmError(format!("cannot get eval function: {e:?}"))
                 })?,
             data_addr: 0,
             base_heap_ptr: 0,

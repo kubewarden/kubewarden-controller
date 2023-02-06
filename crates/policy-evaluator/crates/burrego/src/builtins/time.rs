@@ -12,7 +12,7 @@ pub fn now_ns(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     let now = Local::now();
     serde_json::to_value(now.timestamp_nanos()).map_err(|e| BurregoError::BuiltinError {
         name: "time.now_ns".to_string(),
-        message: format!("cannot convert value into JSON: {:?}", e),
+        message: format!("cannot convert value into JSON: {e:?}"),
     })
 }
 
@@ -31,12 +31,12 @@ pub fn parse_rfc3339_ns(args: &[serde_json::Value]) -> Result<serde_json::Value>
 
     let dt = DateTime::parse_from_rfc3339(value).map_err(|e| BurregoError::BuiltinError {
         name: "time.parse_rfc3339_ns".to_string(),
-        message: format!(": cannot convert {}: {:?}", value, e),
+        message: format!(": cannot convert {value}: {e:?}"),
     })?;
 
     serde_json::to_value(dt.timestamp_nanos()).map_err(|e| BurregoError::BuiltinError {
         name: "time.parse_rfc3339_ns".to_string(),
-        message: format!("cannot convert value into JSON: {:?}", e),
+        message: format!("cannot convert value into JSON: {e:?}"),
     })
 }
 
@@ -79,7 +79,7 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
                 timezone =
                     chrono_tz::Tz::from_str(tz_name).map_err(|e| BurregoError::BuiltinError {
                         name: "time.date".to_string(),
-                        message: format!("cannot handle given timezone {}: {:?}", tz_name, e),
+                        message: format!("cannot handle given timezone {tz_name}: {e:?}"),
                     })?;
             }
         }

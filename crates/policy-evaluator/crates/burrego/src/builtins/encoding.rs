@@ -24,7 +24,7 @@ pub mod base64url {
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "base64url.encode_no_pad".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -75,9 +75,9 @@ pub mod urlquery {
         let mut url =
             Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
                 name: "urlquery.encode".to_string(),
-                message: format!("internal error 1 - {:?}", e),
+                message: format!("internal error 1 - {e:?}"),
             })?;
-        url.set_query(Some(format!("input={}", input).as_str()));
+        url.set_query(Some(format!("input={input}").as_str()));
 
         let res = url.query().ok_or_else(|| BurregoError::BuiltinError {
             name: "urlquery.encode".to_string(),
@@ -92,7 +92,7 @@ pub mod urlquery {
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "urlquery.encode".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -112,9 +112,9 @@ pub mod urlquery {
         let mut url =
             Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
                 name: "urlquery.decode".to_string(),
-                message: format!("internal error 1 - {:?}", e),
+                message: format!("internal error 1 - {e:?}"),
             })?;
-        url.set_query(Some(format!("input={}", input).as_str()));
+        url.set_query(Some(format!("input={input}").as_str()));
 
         let mut pairs = url.query_pairs();
         if pairs.count() != 1 {
@@ -126,7 +126,7 @@ pub mod urlquery {
         let (_, value) = pairs.next().unwrap();
         serde_json::to_value(value).map_err(|e| BurregoError::BuiltinError {
             name: "urlquery.decode".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -148,7 +148,7 @@ pub mod urlquery {
         let mut url =
             Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
                 name: "urlquery.encode_object".to_string(),
-                message: format!("internal error 1 - {:?}", e),
+                message: format!("internal error 1 - {e:?}"),
             })?;
 
         let mut queries: Vec<String> = Vec::new();
@@ -157,7 +157,7 @@ pub mod urlquery {
             if value_str.is_none() {
                 return Err(BurregoError::BuiltinError {
                     name: "urlquery.encode_object".to_string(),
-                    message: format!("the value of key {} is not a string", key),
+                    message: format!("the value of key {key} is not a string"),
                 });
             }
             queries.push(format!("{}={}", key, value_str.unwrap()));
@@ -171,7 +171,7 @@ pub mod urlquery {
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "urlquery.encode_object".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -191,7 +191,7 @@ pub mod urlquery {
         let mut url =
             Url::parse("https://example.com/").map_err(|e| BurregoError::BuiltinError {
                 name: "urlquery.decode_object".to_string(),
-                message: format!("internal error 1 - {:?}", e),
+                message: format!("internal error 1 - {e:?}"),
             })?;
         url.set_query(Some(input));
 
@@ -203,7 +203,7 @@ pub mod urlquery {
 
         serde_json::to_value(&res).map_err(|e| BurregoError::BuiltinError {
             name: "urlquery.decode_object".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -307,7 +307,7 @@ pub mod json {
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "json.is_valid".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -353,19 +353,19 @@ pub mod yaml {
         let value: serde_yaml::Value =
             serde_json::from_value(input).map_err(|e| BurregoError::BuiltinError {
                 name: "yaml.marshal".to_string(),
-                message: format!(" cannot convert input object to yaml - {:?}", e),
+                message: format!(" cannot convert input object to yaml - {e:?}"),
             })?;
 
         // marshal from yaml to string
         let res = serde_yaml::to_string(&value).map_err(|e| BurregoError::BuiltinError {
             name: "yaml.marshal".to_string(),
 
-            message: format!("marshal error - {:?}", e),
+            message: format!("marshal error - {e:?}"),
         })?;
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "yaml.marshal".to_string(),
-            message: format!("cannot convert result into JSON: {:?}", e),
+            message: format!("cannot convert result into JSON: {e:?}"),
         })
     }
 
@@ -385,12 +385,12 @@ pub mod yaml {
         let res: serde_json::Value =
             serde_yaml::from_str(input).map_err(|e| BurregoError::BuiltinError {
                 name: "yaml.unmarshal".to_string(),
-                message: format!("cannot convert input object to json - {:?}", e),
+                message: format!("cannot convert input object to json - {e:?}"),
             })?;
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "yaml.unmarshal".to_string(),
-            message: format!("cannot convert result into JSON: {:?}", e),
+            message: format!("cannot convert result into JSON: {e:?}"),
         })
     }
 
@@ -412,7 +412,7 @@ pub mod yaml {
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "yaml.is_valid".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -507,16 +507,12 @@ pub mod hex {
             message: "1st parameter is not a string".to_string(),
         })?;
 
-        let res: Vec<String> = input
-            .as_bytes()
-            .iter()
-            .map(|v| format!("{:x?}", v))
-            .collect();
+        let res: Vec<String> = input.as_bytes().iter().map(|v| format!("{v:x?}")).collect();
         let res = res.join("");
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "hex.encode".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 
@@ -539,17 +535,17 @@ pub mod hex {
             .collect();
         let value = value.map_err(|e| BurregoError::BuiltinError {
             name: "hex.decode".to_string(),
-            message: format!("cannot parse input - {:?}", e),
+            message: format!("cannot parse input - {e:?}"),
         })?;
 
         let res = String::from_utf8(value).map_err(|e| BurregoError::BuiltinError {
             name: "hex.decode".to_string(),
-            message: format!("cannot parse string - {:?}", e),
+            message: format!("cannot parse string - {e:?}"),
         })?;
 
         serde_json::to_value(res).map_err(|e| BurregoError::BuiltinError {
             name: "hex.decode".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         })
     }
 

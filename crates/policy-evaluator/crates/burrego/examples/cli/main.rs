@@ -76,7 +76,7 @@ fn main() -> Result<()> {
         Commands::Builtins => {
             println!("These are the OPA builtins currently supported:");
             for b in burrego::Evaluator::implemented_builtins() {
-                println!("  - {}", b);
+                println!("  - {b}");
             }
             Ok(())
         }
@@ -93,7 +93,7 @@ fn main() -> Result<()> {
                 ));
             }
             let input_value: serde_json::Value = if let Some(input_json) = input {
-                serde_json::from_str(&input_json)
+                serde_json::from_str(input_json)
                     .map_err(|e| anyhow!("Cannot parse input: {:?}", e))?
             } else if let Some(input_filename) = input_path {
                 let file = File::open(input_filename)
@@ -105,7 +105,7 @@ fn main() -> Result<()> {
             };
 
             let data_value: serde_json::Value =
-                serde_json::from_str(&data).map_err(|e| anyhow!("Cannot parse data: {:?}", e))?;
+                serde_json::from_str(data).map_err(|e| anyhow!("Cannot parse data: {:?}", e))?;
             let mut evaluator = burrego::EvaluatorBuilder::default()
                 .policy_path(&PathBuf::from(policy))
                 .host_callbacks(burrego::HostCallbacks::default())
@@ -121,7 +121,7 @@ fn main() -> Result<()> {
             if !not_implemented_builtins.is_empty() {
                 eprintln!("Cannot evaluate policy, these builtins are not yet implemented:");
                 for b in not_implemented_builtins {
-                    eprintln!("  - {}", b);
+                    eprintln!("  - {b}");
                 }
                 process::exit(1);
             }
