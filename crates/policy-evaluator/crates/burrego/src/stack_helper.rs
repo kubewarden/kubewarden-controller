@@ -30,29 +30,26 @@ impl StackHelper {
         let opa_json_dump_fn = instance
             .get_typed_func::<i32, i32>(store.as_context_mut(), "opa_json_dump")
             .map_err(|e| {
-                BurregoError::RegoWasmError(format!("cannot access opa_json_dump fuction: {:?}", e))
+                BurregoError::RegoWasmError(format!("cannot access opa_json_dump fuction: {e:?}"))
             })?;
         let opa_malloc_fn = instance
             .get_typed_func::<i32, i32>(store.as_context_mut(), "opa_malloc")
             .map_err(|e| {
-                BurregoError::RegoWasmError(format!("Cannot access opa_malloc fuction: {:?}", e))
+                BurregoError::RegoWasmError(format!("Cannot access opa_malloc fuction: {e:?}"))
             })?;
         let opa_json_parse_fn = instance
             .get_typed_func::<(i32, i32), i32>(store.as_context_mut(), "opa_json_parse")
             .map_err(|e| {
-                BurregoError::RegoWasmError(format!(
-                    "Cannot access opa_json_parse fuction: {:?}",
-                    e
-                ))
+                BurregoError::RegoWasmError(format!("Cannot access opa_json_parse fuction: {e:?}"))
             })?;
 
         let builtins_fn = instance
             .get_typed_func::<(), i32>(store.as_context_mut(), "builtins")
             .map_err(|e| {
-                BurregoError::RegoWasmError(format!("cannot access builtins function: {:?}", e))
+                BurregoError::RegoWasmError(format!("cannot access builtins function: {e:?}"))
             })?;
         let addr = builtins_fn.call(store.as_context_mut(), ()).map_err(|e| {
-            BurregoError::WasmEngineError(format!("cannot invoke builtins function: {:?}", e))
+            BurregoError::WasmEngineError(format!("cannot invoke builtins function: {e:?}"))
         })?;
 
         let builtins: HashMap<i32, String> =
@@ -97,7 +94,7 @@ impl StackHelper {
             memory
                 .read(&store, raw_addr.try_into().unwrap(), &mut buffer)
                 .map_err(|e| {
-                    BurregoError::WasmEngineError(format!("cannot read from memory: {:?}", e))
+                    BurregoError::WasmEngineError(format!("cannot read from memory: {e:?}"))
                 })?;
             if buffer[0] == 0 {
                 break;
@@ -126,16 +123,14 @@ impl StackHelper {
             .call(store.as_context_mut(), addr)
             .map_err(|e| {
                 BurregoError::WasmEngineError(format!(
-                    "cannot invoke opa_json_dump function: {:?}",
-                    e
+                    "cannot invoke opa_json_dump function: {e:?}"
                 ))
             })?;
         let data = StackHelper::read_string(store, memory, raw_addr)?;
 
         serde_json::from_slice(&data).map_err(|e| {
             BurregoError::JSONError(format!(
-                "cannot convert data read from memory into utf8 String: {:?}",
-                e
+                "cannot convert data read from memory into utf8 String: {e:?}"
             ))
         })
     }
@@ -157,11 +152,11 @@ impl StackHelper {
         value: &serde_json::Value,
     ) -> Result<i32> {
         let data = serde_json::to_vec(&value).map_err(|e| {
-            BurregoError::JSONError(format!("push_json: cannot convert value to json: {:?}", e))
+            BurregoError::JSONError(format!("push_json: cannot convert value to json: {e:?}"))
         })?;
 
         let data_size: i32 = data.len().try_into().map_err(|e| {
-            BurregoError::JSONError(format!("push_json: cannot convert size to json: {:?}", e))
+            BurregoError::JSONError(format!("push_json: cannot convert size to json: {e:?}"))
         })?;
 
         // allocate memory to fit the value
@@ -169,14 +164,13 @@ impl StackHelper {
             .call(store.as_context_mut(), data_size)
             .map_err(|e| {
                 BurregoError::WasmEngineError(format!(
-                    "push_json: cannot invoke opa_malloc function: {:?}",
-                    e
+                    "push_json: cannot invoke opa_malloc function: {e:?}"
                 ))
             })?;
         memory
             .write(store.as_context_mut(), raw_addr.try_into().unwrap(), &data)
             .map_err(|e| {
-                BurregoError::WasmEngineError(format!("push_json: cannot write to memory: {:?}", e))
+                BurregoError::WasmEngineError(format!("push_json: cannot write to memory: {e:?}"))
             })?;
 
         match opa_json_parse_fn.call(store.as_context_mut(), (raw_addr, data_size)) {
@@ -185,8 +179,7 @@ impl StackHelper {
             )),
             Ok(addr) => Ok(addr),
             Err(e) => Err(BurregoError::RegoWasmError(format!(
-                "Cannot get memory address: {:?}",
-                e
+                "Cannot get memory address: {e:?}"
             ))),
         }
     }

@@ -35,8 +35,8 @@ fn register_opa_abort_func(
 
                 let msg = StackHelper::read_string(caller.as_context_mut(), &memory, addr)
                     .map_or_else(
-                        |e| format!("cannot decode opa_abort message: {:?}", e),
-                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_abort message: didn't read a valid string from memory - {:?}", e)),
+                        |e| format!("cannot decode opa_abort message: {e:?}"),
+                        |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_abort message: didn't read a valid string from memory - {e:?}")),
                     );
                 opa_abort_host_callback(&msg);
 
@@ -63,8 +63,8 @@ fn register_opa_println_func(
 
             let msg = StackHelper::read_string(caller.as_context_mut(), &memory, addr)
                 .map_or_else(
-                    |e| format!("cannot decode opa_println message: {:?}", e),
-                    |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_println message: didn't read a valid string from memory - {:?}", e)),
+                    |e| format!("cannot decode opa_println message: {e:?}"),
+                    |data| String::from_utf8(data).unwrap_or_else(|e| format!("cannot decode opa_println message: didn't read a valid string from memory - {e:?}")),
                 );
             opa_println_host_callback(&msg);
 
@@ -96,7 +96,7 @@ fn register_opa_builtin0_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin0: cannot find builtin {}", builtin_id))
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin0: cannot find builtin {builtin_id}"))
                 })?.clone();
             let args = vec![];
 
@@ -105,7 +105,7 @@ fn register_opa_builtin0_func(
 
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {e:?}")))?;
 
             let builtin_result = builtin_helper
                 .invoke(&builtin_name, &args)?;
@@ -149,7 +149,7 @@ fn register_opa_builtin1_func(
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
                     BurregoError::BuiltinNotImplementedError(
-                    format!("opa_bunltin1: cannot find builtin {}", builtin_id))
+                    format!("opa_bunltin1: cannot find builtin {builtin_id}"))
                 })?.clone();
 
             let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
@@ -162,7 +162,7 @@ fn register_opa_builtin1_func(
 
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {e:?}")))?;
 
             let builtin_result = builtin_helper
                 .invoke(&builtin_name, &args)?;
@@ -207,7 +207,7 @@ fn register_opa_builtin2_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin2: cannot find builtin {}", builtin_id))
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin2: cannot find builtin {builtin_id}"))
                 })?.clone();
 
             let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
@@ -222,7 +222,7 @@ fn register_opa_builtin2_func(
 
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {e:?}")))?;
 
             let builtin_result = builtin_helper.invoke(&builtin_name, &args)?;
 
@@ -267,7 +267,7 @@ fn register_opa_builtin3_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin3: cannot find builtin {}", builtin_id))
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin3: cannot find builtin {builtin_id}"))
                 })?.clone();
 
             let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
@@ -284,7 +284,7 @@ fn register_opa_builtin3_func(
 
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {e:?}")))?;
 
             let builtin_result = builtin_helper.invoke(&builtin_name, &args)?;
 
@@ -330,7 +330,7 @@ fn register_opa_builtin4_func(
                 .get(&builtin_id)
                 .ok_or_else(|| {
                     error!(builtin_id, builtins =? stack_helper.builtins, "opa_builtin0: cannot find builtin");
-                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin4: cannot find builtin {}", builtin_id))
+                    BurregoError::BuiltinNotImplementedError(format!("opa_builtin4: cannot find builtin {builtin_id}"))
                 })?.clone();
 
             let memory_export = caller.get_export("memory").ok_or_else(|| BurregoError::RegoWasmError("cannot find 'memory' export".to_string()))?;
@@ -349,7 +349,7 @@ fn register_opa_builtin4_func(
 
             let builtin_helper = BUILTINS_HELPER
                 .read()
-                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {:?}", e)))?;
+                .map_err(|e| BurregoError::RegoWasmError(format!("Cannot access global builtin helper: {e:?}")))?;
 
             let builtin_result = builtin_helper.invoke(&builtin_name, &args)?;
 

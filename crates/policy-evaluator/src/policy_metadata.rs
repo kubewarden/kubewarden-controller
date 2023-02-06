@@ -90,11 +90,11 @@ fn validate_resources(data: &[String]) -> Result<(), ValidationError> {
         let sub = parts[1];
 
         if resources_with_wildcard_subresources.contains(res) {
-            let msg = format!("if '{}/*' is present, must not specify {}", resource, res);
+            let msg = format!("if '{resource}/*' is present, must not specify {res}");
             return Err(ValidationError::new(Box::leak(msg.into_boxed_str())));
         }
         if subresources_with_wildcard_resource.contains(sub) {
-            let msg = format!("if '*/{}' is present, must not specify {}", sub, resource);
+            let msg = format!("if '*/{sub}' is present, must not specify {resource}");
             return Err(ValidationError::new(Box::leak(msg.into_boxed_str())));
         }
         if sub == "*" {

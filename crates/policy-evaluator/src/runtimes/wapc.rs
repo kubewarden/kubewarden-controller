@@ -61,7 +61,7 @@ pub(crate) fn host_callback(
                 }
                 _ => {
                     error!(namespace, operation, "unknown operation");
-                    Err(format!("unknown operation: {}", operation).into())
+                    Err(format!("unknown operation: {operation}").into())
                 }
             },
             "oci" => match operation {
@@ -107,7 +107,7 @@ pub(crate) fn host_callback(
                 }
                 _ => {
                     error!("unknown operation: {}", operation);
-                    Err(format!("unknown operation: {}", operation).into())
+                    Err(format!("unknown operation: {operation}").into())
                 }
             },
             "net" => match operation {
@@ -129,7 +129,7 @@ pub(crate) fn host_callback(
                 }
                 _ => {
                     error!("unknown operation: {}", operation);
-                    Err(format!("unknown operation: {}", operation).into())
+                    Err(format!("unknown operation: {operation}").into())
                 }
             },
             "crypto" => match operation {
@@ -139,19 +139,19 @@ pub(crate) fn host_callback(
                     let response: CertificateVerificationResponse = match verify_certificate(req) {
                         Ok(b) => b.into(),
                         Err(e) => {
-                            return Err(format!("Error when verifying certificate: {}", e).into())
+                            return Err(format!("Error when verifying certificate: {e}").into())
                         }
                     };
                     Ok(serde_json::to_vec(&response)?)
                 }
                 _ => {
                     error!(namespace, operation, "unknown operation");
-                    Err(format!("unknown operation: {}", operation).into())
+                    Err(format!("unknown operation: {operation}").into())
                 }
             },
             _ => {
                 error!("unknown namespace: {}", namespace);
-                Err(format!("unknown namespace: {}", namespace).into())
+                Err(format!("unknown namespace: {namespace}").into())
             }
         },
         "kubernetes" => {
@@ -162,13 +162,13 @@ pub(crate) fn host_callback(
                 "services" => Ok(cluster_context.services().into()),
                 _ => {
                     error!("unknown namespace: {}", namespace);
-                    Err(format!("unknown namespace: {}", namespace).into())
+                    Err(format!("unknown namespace: {namespace}").into())
                 }
             }
         }
         _ => {
             error!("unknown binding: {}", binding);
-            Err(format!("unknown binding: {}", binding).into())
+            Err(format!("unknown binding: {binding}").into())
         }
     }
 }
@@ -198,7 +198,7 @@ fn send_request_and_wait_for_response(
 
     let send_result = cb_channel.try_send(req);
     if let Err(e) = send_result {
-        return Err(format!("Error sending request over callback channel: {:?}", e).into());
+        return Err(format!("Error sending request over callback channel: {e:?}").into());
     }
 
     // wait for the response
@@ -215,7 +215,7 @@ fn send_request_and_wait_for_response(
                             error = e.to_string().as_str(),
                             "callback evaluation failed"
                         );
-                        Err(format!("Callback evaluation failure: {:?}", e).into())
+                        Err(format!("Callback evaluation failure: {e:?}").into())
                     }
                 }
             }
@@ -425,14 +425,13 @@ impl<'a> Runtime<'a> {
                     .map_err(|e| anyhow!("cannot convert response: {:?}", e));
                 vr.unwrap_or_else(|e| SettingsValidationResponse {
                     valid: false,
-                    message: Some(format!("error: {:?}", e)),
+                    message: Some(format!("error: {e:?}")),
                 })
             }
             Err(err) => SettingsValidationResponse {
                 valid: false,
                 message: Some(format!(
-                    "Error invoking settings validation callback: {:?}",
-                    err
+                    "Error invoking settings validation callback: {err:?}"
                 )),
             },
         }

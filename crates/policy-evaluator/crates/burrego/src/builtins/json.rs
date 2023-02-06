@@ -30,12 +30,12 @@ pub fn patch(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     json_patch::patch(&mut obj, &patches).map_err(|e| BurregoError::BuiltinError {
         name: "json.patch".to_string(),
-        message: format!("cannot apply patch: {:?}", e),
+        message: format!("cannot apply patch: {e:?}"),
     })?;
 
     serde_json::to_value(obj).map_err(|e| BurregoError::BuiltinError {
         name: "json.patch".to_string(),
-        message: format!("cannot convert value into JSON: {:?}", e),
+        message: format!("cannot convert value into JSON: {e:?}"),
     })
 }
 

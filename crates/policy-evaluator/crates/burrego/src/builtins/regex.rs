@@ -25,8 +25,7 @@ pub fn split(args: &[serde_json::Value]) -> Result<serde_json::Value> {
             .map_err(|e| BurregoError::BuiltinError {
                 name: "regex.split".to_string(),
                 message: format!(
-                    "cannot build regex from the given pattern string '{}': {:?}",
-                    pattern_str, e
+                    "cannot build regex from the given pattern string '{pattern_str}': {e:?}"
                 ),
             })?
             .split(string_str)
@@ -34,7 +33,7 @@ pub fn split(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     )
     .map_err(|e| BurregoError::BuiltinError {
         name: "regex.split".to_string(),
-        message: format!("cannot convert result into JSON: {:?}", e),
+        message: format!("cannot convert result into JSON: {e:?}"),
     })
 }
 
@@ -83,7 +82,7 @@ pub fn template_match(args: &[serde_json::Value]) -> Result<serde_json::Value> {
     serde_json::to_value(computed_regexp.is_match(string_str)).map_err(|e| {
         BurregoError::BuiltinError {
             name: "regex.template_match".to_string(),
-            message: format!("cannot convert value into JSON: {:?}", e),
+            message: format!("cannot convert value into JSON: {e:?}"),
         }
     })
 }
@@ -115,8 +114,7 @@ pub fn find_n(args: &[serde_json::Value]) -> Result<serde_json::Value> {
             .map_err(|e| BurregoError::BuiltinError {
                 name: "regex.find_n".to_string(),
                 message: format!(
-                    "cannot build regex from the given pattern string '{}': {:?}",
-                    pattern_str, e
+                    "cannot build regex from the given pattern string '{pattern_str}': {e:?}"
                 ),
             })?
             .find_iter(string_str)
@@ -127,8 +125,7 @@ pub fn find_n(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         .map_err(|e| BurregoError::BuiltinError {
             name: "regex.find_n".to_string(),
             message: format!(
-                "cannot build regex from the given pattern string '{}': {:?}",
-                pattern_str, e
+                "cannot build regex from the given pattern string '{pattern_str}': {e:?}"
             ),
         })?
         .find_iter(string_str)
@@ -138,7 +135,7 @@ pub fn find_n(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 
     serde_json::to_value(matches).map_err(|e| BurregoError::BuiltinError {
         name: "regex.find_n".to_string(),
-        message: format!("cannot convert value into JSON: {:?}", e),
+        message: format!("cannot convert value into JSON: {e:?}"),
     })
 }
 
@@ -162,7 +159,7 @@ struct ExpressionList(Vec<Expression>);
 impl Display for ExpressionList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for expression in self.0.iter() {
-            write!(f, "{}", expression)?;
+            write!(f, "{expression}")?;
         }
         Ok(())
     }
@@ -215,9 +212,9 @@ impl TemplateMatch {
             expressions.0.push(current_expression);
         }
 
-        Regex::from_str(&format!("{}", expressions)).map_err(|e| BurregoError::BuiltinError {
+        Regex::from_str(&format!("{expressions}")).map_err(|e| BurregoError::BuiltinError {
             name: "regex".to_string(),
-            message: format!("tried to initialize an invalid regular expression: {:?}", e),
+            message: format!("tried to initialize an invalid regular expression: {e:?}"),
         })
     }
 }
@@ -261,10 +258,10 @@ mod tests {
     #[test]
     fn find_n() -> Result<()> {
         assert_eq!(
-            super::find_n(&vec![
+            super::find_n(&[
                 serde_json::to_value("a.").unwrap(),
                 serde_json::to_value("paranormal").unwrap(),
-                serde_json::to_value(1).unwrap(),
+                serde_json::to_value(1).unwrap()
             ])?
             .as_array()
             .unwrap(),
@@ -272,10 +269,10 @@ mod tests {
         );
 
         assert_eq!(
-            super::find_n(&vec![
+            super::find_n(&[
                 serde_json::to_value("a.").unwrap(),
                 serde_json::to_value("paranormal").unwrap(),
-                serde_json::to_value(2).unwrap(),
+                serde_json::to_value(2).unwrap()
             ])?
             .as_array()
             .unwrap(),
@@ -283,10 +280,10 @@ mod tests {
         );
 
         assert_eq!(
-            super::find_n(&vec![
+            super::find_n(&[
                 serde_json::to_value("a.").unwrap(),
                 serde_json::to_value("paranormal").unwrap(),
-                serde_json::to_value(10).unwrap(),
+                serde_json::to_value(10).unwrap()
             ])?
             .as_array()
             .unwrap(),
@@ -294,10 +291,10 @@ mod tests {
         );
 
         assert_eq!(
-            super::find_n(&vec![
+            super::find_n(&[
                 serde_json::to_value("a.").unwrap(),
                 serde_json::to_value("paranormal").unwrap(),
-                serde_json::to_value(-1).unwrap(),
+                serde_json::to_value(-1).unwrap()
             ])?
             .as_array()
             .unwrap(),
@@ -305,10 +302,10 @@ mod tests {
         );
 
         assert_eq!(
-            super::find_n(&vec![
+            super::find_n(&[
                 serde_json::to_value("nomatch").unwrap(),
                 serde_json::to_value("paranormal").unwrap(),
-                serde_json::to_value(-1).unwrap(),
+                serde_json::to_value(-1).unwrap()
             ])?
             .as_array()
             .unwrap(),
