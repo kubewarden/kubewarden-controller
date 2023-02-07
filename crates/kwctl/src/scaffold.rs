@@ -27,7 +27,14 @@ struct ClusterAdmissionPolicySpec {
     settings: serde_yaml::Mapping,
     rules: Vec<Rule>,
     mutating: bool,
+    // Skip serialization when this is true, which is the default case.
+    // This is needed as a temporary fix for https://github.com/kubewarden/kubewarden-controller/issues/395
+    #[serde(skip_serializing_if = "is_true")]
     background_audit: bool,
+}
+
+fn is_true(b: &bool) -> bool {
+    *b
 }
 
 impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
@@ -69,6 +76,9 @@ struct AdmissionPolicySpec {
     settings: serde_yaml::Mapping,
     rules: Vec<Rule>,
     mutating: bool,
+    // Skip serialization when this is true, which is the default case.
+    // This is needed as a temporary fix for https://github.com/kubewarden/kubewarden-controller/issues/395
+    #[serde(skip_serializing_if = "is_true")]
     background_audit: bool,
 }
 
@@ -95,6 +105,7 @@ impl TryFrom<ScaffoldData> for AdmissionPolicy {
     }
 }
 
+#[derive(Clone)]
 struct ScaffoldData {
     pub uri: String,
     policy_title: Option<String>,
@@ -260,5 +271,64 @@ mod tests {
                 &mock_metadata_with_title(policy_title.clone())
             )
         )
+    }
+
+    #[test]
+    fn omit_background_audit_during_serialization_when_true() {
+        // testing fix for https://github.com/kubewarden/kubewarden-controller/issues/395
+        let policy_title = "test".to_string();
+        let mut metadata = mock_metadata_with_title(policy_title.clone());
+        metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
+        assert!(metadata.background_audit);
+
+        let scaffold_data = ScaffoldData {
+            uri: "not_relevant".to_string(),
+            policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
+            metadata,
+            settings: Default::default(),
+        };
+
+        let out = serde_yaml::to_string(
+            &ClusterAdmissionPolicy::try_from(scaffold_data.clone())
+                .expect("cannot build ClusterAdmissionPolicy"),
+        )
+        .expect("serialization error");
+        assert!(!out.contains("backgroundAudit"));
+
+        let out = serde_yaml::to_string(
+            &AdmissionPolicy::try_from(scaffold_data).expect("cannot build AdmissionPolicy"),
+        )
+        .expect("serialization error");
+        assert!(!out.contains("backgroundAudit"));
+    }
+
+    #[test]
+    fn do_not_omit_background_audit_during_serialization_when_false() {
+        // testing fix for https://github.com/kubewarden/kubewarden-controller/issues/395
+        let policy_title = "test".to_string();
+        let mut metadata = mock_metadata_with_title(policy_title.clone());
+        metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
+        metadata.background_audit = false;
+        assert!(!metadata.background_audit);
+
+        let scaffold_data = ScaffoldData {
+            uri: "not_relevant".to_string(),
+            policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
+            metadata,
+            settings: Default::default(),
+        };
+
+        let out = serde_yaml::to_string(
+            &ClusterAdmissionPolicy::try_from(scaffold_data.clone())
+                .expect("cannot build ClusterAdmissionPolicy"),
+        )
+        .expect("serialization error");
+        assert!(out.contains("backgroundAudit"));
+
+        let out = serde_yaml::to_string(
+            &AdmissionPolicy::try_from(scaffold_data).expect("cannot build AdmissionPolicy"),
+        )
+        .expect("serialization error");
+        assert!(out.contains("backgroundAudit"));
     }
 }
