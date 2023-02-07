@@ -156,7 +156,7 @@ jobs:
       # Build and push `latest` image
       - name: Build and export to docker
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           load: true
@@ -169,7 +169,7 @@ jobs:
       - name: Build and push
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         id: build-latest
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           platforms: linux/amd64, linux/arm64
@@ -184,7 +184,7 @@ jobs:
           echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
       - name: Build and export to docker
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           load: true
@@ -197,7 +197,7 @@ jobs:
       - name: Build and push
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         id: build-tag
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           platforms: linux/amd64, linux/arm64
