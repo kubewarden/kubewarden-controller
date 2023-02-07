@@ -57,7 +57,7 @@ pub(crate) async fn inspect(uri: &str, output: OutputType, sources: Option<Sourc
             {
                 println!("No sigstore signatures found");
             } else {
-                println!("Cannot determine if the policy has been signed. There was an error while attempting to fetch its signatures from the remote registry: {} ", error)
+                println!("Cannot determine if the policy has been signed. There was an error while attempting to fetch its signatures from the remote registry: {error} ")
             }
         }
     }
@@ -101,7 +101,7 @@ impl MetadataPrinter {
         match self {
             MetadataPrinter::Yaml => {
                 let metadata_yaml = serde_yaml::to_string(metadata)?;
-                println!("{}", metadata_yaml);
+                println!("{metadata_yaml}");
                 Ok(())
             }
             MetadataPrinter::Pretty => {
@@ -177,7 +177,7 @@ impl MetadataPrinter {
         table.add_row(row![Fmbl -> "Rules"]);
         table.printstd();
 
-        let text = format!("```yaml\n{}```", rules_yaml);
+        let text = format!("```yaml\n{rules_yaml}```");
         self.render_markdown(&text)
     }
 
@@ -251,7 +251,7 @@ impl SignaturesPrinter {
             SignaturesPrinter::Yaml => {
                 let signatures_yaml = serde_yaml::to_string(signatures);
                 if let Ok(signatures_yaml) = signatures_yaml {
-                    println!("{}", signatures_yaml)
+                    println!("{signatures_yaml}")
                 }
             }
             SignaturesPrinter::Pretty => {

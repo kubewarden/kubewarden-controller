@@ -45,7 +45,7 @@ pub(crate) fn list() -> Result<()> {
         let policy_filesystem_metadata = std::fs::metadata(&policy.local_path)?;
 
         table.add_row(row![
-            format!("{}", policy),
+            format!("{policy}"),
             mutating,
             context_aware,
             sha256sum,

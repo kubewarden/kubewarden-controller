@@ -12,7 +12,7 @@ pub(crate) fn map_path_to_uri(uri: &str) -> Result<String> {
         return Ok(String::from(uri));
     }
     if PathBuf::from(uri).is_absolute() {
-        Ok(format!("file://{}", uri))
+        Ok(format!("file://{uri}"))
     } else {
         Ok(format!(
             "file://{}/{}",

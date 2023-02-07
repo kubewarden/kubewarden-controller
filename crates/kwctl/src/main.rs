@@ -177,7 +177,7 @@ async fn main() -> Result<()> {
                         if u.starts_with("registry://") {
                             u.clone()
                         } else {
-                            format!("registry://{}", u)
+                            format!("registry://{u}")
                         }
                     })
                     .unwrap();
@@ -199,7 +199,7 @@ async fn main() -> Result<()> {
                         serde_json::to_writer(std::io::stdout(), &response)?
                     }
                     _ => {
-                        println!("Policy successfully pushed: {}", immutable_ref);
+                        println!("Policy successfully pushed: {immutable_ref}");
                     }
                 }
             };
@@ -340,7 +340,7 @@ async fn main() -> Result<()> {
                 let sources = remote_server_options(matches)?;
                 let registry = Registry::new();
                 let digest = registry.manifest_digest(uri, sources.as_ref()).await?;
-                println!("{}@{}", uri, digest);
+                println!("{uri}@{digest}");
             }
             Ok(())
         }
