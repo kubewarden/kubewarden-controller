@@ -21,7 +21,7 @@ lazy_static! {
         let builtins: String = burrego::get_builtins()
             .keys()
             .sorted()
-            .map(|builtin| format!("  - {}", builtin))
+            .map(|builtin| format!("  - {builtin}"))
             .join("\n");
 
         format!(

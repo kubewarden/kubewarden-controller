@@ -103,10 +103,7 @@ impl WorkerPool {
         let bootstrap_data = match self.bootstrap_rx.blocking_recv() {
             Ok(data) => data,
             Err(e) => {
-                eprintln!(
-                    "workers pool bootstrap: error receiving bootstrap data: {:?}",
-                    e
-                );
+                eprintln!("workers pool bootstrap: error receiving bootstrap data: {e:?}");
                 std::process::exit(1);
             }
         };
@@ -121,10 +118,7 @@ impl WorkerPool {
         let engine = match wasmtime::Engine::new(&wasmtime_config) {
             Ok(e) => e,
             Err(e) => {
-                eprintln!(
-                    "workers pool bootstrap: cannot instantiate `wasmtime::Engine`: {:?}",
-                    e
-                );
+                eprintln!("workers pool bootstrap: cannot instantiate `wasmtime::Engine`: {e:?}");
                 std::process::exit(1);
             }
         };
@@ -133,7 +127,7 @@ impl WorkerPool {
             match precompile_policies(&engine, &bootstrap_data.fetched_policies) {
                 Ok(pp) => pp,
                 Err(e) => {
-                    eprintln!("{}", e);
+                    eprintln!("{e}");
                     std::process::exit(1);
                 }
             };
@@ -183,10 +177,7 @@ impl WorkerPool {
                         )))
                         .is_err()
                     {
-                        eprint!(
-                            "cannot create wasmtime engine for one of the workers: {}",
-                            e
-                        );
+                        eprint!("cannot create wasmtime engine for one of the workers: {e}");
                         std::process::exit(1);
                     };
                     return;
@@ -352,8 +343,7 @@ fn precompile_policies(
         .filter_map(|(url, result)| match result {
             Ok(_) => None,
             Err(e) => Some(format!(
-                "[{}] policy cannot be compiled to WebAssembly module: {:?}",
-                url, e
+                "[{url}] policy cannot be compiled to WebAssembly module: {e:?}"
             )),
         })
         .collect();
@@ -415,7 +405,7 @@ fn verify_policy_settings(
         ) {
             Ok(pe) => pe,
             Err(e) => {
-                errors.push(format!("[{}] cannot create PolicyEvaluator: {:?}", id, e));
+                errors.push(format!("[{id}] cannot create PolicyEvaluator: {e:?}"));
                 continue;
             }
         };

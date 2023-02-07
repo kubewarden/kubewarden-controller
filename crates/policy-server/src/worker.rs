@@ -34,7 +34,7 @@ impl fmt::Display for PolicyErrors {
         let mut errors = self
             .0
             .iter()
-            .map(|(policy, error)| format!("[{}: {}]", policy, error));
+            .map(|(policy, error)| format!("[{policy}: {error}]"));
         write!(f, "{}", errors.join(", "))
     }
 }
@@ -72,7 +72,7 @@ impl Worker {
                 Err(e) => {
                     evs_errors.insert(
                         id.clone(),
-                        format!("[{}] could not create PolicyEvaluator: {:?}", id, e),
+                        format!("[{id}] could not create PolicyEvaluator: {e:?}"),
                     );
                     continue;
                 }
@@ -117,7 +117,7 @@ impl Worker {
                     AdmissionResponse {
                         allowed: false,
                         status: Some(AdmissionResponseStatus {
-                            message: Some(format!("Request rejected by policy {}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.", policy_id)),
+                            message: Some(format!("Request rejected by policy {policy_id}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.")),
                             code: None,
                         }),
                         // if `allowed_to_mutate` is false, we are in a validating webhook. If we send a patch, k8s will fail because validating webhook do not expect this field
@@ -140,7 +140,7 @@ impl Worker {
                 info!(
                     policy_id = policy_id,
                     allowed_to_mutate = allowed_to_mutate,
-                    response = format!("{:?}", validation_response).as_str(),
+                    response = format!("{validation_response:?}").as_str(),
                     "policy evaluation (monitor mode)",
                 );
                 AdmissionResponse {
@@ -238,7 +238,7 @@ impl Worker {
                 res.map_err(|_| anyhow!("cannot send response back"))
             }
             Err(e) => {
-                let error_msg = format!("Failed to serialize AdmissionReview: {:?}", e);
+                let error_msg = format!("Failed to serialize AdmissionReview: {e:?}");
                 error!("{}", error_msg);
                 req.resp_chan
                     .send(Some(AdmissionResponse::reject(

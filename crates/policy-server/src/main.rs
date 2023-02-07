@@ -53,10 +53,7 @@ fn main() -> Result<()> {
 
     let metrics_enabled = matches.contains_id("enable-metrics");
     let verification_config = cli::verification_config(&matches).unwrap_or_else(|e| {
-        fatal_error(format!(
-            "Cannot create sigstore verification config: {:?}",
-            e
-        ));
+        fatal_error(format!("Cannot create sigstore verification config: {e:?}"));
         unreachable!()
     });
     let sigstore_cache_dir = matches
@@ -75,8 +72,7 @@ fn main() -> Result<()> {
             Ok(v) => Some(v),
             Err(e) => {
                 fatal_error(format!(
-                    "'policy-timeout' value cannot be converted to unsigned int: {}",
-                    e
+                    "'policy-timeout' value cannot be converted to unsigned int: {e}"
                 ));
                 unreachable!()
             }
@@ -104,7 +100,7 @@ fn main() -> Result<()> {
         }
         match daemonize.start() {
             Ok(_) => println!("Detached from shell, now running in background."),
-            Err(e) => fatal_error(format!("Something went wrong while daemonizing: {}", e)),
+            Err(e) => fatal_error(format!("Something went wrong while daemonizing: {e}")),
         }
     }
 
@@ -133,7 +129,7 @@ fn main() -> Result<()> {
             // We cannot rely on `tracing` yet, because the tracing system has not
             // been initialized, this has to be done inside of an async block, which
             // we cannot use yet
-            eprintln!("Cannot fetch TUF repository: {:?}", e);
+            eprintln!("Cannot fetch TUF repository: {e:?}");
             eprintln!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
             eprintln!(
                 "Sigstore Verifier created without Rekor data: transparency log data won't be used"
@@ -203,8 +199,7 @@ fn main() -> Result<()> {
             Ok(p) => p,
             Err(e) => {
                 fatal_error(format!(
-                    "Cannot init dedicated tokio runtime for the Kubernetes poller: {:?}",
-                    e
+                    "Cannot init dedicated tokio runtime for the Kubernetes poller: {e:?}"
                 ));
                 unreachable!()
             }
@@ -225,7 +220,7 @@ fn main() -> Result<()> {
     let rt = match Runtime::new() {
         Ok(r) => r,
         Err(error) => {
-            fatal_error(format!("error initializing tokio runtime: {}", error));
+            fatal_error(format!("error initializing tokio runtime: {error}"));
             unreachable!();
         }
     };
@@ -389,11 +384,11 @@ fn main() -> Result<()> {
     });
 
     if let Err(e) = wasm_thread.join() {
-        fatal_error(format!("error while waiting for worker threads: {:?}", e));
+        fatal_error(format!("error while waiting for worker threads: {e:?}"));
     };
 
     if let Err(e) = kube_poller_thread.join() {
-        fatal_error(format!("error while waiting for worker threads: {:?}", e));
+        fatal_error(format!("error while waiting for worker threads: {e:?}"));
     };
 
     Ok(())
@@ -405,7 +400,7 @@ fn fatal_error(msg: String) {
         error!("{}", msg);
         shutdown_tracer_provider();
     } else {
-        eprintln!("{}", msg);
+        eprintln!("{msg}");
     }
 
     process::exit(1);

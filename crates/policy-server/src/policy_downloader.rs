@@ -111,7 +111,7 @@ impl Downloader {
                     Err(e) => {
                         info!(policy = name.as_str(), error =?e, "policy cannot be verified");
                         policy_verification_errors
-                            .push(format!("Policy '{}' cannot be verified: {:?}", name, e));
+                            .push(format!("Policy '{name}' cannot be verified: {e:?}"));
                         continue;
                     }
                 };
@@ -150,7 +150,7 @@ impl Downloader {
                         "cannot verify policy, missing verified manifest digest"
                     );
                     policy_verification_errors
-                            .push(format!("verification of policy {} cannot be done, missing verified manifest digest", name));
+                            .push(format!("verification of policy {name} cannot be done, missing verified manifest digest"));
                     continue;
                 }
 
@@ -167,7 +167,7 @@ impl Downloader {
                         "verification failed"
                     );
                     policy_verification_errors
-                        .push(format!("verification of policy {} failed: {}", name, e));
+                        .push(format!("verification of policy {name} failed: {e}"));
 
                     continue;
                 }
@@ -247,7 +247,7 @@ async fn create_verifier(
             // We cannot rely on `tracing` yet, because the tracing system has not
             // been initialized, this has to be done inside of an async block, which
             // we cannot use yet
-            eprintln!("Cannot fetch TUF repository: {:?}", e);
+            eprintln!("Cannot fetch TUF repository: {e:?}");
             eprintln!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
             eprintln!(
                 "Sigstore Verifier created without Rekor data: transparency log data won't be used"
