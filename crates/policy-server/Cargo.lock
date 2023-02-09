@@ -3205,7 +3205,7 @@ dependencies = [
 
 [[package]]
 name = "policy-server"
-version = "1.5.1"
+version = "1.5.2"
 dependencies = [
  "anyhow",
  "clap",
