@@ -102,9 +102,13 @@ See our [governance document](https://github.com/kubewarden/rfc/blob/main/rfc/00
 
 # Community meeting
 
-The Kubewarden project has decided to organize a monthly community meeting.
-Watch the community communication channels to the announcements about community
-meeting dates.
+We host regular online meetings for contributors, adopters, maintainers, and anyone else interested to connect in a synchronous fashion. These meetings usually take place on second Thursday of the month at 4PM UTC.
+
+* [Zoom link](https://zoom.us/j/92928111886)
+* [Minutes from previous meetings](https://docs.google.com/document/d/1TgPIFKygkR2_vViCSfBEzwDDactfTcedc9fc4AeVJ9w/edit#)
+* [Recordings from previous meetings](https://zoom.us/rec/play/rbKlB87WT6JnrwqpRfW3qf3K_nDNCPtesTGAbpEPCL00iAL3_AY0W2tIKo6J1hEDaXk2d2UiQAU_dK4f.msiYZPm5EDxvEDEs?continueMode=true&_x_zm_rtaid=nGiNSrS6ThO04eVz4BHwwg.1675944628679.a37d04739bbd2c6cbbe6de1d9030b1e1&_x_zm_rhtaid=993)
+
+We're a friendly group, so please feel free to join us!
 
 # Community
 
