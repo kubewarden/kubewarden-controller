@@ -16,3 +16,8 @@ sleep:
   allowedToMutate: false
   settings:
     sleepMilliseconds: 2000
+
+disallow-service-loadbalancer:
+  url: ghcr.io/kubewarden/tests/disallow-service-loadbalancer:v0.1.5
+  policyMode: protect
+  allowedToMutate: false
