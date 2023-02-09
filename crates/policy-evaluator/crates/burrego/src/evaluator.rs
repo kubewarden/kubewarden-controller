@@ -47,7 +47,12 @@ impl Evaluator {
         host_callbacks: HostCallbacks,
         epoch_deadline: Option<u64>,
     ) -> Result<Evaluator> {
-        let stack = Self::setup(engine.clone(), module.clone(), host_callbacks.clone())?;
+        let stack = Self::setup(
+            engine.clone(),
+            module.clone(),
+            host_callbacks.clone(),
+            epoch_deadline,
+        )?;
         let mut store = stack.store;
         let instance = stack.instance;
         let memory = stack.memory;
@@ -89,6 +94,7 @@ impl Evaluator {
         engine: Engine,
         module: Module,
         host_callbacks: HostCallbacks,
+        epoch_deadline: Option<u64>,
     ) -> Result<EvaluatorStack> {
         let mut linker = Linker::<Option<StackHelper>>::new(&engine);
 
@@ -104,8 +110,16 @@ impl Evaluator {
 
         opa_host_functions::add_to_linker(&mut linker)?;
 
-        let instance = linker.instantiate(&mut store, &module).map_err(|e| {
-            BurregoError::WasmEngineError(format!("linker cannot create instance: {e}"))
+        // All the OPA modules use a shared memory. Because of that the linker, at instantiation
+        // time, invokes a function provided by the module. This function, for OPA modules, is called
+        // `_initialize`.
+        // When the engine is configured to use epoch_deadline, the invocation of this function
+        // will cause an immediate failure unless the store has some "ticks" inside of it. Like
+        // any other function invocation
+        let instance = set_epoch_deadline_and_call_guest!(epoch_deadline, store, {
+            linker.instantiate(&mut store, &module).map_err(|e| {
+                BurregoError::WasmEngineError(format!("linker cannot create instance: {e}"))
+            })
         })?;
 
         let stack_helper = StackHelper::new(
@@ -131,6 +145,7 @@ impl Evaluator {
             self.engine.clone(),
             self.module.clone(),
             self.host_callbacks.clone(),
+            self.epoch_deadline,
         )?;
         self.store = stack.store;
         self.instance = stack.instance;
