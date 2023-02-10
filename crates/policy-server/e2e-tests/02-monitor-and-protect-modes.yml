@@ -23,6 +23,7 @@ testcases:
     assertions:
     - result.statuscode ShouldEqual 200
     - result.bodyjson.response.allowed ShouldEqual false
+    - result.bodyjson.response.status.code ShouldNotEqual 500
 
 - name: The `/validate` endpoint accepts the request because it's in `monitor` mode
   steps:
