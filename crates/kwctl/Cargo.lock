@@ -492,8 +492,8 @@ checksum = "0d261e256854913907f67ed06efbc3338dfe6179796deefc1ff763fc1aee5535"
 
 [[package]]
 name = "burrego"
-version = "0.3.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.6.1#b83ce404a6b8055a226febfbf190ba6c8374ed65"
+version = "0.3.3"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.6.3#c417afdb38a96acbd9940b32c200164c1b689226"
 dependencies = [
  "base64 0.21.0",
  "chrono",
@@ -3428,8 +3428,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.6.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.6.1#b83ce404a6b8055a226febfbf190ba6c8374ed65"
+version = "0.6.3"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.6.3#c417afdb38a96acbd9940b32c200164c1b689226"
 dependencies = [
  "anyhow",
  "base64 0.21.0",
@@ -3454,7 +3454,7 @@ dependencies = [
  "url",
  "validator",
  "wapc",
- "wasmparser 0.97.0",
+ "wasmparser 0.99.0",
  "wasmtime-provider",
 ]
 
@@ -5301,9 +5301,9 @@ dependencies = [
 
 [[package]]
 name = "wasmparser"
-version = "0.97.0"
+version = "0.99.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b98123a0d2bacf9286239231b116cbd66c65d9b89793f7c9bba3a3ae7f1b15f3"
+checksum = "9ef3b717afc67f848f412d4f02c127dd3e35a0eecd58c684580414df4fde01d3"
 dependencies = [
  "indexmap",
  "url",
