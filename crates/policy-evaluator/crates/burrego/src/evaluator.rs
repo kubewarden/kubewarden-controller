@@ -38,6 +38,8 @@ pub struct Evaluator {
     /// interruption](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
     /// feature of wasmtime
     epoch_deadline: Option<u64>,
+    entrypoints: HashMap<String, i32>,
+    used_builtins: HashSet<String>,
 }
 
 impl Evaluator {
@@ -58,16 +60,23 @@ impl Evaluator {
         let memory = stack.memory;
         let policy = stack.policy;
 
-        let used_builtins = set_epoch_deadline_and_call_guest!(epoch_deadline, store, {
-            policy
-                .builtins(&mut store, &memory)?
-                .keys()
-                .cloned()
-                .collect::<Vec<String>>()
-                .join(", ")
-        });
+        let used_builtins: HashSet<String> =
+            set_epoch_deadline_and_call_guest!(epoch_deadline, store, {
+                policy
+                    .builtins(&mut store, &memory)?
+                    .keys()
+                    .cloned()
+                    .collect()
+            });
 
-        debug!(used = used_builtins.as_str(), "policy builtins");
+        let entrypoints = set_epoch_deadline_and_call_guest!(epoch_deadline, store, {
+            policy.entrypoints(&mut store, &memory)
+        })?;
+
+        debug!(
+            used = used_builtins.iter().join(", ").as_str(),
+            "policy builtins"
+        );
 
         let mut evaluator = Evaluator {
             engine,
@@ -78,6 +87,8 @@ impl Evaluator {
             policy,
             host_callbacks,
             epoch_deadline,
+            entrypoints,
+            used_builtins,
         };
 
         let not_implemented_builtins = evaluator.not_implemented_builtins()?;
@@ -182,39 +193,36 @@ impl Evaluator {
     }
 
     pub fn not_implemented_builtins(&mut self) -> Result<HashSet<String>> {
-        let used_builtins: HashSet<String> = self
-            .policy
-            .builtins(&mut self.store, &self.memory)?
-            .keys()
-            .cloned()
-            .collect();
         let supported_builtins: HashSet<String> = builtins::get_builtins()
             .keys()
             .map(|v| String::from(*v))
             .collect();
-        Ok(used_builtins
+        Ok(self
+            .used_builtins
             .difference(&supported_builtins)
             .cloned()
             .collect())
     }
 
     pub fn entrypoint_id(&mut self, entrypoint: &str) -> Result<i32> {
-        let entrypoints = self.policy.entrypoints(&mut self.store, &self.memory)?;
-        entrypoints
+        self.entrypoints
             .iter()
             .find(|(k, _v)| k == &entrypoint)
             .map(|(_k, v)| *v)
             .ok_or_else(|| {
                 BurregoError::RegoWasmError(format!(
-                    "Cannot find the specified entrypoint {entrypoint} inside of {entrypoints:?}"
+                    "Cannot find the specified entrypoint {entrypoint} inside of {:?}",
+                    self.entrypoints
                 ))
             })
     }
 
-    pub fn entrypoints(&mut self) -> Result<HashMap<String, i32>> {
-        set_epoch_deadline_and_call_guest!(self.epoch_deadline, self.store, {
-            self.policy.entrypoints(&mut self.store, &self.memory)
-        })
+    pub fn entrypoints(&self) -> HashMap<String, i32> {
+        self.entrypoints.clone()
+    }
+
+    fn has_entrypoint(&self, entrypoint_id: i32) -> bool {
+        self.entrypoints.iter().any(|(_k, &v)| v == entrypoint_id)
     }
 
     pub fn evaluate(
@@ -223,33 +231,28 @@ impl Evaluator {
         input: &serde_json::Value,
         data: &serde_json::Value,
     ) -> Result<serde_json::Value> {
-        let entrypoints = self.policy.entrypoints(&mut self.store, &self.memory)?;
-        entrypoints
-            .iter()
-            .find(|(_k, &v)| v == entrypoint_id)
-            .ok_or_else(|| {
-                BurregoError::RegoWasmError(format!(
-                    "Cannot find the specified entrypoint {entrypoint_id} inside of {entrypoints:?}"
-                ))
-            })?;
-
-        debug!(
-            data = serde_json::to_string(&data)
-                .expect("cannot convert data back to json")
-                .as_str(),
-            "setting policy data"
-        );
         set_epoch_deadline_and_call_guest!(self.epoch_deadline, self.store, {
-            self.policy.set_data(&mut self.store, &self.memory, data)
-        })?;
+            if !self.has_entrypoint(entrypoint_id) {
+                return Err(BurregoError::RegoWasmError(format!(
+                    "Cannot find the specified entrypoint {entrypoint_id} inside of {:?}",
+                    self.entrypoints
+                )));
+            }
 
-        debug!(
-            input = serde_json::to_string(&input)
-                .expect("cannot convert input back to JSON")
-                .as_str(),
-            "attempting evaluation"
-        );
-        set_epoch_deadline_and_call_guest!(self.epoch_deadline, self.store, {
+            debug!(
+                data = serde_json::to_string(&data)
+                    .expect("cannot convert data back to json")
+                    .as_str(),
+                "setting policy data"
+            );
+            self.policy.set_data(&mut self.store, &self.memory, data)?;
+
+            debug!(
+                input = serde_json::to_string(&input)
+                    .expect("cannot convert input back to JSON")
+                    .as_str(),
+                "attempting evaluation"
+            );
             self.policy
                 .evaluate(entrypoint_id, &mut self.store, &self.memory, input)
         })
