@@ -114,7 +114,7 @@ fn main() -> Result<()> {
             let (major, minor) = evaluator.opa_abi_version()?;
             debug!(major, minor, "OPA Wasm ABI");
 
-            let entrypoints = evaluator.entrypoints()?;
+            let entrypoints = evaluator.entrypoints();
             debug!(?entrypoints, "OPA entrypoints");
 
             let not_implemented_builtins = evaluator.not_implemented_builtins()?;
