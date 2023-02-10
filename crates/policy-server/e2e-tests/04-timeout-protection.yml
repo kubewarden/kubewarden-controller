@@ -45,6 +45,8 @@ testcases:
       assertions:
       - result.statuscode ShouldEqual 200
       - result.bodyjson.response.allowed ShouldEqual false
+      - result.bodyjson.response.status.code ShouldEqual 500
+      - result.bodyjson.response.status.message ShouldContainSubstring "execution deadline exceeded"
       - result.timeseconds ShouldBeLessThan 3
 
 - name: Accept AGAIN a request that has a short evaluation time

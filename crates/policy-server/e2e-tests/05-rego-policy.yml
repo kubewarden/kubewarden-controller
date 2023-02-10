@@ -21,7 +21,8 @@ testcases:
 
 - name: Rego-based policies work as expected
   steps:
-  - type: http
+  - name: Send violating request
+    type: http
     method: POST
     url: http://localhost:3000/validate/disallow-service-loadbalancer
     headers:
@@ -30,7 +31,9 @@ testcases:
     assertions:
     - result.statuscode ShouldEqual 200
     - result.bodyjson.response.allowed ShouldEqual false
-  - type: http
+    - result.bodyjson.response.status.code ShouldNotEqual 500
+  - name: Send non violating request
+    type: http
     method: POST
     url: http://localhost:3000/validate/disallow-service-loadbalancer
     headers:
