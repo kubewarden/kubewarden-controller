@@ -3,7 +3,7 @@
 | Feature Name | Context Aware Policies           |
 | Start Date   | 13-02-2023                       |
 | Category     | [Category]                       |
-| RFC PR       | [fill this in after opening PR]  |
+| RFC PR       | https://github.com/kubewarden/rfc/pull/16  |
 | State        | **ACCEPTED**                         |
 
 
@@ -240,5 +240,5 @@ The security of this approach is inferior to the one proposed by this RFC:
 
 This RFC does not cover the following details:
 
-* The waPC protocol used to exchange information between the guest and the hosted
-* The caching mechanism used by Policy Server to store these information
+* The waPC protocol used to exchange information between the guest and the host
+* The caching mechanism used by Policy Server to store this information
