@@ -1,100 +1,23 @@
-use anyhow::{anyhow, Result};
-use cached::proc_macro::cached;
-use itertools::Itertools;
-use policy_fetcher::sources::Sources;
-use std::collections::HashMap;
+use anyhow::anyhow;
+use kubewarden_policy_sdk::host_capabilities::net::LookupResponse;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 
-use kubewarden_policy_sdk::host_capabilities::verification::{KeylessInfo, KeylessPrefixInfo};
-use kubewarden_policy_sdk::host_capabilities::{
-    net::LookupResponse, oci::ManifestDigestResponse, verification::VerificationResponse,
-};
-use policy_fetcher::verify::FulcioAndRekorData;
-use sha2::{Digest, Sha256};
-
+mod builder;
 mod crypto;
 mod oci;
 mod sigstore_verification;
 
+pub use builder::CallbackHandlerBuilder;
 pub use crypto::verify_certificate;
 
-const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
-
-/// Helper struct that creates CallbackHandler objects
-pub struct CallbackHandlerBuilder<'a> {
-    oci_sources: Option<Sources>,
-    channel_buffer_size: usize,
-    shutdown_channel: Option<oneshot::Receiver<()>>,
-    fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
-}
-
-impl<'a> Default for CallbackHandlerBuilder<'a> {
-    fn default() -> Self {
-        CallbackHandlerBuilder {
-            oci_sources: None,
-            shutdown_channel: None,
-            channel_buffer_size: DEFAULT_CHANNEL_BUFF_SIZE,
-            fulcio_and_rekor_data: None,
-        }
-    }
-}
-
-impl<'a> CallbackHandlerBuilder<'a> {
-    #![allow(dead_code)]
-
-    /// Provide all the information needed to access OCI registries. Optional
-    pub fn registry_config(mut self, sources: Option<Sources>) -> Self {
-        self.oci_sources = sources;
-        self
-    }
-
-    pub fn fulcio_and_rekor_data(
-        mut self,
-        fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
-    ) -> Self {
-        self.fulcio_and_rekor_data = fulcio_and_rekor_data;
-        self
-    }
-
-    /// Set the size of the channel used by the sync world to communicate with
-    /// the CallbackHandler. Optional
-    pub fn channel_buffer_size(mut self, size: usize) -> Self {
-        self.channel_buffer_size = size;
-        self
-    }
-
-    /// Set the onetime channel used to stop the endless loop of
-    /// CallbackHandler. Mandatory
-    pub fn shutdown_channel(mut self, shutdown_channel: oneshot::Receiver<()>) -> Self {
-        self.shutdown_channel = Some(shutdown_channel);
-        self
-    }
-
-    /// Create a CallbackHandler object
-    pub fn build(self) -> Result<CallbackHandler> {
-        let (tx, rx) = mpsc::channel::<CallbackRequest>(self.channel_buffer_size);
-        let shutdown_channel = self
-            .shutdown_channel
-            .ok_or_else(|| anyhow!("shutdown_channel_rx not provided"))?;
-
-        let oci_client = oci::Client::new(self.oci_sources.clone());
-        let sigstore_client = sigstore_verification::Client::new(
-            self.oci_sources.clone(),
-            self.fulcio_and_rekor_data,
-        )?;
-
-        Ok(CallbackHandler {
-            oci_client,
-            sigstore_client,
-            tx,
-            rx,
-            shutdown_channel,
-        })
-    }
-}
+use sigstore_verification::{
+    get_sigstore_certificate_verification_cached, get_sigstore_github_actions_verification_cached,
+    get_sigstore_keyless_prefix_verification_cached, get_sigstore_keyless_verification_cached,
+    get_sigstore_pub_key_verification_cached,
+};
 
 /// Struct that computes request coming from a Wasm guest.
 /// This should be used only to handle the requests that need some async
@@ -105,6 +28,28 @@ pub struct CallbackHandler {
     rx: mpsc::Receiver<CallbackRequest>,
     tx: mpsc::Sender<CallbackRequest>,
     shutdown_channel: oneshot::Receiver<()>,
+}
+
+macro_rules! handle_callback {
+    ($req:expr, $log_value: expr, $log_msg: expr, $code:block) => {{
+        let response = { $code }
+            .await
+            .map(|response| {
+                debug!(
+                    value = ?$log_value,
+                    cached = response.was_cached,
+                    $log_msg,
+                );
+                let payload = serde_json::to_vec(&response.value)
+                    .map_err(|e| anyhow!("error serializing payload: {e:?}"))?;
+                Ok(CallbackResponse { payload })
+            })
+            .and_then(|r| r);
+
+        if let Err(e) = $req.response_channel.send(response) {
+            warn!("callback handler: cannot send response back: {:?}", e);
+        }
+    }};
 }
 
 impl CallbackHandler {
@@ -138,84 +83,74 @@ impl CallbackHandler {
                             CallbackRequestType::OciManifestDigest {
                                 image,
                             } => {
-                                let response = get_oci_digest_cached(&self.oci_client, &image)
-                                    .await
-                                    .map(|response| {
-                                        if response.was_cached {
-                                            debug!(?image, "Got image digest from cache");
-                                        } else {
-                                            debug!(?image, "Got image digest by querying remote registry");
-                                        }
-                                        CallbackResponse {
-                                        payload: serde_json::to_vec(&response.value).unwrap(),
-                                    }});
-
-                                if let Err(e) = req.response_channel.send(response) {
-                                    warn!("callback handler: cannot send response back: {:?}", e);
-                                }
+                                handle_callback!(
+                                    req,
+                                    image,
+                                    "Image digest computed",
+                                    {
+                                        oci::get_oci_digest_cached(
+                                            &self.oci_client,
+                                            &image,
+                                        )
+                                    }
+                                );
                             },
                             CallbackRequestType::SigstorePubKeyVerify {
                                 image,
                                 pub_keys,
                                 annotations,
                             } => {
-                                let response = get_sigstore_pub_key_verification_cached(&mut self.sigstore_client, image.clone(), pub_keys, annotations)
-                                    .await
-                                    .map(|response| {
-                                        if response.was_cached {
-                                            debug!(?image, "Got sigstore pub keys verification from cache");
-                                        } else {
-                                            debug!(?image, "Got sigstore pub keys verification by querying remote registry");
-                                        }
-                                        CallbackResponse {
-                                        payload: serde_json::to_vec(&response.value).unwrap()
-                                    }});
-
-                                if let Err(e) = req.response_channel.send(response) {
-                                    warn!("callback handler: cannot send response back: {:?}", e);
-                                }
+                                handle_callback!(
+                                    req,
+                                    image,
+                                    "Sigstore pub key verification done",
+                                    {
+                                        get_sigstore_pub_key_verification_cached(
+                                            &mut self.sigstore_client,
+                                            image.clone(),
+                                            pub_keys,
+                                            annotations,
+                                        )
+                                    }
+                                );
                             },
                             CallbackRequestType::SigstoreKeylessVerify {
                                 image,
                                 keyless,
                                 annotations,
                             } => {
-                                let response = get_sigstore_keyless_verification_cached(&mut self.sigstore_client, image.clone(), keyless, annotations)
-                                    .await
-                                    .map(|response| {
-                                        if response.was_cached {
-                                            debug!(?image, "Got sigstore keyless verification from cache");
-                                        } else {
-                                            debug!(?image, "Got sigstore keylesss verification by querying remote registry");
-                                        }
-                                        CallbackResponse {
-                                        payload: serde_json::to_vec(&response.value).unwrap()
-                                    }});
-
-                                if let Err(e) = req.response_channel.send(response) {
-                                    warn!("callback handler: cannot send response back: {:?}", e);
-                                }
+                                handle_callback!(
+                                    req,
+                                    image,
+                                    "Sigstore keyless verification done",
+                                    {
+                                        get_sigstore_keyless_verification_cached(
+                                            &mut self.sigstore_client,
+                                            image.clone(),
+                                            keyless,
+                                            annotations,
+                                        )
+                                    }
+                                );
                             },
                             CallbackRequestType::SigstoreKeylessPrefixVerify {
                                 image,
                                 keyless_prefix,
                                 annotations,
                             } => {
-                                let response = get_sigstore_keyless_prefix_verification_cached(&mut self.sigstore_client, image.clone(), keyless_prefix, annotations)
-                                    .await
-                                    .map(|response| {
-                                        if response.was_cached {
-                                            debug!(?image, "Got sigstore keyless prefix verification from cache");
-                                        } else {
-                                            debug!(?image, "Got sigstore keylesss prefix verification by querying remote registry");
-                                        }
-                                        CallbackResponse {
-                                        payload: serde_json::to_vec(&response.value).unwrap()
-                                    }});
-
-                                if let Err(e) = req.response_channel.send(response) {
-                                    warn!("callback handler: cannot send response back: {:?}", e);
-                                }
+                                handle_callback!(
+                                    req,
+                                    image,
+                                    "Sigstore keyless prefix verification done",
+                                    {
+                                        get_sigstore_keyless_prefix_verification_cached(
+                                            &mut self.sigstore_client,
+                                            image.clone(),
+                                            keyless_prefix,
+                                            annotations,
+                                        )
+                                    }
+                                );
                             },
                             CallbackRequestType::SigstoreGithubActionsVerify {
                                 image,
@@ -223,21 +158,20 @@ impl CallbackHandler {
                                 repo,
                                 annotations,
                             } => {
-                                let response = get_sigstore_github_actions_verification_cached(&mut self.sigstore_client, image.clone(), owner, repo, annotations)
-                                    .await
-                                    .map(|response| {
-                                        if response.was_cached {
-                                            debug!(?image, "Got sigstore GHA verification from cache");
-                                        } else {
-                                            debug!(?image, "Got sigstore GHA verification by querying remote registry");
-                                        }
-                                        CallbackResponse {
-                                        payload: serde_json::to_vec(&response.value).unwrap()
-                                    }});
-
-                                if let Err(e) = req.response_channel.send(response) {
-                                    warn!("callback handler: cannot send response back: {:?}", e);
-                                }
+                                handle_callback!(
+                                    req,
+                                    image,
+                                    "Sigstore GitHub Action verification done",
+                                    {
+                                        get_sigstore_github_actions_verification_cached(
+                                            &mut self.sigstore_client,
+                                            image.clone(),
+                                            owner,
+                                            repo,
+                                            annotations,
+                                        )
+                                    }
+                                );
                             },
                             CallbackRequestType::SigstoreCertificateVerify {
                                 image,
@@ -246,21 +180,20 @@ impl CallbackHandler {
                                 require_rekor_bundle,
                                 annotations
                             } => {
-                                let response = get_sigstore_certificate_verification_cached(&mut self.sigstore_client, &image, &certificate, certificate_chain.as_deref(), require_rekor_bundle, annotations)
-                                    .await
-                                    .map(|response| {
-                                        if response.was_cached {
-                                            debug!(?image, "Got sigstore certificate verification from cache");
-                                        } else {
-                                            debug!(?image, "Computed sigstore certificate verification");
-                                        }
-                                        CallbackResponse {
-                                        payload: serde_json::to_vec(&response.value).unwrap()
-                                    }});
-
-                                if let Err(e) = req.response_channel.send(response) {
-                                    warn!("callback handler: cannot send response back: {:?}", e);
-                                }
+                                handle_callback!(
+                                    req,
+                                    image,
+                                    "Sigstore GitHub Action verification done",
+                                    {
+                                        get_sigstore_certificate_verification_cached(
+                                            &mut self.sigstore_client,
+                                            &image,
+                                            &certificate,
+                                            certificate_chain.as_deref(),
+                                            require_rekor_bundle, annotations
+                                        )
+                                    }
+                                )
                             },
                             CallbackRequestType::DNSLookupHost {
                                 host,
@@ -288,204 +221,4 @@ impl CallbackHandler {
             }
         }
     }
-}
-
-// Interacting with a remote OCI registry is time expensive, this can cause a massive slow down
-// of policy evaluations, especially inside of PolicyServer.
-// Because of that we will keep a cache of the digests results.
-//
-// Details about this cache:
-//   * only the image "url" is used as key. oci::Client is not hashable, plus
-//     the client is always the same
-//   * the cache is time bound: cached values are purged after 60 seconds
-//   * only successful results are cached
-#[cached(
-    time = 60,
-    result = true,
-    sync_writes = true,
-    key = "String",
-    convert = r#"{ format!("{}", img) }"#,
-    with_cached_flag = true
-)]
-async fn get_oci_digest_cached(
-    oci_client: &oci::Client,
-    img: &str,
-) -> Result<cached::Return<ManifestDigestResponse>> {
-    oci_client
-        .digest(img)
-        .await
-        .map(|digest| ManifestDigestResponse { digest })
-        .map(cached::Return::new)
-}
-
-// Sigstore verifications are time expensive, this can cause a massive slow down
-// of policy evaluations, especially inside of PolicyServer.
-// Because of that we will keep a cache of the digests results.
-//
-// Details about this cache:
-//   * the cache is time bound: cached values are purged after 60 seconds
-//   * only successful results are cached
-#[cached(
-    time = 60,
-    result = true,
-    sync_writes = true,
-    key = "String",
-    convert = r#"{ format!("{}{:?}{:?}", image, pub_keys, annotations)}"#,
-    with_cached_flag = true
-)]
-async fn get_sigstore_pub_key_verification_cached(
-    client: &mut sigstore_verification::Client,
-    image: String,
-    pub_keys: Vec<String>,
-    annotations: Option<HashMap<String, String>>,
-) -> Result<cached::Return<VerificationResponse>> {
-    client
-        .verify_public_key(image, pub_keys, annotations)
-        .await
-        .map(cached::Return::new)
-}
-
-// Sigstore verifications are time expensive, this can cause a massive slow down
-// of policy evaluations, especially inside of PolicyServer.
-// Because of that we will keep a cache of the digests results.
-//
-// Details about this cache:
-//   * the cache is time bound: cached values are purged after 60 seconds
-//   * only successful results are cached
-#[cached(
-    time = 60,
-    result = true,
-    sync_writes = true,
-    key = "String",
-    convert = r#"{ format!("{}{:?}{:?}", image, keyless, annotations)}"#,
-    with_cached_flag = true
-)]
-async fn get_sigstore_keyless_verification_cached(
-    client: &mut sigstore_verification::Client,
-    image: String,
-    keyless: Vec<KeylessInfo>,
-    annotations: Option<HashMap<String, String>>,
-) -> Result<cached::Return<VerificationResponse>> {
-    client
-        .verify_keyless(image, keyless, annotations)
-        .await
-        .map(cached::Return::new)
-}
-
-// Sigstore verifications are time expensive, this can cause a massive slow down
-// of policy evaluations, especially inside of PolicyServer.
-// Because of that we will keep a cache of the digests results.
-//
-// Details about this cache:
-//   * the cache is time bound: cached values are purged after 60 seconds
-//   * only successful results are cached
-#[cached(
-    time = 60,
-    result = true,
-    sync_writes = true,
-    key = "String",
-    convert = r#"{ format!("{}{:?}{:?}", image, keyless_prefix, annotations)}"#,
-    with_cached_flag = true
-)]
-async fn get_sigstore_keyless_prefix_verification_cached(
-    client: &mut sigstore_verification::Client,
-    image: String,
-    keyless_prefix: Vec<KeylessPrefixInfo>,
-    annotations: Option<HashMap<String, String>>,
-) -> Result<cached::Return<VerificationResponse>> {
-    client
-        .verify_keyless_prefix(image, keyless_prefix, annotations)
-        .await
-        .map(cached::Return::new)
-}
-
-// Sigstore verifications are time expensive, this can cause a massive slow down
-// of policy evaluations, especially inside of PolicyServer.
-// Because of that we will keep a cache of the digests results.
-//
-// Details about this cache:
-//   * the cache is time bound: cached values are purged after 60 seconds
-//   * only successful results are cached
-#[cached(
-    time = 60,
-    result = true,
-    sync_writes = true,
-    key = "String",
-    convert = r#"{ format!("{}{:?}{:?}{:?}", image, owner, repo, annotations)}"#,
-    with_cached_flag = true
-)]
-async fn get_sigstore_github_actions_verification_cached(
-    client: &mut sigstore_verification::Client,
-    image: String,
-    owner: String,
-    repo: Option<String>,
-    annotations: Option<HashMap<String, String>>,
-) -> Result<cached::Return<VerificationResponse>> {
-    client
-        .verify_github_actions(image, owner, repo, annotations)
-        .await
-        .map(cached::Return::new)
-}
-
-fn get_sigstore_certificate_verification_cache_key(
-    image: &str,
-    certificate: &[u8],
-    certificate_chain: Option<&[Vec<u8>]>,
-    require_rekor_bundle: bool,
-    annotations: Option<&HashMap<String, String>>,
-) -> String {
-    let mut hasher = Sha256::new();
-
-    hasher.update(image);
-    hasher.update(certificate);
-
-    if let Some(certs) = certificate_chain {
-        for c in certs {
-            hasher.update(c);
-        }
-    };
-
-    if require_rekor_bundle {
-        hasher.update(b"1");
-    } else {
-        hasher.update(b"0");
-    };
-
-    if let Some(a) = annotations {
-        for key in a.keys().sorted() {
-            hasher.update(key);
-            hasher.update(b"\n");
-            hasher.update(a.get(key).expect("key not found"));
-        }
-    };
-
-    format!("{:x}", hasher.finalize())
-}
-
-#[cached(
-    time = 60,
-    result = true,
-    sync_writes = true,
-    key = "String",
-    convert = r#"{ format!("{}", get_sigstore_certificate_verification_cache_key(image, certificate, certificate_chain, require_rekor_bundle, annotations.as_ref()))}"#,
-    with_cached_flag = true
-)]
-async fn get_sigstore_certificate_verification_cached(
-    client: &mut sigstore_verification::Client,
-    image: &str,
-    certificate: &[u8],
-    certificate_chain: Option<&[Vec<u8>]>,
-    require_rekor_bundle: bool,
-    annotations: Option<HashMap<String, String>>,
-) -> Result<cached::Return<VerificationResponse>> {
-    client
-        .verify_certificate(
-            image,
-            certificate,
-            certificate_chain,
-            require_rekor_bundle,
-            annotations,
-        )
-        .await
-        .map(cached::Return::new)
 }

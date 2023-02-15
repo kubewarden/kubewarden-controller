@@ -1,4 +1,6 @@
 use anyhow::{anyhow, Result};
+use cached::proc_macro::cached;
+use itertools::Itertools;
 use kubewarden_policy_sdk::host_capabilities::verification::{
     KeylessInfo, KeylessPrefixInfo, VerificationResponse,
 };
@@ -6,6 +8,7 @@ use policy_fetcher::sigstore;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::config::{LatestVerificationConfig, Signature, Subject};
 use policy_fetcher::verify::{fetch_sigstore_remote_data, FulcioAndRekorData, Verifier};
+use sha2::{Digest, Sha256};
 use sigstore::cosign::verification_constraint::{
     AnnotationVerifier, CertificateVerifier, VerificationConstraintVec,
 };
@@ -260,4 +263,176 @@ impl Client {
             Err(e) => Err(e),
         }
     }
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}", image, pub_keys, annotations)}"#,
+    with_cached_flag = true
+)]
+pub(crate) async fn get_sigstore_pub_key_verification_cached(
+    client: &mut Client,
+    image: String,
+    pub_keys: Vec<String>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_public_key(image, pub_keys, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}", image, keyless, annotations)}"#,
+    with_cached_flag = true
+)]
+pub(crate) async fn get_sigstore_keyless_verification_cached(
+    client: &mut Client,
+    image: String,
+    keyless: Vec<KeylessInfo>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_keyless(image, keyless, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}", image, keyless_prefix, annotations)}"#,
+    with_cached_flag = true
+)]
+pub(crate) async fn get_sigstore_keyless_prefix_verification_cached(
+    client: &mut Client,
+    image: String,
+    keyless_prefix: Vec<KeylessPrefixInfo>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_keyless_prefix(image, keyless_prefix, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+// Sigstore verifications are time expensive, this can cause a massive slow down
+// of policy evaluations, especially inside of PolicyServer.
+// Because of that we will keep a cache of the digests results.
+//
+// Details about this cache:
+//   * the cache is time bound: cached values are purged after 60 seconds
+//   * only successful results are cached
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}{:?}{:?}{:?}", image, owner, repo, annotations)}"#,
+    with_cached_flag = true
+)]
+pub(crate) async fn get_sigstore_github_actions_verification_cached(
+    client: &mut Client,
+    image: String,
+    owner: String,
+    repo: Option<String>,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_github_actions(image, owner, repo, annotations)
+        .await
+        .map(cached::Return::new)
+}
+
+fn get_sigstore_certificate_verification_cache_key(
+    image: &str,
+    certificate: &[u8],
+    certificate_chain: Option<&[Vec<u8>]>,
+    require_rekor_bundle: bool,
+    annotations: Option<&HashMap<String, String>>,
+) -> String {
+    let mut hasher = Sha256::new();
+
+    hasher.update(image);
+    hasher.update(certificate);
+
+    if let Some(certs) = certificate_chain {
+        for c in certs {
+            hasher.update(c);
+        }
+    };
+
+    if require_rekor_bundle {
+        hasher.update(b"1");
+    } else {
+        hasher.update(b"0");
+    };
+
+    if let Some(a) = annotations {
+        for key in a.keys().sorted() {
+            hasher.update(key);
+            hasher.update(b"\n");
+            hasher.update(a.get(key).expect("key not found"));
+        }
+    };
+
+    format!("{:x}", hasher.finalize())
+}
+
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}", get_sigstore_certificate_verification_cache_key(image, certificate, certificate_chain, require_rekor_bundle, annotations.as_ref()))}"#,
+    with_cached_flag = true
+)]
+pub(crate) async fn get_sigstore_certificate_verification_cached(
+    client: &mut Client,
+    image: &str,
+    certificate: &[u8],
+    certificate_chain: Option<&[Vec<u8>]>,
+    require_rekor_bundle: bool,
+    annotations: Option<HashMap<String, String>>,
+) -> Result<cached::Return<VerificationResponse>> {
+    client
+        .verify_certificate(
+            image,
+            certificate,
+            certificate_chain,
+            require_rekor_bundle,
+            annotations,
+        )
+        .await
+        .map(cached::Return::new)
 }
