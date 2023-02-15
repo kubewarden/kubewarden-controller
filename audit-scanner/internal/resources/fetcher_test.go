@@ -16,11 +16,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-const (
-	kubewardenPoliciesGroup   = "policies.kubewarden.io"
-	kubewardenPoliciesVersion = "v1"
-)
-
 // policies for testing
 var policy1 = policiesv1.AdmissionPolicy{
 	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
@@ -87,8 +82,8 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Spec: appsv1.DeploymentSpec{},
 	}
 	customScheme := scheme.Scheme
-	customScheme.AddKnownTypes(schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
-	metav1.AddToGroupVersion(customScheme, schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion})
+	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
+	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
 
 	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &deployment1)
 
@@ -111,7 +106,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
 	}}
 
-	fetcher := Fetcher{dynamicClient}
+	fetcher := Fetcher{dynamicClient, ""}
 
 	tests := []struct {
 		name     string
@@ -234,5 +229,58 @@ func TestCreateGVRPolicyMap(t *testing.T) {
 				t.Errorf("expected %v, but got %v", ttest.expect, gvrPolicyMap)
 			}
 		})
+	}
+}
+
+func TestGetPolicyServerByName(t *testing.T) {
+	policyServerObj := policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "testing-name",
+			Labels: map[string]string{
+				"testing-label": "testing",
+			},
+		},
+	}
+	customScheme := scheme.Scheme
+	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.PolicyServer{}, &policiesv1.PolicyServerList{})
+	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
+
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policyServerObj)
+	fetcher := Fetcher{dynamicClient, ""}
+
+	policyServer, err := getPolicyServerByName(context.Background(), "testing-name", &fetcher.dynamicClient)
+	if err != nil {
+		t.Fatal("Cannot get policy server: ", err)
+	}
+	appLabel, ok := policyServer.GetLabels()["testing-label"]
+	if !ok || appLabel != "testing" {
+		t.Error("Policy server returned is not valid")
+	}
+	if policyServer.AppLabel() != "kubewarden-policy-server-testing-name" {
+		t.Error("Unexpected Policy Server app label")
+	}
+}
+
+func TestGetServiceByAppLabel(t *testing.T) {
+	policyServerObj := v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "testing-service",
+			Namespace: "default",
+			Labels: map[string]string{
+				"app": "testing",
+			},
+		},
+	}
+	customScheme := scheme.Scheme
+
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policyServerObj)
+	fetcher := Fetcher{dynamicClient, ""}
+
+	service, err := getServiceByAppLabel(context.Background(), "testing", "default", &fetcher.dynamicClient)
+	if err != nil {
+		t.Fatal("Cannot get service: ", err)
+	}
+	if service.Name != "testing-service" {
+		t.Error("Service returned is not valid")
 	}
 }

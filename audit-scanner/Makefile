@@ -25,3 +25,4 @@ unit-tests: fmt vet ## Run unit tests.
 
 build: fmt vet lint ## Build audit-scanner binary.
 	go build -o bin/audit-scanner .
+

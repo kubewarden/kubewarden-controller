@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const defaultKubewardenNamespace = "kubewarden"
+
 // A Scanner verifies that existing resources don't violate any of the policies
 type Scanner interface {
 	// ScanNamespace scans a given namespace
@@ -36,11 +38,15 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
+			kubewardenNamespace, err := cmd.Flags().GetString("kubewarden-namespace")
+			if err != nil {
+				return err
+			}
 			policiesFetcher, err := policies.NewFetcher()
 			if err != nil {
 				return err
 			}
-			resourcesFetcher, err := resources.NewFetcher()
+			resourcesFetcher, err := resources.NewFetcher(kubewardenNamespace)
 			if err != nil {
 				return err
 			}
@@ -76,5 +82,6 @@ func startScanner(namespace string, scanner Scanner) error {
 
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
+	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. Policy Server) are installed (required)")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 }

@@ -2,20 +2,29 @@ package resources
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const policyServerResource = "policyservers"
+
 // Fetcher fetches all auditable resources.
 // Uses a dynamic client to get all resources from the rules defined in a policy
 type Fetcher struct {
 	dynamicClient dynamic.Interface
+	// Namespace where the Kubewarden components (e.g. policy server) are installed
+	// This is the namespace used to fetch the policy server resources
+	kubewardenNamespace string
 }
 
 // AuditableResources represents all resources that must be audited for a group of policies.
@@ -29,11 +38,11 @@ type AuditableResources struct {
 }
 
 // NewFetcher returns a new fetcher with a dynamic client
-func NewFetcher() (*Fetcher, error) {
+func NewFetcher(kubewardenNamespace string) (*Fetcher, error) {
 	config := ctrl.GetConfigOrDie()
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 
-	return &Fetcher{dynamicClient}, nil
+	return &Fetcher{dynamicClient, kubewardenNamespace}, nil
 }
 
 // GetResourcesForPolicies fetches all resources that must be audited and returns them in an AuditableResources array.
@@ -109,4 +118,65 @@ func addPolicyResources(resources map[schema.GroupVersionResource][]policiesv1.P
 			}
 		}
 	}
+}
+
+func getPolicyServerByName(ctx context.Context, policyServerName string, dynamicClient *dynamic.Interface) (*policiesv1.PolicyServer, error) {
+	resourceID := schema.GroupVersionResource{
+		Group:    policiesv1.GroupVersion.Group,
+		Version:  policiesv1.GroupVersion.Version,
+		Resource: policyServerResource,
+	}
+	resourceObj, err := (*dynamicClient).Resource(resourceID).Get(ctx, policyServerName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	var policyServer policiesv1.PolicyServer
+	err = runtime.DefaultUnstructuredConverter.FromUnstructured(resourceObj.UnstructuredContent(), &policyServer)
+	if err != nil {
+		return nil, err
+	}
+	return &policyServer, nil
+}
+
+func getServiceByAppLabel(ctx context.Context, appLabel string, namespace string, dynamicClient *dynamic.Interface) (*v1.Service, error) {
+	resourceID := schema.GroupVersionResource{
+		Group:    "",
+		Version:  "v1",
+		Resource: "services",
+	}
+	labelSelector := fmt.Sprintf("app=%s", appLabel)
+	list, err := (*dynamicClient).Resource(resourceID).Namespace(namespace).List(ctx, metav1.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		return nil, err
+	}
+	if len(list.Items) != 1 {
+		return nil, fmt.Errorf("could not find a single service for the given policy server app label")
+	}
+	var service v1.Service
+	err = runtime.DefaultUnstructuredConverter.FromUnstructured(list.Items[0].UnstructuredContent(), &service)
+	if err != nil {
+		return nil, err
+	}
+	return &service, nil
+}
+
+func (f *Fetcher) GetPolicyServerURLRunningPolicy(ctx context.Context, policy policiesv1.Policy) (*url.URL, error) {
+	policyServer, err := getPolicyServerByName(ctx, policy.GetPolicyServer(), &f.dynamicClient)
+
+	if err != nil {
+		return nil, err
+	}
+	service, err := getServiceByAppLabel(ctx, policyServer.AppLabel(), f.kubewardenNamespace, &f.dynamicClient)
+	if err != nil {
+		return nil, err
+	}
+	if len(service.Spec.Ports) < 1 {
+		return nil, fmt.Errorf("policy server service does not have a port")
+	}
+	urlStr := fmt.Sprintf("https://%s.%s.svc:%d/audit/%s", service.Name, f.kubewardenNamespace, service.Spec.Ports[0].Port, policy.GetUniqueName())
+	url, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, err
+	}
+	return url, nil
 }
