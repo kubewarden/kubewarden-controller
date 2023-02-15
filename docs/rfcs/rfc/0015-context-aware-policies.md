@@ -63,20 +63,17 @@ metadata:
 
 ```yaml
 contextAware:
-# - group: <group>
-#   version: <version>
-#   resource: <resource>
-- version: v1
-  resource: pods
-- group: apps
-  version: v1
-  resource: deployments
-- group: networking.k8s.io
-  version: v1
-  resource: ingresses
+# - apiVersion: <apiVersion>
+#   kind: <kind>
+- apiVersion: v1
+  kind: Pod
+- apiVersion: apps/v1
+  kind: Deployment
+- apiVersion: networking.k8s.io/v1
+  Kind: Ingress
 ```
 
-These values can be obtained by looking at the output of `kubectl api-resources`.
+These values are the same used when defining Kubernetes resources.
 
 This information is then embedded into the policy by using the `kwctl annotate`
 command.
@@ -96,17 +93,14 @@ to include a new `contextAware` field that holds a list of
 
 ```yaml
 contextAware:
-# - group: <group>
-#   version: <version>
-#   resource: <resource>
-- version: v1
-  resource: pods
-- group: apps
-  version: v1
-  resource: deployments
-- group: networking.k8s.io
-  version: v1
-  resource: ingresses
+# - apiVersion: <apiVersion>
+#   kind: <kind>
+- apiVersion: v1
+  kind: Pod
+- apiVersion: apps/v1
+  kind: Deployment
+- apiVersion: networking.k8s.io/v1
+  Kind: Ingress
 ```
 
 To keep things simple, this is the same format used inside of the policy metadata.
@@ -123,17 +117,14 @@ namespace-validate:
   url: file:///tmp/namespace-validate-policy.wasm
   allowedToMutate: false
   contextAware:
-  # - group: <group>
-  #   version: <version>
-  #   resource: <resource>
-  - version: v1
-    resource: pods
-  - group: apps
-    version: v1
-    resource: deployments
-  - group: networking.k8s.io
-    version: v1
-    resource: ingresses
+  # - apiVersion: <apiVersion>
+  #   kind: <kind>
+  - apiVersion: v1
+    kind: Pod
+  - apiVersion: apps/v1
+    kind: Deployment
+  - apiVersion: networking.k8s.io/v1
+    Kind: Ingress
   settings:
     valid_namespace: valid
 ```
