@@ -474,7 +474,7 @@ the following annotation:
 
 ```yaml
 annotations:
-  kubewarden-ui/questions: |
+  kubewarden/questions-ui: |
     <a YAML document>
 ```
 
@@ -488,7 +488,7 @@ provide a better UX:
   [this one](https://github.com/kubewarden/ui/blob/7461055e54053db7bcbf696d2e16c8a690f9399c/pkg/kubewarden/questions/policy-questions/allow-privilege-escalation-psp.yml)
 * The `kwctl scaffold artifacthub` command will feature a flag called `questions-ui` which can be
   used to point to the `questions-ui.yml` file
-* As a result, the generated `artifacthub-pkg.yml` file will have the `kubewarden-ui/questions` annotation
+* As a result, the generated `artifacthub-pkg.yml` file will have the `kubewarden/questions-ui` annotation
 
 
 ## Implementation details
