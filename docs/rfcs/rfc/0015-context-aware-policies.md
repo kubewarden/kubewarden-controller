@@ -62,7 +62,7 @@ Policy author must mention the Kubernetes resources inside of the policy
 metadata:
 
 ```yaml
-contextAware:
+contextAwareResources:
 # - apiVersion: <apiVersion>
 #   kind: <kind>
 - apiVersion: v1
@@ -78,6 +78,11 @@ These values are the same used when defining Kubernetes resources.
 This information is then embedded into the policy by using the `kwctl annotate`
 command.
 
+**Note:** the legacy implementation of context aware policies relied on a boolean
+flag called `contextAware`. We will start to ignore this legacy flag and consider
+only the existence of the `contextAwareResources` field to determine whether a
+policy is context aware or not.
+
 ## Policy Deployment
 
 When deploying the policy, the Policy Server will by default block access to all
@@ -88,11 +93,11 @@ This is done for security reasons. We don't want an attacker to steal sensitive
 information from a Kubernetes cluster by leveraging a Kubewarden policy.
 
 The `ClusterAdmissionPolicy` Custom Resource Definition is going to be extended
-to include a new `contextAware` field that holds a list of
+to include a new `contextAwareResources` field that holds a list of
 `group-version-resource` items:
 
 ```yaml
-contextAware:
+contextAwareResources:
 # - apiVersion: <apiVersion>
 #   kind: <kind>
 - apiVersion: v1
@@ -116,7 +121,7 @@ Server `policies.yml` file:
 namespace-validate:
   url: file:///tmp/namespace-validate-policy.wasm
   allowedToMutate: false
-  contextAware:
+  contextAwareResources:
   # - apiVersion: <apiVersion>
   #   kind: <kind>
   - apiVersion: v1
@@ -172,8 +177,8 @@ We don't want an attacker to leverage `AdmissionPolicy` resources to gain
 access to confidential resources (for example, access a `Secret` owned by
 a Kubernetes service or another tenant).
 
-The `AdmissionPolicy` CRD will **not** have the `contextAware` field. Because of
-that, these policies will not have the `contextAware` section inside of the
+The `AdmissionPolicy` CRD will **not** have the `contextAwareResources` field. Because of
+that, these policies will not have the `contextAwareResources` section inside of the
 `policies.yml` file used by Policy Server (see previous section).
 
 As a consequence, `AdmissionPolicy` instances will have an empty allow list
