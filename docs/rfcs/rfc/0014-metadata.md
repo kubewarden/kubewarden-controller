@@ -491,6 +491,29 @@ provide a better UX:
 * As a result, the generated `artifacthub-pkg.yml` file will have the `kubewarden/questions-ui` annotation
 
 
+### Hidden-UI
+
+The Web Ui we're currently developing can decide to show or not the specific
+policy. This can be configured by passing the following annotation inside
+`artifacthub-pkg.yml`:
+
+```yaml
+annotations:
+  rancher/hidden-ui: true
+```
+
+
+This value will be taken from the following annotation of `metadata.yml`:
+
+```yaml
+annotations:
+  io.rancher.hidden-ui: true
+```
+
+Given all the annotations inside of `metadata.yml` are optional, the `metadata.yml`
+file might be missing this value. This value is not required by `artifacthub-pkg.yml`,
+hence `kwctl scaffold` not fail if this annotation is not found inside of `metadata.yml`.
+
 ## Implementation details
 
 We plan to implement this new code using vanilla Rust inside of `policy-evaluator`. This is the
