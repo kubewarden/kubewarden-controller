@@ -2,7 +2,8 @@ use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use kube::api::ListParams;
 use serde::Serialize;
-use std::collections::{hash_map, HashMap};
+use std::collections::HashMap;
+use tokio::sync::RwLock;
 
 #[derive(Eq, Hash, PartialEq)]
 struct ApiVersionKind {
@@ -18,7 +19,7 @@ struct KubeResource {
 
 pub(crate) struct Client {
     kube_client: kube::Client,
-    kube_resources: HashMap<ApiVersionKind, KubeResource>,
+    kube_resources: RwLock<HashMap<ApiVersionKind, KubeResource>>,
 }
 
 /// This is a specialized `kube::api::ObjectList` object which
@@ -34,7 +35,7 @@ impl Client {
     pub fn new(client: kube::Client) -> Self {
         Self {
             kube_client: client,
-            kube_resources: HashMap::new(),
+            kube_resources: RwLock::new(HashMap::new()),
         }
     }
 
@@ -47,43 +48,51 @@ impl Client {
             kind: kind.to_string(),
         };
 
-        let kube_resource = match self.kube_resources.entry(avk) {
-            hash_map::Entry::Vacant(entry) => {
-                let resources_list = match api_version {
-                    "v1" => {
-                        self.kube_client
-                            .list_core_api_resources(api_version)
-                            .await?
-                    }
-                    _ => {
-                        self.kube_client
-                            .list_api_group_resources(api_version)
-                            .await?
-                    }
-                };
-
-                let resource = resources_list
-                    .resources
-                    .iter()
-                    .find(|r| r.kind == kind)
-                    .ok_or_else(|| anyhow!("Cannot find resource {api_version}/{kind}"))?
-                    .clone();
-
-                entry
-                    .insert(KubeResource {
-                        resource: kube::api::ApiResource {
-                            group: resource.group.unwrap_or_default(),
-                            version: resource.version.unwrap_or_default(),
-                            api_version: api_version.to_string(),
-                            kind: kind.to_string(),
-                            plural: resource.name,
-                        },
-                        namespaced: resource.namespaced,
-                    })
-                    .clone()
-            }
-            hash_map::Entry::Occupied(entry) => entry.get().clone(),
+        // take a reader lock and search for the resource inside of the
+        // known resources
+        let kube_resource = {
+            let known_resources = self.kube_resources.read().await;
+            known_resources.get(&avk).map(|r| r.to_owned())
         };
+        if let Some(kr) = kube_resource {
+            return Ok(kr);
+        }
+
+        // the resource is not known yet, we have to search it
+        let resources_list = match api_version {
+            "v1" => {
+                self.kube_client
+                    .list_core_api_resources(api_version)
+                    .await?
+            }
+            _ => {
+                self.kube_client
+                    .list_api_group_resources(api_version)
+                    .await?
+            }
+        };
+
+        let resource = resources_list
+            .resources
+            .iter()
+            .find(|r| r.kind == kind)
+            .ok_or_else(|| anyhow!("Cannot find resource {api_version}/{kind}"))?
+            .to_owned();
+
+        let kube_resource = KubeResource {
+            resource: kube::api::ApiResource {
+                group: resource.group.unwrap_or_default(),
+                version: resource.version.unwrap_or_default(),
+                api_version: api_version.to_string(),
+                kind: kind.to_string(),
+                plural: resource.name,
+            },
+            namespaced: resource.namespaced,
+        };
+
+        // Take a writer lock and cache the resource we just found
+        let mut known_resources = self.kube_resources.write().await;
+        known_resources.insert(avk, kube_resource.clone());
 
         Ok(kube_resource)
     }
