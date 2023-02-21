@@ -46,8 +46,15 @@ pub(crate) fn host_callback(
         "kubewarden" => match namespace {
             "tracing" => match operation {
                 "log" => {
-                    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-                    let policy = policy_mapping.get(&policy_id).unwrap();
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            ?policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
                     if let Err(e) = policy.log(payload) {
                         let p =
                             String::from_utf8(payload.to_vec()).unwrap_or_else(|e| e.to_string());
@@ -151,8 +158,31 @@ pub(crate) fn host_callback(
             },
             "kubernetes" => match operation {
                 "list_resources_by_namespace" => {
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
+
                     let req: ListResourcesByNamespaceRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
+
+                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                        error!(
+                            policy = policy.id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                        return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                    }
+
                     debug!(
                         policy_id,
                         binding,
@@ -168,8 +198,30 @@ pub(crate) fn host_callback(
                     send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
                 }
                 "list_resources_all" => {
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
+
                     let req: ListAllResourcesRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
+                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                        error!(
+                            policy = policy.id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                        return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                    }
+
                     debug!(
                         policy_id,
                         binding,
@@ -534,6 +586,19 @@ impl<'a> Runtime<'a> {
             )),
         }
     }
+}
+
+fn get_policy(policy_id: u64) -> Result<Policy> {
+    let policy_mapping = WAPC_POLICY_MAPPING.read().map_err(|e| {
+        anyhow!(
+            "Cannot obtain read lock access to WAPC_POLICY_MAPPING: {}",
+            e
+        )
+    })?;
+    policy_mapping
+        .get(&policy_id)
+        .ok_or_else(|| anyhow!("Cannot find policy with ID {}", policy_id))
+        .cloned()
 }
 
 #[cfg(test)]

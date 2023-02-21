@@ -142,6 +142,7 @@ pub struct Metadata {
     pub background_audit: bool,
     #[serde(default)]
     pub execution_mode: PolicyExecutionMode,
+    #[serde(default)]
     #[validate]
     pub context_aware_resources: HashSet<ContextAwareResource>,
 }

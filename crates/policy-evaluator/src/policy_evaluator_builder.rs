@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::path::Path;
 use tokio::sync::mpsc;
@@ -7,6 +8,7 @@ use wasmtime_provider::wasmtime;
 use crate::callback_requests::CallbackRequest;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicyEvaluator, PolicyExecutionMode};
+use crate::policy_metadata::ContextAwareResource;
 use crate::runtimes::wapc::WAPC_POLICY_MAPPING;
 use crate::runtimes::{burrego::BurregoStack, wapc::WapcStack, Runtime};
 
@@ -39,6 +41,7 @@ pub struct PolicyEvaluatorBuilder {
     callback_channel: Option<mpsc::Sender<CallbackRequest>>,
     wasmtime_cache: bool,
     epoch_deadlines: Option<EpochDeadlines>,
+    ctx_aware_resources_allow_list: HashSet<ContextAwareResource>,
 }
 
 impl PolicyEvaluatorBuilder {
@@ -106,6 +109,15 @@ impl PolicyEvaluatorBuilder {
         s: Option<serde_json::Map<String, serde_json::Value>>,
     ) -> PolicyEvaluatorBuilder {
         self.settings = s;
+        self
+    }
+
+    /// Set the list of Kubernetes resources the policy can have access to
+    pub fn context_aware_resources_allowed(
+        mut self,
+        allowed_resources: HashSet<ContextAwareResource>,
+    ) -> PolicyEvaluatorBuilder {
+        self.ctx_aware_resources_allow_list = allowed_resources;
         self
     }
 
@@ -240,6 +252,7 @@ impl PolicyEvaluatorBuilder {
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
                     self.callback_channel.clone(),
+                    Some(self.ctx_aware_resources_allow_list.clone()),
                     || Some(wapc_stack.wapc_host_id()),
                     Policy::new,
                     execution_mode,
@@ -252,6 +265,7 @@ impl PolicyEvaluatorBuilder {
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
                     self.callback_channel.clone(),
+                    None,
                     || None,
                     Policy::new,
                     execution_mode,
@@ -287,16 +301,27 @@ impl PolicyEvaluatorBuilder {
     fn from_contents_internal<E, P>(
         id: String,
         callback_channel: Option<mpsc::Sender<CallbackRequest>>,
+        ctx_aware_resources_allow_list: Option<HashSet<ContextAwareResource>>,
         engine_initializer: E,
         policy_initializer: P,
         policy_execution_mode: PolicyExecutionMode,
     ) -> Result<Policy>
     where
         E: Fn() -> Option<u64>,
-        P: Fn(String, Option<u64>, Option<mpsc::Sender<CallbackRequest>>) -> Result<Policy>,
+        P: Fn(
+            String,
+            Option<u64>,
+            Option<mpsc::Sender<CallbackRequest>>,
+            Option<HashSet<ContextAwareResource>>,
+        ) -> Result<Policy>,
     {
         let instance_id = engine_initializer();
-        let policy = policy_initializer(id, instance_id, callback_channel)?;
+        let policy = policy_initializer(
+            id,
+            instance_id,
+            callback_channel,
+            ctx_aware_resources_allow_list,
+        )?;
         if policy_execution_mode == PolicyExecutionMode::KubewardenWapc {
             WAPC_POLICY_MAPPING
                 .write()
@@ -328,8 +353,9 @@ mod tests {
         PolicyEvaluatorBuilder::from_contents_internal(
             "mock_policy".to_string(),
             None,
+            None,
             || Some(policy_id),
-            |_, _, _| Ok(policy.clone()),
+            |_, _, _, _| Ok(policy.clone()),
             PolicyExecutionMode::KubewardenWapc,
         )?;
 
@@ -357,8 +383,9 @@ mod tests {
         PolicyEvaluatorBuilder::from_contents_internal(
             policy_name.to_string(),
             None,
+            None,
             || Some(policy_id),
-            |_, _, _| Ok(policy.clone()),
+            |_, _, _, _| Ok(policy.clone()),
             PolicyExecutionMode::OpaGatekeeper,
         )?;
 
