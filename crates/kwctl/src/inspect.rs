@@ -109,6 +109,10 @@ impl MetadataPrinter {
                 println!();
                 self.print_metadata_rules(metadata)?;
                 println!();
+                if !metadata.context_aware_resources.is_empty() {
+                    self.print_metadata_context_aware_resources(metadata)?;
+                    println!();
+                }
                 self.print_metadata_usage(metadata)
             }
         }
@@ -148,7 +152,7 @@ impl MetadataPrinter {
         }
         table.add_row(row![Fgbl -> "mutating:", metadata.mutating]);
         table.add_row(row![Fgbl -> "background audit support:", metadata.background_audit]);
-        table.add_row(row![Fgbl -> "context aware:", metadata.context_aware]);
+        table.add_row(row![Fgbl -> "context aware:", !metadata.context_aware_resources.is_empty()]);
         table.add_row(row![Fgbl -> "execution mode:", metadata.execution_mode]);
         if metadata.execution_mode == PolicyExecutionMode::KubewardenWapc {
             table.add_row(row![Fgbl -> "protocol version:", protocol_version]);
@@ -179,6 +183,27 @@ impl MetadataPrinter {
 
         let text = format!("```yaml\n{rules_yaml}```");
         self.render_markdown(&text)
+    }
+
+    fn print_metadata_context_aware_resources(&self, metadata: &Metadata) -> Result<()> {
+        let resources_yaml = serde_yaml::to_string(&metadata.context_aware_resources)?;
+
+        // Quick hack to print a colorized "Context Aware" section, with the same
+        // style as the other sections we print
+        let mut table = Table::new();
+        table.set_format(FormatBuilder::new().padding(0, 1).build());
+        table.add_row(row![Fmbl -> "Context Aware"]);
+        table.printstd();
+
+        println!(
+            "The policy requires access to the following Kubernetes resources at evaluation time:"
+        );
+
+        let text = format!("```yaml\n{resources_yaml}```");
+        self.render_markdown(&text)?;
+        println!("To avoid abuses, review carefully what the policy requires access to.");
+
+        Ok(())
     }
 
     fn print_metadata_usage(&self, metadata: &Metadata) -> Result<()> {
