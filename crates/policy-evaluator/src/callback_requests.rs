@@ -107,6 +107,40 @@ pub enum CallbackRequestType {
 
     /// Lookup the addresses for a given hostname via DNS
     DNSLookupHost { host: String },
+
+    /// Get all the Kubernetes resources defined inside of the given
+    /// namespace
+    /// Note: cannot be used with cluster-wide resources
+    KubernetesListResourceNamespace {
+        /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+        api_version: String,
+        /// Singular PascalCase name of the resource
+        kind: String,
+        /// Namespace scoping the search
+        namespace: String,
+        /// A selector to restrict the list of returned objects by their labels.
+        /// Defaults to everything if `None`
+        label_selector: Option<String>,
+        /// A selector to restrict the list of returned objects by their fields.
+        /// Defaults to everything if `None`
+        field_selector: Option<String>,
+    },
+
+    /// Get all the Kubernetes resources defined inside of the given
+    /// cluster
+    /// Cluster level resources, or resources viewed across all namespaces.
+    KubernetesListResourceAll {
+        /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+        api_version: String,
+        /// Singular PascalCase name of the resource
+        kind: String,
+        /// A selector to restrict the list of returned objects by their labels.
+        /// Defaults to everything if `None`
+        label_selector: Option<String>,
+        /// A selector to restrict the list of returned objects by their fields.
+        /// Defaults to everything if `None`
+        field_selector: Option<String>,
+    },
 }
 
 impl From<SigstoreVerificationInputV2> for CallbackRequestType {
@@ -188,6 +222,37 @@ impl From<SigstoreVerificationInputV1> for CallbackRequestType {
                 keyless,
                 annotations,
             },
+        }
+    }
+}
+
+impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::ListResourcesByNamespaceRequest>
+    for CallbackRequestType
+{
+    fn from(
+        req: kubewarden_policy_sdk::host_capabilities::kubernetes::ListResourcesByNamespaceRequest,
+    ) -> Self {
+        CallbackRequestType::KubernetesListResourceNamespace {
+            api_version: req.api_version,
+            kind: req.kind,
+            namespace: req.namespace,
+            label_selector: req.label_selector,
+            field_selector: req.field_selector,
+        }
+    }
+}
+
+impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::ListAllResourcesRequest>
+    for CallbackRequestType
+{
+    fn from(
+        req: kubewarden_policy_sdk::host_capabilities::kubernetes::ListAllResourcesRequest,
+    ) -> Self {
+        CallbackRequestType::KubernetesListResourceAll {
+            api_version: req.api_version,
+            kind: req.kind,
+            label_selector: req.label_selector,
+            field_selector: req.field_selector,
         }
     }
 }

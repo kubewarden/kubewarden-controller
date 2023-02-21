@@ -7,6 +7,7 @@ use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackRes
 
 mod builder;
 mod crypto;
+mod kubernetes;
 mod oci;
 mod sigstore_verification;
 
@@ -25,6 +26,7 @@ use sigstore_verification::{
 pub struct CallbackHandler {
     oci_client: oci::Client,
     sigstore_client: sigstore_verification::Client,
+    kubernetes_client: Option<kubernetes::Client>,
     rx: mpsc::Receiver<CallbackRequest>,
     tx: mpsc::Sender<CallbackRequest>,
     shutdown_channel: oneshot::Receiver<()>,
@@ -215,6 +217,50 @@ impl CallbackHandler {
                                     warn!("callback handler: cannot send response back: {:?}", e);
                                 }
                             },
+                            CallbackRequestType::KubernetesListResourceNamespace{
+                                api_version,
+                                kind,
+                                namespace,
+                                label_selector,
+                                field_selector,
+                            } => {
+                                handle_callback!(
+                                    req,
+                                    format!("[{namespace}] {api_version}/{kind}"),
+                                    "List namespaced Kubernetes resource",
+                                    {
+                                        kubernetes::list_resources_by_namespace(
+                                            self.kubernetes_client.as_mut(),
+                                            &api_version,
+                                            &kind,
+                                            &namespace,
+                                            label_selector,
+                                            field_selector,
+                                        )
+                                    }
+                                )
+                            },
+                            CallbackRequestType::KubernetesListResourceAll {
+                                api_version,
+                                kind,
+                                label_selector,
+                                field_selector,
+                            } => {
+                                handle_callback!(
+                                    req,
+                                    format!("{api_version}/{kind}"),
+                                    "List Kubernetes resource",
+                                    {
+                                        kubernetes::list_resources_all(
+                                            self.kubernetes_client.as_mut(),
+                                            &api_version,
+                                            &kind,
+                                            label_selector,
+                                            field_selector,
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 },

@@ -4,7 +4,6 @@ extern crate wasmparser;
 pub mod admission_response;
 pub mod callback_handler;
 pub mod callback_requests;
-pub mod cluster_context;
 pub mod constants;
 pub mod errors;
 pub(crate) mod policy;

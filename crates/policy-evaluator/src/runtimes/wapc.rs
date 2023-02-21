@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::{
     crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
+    kubernetes::{ListAllResourcesRequest, ListResourcesByNamespaceRequest},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
@@ -11,13 +12,12 @@ use serde_json::json;
 use std::{collections::HashMap, convert::TryFrom, sync::RwLock};
 use tokio::sync::oneshot::Receiver;
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use wasmtime_provider::wasmtime;
 
 use crate::admission_response::AdmissionResponse;
 use crate::callback_handler::verify_certificate;
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
-use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 
@@ -149,23 +149,105 @@ pub(crate) fn host_callback(
                     Err(format!("unknown operation: {operation}").into())
                 }
             },
+            "kubernetes" => match operation {
+                "list_resources_by_namespace" => {
+                    let req: ListResourcesByNamespaceRequest =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                "list_resources_all" => {
+                    let req: ListAllResourcesRequest =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                _ => {
+                    error!(namespace, operation, "unknown operation");
+                    Err(format!("unknown operation: {operation}").into())
+                }
+            },
             _ => {
                 error!("unknown namespace: {}", namespace);
                 Err(format!("unknown namespace: {namespace}").into())
             }
         },
-        "kubernetes" => {
-            let cluster_context = ClusterContext::get();
-            match namespace {
-                "ingresses" => Ok(cluster_context.ingresses().into()),
-                "namespaces" => Ok(cluster_context.namespaces().into()),
-                "services" => Ok(cluster_context.services().into()),
-                _ => {
-                    error!("unknown namespace: {}", namespace);
-                    Err(format!("unknown namespace: {namespace}").into())
-                }
+        "kubernetes" => match namespace {
+            "ingresses" => {
+                let req = CallbackRequestType::KubernetesListResourceAll {
+                    api_version: "networking.k8s.io/v1".to_string(),
+                    kind: "Ingress".to_string(),
+                    label_selector: None,
+                    field_selector: None,
+                };
+
+                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                let req = CallbackRequest {
+                    request: req,
+                    response_channel: tx,
+                };
+                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
             }
-        }
+            "namespaces" => {
+                let req = CallbackRequestType::KubernetesListResourceAll {
+                    api_version: "v1".to_string(),
+                    kind: "Namespace".to_string(),
+                    label_selector: None,
+                    field_selector: None,
+                };
+
+                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                let req = CallbackRequest {
+                    request: req,
+                    response_channel: tx,
+                };
+                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+            }
+            "services" => {
+                let req = CallbackRequestType::KubernetesListResourceAll {
+                    api_version: "v1".to_string(),
+                    kind: "Service".to_string(),
+                    label_selector: None,
+                    field_selector: None,
+                };
+
+                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                let req = CallbackRequest {
+                    request: req,
+                    response_channel: tx,
+                };
+                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+            }
+            _ => {
+                error!("unknown namespace: {}", namespace);
+                Err(format!("unknown namespace: {namespace}").into())
+            }
+        },
         _ => {
             error!("unknown binding: {}", binding);
             Err(format!("unknown binding: {binding}").into())
