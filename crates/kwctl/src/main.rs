@@ -632,6 +632,11 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         .unwrap_or(&false)
         .to_owned();
 
+    let allow_context_aware_resources = matches
+        .get_one::<bool>("allow-context-aware")
+        .unwrap_or(&false)
+        .to_owned();
+
     Ok(run::PullAndRunSettings {
         uri: uri.to_owned(),
         user_execution_mode: execution_mode,
@@ -641,6 +646,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         verified_manifest_digest,
         fulcio_and_rekor_data,
         enable_wasmtime_cache,
+        allow_context_aware_resources,
     })
 }
 
