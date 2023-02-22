@@ -394,6 +394,26 @@ Given all the annotations inside of `metadata.yml` are optional, the `metadata.y
 file might be missing this value. This value is not required by `artifacthub-pkg.yml`,
 hence `kwctl scaffold` not fail if this annotation is not found inside of `metadata.yml`.
 
+### `maintainers`
+
+This attribute is considered optional by Artifact Hub:
+```yaml
+maintainers:
+  - name: Tux Tuxedo
+    email: tux@example.com
+```
+
+This value will be taken from the following annotation of `metadata.yml`:
+
+```yaml
+annotations:
+  io.kubewarden.policy.author: "Tux <tux@example.com>, Pidgin <pidgin@example.com>"
+```
+
+Given all the annotations inside of `metadata.yml` are optional, the `metadata.yml`
+file might be missing this value. This value is not required by `artifacthub-pkg.yml`,
+hence `kwctl scaffold` not fail if this annotation is not found inside of `metadata.yml`.
+
 ### Hard coded values
 
 There are some values that are going to be always the same, regardless of the policy and
