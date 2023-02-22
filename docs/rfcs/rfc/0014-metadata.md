@@ -304,7 +304,9 @@ hence `kwctl scaffold` not fail if this annotation is not found inside of `metad
 
 ### `containersImages`
 
-This attribute is considered optional by Artifact Hub:
+This attribute is considered optional for general Artifact Hub packages. Yet
+for Kubewarden policy packages in Artifact Hub it is
+[mandatory to have a container image with name "policy"](https://artifacthub.io/docs/topics/repositories/kubewarden-policies):
 
 ```yaml
 containersImages:
@@ -331,8 +333,9 @@ let url = format!("{}:v{}", ociUrl, version);
 This assumes the final tag will follow this naming convention: `v{version}`.
 
 Given all the annotations inside of `metadata.yml` are optional, the `metadata.yml`
-file might be missing this value. This value is not required by `artifacthub-pkg.yml`,
-hence `kwctl scaffold` not fail if this annotation is not found inside of `metadata.yml`.
+file might be missing this value. Since this is instead required by `artifacthub-pkg.yml`,
+the `kwctl scaffold` will exit with a meaningful error if this annotation is not
+found inside of `metadata.yml`.
 
 ### keywords
 
