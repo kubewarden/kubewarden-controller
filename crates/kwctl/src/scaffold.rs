@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::path::PathBuf;
+use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::warn;
 
@@ -15,6 +16,23 @@ use policy_evaluator::policy_fetcher::verify::config::{
     LatestVerificationConfig, Signature, VersionedVerificationConfig,
 };
 use policy_evaluator::policy_metadata::{ContextAwareResource, Metadata, Rule};
+
+pub(crate) enum ManifestType {
+    ClusterAdmissionPolicy,
+    AdmissionPolicy,
+}
+
+impl FromStr for ManifestType {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        match value {
+            "ClusterAdmissionPolicy" => Ok(ManifestType::ClusterAdmissionPolicy),
+            "AdmissionPolicy" => Ok(ManifestType::AdmissionPolicy),
+            _ => Err(anyhow!("unknown manifest type")),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -127,9 +145,9 @@ struct ScaffoldPolicyData {
 
 pub(crate) fn manifest(
     uri: &str,
-    resource_type: &str,
-    settings: Option<String>,
-    policy_title: Option<String>,
+    resource_type: ManifestType,
+    settings: Option<&str>,
+    policy_title: Option<&str>,
     allow_context_aware_resources: bool,
 ) -> Result<()> {
     let wasm_path = crate::utils::wasm_path(uri)?;
@@ -140,17 +158,34 @@ pub(crate) fn manifest(
                 uri)
         )?;
 
-    let settings_yml: serde_yaml::Mapping =
-        serde_yaml::from_str(&settings.unwrap_or_else(|| String::from("{}")))?;
+    let settings_yml: serde_yaml::Mapping = serde_yaml::from_str(settings.unwrap_or("{}"))?;
 
-    let mut scaffold_data = ScaffoldPolicyData {
+    let scaffold_data = ScaffoldPolicyData {
         uri: String::from(uri),
         policy_title: get_policy_title_from_cli_or_metadata(policy_title, &metadata),
         metadata,
         settings: settings_yml,
     };
-    let resource = match resource_type {
-        "ClusterAdmissionPolicy" => {
+
+    let resource =
+        generate_yaml_resource(scaffold_data, resource_type, allow_context_aware_resources)?;
+
+    let stdout = std::io::stdout();
+    let out = stdout.lock();
+    serde_yaml::to_writer(out, &resource)?;
+
+    Ok(())
+}
+
+fn generate_yaml_resource(
+    scaffold_data: ScaffoldPolicyData,
+    resource_type: ManifestType,
+    allow_context_aware_resources: bool,
+) -> Result<serde_yaml::Value> {
+    let mut scaffold_data = scaffold_data;
+
+    match resource_type {
+        ManifestType::ClusterAdmissionPolicy => {
             if !scaffold_data.metadata.context_aware_resources.is_empty() {
                 if allow_context_aware_resources {
                     warn!(
@@ -169,26 +204,18 @@ pub(crate) fn manifest(
             serde_yaml::to_value(ClusterAdmissionPolicy::try_from(scaffold_data)?)
                 .map_err(|e| anyhow!("{}", e))
         }
-        "AdmissionPolicy" => serde_yaml::to_value(AdmissionPolicy::try_from(scaffold_data)?)
-            .map_err(|e| anyhow!("{}", e)),
-        other => Err(anyhow!(
-            "Resource {} unknown. Valid types are: ClusterAdmissionPolicy",
-            other,
-        )),
-    }?;
-
-    let stdout = std::io::stdout();
-    let out = stdout.lock();
-    serde_yaml::to_writer(out, &resource)?;
-
-    Ok(())
+        ManifestType::AdmissionPolicy => {
+            serde_yaml::to_value(AdmissionPolicy::try_from(scaffold_data)?)
+                .map_err(|e| anyhow!("{}", e))
+        }
+    }
 }
 
 fn get_policy_title_from_cli_or_metadata(
-    policy_title: Option<String>,
+    policy_title: Option<&str>,
     metadata: &Metadata,
 ) -> Option<String> {
-    policy_title.or_else(|| {
+    policy_title.map(|t| t.to_string()).or_else(|| {
         metadata
             .annotations
             .as_ref()
@@ -290,13 +317,13 @@ mod tests {
         }
     }
 
-    fn mock_metadata_with_title(title: String) -> Metadata {
+    fn mock_metadata_with_title(title: &str) -> Metadata {
         Metadata {
             protocol_version: None,
             rules: vec![],
             annotations: Some(HashMap::from([(
                 KUBEWARDEN_ANNOTATION_POLICY_TITLE.to_string(),
-                title,
+                title.to_string(),
             )])),
             mutating: false,
             background_audit: true,
@@ -307,11 +334,11 @@ mod tests {
 
     #[test]
     fn get_policy_title_from_cli_or_metadata_returns_name_from_cli_if_present() {
-        let policy_title = Some("name".to_string());
+        let policy_title = "name";
         assert_eq!(
-            policy_title,
+            Some(policy_title.to_string()),
             get_policy_title_from_cli_or_metadata(
-                policy_title.clone(),
+                Some(policy_title),
                 &mock_metadata_with_no_annotations()
             )
         )
@@ -328,9 +355,9 @@ mod tests {
     #[test]
     fn get_policy_title_from_cli_or_metadata_returns_title_from_annotation_if_name_from_cli_not_present(
     ) {
-        let policy_title = "title".to_string();
+        let policy_title = "title";
         assert_eq!(
-            Some(policy_title.clone()),
+            Some(policy_title.to_string()),
             get_policy_title_from_cli_or_metadata(None, &mock_metadata_with_title(policy_title))
         )
     }
@@ -338,8 +365,8 @@ mod tests {
     #[test]
     fn omit_background_audit_during_serialization_when_true() {
         // testing fix for https://github.com/kubewarden/kubewarden-controller/issues/395
-        let policy_title = "test".to_string();
-        let mut metadata = mock_metadata_with_title(policy_title.clone());
+        let policy_title = "test";
+        let mut metadata = mock_metadata_with_title(policy_title);
         metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
         assert!(metadata.background_audit);
 
@@ -367,8 +394,8 @@ mod tests {
     #[test]
     fn do_not_omit_background_audit_during_serialization_when_false() {
         // testing fix for https://github.com/kubewarden/kubewarden-controller/issues/395
-        let policy_title = "test".to_string();
-        let mut metadata = mock_metadata_with_title(policy_title.clone());
+        let policy_title = "test";
+        let mut metadata = mock_metadata_with_title(policy_title);
         metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
         metadata.background_audit = false;
         assert!(!metadata.background_audit);
@@ -392,5 +419,65 @@ mod tests {
         )
         .expect("serialization error");
         assert!(out.contains("backgroundAudit"));
+    }
+
+    #[test]
+    fn scaffold_cluster_admission_policy_with_context_aware_enabled() {
+        let mut context_aware_resources: HashSet<ContextAwareResource> = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "v1".to_string(),
+            kind: "Pod".to_string(),
+        });
+
+        let policy_title = "test";
+        let mut metadata = mock_metadata_with_title(policy_title);
+        metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
+        metadata.context_aware_resources = context_aware_resources;
+
+        let scaffold_data = ScaffoldPolicyData {
+            uri: "not_relevant".to_string(),
+            policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
+            metadata,
+            settings: Default::default(),
+        };
+
+        let resource =
+            generate_yaml_resource(scaffold_data, ManifestType::ClusterAdmissionPolicy, true)
+                .expect("Cannot create yaml resource");
+
+        let resource = resource.as_mapping().expect("resource should be a Map");
+        let spec = resource.get("spec").expect("cannot get `Spec`");
+        let context_aware_resources = spec.get("contextAwareResources");
+        assert!(context_aware_resources.is_some());
+    }
+
+    #[test]
+    fn scaffold_cluster_admission_policy_with_context_aware_disabled() {
+        let mut context_aware_resources: HashSet<ContextAwareResource> = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "v1".to_string(),
+            kind: "Pod".to_string(),
+        });
+
+        let policy_title = "test";
+        let mut metadata = mock_metadata_with_title(policy_title);
+        metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
+        metadata.context_aware_resources = context_aware_resources;
+
+        let scaffold_data = ScaffoldPolicyData {
+            uri: "not_relevant".to_string(),
+            policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
+            metadata,
+            settings: Default::default(),
+        };
+
+        let resource =
+            generate_yaml_resource(scaffold_data, ManifestType::ClusterAdmissionPolicy, false)
+                .expect("Cannot create yaml resource");
+
+        let resource = resource.as_mapping().expect("resource should be a Map");
+        let spec = resource.get("spec").expect("cannot get `Spec`");
+        let context_aware_resources = spec.get("contextAwareResources");
+        assert!(context_aware_resources.is_none());
     }
 }

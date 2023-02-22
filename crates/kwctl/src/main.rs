@@ -354,9 +354,9 @@ async fn main() -> Result<()> {
 
                     scaffold::manifest(
                         uri,
-                        resource_type,
-                        settings,
-                        policy_title,
+                        resource_type.parse()?,
+                        settings.as_deref(),
+                        policy_title.as_deref(),
                         allow_context_aware_resources,
                     )?;
                 };
