@@ -532,6 +532,11 @@ pub fn build_cli() -> Command {
                                 .value_name("VALUE")
                                 .help("Policy title")
                         )
+                        .arg(
+                            Arg::new("allow-context-aware")
+                            .long("allow-context-aware")
+                            .num_args(0)
+                            .help("Uses the policy metadata to define which Kubernetes resources can be accessed by the policy. Warning: review the list of resources carefully to avoid abuses. Disabled by default"))
                 )
         )
         .subcommand(

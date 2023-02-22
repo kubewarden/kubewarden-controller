@@ -347,7 +347,18 @@ async fn main() -> Result<()> {
                     };
                     let policy_title = matches.get_one::<String>("title").cloned();
 
-                    scaffold::manifest(uri, resource_type, settings, policy_title)?;
+                    let allow_context_aware_resources = matches
+                        .get_one::<bool>("allow-context-aware")
+                        .unwrap_or(&false)
+                        .to_owned();
+
+                    scaffold::manifest(
+                        uri,
+                        resource_type,
+                        settings,
+                        policy_title,
+                        allow_context_aware_resources,
+                    )?;
                 };
             }
             Ok(())
