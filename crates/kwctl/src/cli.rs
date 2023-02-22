@@ -726,6 +726,11 @@ pub fn build_cli() -> Command {
                     .help("Turn off usage of wasmtime cache")
                 )
                 .arg(
+                    Arg::new("allow-context-aware")
+                    .long("allow-context-aware")
+                    .num_args(0)
+                    .help("Grant access to the Kubernetes resources defined inside of the policy's `contextAwareResources` section. Warning: review the list of resources carefully to avoid abuses. Disabled by default"))
+                .arg(
                     Arg::new("uri")
                         .required(true)
                         .index(1)
