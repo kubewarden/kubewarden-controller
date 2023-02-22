@@ -15,6 +15,7 @@ use tracing::{error, info, warn};
 
 use crate::{backend::BackendDetector, pull, verify};
 
+#[derive(Default)]
 pub(crate) struct PullAndRunSettings {
     pub uri: String,
     pub user_execution_mode: Option<PolicyExecutionMode>,
@@ -61,13 +62,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
         &policy.local_path,
     )?;
 
-    let context_aware_allowed_resources = metadata.as_ref().map_or_else(
-        || {
-            info!("Policy is not annotated, access to Kubernetes resources is not allowed");
-            HashSet::new()
-        },
-        |m| compute_context_aware_resources(m, cfg),
-    );
+    let context_aware_allowed_resources = compute_context_aware_resources(metadata.as_ref(), cfg);
 
     let kube_client = if context_aware_allowed_resources.is_empty() {
         None
@@ -275,23 +270,31 @@ fn determine_execution_mode(
 }
 
 fn compute_context_aware_resources(
-    metadata: &Metadata,
+    metadata: Option<&Metadata>,
     cfg: &PullAndRunSettings,
 ) -> HashSet<ContextAwareResource> {
-    if metadata.context_aware_resources.is_empty() {
-        return HashSet::new();
-    }
+    match metadata {
+        None => {
+            info!("Policy is not annotated, access to Kubernetes resources is not allowed");
+            HashSet::new()
+        }
+        Some(metadata) => {
+            if metadata.context_aware_resources.is_empty() {
+                return HashSet::new();
+            }
 
-    if cfg.allow_context_aware_resources {
-        warn!(
+            if cfg.allow_context_aware_resources {
+                warn!(
             "Policy has been granted access to the Kubernetes resources mentioned by its metadata"
         );
-        metadata.context_aware_resources.clone()
-    } else {
-        warn!("Policy requires access to Kubernetes resources at evaluation time. During this execution the access to Kubernetes resources is denied. This can cause the policy to not behave properly");
-        warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command, then run the policy using the `--allow-context-aware` flag.");
+                metadata.context_aware_resources.clone()
+            } else {
+                warn!("Policy requires access to Kubernetes resources at evaluation time. During this execution the access to Kubernetes resources is denied. This can cause the policy to not behave properly");
+                warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command, then run the policy using the `--allow-context-aware` flag.");
 
-        HashSet::new()
+                HashSet::new()
+            }
+        }
     }
 }
 
@@ -507,5 +510,60 @@ mod tests {
         );
         assert!(actual.is_ok());
         assert_eq!(actual.unwrap(), PolicyExecutionMode::KubewardenWapc);
+    }
+
+    #[test]
+    fn prevent_access_to_kubernetes_resources_when_policy_is_not_annotated() {
+        let cfg = PullAndRunSettings {
+            allow_context_aware_resources: true,
+            ..Default::default()
+        };
+
+        let resources = compute_context_aware_resources(None, &cfg);
+        assert!(resources.is_empty());
+    }
+
+    #[test]
+    fn prevent_access_to_kubernetes_resources_when_allow_context_aware_resources_is_disabled() {
+        let mut context_aware_resources = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "v1".to_string(),
+            kind: "Pod".to_string(),
+        });
+
+        let metadata = Metadata {
+            context_aware_resources,
+            ..Default::default()
+        };
+
+        let cfg = PullAndRunSettings {
+            allow_context_aware_resources: false,
+            ..Default::default()
+        };
+
+        let resources = compute_context_aware_resources(Some(&metadata), &cfg);
+        assert!(resources.is_empty());
+    }
+
+    #[test]
+    fn allow_access_to_kubernetes_resources_when_allow_context_aware_resources_is_enabled() {
+        let mut context_aware_resources = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "v1".to_string(),
+            kind: "Pod".to_string(),
+        });
+
+        let metadata = Metadata {
+            context_aware_resources: context_aware_resources.clone(),
+            ..Default::default()
+        };
+
+        let cfg = PullAndRunSettings {
+            allow_context_aware_resources: true,
+            ..Default::default()
+        };
+
+        let resources = compute_context_aware_resources(Some(&metadata), &cfg);
+        assert_eq!(resources, context_aware_resources);
     }
 }
