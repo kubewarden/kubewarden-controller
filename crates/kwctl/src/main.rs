@@ -83,7 +83,11 @@ async fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
 
     // setup logging
-    let level_filter = if matches.contains_id("verbose") {
+    let verbose = matches
+        .get_one::<bool>("verbose")
+        .unwrap_or(&false)
+        .to_owned();
+    let level_filter = if verbose {
         LevelFilter::DEBUG
     } else {
         LevelFilter::INFO
@@ -623,7 +627,10 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         );
     }
 
-    let enable_wasmtime_cache = !matches.contains_id("disable-wasmtime-cache");
+    let enable_wasmtime_cache = !matches
+        .get_one::<bool>("disable-wasmtime-cache")
+        .unwrap_or(&false)
+        .to_owned();
 
     Ok(run::PullAndRunSettings {
         uri: uri.to_owned(),
