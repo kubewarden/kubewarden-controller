@@ -14,7 +14,6 @@ use tracing::{debug, error, info};
 mod admission_review;
 mod api;
 mod cli;
-mod kube_poller;
 mod metrics;
 mod server;
 mod settings;
@@ -27,7 +26,7 @@ mod worker_pool;
 use worker_pool::WorkerPool;
 
 mod communication;
-use communication::{EvalRequest, KubePollerBootRequest, WorkerPoolBootRequest};
+use communication::{EvalRequest, WorkerPoolBootRequest};
 
 lazy_static! {
     static ref TRACE_SYSTEM_INITIALIZED: RwLock<bool> = RwLock::new(false);
@@ -139,9 +138,8 @@ fn main() -> Result<()> {
         }
     };
 
-    let mut callback_handler = CallbackHandlerBuilder::default()
+    let mut callback_handler = CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx)
         .registry_config(sources.clone())
-        .shutdown_channel(callback_handler_shutdown_channel_rx)
         .fulcio_and_rekor_data(fulcio_and_rekor_data.as_ref())
         .build()?;
     let callback_sender_channel = callback_handler.sender_channel();
@@ -182,34 +180,7 @@ fn main() -> Result<()> {
 
     ////////////////////////////////////////////////////////////////////////////
     //                                                                        //
-    // Phase 3: setup a dedicated thread that runs the Kubernetes poller      //
-    //                                                                        //
-    ////////////////////////////////////////////////////////////////////////////
-
-    // This is the channel used to have the asynchronous code trigger the
-    // bootstrap of the kubernetes poller. The bootstrap must be triggered
-    // from within the asynchronous code because some of the tracing collectors
-    // (e.g. OpenTelemetry) require a tokio::Runtime to be available.
-    let (kube_poller_bootstrap_req_tx, kube_poller_bootstrap_req_rx) =
-        oneshot::channel::<KubePollerBootRequest>();
-
-    // Spawn the system thread that runs the main loop of the worker pool manager
-    let kube_poller_thread = thread::spawn(move || {
-        let poller = match kube_poller::Poller::new(kube_poller_bootstrap_req_rx) {
-            Ok(p) => p,
-            Err(e) => {
-                fatal_error(format!(
-                    "Cannot init dedicated tokio runtime for the Kubernetes poller: {e:?}"
-                ));
-                unreachable!()
-            }
-        };
-        poller.run();
-    });
-
-    ////////////////////////////////////////////////////////////////////////////
-    //                                                                        //
-    // Phase 4: setup the asynchronous world.                                 //
+    // Phase 3: setup the asynchronous world.                                 //
     //                                                                        //
     // We setup the tokio Runtime manually, instead of relying on the the     //
     // `tokio::main` macro, because we don't want the "synchronous" world to  //
@@ -277,41 +248,6 @@ fn main() -> Result<()> {
                 unreachable!()
             }
         };
-
-        // Start the kubernetes poller
-        info!(status = "init", "kubernetes poller bootstrap");
-        let (kube_poller_bootstrap_res_tx, mut kube_poller_bootstrap_res_rx) =
-            oneshot::channel::<Result<()>>();
-        let kube_poller_bootstrap_data = KubePollerBootRequest {
-            resp_chan: kube_poller_bootstrap_res_tx,
-        };
-        if kube_poller_bootstrap_req_tx
-            .send(kube_poller_bootstrap_data)
-            .is_err()
-        {
-            fatal_error("Cannot send bootstrap data to kubernetes poller".to_string());
-        }
-
-        // Wait for the kubernetes poller to be fully bootstraped before moving on.
-        //
-        // The poller must be stated before policies can be evaluated, otherwise
-        // context-aware policies could not have the right data at their disposal.
-        loop {
-            match kube_poller_bootstrap_res_rx.try_recv() {
-                Ok(res) => match res {
-                    Ok(_) => break,
-                    Err(e) => fatal_error(e.to_string()),
-                },
-                Err(oneshot::error::TryRecvError::Empty) => {
-                    // the channel is empty, keep waiting
-                }
-                _ => {
-                    fatal_error("Cannot receive kubernetes poller bootstrap result".to_string());
-                    return;
-                }
-            }
-        }
-        info!(status = "done", "kubernetes poller bootstrap");
 
         // Spawn the tokio task used by the CallbackHandler
         let callback_handle = tokio::spawn(async move {
@@ -384,10 +320,6 @@ fn main() -> Result<()> {
     });
 
     if let Err(e) = wasm_thread.join() {
-        fatal_error(format!("error while waiting for worker threads: {e:?}"));
-    };
-
-    if let Err(e) = kube_poller_thread.join() {
         fatal_error(format!("error while waiting for worker threads: {e:?}"));
     };
 
