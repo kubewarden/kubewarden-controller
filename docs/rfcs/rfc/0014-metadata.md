@@ -304,7 +304,9 @@ hence `kwctl scaffold` not fail if this annotation is not found inside of `metad
 
 ### `containersImages`
 
-This attribute is considered optional by Artifact Hub:
+This attribute is considered optional for general Artifact Hub packages. Yet
+for Kubewarden policy packages in Artifact Hub it is
+[mandatory to have a container image with name "policy"](https://artifacthub.io/docs/topics/repositories/kubewarden-policies):
 
 ```yaml
 containersImages:
@@ -331,8 +333,9 @@ let url = format!("{}:v{}", ociUrl, version);
 This assumes the final tag will follow this naming convention: `v{version}`.
 
 Given all the annotations inside of `metadata.yml` are optional, the `metadata.yml`
-file might be missing this value. This value is not required by `artifacthub-pkg.yml`,
-hence `kwctl scaffold` not fail if this annotation is not found inside of `metadata.yml`.
+file might be missing this value. Since this is instead required by `artifacthub-pkg.yml`,
+the `kwctl scaffold` will exit with a meaningful error if this annotation is not
+found inside of `metadata.yml`.
 
 ### keywords
 
@@ -385,6 +388,26 @@ following annotation:
 ```yaml
 annotations:
   io.kubewarden.policy.source: https://github.com/kubewarden/verify-image-signatures
+```
+
+Given all the annotations inside of `metadata.yml` are optional, the `metadata.yml`
+file might be missing this value. This value is not required by `artifacthub-pkg.yml`,
+hence `kwctl scaffold` not fail if this annotation is not found inside of `metadata.yml`.
+
+### `maintainers`
+
+This attribute is considered optional by Artifact Hub:
+```yaml
+maintainers:
+  - name: Tux Tuxedo
+    email: tux@example.com
+```
+
+This value will be taken from the following annotation of `metadata.yml`:
+
+```yaml
+annotations:
+  io.kubewarden.policy.author: "Tux <tux@example.com>, Pidgin <pidgin@example.com>"
 ```
 
 Given all the annotations inside of `metadata.yml` are optional, the `metadata.yml`
@@ -474,7 +497,7 @@ the following annotation:
 
 ```yaml
 annotations:
-  kubewarden-ui/questions: |
+  kubewarden/questions-ui: |
     <a YAML document>
 ```
 
@@ -488,8 +511,31 @@ provide a better UX:
   [this one](https://github.com/kubewarden/ui/blob/7461055e54053db7bcbf696d2e16c8a690f9399c/pkg/kubewarden/questions/policy-questions/allow-privilege-escalation-psp.yml)
 * The `kwctl scaffold artifacthub` command will feature a flag called `questions-ui` which can be
   used to point to the `questions-ui.yml` file
-* As a result, the generated `artifacthub-pkg.yml` file will have the `kubewarden-ui/questions` annotation
+* As a result, the generated `artifacthub-pkg.yml` file will have the `kubewarden/questions-ui` annotation
 
+
+### Hidden-UI
+
+The Web Ui we're currently developing can decide to show or not the specific
+policy. This can be configured by passing the following annotation inside
+`artifacthub-pkg.yml`:
+
+```yaml
+annotations:
+  rancher/hidden-ui: true
+```
+
+
+This value will be taken from the following annotation of `metadata.yml`:
+
+```yaml
+annotations:
+  io.rancher.hidden-ui: true
+```
+
+Given all the annotations inside of `metadata.yml` are optional, the `metadata.yml`
+file might be missing this value. This value is not required by `artifacthub-pkg.yml`,
+hence `kwctl scaffold` not fail if this annotation is not found inside of `metadata.yml`.
 
 ## Implementation details
 
