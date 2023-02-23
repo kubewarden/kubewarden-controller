@@ -149,7 +149,6 @@ impl ArtifactHubPkg {
         metadata: &Metadata,
         version: &str,
         created_at: OffsetDateTime,
-        readme: Option<&str>,
         questions: Option<&str>,
     ) -> Result<Self> {
         // validate inputs
@@ -167,9 +166,6 @@ impl ArtifactHubPkg {
         }
         let semver_version = Version::parse(version)
             .map_err(|e| anyhow!("policy version must be in semver: {}", e))?;
-        if readme.is_some() && readme.unwrap().is_empty() {
-            return Err(anyhow!("readme content cannot be empty"));
-        }
         if questions.is_some() && questions.unwrap().is_empty() {
             return Err(anyhow!("questions-ui content cannot be empty"));
         }
@@ -185,7 +181,7 @@ impl ArtifactHubPkg {
         let links = parse_links(metadata_annots, &semver_version)?;
         let maintainers = parse_maintainers(metadata_annots)?;
         let annotations = parse_annotations(metadata_annots, metadata, questions)?;
-        let readme = parse_readme(metadata_annots, readme)?;
+        let readme = parse_readme(metadata_annots)?;
 
         let artifacthubpkg = ArtifactHubPkg {
             version: semver_version,
@@ -475,23 +471,15 @@ fn parse_annotations(
     Ok(annotations)
 }
 
-fn parse_readme(
-    metadata_annots: &HashMap<String, String>,
-    readme: Option<&str>,
-) -> Result<Option<String>> {
-    match readme {
-        // if readme is Some, use that:
+fn parse_readme(metadata_annots: &HashMap<String, String>) -> Result<Option<String>> {
+    match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_USAGE) {
         Some(s) => Ok(Some(s.to_string())),
-        // if not, try to find it in metadata annotations:
-        None => match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_USAGE) {
-            Some(s) => Ok(Some(s.to_string())),
-            None => {
-                return Err(anyhow!(
-                    "policy metadata must specify \"{}\" in annotations",
-                    KUBEWARDEN_ANNOTATION_POLICY_USAGE,
-                ))
-            }
-        },
+        None => {
+            return Err(anyhow!(
+                "policy metadata must specify \"{}\" in annotations",
+                KUBEWARDEN_ANNOTATION_POLICY_USAGE,
+            ))
+        }
     }
 }
 
@@ -608,7 +596,6 @@ mod tests {
             "0.2.1",
             OffsetDateTime::UNIX_EPOCH,
             None,
-            None,
         );
         assert_eq!(
             arthub.unwrap_err().to_string(),
@@ -620,13 +607,8 @@ mod tests {
             annotations: Some(HashMap::from([])),
             ..Default::default()
         };
-        let arthub = ArtifactHubPkg::from_metadata(
-            &metadata,
-            "0.2.1",
-            OffsetDateTime::UNIX_EPOCH,
-            None,
-            None,
-        );
+        let arthub =
+            ArtifactHubPkg::from_metadata(&metadata, "0.2.1", OffsetDateTime::UNIX_EPOCH, None);
         assert_eq!(
             arthub.unwrap_err().to_string(),
             "no annotations in policy metadata. policy metadata must specify annotations"
@@ -638,28 +620,10 @@ mod tests {
             "not-semver",
             OffsetDateTime::UNIX_EPOCH,
             None,
-            None,
         );
         assert_eq!(
             arthub.unwrap_err().to_string(),
             "policy version must be in semver: unexpected character 'n' while parsing major version number"
-        );
-
-        // check readme is some and not empty
-        let metadata = Metadata {
-            annotations: Some(HashMap::from([(String::from("foo"), String::from("bar"))])),
-            ..Default::default()
-        };
-        let arthub = ArtifactHubPkg::from_metadata(
-            &metadata,
-            "0.2.1",
-            OffsetDateTime::UNIX_EPOCH,
-            Some(""),
-            None,
-        );
-        assert_eq!(
-            arthub.unwrap_err().to_string(),
-            "readme content cannot be empty"
         );
 
         // check questions is some and not empty
@@ -667,13 +631,8 @@ mod tests {
             annotations: Some(HashMap::from([(String::from("foo"), String::from("bar"))])),
             ..Default::default()
         };
-        let arthub = ArtifactHubPkg::from_metadata(
-            &metadata,
-            "0.2.1",
-            OffsetDateTime::UNIX_EPOCH,
-            Some("foo"),
-            Some(""),
-        );
+        let arthub =
+            ArtifactHubPkg::from_metadata(&metadata, "0.2.1", OffsetDateTime::UNIX_EPOCH, Some(""));
         assert_eq!(
             arthub.unwrap_err().to_string(),
             "questions-ui content cannot be empty"
@@ -855,7 +814,6 @@ mod tests {
             "0.2.1",
             OffsetDateTime::UNIX_EPOCH,
             None,
-            None,
         )
         .unwrap();
         let expected = json!({
@@ -898,7 +856,6 @@ mod tests {
             &mock_metadata_with_all(),
             "0.2.1",
             OffsetDateTime::UNIX_EPOCH,
-            Some("readme contents"),
             Some("questions contents"),
         )
         .unwrap();
