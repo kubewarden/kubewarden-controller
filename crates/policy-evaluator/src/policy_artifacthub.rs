@@ -95,7 +95,7 @@ enum ConstContainerImageName {
 ///    url: https://github.com/kubewarden/verify-image-signatures/releases/download/v0.2.1/policy.wasm
 ///  - name: source
 ///    url: https://github.com/kubewarden/verify-image-signatures
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 struct Link {
     /// Either "policy" or "source"
     name: ConstLinkName,
@@ -103,7 +103,7 @@ struct Link {
     url: Url,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 enum ConstLinkName {
     #[serde(rename = "policy")]
     Policy,
@@ -124,7 +124,7 @@ enum ConstRecommendation {
     Kubewarden,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct Maintainer {
     name: String,
@@ -301,8 +301,13 @@ fn parse_containers_images(
 fn parse_keywords(metadata_annots: &HashMap<String, String>) -> Result<Option<Vec<String>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS) {
         Some(s) => {
-            let keywords = s.split(", ").map(str::to_string).collect::<Vec<String>>();
-            for word in keywords.iter() {
+            let csv = s
+                .split(',')
+                .map(|s| s.trim_start_matches(' '))
+                .map(|s| s.trim_end_matches(' '))
+                .map(str::to_string)
+                .collect::<Vec<String>>();
+            for word in csv.iter() {
                 if word.is_empty() {
                     return Err(anyhow!(
                         "annotation \"{}\" in policy metadata is malformed, must be csv values",
@@ -310,7 +315,7 @@ fn parse_keywords(metadata_annots: &HashMap<String, String>) -> Result<Option<Ve
                     ));
                 }
             }
-            Ok(Some(keywords))
+            Ok(Some(csv))
         }
         None => Ok(None),
     }
@@ -331,7 +336,6 @@ fn parse_links(
                     e
                 )
             })?;
-            // TODO always add source pair
             match policy_source.host_str() == Some("github.com") {
                 true => {
                     let url = Url::parse(
@@ -349,7 +353,7 @@ fn parse_links(
                             e
                         )
                     })?;
-                    let links = vec![
+                    Ok(Some(vec![
                         Link {
                             name: ConstLinkName::Policy,
                             url,
@@ -358,10 +362,12 @@ fn parse_links(
                             name: ConstLinkName::Source,
                             url: policy_source,
                         },
-                    ];
-                    Ok(Some(links))
+                    ]))
                 }
-                false => Ok(None),
+                false => Ok(Some(vec![Link {
+                    name: ConstLinkName::Source,
+                    url: policy_source,
+                }])),
             }
         }
         None => Ok(None),
@@ -375,9 +381,28 @@ fn parse_maintainers(metadata_annots: &HashMap<String, String>) -> Result<Option
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR) {
         Some(s) => {
             let mut maintainers: Vec<Maintainer> = vec![];
-            let vec_str = s.split(',').collect::<Vec<&str>>();
-            for person in vec_str.iter() {
+            let csv = s
+                .split(',')
+                .map(|s| s.trim_start_matches(' '))
+                .map(|s| s.trim_end_matches(' '))
+                .map(str::to_string)
+                .collect::<Vec<String>>();
+            for word in csv.iter() {
+                if word.is_empty() {
+                    return Err(anyhow!(
+                        "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                        KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
+                    ));
+                }
+            }
+            for person in csv.iter() {
                 let vec_person = person.split('<').collect::<Vec<&str>>();
+                if vec_person.len() != 2 {
+                    return Err(anyhow!(
+                        "annotation \"{}\" in policy metadata is malformed, elements should be in \"name <email address>\" format",
+                        KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
+                    ));
+                };
                 let name = vec_person[0]
                     .trim_start_matches(' ')
                     .trim_end_matches(' ')
@@ -483,27 +508,27 @@ mod tests {
             rules: vec![],
             annotations: Some(HashMap::from([
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_TITLE.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
                     String::from("verify-image-signatures"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME),
                     String::from("Verify Image Signatures"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION),
                     String::from("A description"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_OCIURL.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
                     String::from("https://github.com/ocirepo"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES),
                     String::from("Pod, Deployment"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_USAGE.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_USAGE),
                     String::from("readme contents"),
                 ),
             ])),
@@ -520,51 +545,51 @@ mod tests {
             rules: vec![],
             annotations: Some(HashMap::from([
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_TITLE.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
                     String::from("verify-image-signatures"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION),
                     String::from("A description"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_AUTHOR.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
                     String::from("Tux Tuxedo <tux@example.com>, Pidgin <pidgin@example.com>"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_URL.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_URL),
                     String::from("https://github.com/home"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_OCIURL.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
                     String::from("https://github.com/ocirepo"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_SOURCE.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
                     String::from("https://github.com/repo"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_LICENSE.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_LICENSE),
                     String::from("Apache-2.0"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_POLICY_USAGE.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_USAGE),
                     String::from("readme contents"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES),
                     String::from("Pod, Deployment"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME),
                     String::from("Verify Image Signatures"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS),
                     String::from("pod, signature"),
                 ),
                 (
-                    KUBEWARDEN_ANNOTATION_RANCHER_HIDDENUI.to_string(),
+                    String::from(KUBEWARDEN_ANNOTATION_RANCHER_HIDDENUI),
                     String::from("true"),
                 ),
             ])),
@@ -658,6 +683,152 @@ mod tests {
     }
 
     #[test]
+    fn check_parse_keywords() -> Result<(), ()> {
+        let keywords_annot = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS),
+            String::from(" foo,bar, faz fiz, baz"),
+        )]);
+        let keywords_annot_empty = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS),
+            String::from(""),
+        )]);
+        let keywords_annot_commas = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS),
+            String::from("foo,,bar"),
+        )]);
+
+        assert_eq!(
+            parse_keywords(&keywords_annot).unwrap(),
+            Some(
+                vec!["foo", "bar", "faz fiz", "baz"]
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect()
+            )
+        );
+        assert_eq!(
+            parse_keywords(&keywords_annot_empty)
+                .unwrap_err()
+                .to_string(),
+            format!(
+                "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS
+            )
+        );
+        assert_eq!(
+            parse_keywords(&keywords_annot_commas)
+                .unwrap_err()
+                .to_string(),
+            format!(
+                "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS
+            )
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn check_parse_links() -> Result<(), ()> {
+        let semver_version = Version::parse("0.2.1").unwrap();
+        let source_annot = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
+            String::from("https://github.com/repo"),
+        )]);
+        let source_annot_not_github = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
+            String::from("https://notgithub.com/repo"),
+        )]);
+        let source_annot_badurl = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
+            String::from("@&*foo"),
+        )]);
+
+        assert_eq!(
+            parse_links(&source_annot, &semver_version).unwrap(),
+            Some(vec![
+                Link {
+                    name: ConstLinkName::Policy,
+                    url: Url::parse("https://github.com/repo/releases/download/v0.2.1/policy.wasm")
+                        .unwrap(),
+                },
+                Link {
+                    name: ConstLinkName::Source,
+                    url: Url::parse("https://github.com/repo").unwrap(),
+                }
+            ])
+        );
+        assert_eq!(
+            parse_links(&source_annot_not_github, &semver_version).unwrap(),
+            Some(vec![Link {
+                name: ConstLinkName::Source,
+                url: Url::parse("https://notgithub.com/repo").unwrap(),
+            }])
+        );
+        assert!(parse_links(&source_annot_badurl, &semver_version).is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn check_parse_maintainers() -> Result<(), ()> {
+        let author_annot = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
+            String::from("Tux Tuxedo <tux@example.com>, Pidgin <pidgin@example.com>"),
+        )]);
+        let author_annot_empty = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
+            String::from(""),
+        )]);
+        let author_annot_commas = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
+            String::from("Foo <foo@example.com>,,Bar <bar@example.com>"),
+        )]);
+        let author_annot_nameemail = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
+            String::from("Foo foo@example.com, Bar <bar@example.com>"),
+        )]);
+        let author_annot_bademail = HashMap::from([(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
+            String::from("Bar <#$%#$%>"),
+        )]);
+
+        assert_eq!(
+            parse_maintainers(&author_annot).unwrap(),
+            Some(vec![
+                Maintainer {
+                    name: String::from("Tux Tuxedo"),
+                    email: String::from("tux@example.com"),
+                },
+                Maintainer {
+                    name: String::from("Pidgin"),
+                    email: String::from("pidgin@example.com"),
+                }
+            ])
+        );
+        assert_eq!(
+            parse_maintainers(&author_annot_empty)
+                .unwrap_err()
+                .to_string(),
+            format!(
+                "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
+            )
+        );
+        assert_eq!(
+            parse_maintainers(&author_annot_commas)
+                .unwrap_err()
+                .to_string(),
+            format!(
+                "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
+            )
+        );
+        assert!(parse_maintainers(&author_annot_nameemail).is_err());
+        assert!(parse_maintainers(&author_annot_bademail).is_err());
+        Ok(())
+    }
+
+    #[test]
     fn artifacthubpkg_missing_required() -> Result<(), ()> {
         let semver_version = Version::parse("0.2.1").unwrap();
         let invalid_annotations = HashMap::from([(String::from("foo"), String::from("bar"))]);
@@ -673,6 +844,7 @@ mod tests {
                 KUBEWARDEN_ANNOTATION_POLICY_OCIURL
             )
         );
+
         Ok(())
     }
 
