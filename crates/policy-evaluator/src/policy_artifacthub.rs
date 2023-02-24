@@ -910,7 +910,7 @@ mod tests {
                 "kubewarden/resources": "Pod, Deployment",
                 "kubewarden/mutation": "false",
                 "kubewarden/contextAware": "false",
-                "rancher/hidden-ui": "true",
+                "kubewarden/hidden-ui": "true",
                 "kubewarden/rules": "[]",
                 "kubewarden/questions-ui": "questions contents"
             }
