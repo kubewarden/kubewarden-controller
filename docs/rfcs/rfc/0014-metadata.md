@@ -522,11 +522,19 @@ policy. This can be configured by passing the following annotation inside
 
 ```yaml
 annotations:
-  rancher/hidden-ui: true
+  kubewarden/hidden-ui: true
 ```
 
 
 This value will be taken from the following annotation of `metadata.yml`:
+
+```yaml
+annotations:
+  io.kubewarden.hidden-ui: true
+```
+
+The same value can also be taken from the following annotation of `metadata.yml`,
+that has been marked as deprecated:
 
 ```yaml
 annotations:
