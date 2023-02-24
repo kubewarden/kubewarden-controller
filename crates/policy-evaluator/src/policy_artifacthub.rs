@@ -152,7 +152,6 @@ impl ArtifactHubPkg {
         questions: Option<&str>,
     ) -> Result<Self> {
         // validate inputs
-        //
         if metadata.annotations.is_none() {
             return Err(anyhow!(
                 "no annotations in policy metadata. policy metadata must specify annotations"
@@ -171,7 +170,6 @@ impl ArtifactHubPkg {
         }
 
         // build struct
-        //
         let name = parse_name(metadata_annots)?;
         let display_name = parse_display_name(metadata_annots)?;
         let description = parse_description(metadata_annots)?;
@@ -427,7 +425,6 @@ fn parse_annotations(
     questions: Option<&str>,
 ) -> Result<HashMap<String, String>> {
     // add required annotations
-    //
     let mut annotations: HashMap<String, String> = HashMap::new();
     annotations.insert(
         ARTIFACTHUB_ANNOTATION_KUBEWARDEN_MUTATION.to_string(),
@@ -443,7 +440,6 @@ fn parse_annotations(
     );
 
     // add optional annotations
-    //
     if let Some(s) = questions {
         annotations.insert(
             ARTIFACTHUB_ANNOTATION_KUBEWARDEN_QUESTIONSUI.to_string(),
