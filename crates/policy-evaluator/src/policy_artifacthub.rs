@@ -165,7 +165,10 @@ impl ArtifactHubPkg {
         }
         let semver_version = Version::parse(version)
             .map_err(|e| anyhow!("policy version must be in semver: {}", e))?;
-        if questions.is_some() && questions.unwrap().is_empty() {
+        if questions
+            .and_then(|q| if q.is_empty() { Some(q) } else { None })
+            .is_some()
+        {
             return Err(anyhow!("questions-ui content cannot be empty"));
         }
 
