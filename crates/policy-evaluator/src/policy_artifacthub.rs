@@ -213,39 +213,39 @@ impl ArtifactHubPkg {
 }
 
 fn parse_name(metadata_annots: &HashMap<String, String>) -> Result<String> {
-    match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_TITLE) {
-        Some(s) => Ok(s.to_string()),
-        None => {
-            return Err(anyhow!(
+    metadata_annots
+        .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
+        .ok_or_else(|| {
+            anyhow!(
                 "policy metadata must specify \"{}\" in annotations",
                 KUBEWARDEN_ANNOTATION_POLICY_TITLE,
-            ))
-        }
-    }
+            )
+        })
+        .cloned()
 }
 
 fn parse_display_name(metadata_annots: &HashMap<String, String>) -> Result<String> {
-    match metadata_annots.get(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME) {
-        Some(s) => Ok(s.to_string()),
-        None => {
-            return Err(anyhow!(
+    metadata_annots
+        .get(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME)
+        .ok_or_else(|| {
+            anyhow!(
                 "policy metadata must specify \"{}\" in annotations",
                 KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME,
-            ))
-        }
-    }
+            )
+        })
+        .cloned()
 }
 
 fn parse_description(metadata_annots: &HashMap<String, String>) -> Result<String> {
-    match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION) {
-        Some(s) => Ok(s.to_string()),
-        None => {
-            return Err(anyhow!(
+    metadata_annots
+        .get(KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION)
+        .ok_or_else(|| {
+            anyhow!(
                 "policy metadata must specify \"{}\" in annotations",
                 KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION,
-            ))
-        }
-    }
+            )
+        })
+        .cloned()
 }
 
 fn parse_home_url(metadata_annots: &HashMap<String, String>) -> Result<Option<Url>> {
@@ -304,15 +304,14 @@ fn parse_keywords(metadata_annots: &HashMap<String, String>) -> Result<Option<Ve
                 .map(|s| s.trim_end_matches(' '))
                 .map(str::to_string)
                 .collect::<Vec<String>>();
-            for word in csv.iter() {
-                if word.is_empty() {
-                    return Err(anyhow!(
-                        "annotation \"{}\" in policy metadata is malformed, must be csv values",
-                        KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS
-                    ));
-                }
+            if csv.clone().into_iter().any(|word| word.is_empty()) {
+                Err(anyhow!(
+                    "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS
+                ))
+            } else {
+                Ok(Some(csv))
             }
-            Ok(Some(csv))
         }
         None => Ok(None),
     }
