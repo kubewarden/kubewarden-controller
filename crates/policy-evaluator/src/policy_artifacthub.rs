@@ -115,13 +115,16 @@ enum ConstLinkName {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 struct Recommendation {
-    url: ConstRecommendation,
+    url: String,
 }
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-enum ConstRecommendation {
-    #[serde(rename = "https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller")]
-    Kubewarden,
+impl Default for Recommendation {
+    fn default() -> Self {
+        Recommendation {
+            url: String::from(
+                "https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller",
+            ),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
@@ -135,13 +138,14 @@ struct Maintainer {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 struct Provider {
-    name: ConstProvider,
+    name: String,
 }
-
-#[derive(Deserialize, Serialize, Debug, Clone)]
-enum ConstProvider {
-    #[serde(rename = "kubewarden")]
-    Kubewarden,
+impl Default for Provider {
+    fn default() -> Self {
+        Provider {
+            name: String::from("kubewarden"),
+        }
+    }
 }
 
 impl ArtifactHubPkg {
@@ -198,12 +202,8 @@ impl ArtifactHubPkg {
             keywords,
             links,
             maintainers,
-            provider: Provider {
-                name: ConstProvider::Kubewarden,
-            },
-            recommendations: vec![Recommendation {
-                url: ConstRecommendation::Kubewarden,
-            }],
+            provider: Default::default(),
+            recommendations: vec![Recommendation::default()],
             annotations,
             readme,
         };
