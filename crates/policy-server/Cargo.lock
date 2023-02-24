@@ -394,7 +394,7 @@ checksum = "0d261e256854913907f67ed06efbc3338dfe6179796deefc1ff763fc1aee5535"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.8.0#943802008d83e624f13aa12cae965b9a6afa2cb8"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.9.0#c341d5e97bafc07ad3f0cc42e8c07665a9920357"
 dependencies = [
  "base64 0.21.0",
  "chrono",
@@ -2172,9 +2172,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.8.7"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "588e2e23d9a7e1b2529ce00a784e101f2d685d44e901b3c631c30ac33d7441ab"
+checksum = "49adc28e839eaa1bebfacaeaaf3a10f7a5fc9b9c9ea1ae47c5a418899f0a5f4e"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -3135,8 +3135,8 @@ checksum = "6ac9a59f73473f1b8d852421e59e64809f025994837ef743615c6d0c5b305160"
 
 [[package]]
 name = "policy-evaluator"
-version = "0.8.0"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.8.0#943802008d83e624f13aa12cae965b9a6afa2cb8"
+version = "0.9.0"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.9.0#c341d5e97bafc07ad3f0cc42e8c07665a9920357"
 dependencies = [
  "anyhow",
  "base64 0.21.0",
@@ -3173,8 +3173,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.7.18"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.18#1aac1abadf79de197bd09e234066413d1b2da594"
+version = "0.7.19"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.7.19#28221f6814d330c23532c0f899cb1929bf0b53c7"
 dependencies = [
  "anyhow",
  "async-std",
@@ -3848,9 +3848,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.155"
+version = "1.0.156"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71f2b4817415c6d4210bfe1c7bfcf4801b2d904cb4d0e1a8fdb651013c9e86b8"
+checksum = "314b5b092c0ade17c00142951e50ced110ec27cea304b1037c6969246c2469a4"
 dependencies = [
  "serde_derive",
 ]
@@ -3876,9 +3876,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.155"
+version = "1.0.156"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d071a94a3fac4aff69d023a7f411e33f40f3483f8c5190b1953822b6b76d7630"
+checksum = "d7e29c4601e36bcec74a223228dce795f4cd3616341a4af93520ca1a837c087d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4070,8 +4070,7 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c432c1d3239bd0b5a871abd75ca03a6e085b02ba310d570890eef974a92bb325"
+source = "git+https://github.com/flavio/sigstore-rs?branch=0.6.0-patch#0c9910e0f963987a838a1b132153420f7905fe5b"
 dependencies = [
  "async-trait",
  "base64 0.13.1",
