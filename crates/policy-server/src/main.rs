@@ -4,9 +4,9 @@ extern crate policy_evaluator;
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use opentelemetry::global::shutdown_tracer_provider;
-use policy_evaluator::callback_handler::CallbackHandlerBuilder;
 use policy_evaluator::policy_fetcher::sigstore;
 use policy_evaluator::policy_fetcher::verify::FulcioAndRekorData;
+use policy_evaluator::{callback_handler::CallbackHandlerBuilder, kube};
 use std::{fs, path::PathBuf, process, sync::RwLock, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
 use tracing::{debug, error, info};
@@ -51,6 +51,8 @@ fn main() -> Result<()> {
         .map(|s| s.to_owned());
 
     let metrics_enabled = matches.contains_id("enable-metrics");
+    let ignore_kubernetes_connection_failure =
+        matches.contains_id("ignore-kubernetes-connection-failure");
     let verification_config = cli::verification_config(&matches).unwrap_or_else(|e| {
         fatal_error(format!("Cannot create sigstore verification config: {e:?}"));
         unreachable!()
@@ -138,10 +140,56 @@ fn main() -> Result<()> {
         }
     };
 
-    let mut callback_handler = CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx)
-        .registry_config(sources.clone())
-        .fulcio_and_rekor_data(fulcio_and_rekor_data.as_ref())
-        .build()?;
+    let mut callback_handler_builder =
+        CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx)
+            .registry_config(sources.clone())
+            .fulcio_and_rekor_data(fulcio_and_rekor_data.as_ref());
+
+    // Attempt to build kube::Client instance, this unfortunately needs an async context
+    // for a really limited amount of time.
+    //
+    // Important: the tokio runtime used to create the `kube::Client` **must**
+    // be the very same one used later on when the client is used.
+    let rt = match Runtime::new() {
+        Ok(r) => r,
+        Err(error) => {
+            fatal_error(format!("error initializing tokio runtime: {error}"));
+            unreachable!();
+        }
+    };
+
+    let kube_client: Option<kube::Client> = rt.block_on(async {
+        match kube::Client::try_default().await {
+            Ok(client) => Some(client),
+            Err(e) => {
+                // We cannot rely on `tracing` yet, because the tracing system has not
+                // been initialized yet
+                eprintln!("Cannot connect to Kubernetes cluster: {e}");
+                None
+            }
+        }
+    });
+
+    match kube_client {
+        Some(client) => {
+            callback_handler_builder = callback_handler_builder.kube_client(client);
+        }
+        None => {
+            if ignore_kubernetes_connection_failure {
+                // We cannot rely on `tracing` yet, because the tracing system has not
+                // been initialized yet
+                eprintln!(
+                    "Cannot connect to Kubernetes, context aware policies will not work properly"
+                );
+            } else {
+                return Err(anyhow!(
+                    "Cannot connect to Kubernetes, context aware policies would not work properly"
+                ));
+            }
+        }
+    };
+
+    let mut callback_handler = callback_handler_builder.build()?;
     let callback_sender_channel = callback_handler.sender_channel();
 
     ////////////////////////////////////////////////////////////////////////////
@@ -188,13 +236,6 @@ fn main() -> Result<()> {
     //                                                                        //
     ////////////////////////////////////////////////////////////////////////////
 
-    let rt = match Runtime::new() {
-        Ok(r) => r,
-        Err(error) => {
-            fatal_error(format!("error initializing tokio runtime: {error}"));
-            unreachable!();
-        }
-    };
     rt.block_on(async {
         // Setup the tracing system. This MUST be done inside of a tokio Runtime
         // because some collectors rely on it and would panic otherwise.

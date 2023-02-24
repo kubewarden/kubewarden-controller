@@ -12,6 +12,7 @@ testcases:
   steps:
   - script: |
       cargo run --release -- \
+        --ignore-kubernetes-connection-failure 1 \
         --policies test_data/policies.yaml \
         --policies-download-dir `pwd`/e2e-tests-policies \
         --policy-timeout 2 \
