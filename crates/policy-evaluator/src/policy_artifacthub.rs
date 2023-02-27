@@ -4,7 +4,6 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
-use thiserror::Error;
 use time::OffsetDateTime;
 use url::Url;
 
@@ -19,39 +18,10 @@ use crate::constants::{
     KUBEWARDEN_ANNOTATION_POLICY_TITLE, KUBEWARDEN_ANNOTATION_POLICY_URL,
     KUBEWARDEN_ANNOTATION_POLICY_USAGE, KUBEWARDEN_ANNOTATION_RANCHER_HIDDENUI,
 };
+use crate::errors::ArtifactHubError;
 use crate::policy_metadata::Metadata;
 
 pub type Result<T> = std::result::Result<T, ArtifactHubError>;
-
-#[derive(Error, Debug)]
-pub enum ArtifactHubError {
-    #[error("no annotations in policy metadata. policy metadata must specify annotations")]
-    NoAnnotations,
-
-    #[error("policy version must be in semver: {0}")]
-    NoSemverVersion(String),
-
-    #[error("questions-ui content cannot be empty")]
-    EmptyQuestionsUI,
-
-    #[error("policy metadata must specify \"{0}\" in annotations")]
-    MissingAnnotation(String),
-
-    #[error("annotation \"{annot:?}\" in policy metadata must be a well formed URL: {error:?}")]
-    MalformedURL { annot: String, error: String },
-
-    #[error("annotation \"{0}\" in policy metadata is malformed, must be csv values")]
-    MalformedCSV(String),
-
-    #[error("annotation \"{0}\" in policy metadata is malformed, must be csv values of \"name <email>\"")]
-    MalformedCSVEmail(String),
-
-    #[error("annotation \"{annot:?}\" in policy metadata must be a well formed email: {error:?}")]
-    MalformedEmail { annot: String, error: String },
-
-    #[error("annotation \"{0}\" in policy metadata is malformed, must be a string \"true\" or \"false\"")]
-    MalformedBoolString(String),
-}
 
 /// Partial implementation of the format of artifacthub-pkg.yml file as defined
 /// in
