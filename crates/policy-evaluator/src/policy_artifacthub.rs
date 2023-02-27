@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use email_address::*;
+use mail_parser::*;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -371,49 +372,59 @@ fn parse_links(
 }
 
 // parses the value of annotation KUBEWARDEN_ANNOTATION_POLICY_AUTHOR into a
-// vector of maintainers, making sure the email is well formed, and removes '<'
-// and '>' from the mail address
+// vector of maintainers, making sure the csv input and emails are well formed
 fn parse_maintainers(metadata_annots: &HashMap<String, String>) -> Result<Option<Vec<Maintainer>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR) {
         Some(s) => {
+            // name-addr https://www.rfc-editor.org/rfc/rfc5322#section-3.4
             let mut maintainers: Vec<Maintainer> = vec![];
-            let csv = s
-                .split(',')
-                .map(|s| s.trim_start_matches(' '))
-                .map(|s| s.trim_end_matches(' '))
-                .map(str::to_string)
-                .collect::<Vec<String>>();
-            for word in csv.iter() {
-                if word.is_empty() {
-                    return Err(anyhow!(
-                        "annotation \"{}\" in policy metadata is malformed, must be csv values",
-                        KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
-                    ));
-                }
-            }
-            for person in csv.iter() {
-                let vec_person = person.split('<').collect::<Vec<&str>>();
-                if vec_person.len() != 2 {
-                    return Err(anyhow!(
-                        "annotation \"{}\" in policy metadata is malformed, elements should be in \"name <email address>\" format",
-                        KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
-                    ));
-                };
-                let name = vec_person[0]
-                    .trim_start_matches(' ')
-                    .trim_end_matches(' ')
-                    .to_string();
-                let email = EmailAddress::from_str(vec_person[1].trim_matches(|c|c == '<' || c == '>')).map_err(|e| {
+            let to = format!("To: {}", s);
+            let msg = mail_parser::Message::parse(to.as_bytes())
+                .ok_or(
                     anyhow!(
-                        "annotation \"{}\" in policy metadata is malformed, email address must be in RFC5322 format: {}",
+                    "annotation \"{}\" in policy metadata is malformed, must be csv values of \"name <email>\"",
+                    KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
+                    )
+                )?;
+
+            let addr = msg.to();
+
+            match addr {
+                HeaderValue::Address(addr) => {
+                    let email = EmailAddress::from_str(&addr.address.clone().unwrap_or_default()).map_err(|e|
+                    anyhow!(
+                        "annotation \"{}\" in policy metadata is malformed, email address malformed: {}",
                         KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
                         e,
                     )
-                })?;
-                maintainers.push(Maintainer {
-                    name,
-                    email: email.to_string(),
-                });
+                )?;
+
+                    maintainers.push(Maintainer {
+                        name: addr.name.clone().unwrap_or_default().to_string(),
+                        email: email.to_string(),
+                    });
+                }
+                HeaderValue::AddressList(vec_addr) => {
+                    for a in vec_addr {
+                        let email = EmailAddress::from_str(&a.address.clone().unwrap_or_default()).map_err(|e|
+                    anyhow!(
+                        "annotation \"{}\" in policy metadata is malformed, email address malformed: {}",
+                        KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
+                        e,
+                    )
+                )?;
+                        maintainers.push(Maintainer {
+                            name: a.name.clone().unwrap_or_default().to_string(),
+                            email: email.to_string(),
+                        });
+                    }
+                }
+                _ => {
+                    return Err(anyhow!(
+                        "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                        KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
+                    ))
+                }
             }
             Ok(Some(maintainers))
         }
@@ -767,18 +778,23 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             format!(
-                "annotation \"{}\" in policy metadata is malformed, must be csv values",
+                "annotation \"{}\" in policy metadata is malformed, must be csv values of \"name <email>\"",
                 KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
             )
         );
+
         assert_eq!(
-            parse_maintainers(&author_annot_commas)
-                .unwrap_err()
-                .to_string(),
-            format!(
-                "annotation \"{}\" in policy metadata is malformed, must be csv values",
-                KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
-            )
+            parse_maintainers(&author_annot_commas).unwrap(),
+            Some(vec![
+                Maintainer {
+                    name: String::from("Foo"),
+                    email: String::from("foo@example.com"),
+                },
+                Maintainer {
+                    name: String::from("Bar"),
+                    email: String::from("bar@example.com"),
+                }
+            ])
         );
         assert!(parse_maintainers(&author_annot_nameemail).is_err());
         assert!(parse_maintainers(&author_annot_bademail).is_err());
