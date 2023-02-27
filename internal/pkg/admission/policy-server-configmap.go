@@ -21,11 +21,12 @@ import (
 )
 
 type PolicyServerConfigEntry struct {
-	NamespacedName  types.NamespacedName `json:"namespacedName"`
-	URL             string               `json:"url"`
-	PolicyMode      string               `json:"policyMode"`
-	AllowedToMutate bool                 `json:"allowedToMutate"`
-	Settings        runtime.RawExtension `json:"settings,omitempty"`
+	NamespacedName        types.NamespacedName              `json:"namespacedName"`
+	URL                   string                            `json:"url"`
+	PolicyMode            string                            `json:"policyMode"`
+	AllowedToMutate       bool                              `json:"allowedToMutate"`
+	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
+	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 }
 
 type sourceAuthorityType string
@@ -207,10 +208,11 @@ func (r *Reconciler) createPoliciesMap(admissionPolicies []policiesv1.Policy) Po
 				Namespace: admissionPolicy.GetNamespace(),
 				Name:      admissionPolicy.GetName(),
 			},
-			URL:             admissionPolicy.GetModule(),
-			PolicyMode:      string(admissionPolicy.GetPolicyMode()),
-			AllowedToMutate: admissionPolicy.IsMutating(),
-			Settings:        admissionPolicy.GetSettings(),
+			URL:                   admissionPolicy.GetModule(),
+			PolicyMode:            string(admissionPolicy.GetPolicyMode()),
+			AllowedToMutate:       admissionPolicy.IsMutating(),
+			Settings:              admissionPolicy.GetSettings(),
+			ContextAwareResources: admissionPolicy.GetContextAwareResources(),
 		}
 	}
 	return policies
