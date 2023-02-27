@@ -107,6 +107,7 @@ setup-envtest: $(SETUP_ENVTEST) # Build setup-envtest
 .PHONY: unit-tests
 unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
 	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./internal/... -test.v -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./apis/... -test.v -coverprofile cover.out
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.

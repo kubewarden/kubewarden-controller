@@ -140,3 +140,7 @@ func (r *AdmissionPolicy) GetPolicyServer() string {
 func (r *AdmissionPolicy) GetUniqueName() string {
 	return "namespaced-" + r.Namespace + "-" + r.Name
 }
+
+func (r *AdmissionPolicy) GetContextAwareResources() []ContextAwareResource {
+	return []ContextAwareResource{}
+}
