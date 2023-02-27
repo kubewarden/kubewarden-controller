@@ -57,6 +57,26 @@ spec:
           spec:
             description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
             properties:
+              contextAwareResources:
+                description: List of Kubernetes resources the policy is allowed to
+                  access at evaluation time. Access to these resources is done using
+                  the `ServiceAccount` of the PolicyServer the policy is assigned
+                  to.
+                items:
+                  description: ContextAwareResource identifies a Kubernetes resource
+                  properties:
+                    apiVersion:
+                      description: apiVersion of the resource (v1 for core group,
+                        groupName/groupVersions for other).
+                      type: string
+                    kind:
+                      description: Singular PascalCase name of the resource
+                      type: string
+                  required:
+                  - apiVersion
+                  - kind
+                  type: object
+                type: array
               failurePolicy:
                 description: FailurePolicy defines how unrecognized errors and timeout
                   errors from the policy are handled. Allowed values are "Ignore"

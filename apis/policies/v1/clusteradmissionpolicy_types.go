@@ -22,6 +22,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// ContextAwareResource identifies a Kubernetes resource
+type ContextAwareResource struct {
+	// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+	APIVersion string `json:"apiVersion"`
+
+	// Singular PascalCase name of the resource
+	Kind string `json:"kind"`
+}
+
 // ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
 type ClusterAdmissionPolicySpec struct {
 	PolicySpec `json:""` //nolint
@@ -71,6 +80,12 @@ type ClusterAdmissionPolicySpec struct {
 	// Default to the empty LabelSelector, which matches everything.
 	// +optional
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+
+	// List of Kubernetes resources the policy is allowed to access at evaluation time.
+	// Access to these resources is done using the `ServiceAccount` of the PolicyServer
+	// the policy is assigned to.
+	// +optional
+	ContextAwareResources []ContextAwareResource `json:"contextAwareResources,omitempty"`
 }
 
 // ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
