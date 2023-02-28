@@ -21,7 +21,7 @@ lazy_static = "1.4.0"
 # It's necessary to set the "static" feature in mdcat to avoid the usage of 
 # native-ssl. Using the rustls instead. Otherwise, the build will fail due the 
 # missing OpenSSL lib.
-mdcat = { version = "1.0", default-features = false, features = ["static"] }
+mdcat = { version = "1.1", default-features = false, features = ["static"] }
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.6.3" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.10"
