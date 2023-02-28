@@ -1,5 +1,6 @@
 use email_address::*;
 use mail_parser::*;
+use policy_fetcher::oci_distribution::{ParseError, Reference};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -261,11 +262,13 @@ fn parse_containers_images(
 ) -> Result<Option<Vec<ContainerImage>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_OCIURL) {
         Some(s) => {
-            let oci_url = Url::parse(format!("{}:v{}", s, version.to_string().as_str()).as_str())
-                .map_err(|e| ArtifactHubError::MalformedURL {
-                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
-                error: e.to_string(),
-            })?;
+            let oci_url: Reference =
+                format!("{}:v{}", s, version)
+                    .parse()
+                    .map_err(|e: ParseError| ArtifactHubError::MalformedURL {
+                        annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
+                        error: e.to_string(),
+                    })?;
             let container_images = vec![ContainerImage {
                 name: ConstContainerImageName::Policy,
                 image: oci_url.to_string(),
@@ -484,7 +487,7 @@ mod tests {
                 ),
                 (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
-                    String::from("https://github.com/ocirepo"),
+                    String::from("ghcr.io/ocirepo/namespace/verify-image-signatures"),
                 ),
                 (
                     String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES),
@@ -525,7 +528,7 @@ mod tests {
                 ),
                 (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
-                    String::from("https://github.com/ocirepo"),
+                    String::from("ghcr.io/ocirepo/namespace/verify-image-signatures"),
                 ),
                 (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
@@ -811,7 +814,7 @@ mod tests {
             "containersImages": [
             {
                 "name": "policy",
-                "image": "https://github.com/ocirepo:v0.2.1"
+                "image": "ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1",
             },
             ],
             "readme": "readme contents",
@@ -850,7 +853,7 @@ mod tests {
             "containersImages": [
             {
                 "name": "policy",
-                "image": "https://github.com/ocirepo:v0.2.1"
+                "image": "ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1",
             },
             ],
             "keywords": [
