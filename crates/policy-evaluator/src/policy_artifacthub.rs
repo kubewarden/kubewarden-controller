@@ -419,7 +419,7 @@ fn parse_annotations(
     );
     annotations.insert(
         ARTIFACTHUB_ANNOTATION_KUBEWARDEN_RULES.to_string(),
-        serde_json::to_string(&metadata.rules).unwrap(),
+        serde_yaml::to_string(&metadata.rules).unwrap(),
     );
 
     // add optional annotations
@@ -805,7 +805,7 @@ mod tests {
             "annotations": {
                 "kubewarden/mutation": "false",
                 "kubewarden/contextAware": "false",
-                "kubewarden/rules": "[]",
+                "kubewarden/rules": "[]\n",
                 "kubewarden/resources": "Pod, Deployment",
             },
             "containersImages": [
@@ -891,7 +891,7 @@ mod tests {
                 "kubewarden/mutation": "false",
                 "kubewarden/contextAware": "false",
                 "kubewarden/hidden-ui": "true",
-                "kubewarden/rules": "[]",
+                "kubewarden/rules": "[]\n",
                 "kubewarden/questions-ui": "questions contents"
             }
         });
