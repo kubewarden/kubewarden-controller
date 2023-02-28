@@ -49,7 +49,9 @@ containers.
 Built binaries for `Linux x86_64`, `Windows x86_64`, `MacOS x86_64` and `MacOS
 aarch64 (M1)` are available in [GH Releases](https://github.com/kubewarden/kwctl/releases).
 
-There is also a community-created [Homebrew 🍺 formula for kwctl](https://formulae.brew.sh/formula/kwctl).
+There is also:
+- Community-created [Homebrew 🍺 formula for kwctl](https://formulae.brew.sh/formula/kwctl)
+- Community-created [AUR 🐧 package](https://aur.archlinux.org/packages/kwctl-bin)
 
 ## Usage
 
