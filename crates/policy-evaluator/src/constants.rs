@@ -12,7 +12,7 @@ pub const KUBEWARDEN_ANNOTATION_POLICY_USAGE: &str = "io.kubewarden.policy.usage
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES: &str = "io.artifacthub.resources";
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME: &str = "io.artifacthub.displayName";
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS: &str = "io.artifacthub.keywords";
-pub const KUBEWARDEN_ANNOTATION_RANCHER_HIDDENUI: &str = "io.kubewarden.hidden-ui";
+pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_HIDDENUI: &str = "io.kubewarden.hidden-ui";
 
 pub const KUBEWARDEN_ANNOTATION_KWCTL_VERSION: &str = "io.kubewarden.kwctl";
 
