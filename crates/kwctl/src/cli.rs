@@ -401,6 +401,13 @@ pub fn build_cli() -> Command {
                     .help("File containing the metadata")
                 )
                 .arg(
+                    Arg::new("usage-path")
+                    .long("usage-path")
+                    .short('u')
+                    .value_name("PATH")
+                    .help("File containing the usage information of the policy")
+                )
+                .arg(
                     Arg::new("output-path")
                     .long("output-path")
                     .short('o')
