@@ -17,7 +17,7 @@ use crate::constants::{
     KUBEWARDEN_ANNOTATION_POLICY_AUTHOR, KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION,
     KUBEWARDEN_ANNOTATION_POLICY_LICENSE, KUBEWARDEN_ANNOTATION_POLICY_OCIURL,
     KUBEWARDEN_ANNOTATION_POLICY_SOURCE, KUBEWARDEN_ANNOTATION_POLICY_TITLE,
-    KUBEWARDEN_ANNOTATION_POLICY_URL, KUBEWARDEN_ANNOTATION_POLICY_USAGE,
+    KUBEWARDEN_ANNOTATION_POLICY_URL,
 };
 use crate::errors::ArtifactHubError;
 use crate::policy_metadata::Metadata;
@@ -71,10 +71,6 @@ pub struct ArtifactHubPkg {
     recommendations: Vec<Recommendation>,
     /// List of annotations. Contains kubewarden-specific annotations
     annotations: HashMap<String, String>,
-    /// Multiline package documentation in Markdown format. For us, policy
-    /// readme file
-    #[serde(skip_serializing_if = "Option::is_none")]
-    readme: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -186,7 +182,6 @@ impl ArtifactHubPkg {
         let links = parse_links(metadata_annots, &semver_version)?;
         let maintainers = parse_maintainers(metadata_annots)?;
         let annotations = parse_annotations(metadata_annots, metadata, questions)?;
-        let readme = parse_readme(metadata_annots)?;
 
         let artifacthubpkg = ArtifactHubPkg {
             version: semver_version,
@@ -205,7 +200,6 @@ impl ArtifactHubPkg {
             provider: Default::default(),
             recommendations: vec![Recommendation::default()],
             annotations,
-            readme,
         };
 
         Ok(artifacthubpkg)
@@ -452,15 +446,6 @@ fn parse_annotations(
     Ok(annotations)
 }
 
-fn parse_readme(metadata_annots: &HashMap<String, String>) -> Result<Option<String>> {
-    match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_USAGE) {
-        Some(s) => Ok(Some(s.to_string())),
-        None => Err(ArtifactHubError::MissingAnnotation(String::from(
-            KUBEWARDEN_ANNOTATION_POLICY_USAGE,
-        ))),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -492,10 +477,6 @@ mod tests {
                 (
                     String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES),
                     String::from("Pod, Deployment"),
-                ),
-                (
-                    String::from(KUBEWARDEN_ANNOTATION_POLICY_USAGE),
-                    String::from("readme contents"),
                 ),
             ])),
             mutating: false,
@@ -537,10 +518,6 @@ mod tests {
                 (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_LICENSE),
                     String::from("Apache-2.0"),
-                ),
-                (
-                    String::from(KUBEWARDEN_ANNOTATION_POLICY_USAGE),
-                    String::from("readme contents"),
                 ),
                 (
                     String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES),
@@ -817,7 +794,6 @@ mod tests {
                 "image": "ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1",
             },
             ],
-            "readme": "readme contents",
             "provider": {
                "name":  "kubewarden"
             },
@@ -870,7 +846,6 @@ mod tests {
                 "url": "https://github.com/repo"
             }
             ],
-            "readme": "readme contents",
             "maintainers": [
             {
                 "name": "Tux Tuxedo",
