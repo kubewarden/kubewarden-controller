@@ -22,7 +22,7 @@ lazy_static = "1.4.0"
 # native-ssl. Using the rustls instead. Otherwise, the build will fail due the 
 # missing OpenSSL lib.
 mdcat = { version = "1.1", default-features = false, features = ["static"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.6.3" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.7.0" }
 pretty-bytes = "0.2.2"
 prettytable-rs = "^0.10"
 pulldown-cmark = { version = "0.9.2", default-features = false }
