@@ -552,10 +552,7 @@ mod tests {
             OffsetDateTime::UNIX_EPOCH,
             None,
         );
-        assert_eq!(
-            arthub.unwrap_err().to_string(),
-            "no annotations in policy metadata. policy metadata must specify annotations"
-        );
+        assert_eq!(arthub.unwrap_err(), ArtifactHubError::NoAnnotations);
 
         // check annotations empty
         let metadata = Metadata {
@@ -564,10 +561,7 @@ mod tests {
         };
         let arthub =
             ArtifactHubPkg::from_metadata(&metadata, "0.2.1", OffsetDateTime::UNIX_EPOCH, None);
-        assert_eq!(
-            arthub.unwrap_err().to_string(),
-            "no annotations in policy metadata. policy metadata must specify annotations"
-        );
+        assert_eq!(arthub.unwrap_err(), ArtifactHubError::NoAnnotations);
 
         // check version is semver
         let arthub = ArtifactHubPkg::from_metadata(
@@ -577,8 +571,10 @@ mod tests {
             None,
         );
         assert_eq!(
-            arthub.unwrap_err().to_string(),
-            "policy version must be in semver: unexpected character 'n' while parsing major version number"
+            arthub.unwrap_err(),
+            ArtifactHubError::NoSemverVersion(String::from(
+                "unexpected character 'n' while parsing major version number"
+            ))
         );
 
         // check questions is some and not empty
@@ -588,10 +584,7 @@ mod tests {
         };
         let arthub =
             ArtifactHubPkg::from_metadata(&metadata, "0.2.1", OffsetDateTime::UNIX_EPOCH, Some(""));
-        assert_eq!(
-            arthub.unwrap_err().to_string(),
-            "questions-ui content cannot be empty"
-        );
+        assert_eq!(arthub.unwrap_err(), ArtifactHubError::EmptyQuestionsUI);
 
         Ok(())
     }
@@ -621,22 +614,16 @@ mod tests {
             )
         );
         assert_eq!(
-            parse_keywords(&keywords_annot_empty)
-                .unwrap_err()
-                .to_string(),
-            format!(
-                "annotation \"{}\" in policy metadata is malformed, must be csv values",
+            parse_keywords(&keywords_annot_empty).unwrap_err(),
+            ArtifactHubError::MalformedCSV(String::from(
                 KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS
-            )
+            ))
         );
         assert_eq!(
-            parse_keywords(&keywords_annot_commas)
-                .unwrap_err()
-                .to_string(),
-            format!(
-                "annotation \"{}\" in policy metadata is malformed, must be csv values",
+            parse_keywords(&keywords_annot_commas).unwrap_err(),
+            ArtifactHubError::MalformedCSV(String::from(
                 KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS
-            )
+            ))
         );
         Ok(())
     }
@@ -678,7 +665,13 @@ mod tests {
                 url: Url::parse("https://notgithub.com/repo").unwrap(),
             }])
         );
-        assert!(parse_links(&source_annot_badurl, &semver_version).is_err());
+        assert_eq!(
+            parse_links(&source_annot_badurl, &semver_version).unwrap_err(),
+            ArtifactHubError::MalformedURL {
+                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
+                error: "relative URL without a base".to_string(),
+            }
+        );
 
         Ok(())
     }
@@ -699,7 +692,7 @@ mod tests {
         )]);
         let author_annot_nameemail = HashMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
-            String::from("Foo foo@example.com, Bar <bar@example.com>"),
+            String::from("Foo missing@chevrons.com, Bar <bar@example.com>"),
         )]);
         let author_annot_bademail = HashMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
@@ -720,13 +713,8 @@ mod tests {
             ])
         );
         assert_eq!(
-            parse_maintainers(&author_annot_empty)
-                .unwrap_err()
-                .to_string(),
-            format!(
-                "annotation \"{}\" in policy metadata is malformed, must be csv values of \"name <email>\"",
-                KUBEWARDEN_ANNOTATION_POLICY_AUTHOR
-            )
+            parse_maintainers(&author_annot_empty).unwrap_err(),
+            ArtifactHubError::MalformedCSVEmail(String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR))
         );
 
         assert_eq!(
@@ -742,8 +730,20 @@ mod tests {
                 }
             ])
         );
-        assert!(parse_maintainers(&author_annot_nameemail).is_err());
-        assert!(parse_maintainers(&author_annot_bademail).is_err());
+        assert_eq!(
+            parse_maintainers(&author_annot_nameemail).unwrap_err(),
+            ArtifactHubError::MalformedEmail {
+                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
+                error: String::from("Invalid character.")
+            }
+        );
+        assert_eq!(
+            parse_maintainers(&author_annot_bademail).unwrap_err(),
+            ArtifactHubError::MalformedEmail {
+                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
+                error: String::from("Missing separator character '@'.")
+            }
+        );
         Ok(())
     }
 
@@ -755,13 +755,8 @@ mod tests {
         assert!(parse_name(&invalid_annotations).is_err());
         assert!(parse_display_name(&invalid_annotations).is_err());
         assert_eq!(
-            parse_containers_images(&invalid_annotations, &semver_version)
-                .unwrap_err()
-                .to_string(),
-            format!(
-                "policy metadata must specify \"{}\" in annotations",
-                KUBEWARDEN_ANNOTATION_POLICY_OCIURL
-            )
+            parse_containers_images(&invalid_annotations, &semver_version).unwrap_err(),
+            ArtifactHubError::MissingAnnotation(String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL))
         );
 
         Ok(())

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum ArtifactHubError {
     #[error("no annotations in policy metadata. policy metadata must specify annotations")]
     NoAnnotations,
