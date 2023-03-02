@@ -223,25 +223,24 @@ pub(crate) fn artifacthub(
 # Use this config to submit the policy to https://artifacthub.io.
 #
 # This config can be saved to its default location with:
-#   kwctl scaffold artifacthub > artifacthub-pkg.yml "#
-        .to_string();
+#   kwctl scaffold artifacthub > artifacthub-pkg.yml "#;
 
     let metadata_file =
         File::open(metadata_path).map_err(|e| anyhow!("Error opening metadata file: {}", e))?;
     let metadata: Metadata = serde_yaml::from_reader(&metadata_file)
         .map_err(|e| anyhow!("Error unmarshalling metadata {}", e))?;
-    let questions_content: String;
-    let questions = match questions_path {
-        Some(path) => {
-            questions_content = fs::read_to_string(path)
-                .map_err(|e| anyhow!("Error reading questions file: {}", e))?;
-            Some(questions_content.as_str())
-        }
-        None => None,
-    };
+    let questions = questions_path
+        .map(|path| {
+            fs::read_to_string(path).map_err(|e| anyhow!("Error reading questions file: {}", e))
+        })
+        .transpose()?;
 
-    let kubewarden_artifacthub_pkg =
-        ArtifactHubPkg::from_metadata(&metadata, version, OffsetDateTime::now_utc(), questions)?;
+    let kubewarden_artifacthub_pkg = ArtifactHubPkg::from_metadata(
+        &metadata,
+        version,
+        OffsetDateTime::now_utc(),
+        questions.as_deref(),
+    )?;
 
     Ok(format!(
         "{}\n{}",
@@ -307,10 +306,7 @@ mod tests {
         let policy_title = "title".to_string();
         assert_eq!(
             Some(policy_title.clone()),
-            get_policy_title_from_cli_or_metadata(
-                None,
-                &mock_metadata_with_title(policy_title.clone())
-            )
+            get_policy_title_from_cli_or_metadata(None, &mock_metadata_with_title(policy_title))
         )
     }
 

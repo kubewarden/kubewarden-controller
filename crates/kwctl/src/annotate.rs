@@ -11,17 +11,18 @@ pub(crate) fn write_annotation(
     destination: PathBuf,
     usage_path: Option<PathBuf>,
 ) -> Result<()> {
-    let usage_content: String;
-    let usage = match usage_path {
-        Some(path) => {
-            usage_content = fs::read_to_string(path)
-                .map_err(|e| anyhow!("Error reading questions file: {}", e))?;
-            Some(usage_content.as_str())
-        }
-        None => None,
-    };
+    let usage = usage_path
+        .map(|path| {
+            fs::read_to_string(path).map_err(|e| anyhow!("Error reading usage file: {}", e))
+        })
+        .transpose()?;
     let backend_detector = BackendDetector::default();
-    let metadata = prepare_metadata(wasm_path.clone(), metadata_path, backend_detector, usage)?;
+    let metadata = prepare_metadata(
+        wasm_path.clone(),
+        metadata_path,
+        backend_detector,
+        usage.as_deref(),
+    )?;
     write_annotated_wasm_file(wasm_path, destination, metadata)
 }
 
@@ -211,8 +212,7 @@ mod tests {
         let file_path = dir.path().join("metadata.yml");
         let mut file = File::create(file_path.clone())?;
 
-        let raw_metadata = format!(
-            r#"
+        let raw_metadata = r#"
         rules:
         - apiGroups: [""]
           apiVersions: ["v1"]
@@ -221,8 +221,7 @@ mod tests {
         mutating: false
         backgroundAudit: true
         executionMode: kubewarden-wapc
-        "#
-        );
+        "#;
 
         write!(file, "{}", raw_metadata)?;
 
@@ -253,8 +252,7 @@ mod tests {
         let file_path = dir.path().join("metadata.yml");
         let mut file = File::create(file_path.clone())?;
 
-        let raw_metadata = format!(
-            r#"
+        let raw_metadata = r#"
         rules:
         - apiGroups: [""]
           apiVersions: ["v1"]
@@ -263,8 +261,7 @@ mod tests {
         mutating: false
         backgroundAudit: true
         executionMode: kubewarden-wapc
-        "#
-        );
+        "#;
 
         write!(file, "{}", raw_metadata)?;
 
