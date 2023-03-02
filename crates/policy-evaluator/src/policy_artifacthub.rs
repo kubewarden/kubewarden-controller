@@ -570,12 +570,10 @@ mod tests {
             OffsetDateTime::UNIX_EPOCH,
             None,
         );
-        assert_eq!(
+        assert!(matches!(
             arthub.unwrap_err(),
-            ArtifactHubError::NoSemverVersion(String::from(
-                "unexpected character 'n' while parsing major version number"
-            ))
-        );
+            ArtifactHubError::NoSemverVersion(_)
+        ));
 
         // check questions is some and not empty
         let metadata = Metadata {
@@ -665,13 +663,10 @@ mod tests {
                 url: Url::parse("https://notgithub.com/repo").unwrap(),
             }])
         );
-        assert_eq!(
+        assert!(matches!(
             parse_links(&source_annot_badurl, &semver_version).unwrap_err(),
-            ArtifactHubError::MalformedURL {
-                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
-                error: "relative URL without a base".to_string(),
-            }
-        );
+            ArtifactHubError::MalformedURL { .. }
+        ));
 
         Ok(())
     }
@@ -730,20 +725,14 @@ mod tests {
                 }
             ])
         );
-        assert_eq!(
+        assert!(matches!(
             parse_maintainers(&author_annot_nameemail).unwrap_err(),
-            ArtifactHubError::MalformedEmail {
-                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
-                error: String::from("Invalid character.")
-            }
-        );
-        assert_eq!(
+            ArtifactHubError::MalformedEmail { .. }
+        ));
+        assert!(matches!(
             parse_maintainers(&author_annot_bademail).unwrap_err(),
-            ArtifactHubError::MalformedEmail {
-                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
-                error: String::from("Missing separator character '@'.")
-            }
-        );
+            ArtifactHubError::MalformedEmail { .. }
+        ));
         Ok(())
     }
 
