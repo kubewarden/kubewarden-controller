@@ -177,7 +177,7 @@ fn validate_metadata(metadata: &Metadata) -> Result<(), ValidationError> {
         && metadata.protocol_version == Some(ProtocolVersion::Unknown)
     {
         return Err(ValidationError::new(
-            "Must specifify a valid protocol version",
+            "Must specify a valid protocol version",
         ));
     }
     Ok(())
