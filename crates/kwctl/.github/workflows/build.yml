@@ -61,7 +61,7 @@ jobs:
           # update the spec file to ensure that.
           sudo sed -i "s/-dynamic-linker.*/-no-dynamic-linker  -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-no-export-dynamic}/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
 
-      - uses: sigstore/cosign-installer@main
+      - uses: sigstore/cosign-installer@v2.8.1
 
       - name: Checkout code
         uses: actions/checkout@v2
@@ -136,7 +136,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v2
-      - uses: sigstore/cosign-installer@main
+      - uses: sigstore/cosign-installer@v2.8.1
       - name: Setup rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -193,7 +193,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v2
-      - uses: sigstore/cosign-installer@main
+      - uses: sigstore/cosign-installer@v2.8.1
       - name: Setup rust toolchain
         uses: actions-rs/toolchain@v1
         with:
