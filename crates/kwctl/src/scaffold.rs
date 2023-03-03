@@ -4,8 +4,12 @@ use policy_evaluator::validator::Validate;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fs::{self, File};
+use std::path::PathBuf;
+use time::OffsetDateTime;
 
 use policy_evaluator::constants::KUBEWARDEN_ANNOTATION_POLICY_TITLE;
+use policy_evaluator::policy_artifacthub::ArtifactHubPkg;
 use policy_evaluator::policy_fetcher::verify::config::{
     LatestVerificationConfig, Signature, VersionedVerificationConfig,
 };
@@ -37,10 +41,10 @@ fn is_true(b: &bool) -> bool {
     *b
 }
 
-impl TryFrom<ScaffoldData> for ClusterAdmissionPolicy {
+impl TryFrom<ScaffoldPolicyData> for ClusterAdmissionPolicy {
     type Error = anyhow::Error;
 
-    fn try_from(data: ScaffoldData) -> Result<Self, Self::Error> {
+    fn try_from(data: ScaffoldPolicyData) -> Result<Self, Self::Error> {
         data.metadata.validate()?;
         Ok(ClusterAdmissionPolicy {
             api_version: String::from("policies.kubewarden.io/v1"),
@@ -82,10 +86,10 @@ struct AdmissionPolicySpec {
     background_audit: bool,
 }
 
-impl TryFrom<ScaffoldData> for AdmissionPolicy {
+impl TryFrom<ScaffoldPolicyData> for AdmissionPolicy {
     type Error = anyhow::Error;
 
-    fn try_from(data: ScaffoldData) -> Result<Self, Self::Error> {
+    fn try_from(data: ScaffoldPolicyData) -> Result<Self, Self::Error> {
         data.metadata.validate()?;
         Ok(AdmissionPolicy {
             api_version: String::from("policies.kubewarden.io/v1"),
@@ -106,7 +110,7 @@ impl TryFrom<ScaffoldData> for AdmissionPolicy {
 }
 
 #[derive(Clone)]
-struct ScaffoldData {
+struct ScaffoldPolicyData {
     pub uri: String,
     policy_title: Option<String>,
     metadata: Metadata,
@@ -130,7 +134,7 @@ pub(crate) fn manifest(
     let settings_yml: serde_yaml::Mapping =
         serde_yaml::from_str(&settings.unwrap_or_else(|| String::from("{}")))?;
 
-    let scaffold_data = ScaffoldData {
+    let scaffold_data = ScaffoldPolicyData {
         uri: String::from(uri),
         policy_title: get_policy_title_from_cli_or_metadata(policy_title, &metadata),
         metadata,
@@ -209,6 +213,42 @@ pub(crate) fn verification_config() -> Result<String> {
     ))
 }
 
+pub(crate) fn artifacthub(
+    metadata_path: PathBuf,
+    version: &str,
+    questions_path: Option<PathBuf>,
+) -> Result<String> {
+    let comment_header = r#"# Kubewarden Artifacthub Package config
+#
+# Use this config to submit the policy to https://artifacthub.io.
+#
+# This config can be saved to its default location with:
+#   kwctl scaffold artifacthub > artifacthub-pkg.yml "#;
+
+    let metadata_file =
+        File::open(metadata_path).map_err(|e| anyhow!("Error opening metadata file: {}", e))?;
+    let metadata: Metadata = serde_yaml::from_reader(&metadata_file)
+        .map_err(|e| anyhow!("Error unmarshalling metadata {}", e))?;
+    let questions = questions_path
+        .map(|path| {
+            fs::read_to_string(path).map_err(|e| anyhow!("Error reading questions file: {}", e))
+        })
+        .transpose()?;
+
+    let kubewarden_artifacthub_pkg = ArtifactHubPkg::from_metadata(
+        &metadata,
+        version,
+        OffsetDateTime::now_utc(),
+        questions.as_deref(),
+    )?;
+
+    Ok(format!(
+        "{}\n{}",
+        comment_header,
+        serde_yaml::to_string(&kubewarden_artifacthub_pkg)?
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,10 +306,7 @@ mod tests {
         let policy_title = "title".to_string();
         assert_eq!(
             Some(policy_title.clone()),
-            get_policy_title_from_cli_or_metadata(
-                None,
-                &mock_metadata_with_title(policy_title.clone())
-            )
+            get_policy_title_from_cli_or_metadata(None, &mock_metadata_with_title(policy_title))
         )
     }
 
@@ -281,7 +318,7 @@ mod tests {
         metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
         assert!(metadata.background_audit);
 
-        let scaffold_data = ScaffoldData {
+        let scaffold_data = ScaffoldPolicyData {
             uri: "not_relevant".to_string(),
             policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
             metadata,
@@ -311,7 +348,7 @@ mod tests {
         metadata.background_audit = false;
         assert!(!metadata.background_audit);
 
-        let scaffold_data = ScaffoldData {
+        let scaffold_data = ScaffoldPolicyData {
             uri: "not_relevant".to_string(),
             policy_title: get_policy_title_from_cli_or_metadata(Some(policy_title), &metadata),
             metadata,

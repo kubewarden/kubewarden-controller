@@ -2,16 +2,27 @@ use crate::backend::{Backend, BackendDetector};
 use anyhow::{anyhow, Result};
 use policy_evaluator::validator::Validate;
 use policy_evaluator::{constants::*, policy_metadata::Metadata, ProtocolVersion};
-use std::fs::File;
+use std::fs::{self, File};
 use std::path::PathBuf;
 
 pub(crate) fn write_annotation(
     wasm_path: PathBuf,
     metadata_path: PathBuf,
     destination: PathBuf,
+    usage_path: Option<PathBuf>,
 ) -> Result<()> {
+    let usage = usage_path
+        .map(|path| {
+            fs::read_to_string(path).map_err(|e| anyhow!("Error reading usage file: {}", e))
+        })
+        .transpose()?;
     let backend_detector = BackendDetector::default();
-    let metadata = prepare_metadata(wasm_path.clone(), metadata_path, backend_detector)?;
+    let metadata = prepare_metadata(
+        wasm_path.clone(),
+        metadata_path,
+        backend_detector,
+        usage.as_deref(),
+    )?;
     write_annotated_wasm_file(wasm_path, destination, metadata)
 }
 
@@ -19,6 +30,7 @@ fn prepare_metadata(
     wasm_path: PathBuf,
     metadata_path: PathBuf,
     backend_detector: BackendDetector,
+    usage: Option<&str>,
 ) -> Result<Metadata> {
     let metadata_file =
         File::open(metadata_path).map_err(|e| anyhow!("Error opening metadata file: {}", e))?;
@@ -40,6 +52,12 @@ fn prepare_metadata(
         String::from(KUBEWARDEN_ANNOTATION_KWCTL_VERSION),
         String::from(env!("CARGO_PKG_VERSION")),
     );
+    if let Some(s) = usage {
+        annotations.insert(
+            String::from(KUBEWARDEN_ANNOTATION_POLICY_USAGE),
+            String::from(s),
+        );
+    }
     metadata.annotations = Some(annotations);
 
     metadata
@@ -119,6 +137,7 @@ mod tests {
             PathBuf::from("irrelevant.wasm"),
             file_path,
             backend_detector,
+            None,
         )?;
         let annotations = metadata.annotations.unwrap();
 
@@ -169,6 +188,7 @@ mod tests {
             PathBuf::from("irrelevant.wasm"),
             file_path,
             backend_detector,
+            None,
         )?;
         let annotations = metadata.annotations.unwrap();
 
@@ -192,8 +212,7 @@ mod tests {
         let file_path = dir.path().join("metadata.yml");
         let mut file = File::create(file_path.clone())?;
 
-        let raw_metadata = format!(
-            r#"
+        let raw_metadata = r#"
         rules:
         - apiGroups: [""]
           apiVersions: ["v1"]
@@ -202,8 +221,7 @@ mod tests {
         mutating: false
         backgroundAudit: true
         executionMode: kubewarden-wapc
-        "#
-        );
+        "#;
 
         write!(file, "{}", raw_metadata)?;
 
@@ -215,12 +233,53 @@ mod tests {
             PathBuf::from("irrelevant.wasm"),
             file_path,
             backend_detector,
+            None,
         )?;
         let annotations = metadata.annotations.unwrap();
 
         assert_eq!(
             annotations.get(KUBEWARDEN_ANNOTATION_KWCTL_VERSION),
             Some(&String::from(env!("CARGO_PKG_VERSION"))),
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_kwctl_usage_is_added_when_annotations_is_none() -> Result<()> {
+        let dir = tempdir()?;
+
+        let file_path = dir.path().join("metadata.yml");
+        let mut file = File::create(file_path.clone())?;
+
+        let raw_metadata = r#"
+        rules:
+        - apiGroups: [""]
+          apiVersions: ["v1"]
+          resources: ["pods"]
+          operations: ["CREATE", "UPDATE"]
+        mutating: false
+        backgroundAudit: true
+        executionMode: kubewarden-wapc
+        "#;
+
+        write!(file, "{}", raw_metadata)?;
+
+        let backend_detector = BackendDetector::new(
+            mock_rego_policy_detector_false,
+            mock_protocol_version_detector_v1,
+        );
+        let metadata = prepare_metadata(
+            PathBuf::from("irrelevant.wasm"),
+            file_path,
+            backend_detector,
+            Some("readme contents"),
+        )?;
+        let annotations = metadata.annotations.unwrap();
+
+        assert_eq!(
+            annotations.get(KUBEWARDEN_ANNOTATION_POLICY_USAGE),
+            Some(&String::from("readme contents")),
         );
 
         Ok(())
@@ -256,6 +315,7 @@ mod tests {
             PathBuf::from("irrelevant.wasm"),
             file_path,
             backend_detector,
+            None,
         );
         assert!(metadata.is_ok());
         assert_eq!(
