@@ -1,6 +1,6 @@
 name: Policy Server end-to-end tests teardown
 vars:
-  pidfile: policy-server.pid
+  pidfile: /tmp/policy-server.pid
 
 testcases:
 - name: Stop policy-server

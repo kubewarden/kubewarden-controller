@@ -1,6 +1,6 @@
 name: Policy Server end-to-end setup
 vars:
-  pidfile: policy-server.pid
+  pidfile: /tmp/policy-server.pid
 
 testcases:
 - name: Build policy-server binary with release mode. Can take quite some time...
