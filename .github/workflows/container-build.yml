@@ -33,7 +33,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: sigstore/cosign-installer@main
+      - uses: sigstore/cosign-installer@v2.8.1
       - name: Sign the images
         run: |
           cosign sign \
@@ -41,7 +41,7 @@ jobs:
         env:
           COSIGN_EXPERIMENTAL: 1
 
-      - uses: sigstore/cosign-installer@main
+      - uses: sigstore/cosign-installer@v2.8.1
       - name: Sign the SBOM
         run: |
           tag=$(echo '${{needs.build.outputs.digest}}' | sed 's/:/-/g')
