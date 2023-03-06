@@ -115,9 +115,11 @@ impl Evaluator {
         let memory_ty = MemoryType::new(5, None);
         let memory = Memory::new(&mut store, memory_ty)
             .map_err(|e| BurregoError::WasmEngineError(format!("cannot create memory: {e}")))?;
-        linker.define("env", "memory", memory).map_err(|e| {
-            BurregoError::WasmEngineError(format!("linker cannot define memory: {e}"))
-        })?;
+        linker
+            .define(&mut store, "env", "memory", memory)
+            .map_err(|e| {
+                BurregoError::WasmEngineError(format!("linker cannot define memory: {e}"))
+            })?;
 
         opa_host_functions::add_to_linker(&mut linker)?;
 
