@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::{
     crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
-    kubernetes::{ListAllResourcesRequest, ListResourcesByNamespaceRequest},
+    kubernetes::{GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
@@ -209,6 +209,45 @@ pub(crate) fn host_callback(
                     })?;
 
                     let req: ListAllResourcesRequest =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                        error!(
+                            policy = policy.id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                        return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                    }
+
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                "get_resource" => {
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
+
+                    let req: GetResourceRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
                     if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
                         error!(

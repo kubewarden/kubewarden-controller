@@ -65,11 +65,11 @@ impl Client {
                     .list_core_api_resources(api_version)
                     .await?
             }
-            _ => {
-                self.kube_client
-                    .list_api_group_resources(api_version)
-                    .await?
-            }
+            _ => self
+                .kube_client
+                .list_api_group_resources(api_version)
+                .await
+                .map_err(|e| anyhow!("error finding resource {api_version} / {kind}: {e}"))?,
         };
 
         let resource = resources_list
@@ -79,10 +79,17 @@ impl Client {
             .ok_or_else(|| anyhow!("Cannot find resource {api_version}/{kind}"))?
             .to_owned();
 
+        let (group, version) = match api_version {
+            "v1" => ("", "v1"),
+            _ => api_version
+                .split_once('/')
+                .ok_or_else(|| anyhow!("cannot determine group and version for {api_version}"))?,
+        };
+
         let kube_resource = KubeResource {
             resource: kube::api::ApiResource {
-                group: resource.group.unwrap_or_default(),
-                version: resource.version.unwrap_or_default(),
+                group: group.to_string(),
+                version: version.to_string(),
                 api_version: api_version.to_string(),
                 kind: kind.to_string(),
                 plural: resource.name,
@@ -141,6 +148,39 @@ impl Client {
             metadata: resource_list.metadata,
             items: resource_list.items,
         })
+    }
+
+    async fn get_resource(
+        &mut self,
+        api_version: &str,
+        kind: &str,
+        name: &str,
+        namespace: Option<&str>,
+    ) -> Result<kube::core::DynamicObject> {
+        let resource = self.build_kube_resource(api_version, kind).await?;
+
+        let api = match resource.namespaced {
+            true => kube::api::Api::<kube::core::DynamicObject>::namespaced_with(
+                self.kube_client.clone(),
+                namespace.ok_or_else(|| {
+                    anyhow!(
+                        "Resource {}/{} is namespaced, but no namespace was provided",
+                        api_version,
+                        kind
+                    )
+                })?,
+                &resource.resource,
+            ),
+            false => kube::api::Api::<kube::core::DynamicObject>::all_with(
+                self.kube_client.clone(),
+                &resource.resource,
+            ),
+        };
+
+        api.get_opt(name)
+            .await
+            .map_err(anyhow::Error::new)?
+            .ok_or_else(|| anyhow!("Cannot find {api_version}/{kind} named '{name}' inside of namespace '{namespace:?}'"))
     }
 }
 
@@ -207,4 +247,43 @@ pub(crate) async fn list_resources_all(
         .list_resources_all(api_version, kind, &list_params)
         .await
         .map(cached::Return::new)
+}
+
+pub(crate) async fn get_resource(
+    client: Option<&mut Client>,
+    api_version: &str,
+    kind: &str,
+    name: &str,
+    namespace: Option<&str>,
+) -> Result<cached::Return<kube::core::DynamicObject>> {
+    if client.is_none() {
+        return Err(anyhow!("kube::Client was not initialized properly"));
+    }
+
+    client
+        .unwrap()
+        .get_resource(api_version, kind, name, namespace)
+        .await
+        .map(|value| cached::Return {
+            was_cached: false,
+            value,
+        })
+}
+
+#[cached(
+    time = 5,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("get_resource_cached({},{}),{},{:?}", api_version, kind, name, namespace) }"#,
+    with_cached_flag = true
+)]
+pub(crate) async fn get_resource_cached(
+    client: Option<&mut Client>,
+    api_version: &str,
+    kind: &str,
+    name: &str,
+    namespace: Option<&str>,
+) -> Result<cached::Return<kube::core::DynamicObject>> {
+    get_resource(client, api_version, kind, name, namespace).await
 }

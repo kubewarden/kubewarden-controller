@@ -261,6 +261,45 @@ impl CallbackHandler {
                                     }
                                 )
                             }
+                            CallbackRequestType::KubernetesGetResource{
+                                api_version,
+                                kind,
+                                name,
+                                namespace,
+                                disable_cache,
+                            } => {
+                                if disable_cache {
+                                    handle_callback!(
+                                        req,
+                                        format!("{api_version}/{kind}"),
+                                        "Get Kubernetes resource - no cache",
+                                        {
+                                            kubernetes::get_resource(
+                                                self.kubernetes_client.as_mut(),
+                                                &api_version,
+                                                &kind,
+                                                &name,
+                                                namespace.as_deref(),
+                                            )
+                                        }
+                                    )
+                                } else {
+                                    handle_callback!(
+                                        req,
+                                        format!("{api_version}/{kind}"),
+                                        "Get Kubernetes resource",
+                                        {
+                                            kubernetes::get_resource_cached(
+                                                self.kubernetes_client.as_mut(),
+                                                &api_version,
+                                                &kind,
+                                                &name,
+                                                namespace.as_deref(),
+                                            )
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 },
