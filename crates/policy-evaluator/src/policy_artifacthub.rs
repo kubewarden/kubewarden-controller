@@ -159,10 +159,10 @@ impl ArtifactHubPkg {
         questions: Option<&str>,
     ) -> Result<Self> {
         // validate inputs
-        if metadata.annotations.is_none() {
-            return Err(ArtifactHubError::NoAnnotations);
-        }
-        let metadata_annots = metadata.annotations.as_ref().unwrap();
+        let metadata_annots = metadata
+            .annotations
+            .as_ref()
+            .ok_or(ArtifactHubError::NoAnnotations)?;
         if metadata_annots.is_empty() {
             return Err(ArtifactHubError::NoAnnotations);
         }
@@ -454,7 +454,7 @@ fn parse_annotations(
     }
     annotations.insert(
         ARTIFACTHUB_ANNOTATION_KUBEWARDEN_RULES.to_string(),
-        serde_yaml::to_string(&metadata.rules).unwrap(),
+        serde_yaml::to_string(&metadata.rules).expect("cannot convert rules to yaml"),
     );
 
     // add optional annotations
