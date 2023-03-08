@@ -281,12 +281,12 @@ fn parse_containers_images(
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_OCIURL) {
         Some(s) => {
             let oci_url: Reference =
-                format!("{}:v{}", s, version)
-                    .parse()
-                    .map_err(|e: ParseError| ArtifactHubError::MalformedURL {
+                format!("{s}:v{version}").parse().map_err(|e: ParseError| {
+                    ArtifactHubError::MalformedURL {
                         annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
                         error: e.to_string(),
-                    })?;
+                    }
+                })?;
             let container_images = vec![ContainerImage {
                 name: ConstContainerImageName::Policy,
                 image: oci_url.to_string(),
@@ -387,7 +387,7 @@ fn parse_maintainers(metadata_annots: &HashMap<String, String>) -> Result<Option
         Some(s) => {
             // name-addr https://www.rfc-editor.org/rfc/rfc5322#section-3.4
             let mut maintainers: Vec<Maintainer> = vec![];
-            let to = format!("To: {}", s);
+            let to = format!("To: {s}");
             let msg = mail_parser::Message::parse(to.as_bytes()).ok_or(
                 ArtifactHubError::MalformedCSVEmail(String::from(
                     KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
