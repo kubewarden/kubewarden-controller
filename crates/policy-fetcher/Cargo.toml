@@ -27,7 +27,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
-sigstore = { version = "0.6", default-features = false, features = ["rustls-tls"] }
+#sigstore = { version = "0.6", default-features = false, features = ["rustls-tls"] }
+# We have to use this fork until a new release of sigstore that includes https://github.com/sigstore/sigstore-rs/pull/227 is done
+sigstore = { git = "https://github.com/flavio/sigstore-rs", branch = "0.6.0-patch", default-features = false, features = ["rustls-tls"] }
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
 walkdir = "2"
