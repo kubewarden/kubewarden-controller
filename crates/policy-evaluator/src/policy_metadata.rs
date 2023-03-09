@@ -349,13 +349,14 @@ mod tests {
     }
 
     #[test]
-    fn metadata_backwards_compatibility() -> Result<(), ()> {
+    fn metadata_backwards_compatibility() {
         // missing backgroundAudit on purpose
+        // featuring the old `contextAware` boolean flag
         let json_metadata = json!({
             "protocolVersion": "v1",
             "rules": [ ],
             "mutating": false,
-            "contextAwareResources": [ ],
+            "contextAware": true,
             "executionMode": "kubewarden-wapc",
         });
 
@@ -363,12 +364,13 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             annotations: None,
             background_audit: true,
+            context_aware_resources: HashSet::new(),
             ..Default::default()
         };
 
-        let actual: Metadata = serde_json::from_value(json_metadata).unwrap();
+        let actual: Metadata =
+            serde_json::from_value(json_metadata).expect("cannot deserialize Metadata");
         assert_json_eq!(expected, actual);
-        Ok(())
     }
 
     #[test]
