@@ -27,6 +27,7 @@ pub mod config;
 pub mod verification_constraints;
 
 /// Define how Fulcio and Rekor data are going to be provided to sigstore cosign client
+#[derive(Clone)]
 pub enum FulcioAndRekorData {
     /// Data is read from the official Sigstore TUF repository
     ///
