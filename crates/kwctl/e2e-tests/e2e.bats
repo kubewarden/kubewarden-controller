@@ -11,7 +11,7 @@ setup() {
 }
 
 kwctl() {
-    run cargo -q run -- "$@"
+    run cargo -q run --release -- "$@"
 }
 
 @test "list policies when no policies are pulled" {

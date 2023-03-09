@@ -52,6 +52,7 @@ mod backend;
 mod bench;
 mod cli;
 mod completions;
+mod info;
 mod inspect;
 mod load;
 mod policies;
@@ -101,6 +102,7 @@ async fn main() -> Result<()> {
 
     match matches.subcommand_name() {
         Some("policies") => policies::list(),
+        Some("info") => info::info(),
         Some("pull") => {
             if let Some(matches) = matches.subcommand_matches("pull") {
                 let uri = matches.get_one::<String>("uri").unwrap();
@@ -260,7 +262,6 @@ async fn main() -> Result<()> {
             }
             Ok(())
         }
-
         Some("annotate") => {
             if let Some(matches) = matches.subcommand_matches("annotate") {
                 let wasm_path = matches

@@ -2,22 +2,16 @@ use clap::{
     builder::PossibleValuesParser, crate_authors, crate_description, crate_name, crate_version,
     Arg, ArgAction, Command,
 };
-use itertools::Itertools;
 use lazy_static::lazy_static;
-use policy_evaluator::burrego;
 
 lazy_static! {
     static ref VERSION_AND_BUILTINS: String = {
-        let builtins: String = burrego::get_builtins()
-            .keys()
-            .sorted()
-            .map(|builtin| format!("  - {builtin}"))
-            .join("\n");
-
         format!(
-            "{}\n\nOpen Policy Agent/Gatekeeper implemented builtins:\n{}",
+            r#"{}
+
+Use the `info` command to display system information.
+"#,
             crate_version!(),
-            builtins,
         )
     };
 }
@@ -31,6 +25,10 @@ pub fn build_cli() -> Command {
         .subcommand(
             Command::new("policies")
                 .about("Lists all downloaded policies")
+        )
+        .subcommand(
+            Command::new("info")
+                .about("Display system information")
         )
         .subcommand(
             Command::new("pull")
