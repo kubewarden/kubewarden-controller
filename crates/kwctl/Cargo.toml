@@ -1,7 +1,7 @@
 [package]
 name = "kwctl"
 description = "Tool to manage Kubewarden policies"
-version = "1.6.0-rc1"
+version = "1.6.0-rc2"
 authors = [
         "Kubewarden Developers <kubewarden@suse.de>"
 ]
