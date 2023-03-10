@@ -3,7 +3,8 @@ name = "policy-evaluator"
 version = "0.7.0"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
-  "Rafael Fernández López <rfernandezlopez@suse.com>"
+  "Rafael Fernández López <rfernandezlopez@suse.com>",
+  "Víctor Cuadrado Juan <vcuadradojuan@suse.com>"
 ]
 edition = "2021"
 
