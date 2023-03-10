@@ -3,7 +3,7 @@ use mail_parser::*;
 use policy_fetcher::oci_distribution::{ParseError, Reference};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 use time::OffsetDateTime;
 use url::Url;
@@ -70,7 +70,7 @@ pub struct ArtifactHubPkg {
     /// [{url: <url of kubewarden controller repo>}]
     recommendations: Vec<Recommendation>,
     /// List of annotations. Contains kubewarden-specific annotations
-    annotations: HashMap<String, String>,
+    annotations: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -403,9 +403,9 @@ fn parse_annotations(
     metadata_annots: &HashMap<String, String>,
     metadata: &Metadata,
     questions: Option<&str>,
-) -> Result<HashMap<String, String>> {
+) -> Result<BTreeMap<String, String>> {
     // add required annotations
-    let mut annotations: HashMap<String, String> = HashMap::new();
+    let mut annotations: BTreeMap<String, String> = BTreeMap::new();
     annotations.insert(
         ARTIFACTHUB_ANNOTATION_KUBEWARDEN_MUTATION.to_string(),
         metadata.mutating.to_string(),

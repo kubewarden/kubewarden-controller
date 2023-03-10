@@ -11,20 +11,15 @@ use crate::runtimes::burrego::Runtime as BurregoRuntime;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
 use crate::runtimes::Runtime;
 
-#[derive(Copy, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Default, serde::Deserialize, serde::Serialize, Debug)]
 pub enum PolicyExecutionMode {
     #[serde(rename = "kubewarden-wapc")]
+    #[default]
     KubewardenWapc,
     #[serde(rename = "opa")]
     Opa,
     #[serde(rename = "gatekeeper")]
     OpaGatekeeper,
-}
-
-impl Default for PolicyExecutionMode {
-    fn default() -> Self {
-        PolicyExecutionMode::KubewardenWapc
-    }
 }
 
 impl fmt::Display for PolicyExecutionMode {
