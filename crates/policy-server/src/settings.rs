@@ -7,18 +7,13 @@ use std::fs::File;
 use std::iter::FromIterator;
 use std::path::Path;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Default)]
 pub enum PolicyMode {
     #[serde(rename = "monitor")]
     Monitor,
     #[serde(rename = "protect")]
+    #[default]
     Protect,
-}
-
-impl Default for PolicyMode {
-    fn default() -> PolicyMode {
-        PolicyMode::Protect
-    }
 }
 
 impl From<PolicyMode> for String {
