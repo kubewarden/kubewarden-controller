@@ -26,7 +26,7 @@ pub struct CallbackRequest {
 
 /// Describes the different kinds of request a waPC guest can make to
 /// our host.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub enum CallbackRequestType {
     /// Require the computation of the manifest digest of an OCI object (be
     /// it an image or anything else that can be stored into an OCI registry)
