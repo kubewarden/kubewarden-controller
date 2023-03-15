@@ -31,7 +31,7 @@ impl CallbackHandler {
     ) -> Result<CallbackHandler> {
         match &cfg.host_capabilities_mode {
             HostCapabilitiesMode::Proxy(proxy_mode) => {
-                new_proxy(&proxy_mode, cfg, kube_client, shutdown_channel).await
+                new_proxy(proxy_mode, cfg, kube_client, shutdown_channel).await
             }
             HostCapabilitiesMode::Direct => {
                 new_transparent(cfg, kube_client, shutdown_channel).await

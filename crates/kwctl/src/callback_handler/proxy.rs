@@ -169,11 +169,11 @@ impl CallbackHandlerProxy {
         // there's no nice way to handle errors here.
 
         let mut exchanges: VecDeque<Exchange> = if let ProxyMode::Replay { source } = &self.mode {
-            let file = File::open(source).expect(
-                format!("Cannot open host capabilities interactions file {source:?}",).as_str(),
-            );
+            let file = File::open(source).unwrap_or_else(|_| {
+                panic!("Cannot open host capabilities interactions file {source:?}")
+            });
             serde_yaml::from_reader(file)
-                .expect(format!("cannot deserialize contents of {source:?}").as_str())
+                .unwrap_or_else(|_| panic!("cannot deserialize contents of {source:?}"))
         } else {
             // this should never happen
             unreachable!()

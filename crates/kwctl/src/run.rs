@@ -95,7 +95,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
         oneshot::channel();
 
     let callback_handler =
-        CallbackHandler::new(&cfg, kube_client, callback_handler_shutdown_channel_rx).await?;
+        CallbackHandler::new(cfg, kube_client, callback_handler_shutdown_channel_rx).await?;
 
     let callback_sender_channel = callback_handler.sender_channel();
 

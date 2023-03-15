@@ -655,8 +655,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         let destination = matches
             .get_one::<String>("record-host-capabilities-interactions")
             .map(|destination| PathBuf::from_str(destination).unwrap())
-            .ok_or_else(|| anyhow!("Cannot parse 'record-host-capabilities-interactions' file"))?
-            .to_owned();
+            .ok_or_else(|| anyhow!("Cannot parse 'record-host-capabilities-interactions' file"))?;
 
         // TODO: replace eprintln with info
         // once https://github.com/swsnr/mdcat/issues/242 is fixed
@@ -673,8 +672,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         let source = matches
             .get_one::<String>("replay-host-capabilities-interactions")
             .map(|source| PathBuf::from_str(source).unwrap())
-            .ok_or_else(|| anyhow!("Cannot parse 'replay-host-capabilities-interaction' file"))?
-            .to_owned();
+            .ok_or_else(|| anyhow!("Cannot parse 'replay-host-capabilities-interaction' file"))?;
 
         // TODO: replace eprintln with info
         // once https://github.com/swsnr/mdcat/issues/242 is fixed
