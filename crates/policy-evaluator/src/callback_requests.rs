@@ -26,7 +26,7 @@ pub struct CallbackRequest {
 
 /// Describes the different kinds of request a waPC guest can make to
 /// our host.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub enum CallbackRequestType {
     /// Require the computation of the manifest digest of an OCI object (be
     /// it an image or anything else that can be stored into an OCI registry)
@@ -107,6 +107,61 @@ pub enum CallbackRequestType {
 
     /// Lookup the addresses for a given hostname via DNS
     DNSLookupHost { host: String },
+
+    /// Get all the Kubernetes resources defined inside of the given
+    /// namespace
+    /// Note: cannot be used with cluster-wide resources
+    KubernetesListResourceNamespace {
+        /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+        api_version: String,
+        /// Singular PascalCase name of the resource
+        kind: String,
+        /// Namespace scoping the search
+        namespace: String,
+        /// A selector to restrict the list of returned objects by their labels.
+        /// Defaults to everything if `None`
+        label_selector: Option<String>,
+        /// A selector to restrict the list of returned objects by their fields.
+        /// Defaults to everything if `None`
+        field_selector: Option<String>,
+    },
+
+    /// Get all the Kubernetes resources defined inside of the given
+    /// cluster
+    /// Cluster level resources, or resources viewed across all namespaces.
+    KubernetesListResourceAll {
+        /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+        api_version: String,
+        /// Singular PascalCase name of the resource
+        kind: String,
+        /// A selector to restrict the list of returned objects by their labels.
+        /// Defaults to everything if `None`
+        label_selector: Option<String>,
+        /// A selector to restrict the list of returned objects by their fields.
+        /// Defaults to everything if `None`
+        field_selector: Option<String>,
+    },
+
+    /// Get a Kubernetes resource with the specified `name`.
+    /// Namespaced resources must provide a `namespace` name to scope the search.
+    KubernetesGetResource {
+        /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+        api_version: String,
+        /// Singular PascalCase name of the resource
+        kind: String,
+        /// The name of the resource
+        name: String,
+        /// The namespace used to search namespaced resources. Cluster level resources
+        /// must set this parameter to `None`
+        namespace: Option<String>,
+
+        /// Disable caching of results obtained from Kubernetes API Server
+        /// By default query results are cached for 5 seconds, that might cause
+        /// stale data to be returned.
+        /// However, making too many requests against the Kubernetes API Server
+        /// might cause issues to the cluster
+        disable_cache: bool,
+    },
 }
 
 impl From<SigstoreVerificationInputV2> for CallbackRequestType {
@@ -188,6 +243,51 @@ impl From<SigstoreVerificationInputV1> for CallbackRequestType {
                 keyless,
                 annotations,
             },
+        }
+    }
+}
+
+impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::ListResourcesByNamespaceRequest>
+    for CallbackRequestType
+{
+    fn from(
+        req: kubewarden_policy_sdk::host_capabilities::kubernetes::ListResourcesByNamespaceRequest,
+    ) -> Self {
+        CallbackRequestType::KubernetesListResourceNamespace {
+            api_version: req.api_version,
+            kind: req.kind,
+            namespace: req.namespace,
+            label_selector: req.label_selector,
+            field_selector: req.field_selector,
+        }
+    }
+}
+
+impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::ListAllResourcesRequest>
+    for CallbackRequestType
+{
+    fn from(
+        req: kubewarden_policy_sdk::host_capabilities::kubernetes::ListAllResourcesRequest,
+    ) -> Self {
+        CallbackRequestType::KubernetesListResourceAll {
+            api_version: req.api_version,
+            kind: req.kind,
+            label_selector: req.label_selector,
+            field_selector: req.field_selector,
+        }
+    }
+}
+
+impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::GetResourceRequest>
+    for CallbackRequestType
+{
+    fn from(req: kubewarden_policy_sdk::host_capabilities::kubernetes::GetResourceRequest) -> Self {
+        CallbackRequestType::KubernetesGetResource {
+            api_version: req.api_version,
+            kind: req.kind,
+            name: req.name,
+            namespace: req.namespace,
+            disable_cache: req.disable_cache,
         }
     }
 }

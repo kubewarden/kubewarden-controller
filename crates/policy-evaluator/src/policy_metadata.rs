@@ -118,6 +118,15 @@ fn validate_resources(data: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone, Validate, PartialEq, Hash, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextAwareResource {
+    #[validate(length(min = 1))]
+    pub api_version: String,
+    #[validate(length(min = 1))]
+    pub kind: String,
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Validate)]
 #[serde(rename_all = "camelCase")]
 #[validate(schema(function = "validate_metadata", skip_on_field_errors = false))]
@@ -132,9 +141,10 @@ pub struct Metadata {
     #[serde(default = "_default_true")]
     pub background_audit: bool,
     #[serde(default)]
-    pub context_aware: bool,
-    #[serde(default)]
     pub execution_mode: PolicyExecutionMode,
+    #[serde(default)]
+    #[validate]
+    pub context_aware_resources: HashSet<ContextAwareResource>,
 }
 
 const fn _default_true() -> bool {
@@ -149,8 +159,8 @@ impl Default for Metadata {
             annotations: Some(HashMap::new()),
             mutating: false,
             background_audit: true,
-            context_aware: false,
             execution_mode: PolicyExecutionMode::KubewardenWapc,
+            context_aware_resources: HashSet::new(),
         }
     }
 }
@@ -329,7 +339,7 @@ mod tests {
             "rules": [ ],
             "mutating": false,
             "backgroundAudit": true,
-            "contextAware": false,
+            "contextAwareResources": [ ],
             "executionMode": "kubewarden-wapc",
         });
 
@@ -339,13 +349,14 @@ mod tests {
     }
 
     #[test]
-    fn metadata_backwards_compatibility() -> Result<(), ()> {
+    fn metadata_backwards_compatibility() {
         // missing backgroundAudit on purpose
+        // featuring the old `contextAware` boolean flag
         let json_metadata = json!({
             "protocolVersion": "v1",
             "rules": [ ],
             "mutating": false,
-            "contextAware": false,
+            "contextAware": true,
             "executionMode": "kubewarden-wapc",
         });
 
@@ -353,12 +364,13 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             annotations: None,
             background_audit: true,
+            context_aware_resources: HashSet::new(),
             ..Default::default()
         };
 
-        let actual: Metadata = serde_json::from_value(json_metadata).unwrap();
+        let actual: Metadata =
+            serde_json::from_value(json_metadata).expect("cannot deserialize Metadata");
         assert_json_eq!(expected, actual);
-        Ok(())
     }
 
     #[test]
@@ -399,7 +411,7 @@ mod tests {
             },
             "mutating": false,
             "backgroundAudit": true,
-            "contextAware": false,
+            "contextAwareResources": [ ],
             "executionMode": "kubewarden-wapc",
         });
 
@@ -570,5 +582,53 @@ mod tests {
 
         assert!(metadata.validate().is_err());
         Ok(())
+    }
+
+    #[test]
+    fn validate_context_aware_resource_without_api_group() {
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
+
+        let mut context_aware_resources = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "".to_string(),
+            kind: "Pod".to_string(),
+        });
+
+        let metadata = Metadata {
+            annotations: Some(annotations),
+            protocol_version: Some(ProtocolVersion::V1),
+            context_aware_resources,
+            ..Default::default()
+        };
+
+        assert!(metadata.validate().is_err());
+    }
+
+    #[test]
+    fn validate_context_aware_resource_without_kind() {
+        let mut annotations: HashMap<String, String> = HashMap::new();
+        annotations.insert(
+            String::from("io.kubewarden.policy.author"),
+            String::from("Flavio Castelli"),
+        );
+
+        let mut context_aware_resources = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "v1".to_string(),
+            kind: "".to_string(),
+        });
+
+        let metadata = Metadata {
+            annotations: Some(annotations),
+            protocol_version: Some(ProtocolVersion::V1),
+            context_aware_resources,
+            ..Default::default()
+        };
+
+        assert!(metadata.validate().is_err());
     }
 }

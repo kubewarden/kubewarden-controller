@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::{
     crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
+    kubernetes::{GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
@@ -11,13 +12,12 @@ use serde_json::json;
 use std::{collections::HashMap, convert::TryFrom, sync::RwLock};
 use tokio::sync::oneshot::Receiver;
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use wasmtime_provider::wasmtime;
 
 use crate::admission_response::AdmissionResponse;
 use crate::callback_handler::verify_certificate;
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
-use crate::cluster_context::ClusterContext;
 use crate::policy::Policy;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 
@@ -46,8 +46,15 @@ pub(crate) fn host_callback(
         "kubewarden" => match namespace {
             "tracing" => match operation {
                 "log" => {
-                    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-                    let policy = policy_mapping.get(&policy_id).unwrap();
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            ?policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
                     if let Err(e) = policy.log(payload) {
                         let p =
                             String::from_utf8(payload.to_vec()).unwrap_or_else(|e| e.to_string());
@@ -149,23 +156,189 @@ pub(crate) fn host_callback(
                     Err(format!("unknown operation: {operation}").into())
                 }
             },
+            "kubernetes" => match operation {
+                "list_resources_by_namespace" => {
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
+
+                    let req: ListResourcesByNamespaceRequest =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+
+                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                        error!(
+                            policy = policy.id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                        return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                    }
+
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                "list_resources_all" => {
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
+
+                    let req: ListAllResourcesRequest =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                        error!(
+                            policy = policy.id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                        return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                    }
+
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                "get_resource" => {
+                    let policy = get_policy(policy_id).map_err(|e| {
+                        error!(
+                            policy_id,
+                            ?binding,
+                            ?namespace,
+                            ?operation,
+                            error = ?e, "Cannot find requested policy");
+                        e
+                    })?;
+
+                    let req: GetResourceRequest =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                        error!(
+                            policy = policy.id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                        return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                    }
+
+                    debug!(
+                        policy_id,
+                        binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                }
+                _ => {
+                    error!(namespace, operation, "unknown operation");
+                    Err(format!("unknown operation: {operation}").into())
+                }
+            },
             _ => {
                 error!("unknown namespace: {}", namespace);
                 Err(format!("unknown namespace: {namespace}").into())
             }
         },
-        "kubernetes" => {
-            let cluster_context = ClusterContext::get();
-            match namespace {
-                "ingresses" => Ok(cluster_context.ingresses().into()),
-                "namespaces" => Ok(cluster_context.namespaces().into()),
-                "services" => Ok(cluster_context.services().into()),
-                _ => {
-                    error!("unknown namespace: {}", namespace);
-                    Err(format!("unknown namespace: {namespace}").into())
-                }
+        "kubernetes" => match namespace {
+            "ingresses" => {
+                let req = CallbackRequestType::KubernetesListResourceAll {
+                    api_version: "networking.k8s.io/v1".to_string(),
+                    kind: "Ingress".to_string(),
+                    label_selector: None,
+                    field_selector: None,
+                };
+
+                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                let req = CallbackRequest {
+                    request: req,
+                    response_channel: tx,
+                };
+                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
             }
-        }
+            "namespaces" => {
+                let req = CallbackRequestType::KubernetesListResourceAll {
+                    api_version: "v1".to_string(),
+                    kind: "Namespace".to_string(),
+                    label_selector: None,
+                    field_selector: None,
+                };
+
+                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                let req = CallbackRequest {
+                    request: req,
+                    response_channel: tx,
+                };
+                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+            }
+            "services" => {
+                let req = CallbackRequestType::KubernetesListResourceAll {
+                    api_version: "v1".to_string(),
+                    kind: "Service".to_string(),
+                    label_selector: None,
+                    field_selector: None,
+                };
+
+                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                let req = CallbackRequest {
+                    request: req,
+                    response_channel: tx,
+                };
+                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+            }
+            _ => {
+                error!("unknown namespace: {}", namespace);
+                Err(format!("unknown namespace: {namespace}").into())
+            }
+        },
         _ => {
             error!("unknown binding: {}", binding);
             Err(format!("unknown binding: {binding}").into())
@@ -452,6 +625,19 @@ impl<'a> Runtime<'a> {
             )),
         }
     }
+}
+
+fn get_policy(policy_id: u64) -> Result<Policy> {
+    let policy_mapping = WAPC_POLICY_MAPPING.read().map_err(|e| {
+        anyhow!(
+            "Cannot obtain read lock access to WAPC_POLICY_MAPPING: {}",
+            e
+        )
+    })?;
+    policy_mapping
+        .get(&policy_id)
+        .ok_or_else(|| anyhow!("Cannot find policy with ID {}", policy_id))
+        .cloned()
 }
 
 #[cfg(test)]

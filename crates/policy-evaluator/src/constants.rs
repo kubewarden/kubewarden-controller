@@ -17,7 +17,8 @@ pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_HIDDENUI: &str = "io.kubewarden.hidd
 pub const KUBEWARDEN_ANNOTATION_KWCTL_VERSION: &str = "io.kubewarden.kwctl";
 
 pub const ARTIFACTHUB_ANNOTATION_KUBEWARDEN_MUTATION: &str = "kubewarden/mutation";
-pub const ARTIFACTHUB_ANNOTATION_KUBEWARDEN_CONTEXTAWARE: &str = "kubewarden/contextAware";
+pub const ARTIFACTHUB_ANNOTATION_KUBEWARDEN_CONTEXTAWARE_RESOURCES: &str =
+    "kubewarden/contextAwareResources";
 pub const ARTIFACTHUB_ANNOTATION_KUBEWARDEN_RESOURCES: &str = "kubewarden/resources";
 pub const ARTIFACTHUB_ANNOTATION_RANCHER_HIDDENUI: &str = "kubewarden/hidden-ui";
 pub const ARTIFACTHUB_ANNOTATION_KUBEWARDEN_RULES: &str = "kubewarden/rules";
