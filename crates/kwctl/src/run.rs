@@ -1,14 +1,18 @@
 use anyhow::{anyhow, Result};
+use policy_evaluator::kube;
 use policy_evaluator::{
     constants::*,
-    kube::Client,
     policy_evaluator::{Evaluator, PolicyEvaluator},
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
     policy_metadata::{ContextAwareResource, Metadata},
 };
-use std::{collections::HashSet, path::Path};
+use std::{
+    collections::HashSet,
+    net::{Ipv4Addr, Ipv6Addr},
+    path::Path,
+};
 use tokio::sync::oneshot;
 use tracing::{error, info, warn};
 
@@ -74,10 +78,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     let kube_client = if context_aware_allowed_resources.is_empty() {
         None
     } else {
-        Client::try_default()
-            .await
-            .map(Some)
-            .map_err(anyhow::Error::new)?
+        Some(build_kube_client().await?)
     };
 
     let policy_settings = cfg.settings.as_ref().map_or(Ok(None), |settings| {
@@ -294,6 +295,33 @@ fn compute_context_aware_resources(
             }
         }
     }
+}
+
+/// kwctl is built using rustls enabled. Unfortunately rustls does not support validating IP addresses
+/// yet (see https://github.com/kube-rs/kube/issues/1003).
+///
+/// This function provides a workaround to this limitation.
+async fn build_kube_client() -> Result<kube::Client> {
+    // This is the usual way of obtaining a kubeconfig
+    let mut kube_config = kube::Config::infer().await.map_err(anyhow::Error::new)?;
+
+    // Does the cluster_url have an host? This is probably true 99.999% of the times
+    if let Some(host) = kube_config.cluster_url.host() {
+        // is the host an IP or a hostname?
+        let is_an_ip = host.parse::<Ipv4Addr>().is_ok() || host.parse::<Ipv6Addr>().is_ok();
+
+        // if the host is an IP and no `tls_server_name` is set, then
+        // set `tls_server_name` to `kubernetes.default.svc`. This is a FQDN
+        // that is always associated to the certificate used by the API server.
+        // This will make kwctl work against minikube and k3d, to name a few...
+        if is_an_ip && kube_config.tls_server_name.is_none() {
+            warn!(host, "The loaded kubeconfig connects to a server using an IP address instead of a FQDN. This is usually done by minikube, k3d and other local development solutions");
+            warn!("Due to a limitation of rustls, certificate validation cannot be performed against IP addresses, the certificate validation will be made against `kubernetes.default.svc`");
+            kube_config.tls_server_name = Some("kubernetes.default.svc".to_string());
+        }
+    }
+
+    kube::Client::try_from(kube_config).map_err(anyhow::Error::new)
 }
 
 #[cfg(test)]
