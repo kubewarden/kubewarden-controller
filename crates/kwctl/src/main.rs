@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use run::HostCapabilitiesMode;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -50,6 +51,7 @@ use crate::utils::new_policy_execution_mode_from_str;
 mod annotate;
 mod backend;
 mod bench;
+mod callback_handler;
 mod cli;
 mod completions;
 mod info;
@@ -647,6 +649,50 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         .get_one::<bool>("allow-context-aware")
         .unwrap_or(&false)
         .to_owned();
+    if matches.contains_id("record-host-capabilities-interactions")
+        && matches.contains_id("replay-host-capabilities-interactions")
+    {
+        return Err(anyhow!("Cannot use the 'record-host-capabilities-interactions' and the 'replay-host-capabilities-interactions' flags at the same time"));
+    }
+
+    let mut host_capabilities_mode = HostCapabilitiesMode::Direct;
+    if matches.contains_id("record-host-capabilities-interactions") {
+        let destination = matches
+            .get_one::<String>("record-host-capabilities-interactions")
+            .map(|destination| PathBuf::from_str(destination).unwrap())
+            .ok_or_else(|| anyhow!("Cannot parse 'record-host-capabilities-interactions' file"))?
+            .to_owned();
+
+        // TODO: replace eprintln with info
+        // once https://github.com/swsnr/mdcat/issues/242 is fixed
+        // info!(session_file = ?destination, "host capabilities proxy enabled with record mode");
+        // print to stderr to not mess with commands that handle the json output
+        // produce by kwctl
+        eprintln!(
+            "host capabilities proxy enabled with record mode. Contents saved to {destination:?}"
+        );
+        host_capabilities_mode =
+            HostCapabilitiesMode::Proxy(callback_handler::ProxyMode::Record { destination });
+    }
+    if matches.contains_id("replay-host-capabilities-interactions") {
+        let source = matches
+            .get_one::<String>("replay-host-capabilities-interactions")
+            .map(|source| PathBuf::from_str(source).unwrap())
+            .ok_or_else(|| anyhow!("Cannot parse 'replay-host-capabilities-interaction' file"))?
+            .to_owned();
+
+        // TODO: replace eprintln with info
+        // once https://github.com/swsnr/mdcat/issues/242 is fixed
+        // info!(session_file = ?source, "host capabilities proxy enabled with replay mode");
+        // print to stderr to not mess with commands that handle the json output
+        // produce by kwctl
+        eprintln!(
+            "host capabilities proxy enabled with replay mode. Host capabilities interactions taken from {source:?}"
+        );
+
+        host_capabilities_mode =
+            HostCapabilitiesMode::Proxy(callback_handler::ProxyMode::Replay { source });
+    }
 
     Ok(run::PullAndRunSettings {
         uri: uri.to_owned(),
@@ -658,6 +704,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         fulcio_and_rekor_data,
         enable_wasmtime_cache,
         allow_context_aware_resources,
+        host_capabilities_mode,
     })
 }
 

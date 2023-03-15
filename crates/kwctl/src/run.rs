@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::{
-    callback_handler::{CallbackHandler, CallbackHandlerBuilder},
     constants::*,
     kube::Client,
     policy_evaluator::{Evaluator, PolicyEvaluator},
@@ -13,7 +12,14 @@ use std::{collections::HashSet, path::Path};
 use tokio::sync::oneshot;
 use tracing::{error, info, warn};
 
-use crate::{backend::BackendDetector, pull, verify};
+use crate::{backend::BackendDetector, callback_handler::CallbackHandler, pull, verify};
+
+#[derive(Default)]
+pub(crate) enum HostCapabilitiesMode {
+    #[default]
+    Direct,
+    Proxy(crate::callback_handler::ProxyMode),
+}
 
 #[derive(Default)]
 pub(crate) struct PullAndRunSettings {
@@ -26,6 +32,7 @@ pub(crate) struct PullAndRunSettings {
     pub fulcio_and_rekor_data: Option<FulcioAndRekorData>,
     pub enable_wasmtime_cache: bool,
     pub allow_context_aware_resources: bool,
+    pub host_capabilities_mode: HostCapabilitiesMode,
 }
 
 pub(crate) struct RunEnv {
@@ -86,15 +93,8 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
         oneshot::channel();
 
-    let mut callback_handler_builder =
-        CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx)
-            .registry_config(cfg.sources.clone())
-            .fulcio_and_rekor_data(fulcio_and_rekor_data);
-    if let Some(kc) = kube_client {
-        callback_handler_builder = callback_handler_builder.kube_client(kc);
-    }
-
-    let callback_handler = callback_handler_builder.build()?;
+    let callback_handler =
+        CallbackHandler::new(&cfg, kube_client, callback_handler_shutdown_channel_rx).await?;
 
     let callback_sender_channel = callback_handler.sender_channel();
 
@@ -284,9 +284,7 @@ fn compute_context_aware_resources(
             }
 
             if cfg.allow_context_aware_resources {
-                warn!(
-            "Policy has been granted access to the Kubernetes resources mentioned by its metadata"
-        );
+                warn!("Policy has been granted access to the Kubernetes resources mentioned by its metadata");
                 metadata.context_aware_resources.clone()
             } else {
                 warn!("Policy requires access to Kubernetes resources at evaluation time. During this execution the access to Kubernetes resources is denied. This can cause the policy to not behave properly");

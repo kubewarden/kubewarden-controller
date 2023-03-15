@@ -23,6 +23,7 @@ pub fn build_cli() -> Command {
         .about(crate_description!())
         .arg(Arg::new("verbose")
             .short('v')
+            .long("verbose")
             .num_args(0)
             .help("Increase verbosity"))
         .subcommand(
@@ -390,6 +391,21 @@ pub fn build_cli() -> Command {
                     .num_args(0)
                     .help("Grant access to the Kubernetes resources defined inside of the policy's `contextAwareResources` section. Warning: review the list of resources carefully to avoid abuses. Disabled by default"))
                 .arg(
+                    Arg::new("record-host-capabilities-interactions")
+                    .long("record-host-capabilities-interactions")
+                    .value_name("FILE")
+                    .long_help(r#"Record all the policy <-> host capabilities
+communications to the given file.
+Useful to be combiled later with '--replay-host-capabilities-interactions' flag"#))
+                .arg(
+                    Arg::new("replay-host-capabilities-interactions")
+                    .long("replay-host-capabilities-interactions")
+                    .value_name("FILE")
+                    .long_help(r#"During policy <-> host capabilities exchanges
+the host replays back the answers found inside of the provided file.
+This is useful to test policies in a reproducible way, given no external
+interactions with OCI registries, DNS, Kubernetes are performed."#))
+                .arg(
                     Arg::new("uri")
                         .required(true)
                         .index(1)
@@ -730,6 +746,21 @@ pub fn build_cli() -> Command {
                     .long("allow-context-aware")
                     .num_args(0)
                     .help("Grant access to the Kubernetes resources defined inside of the policy's `contextAwareResources` section. Warning: review the list of resources carefully to avoid abuses. Disabled by default"))
+                .arg(
+                    Arg::new("record-host-capabilities-interactions")
+                    .long("record-host-capabilities-interactions")
+                    .value_name("FILE")
+                    .long_help(r#"Record all the policy <-> host capabilities
+communications to the given file.
+Useful to be combiled later with '--replay-host-capabilities-interactions' flag"#))
+                .arg(
+                    Arg::new("replay-host-capabilities-interactions")
+                    .long("replay-host-capabilities-interactions")
+                    .value_name("FILE")
+                    .long_help(r#"During policy <-> host capabilities exchanges
+the host replays back the answers found inside of the provided file.
+This is useful to test policies in a reproducible way, given no external
+interactions with OCI registries, DNS, Kubernetes are performed."#))
                 .arg(
                     Arg::new("uri")
                         .required(true)
