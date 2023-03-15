@@ -61,6 +61,9 @@ pub struct ArtifactHubPkg {
     /// E.g: {"policy", <url>}, {"source", <url>}
     #[serde(skip_serializing_if = "Option::is_none")]
     links: Option<Vec<Link>>,
+    /// Install instructions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    install: Option<String>,
     /// List of maintainers in tuple (name, email) format
     #[serde(skip_serializing_if = "Option::is_none")]
     maintainers: Option<Vec<Maintainer>>,
@@ -180,6 +183,7 @@ impl ArtifactHubPkg {
         let containers_images = parse_containers_images(metadata_annots, &semver_version)?;
         let keywords = parse_keywords(metadata_annots)?;
         let links = parse_links(metadata_annots, &semver_version)?;
+        let install = parse_oci_url(metadata_annots, &semver_version)?.map(compose_install);
         let maintainers = parse_maintainers(metadata_annots)?;
         let annotations = parse_annotations(metadata_annots, metadata, questions)?;
 
@@ -196,6 +200,7 @@ impl ArtifactHubPkg {
             containers_images,
             keywords,
             links,
+            install,
             maintainers,
             provider: Default::default(),
             recommendations: vec![Recommendation::default()],
@@ -245,6 +250,25 @@ fn parse_home_url(metadata_annots: &HashMap<String, String>) -> Result<Option<Ur
                 error: e.to_string(),
             })?;
             Ok(Some(url))
+        }
+        None => Ok(None),
+    }
+}
+
+fn parse_oci_url(
+    metadata_annots: &HashMap<String, String>,
+    version: &Version,
+) -> Result<Option<String>> {
+    match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_OCIURL) {
+        Some(s) => {
+            let oci_url: Reference =
+                format!("{}:v{}", s, version)
+                    .parse()
+                    .map_err(|e: ParseError| ArtifactHubError::MalformedURL {
+                        annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_OCIURL),
+                        error: e.to_string(),
+                    })?;
+            Ok(Some(oci_url.to_string()))
         }
         None => Ok(None),
     }
@@ -343,6 +367,17 @@ fn parse_links(
         }
         None => Ok(None),
     }
+}
+
+fn compose_install(oci_url: String) -> String {
+    format!(
+        r#"The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
+```console
+kwctl pull {}
+```
+"#,
+        oci_url
+    )
 }
 
 // parses the value of annotation KUBEWARDEN_ANNOTATION_POLICY_AUTHOR into a
@@ -772,6 +807,11 @@ mod tests {
                 "kubewarden/rules": "[]\n",
                 "kubewarden/resources": "Pod, Deployment",
             },
+            "install": r#"The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
+```console
+kwctl pull ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
+```
+"#,
             "containersImages": [
             {
                 "name": "policy",
@@ -830,6 +870,11 @@ mod tests {
                 "url": "https://github.com/repo"
             }
             ],
+            "install": r#"The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
+```console
+kwctl pull ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
+```
+"#,
             "maintainers": [
             {
                 "name": "Tux Tuxedo",
