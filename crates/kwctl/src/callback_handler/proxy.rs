@@ -277,7 +277,7 @@ impl CallbackHandlerProxy {
                     if let Some(req) = maybe_req {
                         let request = serde_yaml::to_string(&req.request)
                             .map_err(|e| {
-                                // the recording of compromised, but we will
+                                // the recording is compromised, but we will
                                 // not panic here. We record the error and keep
                                 // going with the policy execution.
                                 // We will inform the user once policy execution
