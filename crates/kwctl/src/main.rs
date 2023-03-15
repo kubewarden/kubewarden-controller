@@ -649,11 +649,6 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         .get_one::<bool>("allow-context-aware")
         .unwrap_or(&false)
         .to_owned();
-    if matches.contains_id("record-host-capabilities-interactions")
-        && matches.contains_id("replay-host-capabilities-interactions")
-    {
-        return Err(anyhow!("Cannot use the 'record-host-capabilities-interactions' and the 'replay-host-capabilities-interactions' flags at the same time"));
-    }
 
     let mut host_capabilities_mode = HostCapabilitiesMode::Direct;
     if matches.contains_id("record-host-capabilities-interactions") {

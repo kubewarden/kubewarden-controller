@@ -1,6 +1,6 @@
 use clap::{
     builder::PossibleValuesParser, crate_authors, crate_description, crate_name, crate_version,
-    Arg, ArgAction, Command,
+    Arg, ArgAction, ArgGroup, Command,
 };
 use lazy_static::lazy_static;
 
@@ -411,6 +411,14 @@ interactions with OCI registries, DNS, Kubernetes are performed."#))
                         .index(1)
                         .help("Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
                 )
+                .group(
+                    // these flags cannot be used at the same time
+                    ArgGroup::new("host-capabilities-proxy")
+                    .args([
+                        "record-host-capabilities-interactions",
+                        "replay-host-capabilities-interactions",
+                    ])
+                )
         )
         .subcommand(
             Command::new("annotate")
@@ -766,6 +774,14 @@ interactions with OCI registries, DNS, Kubernetes are performed."#))
                         .required(true)
                         .index(1)
                         .help("Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
+                )
+                .group(
+                    // these flags cannot be used at the same time
+                    ArgGroup::new("host-capabilities-proxy")
+                    .args([
+                        "record-host-capabilities-interactions",
+                        "replay-host-capabilities-interactions",
+                    ])
                 )
         )
         .subcommand(
