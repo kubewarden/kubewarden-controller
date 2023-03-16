@@ -13,4 +13,7 @@ ignore = [
                        # the problem: # https://github.com/abonander/multipart/issues/143
   "RUSTSEC-2021-0147", # This is about "daemonize" being unmaintained.
                        # This is a feature that we use only when doing e2e tests
+  "RUSTSEC-2020-0168", # This is about "mach" being unmaintained.
+                       # This is a transitive dependency of wasmtime. This is
+                       # being tracked upstream via https://github.com/bytecodealliance/wasmtime/issues/6000
 ]
