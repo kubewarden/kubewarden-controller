@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use run::HostCapabilitiesMode;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -50,6 +51,7 @@ use crate::utils::new_policy_execution_mode_from_str;
 mod annotate;
 mod backend;
 mod bench;
+mod callback_handler;
 mod cli;
 mod completions;
 mod info;
@@ -83,7 +85,11 @@ async fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
 
     // setup logging
-    let level_filter = if matches.contains_id("verbose") {
+    let verbose = matches
+        .get_one::<bool>("verbose")
+        .unwrap_or(&false)
+        .to_owned();
+    let level_filter = if verbose {
         LevelFilter::DEBUG
     } else {
         LevelFilter::INFO
@@ -343,7 +349,18 @@ async fn main() -> Result<()> {
                     };
                     let policy_title = matches.get_one::<String>("title").cloned();
 
-                    scaffold::manifest(uri, resource_type, settings, policy_title)?;
+                    let allow_context_aware_resources = matches
+                        .get_one::<bool>("allow-context-aware")
+                        .unwrap_or(&false)
+                        .to_owned();
+
+                    scaffold::manifest(
+                        uri,
+                        resource_type.parse()?,
+                        settings.as_deref(),
+                        policy_title.as_deref(),
+                        allow_context_aware_resources,
+                    )?;
                 };
             }
             Ok(())
@@ -623,7 +640,52 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         );
     }
 
-    let enable_wasmtime_cache = !matches.contains_id("disable-wasmtime-cache");
+    let enable_wasmtime_cache = !matches
+        .get_one::<bool>("disable-wasmtime-cache")
+        .unwrap_or(&false)
+        .to_owned();
+
+    let allow_context_aware_resources = matches
+        .get_one::<bool>("allow-context-aware")
+        .unwrap_or(&false)
+        .to_owned();
+
+    let mut host_capabilities_mode = HostCapabilitiesMode::Direct;
+    if matches.contains_id("record-host-capabilities-interactions") {
+        let destination = matches
+            .get_one::<String>("record-host-capabilities-interactions")
+            .map(|destination| PathBuf::from_str(destination).unwrap())
+            .ok_or_else(|| anyhow!("Cannot parse 'record-host-capabilities-interactions' file"))?;
+
+        // TODO: replace eprintln with info
+        // once https://github.com/swsnr/mdcat/issues/242 is fixed
+        // info!(session_file = ?destination, "host capabilities proxy enabled with record mode");
+        // print to stderr to not mess with commands that handle the json output
+        // produce by kwctl
+        eprintln!(
+            "host capabilities proxy enabled with record mode. Contents saved to {destination:?}"
+        );
+        host_capabilities_mode =
+            HostCapabilitiesMode::Proxy(callback_handler::ProxyMode::Record { destination });
+    }
+    if matches.contains_id("replay-host-capabilities-interactions") {
+        let source = matches
+            .get_one::<String>("replay-host-capabilities-interactions")
+            .map(|source| PathBuf::from_str(source).unwrap())
+            .ok_or_else(|| anyhow!("Cannot parse 'replay-host-capabilities-interaction' file"))?;
+
+        // TODO: replace eprintln with info
+        // once https://github.com/swsnr/mdcat/issues/242 is fixed
+        // info!(session_file = ?source, "host capabilities proxy enabled with replay mode");
+        // print to stderr to not mess with commands that handle the json output
+        // produce by kwctl
+        eprintln!(
+            "host capabilities proxy enabled with replay mode. Host capabilities interactions taken from {source:?}"
+        );
+
+        host_capabilities_mode =
+            HostCapabilitiesMode::Proxy(callback_handler::ProxyMode::Replay { source });
+    }
 
     Ok(run::PullAndRunSettings {
         uri: uri.to_owned(),
@@ -634,6 +696,8 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         verified_manifest_digest,
         fulcio_and_rekor_data,
         enable_wasmtime_cache,
+        allow_context_aware_resources,
+        host_capabilities_mode,
     })
 }
 

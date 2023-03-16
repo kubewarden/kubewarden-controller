@@ -1,21 +1,31 @@
 use anyhow::{anyhow, Result};
+use policy_evaluator::kube;
 use policy_evaluator::{
-    callback_handler::{CallbackHandler, CallbackHandlerBuilder},
-    cluster_context::ClusterContext,
     constants::*,
-    kube::Client,
     policy_evaluator::{Evaluator, PolicyEvaluator},
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
-    policy_metadata::Metadata,
+    policy_metadata::{ContextAwareResource, Metadata},
 };
-use std::path::Path;
+use std::{
+    collections::HashSet,
+    net::{Ipv4Addr, Ipv6Addr},
+    path::Path,
+};
 use tokio::sync::oneshot;
-use tracing::error;
+use tracing::{error, info, warn};
 
-use crate::{backend::BackendDetector, pull, verify};
+use crate::{backend::BackendDetector, callback_handler::CallbackHandler, pull, verify};
 
+#[derive(Default)]
+pub(crate) enum HostCapabilitiesMode {
+    #[default]
+    Direct,
+    Proxy(crate::callback_handler::ProxyMode),
+}
+
+#[derive(Default)]
 pub(crate) struct PullAndRunSettings {
     pub uri: String,
     pub user_execution_mode: Option<PolicyExecutionMode>,
@@ -25,6 +35,8 @@ pub(crate) struct PullAndRunSettings {
     pub verified_manifest_digest: Option<String>,
     pub fulcio_and_rekor_data: Option<FulcioAndRekorData>,
     pub enable_wasmtime_cache: bool,
+    pub allow_context_aware_resources: bool,
+    pub host_capabilities_mode: HostCapabilitiesMode,
 }
 
 pub(crate) struct RunEnv {
@@ -48,21 +60,9 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     }
 
     let metadata = Metadata::from_path(&policy.local_path)?;
-    if let Some(ref metadata) = metadata {
-        if metadata.context_aware {
-            println!("Fetching Kubernetes context since this policy is context-aware");
 
-            let kubernetes_client = Client::try_default()
-                .await
-                .map_err(|e| anyhow!("could not initialize a cluster context because a Kubernetes client could not be created: {}", e))?;
-
-            ClusterContext::get()
-                .refresh(&kubernetes_client)
-                .await
-                .map_err(|e| anyhow!("could not initialize a cluster context: {}", e))?;
-        }
-    }
-    let policy_id = read_policy_title_from_metadata(&metadata).unwrap_or_else(|| uri.clone());
+    let policy_id =
+        read_policy_title_from_metadata(metadata.as_ref()).unwrap_or_else(|| uri.clone());
 
     let request = serde_json::from_str::<serde_json::Value>(&cfg.request)?;
 
@@ -72,6 +72,14 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
         BackendDetector::default(),
         &policy.local_path,
     )?;
+
+    let context_aware_allowed_resources = compute_context_aware_resources(metadata.as_ref(), cfg);
+
+    let kube_client = if context_aware_allowed_resources.is_empty() {
+        None
+    } else {
+        Some(build_kube_client().await?)
+    };
 
     let policy_settings = cfg.settings.as_ref().map_or(Ok(None), |settings| {
         if settings.is_empty() {
@@ -86,11 +94,8 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
         oneshot::channel();
 
-    let callback_handler = CallbackHandlerBuilder::default()
-        .registry_config(cfg.sources.clone())
-        .shutdown_channel(callback_handler_shutdown_channel_rx)
-        .fulcio_and_rekor_data(fulcio_and_rekor_data)
-        .build()?;
+    let callback_handler =
+        CallbackHandler::new(cfg, kube_client, callback_handler_shutdown_channel_rx).await?;
 
     let callback_sender_channel = callback_handler.sender_channel();
 
@@ -98,7 +103,8 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
         .policy_file(&policy.local_path)?
         .execution_mode(execution_mode)
         .settings(policy_settings)
-        .callback_channel(callback_sender_channel);
+        .callback_channel(callback_sender_channel)
+        .context_aware_resources_allowed(context_aware_allowed_resources);
     if cfg.enable_wasmtime_cache {
         policy_evaluator_builder = policy_evaluator_builder.enable_wasmtime_cache();
     }
@@ -166,9 +172,9 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
     Ok(())
 }
 
-fn read_policy_title_from_metadata(metadata: &Option<Metadata>) -> Option<String> {
+fn read_policy_title_from_metadata(metadata: Option<&Metadata>) -> Option<String> {
     match metadata {
-        Some(ref metadata) => match metadata.annotations {
+        Some(metadata) => match metadata.annotations {
             Some(ref annotations) => annotations
                 .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
                 .map(Clone::clone),
@@ -262,6 +268,60 @@ fn determine_execution_mode(
             }
         }
     }
+}
+
+fn compute_context_aware_resources(
+    metadata: Option<&Metadata>,
+    cfg: &PullAndRunSettings,
+) -> HashSet<ContextAwareResource> {
+    match metadata {
+        None => {
+            info!("Policy is not annotated, access to Kubernetes resources is not allowed");
+            HashSet::new()
+        }
+        Some(metadata) => {
+            if metadata.context_aware_resources.is_empty() {
+                return HashSet::new();
+            }
+
+            if cfg.allow_context_aware_resources {
+                warn!("Policy has been granted access to the Kubernetes resources mentioned by its metadata");
+                metadata.context_aware_resources.clone()
+            } else {
+                warn!("Policy requires access to Kubernetes resources at evaluation time. During this execution the access to Kubernetes resources is denied. This can cause the policy to not behave properly");
+                warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command, then run the policy using the `--allow-context-aware` flag.");
+
+                HashSet::new()
+            }
+        }
+    }
+}
+
+/// kwctl is built using rustls enabled. Unfortunately rustls does not support validating IP addresses
+/// yet (see https://github.com/kube-rs/kube/issues/1003).
+///
+/// This function provides a workaround to this limitation.
+async fn build_kube_client() -> Result<kube::Client> {
+    // This is the usual way of obtaining a kubeconfig
+    let mut kube_config = kube::Config::infer().await.map_err(anyhow::Error::new)?;
+
+    // Does the cluster_url have an host? This is probably true 99.999% of the times
+    if let Some(host) = kube_config.cluster_url.host() {
+        // is the host an IP or a hostname?
+        let is_an_ip = host.parse::<Ipv4Addr>().is_ok() || host.parse::<Ipv6Addr>().is_ok();
+
+        // if the host is an IP and no `tls_server_name` is set, then
+        // set `tls_server_name` to `kubernetes.default.svc`. This is a FQDN
+        // that is always associated to the certificate used by the API server.
+        // This will make kwctl work against minikube and k3d, to name a few...
+        if is_an_ip && kube_config.tls_server_name.is_none() {
+            warn!(host, "The loaded kubeconfig connects to a server using an IP address instead of a FQDN. This is usually done by minikube, k3d and other local development solutions");
+            warn!("Due to a limitation of rustls, certificate validation cannot be performed against IP addresses, the certificate validation will be made against `kubernetes.default.svc`");
+            kube_config.tls_server_name = Some("kubernetes.default.svc".to_string());
+        }
+    }
+
+    kube::Client::try_from(kube_config).map_err(anyhow::Error::new)
 }
 
 #[cfg(test)]
@@ -476,5 +536,60 @@ mod tests {
         );
         assert!(actual.is_ok());
         assert_eq!(actual.unwrap(), PolicyExecutionMode::KubewardenWapc);
+    }
+
+    #[test]
+    fn prevent_access_to_kubernetes_resources_when_policy_is_not_annotated() {
+        let cfg = PullAndRunSettings {
+            allow_context_aware_resources: true,
+            ..Default::default()
+        };
+
+        let resources = compute_context_aware_resources(None, &cfg);
+        assert!(resources.is_empty());
+    }
+
+    #[test]
+    fn prevent_access_to_kubernetes_resources_when_allow_context_aware_resources_is_disabled() {
+        let mut context_aware_resources = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "v1".to_string(),
+            kind: "Pod".to_string(),
+        });
+
+        let metadata = Metadata {
+            context_aware_resources,
+            ..Default::default()
+        };
+
+        let cfg = PullAndRunSettings {
+            allow_context_aware_resources: false,
+            ..Default::default()
+        };
+
+        let resources = compute_context_aware_resources(Some(&metadata), &cfg);
+        assert!(resources.is_empty());
+    }
+
+    #[test]
+    fn allow_access_to_kubernetes_resources_when_allow_context_aware_resources_is_enabled() {
+        let mut context_aware_resources = HashSet::new();
+        context_aware_resources.insert(ContextAwareResource {
+            api_version: "v1".to_string(),
+            kind: "Pod".to_string(),
+        });
+
+        let metadata = Metadata {
+            context_aware_resources: context_aware_resources.clone(),
+            ..Default::default()
+        };
+
+        let cfg = PullAndRunSettings {
+            allow_context_aware_resources: true,
+            ..Default::default()
+        };
+
+        let resources = compute_context_aware_resources(Some(&metadata), &cfg);
+        assert_eq!(resources, context_aware_resources);
     }
 }

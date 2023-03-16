@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use policy_evaluator::{
     policy_fetcher::{policy::Policy, store::Store},
     policy_metadata::Metadata as PolicyMetadata,
@@ -20,24 +20,26 @@ pub(crate) fn list() -> Result<()> {
         "Size"
     ]);
     for policy in policy_list()? {
-        let (mutating, context_aware) =
-            if let Some(policy_metadata) = PolicyMetadata::from_path(&policy.local_path)? {
-                let mutating = if policy_metadata.mutating {
-                    "yes"
-                } else {
-                    "no"
-                };
-
-                let context_aware = if policy_metadata.context_aware {
-                    "yes"
-                } else {
-                    "no"
-                };
-
-                (mutating, context_aware)
+        let (mutating, context_aware) = if let Some(policy_metadata) =
+            PolicyMetadata::from_path(&policy.local_path)
+                .map_err(|e| anyhow!("error processing metadata of policy {}: {:?}", policy, e))?
+        {
+            let mutating = if policy_metadata.mutating {
+                "yes"
             } else {
-                ("unknown", "no")
+                "no"
             };
+
+            let context_aware = if policy_metadata.context_aware_resources.is_empty() {
+                "no"
+            } else {
+                "yes"
+            };
+
+            (mutating, context_aware)
+        } else {
+            ("unknown", "no")
+        };
 
         let mut sha256sum = policy.digest()?;
         sha256sum.truncate(12);
