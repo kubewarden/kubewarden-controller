@@ -6,7 +6,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/kubewarden/kubewarden-controller v1.1.2-0.20221021125822-dbf0a01df20e
-	github.com/rs/zerolog v1.28.0
+	github.com/rs/zerolog v1.29.0
 	github.com/spf13/cobra v1.6.1
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
