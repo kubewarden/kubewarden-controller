@@ -9,5 +9,8 @@ ignore = [
                        # at this time. The call to localtime_r is not protected by any lock and can
                        # cause unsoundness. Read the previous link for more information.
   "RUSTSEC-2021-0139", # This is about `ansi_term` not being maintained anymore
+  "RUSTSEC-2020-0168", # This is about "mach" being unmaintained.
+                       # This is a transitive dependency of wasmtime. This is
+                       # being tracked upstream via https://github.com/bytecodealliance/wasmtime/issues/6000
 ]
 
