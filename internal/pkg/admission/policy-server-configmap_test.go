@@ -64,7 +64,7 @@ func TestArePoliciesEqual(t *testing.T) {
 }
 
 func TestCreatePoliciesMap(t *testing.T) {
-	reconciler, validationPolicy, mutatingPolicy := createReconciler()
+	reconciler, validationPolicy, mutatingPolicy, contextAwarePolicy := createReconciler()
 
 	var policies PolicyConfigEntryMap
 	clusterAdmissionPolicies := []policiesv1.Policy{}
@@ -73,10 +73,10 @@ func TestCreatePoliciesMap(t *testing.T) {
 		t.Error("Empty ClusterAdmissionPolicyList should generate empty policies map")
 	}
 
-	clusterAdmissionPolicies = []policiesv1.Policy{&validationPolicy, &mutatingPolicy}
+	clusterAdmissionPolicies = []policiesv1.Policy{&validationPolicy, &mutatingPolicy, &contextAwarePolicy}
 	policies = reconciler.createPoliciesMap(clusterAdmissionPolicies)
-	if len(policies) != 2 {
-		t.Error("Policy map must has 2 entries")
+	if len(policies) != 3 {
+		t.Error("Policy map must has 3 entries")
 	}
 	expectedPolicies := make(PolicyConfigEntryMap)
 	expectedPolicies[validationPolicy.GetUniqueName()] = PolicyServerConfigEntry{
@@ -94,6 +94,20 @@ func TestCreatePoliciesMap(t *testing.T) {
 		URL:             "registry://blabla/mutation-policy:latest",
 		AllowedToMutate: true,
 		Settings:        runtime.RawExtension{},
+	}
+	expectedPolicies[contextAwarePolicy.GetUniqueName()] = PolicyServerConfigEntry{
+		NamespacedName: types.NamespacedName{
+			Name: contextAwarePolicy.GetName(),
+		},
+		URL:             "registry://blabla/context-aware-policy:latest",
+		AllowedToMutate: false,
+		Settings:        runtime.RawExtension{},
+		ContextAwareResources: []policiesv1.ContextAwareResource{
+			{
+				APIVersion: "v1",
+				Kind:       "Pods",
+			},
+		},
 	}
 	if len(policies) != len(expectedPolicies) {
 		t.Errorf("Policies maps must be length %d", len(expectedPolicies))

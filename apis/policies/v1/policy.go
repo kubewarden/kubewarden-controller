@@ -96,4 +96,5 @@ type Policy interface {
 	GetObjectMeta() *metav1.ObjectMeta
 	GetPolicyServer() string
 	GetUniqueName() string
+	GetContextAwareResources() []ContextAwareResource
 }
