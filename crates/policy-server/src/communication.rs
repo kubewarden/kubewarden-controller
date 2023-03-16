@@ -38,11 +38,3 @@ pub(crate) struct WorkerPoolBootRequest {
     /// * Err(e) -> one or more workers couldn't bootstrap
     pub resp_chan: oneshot::Sender<Result<()>>,
 }
-
-// Holds the bootstrap parameters of a kube pooler
-pub(crate) struct KubePollerBootRequest {
-    // channel used to send back bootstrap status:
-    // * Ok(()) -> all good
-    // * Err(e) -> one or more workers couldn't bootstrap
-    pub resp_chan: oneshot::Sender<Result<()>>,
-}

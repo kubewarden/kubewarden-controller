@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Result};
 
+use policy_evaluator::policy_metadata::ContextAwareResource;
 use serde::Deserialize;
 use serde_yaml::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::iter::FromIterator;
 use std::path::Path;
@@ -26,14 +27,15 @@ impl From<PolicyMode> for String {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Policy {
     pub url: String,
-    #[serde(default, rename = "policyMode")]
-    pub policy_mode: PolicyMode,
-    #[serde(rename = "allowedToMutate")]
-    pub allowed_to_mutate: Option<bool>,
     #[serde(default)]
+    pub policy_mode: PolicyMode,
+    pub allowed_to_mutate: Option<bool>,
     pub settings: Option<HashMap<String, Value>>,
+    #[serde(default)]
+    pub context_aware_resources: HashSet<ContextAwareResource>,
 }
 
 impl Policy {

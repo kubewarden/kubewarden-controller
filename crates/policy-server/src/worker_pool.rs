@@ -309,6 +309,7 @@ pub(crate) fn build_policy_evaluator(
         .engine(engine.clone())
         .policy_module(module)
         .settings(policy.settings_to_json()?)
+        .context_aware_resources_allowed(policy.context_aware_resources.clone())
         .callback_channel(callback_handler_tx)
         .execution_mode(policy_module.execution_mode);
 

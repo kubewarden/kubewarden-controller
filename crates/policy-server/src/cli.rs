@@ -223,6 +223,13 @@ pub(crate) fn build_cli() -> Command {
                 .required(false)
                 .help("Path to file holding stderr, used only when running in daemon mode"),
         )
+        .arg(
+            Arg::new("ignore-kubernetes-connection-failure")
+                .long("ignore-kubernetes-connection-failure")
+                .env("KUBEWARDEN_IGNORE_KUBERNETES_CONNECTION_FAILURE")
+                .required(false)
+                .help("Do not exit with an error if the Kubernetes connection fails. This will cause context aware policies to break when there's no connection with Kubernetes."),
+        )
         .long_version(VERSION_AND_BUILTINS.as_str())
 }
 
@@ -278,11 +285,12 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
         // let's filter them
         .add_directive("cranelift_codegen=off".parse().unwrap())
         .add_directive("cranelift_wasm=off".parse().unwrap())
-        .add_directive("wasmtime_cranelift=off".parse().unwrap())
-        .add_directive("regalloc=off".parse().unwrap())
-        .add_directive("hyper=off".parse().unwrap())
         .add_directive("h2=off".parse().unwrap())
-        .add_directive("tower=off".parse().unwrap());
+        .add_directive("hyper=off".parse().unwrap())
+        .add_directive("regalloc=off".parse().unwrap())
+        .add_directive("tower=off".parse().unwrap())
+        .add_directive("wasmtime_cranelift=off".parse().unwrap())
+        .add_directive("wasmtime_jit=off".parse().unwrap());
 
     match matches.get_one::<String>("log-fmt").unwrap().as_str() {
         "json" => tracing_subscriber::registry()
