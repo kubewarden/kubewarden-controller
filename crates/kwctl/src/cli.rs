@@ -297,7 +297,7 @@ fn run_args() -> Vec<Arg> {
             .value_name("FILE")
             .long_help(r#"Record all the policy <-> host capabilities
 communications to the given file.
-Useful to be combiled later with '--replay-host-capabilities-interactions' flag"#),
+Useful to be combined later with '--replay-host-capabilities-interactions' flag"#),
         Arg::new("replay-host-capabilities-interactions")
             .long("replay-host-capabilities-interactions")
             .value_name("FILE")
