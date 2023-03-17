@@ -317,10 +317,13 @@ async fn main() -> Result<()> {
                     let questions_file = artifacthub_matches
                         .get_one::<String>("questions-path")
                         .map(|output| PathBuf::from_str(output).unwrap());
-                    println!(
-                        "{}",
-                        scaffold::artifacthub(metadata_file, version, questions_file)?
-                    );
+                    let content = scaffold::artifacthub(metadata_file, version, questions_file)?;
+                    if let Some(output) = artifacthub_matches.get_one::<String>("output") {
+                        let output_path = PathBuf::from_str(output)?;
+                        fs::write(output_path, content)?;
+                    } else {
+                        println!("{}", content);
+                    }
                 }
             }
             if let Some(matches) = matches.subcommand_matches("scaffold") {
