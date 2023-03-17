@@ -413,6 +413,11 @@ fn subcommand_scaffold() -> Command {
             .short('q')
             .value_name("PATH")
             .help("File containing the questions-ui content of the policy"),
+        Arg::new("output")
+            .long("output")
+            .short('o')
+            .value_name("FILE")
+            .help("Path where the artifact-pkg.yml file will be stored"),
     ];
     artifacthub_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 
