@@ -16,7 +16,11 @@ use std::{
 use tokio::sync::oneshot;
 use tracing::{error, info, warn};
 
-use crate::{backend::BackendDetector, callback_handler::CallbackHandler, pull, verify};
+use crate::{
+    backend::BackendDetector,
+    callback_handler::{CallbackHandler, ProxyMode},
+    pull, verify,
+};
 
 #[derive(Default)]
 pub(crate) enum HostCapabilitiesMode {
@@ -78,7 +82,10 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     let kube_client = if context_aware_allowed_resources.is_empty() {
         None
     } else {
-        Some(build_kube_client().await?)
+        match &cfg.host_capabilities_mode {
+            HostCapabilitiesMode::Proxy(ProxyMode::Replay { source: _ }) => None,
+            _ => Some(build_kube_client().await?),
+        }
     };
 
     let policy_settings = cfg.settings.as_ref().map_or(Ok(None), |settings| {
