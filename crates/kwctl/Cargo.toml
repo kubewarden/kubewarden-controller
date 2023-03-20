@@ -13,7 +13,7 @@ edition = "2021"
 anyhow = "1.0"
 clap_complete = "4.1"
 clap = { version = "4.0", features = [ "cargo", "env" ] }
-directories = "4.0.1"
+directories = "5.0.0"
 flate2 = "1.0.25"
 itertools = "0.10.5"
 k8s-openapi = { version = "0.17.0", default-features = false, features = ["v1_25"] }
