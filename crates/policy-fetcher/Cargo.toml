@@ -16,7 +16,7 @@ async-std = "1.9"
 async-stream = "0.3"
 async-trait = "0.1"
 base64 = "0.21"
-directories = "4.0"
+directories = "5.0"
 lazy_static = "1.4"
 oci-distribution = { version = "0.9.4", default-features = false, features =  ["rustls-tls"] }
 path-slash = "0.2"
