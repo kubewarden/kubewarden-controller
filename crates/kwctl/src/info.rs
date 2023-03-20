@@ -1,7 +1,10 @@
 use anyhow::Result;
 use clap::crate_version;
 use itertools::Itertools;
-use policy_evaluator::{burrego, policy_fetcher::store::Store};
+use policy_evaluator::{
+    burrego,
+    policy_fetcher::store::{Store, DEFAULT_ROOT},
+};
 
 pub(crate) fn info() -> Result<()> {
     let builtins: String = burrego::get_builtins()
@@ -18,11 +21,13 @@ pub(crate) fn info() -> Result<()> {
 Open Policy Agent/Gatekeeper implemented builtins:
 {}
 
-Policy store: {}"
+Policy store: {}
+Config directory: {}
     "#,
         crate_version!(),
         builtins,
-        store.root.to_string_lossy()
+        store.root.to_string_lossy(),
+        DEFAULT_ROOT.config_dir().to_string_lossy(),
     );
 
     Ok(())
