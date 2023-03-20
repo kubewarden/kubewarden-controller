@@ -660,14 +660,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
             .map(|destination| PathBuf::from_str(destination).unwrap())
             .ok_or_else(|| anyhow!("Cannot parse 'record-host-capabilities-interactions' file"))?;
 
-        // TODO: replace eprintln with info
-        // once https://github.com/swsnr/mdcat/issues/242 is fixed
-        // info!(session_file = ?destination, "host capabilities proxy enabled with record mode");
-        // print to stderr to not mess with commands that handle the json output
-        // produce by kwctl
-        eprintln!(
-            "host capabilities proxy enabled with record mode. Contents saved to {destination:?}"
-        );
+        info!(session_file = ?destination, "host capabilities proxy enabled with record mode");
         host_capabilities_mode =
             HostCapabilitiesMode::Proxy(callback_handler::ProxyMode::Record { destination });
     }
@@ -677,15 +670,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
             .map(|source| PathBuf::from_str(source).unwrap())
             .ok_or_else(|| anyhow!("Cannot parse 'replay-host-capabilities-interaction' file"))?;
 
-        // TODO: replace eprintln with info
-        // once https://github.com/swsnr/mdcat/issues/242 is fixed
-        // info!(session_file = ?source, "host capabilities proxy enabled with replay mode");
-        // print to stderr to not mess with commands that handle the json output
-        // produce by kwctl
-        eprintln!(
-            "host capabilities proxy enabled with replay mode. Host capabilities interactions taken from {source:?}"
-        );
-
+        info!(session_file = ?source, "host capabilities proxy enabled with replay mode");
         host_capabilities_mode =
             HostCapabilitiesMode::Proxy(callback_handler::ProxyMode::Replay { source });
     }
