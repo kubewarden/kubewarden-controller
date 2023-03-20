@@ -49,5 +49,5 @@ time = "0.3.20"
 reqwest = { version = "0", default-features = false, features = ["rustls-tls-native-roots"] }
 
 [dev-dependencies]
-rstest = "0.16.0"
+rstest = "0.17.0"
 tempfile = "3.4.0"
