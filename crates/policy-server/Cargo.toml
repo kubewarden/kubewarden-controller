@@ -33,5 +33,5 @@ tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 warp = { version = "0.3.3", default_features = false, features = [ "multipart", "tls"] }
 
 [dev-dependencies]
-rstest = "0.16"
+rstest = "0.17"
 tempfile = "3.4.0"
