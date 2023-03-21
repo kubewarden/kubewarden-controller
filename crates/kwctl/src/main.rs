@@ -100,7 +100,8 @@ async fn main() -> Result<()> {
         .add_directive("cranelift_wasm=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("hyper=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("regalloc=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
-        .add_directive("wasmtime_cache=off".parse().unwrap()); // wasmtime_cache messages are not critical and just confuse users
+        .add_directive("wasmtime_cache=off".parse().unwrap()) // wasmtime_cache messages are not critical and just confuse users
+        .add_directive("walrus=warn".parse().unwrap()); // walrus: ignore warning messages
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt::layer().with_writer(std::io::stderr))
