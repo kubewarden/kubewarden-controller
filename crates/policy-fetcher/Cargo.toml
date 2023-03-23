@@ -1,6 +1,6 @@
 [package]
 name = "policy-fetcher"
-version = "0.7.19"
+version = "0.7.20"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
@@ -34,7 +34,7 @@ tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
 walkdir = "2"
 rayon = "1.5"
-docker_credential = "1.0"
+docker_credential = "1.2"
 tokio = { version = "1", default_features = false }
 
 [dev-dependencies]
