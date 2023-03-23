@@ -273,7 +273,7 @@ impl PolicyFetcher for Registry {
 
         match image_content {
             Some(image_content) => Ok(image_content),
-            None => Err(anyhow!("could not pull policy {}", url)),
+            None => Err(anyhow!("could not pull policy {}: empty layers", url)),
         }
     }
 }
