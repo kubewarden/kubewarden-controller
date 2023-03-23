@@ -148,11 +148,10 @@ pub async fn fetch_policy(
         return create_file_if_valid(&bytes, &destination, url.to_string());
     }
 
-    if let Ok(bytes) = policy_fetcher.fetch(&url, ClientProtocol::Http).await {
-        return create_file_if_valid(&bytes, &destination, url.to_string());
+    match policy_fetcher.fetch(&url, ClientProtocol::Http).await {
+        Ok(bytes) => create_file_if_valid(&bytes, &destination, url.to_string()),
+        Err(e) => Err(anyhow!("could not pull policy {}: {}", url, e)),
     }
-
-    Err(anyhow!("could not pull policy {}", url))
 }
 
 fn client_protocol(url: &Url, sources: &Sources) -> Result<ClientProtocol> {
