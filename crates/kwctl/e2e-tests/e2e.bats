@@ -71,6 +71,26 @@ kwctl() {
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
 }
 
+@test "execute a remote policy that use context aware informtion using a pre-recorded session" {
+    # replay a session where the namespace is found
+    kwctl run \
+    --request-path test-data/context-aware-policy-request-pod-creation-all-labels.json \
+    --allow-context-aware \
+    --replay-host-capabilities-interactions test-data/host-capabilities-sessions/context-aware-demo-namespace-found.yml \
+    registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*"allowed":true.*') -ne 0 ]
+
+    # replay a session where something went wrong
+    kwctl run \
+    --request-path test-data/context-aware-policy-request-pod-creation-all-labels.json \
+    --allow-context-aware \
+    --replay-host-capabilities-interactions test-data/host-capabilities-sessions/context-aware-demo-namespace-not-found.yml \
+    registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0
+    [ "$status" -eq 0 ]
+    [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
+}
+
 @test "benchmark a policy" {
     kwctl bench \
       --warm-up-time 1 \
