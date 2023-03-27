@@ -9,8 +9,16 @@ ignore = [
                        # This is a transitive depependency
   "RUSTSEC-2021-0146", # This is about `twoway` not being maintained anymore
                        # This is a transitive dependency of `multipart`, which is
-                       # a dependency of `warp`. This is the GH issue that describes
-                       # the problem: # https://github.com/abonander/multipart/issues/143
+                       # a dependency of `warp`. The `multipart` project has been
+                       # archived in Feb 2023. This is the issue made against
+                       # `warp` asking for the removal of the `multipart` dependency
+                       # https://github.com/seanmonstar/warp/issues/1023
+  "RUSTSEC-2023-0028", # This is about `buf_redux` not being maintained anymore
+                       # This is a transitive dependency of `multipart`, which is
+                       # a dependency of `warp`. The `multipart` project has been
+                       # archived in Feb 2023. This is the issue made against
+                       # `warp` asking for the removal of the `multipart` dependency
+                       # https://github.com/seanmonstar/warp/issues/1023
   "RUSTSEC-2021-0147", # This is about "daemonize" being unmaintained.
                        # This is a feature that we use only when doing e2e tests
   "RUSTSEC-2020-0168", # This is about "mach" being unmaintained.
