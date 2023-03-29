@@ -34,4 +34,4 @@ warp = { version = "0.3.3", default_features = false, features = [ "multipart", 
 
 [dev-dependencies]
 rstest = "0.17"
-tempfile = "3.4.0"
+tempfile = "3.5.0"
