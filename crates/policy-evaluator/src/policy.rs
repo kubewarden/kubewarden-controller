@@ -161,4 +161,24 @@ mod tests {
             &requested_resource.kind
         ));
     }
+
+    #[test]
+    fn policy_fields_test() {
+        let id = "test".to_string();
+        let policy_id = Some(1);
+        let callback_channel = None;
+        let ctx_aware_resources_allow_list = Some(HashSet::new());
+
+        let policy = Policy::new(
+            id.clone(),
+            policy_id.clone(),
+            callback_channel.clone(),
+            ctx_aware_resources_allow_list.clone(),
+        )
+        .expect("cannot create policy");
+
+        assert!(policy.id == id);
+        assert!(policy.instance_id == policy_id);
+        assert!(policy.ctx_aware_resources_allow_list == ctx_aware_resources_allow_list.unwrap());
+    }
 }
