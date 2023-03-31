@@ -200,6 +200,12 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName: policyServer.Spec.ImagePullSecret,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  ".dockerconfigjson",
+								Path: "config.json",
+							},
+						},
 					},
 				},
 			},
@@ -310,7 +316,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		admissionContainer.Env = append(admissionContainer.Env,
 			corev1.EnvVar{
 				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
-				Value: filepath.Join(dockerConfigJSONPolicyServerPath, ".dockerconfigjson"),
+				Value: dockerConfigJSONPolicyServerPath,
 			},
 		)
 	}
