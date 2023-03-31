@@ -418,8 +418,6 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	}
 	if policyServer.Spec.SecurityContexts.Pod != nil {
 		policyServerDeployment.Spec.Template.Spec.SecurityContext = policyServer.Spec.SecurityContexts.Pod
-	} else {
-		policyServerDeployment.Spec.Template.Spec.SecurityContext = defaultPodSecurityContext()
 	}
 
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
@@ -444,12 +442,4 @@ func defaultContainerSecurityContext() *corev1.SecurityContext {
 		RunAsNonRoot:             &runAsNonRoot,
 	}
 	return &admissionContainerSecurityContext
-}
-
-func defaultPodSecurityContext() *corev1.PodSecurityContext {
-	runAsNonRoot := true
-	securityContext := corev1.PodSecurityContext{
-		RunAsNonRoot: &runAsNonRoot,
-	}
-	return &securityContext
 }

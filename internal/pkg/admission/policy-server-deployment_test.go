@@ -313,7 +313,6 @@ func TestPolicyServerWithoutSecurityContext(t *testing.T) {
 	}
 	deployment := reconciler.deployment("v1", policyServer)
 	containerDefaultSecurityContext := defaultContainerSecurityContext()
-	podDefaultSecurityContext := defaultPodSecurityContext()
 
 	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem != *containerDefaultSecurityContext.ReadOnlyRootFilesystem {
 		t.Error("Policy server container ReadOnlyRootFilesystem diverge from the expected value")
@@ -329,10 +328,6 @@ func TestPolicyServerWithoutSecurityContext(t *testing.T) {
 	}
 	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities == containerDefaultSecurityContext.Capabilities {
 		t.Error("Policy server container should have capabilities defined")
-	}
-
-	if *deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot != *podDefaultSecurityContext.RunAsNonRoot {
-		t.Error("Pod RunAsNonRoot should be set to true")
 	}
 }
 
@@ -435,13 +430,5 @@ func TestDefaultContainerSecurityContext(t *testing.T) {
 			securityContext.Capabilities.Drop[0] != dropCapabilityAll {
 			t.Error("Policy server container Capabilities should have only one 'All' drop capability")
 		}
-	}
-}
-
-func TestDefaultPodSecurityContext(t *testing.T) {
-	securityContext := defaultPodSecurityContext()
-
-	if *securityContext.RunAsNonRoot != true {
-		t.Error("Pod RunAsNonRoot should be set to true")
 	}
 }
