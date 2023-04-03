@@ -3,7 +3,6 @@ use policy_evaluator::{
     policy_fetcher::{policy::Policy, store::Store},
     policy_metadata::Metadata as PolicyMetadata,
 };
-use pretty_bytes::converter::convert;
 use prettytable::{format, Table};
 
 pub(crate) fn list() -> Result<()> {
@@ -51,7 +50,7 @@ pub(crate) fn list() -> Result<()> {
             mutating,
             context_aware,
             sha256sum,
-            convert(policy_filesystem_metadata.len() as f64),
+            humansize::format_size(policy_filesystem_metadata.len(), humansize::DECIMAL),
         ]);
     }
     table.printstd();
