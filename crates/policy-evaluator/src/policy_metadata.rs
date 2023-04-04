@@ -1,5 +1,6 @@
 use anyhow::Result;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -145,6 +146,8 @@ pub struct Metadata {
     #[serde(default)]
     #[validate]
     pub context_aware_resources: HashSet<ContextAwareResource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimum_kubewarden_version: Option<Version>,
 }
 
 const fn _default_true() -> bool {
@@ -161,6 +164,7 @@ impl Default for Metadata {
             background_audit: true,
             execution_mode: PolicyExecutionMode::KubewardenWapc,
             context_aware_resources: HashSet::new(),
+            minimum_kubewarden_version: None,
         }
     }
 }
