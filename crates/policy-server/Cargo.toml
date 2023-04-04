@@ -31,6 +31,7 @@ tracing-futures = "0.2"
 tracing-opentelemetry = "0.17.4"
 tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 warp = { version = "0.3.4", default_features = false, features = [ "multipart", "tls"] }
+semver = { version = "1.0.17", features = ["serde"] }
 
 [dev-dependencies]
 rstest = "0.17"
