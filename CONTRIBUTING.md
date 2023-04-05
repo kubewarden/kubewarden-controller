@@ -102,7 +102,6 @@ $ # commit resulting changes
 Assuming your official kubewarden remote is called `upstream`:
 
 ```console
-$ git commit -m 'Update CHANGELOG.md' # on main branch
 $ git tag -a vX.Y.Z  -m "vX.Y.Z" -s
 $ git push upstream main vX.Y.Z
 ```
@@ -120,7 +119,7 @@ executed successfully.
 
 ### Consider bumping the helm-chart
 
-Now that the controller has a new tag released, consider bumping the
+Now that the controller has a new tag released, the automation will bump the
 [`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-controller).
 
 ### Consider announcing the new release in channels!
