@@ -157,6 +157,9 @@ impl MetadataPrinter {
         if metadata.execution_mode == PolicyExecutionMode::KubewardenWapc {
             table.add_row(row![Fgbl -> "protocol version:", protocol_version]);
         }
+        if let Some(minimum_kubewarden_version) = &metadata.minimum_kubewarden_version {
+            table.add_row(row![Fgbl -> "minimum kubewarden version:", minimum_kubewarden_version]);
+        }
 
         let _usage = annotations.remove(KUBEWARDEN_ANNOTATION_POLICY_USAGE);
         if !annotations.is_empty() {

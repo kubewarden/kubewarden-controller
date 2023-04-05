@@ -17,6 +17,7 @@ use tokio::sync::oneshot;
 use tracing::{error, info, warn};
 
 use crate::{
+    backend::has_minimum_kubewarden_version,
     backend::BackendDetector,
     callback_handler::{CallbackHandler, ProxyMode},
     pull, verify,
@@ -64,6 +65,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     }
 
     let metadata = Metadata::from_path(&policy.local_path)?;
+    has_minimum_kubewarden_version(metadata.as_ref())?;
 
     let policy_id =
         read_policy_title_from_metadata(metadata.as_ref()).unwrap_or_else(|| uri.clone());
