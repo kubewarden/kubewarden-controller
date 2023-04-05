@@ -277,3 +277,41 @@ After that, you can access Grafana WebUI at [localhost:3001](http://localhost:30
 data source using the `http://host.docker.internal:9090` as the data source URL,
 and [import](https://grafana.com/docs/grafana/latest/dashboards/export-import/#import-dashboard)
 the dashboard definition kubewarden-dashboard.json file into the Grafana instance.
+
+## Debugging policy-server pod
+
+The policy-server container is built from scratch, hence it doesn't have a
+shell to do `kubectl exec -ti policy-server -- sh`.
+
+Starting from k8s 1.24, we can use ephemeral containers. Ephemeral containers become sidecars of the
+running pod. To instantiate them you can't define their yaml, you need to use `kubectl debug`.
+
+The policy-server process in the policy-server container is running under its own kernel namespace.
+To be able to debug it, we need to make a full copy of it. This copy will have an ephemeral container
+included in the same kernel namespace, so we have access.
+
+```
+$ kubectl debug --copy-to <name of new debug pod> --share-proceses --image alpine -ti <running policy-server pod>
+$ ps aux
+(find PID of policy-server)
+$ apk add strace
+$ strace -p <PID of policy server>
+```
+
+the filesystem is mounted still in the other container, and cannot be shared
+to the alpine one (there would be clashes):
+
+```
+cd /proc/<PID of policy-server>/
+ls root
+ls: root: Permission denied
+```
+
+For that, we create a user with UID of policy-server:
+
+```
+adduser -G nobody -U <UID of policy-server> -D -H kw
+su -kw
+cd /proc/<PID of policy-server>/root
+ls -l
+```
