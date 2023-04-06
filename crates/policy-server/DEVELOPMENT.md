@@ -277,3 +277,84 @@ After that, you can access Grafana WebUI at [localhost:3001](http://localhost:30
 data source using the `http://host.docker.internal:9090` as the data source URL,
 and [import](https://grafana.com/docs/grafana/latest/dashboards/export-import/#import-dashboard)
 the dashboard definition kubewarden-dashboard.json file into the Grafana instance.
+
+## Debugging policy-server pod
+
+The policy-server container is built from scratch, hence it doesn't have a
+shell to do `kubectl exec -ti policy-server -- sh`.
+
+Starting from k8s 1.24, we can use ephemeral containers. Ephemeral containers become sidecars of the
+running pod. To instantiate them you can't define their yaml, you need to use `kubectl debug`.
+
+The policy-server process in the policy-server container is running under its own kernel namespace.
+To be able to debug it, we need to make a full copy of it. This copy will have an ephemeral container
+included in the same kernel namespace, so we have access.
+
+```console
+$ kubectl debug --copy-to <name of new debug pod> --share-processes --image alpine -ti <running policy-server pod>
+# ps aux
+(find PID of policy-server)
+```
+
+### Accessing the filesystem of the policy-server container
+
+The filesystem is mounted still in the other container, and cannot be shared
+to the alpine one (there would be clashes):
+
+```console
+# cd /proc/<PID of policy-server>/
+# ls root
+ls: root: Permission denied
+```
+
+For that, we create a user with UID of user running the policy-server process.
+This information can be found by looking at the output of the `ps aux` command.
+Currently, the UID of the user running the policy-server is hardcoded inside
+of our container image to be `65533`.
+
+```console
+# adduser -G nogroup -u <UID of policy-server> -D kw
+# su - kw
+$ cd /proc/<PID of policy-server>/root
+```
+
+As soon as we move into this directory the following error is printed:
+
+```console
+ash: getcwd: No such file or directory
+```
+
+That's fine, is caused by the shell not being able to determine the current directory.
+This error can be ignored, or completely removed by executing this command:
+
+```console
+$ export PS1="\h: $ "
+```
+
+Next, we can peek into the filesystem of the container running the policy-server process:
+
+```console
+$ ls -l
+config         dev            etc            pki            policy-server  proc           sys            tmp            var
+```
+
+> **Note:** the filesytem of the policy-server container is read-only. This is set inside of the Deployment of the Policy Server.
+
+### Attaching with strace to the policy-server process
+
+From the debugging container, install the `strace` utility. This must be done as
+root:
+
+```console
+# apk add strace
+```
+
+In this special context, strace must be run by the same user running the policy-server
+process.
+
+In the previous section you have created a `kw` user. We can leverage that user:
+
+```console
+# su - kw
+$ strace -p <PID of policy server>
+```
