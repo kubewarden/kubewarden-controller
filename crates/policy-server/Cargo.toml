@@ -1,6 +1,6 @@
 [package]
 name = "policy-server"
-version = "1.6.0-rc5"
+version = "1.6.0-rc6"
 authors = [
   "Kubewarden Developers <kubewarden@suse.de>",
   "Flavio Castelli <fcastelli@suse.com>",
@@ -15,16 +15,16 @@ anyhow = "1.0"
 clap = { version = "4.2", features = [ "cargo", "env" ] }
 daemonize = "0.5"
 itertools = "0.10.5"
-k8s-openapi = { version = "0.17.0", default-features = false, features = ["v1_25"] }
+k8s-openapi = { version = "0.18.0", default-features = false, features = ["v1_26"] }
 lazy_static = "1.4.0"
 num_cpus = "1.15.0"
 opentelemetry-otlp = { version = "0.10.0", features = ["metrics", "tonic"] }
 opentelemetry = { version = "0.17", default-features = false, features = ["metrics", "trace", "rt-tokio", "serialize"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.9.2" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.9.3" }
 rayon = "1.6"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.19"
+serde_yaml = "0.9.21"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
