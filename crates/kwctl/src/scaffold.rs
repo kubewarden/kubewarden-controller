@@ -314,6 +314,7 @@ mod tests {
             background_audit: true,
             context_aware_resources: HashSet::new(),
             execution_mode: Default::default(),
+            minimum_kubewarden_version: None,
         }
     }
 
@@ -329,6 +330,7 @@ mod tests {
             background_audit: true,
             context_aware_resources: HashSet::new(),
             execution_mode: Default::default(),
+            minimum_kubewarden_version: None,
         }
     }
 
