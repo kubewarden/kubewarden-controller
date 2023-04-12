@@ -134,12 +134,6 @@ func main() {
 			LeaderElection:         enableLeaderElection,
 			LeaderElectionID:       "a4ddbf36.kubewarden.io",
 			ClientDisableCacheFor:  []client.Object{&corev1.ConfigMap{}, &appsv1.Deployment{}},
-			// Watch for kubewarden namespace on namespaced resources:
-			// Note: If a namespace is specified, controllers can still Watch for a
-			// cluster-scoped resource (in our case, ClusterAdmissionPolicies,
-			// webhooks, etc). For namespaced resources, the cache will only
-			// hold objects from the desired namespace.
-			Namespace: deploymentsNamespace,
 		},
 		setupLog,
 		environment.developmentMode,
