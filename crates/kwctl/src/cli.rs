@@ -21,7 +21,7 @@ fn subcommand_pull() -> Command {
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("DOCKER_CONFIG")
-            .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
+            .help("Path to a directory containing the Docker config.json. Can be used to indicate registry authentication details"),
         Arg::new("sources-path")
             .long("sources-path")
             .value_name("PATH")
@@ -97,7 +97,7 @@ fn subcommand_verify() -> Command {
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("PATH")
-            .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
+            .help("Path to a directory containing the Docker config.json. Can be used to indicate registry authentication details"),
         Arg::new("sources-path")
             .long("sources-path")
             .value_name("PATH")
@@ -169,7 +169,7 @@ fn subcommand_push() -> Command {
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("PATH")
-            .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
+            .help("Path to a directory containing the Docker config.json. Can be used to indicate registry authentication details"),
         Arg::new("sources-path")
             .long("sources-path")
             .value_name("PATH")
@@ -210,7 +210,7 @@ fn run_args() -> Vec<Arg> {
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("PATH")
-            .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
+            .help("Path to a directory containing the Docker config.json. Can be used to indicate registry authentication details"),
         Arg::new("sources-path")
             .long("sources-path")
             .value_name("PATH")
@@ -378,7 +378,7 @@ fn subcommand_inspect() -> Command {
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("PATH")
-            .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
+            .help("Path to a directory containing the Docker config.json. Can be used to indicate registry authentication details"),
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
@@ -482,7 +482,7 @@ fn subcommand_digest() -> Command {
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("PATH")
-            .help("Path to a Docker config.json-like path. Can be used to indicate registry authentication details"),
+            .help("Path to a directory containing the Docker config.json. Can be used to indicate registry authentication details"),
 
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
