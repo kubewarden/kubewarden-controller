@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -31,10 +32,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -124,6 +127,10 @@ func main() {
 		}()
 	}
 
+	namespaceSelector := cache.ObjectSelector{
+		Field: fields.ParseSelectorOrDie(fmt.Sprintf("metadata.namespace=%s", deploymentsNamespace)),
+	}
+
 	mgr, err := webhookwrapper.NewManager(
 		ctrl.Options{
 			Scheme:                 scheme,
@@ -133,13 +140,43 @@ func main() {
 			HealthProbeBindAddress: probeAddr,
 			LeaderElection:         enableLeaderElection,
 			LeaderElectionID:       "a4ddbf36.kubewarden.io",
-			ClientDisableCacheFor:  []client.Object{&corev1.ConfigMap{}, &appsv1.Deployment{}},
-			// Watch for kubewarden namespace on namespaced resources:
-			// Note: If a namespace is specified, controllers can still Watch for a
-			// cluster-scoped resource (in our case, ClusterAdmissionPolicies,
-			// webhooks, etc). For namespaced resources, the cache will only
-			// hold objects from the desired namespace.
-			Namespace: deploymentsNamespace,
+			// Warning: the manager creates a client, which then uses Watches to monitor
+			// certain resources. By default, the client is not going to be namespaced,
+			// it will be able to watch resources across the entire cluster. This is of
+			// course constrained by the RBAC rules applied to the ServiceAccount that
+			// runs the controller.
+			// **However**, even when accessing a resource inside of a specific Namespace,
+			// the default behaviour of the cache is to create a Watch that is not namespaced;
+			// hence requires the privilege to access all the resources of that type inside
+			// of the cluster. That can cause runtime error if the ServiceAccount lacking
+			// this privilege.
+			// For example, when we access a secret inside the `kubewarden`
+			// namespace, the cache will create a Watch against Secrets, that will require
+			// privileged to acccess ALL the secrets of the cluster.
+			//
+			// To be able to have stricter RBAC rules, we need to instruct the cache to
+			// only watch objects inside of the namespace where the controller is running.
+			// That applies ONLY to the namespaced resources that we know the controller
+			// is going to own inside of a specific namespace.
+			// For example, Secret resources are going to be defined by the controller
+			// only inside of the `kubewarden` namespace; hence their watch can be namespaced.
+			// On the other hand, AdmissionPolicy resources are namespaced, but the controller
+			// requires to access them across all the namespaces of the cluster; hence the
+			// cache must not be namespaced.
+			NewCache: cache.BuilderWithOptions(cache.Options{
+				SelectorsByObject: map[client.Object]cache.ObjectSelector{
+					&appsv1.ReplicaSet{}: namespaceSelector,
+					&corev1.Secret{}:     namespaceSelector,
+					&corev1.Pod{}:        namespaceSelector,
+					&corev1.Service{}:    namespaceSelector,
+				},
+			}),
+			// These types of resources should never be cached because we need fresh
+			// data coming from the cliet. This is required to perform the rollout
+			// of the PolicyServer Deployment whenever a policy is added/changed/removed.
+			// Because of that, there's not need to scope these resources inside
+			// of the cache, like we did for Pods, Services,... right above.
+			ClientDisableCacheFor: []client.Object{&corev1.ConfigMap{}, &appsv1.Deployment{}},
 		},
 		setupLog,
 		environment.developmentMode,
