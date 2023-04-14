@@ -23,7 +23,7 @@ use std::{
 use tokio::task::spawn_blocking;
 use verify::VerificationAnnotations;
 
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{
     filter::{EnvFilter, LevelFilter},
@@ -427,8 +427,15 @@ fn remote_server_options(matches: &ArgMatches) -> Result<Option<Sources>> {
     }
     if let Ok(docker_config_path_str) = env::var(DOCKER_CONFIG_ENV_VAR) {
         let docker_config_path = Path::new(&docker_config_path_str).join("config.json");
-        if !docker_config_path.as_path().exists() {
-            error!("Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.", docker_config_path.display());
+        match docker_config_path.as_path().try_exists() {
+            Ok(exist) => {
+                if !exist {
+                    warn!("Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.", docker_config_path.display());
+                }
+            }
+            Err(_) => {
+                warn!("Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.", docker_config_path.display());
+            }
         }
     }
 
