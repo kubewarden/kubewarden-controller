@@ -425,6 +425,19 @@ fn remote_server_options(matches: &ArgMatches) -> Result<Option<Sources>> {
         // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility
         env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
     }
+    if let Ok(docker_config_path_str) = env::var(DOCKER_CONFIG_ENV_VAR) {
+        let docker_config_path = Path::new(&docker_config_path_str).join("config.json");
+        match docker_config_path.as_path().try_exists() {
+            Ok(exist) => {
+                if !exist {
+                    warn!("Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.", docker_config_path.display());
+                }
+            }
+            Err(_) => {
+                warn!("Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.", docker_config_path.display());
+            }
+        }
+    }
 
     Ok(sources)
 }
