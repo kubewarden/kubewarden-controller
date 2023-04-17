@@ -2613,7 +2613,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.6.0-rc6"
+version = "1.6.0"
 dependencies = [
  "anyhow",
  "clap",
