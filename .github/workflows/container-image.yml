@@ -59,7 +59,7 @@ jobs:
           go-version: '1.19'
       -
         name: Install the bom command
-        uses: kubewarden/github-actions/kubernetes-bom-installer@v1
+        uses: kubewarden/github-actions/kubernetes-bom-installer@v2
       -
         name: Install Cosign
         if: ${{ inputs.generate-sbom == true }}
