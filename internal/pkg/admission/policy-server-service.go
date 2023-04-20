@@ -35,8 +35,13 @@ func init() {
 }
 
 func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
-	err := r.Client.Create(ctx, r.service(policyServer))
-	if err == nil || apierrors.IsAlreadyExists(err) {
+	service := r.service(policyServer)
+	err := r.Client.Create(ctx, service)
+
+	if err != nil && apierrors.IsAlreadyExists(err) {
+		err = r.Client.Update(ctx, service)
+	}
+	if err == nil {
 		return nil
 	}
 	return fmt.Errorf("cannot reconcile policy-server service: %w", err)
