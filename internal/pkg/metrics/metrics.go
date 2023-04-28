@@ -53,7 +53,7 @@ func RecordPolicyCount(ctx context.Context, policy policiesv1.Policy) error {
 		attribute.String("policy_status", string(policy.GetStatus().PolicyStatus)),
 	}
 	meter := global.Meter(meterName)
-	counter, err := meter.SyncInt64().Counter(policyCounterMetricName, instrument.WithDescription(policyCounterMetricDescription))
+	counter, err := meter.Int64Counter(policyCounterMetricName, instrument.WithDescription(policyCounterMetricDescription))
 	if err != nil {
 		return fmt.Errorf("cannot create the instrument: %w", err)
 	}
