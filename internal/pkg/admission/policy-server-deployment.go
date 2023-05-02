@@ -226,6 +226,18 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 			},
 		)
 	}
+	if r.MetricsEnabled {
+		policyServerDeployment.Annotations[constants.OptelInjectAnnotation] = "true"
+	}
+}
+
+func envVarsContainVariable(envVars []corev1.EnvVar, envVarName string) int {
+	for i, envvar := range envVars {
+		if envvar.Name == envVarName {
+			return i
+		}
+	}
+	return -1
 }
 
 func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1.PolicyServer) *appsv1.Deployment {
@@ -344,6 +356,20 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	templateAnnotations := policyServer.Spec.Annotations
 	if templateAnnotations == nil {
 		templateAnnotations = make(map[string]string)
+	}
+	if r.MetricsEnabled {
+		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "1"}
+		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
+			admissionContainer.Env[index] = envvar
+		} else {
+			admissionContainer.Env = append(admissionContainer.Env, envvar)
+		}
+		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
+		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
+			admissionContainer.Env[index] = logFmtEnvVar
+		} else {
+			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
+		}
 	}
 
 	policyServerDeployment := &appsv1.Deployment{

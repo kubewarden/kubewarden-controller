@@ -195,6 +195,7 @@ func main() {
 		Log:                  ctrl.Log.WithName("reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
 		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
+		MetricsEnabled: enableMetrics,
 	}
 
 	if err = (&controllers.PolicyServerReconciler{

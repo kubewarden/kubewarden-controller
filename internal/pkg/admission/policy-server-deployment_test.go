@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -430,5 +431,102 @@ func TestDefaultContainerSecurityContext(t *testing.T) {
 			securityContext.Capabilities.Drop[0] != dropCapabilityAll {
 			t.Error("Policy server container Capabilities should have only one 'All' drop capability")
 		}
+	}
+}
+
+func TestMetricAndLogFmtEnvVarsDetection(t *testing.T) {
+	for _, envVarName := range []string{constants.PolicyServerEnableMetricsEnvVar, constants.PolicyServerLogFmtEnvVar} {
+		env := []corev1.EnvVar{{Name: "env1"}, {Name: "env2"}, {Name: envVarName}, {Name: "env3"}}
+		envIndex := envVarsContainVariable(env, envVarName)
+		if envIndex != 2 {
+			t.Error("Function must find a metrics environment at position {}. Found at {}.", 2, envIndex)
+		}
+
+		env = []corev1.EnvVar{{Name: "env1"}, {Name: "env2"}, {Name: "env3"}}
+		envIndex = envVarsContainVariable(env, envVarName)
+		if envIndex != -1 {
+			t.Error("Function must the metrics environment variable at position {}. Found at {}.", -1, envIndex)
+		}
+	}
+}
+
+func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+		MetricsEnabled:       true,
+	}
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "0"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
+		},
+	}
+	deployment := reconciler.deployment("v1", policyServer)
+	hasMetricEnvvar := false
+	hasLogFmtEnvvar := false
+	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
+		if envvar.Name == constants.PolicyServerEnableMetricsEnvVar {
+			hasMetricEnvvar = true
+			if envvar.Value != "1" {
+				t.Error("Present but not reconciled {} value", constants.PolicyServerEnableMetricsEnvVar)
+			}
+		}
+		if envvar.Name == constants.PolicyServerLogFmtEnvVar {
+			hasLogFmtEnvvar = true
+			if envvar.Value != "otlp" {
+				t.Error("Present but not reconciled {} value", constants.PolicyServerLogFmtEnvVar)
+			}
+		}
+	}
+	if !hasMetricEnvvar {
+		t.Error("Missing {} environment variable", constants.PolicyServerEnableMetricsEnvVar)
+	}
+	if !hasLogFmtEnvvar {
+		t.Error("Missing {} environment variable", constants.PolicyServerLogFmtEnvVar)
+	}
+
+	value, hasAnnotation := deployment.Annotations["sidecar.opentelemetry.io/inject"]
+	if !hasAnnotation {
+		t.Error("Missing OTEL annotation")
+	}
+	if value != "true" {
+		t.Error("OTEL annotation invalid value")
+	}
+}
+
+func TestPolicyServerDeploymentMetricConfigurationWithNoValueDefinedByUSer(t *testing.T) {
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+		MetricsEnabled:       false,
+	}
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+			Env:   []corev1.EnvVar{},
+		},
+	}
+	deployment := reconciler.deployment("v1", policyServer)
+	hasMetricEnvvar := false
+	hasLogFmtEnvvar := false
+	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
+		if envvar.Name == constants.PolicyServerEnableMetricsEnvVar {
+			hasMetricEnvvar = true
+		}
+		if envvar.Name == constants.PolicyServerLogFmtEnvVar {
+			hasLogFmtEnvvar = true
+		}
+	}
+	if hasMetricEnvvar {
+		t.Error("{} should not be set", constants.PolicyServerEnableMetricsEnvVar)
+	}
+	if hasLogFmtEnvvar {
+		t.Error("{} should not be set", constants.PolicyServerLogFmtEnvVar)
+	}
+
+	_, hasAnnotation := deployment.Annotations["sidecar.opentelemetry.io/inject"]
+	if hasAnnotation {
+		t.Error("OTEL annotation should not be set")
 	}
 }
