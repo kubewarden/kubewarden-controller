@@ -18,7 +18,7 @@ anyhow = "1.0"
 base64 = "0.21"
 burrego = { path = "crates/burrego" }
 cached = "0.43"
-dns-lookup = "1.0"
+dns-lookup = "2.0"
 json-patch = "1.0"
 kube = { version = "0.82.0", default-features = false, features = ["client", "rustls-tls"] }
 k8s-openapi = { version = "0.18.0", default-features = false }
