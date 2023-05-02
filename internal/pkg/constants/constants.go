@@ -24,6 +24,7 @@ const (
 	PolicyServerMetricsPortEnvVar                   = "KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT"
 	PolicyServerMetricsPort                         = 8080
 	PolicyServerReadinessProbe                      = "/readiness"
+	PolicyServerLogFmtEnvVar                        = "KUBEWARDEN_LOG_FMT"
 
 	// PolicyServer ConfigMap
 	PolicyServerConfigPoliciesEntry         = "policies.yml"
@@ -47,4 +48,7 @@ const (
 
 	// Kubernetes
 	KubernetesRevisionAnnotation = "deployment.kubernetes.io/revision"
+
+	// OPTEL
+	OptelInjectAnnotation = "sidecar.opentelemetry.io/inject"
 )
