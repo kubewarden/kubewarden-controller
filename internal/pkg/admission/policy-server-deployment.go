@@ -226,9 +226,6 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 			},
 		)
 	}
-	if r.MetricsEnabled {
-		policyServerDeployment.Annotations[constants.OptelInjectAnnotation] = "true"
-	}
 }
 
 func envVarsContainVariable(envVars []corev1.EnvVar, envVarName string) int {
@@ -358,6 +355,8 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		templateAnnotations = make(map[string]string)
 	}
 	if r.MetricsEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
+
 		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "1"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
 			admissionContainer.Env[index] = envvar
