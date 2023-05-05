@@ -486,7 +486,7 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 		t.Error("Missing {} environment variable", constants.PolicyServerLogFmtEnvVar)
 	}
 
-	value, hasAnnotation := deployment.Annotations["sidecar.opentelemetry.io/inject"]
+	value, hasAnnotation := deployment.Spec.Template.Annotations["sidecar.opentelemetry.io/inject"]
 	if !hasAnnotation {
 		t.Error("Missing OTEL annotation")
 	}
@@ -525,7 +525,7 @@ func TestPolicyServerDeploymentMetricConfigurationWithNoValueDefinedByUSer(t *te
 		t.Error("{} should not be set", constants.PolicyServerLogFmtEnvVar)
 	}
 
-	_, hasAnnotation := deployment.Annotations["sidecar.opentelemetry.io/inject"]
+	_, hasAnnotation := deployment.Spec.Template.Annotations["sidecar.opentelemetry.io/inject"]
 	if hasAnnotation {
 		t.Error("OTEL annotation should not be set")
 	}
