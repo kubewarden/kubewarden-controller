@@ -9,7 +9,6 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -288,19 +287,4 @@ func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1.P
 	}
 
 	return policies, nil
-}
-
-// UpdateAdmissionPolicyStatus Updates the status subresource of the passed
-// clusterAdmissionPolicy with a Client apt for it.
-func (r *Reconciler) UpdateAdmissionPolicyStatus(
-	ctx context.Context,
-	policy policiesv1.Policy,
-) error {
-	if err := r.Client.Status().Update(ctx, policy); err != nil {
-		return fmt.Errorf("failed to update status of Policy %q, %w", policy.GetObjectMeta(), err)
-	}
-	if err := metrics.RecordPolicyCount(ctx, policy); err != nil {
-		return fmt.Errorf("failed to record policy mestrics: %w", err)
-	}
-	return nil
 }
