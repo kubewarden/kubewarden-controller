@@ -24,6 +24,7 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
 	"github.com/pkg/errors"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -76,6 +77,11 @@ func startReconciling(ctx context.Context, client client.Client, reconciler admi
 	_ = setPolicyStatus(ctx, reconciler.DeploymentsNamespace, reconciler.APIReader, policy)
 	if err := client.Status().Update(ctx, policy); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update admission policy status error: %w", err)
+	}
+
+	// record policy count metric
+	if err := metrics.RecordPolicyCount(ctx, policy); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to record policy mestrics: %w", err)
 	}
 
 	return reconcileResult, reconcileErr
