@@ -1,9 +1,5 @@
 use crate::{Registry, Sources};
 use anyhow::{anyhow, Result};
-use mdcat::{
-    terminal::{TerminalProgram, TerminalSize},
-    ResourceAccess,
-};
 use policy_evaluator::policy_fetcher::oci_distribution::secrets::RegistryAuth;
 use policy_evaluator::policy_fetcher::{
     oci_distribution::manifest::{OciImageManifest, OciManifest},
@@ -17,6 +13,10 @@ use policy_evaluator::{
 };
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
+use pulldown_cmark_mdcat::{
+    resources::NoopResourceHandler,
+    terminal::{TerminalProgram, TerminalSize},
+};
 use std::convert::TryFrom;
 use syntect::parsing::SyntaxSet;
 
@@ -235,27 +235,31 @@ impl MetadataPrinter {
         let size = TerminalSize::detect().unwrap_or_default();
         let columns = size.columns;
         let terminal = TerminalProgram::detect();
-        let settings = mdcat::Settings {
+        let settings = pulldown_cmark_mdcat::Settings {
             terminal_capabilities: terminal.capabilities(),
             terminal_size: TerminalSize { columns, ..size },
-            resource_access: ResourceAccess::LocalOnly,
-            syntax_set: SyntaxSet::load_defaults_newlines(),
+            syntax_set: &SyntaxSet::load_defaults_newlines(),
+            theme: pulldown_cmark_mdcat::Theme::default(),
         };
         let parser = Parser::new_ext(
             text,
             Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH,
         );
-        let env = mdcat::Environment::for_local_directory(&std::env::current_dir()?)?;
+        let env =
+            pulldown_cmark_mdcat::Environment::for_local_directory(&std::env::current_dir()?)?;
 
         let stdout = std::io::stdout();
         let mut output = stdout.lock();
-        mdcat::push_tty(&settings, &env, &mut output, parser).or_else(|error| {
-            if error.kind() == std::io::ErrorKind::BrokenPipe {
-                Ok(())
-            } else {
-                Err(anyhow!("Cannot render markdown to stdout: {:?}", error))
-            }
-        })
+        let resource_handler = NoopResourceHandler {};
+
+        pulldown_cmark_mdcat::push_tty(&settings, &env, &resource_handler, &mut output, parser)
+            .or_else(|error| {
+                if error.kind() == std::io::ErrorKind::BrokenPipe {
+                    Ok(())
+                } else {
+                    Err(anyhow!("Cannot render markdown to stdout: {:?}", error))
+                }
+            })
     }
 }
 
