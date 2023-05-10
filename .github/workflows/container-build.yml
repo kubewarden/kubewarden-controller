@@ -8,7 +8,8 @@ on:
         value: ${{jobs.build.outputs.digest}}
   push:
     branches:
-      - "*"
+      - "main"
+      - "feat-**"
 
 jobs:
   build:
