@@ -70,7 +70,7 @@ func (r *Reconciler) service(policyServer *policiesv1.PolicyServer) *corev1.Serv
 			},
 		},
 	}
-	if metricsEnabled(policyServer) {
+	if r.MetricsEnabled {
 		svc.Spec.Ports = append(
 			svc.Spec.Ports,
 			corev1.ServicePort{
@@ -81,15 +81,4 @@ func (r *Reconciler) service(policyServer *policiesv1.PolicyServer) *corev1.Serv
 		)
 	}
 	return &svc
-}
-
-// If an environment variable `KUBEWARDEN_ENABLE_METRICS` is exported -- regardless of its value --,
-// metrics are considered enabled.
-func metricsEnabled(policyServer *policiesv1.PolicyServer) bool {
-	for _, envVar := range policyServer.Spec.Env {
-		if envVar.Name == constants.PolicyServerEnableMetricsEnvVar {
-			return true
-		}
-	}
-	return false
 }
