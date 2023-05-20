@@ -83,6 +83,24 @@ lazy_static! {
 async fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
 
+    // setup color
+    let mut term_color_support = "dumb".to_string();
+
+    if let Ok(val) = env::var("TERM") {
+        term_color_support = val
+    }
+
+    let no_color = matches
+        .get_one::<bool>("no-color")
+        .unwrap_or(&false)
+        .to_owned();
+
+    if no_color {
+        env::set_var("TERM", "dumb");
+    } else {
+        env::set_var("TERM", term_color_support);
+    }
+
     // setup logging
     let verbose = matches
         .get_one::<bool>("verbose")
@@ -103,7 +121,11 @@ async fn main() -> Result<()> {
         .add_directive("walrus=warn".parse().unwrap()); // walrus: ignore warning messages
     tracing_subscriber::registry()
         .with(filter_layer)
-        .with(fmt::layer().with_writer(std::io::stderr))
+        .with(
+            fmt::layer()
+                .with_writer(std::io::stderr)
+                .with_ansi(!no_color),
+        )
         .init();
 
     match matches.subcommand_name() {

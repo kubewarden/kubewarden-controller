@@ -18,6 +18,7 @@ use pulldown_cmark_mdcat::{
     terminal::{TerminalProgram, TerminalSize},
 };
 use std::convert::TryFrom;
+use std::env;
 use syntect::parsing::SyntaxSet;
 
 pub(crate) async fn inspect(uri: &str, output: OutputType, sources: Option<Sources>) -> Result<()> {
@@ -235,8 +236,16 @@ impl MetadataPrinter {
         let size = TerminalSize::detect().unwrap_or_default();
         let columns = size.columns;
         let terminal = TerminalProgram::detect();
+        let mut capabilities = terminal.capabilities();
+
+        if let Ok(val) = env::var("TERM") {
+            if val == "dumb" {
+                capabilities.style = None;
+            }
+        }
+
         let settings = pulldown_cmark_mdcat::Settings {
-            terminal_capabilities: terminal.capabilities(),
+            terminal_capabilities: capabilities,
             terminal_size: TerminalSize { columns, ..size },
             syntax_set: &SyntaxSet::load_defaults_newlines(),
             theme: pulldown_cmark_mdcat::Theme::default(),
