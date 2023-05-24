@@ -82,8 +82,6 @@ lazy_static! {
 #[tokio::main]
 async fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
-
-    // setup color
     let mut term_color_support = "dumb".to_string();
 
     if let Ok(val) = env::var("TERM") {
@@ -319,7 +317,7 @@ async fn main() -> Result<()> {
                 )?;
                 let sources = remote_server_options(matches)?;
 
-                inspect::inspect(uri, output, sources).await?;
+                inspect::inspect(uri, output, sources, no_color).await?;
             };
             Ok(())
         }
