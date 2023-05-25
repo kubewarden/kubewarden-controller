@@ -93,6 +93,9 @@ async fn main() -> Result<()> {
         .unwrap_or(&false)
         .to_owned();
 
+    // Need to set this env variable to have prettytable
+    // adapt the output. This can later be removed if
+    // prettytable provides methods to disable color globally
     if no_color {
         env::set_var("TERM", "dumb");
     } else {
