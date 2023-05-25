@@ -616,6 +616,12 @@ pub fn build_cli() -> Command {
                 .num_args(0)
                 .help("Increase verbosity"),
         )
+        .arg(
+            Arg::new("no-color")
+                .long("no-color")
+                .num_args(0)
+                .help("Disable colorful output"),
+        )
         .subcommands(subcommands)
         .long_version(VERSION_AND_BUILTINS.as_str())
         .subcommand_required(true)

@@ -13,6 +13,7 @@ use policy_evaluator::{
 };
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
+use pulldown_cmark_mdcat::TerminalCapabilities;
 use pulldown_cmark_mdcat::{
     resources::NoopResourceHandler,
     terminal::{TerminalProgram, TerminalSize},
@@ -20,7 +21,12 @@ use pulldown_cmark_mdcat::{
 use std::convert::TryFrom;
 use syntect::parsing::SyntaxSet;
 
-pub(crate) async fn inspect(uri: &str, output: OutputType, sources: Option<Sources>) -> Result<()> {
+pub(crate) async fn inspect(
+    uri: &str,
+    output: OutputType,
+    sources: Option<Sources>,
+    no_color: bool,
+) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri)?;
     let wasm_path = crate::utils::wasm_path(uri.as_str())?;
     let metadata_printer = MetadataPrinter::from(&output);
@@ -31,7 +37,7 @@ pub(crate) async fn inspect(uri: &str, output: OutputType, sources: Option<Sourc
     let signatures = fetch_signatures_manifest(uri.as_str(), sources).await;
 
     match metadata {
-        Some(metadata) => metadata_printer.print(&metadata)?,
+        Some(metadata) => metadata_printer.print(&metadata, no_color)?,
         None => return Err(anyhow!(
             "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
             uri
@@ -97,7 +103,7 @@ impl From<&OutputType> for MetadataPrinter {
 }
 
 impl MetadataPrinter {
-    fn print(&self, metadata: &Metadata) -> Result<()> {
+    fn print(&self, metadata: &Metadata, no_color: bool) -> Result<()> {
         match self {
             MetadataPrinter::Yaml => {
                 let metadata_yaml = serde_yaml::to_string(metadata)?;
@@ -107,13 +113,13 @@ impl MetadataPrinter {
             MetadataPrinter::Pretty => {
                 self.print_metadata_generic_info(metadata)?;
                 println!();
-                self.print_metadata_rules(metadata)?;
+                self.print_metadata_rules(metadata, no_color)?;
                 println!();
                 if !metadata.context_aware_resources.is_empty() {
-                    self.print_metadata_context_aware_resources(metadata)?;
+                    self.print_metadata_context_aware_resources(metadata, no_color)?;
                     println!();
                 }
-                self.print_metadata_usage(metadata)
+                self.print_metadata_usage(metadata, no_color)
             }
         }
     }
@@ -174,7 +180,7 @@ impl MetadataPrinter {
         Ok(())
     }
 
-    fn print_metadata_rules(&self, metadata: &Metadata) -> Result<()> {
+    fn print_metadata_rules(&self, metadata: &Metadata, no_color: bool) -> Result<()> {
         let rules_yaml = serde_yaml::to_string(&metadata.rules)?;
 
         // Quick hack to print a colorized "Rules" section, with the same
@@ -185,10 +191,14 @@ impl MetadataPrinter {
         table.printstd();
 
         let text = format!("```yaml\n{rules_yaml}```");
-        self.render_markdown(&text)
+        self.render_markdown(&text, no_color)
     }
 
-    fn print_metadata_context_aware_resources(&self, metadata: &Metadata) -> Result<()> {
+    fn print_metadata_context_aware_resources(
+        &self,
+        metadata: &Metadata,
+        no_color: bool,
+    ) -> Result<()> {
         let resources_yaml = serde_yaml::to_string(&metadata.context_aware_resources)?;
 
         // Quick hack to print a colorized "Context Aware" section, with the same
@@ -203,13 +213,13 @@ impl MetadataPrinter {
         );
 
         let text = format!("```yaml\n{resources_yaml}```");
-        self.render_markdown(&text)?;
+        self.render_markdown(&text, no_color)?;
         println!("To avoid abuses, review carefully what the policy requires access to.");
 
         Ok(())
     }
 
-    fn print_metadata_usage(&self, metadata: &Metadata) -> Result<()> {
+    fn print_metadata_usage(&self, metadata: &Metadata, no_color: bool) -> Result<()> {
         let usage = match metadata.annotations.clone() {
             None => None,
             Some(annotations) => annotations
@@ -228,15 +238,25 @@ impl MetadataPrinter {
         table.add_row(row![Fmbl -> "Usage"]);
         table.printstd();
 
-        self.render_markdown(&usage.unwrap())
+        self.render_markdown(&usage.unwrap(), no_color)
     }
 
-    fn render_markdown(&self, text: &str) -> Result<()> {
+    fn render_markdown(&self, text: &str, no_color: bool) -> Result<()> {
         let size = TerminalSize::detect().unwrap_or_default();
         let columns = size.columns;
         let terminal = TerminalProgram::detect();
+
+        let capabilities = if no_color {
+            TerminalCapabilities {
+                style: None,
+                ..terminal.capabilities()
+            }
+        } else {
+            terminal.capabilities()
+        };
+
         let settings = pulldown_cmark_mdcat::Settings {
-            terminal_capabilities: terminal.capabilities(),
+            terminal_capabilities: capabilities,
             terminal_size: TerminalSize { columns, ..size },
             syntax_set: &SyntaxSet::load_defaults_newlines(),
             theme: pulldown_cmark_mdcat::Theme::default(),

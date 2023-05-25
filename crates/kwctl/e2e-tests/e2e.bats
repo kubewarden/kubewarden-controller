@@ -158,3 +158,20 @@ kwctl() {
     [[ "$privileged_https_sha" = $(sha256sum $XDG_CACHE_HOME/kubewarden/store/https/github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm) ]]
     rm policies.tar.gz
  }
+
+ @test "CLI app outputs colored text by default" {
+    kwctl pull registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    kwctl inspect registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    [ "${output}" != "" ]
+    [[ "${output}" == *$'\e['* ]]  # Check if output contains ANSI escape sequences
+ }
+
+@test "CLI app honors --no-color flag and disables colored output" {
+    kwctl pull registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    kwctl --no-color inspect registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    [ "$status" -eq 0 ]
+    [ "${output}" != "" ]
+    [[ "${output}" != *$'\e['* ]]  # Check if output does not contain ANSI escape sequences
+ }
+
