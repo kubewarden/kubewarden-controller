@@ -205,7 +205,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
 			c := Fetcher{client: mockClient(ttest.policies...), filter: mockFilter}
-			policies, err := c.GetPoliciesForANamespace(ttest.namespace)
+			policies, _, err := c.GetPoliciesForANamespace(ttest.namespace) // we don't test for skippedNum, as with mockFilter it is always 0
 			if err != nil {
 				t.Errorf("error should be nil:  %s", err.Error())
 			}

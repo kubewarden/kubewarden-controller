@@ -39,26 +39,29 @@ func NewFetcher() (*Fetcher, error) {
 }
 
 // TODO implement this for all ns
-func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error) {
-	return nil, errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
+func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error) {
+	return nil, 0, errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
 
-// GetPoliciesForANamespace gets all auditable policies for a given namespace
-func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, error) {
+// GetPoliciesForANamespace gets all auditable policies for a given namespace, and the number
+// of skipped policies
+func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, int, error) {
 	namespacePolicies, err := f.findNamespacesForAllClusterAdmissionPolicies()
 	if err != nil {
-		return nil, fmt.Errorf("can't fetch ClusterAdmissionPolicies: %w", err)
+		return nil, 0, fmt.Errorf("can't fetch ClusterAdmissionPolicies: %w", err)
 	}
 	admissionPolicies, err := f.getAdmissionPolicies(namespace)
 	if err != nil {
-		return nil, fmt.Errorf("can't fetch AdmissionPolicies: %w", err)
+		return nil, 0, fmt.Errorf("can't fetch AdmissionPolicies: %w", err)
 	}
 	for _, policy := range admissionPolicies {
 		policy := policy
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
 	}
 
-	return f.filter(namespacePolicies[namespace]), nil
+	filteredPolicies := f.filter(namespacePolicies[namespace])
+	skippedNum := len(namespacePolicies[namespace]) - len(filteredPolicies)
+	return filteredPolicies, skippedNum, nil
 }
 
 // initializes map with an entry for all namespaces with an empty policies array as value

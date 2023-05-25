@@ -20,10 +20,10 @@ import (
 
 // A PoliciesFetcher interacts with the kubernetes api to return Kubewarden policies
 type PoliciesFetcher interface {
-	// GetPoliciesForANamespace gets all auditable policies for a given namespace
-	GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, error)
-	// GetPoliciesForAllNamespaces gets all auditable policies for all namespaces
-	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error)
+	// GetPoliciesForANamespace gets all auditable policies for a given namespace, and the number of skipped policies
+	GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, int, error)
+	// GetPoliciesForAllNamespaces gets all auditable policies for all namespaces, and the number of skipped policies
+	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error)
 }
 
 type ResourcesFetcher interface {
@@ -49,7 +49,7 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 func (s *Scanner) ScanNamespace(namespace string) error {
 	log.Info().Str("namespace", namespace).Msg("scan started")
 
-	policies, err := s.policiesFetcher.GetPoliciesForANamespace(namespace)
+	policies, skippedNum, err := s.policiesFetcher.GetPoliciesForANamespace(namespace)
 	if err != nil {
 		return err
 	}
