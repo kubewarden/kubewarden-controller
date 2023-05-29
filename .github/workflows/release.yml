@@ -141,7 +141,7 @@ jobs:
             });
 
       - name: Trigger chart update
-        uses: peter-evans/repository-dispatch@02f5adb87b06ea7a7b98326fa63e1782701201cd
+        uses: peter-evans/repository-dispatch@v2.1.1
         with:
           token: ${{ secrets.WORKFLOW_PAT }}
           repository: "${{github.repository_owner}}/helm-charts"
