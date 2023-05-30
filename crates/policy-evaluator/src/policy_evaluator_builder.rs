@@ -10,7 +10,7 @@ use crate::policy::Policy;
 use crate::policy_evaluator::{PolicyEvaluator, PolicyExecutionMode};
 use crate::policy_metadata::ContextAwareResource;
 use crate::runtimes::wapc::WAPC_POLICY_MAPPING;
-use crate::runtimes::{burrego::BurregoStack, wapc::WapcStack, Runtime};
+use crate::runtimes::{burrego::BurregoStack, wapc::WapcStack, wasi_cli, Runtime};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
 ///
@@ -259,6 +259,21 @@ impl PolicyEvaluatorBuilder {
                 )?;
 
                 let policy_runtime = Runtime::Wapc(wapc_stack);
+                (policy, policy_runtime)
+            }
+            PolicyExecutionMode::Wasi => {
+                let cli_stack = wasi_cli::Stack::new(engine, module, self.epoch_deadlines)?;
+
+                let policy = Self::from_contents_internal(
+                    self.policy_id.clone(),
+                    self.callback_channel.clone(),
+                    None,
+                    || None,
+                    Policy::new,
+                    execution_mode,
+                )?;
+
+                let policy_runtime = Runtime::Cli(cli_stack);
                 (policy, policy_runtime)
             }
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
