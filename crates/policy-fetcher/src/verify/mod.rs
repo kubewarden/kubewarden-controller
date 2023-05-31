@@ -3,7 +3,10 @@ use crate::sources::Sources;
 
 use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
-use sigstore::cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities};
+use sigstore::{
+    cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities},
+    registry::oci_reference::OciReference,
+};
 
 use crate::verify::config::Signature;
 use crate::Registry;
@@ -349,8 +352,9 @@ pub async fn fetch_sigstore_remote_data(
     //
     // trusted_signature_layers() will error early if cosign_client using
     // Fulcio,Rekor certs and signatures are not verified
+    let image_oci_ref = OciReference::from_str(image_name)?;
     let (cosign_signature_image, source_image_digest) = cosign_client
-        .triangulate(image_name, &sigstore_auth)
+        .triangulate(&image_oci_ref, &sigstore_auth)
         .await?;
 
     // get trusted layers
