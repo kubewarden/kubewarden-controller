@@ -16,13 +16,18 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	admv1 "k8s.io/api/admission/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // A PoliciesFetcher interacts with the kubernetes api to return Kubewarden policies
 type PoliciesFetcher interface {
-	// GetPoliciesForANamespace gets all auditable policies for a given namespace, and the number of skipped policies
+	// GetPoliciesForANamespace gets all auditable policies for a given
+	// namespace, and the number of skipped policies
 	GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, int, error)
-	// GetPoliciesForAllNamespaces gets all auditable policies for all namespaces, and the number of skipped policies
+	// GetNamespace gets a given namespace
+	GetNamespace(namespace string) (*v1.Namespace, error)
+	// GetPoliciesForAllNamespaces gets all auditable policies for all
+	// namespaces, and the number of skipped policies
 	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error)
 }
 
@@ -46,10 +51,10 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 }
 
 // ScanNamespace scans resources for a given namespace
-func (s *Scanner) ScanNamespace(namespace string) error {
-	log.Info().Str("namespace", namespace).Msg("scan started")
+func (s *Scanner) ScanNamespace(nsName string) error {
+	log.Info().Str("namespace", nsName).Msg("scan started")
 
-	policies, skippedNum, err := s.policiesFetcher.GetPoliciesForANamespace(namespace)
+	policies, skippedNum, err := s.policiesFetcher.GetPoliciesForANamespace(nsName)
 	if err != nil {
 		return err
 	}
@@ -59,9 +64,12 @@ func (s *Scanner) ScanNamespace(namespace string) error {
 	log.Debug().Str("namespace", namespace).Msg("The following policies were found for the namespace " + namespace)
 	for _, policy := range policies {
 		log.Debug().Str("policy name", policy.GetName()).Msg("Policy retrieved")
+	namespace, err := s.policiesFetcher.GetNamespace(nsName)
+	if err != nil {
+		return err
 	}
 
-	auditableResources, err := s.resourcesFetcher.GetResourcesForPolicies(context.Background(), policies, namespace)
+	auditableResources, err := s.resourcesFetcher.GetResourcesForPolicies(context.Background(), policies, nsName)
 
 	if err != nil {
 		return err

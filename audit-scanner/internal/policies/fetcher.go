@@ -6,13 +6,14 @@ import (
 	"fmt"
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	v1 "k8s.io/api/core/v1"
+	errorsApi "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,7 +35,9 @@ func NewFetcher() (*Fetcher, error) {
 	return &Fetcher{client: client, filter: filterAuditablePolicies}, nil
 }
 
-// TODO implement this for all ns
+// GetPoliciesForAllNamespace gets all auditable policies, and the number of
+// skipped policies
+// TODO implement this in the future
 func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error) {
 	return nil, 0, errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
@@ -58,6 +61,22 @@ func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Polic
 	filteredPolicies := f.filter(namespacePolicies[namespace])
 	skippedNum := len(namespacePolicies[namespace]) - len(filteredPolicies)
 	return filteredPolicies, skippedNum, nil
+}
+
+func (f *Fetcher) GetNamespace(nsName string) (*v1.Namespace, error) {
+	namespace := &v1.Namespace{}
+	err := f.client.Get(context.Background(),
+		client.ObjectKey{
+			Name: nsName,
+		},
+		namespace)
+	if err != nil && errorsApi.IsNotFound(err) {
+		return nil, fmt.Errorf("namespace not found: %s", nsName)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("can't get namespace: %s", nsName)
+	}
+	return namespace, nil
 }
 
 // initializes map with an entry for all namespaces with an empty policies array as value
