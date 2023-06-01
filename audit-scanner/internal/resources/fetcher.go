@@ -3,9 +3,11 @@ package resources
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/url"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +27,9 @@ type Fetcher struct {
 	// Namespace where the Kubewarden components (e.g. policy server) are installed
 	// This is the namespace used to fetch the policy server resources
 	kubewardenNamespace string
+	// FQDN of the policy server to query. If not empty, Fetcher will query on
+	// port 3000. Useful for out-of-cluster debugging
+	policyServerFQDN string
 }
 
 // AuditableResources represents all resources that must be audited for a group of policies.
@@ -38,11 +43,13 @@ type AuditableResources struct {
 }
 
 // NewFetcher returns a new fetcher with a dynamic client
-func NewFetcher(kubewardenNamespace string) (*Fetcher, error) {
+func NewFetcher(kubewardenNamespace string, policyServerFQDN string) (*Fetcher, error) {
 	config := ctrl.GetConfigOrDie()
 	dynamicClient := dynamic.NewForConfigOrDie(config)
-
-	return &Fetcher{dynamicClient, kubewardenNamespace}, nil
+	if policyServerFQDN != "" {
+		log.Info().Msg(fmt.Sprintf("Querying PolicyServers at %s:3000 for debugging purposes. Don't forget to start `kwctl port-forward` if needed", policyServerFQDN))
+	}
+	return &Fetcher{dynamicClient, kubewardenNamespace, policyServerFQDN}, nil
 }
 
 // GetResourcesForPolicies fetches all resources that must be audited and returns them in an AuditableResources array.
@@ -173,7 +180,12 @@ func (f *Fetcher) GetPolicyServerURLRunningPolicy(ctx context.Context, policy po
 	if len(service.Spec.Ports) < 1 {
 		return nil, fmt.Errorf("policy server service does not have a port")
 	}
-	urlStr := fmt.Sprintf("https://%s.%s.svc:%d/audit/%s", service.Name, f.kubewardenNamespace, service.Spec.Ports[0].Port, policy.GetUniqueName())
+	var urlStr string
+	if f.policyServerFQDN != "" {
+		urlStr = fmt.Sprintf("https://%s/audit/%s", net.JoinHostPort(f.policyServerFQDN, fmt.Sprint(3000)), policy.GetUniqueName())
+	} else {
+		urlStr = fmt.Sprintf("https://%s.%s.svc:%d/audit/%s", service.Name, f.kubewardenNamespace, service.Spec.Ports[0].Port, policy.GetUniqueName())
+	}
 	url, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err

@@ -24,12 +24,9 @@ helm upgrade -i --wait \
 kubectl port-forward -n kubewarden service/policy-server-default 3000:8443
 ```
 
-Then, patch  `GetPolicyServerURLRunningPolicy()` with:
-``` go
-	urlStr := fmt.Sprintf("https://localhost:%d/audit/%s", 3000, policy.GetUniqueName())
-```
+Then:
 
 
 ``` console
-./bin/audit-scanner -k kubewarden --namespace default -l debug --localhost
+./bin/audit-scanner -k kubewarden --namespace default -l debug --policyServerFQDN localhost
 ```

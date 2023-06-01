@@ -42,11 +42,15 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
+			policyServerFQDN, err := cmd.Flags().GetString("policy-server-fqdn")
+			if err != nil {
+				return err
+			}
 			policiesFetcher, err := policies.NewFetcher()
 			if err != nil {
 				return err
 			}
-			resourcesFetcher, err := resources.NewFetcher(kubewardenNamespace)
+			resourcesFetcher, err := resources.NewFetcher(kubewardenNamespace, policyServerFQDN)
 			if err != nil {
 				return err
 			}
@@ -87,5 +91,6 @@ func startScanner(namespace string, scanner Scanner) error {
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
 	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. Policy Server) are installed (required)")
+	rootCmd.Flags().StringP("policy-server-fqdn", "p", "", "FQDN of the PolicyServers. If non-empty, they will be queried on port 3000. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 }
