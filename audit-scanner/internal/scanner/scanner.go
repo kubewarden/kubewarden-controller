@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/kubewarden/audit-scanner/internal/report"
 	"github.com/kubewarden/audit-scanner/internal/resources"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog"
@@ -41,13 +42,14 @@ type ResourcesFetcher interface {
 type Scanner struct {
 	policiesFetcher  PoliciesFetcher
 	resourcesFetcher ResourcesFetcher
+	reportStore      report.PolicyReportStore
 	// http client used to make requests against the Policy Server
 	httpClient http.Client
 }
 
 // NewScanner creates a new scanner with the PoliciesFetcher provided
 func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher) *Scanner {
-	return &Scanner{policiesFetcher, resourcesFetcher, http.Client{}}
+	return &Scanner{policiesFetcher, resourcesFetcher, report.NewPolicyReportStore(), http.Client{}}
 }
 
 // ScanNamespace scans resources for a given namespace
@@ -58,16 +60,11 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	if err != nil {
 		return err
 	}
-	log.Debug().Str("namespace", namespace).Int("count", len(policies)).Msg("number of policies to evaluate")
-
-	// TODO continue with the scanning and remove this code
-	log.Debug().Str("namespace", namespace).Msg("The following policies were found for the namespace " + namespace)
-	for _, policy := range policies {
-		log.Debug().Str("policy name", policy.GetName()).Msg("Policy retrieved")
 	namespace, err := s.policiesFetcher.GetNamespace(nsName)
 	if err != nil {
 		return err
 	}
+	log.Debug().Str("namespace", nsName).Int("count", len(policies)).Msg("number of policies to evaluate")
 
 	auditableResources, err := s.resourcesFetcher.GetResourcesForPolicies(context.Background(), policies, nsName)
 
@@ -75,31 +72,25 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 		return err
 	}
 
-	// TODO this is for debugging, it should be remove in future steps!
-	for _, resource := range auditableResources {
-		log.Debug().Msg("Policies: ")
-		for _, policy := range resource.Policies {
-			url, err := s.resourcesFetcher.GetPolicyServerURLRunningPolicy(context.Background(), policy)
-			if err != nil {
-				log.Debug().Err(err).Msg("CANNOT GET POLICY SERVER URL")
-				continue
-			}
-			log.Debug().Msgf("POLICY SERVER URL: %s", url.String())
-		}
-		for _, resource := range resource.Resources {
-			log.Debug().Dict("resource", zerolog.Dict().
-				Str("name", resource.GetName()).
-				Str("kind", resource.GetKind()).
-				Str("namespace", resource.GetNamespace()).
-				Str("UID", string(resource.GetUID()))).
-				Msg("auditable resource")
-		}
-	}
+	// create PolicyReport
+	namespacedsReport := report.NewPR(namespace)
+	namespacedsReport.Summary.Skip = skippedNum
 
 	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need
 	// to evaluate them.
 	for i := range auditableResources {
-		auditResource(&auditableResources[i], &s.resourcesFetcher, &s.httpClient)
+		auditResource(&auditableResources[i], &s.resourcesFetcher, &s.httpClient, namespacedsReport)
+		err = s.reportStore.Add(namespacedsReport)
+		if err != nil {
+			log.Error().Err(err).Msg("error adding PolicyReport to store")
+		}
+	}
+
+	// TODO for debug
+	str, err := s.reportStore.ToJSON()
+	fmt.Println(str)
+	if err != nil {
+		log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 	}
 
 	return nil
@@ -108,7 +99,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 // auditResource sends the requests to the Policy Server to evaluate the auditable resources.
 // It will iterate over the policies which should evaluate the resource, get the URL to the service of the policy
 // server running the policy, creates the AdmissionReview payload and send the request to the policy server for evaluation
-func auditResource(resource *resources.AuditableResources, resourcesFetcher *ResourcesFetcher, httpClient *http.Client) {
+func auditResource(resource *resources.AuditableResources, resourcesFetcher *ResourcesFetcher, httpClient *http.Client, nsReport *report.PolicyReport) {
 	for _, policy := range resource.Policies {
 		url, err := (*resourcesFetcher).GetPolicyServerURLRunningPolicy(context.Background(), policy)
 		if err != nil {
@@ -118,10 +109,10 @@ func auditResource(resource *resources.AuditableResources, resourcesFetcher *Res
 		}
 		for _, resource := range resource.Resources {
 			admissionRequest := resources.GenerateAdmissionReview(resource)
-			auditResponse, err := sendAdmissionReviewToPolicyServer(url, admissionRequest, httpClient)
-			if err != nil {
-				// TODO what's the better thing to do here?
-				log.Error().Err(err)
+			auditResponse, responseErr := sendAdmissionReviewToPolicyServer(url, admissionRequest, httpClient)
+			if responseErr != nil {
+				// log error, will end in PolicyReportResult too
+				log.Error().Err(responseErr)
 				continue
 			}
 
@@ -129,6 +120,8 @@ func auditResource(resource *resources.AuditableResources, resourcesFetcher *Res
 				Str("uid", string(auditResponse.Response.UID)).
 				Bool("allowed", auditResponse.Response.Allowed)).
 				Msg("audit review response")
+
+			nsReport.AddResult(policy, resource, auditResponse, responseErr)
 		}
 	}
 }

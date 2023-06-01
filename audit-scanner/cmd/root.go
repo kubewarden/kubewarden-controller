@@ -52,7 +52,11 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			}
 			scanner := scanner.NewScanner(policiesFetcher, resourcesFetcher)
 
-			return startScanner(namespace, scanner)
+			err = startScanner(namespace, scanner)
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 )
