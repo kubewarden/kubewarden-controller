@@ -8,6 +8,7 @@ import (
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/resources"
 	"github.com/kubewarden/audit-scanner/internal/scanner"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -68,12 +69,11 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal().Err(err).Msg("Error on cmd.Execute()")
 		os.Exit(1)
 	}
 }
-
 func startScanner(namespace string, scanner Scanner) error {
 	if namespace != "" {
 		if err := scanner.ScanNamespace(namespace); err != nil {

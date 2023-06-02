@@ -97,6 +97,7 @@ func (s *policyReportStore) Remove(namespace string) error {
 func (s *policyReportStore) RemoveAllNamespaced() error {
 	s.rwm.Lock()
 	defer s.rwm.Unlock()
+	// TODO once go 1.21 is out, use new `clear` builtin
 	s.store = make(map[string]RInterface)
 	return nil
 }

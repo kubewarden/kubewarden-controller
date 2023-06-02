@@ -71,10 +71,10 @@ func (f *Fetcher) GetNamespace(nsName string) (*v1.Namespace, error) {
 		},
 		namespace)
 	if err != nil && errorsApi.IsNotFound(err) {
-		return nil, fmt.Errorf("namespace not found: %s", nsName)
+		return nil, fmt.Errorf("namespace %s not found: %w", nsName, err)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("can't get namespace: %s", nsName)
+		return nil, fmt.Errorf("can't get namespace %s: %w", nsName, err)
 	}
 	return namespace, nil
 }
@@ -152,8 +152,16 @@ func (f *Fetcher) getAdmissionPolicies(namespace string) ([]policiesv1.Admission
 func newClient() (client.Client, error) {
 	config := ctrl.GetConfigOrDie()
 	customScheme := scheme.Scheme
-	customScheme.AddKnownTypes(schema.GroupVersion{Group: constants.KubewardenPoliciesGroup, Version: constants.KubewardenPoliciesVersion}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
-	metav1.AddToGroupVersion(customScheme, schema.GroupVersion{Group: constants.KubewardenPoliciesGroup, Version: constants.KubewardenPoliciesVersion})
+	customScheme.AddKnownTypes(
+		schema.GroupVersion{Group: constants.KubewardenPoliciesGroup, Version: constants.KubewardenPoliciesVersion},
+		&policiesv1.ClusterAdmissionPolicy{},
+		&policiesv1.AdmissionPolicy{},
+		&policiesv1.ClusterAdmissionPolicyList{},
+		&policiesv1.AdmissionPolicyList{},
+	)
+	metav1.AddToGroupVersion(
+		customScheme, schema.GroupVersion{Group: constants.KubewardenPoliciesGroup, Version: constants.KubewardenPoliciesVersion},
+	)
 
 	return client.New(config, client.Options{Scheme: customScheme})
 }

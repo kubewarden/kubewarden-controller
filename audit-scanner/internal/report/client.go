@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,18 +32,15 @@ func Save(report *polReport.PolicyReport) error {
 	if err != nil {
 		return fmt.Errorf("failed when creating new client: %w", err)
 	}
-
 	// Check for existing Policy Reports
 	result := &polReport.PolicyReport{}
 	getErr := client.Get(context.TODO(), types.NamespacedName{
 		Namespace: report.Namespace,
 		Name:      report.Name,
 	}, result)
-
 	// Create new Policy Report if not found
 	if errors.IsNotFound(getErr) {
 		log.Info().Msg("creating policy report...")
-
 		err = client.Create(context.TODO(), report)
 		if err != nil {
 			return fmt.Errorf("failed when creating PolicyReport: %w", err)
@@ -61,21 +59,24 @@ func Save(report *polReport.PolicyReport) error {
 				log.Error().Err(err).Str("PolicyReport name", report.GetName())
 				return nil
 			}
-
 			if err != nil {
 				return fmt.Errorf("failed when getting PolicyReport: %w", err)
 			}
-
 			report.SetResourceVersion(getObj.GetResourceVersion())
-
 			updateErr := client.Update(context.TODO(), report)
 			// return unwrapped error for RetryOnConflict()
 			return updateErr
 		})
 		if retryErr != nil {
-			log.Error().Err(retryErr).Msg("PolcyReport update failed")
+			log.Error().
+				Dict("dict", zerolog.Dict().
+					Str("report name", report.Name).Str("report ns", report.Namespace),
+				).Msg("PolicyReport update failed")
 		}
-		log.Info().Msg("updated policy report")
+		log.Info().
+			Dict("dict", zerolog.Dict().
+				Str("report name", report.Name).Str("report ns", report.Namespace),
+			).Msg("updated PolicyReport")
 	}
 	return nil
 }

@@ -93,6 +93,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 		log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 	}
 
+	log.Info().Str("namespace", nsName).Msg("scan finished")
 	return nil
 }
 
@@ -112,16 +113,22 @@ func auditResource(resource *resources.AuditableResources, resourcesFetcher *Res
 			auditResponse, responseErr := sendAdmissionReviewToPolicyServer(url, admissionRequest, httpClient)
 			if responseErr != nil {
 				// log error, will end in PolicyReportResult too
-				log.Error().Err(responseErr)
-				continue
+				log.Error().Err(responseErr).Dict("response", zerolog.Dict().
+					Str("admissionRequest name", admissionRequest.Request.Name).
+					Str("policy", policy.GetName()).
+					Str("resource", resource.GetName()),
+				).
+					Msg("error sending AdmissionReview to PolicyServer")
+			} else {
+				log.Debug().Dict("response", zerolog.Dict().
+					Str("uid", string(auditResponse.Response.UID)).
+					Bool("allowed", auditResponse.Response.Allowed).
+					Str("policy", policy.GetName()).
+					Str("resource", resource.GetName()),
+				).
+					Msg("audit review response")
+				nsReport.AddResult(policy, resource, auditResponse, responseErr)
 			}
-
-			log.Debug().Dict("response", zerolog.Dict().
-				Str("uid", string(auditResponse.Response.UID)).
-				Bool("allowed", auditResponse.Response.Allowed)).
-				Msg("audit review response")
-
-			nsReport.AddResult(policy, resource, auditResponse, responseErr)
 		}
 	}
 }
