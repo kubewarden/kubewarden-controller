@@ -73,7 +73,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	}
 
 	// create PolicyReport
-	namespacedsReport := report.NewPR(namespace)
+	namespacedsReport := report.NewPolicyReport(namespace)
 	namespacedsReport.Summary.Skip = skippedNum
 
 	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need

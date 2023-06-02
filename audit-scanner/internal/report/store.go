@@ -39,7 +39,7 @@ type PolicyReportStore interface {
 func NewPolicyReportStore() PolicyReportStore {
 	return &policyReportStore{
 		store:     make(map[string]RInterface),
-		clusterPR: *NewCPR("clusterwide"),
+		clusterPR: *NewClusterPolicyReport("clusterwide"),
 		rwm:       new(sync.RWMutex),
 	}
 }
@@ -58,8 +58,8 @@ func (s *policyReportStore) Add(report RInterface) error {
 
 func (s *policyReportStore) Get(namespace string) (RInterface, error) {
 	s.rwm.RLock()
+	defer s.rwm.Unlock()
 	report, present := s.store[namespace]
-	s.rwm.RUnlock()
 	if present {
 		return report, nil
 	}
@@ -68,8 +68,8 @@ func (s *policyReportStore) Get(namespace string) (RInterface, error) {
 
 func (s *policyReportStore) GetClusterWide() (RInterface, error) {
 	s.rwm.RLock()
+	defer s.rwm.Unlock()
 	report := s.clusterPR
-	s.rwm.RUnlock()
 	return RInterface(&report), nil
 }
 

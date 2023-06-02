@@ -46,7 +46,7 @@ const (
 	StatusSkip  = "skip"
 )
 
-func NewCPR(name string) *ClusterPolicyReport {
+func NewClusterPolicyReport(name string) *ClusterPolicyReport {
 	return &ClusterPolicyReport{
 		ClusterPolicyReport: v1alpha2.ClusterPolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
@@ -65,7 +65,7 @@ func NewCPR(name string) *ClusterPolicyReport {
 	}
 }
 
-func NewPR(namespace *v1.Namespace) *PolicyReport {
+func NewPolicyReport(namespace *v1.Namespace) *PolicyReport {
 	return &PolicyReport{
 		PolicyReport: v1alpha2.PolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ func (r *PolicyReport) GetType() ResourceType {
 }
 
 func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {
-	result := newResult(policy, resource, auditResponse, responseErr)
+	result := newPolicyReportResult(policy, resource, auditResponse, responseErr)
 	switch result.Result {
 	case StatusFail:
 		r.Summary.Fail++
@@ -115,7 +115,7 @@ func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured
 }
 
 func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {
-	result := newResult(policy, resource, auditResponse, responseErr)
+	result := newPolicyReportResult(policy, resource, auditResponse, responseErr)
 	switch result.Result {
 	case StatusFail:
 		r.Summary.Fail++
@@ -127,7 +127,7 @@ func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstr
 	r.Results = append(r.Results, result)
 }
 
-func newResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) *v1alpha2.PolicyReportResult {
+func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) *v1alpha2.PolicyReportResult {
 	var result v1alpha2.PolicyResult
 	var description string
 	if responseErr != nil {
