@@ -19,24 +19,6 @@ type ClusterPolicyReport struct {
 	v1alpha2.ClusterPolicyReport
 }
 
-type RInterface interface {
-	metav1.Object
-	// GetType returns the type of the PolicyReport
-	GetType() ResourceType
-	// AddResult adds a PolicyReportResult to the policy report. This result
-	// includes policy info and resource under audit
-	AddResult(policiesv1.Policy, unstructured.Unstructured, *admv1.AdmissionReview, error)
-}
-
-// ResourceType Enum defined for PolicyReport
-type ResourceType = string
-
-// ReportType Enum
-const (
-	PolicyReportType        ResourceType = "PolicyReport"
-	ClusterPolicyReportType ResourceType = "ClusterPolicyReport"
-)
-
 // Status specifies state of a policy result
 const (
 	StatusPass  = "pass"
@@ -46,8 +28,8 @@ const (
 	StatusSkip  = "skip"
 )
 
-func NewClusterPolicyReport(name string) *ClusterPolicyReport {
-	return &ClusterPolicyReport{
+func NewClusterPolicyReport(name string) ClusterPolicyReport {
+	return ClusterPolicyReport{
 		ClusterPolicyReport: v1alpha2.ClusterPolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              PrefixNameClusterPolicyReport + name,
@@ -65,8 +47,8 @@ func NewClusterPolicyReport(name string) *ClusterPolicyReport {
 	}
 }
 
-func NewPolicyReport(namespace *v1.Namespace) *PolicyReport {
-	return &PolicyReport{
+func NewPolicyReport(namespace *v1.Namespace) PolicyReport {
+	return PolicyReport{
 		PolicyReport: v1alpha2.PolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              PrefixNamePolicyReport + namespace.Name,
@@ -91,14 +73,6 @@ func NewPolicyReport(namespace *v1.Namespace) *PolicyReport {
 			Results: []*v1alpha2.PolicyReportResult{},
 		},
 	}
-}
-
-func (r *ClusterPolicyReport) GetType() ResourceType {
-	return ClusterPolicyReportType
-}
-
-func (r *PolicyReport) GetType() ResourceType {
-	return PolicyReportType
 }
 
 func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {

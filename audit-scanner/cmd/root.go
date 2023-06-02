@@ -55,7 +55,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			scanner := scanner.NewScanner(policiesFetcher, resourcesFetcher)
+			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher)
+			if err != nil {
+				return err
+			}
 
 			err = startScanner(namespace, scanner)
 			if err != nil {

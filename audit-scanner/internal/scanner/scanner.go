@@ -48,8 +48,12 @@ type Scanner struct {
 }
 
 // NewScanner creates a new scanner with the PoliciesFetcher provided
-func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher) *Scanner {
-	return &Scanner{policiesFetcher, resourcesFetcher, report.NewPolicyReportStore(), http.Client{}}
+func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher) (*Scanner, error) {
+	report, err := report.NewPolicyReportStore()
+	if err != nil {
+		return nil, err
+	}
+	return &Scanner{policiesFetcher, resourcesFetcher, *report, http.Client{}}, nil
 }
 
 // ScanNamespace scans resources for a given namespace
@@ -79,8 +83,8 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need
 	// to evaluate them.
 	for i := range auditableResources {
-		auditResource(&auditableResources[i], &s.resourcesFetcher, &s.httpClient, namespacedsReport)
-		err = s.reportStore.Add(namespacedsReport)
+		auditResource(&auditableResources[i], &s.resourcesFetcher, &s.httpClient, &namespacedsReport)
+		err = s.reportStore.AddPolicyReport(&namespacedsReport)
 		if err != nil {
 			log.Error().Err(err).Msg("error adding PolicyReport to store")
 		}

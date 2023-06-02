@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
-var cpr = &report.ClusterPolicyReport{
+var cpr = report.ClusterPolicyReport{
 	v1alpha2.ClusterPolicyReport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "polr-clusterwide",
@@ -19,7 +19,7 @@ var cpr = &report.ClusterPolicyReport{
 	},
 }
 
-var npr = &report.PolicyReport{
+var npr = report.PolicyReport{
 	v1alpha2.PolicyReport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "polr-ns-test",
@@ -32,23 +32,23 @@ var npr = &report.PolicyReport{
 }
 
 func Test_PolicyReportStore(t *testing.T) {
-	store := report.NewPolicyReportStore()
+	store, _ := report.NewPolicyReportStore()
 
-	t.Run("Add then Get", func(t *testing.T) {
-		_, err := store.Get(npr.GetNamespace())
+	t.Run("Add then Get namespaced PolicyReport", func(t *testing.T) {
+		_, err := store.GetPolicyReport(npr.GetNamespace())
 		if err == nil {
 			t.Fatalf("Should not be found in empty Store")
 		}
 
-		_ = store.Add(npr)
-		_, err = store.Get(npr.GetNamespace())
+		_ = store.AddPolicyReport(&npr)
+		_, err = store.GetPolicyReport(npr.GetNamespace())
 		if err != nil {
 			t.Errorf("Should be found in Store after adding report to the store")
 		}
 	})
 
-	t.Run("Update then Get", func(t *testing.T) {
-		upr := &report.PolicyReport{
+	t.Run("Update then Get namespaced PolicyReport", func(t *testing.T) {
+		upr := report.PolicyReport{
 			v1alpha2.PolicyReport{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "polr-ns-test",
@@ -60,52 +60,55 @@ func Test_PolicyReportStore(t *testing.T) {
 			},
 		}
 
-		_ = store.Add(npr)
-		r, _ := store.Get(npr.GetNamespace())
-		if rep, _ := r.(*report.PolicyReport); rep.Summary.Skip != 0 {
+		_ = store.AddPolicyReport(&npr)
+		r, err := store.GetPolicyReport(npr.GetNamespace())
+		if err != nil {
+			t.Errorf("Should be found in Store after adding report to the store")
+		}
+		if r.Summary.Skip != 0 {
 			t.Errorf("Expected Summary.Skip to be 0")
 		}
 
-		_ = store.Update(upr)
-		r2, _ := store.Get(npr.GetNamespace())
-		if rep2, _ := r2.(*report.PolicyReport); rep2.Summary.Skip != 0 {
+		_ = store.UpdatePolicyReport(&upr)
+		r2, _ := store.GetPolicyReport(npr.GetNamespace())
+		if r2.Summary.Skip != 1 {
 			t.Errorf("Expected Summary.Skip to be 1 after update")
 		}
 	})
 
-	t.Run("Delete then Get", func(t *testing.T) {
-		_, err := store.Get(npr.GetNamespace())
+	t.Run("Delete then Get namespaced PolicyReport", func(t *testing.T) {
+		_, err := store.GetPolicyReport(npr.GetNamespace())
 		if err != nil {
 			t.Errorf("Should be found in Store after adding report to the store")
 		}
 
-		_ = store.Remove(npr.GetNamespace())
-		_, err = store.Get(npr.GetNamespace())
+		_ = store.RemovePolicyReport(npr.GetNamespace())
+		_, err = store.GetPolicyReport(npr.GetNamespace())
 		if err == nil {
 			t.Fatalf("Should not be found after Remove report from Store")
 		}
 	})
 
 	t.Run("Remove all namespaced", func(t *testing.T) {
-		_ = store.Add(npr)
+		_ = store.AddPolicyReport(&npr)
 
-		_ = store.RemoveAllNamespaced()
-		_, err := store.Get(npr.GetNamespace())
+		_ = store.RemoveAllNamespacedPolicyReports()
+		_, err := store.GetPolicyReport(npr.GetNamespace())
 		if err == nil {
 			t.Fatalf("Should have no results after CleanUp")
 		}
 	})
 
 	t.Run("Clusterwide Add then Get", func(t *testing.T) {
-		_ = store.Add(cpr)
-		_, err := store.GetClusterWide()
+		_ = store.AddClusterPolicyReport(&cpr)
+		_, err := store.GetClusterPolicyReport()
 		if err != nil {
 			t.Errorf("Should be found in Store after adding report to the store")
 		}
 	})
 
 	t.Run("Clusterwide Update then Get", func(t *testing.T) {
-		cprWithSkip := &report.ClusterPolicyReport{
+		cprWithSkip := report.ClusterPolicyReport{
 			v1alpha2.ClusterPolicyReport{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "polr-clusterwide-test",
@@ -116,15 +119,18 @@ func Test_PolicyReportStore(t *testing.T) {
 			},
 		}
 
-		_ = store.Add(cprWithSkip)
-		r, _ := store.GetClusterWide()
-		if rep, _ := r.(*report.ClusterPolicyReport); rep.Summary.Skip != 0 {
+		_ = store.AddClusterPolicyReport(&cpr)
+		r, err := store.GetClusterPolicyReport()
+		if err != nil {
+			t.Errorf("Should be found in Store after adding report to the store")
+		}
+		if r.Summary.Skip != 0 {
 			t.Errorf("Expected Summary.Skip to be 0")
 		}
 
-		_ = store.Update(cpr)
-		r2, _ := store.Get(npr.GetNamespace())
-		if rep2, _ := r2.(*report.ClusterPolicyReport); rep2.Summary.Skip != 0 {
+		_ = store.UpdateClusterPolicyReport(&cprWithSkip)
+		r2, _ := store.GetClusterPolicyReport()
+		if r2.Summary.Skip != 1 {
 			t.Errorf("Expected Summary.Skip to be 1 after update")
 		}
 	})
