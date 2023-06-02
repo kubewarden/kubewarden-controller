@@ -94,6 +94,6 @@ func startScanner(namespace string, scanner Scanner) error {
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
 	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. Policy Server) are installed (required)")
-	rootCmd.Flags().StringP("policy-server-fqdn", "p", "", "FQDN of the PolicyServers. If non-empty, they will be queried on port 3000. Useful for out-of-cluster debugging")
+	rootCmd.Flags().StringP("policy-server-fqdn", "p", "", "FQDN of the PolicyServers. If non-empty, they will be queried on <FQDN>:3000. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 }
