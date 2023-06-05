@@ -28,5 +28,5 @@ Then:
 
 
 ``` console
-./bin/audit-scanner -k kubewarden --namespace default -l debug --policyServerFQDN localhost
+./bin/audit-scanner -k kubewarden --namespace default -l debug --policy-server-url https://localhost:3000
 ```
