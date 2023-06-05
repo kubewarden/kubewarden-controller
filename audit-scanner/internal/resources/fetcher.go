@@ -180,7 +180,11 @@ func (f *Fetcher) GetPolicyServerURLRunningPolicy(ctx context.Context, policy po
 	}
 	var urlStr string
 	if f.policyServerURL != "" {
-		urlStr = fmt.Sprintf("%s/audit/%s", f.policyServerURL, policy.GetUniqueName())
+		url, err := url.Parse(f.policyServerURL)
+		if err != nil {
+			log.Fatal().Msg("incorrect URL for policy-server")
+		}
+		urlStr = fmt.Sprintf("%s/audit/%s", url, policy.GetUniqueName())
 	} else {
 		urlStr = fmt.Sprintf("https://%s.%s.svc:%d/audit/%s", service.Name, f.kubewardenNamespace, service.Spec.Ports[0].Port, policy.GetUniqueName())
 	}
