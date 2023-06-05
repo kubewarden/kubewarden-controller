@@ -32,7 +32,7 @@ var npr = report.PolicyReport{
 }
 
 func Test_PolicyReportStore(t *testing.T) {
-	store, _ := report.NewPolicyReportStore()
+	store := report.MockNewPolicyReportStore()
 
 	t.Run("Add then Get namespaced PolicyReport", func(t *testing.T) {
 		_, err := store.GetPolicyReport(npr.GetNamespace())

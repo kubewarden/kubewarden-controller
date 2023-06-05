@@ -34,7 +34,7 @@ type PolicyReportStore struct {
 }
 
 // NewPolicyReportStore construct a PolicyReportStore, initializing the
-// clusterwide ClusterPolicyReport
+// clusterwide ClusterPolicyReport and namesapcedPolicyReports.
 func NewPolicyReportStore() (*PolicyReportStore, error) {
 	config := ctrl.GetConfigOrDie()
 	customScheme := scheme.Scheme
@@ -57,6 +57,19 @@ func NewPolicyReportStore() (*PolicyReportStore, error) {
 		clusterPolicyReportMutex:     new(sync.RWMutex),
 		client:                       client,
 	}, nil
+}
+
+// MockNewPolicyReportStore constructs a PolicyReportStore, initializing the
+// clusterwide ClusterPolicyReport and namespacedPolicyReports, but setting the
+// client to nil. Useful for testing.
+func MockNewPolicyReportStore() *PolicyReportStore {
+	return &PolicyReportStore{
+		namespacedPolicyReports:      make(map[string]PolicyReport),
+		clusterPolicyReport:          NewClusterPolicyReport("clusterwide"),
+		namespacedPolicyReportsMutex: new(sync.RWMutex),
+		clusterPolicyReportMutex:     new(sync.RWMutex),
+		client:                       nil,
+	}
 }
 
 // AddPolicyReport adds a namespaced PolicyReport to the Store
