@@ -71,7 +71,7 @@ func (f *Fetcher) GetNamespace(nsName string) (*v1.Namespace, error) {
 		},
 		namespace)
 	if err != nil && errorsApi.IsNotFound(err) {
-		return nil, fmt.Errorf("namespace %s not found: %w", nsName, err)
+		return nil, err
 	}
 	if err != nil {
 		return nil, fmt.Errorf("can't get namespace %s: %w", nsName, err)

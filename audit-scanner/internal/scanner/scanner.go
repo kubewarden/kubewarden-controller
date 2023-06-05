@@ -60,18 +60,24 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 func (s *Scanner) ScanNamespace(nsName string) error {
 	log.Info().Str("namespace", nsName).Msg("scan started")
 
-	policies, skippedNum, err := s.policiesFetcher.GetPoliciesForANamespace(nsName)
-	if err != nil {
-		return err
-	}
 	namespace, err := s.policiesFetcher.GetNamespace(nsName)
 	if err != nil {
 		return err
 	}
-	log.Debug().Str("namespace", nsName).Int("count", len(policies)).Msg("number of policies to evaluate")
+
+	policies, skippedNum, err := s.policiesFetcher.GetPoliciesForANamespace(nsName)
+	if err != nil {
+		return err
+	}
+	// log.Debug().Str("namespace", nsName).Int("count", len(policies)).Msg("number of policies to evaluate")
+	log.Debug().
+		Str("namespace", nsName).
+		Dict("dict", zerolog.Dict().
+			Int("policies to evaluate", len(policies)).
+			Int("policies skipped", skippedNum),
+		).Msg("policy count")
 
 	auditableResources, err := s.resourcesFetcher.GetResourcesForPolicies(context.Background(), policies, nsName)
-
 	if err != nil {
 		return err
 	}

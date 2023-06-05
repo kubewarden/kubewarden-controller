@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/rs/zerolog/log"
 	admv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -130,6 +131,9 @@ func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstr
 		Kind:    constants.KubewardenKindAdmissionPolicy,
 	}:
 		name = "ap-" + policy.GetName()
+	default:
+		// this never happens
+		log.Fatal().Msg("no policy found when creating PolicyReportResult")
 	}
 
 	time := metav1.Now()

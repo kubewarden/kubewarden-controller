@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
@@ -60,11 +59,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 				return err
 			}
 
-			err = startScanner(namespace, scanner)
-			if err != nil {
-				return err
-			}
-			return nil
+			return startScanner(namespace, scanner)
 		},
 	}
 )
@@ -74,7 +69,6 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal().Err(err).Msg("Error on cmd.Execute()")
-		os.Exit(1)
 	}
 }
 func startScanner(namespace string, scanner Scanner) error {
