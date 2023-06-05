@@ -9,7 +9,8 @@ use policy_evaluator::policy_fetcher::{
     },
 };
 use policy_evaluator::{
-    constants::*, policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata,
+    constants::*, policy_evaluator::PolicyExecutionMode,
+    policy_fetcher::sigstore::registry::oci_reference::OciReference, policy_metadata::Metadata,
 };
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
@@ -18,7 +19,7 @@ use pulldown_cmark_mdcat::{
     resources::NoopResourceHandler,
     terminal::{TerminalProgram, TerminalSize},
 };
-use std::convert::TryFrom;
+use std::{convert::TryFrom, str::FromStr};
 use syntect::parsing::SyntaxSet;
 
 pub(crate) async fn inspect(
@@ -339,16 +340,17 @@ async fn fetch_signatures_manifest(
     let image_name = uri
         .strip_prefix("registry://")
         .ok_or_else(|| anyhow!("invalid uri"))?;
+    let image_ref = OciReference::from_str(image_name)?;
     let auth = match Registry::auth(image_name) {
         RegistryAuth::Anonymous => Auth::Anonymous,
         RegistryAuth::Basic(username, password) => Auth::Basic(username, password),
     };
 
     let (cosign_signature_image, _source_image_digest) =
-        client.triangulate(image_name, &auth).await?;
+        client.triangulate(&image_ref, &auth).await?;
 
     let manifest = registry
-        .manifest(cosign_signature_image.as_str(), sources.as_ref())
+        .manifest(&cosign_signature_image.whole(), sources.as_ref())
         .await?;
 
     match manifest {
