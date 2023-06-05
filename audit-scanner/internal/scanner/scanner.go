@@ -45,15 +45,16 @@ type Scanner struct {
 	reportStore      report.PolicyReportStore
 	// http client used to make requests against the Policy Server
 	httpClient http.Client
+	printJSON  bool
 }
 
 // NewScanner creates a new scanner with the PoliciesFetcher provided
-func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher) (*Scanner, error) {
+func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher, printJSON bool) (*Scanner, error) {
 	report, err := report.NewPolicyReportStore()
 	if err != nil {
 		return nil, err
 	}
-	return &Scanner{policiesFetcher, resourcesFetcher, *report, http.Client{}}, nil
+	return &Scanner{policiesFetcher, resourcesFetcher, *report, http.Client{}, printJSON}, nil
 }
 
 // ScanNamespace scans resources for a given namespace
@@ -97,15 +98,17 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	}
 	log.Info().Str("namespace", nsName).Msg("scan finished")
 
+	if s.printJSON {
+		str, err := s.reportStore.ToJSON()
+		if err != nil {
+			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
+		}
+		fmt.Println(str)
+	}
+
 	err = s.reportStore.SaveAll()
 	if err != nil {
 		return err
-	}
-	// TODO for debug
-	str, err := s.reportStore.ToJSON()
-	fmt.Println(str)
-	if err != nil {
-		log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 	}
 
 	return nil
