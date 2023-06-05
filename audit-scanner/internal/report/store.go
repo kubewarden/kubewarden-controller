@@ -41,6 +41,7 @@ func NewPolicyReportStore() (*PolicyReportStore, error) {
 	customScheme.AddKnownTypes(
 		polReport.SchemeGroupVersion,
 		&polReport.PolicyReport{},
+		&polReport.ClusterPolicyReport{},
 		&polReport.PolicyReportList{},
 		&polReport.ClusterPolicyReportList{},
 	)
@@ -156,9 +157,26 @@ func (s *PolicyReportStore) ToJSON() (string, error) {
 	return string(marshaled), nil
 }
 
-// Save instantiates the passed namespaced PolicyReport if it doesn't exist, or
-// updated a new one if one is found
-func (s *PolicyReportStore) Save(report *PolicyReport) error {
+// SaveAll saves the store policy reports to the cluster. It does this by
+// instantiating new clusterPolicyReport and PolicyReports, or updating them if
+// they are already present.
+func (s *PolicyReportStore) SaveAll() error {
+	if err := s.saveClusterPolicyReport(); err != nil {
+		return err
+	}
+
+	for _, report := range s.namespacedPolicyReports {
+		report := report
+		if err := s.savePolicyReport(&report); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// savePolicyReport instantiates the passed namespaced PolicyReport if it doesn't exist, or
+// updates it if one is found
+func (s *PolicyReportStore) savePolicyReport(report *PolicyReport) error {
 	// Check for existing Policy Report
 	result := &polReport.PolicyReport{}
 	getErr := s.client.Get(context.TODO(), types.NamespacedName{
@@ -167,14 +185,15 @@ func (s *PolicyReportStore) Save(report *PolicyReport) error {
 	}, result)
 	// Create new Policy Report if not found
 	if errorMachinery.IsNotFound(getErr) {
-		log.Info().Msg("creating policy report...")
-		err := s.client.Create(context.TODO(), report)
+		log.Debug().Msg("creating PolicyReport")
+		err := s.client.Create(context.TODO(), &report.PolicyReport)
 		if err != nil {
 			return fmt.Errorf("failed when creating PolicyReport: %w", err)
 		}
+		log.Info().Msg("created PolicyReport")
 	} else {
 		// Update existing Policy Report
-		log.Info().Msg("updating policy report...")
+		log.Debug().Msg("updating PolicyReport")
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			getObj := &polReport.PolicyReport{}
 			err := s.client.Get(context.TODO(), types.NamespacedName{
@@ -190,7 +209,7 @@ func (s *PolicyReportStore) Save(report *PolicyReport) error {
 				return fmt.Errorf("failed when getting PolicyReport: %w", err)
 			}
 			report.SetResourceVersion(getObj.GetResourceVersion())
-			updateErr := s.client.Update(context.TODO(), report)
+			updateErr := s.client.Update(context.TODO(), &report.PolicyReport)
 			// return unwrapped error for RetryOnConflict()
 			return updateErr
 		})
@@ -199,11 +218,64 @@ func (s *PolicyReportStore) Save(report *PolicyReport) error {
 				Dict("dict", zerolog.Dict().
 					Str("report name", report.Name).Str("report ns", report.Namespace),
 				).Msg("PolicyReport update failed")
+			// TODO bubble up error
+			//
+		} else {
+			log.Info().
+				Dict("dict", zerolog.Dict().
+					Str("report name", report.Name).Str("report ns", report.Namespace),
+				).Msg("updated PolicyReport")
 		}
-		log.Info().
-			Dict("dict", zerolog.Dict().
-				Str("report name", report.Name).Str("report ns", report.Namespace),
-			).Msg("updated PolicyReport")
+	}
+	return nil
+}
+
+// SavePolicyClusterPolicyReport instantiates the ClusterPolicyReport if it doesn't exist, or
+// updates it one is found
+func (s *PolicyReportStore) saveClusterPolicyReport() error {
+	report := s.clusterPolicyReport
+
+	// Check for existing Policy Report
+	result := &polReport.ClusterPolicyReport{}
+	getErr := s.client.Get(context.TODO(), client.ObjectKey{Name: report.Name}, result)
+	// Create new Policy Report if not found
+	if errorMachinery.IsNotFound(getErr) {
+		log.Debug().Msg("creating ClusterPolicyReport")
+		err := s.client.Create(context.TODO(), &report.ClusterPolicyReport)
+		if err != nil {
+			return fmt.Errorf("failed when creating ClusterPolicyReport: %w", err)
+		}
+		log.Info().Msg("created ClusterPolicyReport")
+	} else {
+		// Update existing Policy Report
+		log.Debug().Msg("updating ClusterPolicyReport")
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			getObj := &polReport.ClusterPolicyReport{}
+			err := s.client.Get(context.TODO(), client.ObjectKey{Name: report.Name}, getObj)
+			if errorMachinery.IsNotFound(err) {
+				// This should never happen
+				log.Error().Err(err).Str("ClusterPolicyReport name", report.GetName())
+				return nil
+			}
+			if err != nil {
+				return fmt.Errorf("failed when getting ClusterPolicyReport: %w", err)
+			}
+			report.SetResourceVersion(getObj.GetResourceVersion())
+			updateErr := s.client.Update(context.TODO(), &report.ClusterPolicyReport)
+			// return unwrapped error for RetryOnConflict()
+			return updateErr
+		})
+		if retryErr != nil {
+			log.Error().Err(retryErr).
+				Dict("dict", zerolog.Dict().
+					Str("report name", report.Name),
+				).Msg("ClusterPolicyReport update failed")
+		} else {
+			log.Info().
+				Dict("dict", zerolog.Dict().
+					Str("report name", report.Name),
+				).Msg("updated ClusterPolicyReport")
+		}
 	}
 	return nil
 }

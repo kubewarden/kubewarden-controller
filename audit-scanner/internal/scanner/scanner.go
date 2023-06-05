@@ -95,7 +95,12 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 			log.Error().Err(err).Msg("error adding PolicyReport to store")
 		}
 	}
+	log.Info().Str("namespace", nsName).Msg("scan finished")
 
+	err = s.reportStore.SaveAll()
+	if err != nil {
+		return err
+	}
 	// TODO for debug
 	str, err := s.reportStore.ToJSON()
 	fmt.Println(str)
@@ -103,7 +108,6 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 		log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 	}
 
-	log.Info().Str("namespace", nsName).Msg("scan finished")
 	return nil
 }
 
