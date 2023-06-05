@@ -25,7 +25,7 @@ k8s-openapi = { version = "0.18.0", default-features = false }
 kubewarden-policy-sdk = "0.9.4"
 itertools = "0.10"
 lazy_static = "1.4"
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.21" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.22" }
 serde_json = "1.0"
 serde_yaml = "0.9"
 serde = { version = "1.0", features = ["derive"] }
