@@ -132,22 +132,15 @@ func (s *PolicyReportStore) RemoveAllNamespacedPolicyReports() error {
 
 // Marshal the contents of the store into a JSON string
 func (s *PolicyReportStore) ToJSON() (string, error) {
-	var str string
+	recapJSON := make(map[string]interface{})
+	recapJSON["cluster"] = s.clusterPolicyReport
+	recapJSON["namespaces"] = s.namespacedPolicyReports
 
-	marshaled, err := json.Marshal(s.clusterPolicyReport)
+	marshaled, err := json.Marshal(recapJSON)
 	if err != nil {
 		return "", err
 	}
-	str = (string(marshaled))
-	for _, report := range s.namespacedPolicyReports {
-		marshaled, err := json.Marshal(report)
-		if err != nil {
-			return "", err
-		}
-
-		str += (string(marshaled))
-	}
-	return str, nil
+	return string(marshaled), nil
 }
 
 // Save instantiates the passed namespaced PolicyReport if it doesn't exist, or
