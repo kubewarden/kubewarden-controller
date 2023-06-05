@@ -34,7 +34,7 @@ tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
-url = "2.3.1"
+url = "2.4.0"
 walrus = "0.19.0"
 wasmparser = "0.107"
 time = "0.3.21"
