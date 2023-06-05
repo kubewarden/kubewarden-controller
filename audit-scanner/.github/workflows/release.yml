@@ -95,6 +95,10 @@ jobs:
             }
             core.setFailed(`Draft release not found`)
 
+      - name: tar CRDs
+        run: |
+          tar -czf CRDS.tar.gz -C config/crd $(ls config/crd)
+
       - name: Upload release assets
         id: upload_release_assets
         uses: actions/github-script@v6
@@ -142,4 +146,4 @@ jobs:
       #     token: ${{ secrets.HELM_CHART_REPO_ACCESS_TOKEN }}
       #     repository: "${{github.repository_owner}}/helm-charts"
       #     event-type: update-chart
-      #     client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}"}'
+      #     client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}", "crds_asset_id": "${{steps.upload_release_assets.outputs.crds_asset_id}}"}'
