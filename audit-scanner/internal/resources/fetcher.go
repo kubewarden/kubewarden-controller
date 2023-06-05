@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +26,9 @@ type Fetcher struct {
 	// Namespace where the Kubewarden components (e.g. policy server) are installed
 	// This is the namespace used to fetch the policy server resources
 	kubewardenNamespace string
+	// FQDN of the policy server to query. If not empty, Fetcher will query on
+	// port 3000. Useful for out-of-cluster debugging
+	policyServerURL string
 }
 
 // AuditableResources represents all resources that must be audited for a group of policies.
@@ -38,11 +42,13 @@ type AuditableResources struct {
 }
 
 // NewFetcher returns a new fetcher with a dynamic client
-func NewFetcher(kubewardenNamespace string) (*Fetcher, error) {
+func NewFetcher(kubewardenNamespace string, policyServerURL string) (*Fetcher, error) {
 	config := ctrl.GetConfigOrDie()
 	dynamicClient := dynamic.NewForConfigOrDie(config)
-
-	return &Fetcher{dynamicClient, kubewardenNamespace}, nil
+	if policyServerURL != "" {
+		log.Info().Msg(fmt.Sprintf("Querying PolicyServers at %s for debugging purposes. Don't forget to start `kwctl port-forward` if needed", policyServerURL))
+	}
+	return &Fetcher{dynamicClient, kubewardenNamespace, policyServerURL}, nil
 }
 
 // GetResourcesForPolicies fetches all resources that must be audited and returns them in an AuditableResources array.
@@ -162,7 +168,6 @@ func getServiceByAppLabel(ctx context.Context, appLabel string, namespace string
 
 func (f *Fetcher) GetPolicyServerURLRunningPolicy(ctx context.Context, policy policiesv1.Policy) (*url.URL, error) {
 	policyServer, err := getPolicyServerByName(ctx, policy.GetPolicyServer(), &f.dynamicClient)
-
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +178,12 @@ func (f *Fetcher) GetPolicyServerURLRunningPolicy(ctx context.Context, policy po
 	if len(service.Spec.Ports) < 1 {
 		return nil, fmt.Errorf("policy server service does not have a port")
 	}
-	urlStr := fmt.Sprintf("https://%s.%s.svc:%d/audit/%s", service.Name, f.kubewardenNamespace, service.Spec.Ports[0].Port, policy.GetUniqueName())
+	var urlStr string
+	if f.policyServerURL != "" {
+		urlStr = fmt.Sprintf("%s/audit/%s", f.policyServerURL, policy.GetUniqueName())
+	} else {
+		urlStr = fmt.Sprintf("https://%s.%s.svc:%d/audit/%s", service.Name, f.kubewardenNamespace, service.Spec.Ports[0].Port, policy.GetUniqueName())
+	}
 	url, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err

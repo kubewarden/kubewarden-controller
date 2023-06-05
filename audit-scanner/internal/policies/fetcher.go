@@ -5,19 +5,16 @@ import (
 	"errors"
 	"fmt"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	v1 "k8s.io/api/core/v1"
+	"github.com/kubewarden/audit-scanner/internal/constants"
+	errorsApi "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	kubewardenPoliciesGroup   = "policies.kubewarden.io"
-	kubewardenPoliciesVersion = "v1"
 )
 
 // Fetcher fetches Kubewarden policies from the Kubernetes cluster, and filters policies that are auditable.
@@ -38,27 +35,48 @@ func NewFetcher() (*Fetcher, error) {
 	return &Fetcher{client: client, filter: filterAuditablePolicies}, nil
 }
 
-// TODO implement this for all ns
-func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, error) {
-	return nil, errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
+// GetPoliciesForAllNamespace gets all auditable policies, and the number of
+// skipped policies
+// TODO implement this in the future
+func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error) {
+	return nil, 0, errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
 
-// GetPoliciesForANamespace gets all auditable policies for a given namespace
-func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, error) {
+// GetPoliciesForANamespace gets all auditable policies for a given namespace, and the number
+// of skipped policies
+func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, int, error) {
 	namespacePolicies, err := f.findNamespacesForAllClusterAdmissionPolicies()
 	if err != nil {
-		return nil, fmt.Errorf("can't fetch ClusterAdmissionPolicies: %w", err)
+		return nil, 0, fmt.Errorf("can't fetch ClusterAdmissionPolicies: %w", err)
 	}
 	admissionPolicies, err := f.getAdmissionPolicies(namespace)
 	if err != nil {
-		return nil, fmt.Errorf("can't fetch AdmissionPolicies: %w", err)
+		return nil, 0, fmt.Errorf("can't fetch AdmissionPolicies: %w", err)
 	}
 	for _, policy := range admissionPolicies {
 		policy := policy
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
 	}
 
-	return f.filter(namespacePolicies[namespace]), nil
+	filteredPolicies := f.filter(namespacePolicies[namespace])
+	skippedNum := len(namespacePolicies[namespace]) - len(filteredPolicies)
+	return filteredPolicies, skippedNum, nil
+}
+
+func (f *Fetcher) GetNamespace(nsName string) (*v1.Namespace, error) {
+	namespace := &v1.Namespace{}
+	err := f.client.Get(context.Background(),
+		client.ObjectKey{
+			Name: nsName,
+		},
+		namespace)
+	if err != nil && errorsApi.IsNotFound(err) {
+		return nil, err
+	}
+	if err != nil {
+		return nil, fmt.Errorf("can't get namespace %s: %w", nsName, err)
+	}
+	return namespace, nil
 }
 
 // initializes map with an entry for all namespaces with an empty policies array as value
@@ -134,8 +152,16 @@ func (f *Fetcher) getAdmissionPolicies(namespace string) ([]policiesv1.Admission
 func newClient() (client.Client, error) {
 	config := ctrl.GetConfigOrDie()
 	customScheme := scheme.Scheme
-	customScheme.AddKnownTypes(schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
-	metav1.AddToGroupVersion(customScheme, schema.GroupVersion{Group: kubewardenPoliciesGroup, Version: kubewardenPoliciesVersion})
+	customScheme.AddKnownTypes(
+		schema.GroupVersion{Group: constants.KubewardenPoliciesGroup, Version: constants.KubewardenPoliciesVersion},
+		&policiesv1.ClusterAdmissionPolicy{},
+		&policiesv1.AdmissionPolicy{},
+		&policiesv1.ClusterAdmissionPolicyList{},
+		&policiesv1.AdmissionPolicyList{},
+	)
+	metav1.AddToGroupVersion(
+		customScheme, schema.GroupVersion{Group: constants.KubewardenPoliciesGroup, Version: constants.KubewardenPoliciesVersion},
+	)
 
 	return client.New(config, client.Options{Scheme: customScheme})
 }

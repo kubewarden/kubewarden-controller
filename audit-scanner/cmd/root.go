@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/resources"
 	"github.com/kubewarden/audit-scanner/internal/scanner"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -42,15 +42,22 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
+			policyServerURL, err := cmd.Flags().GetString("policy-server-url")
+			if err != nil {
+				return err
+			}
 			policiesFetcher, err := policies.NewFetcher()
 			if err != nil {
 				return err
 			}
-			resourcesFetcher, err := resources.NewFetcher(kubewardenNamespace)
+			resourcesFetcher, err := resources.NewFetcher(kubewardenNamespace, policyServerURL)
 			if err != nil {
 				return err
 			}
-			scanner := scanner.NewScanner(policiesFetcher, resourcesFetcher)
+			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher)
+			if err != nil {
+				return err
+			}
 
 			return startScanner(namespace, scanner)
 		},
@@ -60,12 +67,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal().Err(err).Msg("Error on cmd.Execute()")
 	}
 }
-
 func startScanner(namespace string, scanner Scanner) error {
 	if namespace != "" {
 		if err := scanner.ScanNamespace(namespace); err != nil {
@@ -83,5 +88,6 @@ func startScanner(namespace string, scanner Scanner) error {
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
 	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. Policy Server) are installed (required)")
+	rootCmd.Flags().StringP("policy-server-url", "p", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 }

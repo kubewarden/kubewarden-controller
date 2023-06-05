@@ -106,7 +106,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
 	}}
 
-	fetcher := Fetcher{dynamicClient, ""}
+	fetcher := Fetcher{dynamicClient, "", ""}
 
 	tests := []struct {
 		name     string
@@ -246,7 +246,7 @@ func TestGetPolicyServerByName(t *testing.T) {
 	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
 
 	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policyServerObj)
-	fetcher := Fetcher{dynamicClient, ""}
+	fetcher := Fetcher{dynamicClient, "", ""}
 
 	policyServer, err := getPolicyServerByName(context.Background(), "testing-name", &fetcher.dynamicClient)
 	if err != nil {
@@ -274,7 +274,7 @@ func TestGetServiceByAppLabel(t *testing.T) {
 	customScheme := scheme.Scheme
 
 	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policyServerObj)
-	fetcher := Fetcher{dynamicClient, ""}
+	fetcher := Fetcher{dynamicClient, "", ""}
 
 	service, err := getServiceByAppLabel(context.Background(), "testing", "default", &fetcher.dynamicClient)
 	if err != nil {
