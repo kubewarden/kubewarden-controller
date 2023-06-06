@@ -124,7 +124,7 @@ func auditResource(resource *resources.AuditableResources, resourcesFetcher *Res
 			admissionRequest := resources.GenerateAdmissionReview(resource)
 			auditResponse, responseErr := sendAdmissionReviewToPolicyServer(url, admissionRequest, httpClient)
 			if responseErr != nil {
-				// log error, will end in PolicyReportResult too
+				// log responseErr, will end in PolicyReportResult too
 				log.Error().Err(responseErr).Dict("response", zerolog.Dict().
 					Str("admissionRequest name", admissionRequest.Request.Name).
 					Str("policy", policy.GetName()).
@@ -134,9 +134,9 @@ func auditResource(resource *resources.AuditableResources, resourcesFetcher *Res
 			} else {
 				log.Debug().Dict("response", zerolog.Dict().
 					Str("uid", string(auditResponse.Response.UID)).
-					Bool("allowed", auditResponse.Response.Allowed).
 					Str("policy", policy.GetName()).
-					Str("resource", resource.GetName()),
+					Str("resource", resource.GetName()).
+					Bool("allowed", auditResponse.Response.Allowed),
 				).
 					Msg("audit review response")
 				nsReport.AddResult(policy, resource, auditResponse, responseErr)

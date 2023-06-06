@@ -192,15 +192,27 @@ func (s *PolicyReportStore) SavePolicyReport(report *PolicyReport) error {
 	}, result)
 	// Create new Policy Report if not found
 	if errorMachinery.IsNotFound(getErr) {
-		log.Debug().Msg("creating PolicyReport")
+		log.Debug().
+			Dict("dict", zerolog.Dict().
+				Str("report name", report.Name).Str("report ns", report.Namespace),
+			).
+			Msg("creating PolicyReport")
 		err := s.client.Create(context.TODO(), &report.PolicyReport)
 		if err != nil {
 			return fmt.Errorf("create failed: %w", err)
 		}
-		log.Info().Msg("created PolicyReport")
+		log.Info().
+			Dict("dict", zerolog.Dict().
+				Str("report name", report.Name).Str("report ns", report.Namespace),
+			).
+			Msg("created PolicyReport")
 	} else {
 		// Update existing Policy Report
-		log.Debug().Msg("updating PolicyReport")
+		log.Debug().
+			Dict("dict", zerolog.Dict().
+				Str("report name", report.Name).Str("report ns", report.Namespace),
+			).
+			Msg("updating PolicyReport")
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			getObj := &polReport.PolicyReport{}
 			err := s.client.Get(context.TODO(), types.NamespacedName{
@@ -225,7 +237,8 @@ func (s *PolicyReportStore) SavePolicyReport(report *PolicyReport) error {
 		log.Info().
 			Dict("dict", zerolog.Dict().
 				Str("report name", report.Name).Str("report ns", report.Namespace),
-			).Msg("updated PolicyReport")
+			).
+			Msg("updated PolicyReport")
 	}
 	return nil
 }
