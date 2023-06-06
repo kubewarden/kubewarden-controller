@@ -30,7 +30,7 @@ $ make build
 Have a look at CONTRIBUTING.md for more developer information.
 
 For implementation details, see [RFC-11](https://github.com/kubewarden/rfc/blob/main/rfc/0011-audit-checks.md), 
-[RFC-12](https://github.com/kubewarden/rfc/blob/main/rfc/0011-audit-checks.md).
+[RFC-12](https://github.com/kubewarden/rfc/blob/main/rfc/0012-policy-report.md).
 
 
 # Software bill of materials
