@@ -160,11 +160,13 @@ func (s *PolicyReportStore) ToJSON() (string, error) {
 // SaveAll saves the store policy reports to the cluster. It does this by
 // instantiating new clusterPolicyReport and PolicyReports, or updating them if
 // they are already present.
-func (s *PolicyReportStore) SaveAll() {
+func (s *PolicyReportStore) SaveAll() error {
+	var errs error
 	if err := s.SaveClusterPolicyReport(); err != nil {
 		log.Error().Err(err).
 			Str("report name", s.clusterPolicyReport.GetName()).
 			Msg("error saving ClusterPolicyReport")
+		errs = errors.New(errs.Error() + err.Error())
 	}
 
 	for _, report := range s.namespacedPolicyReports {
@@ -173,8 +175,10 @@ func (s *PolicyReportStore) SaveAll() {
 			log.Error().Err(err).
 				Str("report name", report.GetName()).
 				Msg("error saving PolicyReport")
+			errs = errors.New(errs.Error() + err.Error())
 		}
 	}
+	return errs
 }
 
 // SavePolicyReport instantiates the passed namespaced PolicyReport if it doesn't exist, or

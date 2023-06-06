@@ -106,9 +106,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 		fmt.Println(str)
 	}
 
-	s.reportStore.SaveAll()
-
-	return nil
+	return s.reportStore.SaveAll()
 }
 
 // auditResource sends the requests to the Policy Server to evaluate the auditable resources.
