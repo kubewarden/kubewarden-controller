@@ -133,7 +133,7 @@ together with the signature and certificate used to signed it in the
 
 # Security
 
-The Kubewarden team is security conscious. You can find our threat model
-assessment, responsible disclosure approach and other related things under the
-[*security* section of Kubewarden
-docs](https://docs.kubewarden.io/security/intro).
+The Kubewarden team is security conscious. You can find our [threat model
+assessment](https://docs.kubewarden.io/security/threat-model) and
+[responsible disclosure approach](https://docs.kubewarden.io/security/disclosure)
+in our Kubewarden docs.
