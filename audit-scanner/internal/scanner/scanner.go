@@ -106,10 +106,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 		fmt.Println(str)
 	}
 
-	err = s.reportStore.SaveAll()
-	if err != nil {
-		return err
-	}
+	s.reportStore.SaveAll()
 
 	return nil
 }
