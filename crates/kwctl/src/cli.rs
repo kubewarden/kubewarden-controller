@@ -282,7 +282,7 @@ fn run_args() -> Vec<Arg> {
             .long("execution-mode")
             .short('e')
             .value_name("MODE")
-            .value_parser(PossibleValuesParser::new(["opa","gatekeeper", "kubewarden"]))
+            .value_parser(PossibleValuesParser::new(["opa","gatekeeper", "kubewarden", "wasi"]))
             .help("The runtime to use to execute this policy"),
         Arg::new("disable-wasmtime-cache")
             .long("disable-wasmtime-cache")

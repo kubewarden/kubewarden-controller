@@ -15,6 +15,7 @@ lazy_static! {
 pub(crate) enum Backend {
     Opa,
     OpaGatekeeper,
+    Wasi,
     KubewardenWapc(ProtocolVersion),
 }
 
@@ -90,6 +91,7 @@ impl BackendDetector {
     pub(crate) fn detect(&self, wasm_path: PathBuf, metadata: &Metadata) -> Result<Backend> {
         let is_rego_policy = self.is_rego_policy(&wasm_path)?;
         match metadata.execution_mode {
+            PolicyExecutionMode::Wasi => Ok(Backend::Wasi),
             PolicyExecutionMode::Opa => {
                 if is_rego_policy {
                     Ok(Backend::Opa)

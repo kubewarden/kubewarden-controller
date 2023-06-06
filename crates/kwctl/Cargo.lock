@@ -445,7 +445,7 @@ checksum = "a3e2c3daef883ecc1b5d58c15adae93470a91d425f3532ba1695849656af3fc1"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.9.5#588793547485838b82c59894faed0bec56b79943"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.10.0#650df01b300dbdc4b6f535d1697a1c650512af98"
 dependencies = [
  "base64 0.21.2",
  "chrono",
@@ -487,7 +487,7 @@ checksum = "5e5877db5d1af7fae60d06b5db9430b68056a69b3582a0be8e3691e87654aeb6"
 dependencies = [
  "async-trait",
  "async_once",
- "cached_proc_macro",
+ "cached_proc_macro 0.16.0",
  "cached_proc_macro_types",
  "futures",
  "hashbrown 0.13.2",
@@ -500,18 +500,16 @@ dependencies = [
 
 [[package]]
 name = "cached"
-version = "0.43.0"
+version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc2fafddf188d13788e7099295a59b99e99b2148ab2195cae454e754cc099925"
+checksum = "b195e4fbc4b6862bbd065b991a34750399c119797efff72492f28a5864de8700"
 dependencies = [
  "async-trait",
- "async_once",
- "cached_proc_macro",
+ "cached_proc_macro 0.17.0",
  "cached_proc_macro_types",
  "futures",
  "hashbrown 0.13.2",
  "instant",
- "lazy_static",
  "once_cell",
  "thiserror",
  "tokio",
@@ -522,6 +520,19 @@ name = "cached_proc_macro"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e10ca87c81aaa3a949dbbe2b5e6c2c45dbc94ba4897e45ea31ff9ec5087be3dc"
+dependencies = [
+ "cached_proc_macro_types",
+ "darling 0.14.4",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "cached_proc_macro"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b48814962d2fd604c50d2b9433c2a41a0ab567779ee2c02f7fba6eca1221f082"
 dependencies = [
  "cached_proc_macro_types",
  "darling 0.14.4",
@@ -2320,9 +2331,9 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.82.2"
+version = "0.83.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc7d3d52dd5c871991679102e80dfb192faaaa09fecdbccdd8c55af264ce7a8f"
+checksum = "32f468b2fa6c5ef92117813238758f79e394c2d7688bd6faa3e77243f90260b0"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -2331,9 +2342,9 @@ dependencies = [
 
 [[package]]
 name = "kube-client"
-version = "0.82.2"
+version = "0.83.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "544339f1665488243f79080441cacb09c997746fd763342303e66eebb9d3ba13"
+checksum = "337eb332d253036adc3247936248d0742c6c743f51eb38a684fd9b3b2878b27c"
 dependencies = [
  "base64 0.20.0",
  "bytes",
@@ -2367,9 +2378,9 @@ dependencies = [
 
 [[package]]
 name = "kube-core"
-version = "0.82.2"
+version = "0.83.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25983d07f414dfffba08c5951fe110f649113416b1d8e22f7c89c750eb2555a7"
+checksum = "f924177ad71936cfe612641b45bb9879890696d3c026f0846423529f4fa449af"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -3391,13 +3402,13 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.9.5"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.9.5#588793547485838b82c59894faed0bec56b79943"
+version = "0.10.0"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.10.0#650df01b300dbdc4b6f535d1697a1c650512af98"
 dependencies = [
  "anyhow",
  "base64 0.21.2",
  "burrego",
- "cached 0.43.0",
+ "cached 0.44.0",
  "chrono",
  "dns-lookup",
  "email_address",
@@ -3423,8 +3434,12 @@ dependencies = [
  "url",
  "validator",
  "wapc",
+ "wasi-cap-std-sync",
+ "wasi-common",
  "wasmparser 0.107.0",
+ "wasmtime",
  "wasmtime-provider",
+ "wasmtime-wasi",
 ]
 
 [[package]]
@@ -4908,9 +4923,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.24"
+version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f57e3ca2a01450b1a921183a9c9cbfda207fd822cef4ccb00a65402cbba7a74"
+checksum = "8803eee176538f94ae9a14b55b2804eb7e1441f8210b1c31290b3bccdccff73b"
 dependencies = [
  "proc-macro2",
  "quote",
