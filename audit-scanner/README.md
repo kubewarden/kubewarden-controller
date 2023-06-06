@@ -7,8 +7,12 @@
 > **Note well:** don't forget to checkout [Kubewarden's documentation](https://docs.kubewarden.io)
 > for more information
 
-The Audit scanner inspects the resources already deployed in the cluster and
-flags when something violates some policies installed in the cluster.
+The Audit scanner inspects the resources defined in the cluster and
+identifies the ones that are violating Kubewarden policies.
+
+The results of the scan are made available via `PolicyReport` objects. Each Namespace
+has its own dedicated `PolicyReport`. Cluster-wide resources compliance is available via
+the `ClusterPolicyReport` resource. 
 
 # Deployment
 
