@@ -45,15 +45,16 @@ type Scanner struct {
 	reportStore      report.PolicyReportStore
 	// http client used to make requests against the Policy Server
 	httpClient http.Client
+	printJSON  bool
 }
 
 // NewScanner creates a new scanner with the PoliciesFetcher provided
-func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher) (*Scanner, error) {
+func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher, printJSON bool) (*Scanner, error) {
 	report, err := report.NewPolicyReportStore()
 	if err != nil {
 		return nil, err
 	}
-	return &Scanner{policiesFetcher, resourcesFetcher, *report, http.Client{}}, nil
+	return &Scanner{policiesFetcher, resourcesFetcher, *report, http.Client{}, printJSON}, nil
 }
 
 // ScanNamespace scans resources for a given namespace
@@ -95,16 +96,17 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 			log.Error().Err(err).Msg("error adding PolicyReport to store")
 		}
 	}
+	log.Info().Str("namespace", nsName).Msg("scan finished")
 
-	// TODO for debug
-	str, err := s.reportStore.ToJSON()
-	fmt.Println(str)
-	if err != nil {
-		log.Error().Err(err).Msg("error marshaling reportStore to JSON")
+	if s.printJSON {
+		str, err := s.reportStore.ToJSON()
+		if err != nil {
+			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
+		}
+		fmt.Println(str)
 	}
 
-	log.Info().Str("namespace", nsName).Msg("scan finished")
-	return nil
+	return s.reportStore.SaveAll()
 }
 
 // auditResource sends the requests to the Policy Server to evaluate the auditable resources.
@@ -122,7 +124,7 @@ func auditResource(resource *resources.AuditableResources, resourcesFetcher *Res
 			admissionRequest := resources.GenerateAdmissionReview(resource)
 			auditResponse, responseErr := sendAdmissionReviewToPolicyServer(url, admissionRequest, httpClient)
 			if responseErr != nil {
-				// log error, will end in PolicyReportResult too
+				// log responseErr, will end in PolicyReportResult too
 				log.Error().Err(responseErr).Dict("response", zerolog.Dict().
 					Str("admissionRequest name", admissionRequest.Request.Name).
 					Str("policy", policy.GetName()).
@@ -132,9 +134,9 @@ func auditResource(resource *resources.AuditableResources, resourcesFetcher *Res
 			} else {
 				log.Debug().Dict("response", zerolog.Dict().
 					Str("uid", string(auditResponse.Response.UID)).
-					Bool("allowed", auditResponse.Response.Allowed).
 					Str("policy", policy.GetName()).
-					Str("resource", resource.GetName()),
+					Str("resource", resource.GetName()).
+					Bool("allowed", auditResponse.Response.Allowed),
 				).
 					Msg("audit review response")
 				nsReport.AddResult(policy, resource, auditResponse, responseErr)

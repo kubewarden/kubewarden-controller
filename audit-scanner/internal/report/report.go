@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	admv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -87,6 +88,14 @@ func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured
 		r.Summary.Pass++
 	}
 	r.Results = append(r.Results, result)
+	log.Debug().
+		Str("report name", r.Name).
+		Dict("result", zerolog.Dict().
+			Str("policy", policy.GetName()).
+			Str("resource", resource.GetName()).
+			Bool("allowed", auditResponse.Response.Allowed).
+			Str("result", string(result.Result)),
+		).Msg("added result to report")
 }
 
 func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {
@@ -100,6 +109,14 @@ func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstr
 		r.Summary.Pass++
 	}
 	r.Results = append(r.Results, result)
+	log.Debug().
+		Str("report name", r.Name).
+		Dict("result", zerolog.Dict().
+			Str("policy", policy.GetName()).
+			Str("resource", resource.GetName()).
+			Bool("allowed", auditResponse.Response.Allowed).
+			Str("result", string(result.Result)),
+		).Msg("added result to report")
 }
 
 func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) *v1alpha2.PolicyReportResult {

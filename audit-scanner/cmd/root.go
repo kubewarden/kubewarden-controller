@@ -23,6 +23,9 @@ type Scanner interface {
 
 var level logconfig.Level
 
+// print result of scan as JSON to stdout
+var printJSON bool
+
 // rootCmd represents the base command when called without any subcommands
 var (
 	rootCmd = &cobra.Command{
@@ -54,7 +57,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher)
+			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher, printJSON)
 			if err != nil {
 				return err
 			}
@@ -88,6 +91,7 @@ func startScanner(namespace string, scanner Scanner) error {
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
 	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. Policy Server) are installed (required)")
-	rootCmd.Flags().StringP("policy-server-url", "p", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
+	rootCmd.Flags().StringP("policy-server-url", "u", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
+	rootCmd.Flags().BoolVarP(&printJSON, "print", "p", false, "print result of scan in JSON to stdout")
 }

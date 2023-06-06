@@ -1,4 +1,4 @@
-### Testing localy
+### Testing locally
 
 Install Kubewarden stack normally. For now:
 
@@ -24,9 +24,27 @@ helm upgrade -i --wait \
 kubectl port-forward -n kubewarden service/policy-server-default 3000:8443
 ```
 
+Install PolicyReports CRDs:
+```
+kubectl apply \
+  -f config/crd/wgpolicyk8s.io_clusterpolicyreports.yaml \
+  -f config/crd/wgpolicyk8s.io_policyreports.yaml
+```
+
 Then:
 
+``` console
+./bin/audit-scanner \
+  -k kubewarden --namespace default \
+  --policy-server-url https://localhost:3000 \
+  -l debug
+```
+
+or to get results in JSON:
 
 ``` console
-./bin/audit-scanner -k kubewarden --namespace default -l debug --policy-server-url https://localhost:3000
+./bin/audit-scanner \
+  -k kubewarden --namespace default \
+  --policy-server-url https://localhost:3000 \
+  -l debug --print
 ```
