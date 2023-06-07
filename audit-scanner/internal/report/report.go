@@ -23,13 +23,24 @@ type ClusterPolicyReport struct {
 	v1alpha2.ClusterPolicyReport
 }
 
-// Status specifies state of a policy result
 const (
+	// Status specifies state of a policy result
 	StatusPass  = "pass"
 	StatusFail  = "fail"
 	StatusWarn  = "warn"
 	StatusError = "error"
 	StatusSkip  = "skip"
+
+	// Severity specifies severity of a policy result
+	SeverityCritical = "critical"
+	SeverityHigh     = "high"
+	SeverityMedium   = "medium"
+	SeverityLow      = "low"
+	SeverityInfo     = "info"
+
+	// Category specifies the category of a policy result
+	CategoryMutating   = "mutating & validating"
+	CategoryValidating = "validating"
 )
 
 func NewClusterPolicyReport(name string) ClusterPolicyReport {
@@ -116,7 +127,10 @@ func (r *ClusterPolicyReport) GetSummary() (string, error) {
 	return string(marshaled), nil
 }
 
-func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {
+func (r *ClusterPolicyReport) AddResult(
+	policy policiesv1.Policy, resource unstructured.Unstructured,
+	auditResponse *admv1.AdmissionReview, responseErr error,
+) {
 	result := newPolicyReportResult(policy, resource, auditResponse, responseErr)
 	switch result.Result {
 	case StatusFail:
@@ -137,7 +151,10 @@ func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstr
 		).Msg("added result to report")
 }
 
-func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) *v1alpha2.PolicyReportResult {
+func newPolicyReportResult( //nolint:funlen
+	policy policiesv1.Policy, resource unstructured.Unstructured,
+	auditResponse *admv1.AdmissionReview, responseErr error,
+) *v1alpha2.PolicyReportResult {
 	var result v1alpha2.PolicyResult
 	var description string
 	if responseErr != nil {
@@ -166,13 +183,28 @@ func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstr
 		Kind:    constants.KubewardenKindAdmissionPolicy,
 	}:
 		name = "ap-" + policy.GetName()
-	default:
-		// this never happens
+	default: // this never happens
 		log.Fatal().Msg("no policy found when creating PolicyReportResult")
 	}
 
 	time := metav1.Now()
 	timestamp := *time.ProtoTime()
+
+	var severity v1alpha2.PolicyResultSeverity
+	var scored bool
+	if policy.GetPolicyMode() == policiesv1.PolicyMode(policiesv1.PolicyModeStatusMonitor) {
+		scored = true
+		severity = SeverityInfo
+	}
+
+	var category string
+	if policy.IsMutating() {
+		category = CategoryMutating
+	} else {
+		category = CategoryValidating
+	}
+
+	rule := policy.GetName()
 
 	resourceObjectReference := &v1.ObjectReference{
 		Kind:            resource.GetKind(),
@@ -184,13 +216,19 @@ func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstr
 	}
 
 	return &v1alpha2.PolicyReportResult{
-		Source: PolicyReportSource,
-		Policy: name, // either cap-policy_name or ap-policy_name
+		Source:   PolicyReportSource,
+		Policy:   name,     // either cap-policy_name or ap-policy_name
+		Rule:     rule,     // policy name
+		Category: category, // either validating, or mutating and validating
+		Severity: severity, // either info for monitor or empty
 		// Timestamp shouldn't be used in go structs, and only gives seconds
 		// https://github.com/kubernetes/apimachinery/blob/v0.27.2/pkg/apis/meta/v1/time_proto.go#LL48C9-L48C9
-		Timestamp:   timestamp,                                      // time the result was found
-		Result:      result,                                         // pass, fail, error
-		Subjects:    []*v1.ObjectReference{resourceObjectReference}, // reference to object evaluated
-		Description: description,                                    // output message of the policy
+		Timestamp:       timestamp, // time the result was computed
+		Result:          result,    // pass, fail, error
+		Scored:          scored,
+		Subjects:        []*v1.ObjectReference{resourceObjectReference}, // reference to object evaluated
+		SubjectSelector: &metav1.LabelSelector{},
+		Description:     description, // output message of the policy
+		Properties:      map[string]string{},
 	}
 }
