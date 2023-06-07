@@ -120,7 +120,8 @@ func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured
 		).Msg("added result to report")
 }
 
-func (r *PolicyReport) GetSummary() (string, error) {
+// GetSummaryJSON gets the report.Summary formatted in JSON. Useful for logging
+func (r *PolicyReport) GetSummaryJSON() (string, error) {
 	marshaled, err := json.Marshal(r.Summary)
 	if err != nil {
 		return "error marshalling summary", err
