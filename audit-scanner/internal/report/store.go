@@ -195,24 +195,23 @@ func (s *PolicyReportStore) SavePolicyReport(report *PolicyReport) error {
 		log.Debug().
 			Dict("dict", zerolog.Dict().
 				Str("report name", report.Name).Str("report ns", report.Namespace),
-			).
-			Msg("creating PolicyReport")
+			).Msg("creating PolicyReport")
 		err := s.client.Create(context.TODO(), &report.PolicyReport)
 		if err != nil {
 			return fmt.Errorf("create failed: %w", err)
 		}
+		summary, _ := report.GetSummary()
 		log.Info().
 			Dict("dict", zerolog.Dict().
-				Str("report name", report.Name).Str("report ns", report.Namespace),
-			).
-			Msg("created PolicyReport")
+				Str("report name", report.Name).Str("report ns", report.Namespace).
+				Str("summary", summary),
+			).Msg("created PolicyReport")
 	} else {
 		// Update existing Policy Report
 		log.Debug().
 			Dict("dict", zerolog.Dict().
 				Str("report name", report.Name).Str("report ns", report.Namespace),
-			).
-			Msg("updating PolicyReport")
+			).Msg("updating PolicyReport")
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			getObj := &polReport.PolicyReport{}
 			err := s.client.Get(context.TODO(), types.NamespacedName{
@@ -234,11 +233,12 @@ func (s *PolicyReportStore) SavePolicyReport(report *PolicyReport) error {
 		if retryErr != nil {
 			return fmt.Errorf("update failed: %w", retryErr)
 		}
+		summary, _ := report.GetSummary()
 		log.Info().
 			Dict("dict", zerolog.Dict().
-				Str("report name", report.Name).Str("report ns", report.Namespace),
-			).
-			Msg("updated PolicyReport")
+				Str("report name", report.Name).Str("report ns", report.Namespace).
+				Str("summary", summary),
+			).Msg("updated PolicyReport")
 	}
 	return nil
 }
@@ -256,10 +256,17 @@ func (s *PolicyReportStore) SaveClusterPolicyReport() error {
 		if err != nil {
 			return fmt.Errorf("create failed: %w", err)
 		}
-		log.Info().Msg("created ClusterPolicyReport")
+		summary, _ := report.GetSummary()
+		log.Info().
+			Dict("dict", zerolog.Dict().
+				Str("report name", report.Name).Str("report ns", report.Namespace).
+				Str("summary", summary),
+			).Msg("created ClusterPolicyReport")
 	} else {
 		// Update existing Policy Report
-		log.Debug().Msg("updating ClusterPolicyReport")
+		log.Debug().
+			Dict("dict", zerolog.Dict().Str("report name", report.Name)).
+			Msg("updating ClusterPolicyReport")
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			getObj := &polReport.ClusterPolicyReport{}
 			err := s.client.Get(context.TODO(), client.ObjectKey{Name: report.Name}, getObj)
@@ -278,9 +285,11 @@ func (s *PolicyReportStore) SaveClusterPolicyReport() error {
 		if retryErr != nil {
 			return fmt.Errorf("update failed: %w", retryErr)
 		}
+		summary, _ := report.GetSummary()
 		log.Info().
 			Dict("dict", zerolog.Dict().
-				Str("report name", report.Name),
+				Str("report name", report.Name).Str("report ns", report.Namespace).
+				Str("summary", summary),
 			).Msg("updated ClusterPolicyReport")
 	}
 	return nil

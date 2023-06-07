@@ -1,6 +1,8 @@
 package report
 
 import (
+	"encoding/json"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
@@ -96,6 +98,22 @@ func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured
 			Bool("allowed", auditResponse.Response.Allowed).
 			Str("result", string(result.Result)),
 		).Msg("added result to report")
+}
+
+func (r *PolicyReport) GetSummary() (string, error) {
+	marshaled, err := json.Marshal(r.Summary)
+	if err != nil {
+		return "error marshalling summary", err
+	}
+	return string(marshaled), nil
+}
+
+func (r *ClusterPolicyReport) GetSummary() (string, error) {
+	marshaled, err := json.Marshal(r.Summary)
+	if err != nil {
+		return "error marshalling summary", err
+	}
+	return string(marshaled), nil
 }
 
 func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {
