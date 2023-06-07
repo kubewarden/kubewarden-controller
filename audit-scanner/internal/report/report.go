@@ -41,14 +41,20 @@ const (
 	// Category specifies the category of a policy result
 	CategoryMutating   = "mutating & validating"
 	CategoryValidating = "validating"
+
+	LabelAppManagedBy = "app.kubernetes.io/managed-by"
+	LabelApp          = "kubewarden"
 )
 
 func NewClusterPolicyReport(name string) ClusterPolicyReport {
+	labels := map[string]string{}
+	labels[LabelAppManagedBy] = LabelApp
 	return ClusterPolicyReport{
 		ClusterPolicyReport: v1alpha2.ClusterPolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              PrefixNameClusterPolicyReport + name,
 				CreationTimestamp: metav1.Now(),
+				Labels:            labels,
 			},
 			Summary: v1alpha2.PolicyReportSummary{
 				Pass:  0, // count of policies with requirements met
@@ -63,12 +69,15 @@ func NewClusterPolicyReport(name string) ClusterPolicyReport {
 }
 
 func NewPolicyReport(namespace *v1.Namespace) PolicyReport {
+	labels := map[string]string{}
+	labels[LabelAppManagedBy] = LabelApp
 	return PolicyReport{
 		PolicyReport: v1alpha2.PolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              PrefixNamePolicyReport + namespace.Name,
 				Namespace:         namespace.Name,
 				CreationTimestamp: metav1.Now(),
+				Labels:            labels,
 			},
 			Scope: &v1.ObjectReference{
 				Kind:            namespace.Kind,
