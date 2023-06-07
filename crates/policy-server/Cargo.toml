@@ -35,4 +35,4 @@ semver = { version = "1.0.17", features = ["serde"] }
 
 [dev-dependencies]
 rstest = "0.17"
-tempfile = "3.5.0"
+tempfile = "3.6.0"
