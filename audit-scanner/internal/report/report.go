@@ -39,7 +39,7 @@ const (
 	SeverityInfo     = "info"
 
 	// Category specifies the category of a policy result
-	CategoryMutating   = "mutating & validating"
+	CategoryMutating   = "mutating"
 	CategoryValidating = "validating"
 
 	LabelAppManagedBy = "app.kubernetes.io/managed-by"
