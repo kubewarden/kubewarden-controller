@@ -19,6 +19,8 @@ type Scanner interface {
 	ScanNamespace(namespace string) error
 	// ScanAllNamespaces scan all namespaces
 	ScanAllNamespaces() error
+	// Scan only cluster wide resources
+	ScanClusterWideResources() error
 }
 
 var level logconfig.Level
@@ -45,6 +47,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
+			clusterWide, err := cmd.Flags().GetBool("cluster")
+			if err != nil {
+				return err
+			}
 			policyServerURL, err := cmd.Flags().GetString("policy-server-url")
 			if err != nil {
 				return err
@@ -62,7 +68,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 				return err
 			}
 
-			return startScanner(namespace, scanner)
+			return startScanner(namespace, clusterWide, scanner)
 		},
 	}
 )
@@ -74,12 +80,20 @@ func Execute() {
 		log.Fatal().Err(err).Msg("Error on cmd.Execute()")
 	}
 }
-func startScanner(namespace string, scanner Scanner) error {
+func startScanner(namespace string, clusterWide bool, scanner Scanner) error {
+	if clusterWide {
+		if err := scanner.ScanClusterWideResources(); err != nil {
+			return err
+		}
+	}
+
 	if namespace != "" {
 		if err := scanner.ScanNamespace(namespace); err != nil {
 			return err
 		}
-	} else {
+	} else if !clusterWide {
+		// FIXME ScanAllNamespaces is not implemented. Therefore, if we are
+		// scanning cluster wide resource do not trigger this scan. It will failed anyway
 		if err := scanner.ScanAllNamespaces(); err != nil {
 			return err
 		}
@@ -90,6 +104,7 @@ func startScanner(namespace string, scanner Scanner) error {
 
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
+	rootCmd.Flags().BoolP("cluster", "c", false, "Scan cluster wide resources")
 	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. Policy Server) are installed (required)")
 	rootCmd.Flags().StringP("policy-server-url", "u", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))

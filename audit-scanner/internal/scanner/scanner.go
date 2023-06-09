@@ -30,12 +30,16 @@ type PoliciesFetcher interface {
 	// GetPoliciesForAllNamespaces gets all auditable policies for all
 	// namespaces, and the number of skipped policies
 	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error)
+	// Get all auditable ClusterAdmissionPolicies and the number of skipped policies
+	GetClusterAdmissionPolicies() ([]policiesv1.Policy, int, error)
 }
 
 type ResourcesFetcher interface {
 	GetResourcesForPolicies(ctx context.Context, policies []policiesv1.Policy, namespace string) ([]resources.AuditableResources, error)
 	// GetPolicyServerURLRunningPolicy gets the URL used to send API requests to the policy server
 	GetPolicyServerURLRunningPolicy(ctx context.Context, policy policiesv1.Policy) (*url.URL, error)
+	// Get Cluster wide resources evaluated by the given policies
+	GetClusterWideResourcesForPolicies(ctx context.Context, policies []policiesv1.Policy) ([]resources.AuditableResources, error)
 }
 
 // A Scanner verifies that existing resources don't violate any of the policies
@@ -106,6 +110,73 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	}
 
 	return s.reportStore.SaveAll()
+}
+
+func (s *Scanner) ScanClusterWideResources() error {
+	log.Info().Msg("cluster wide scan started")
+	policies, skippedNum, err := s.policiesFetcher.GetClusterAdmissionPolicies()
+	if err != nil {
+		return err
+	}
+	log.Debug().
+		Dict("dict", zerolog.Dict().
+			Int("policies to evaluate", len(policies)).
+			Int("policies skipped", skippedNum),
+		).Msg("cluster admission policies count")
+	auditableResources, err := s.resourcesFetcher.GetClusterWideResourcesForPolicies(context.Background(), policies)
+	if err != nil {
+		return err
+	}
+	// create PolicyReport
+	clusterReport := report.NewClusterPolicyReport("cluster-report")
+	clusterReport.Summary.Skip = skippedNum
+	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need
+	// to evaluate them.
+	for i := range auditableResources {
+		auditClusterResource(&auditableResources[i], &s.resourcesFetcher, &s.httpClient, &clusterReport)
+	}
+	log.Info().Msg("scan finished")
+	err = s.reportStore.UpdateClusterPolicyReport(&clusterReport)
+	if err != nil {
+		log.Error().Err(err).Msg("error adding PolicyReport to store")
+	}
+	// TODO for debug
+	if s.printJSON {
+		str, err := s.reportStore.ToJSON()
+		if err != nil {
+			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
+		}
+		fmt.Println(str)
+	}
+	return s.reportStore.SaveAll()
+}
+
+func auditClusterResource(resource *resources.AuditableResources, resourcesFetcher *ResourcesFetcher, httpClient *http.Client, clusterReport *report.ClusterPolicyReport) {
+	for _, policy := range resource.Policies {
+		url, err := (*resourcesFetcher).GetPolicyServerURLRunningPolicy(context.Background(), policy)
+		if err != nil {
+			// TODO what's the better thing to do here?
+			log.Error().Err(err)
+			continue
+		}
+		for _, resource := range resource.Resources {
+			admissionRequest := resources.GenerateAdmissionReview(resource)
+			auditResponse, responseErr := sendAdmissionReviewToPolicyServer(url, admissionRequest, httpClient)
+			if responseErr != nil {
+				// log error, will end in ClusterPolicyReportResult too
+				log.Error().Err(responseErr).Dict("response", zerolog.Dict().
+					Str("admissionRequest name", admissionRequest.Request.Name).Str("policy", policy.GetName()).Str("resource", resource.GetName()),
+				).
+					Msg("error sending AdmissionReview to PolicyServer")
+			} else {
+				log.Debug().Dict("response", zerolog.Dict().
+					Str("uid", string(auditResponse.Response.UID)).Bool("allowed", auditResponse.Response.Allowed).Str("policy", policy.GetName()).Str("resource", resource.GetName()),
+				).
+					Msg("audit review response")
+				clusterReport.AddResult(policy, resource, auditResponse, responseErr)
+			}
+		}
+	}
 }
 
 // auditResource sends the requests to the Policy Server to evaluate the auditable resources.

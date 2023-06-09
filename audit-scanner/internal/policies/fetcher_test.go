@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -212,6 +213,135 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 			}
 			if !cmp.Equal(policies, ttest.expect, policySorter, policyComparer) {
 				t.Errorf("expected %v, but got %v", ttest.expect, policies)
+			}
+		})
+	}
+}
+
+func TestGetClusterAdmissionPolicies(t *testing.T) {
+	clusterPolicy1 := policiesv1.ClusterAdmissionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cap1",
+			// It's necessary to define ResourceVersion and Generation
+			// because the fake client can set values for these fields.
+			// See more at docs:
+			// ObjectMeta's `Generation` and `ResourceVersion` don't
+			// behave properly, Patch or Update operations that rely
+			// on these fields will fail, or give false positives.
+			// https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client/fake
+			ResourceVersion: "123",
+			Generation:      1,
+		},
+		Spec: policiesv1.ClusterAdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
+				BackgroundAudit: true,
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"", "apps"},
+						APIVersions: []string{"v1", "alphav1"},
+						Resources:   []string{"pods", "deployments"},
+					},
+				},
+				},
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: policiesv1.PolicyStatusActive,
+		},
+	}
+
+	clusterPolicy2 := policiesv1.ClusterAdmissionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cap2",
+			// It's necessary to define ResourceVersion and Generation
+			// because the fake client can set values for these fields.
+			// See more at docs:
+			// ObjectMeta's `Generation` and `ResourceVersion` don't
+			// behave properly, Patch or Update operations that rely
+			// on these fields will fail, or give false positives.
+			// https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client/fake
+			ResourceVersion: "123",
+			Generation:      1,
+		},
+		Spec: policiesv1.ClusterAdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
+				BackgroundAudit: true,
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"", "apps"},
+						APIVersions: []string{"v1", "alphav1"},
+						Resources:   []string{"pods", "deployments"},
+					},
+				},
+				},
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: policiesv1.PolicyStatusActive,
+		},
+	}
+	clusterPolicy3 := policiesv1.ClusterAdmissionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cap3",
+			// It's necessary to define ResourceVersion and Generation
+			// because the fake client can set values for these fields.
+			// See more at docs:
+			// ObjectMeta's `Generation` and `ResourceVersion` don't
+			// behave properly, Patch or Update operations that rely
+			// on these fields will fail, or give false positives.
+			// https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client/fake
+			ResourceVersion: "123",
+			Generation:      1,
+		},
+		Spec: policiesv1.ClusterAdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
+				BackgroundAudit: false,
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"", "apps"},
+						APIVersions: []string{"v1", "alphav1"},
+						Resources:   []string{"pods", "deployments"},
+					},
+				},
+				},
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: policiesv1.PolicyStatusPending,
+		},
+	}
+
+	tests := []struct {
+		name                  string
+		policies              []k8sClient.Object
+		expect                []policiesv1.Policy
+		expectSkippedPolicies int
+	}{
+		{"Get all ClusterAdmissionPolicies", []k8sClient.Object{&clusterPolicy1, &clusterPolicy2}, []policiesv1.Policy{&clusterPolicy1, &clusterPolicy2}, 0},
+		{"Get only auditable ClusterAdmissionPolicies", []k8sClient.Object{&clusterPolicy1, &clusterPolicy2, &clusterPolicy3}, []policiesv1.Policy{&clusterPolicy1, &clusterPolicy2}, 1},
+	}
+
+	policyComparer := cmp.Comparer(func(n, p policiesv1.Policy) bool { return p.GetUniqueName() == n.GetUniqueName() })
+	policySorter := cmpopts.SortSlices(func(n, p policiesv1.Policy) bool { return p.GetUniqueName() > n.GetUniqueName() })
+
+	for _, test := range tests {
+		ttest := test
+		t.Run(ttest.name, func(t *testing.T) {
+			fetcher := Fetcher{client: mockClient(ttest.policies...), filter: filterAuditablePolicies}
+
+			policies, skippedPolicies, err := fetcher.GetClusterAdmissionPolicies()
+			if err != nil {
+				t.Errorf("error should be nil:  %s", err.Error())
+			}
+			if !cmp.Equal(policies, ttest.expect, policySorter, policyComparer) {
+				diff := cmp.Diff(ttest.expect, policies)
+				t.Errorf("ClusterAdmissionPolicy list does not match the expected values: %s", diff)
+			}
+			if skippedPolicies != ttest.expectSkippedPolicies {
+				t.Errorf("expected skipped policies count: %d. Got %d", ttest.expectSkippedPolicies, skippedPolicies)
 			}
 		})
 	}

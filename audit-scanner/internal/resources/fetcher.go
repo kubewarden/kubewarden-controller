@@ -2,18 +2,21 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
+	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -29,6 +32,11 @@ type Fetcher struct {
 	// FQDN of the policy server to query. If not empty, Fetcher will query on
 	// port 3000. Useful for out-of-cluster debugging
 	policyServerURL string
+	// We use two different clients to facilitate the interaction with
+	// the discovery API. Therefore, the clientset is used to call the discovery
+	// API and see if a resource is namespaced or not. While the dynamicClient
+	// client is used to fetch resource data.
+	clientset kubernetes.Interface
 }
 
 // AuditableResources represents all resources that must be audited for a group of policies.
@@ -45,10 +53,11 @@ type AuditableResources struct {
 func NewFetcher(kubewardenNamespace string, policyServerURL string) (*Fetcher, error) {
 	config := ctrl.GetConfigOrDie()
 	dynamicClient := dynamic.NewForConfigOrDie(config)
+	clientset := kubernetes.NewForConfigOrDie(config)
 	if policyServerURL != "" {
 		log.Info().Msg(fmt.Sprintf("Querying PolicyServers at %s for debugging purposes. Don't forget to start `kwctl port-forward` if needed", policyServerURL))
 	}
-	return &Fetcher{dynamicClient, kubewardenNamespace, policyServerURL}, nil
+	return &Fetcher{dynamicClient, kubewardenNamespace, policyServerURL, clientset}, nil
 }
 
 // GetResourcesForPolicies fetches all resources that must be audited and returns them in an AuditableResources array.
@@ -63,7 +72,65 @@ func (f *Fetcher) GetResourcesForPolicies(ctx context.Context, policies []polici
 	for gvr, policies := range gvrMap {
 		resources, err := f.getResourcesDynamically(ctx, gvr.Group, gvr.Version, gvr.Resource, namespace)
 		// continue if resource doesn't exist.
-		if errors.IsNotFound(err) {
+		if apimachineryerrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		if len(resources.Items) > 0 {
+			auditableResources = append(auditableResources, AuditableResources{
+				Policies:  policies,
+				Resources: resources.Items,
+			})
+		}
+	}
+
+	return auditableResources, nil
+}
+
+// Method to check if the given resource is namespaced or not.
+func (f *Fetcher) isNamespacedResource(gvr schema.GroupVersionResource) (bool, error) {
+	discoveryClient := f.clientset.Discovery()
+
+	apiResourceList, err := discoveryClient.ServerResourcesForGroupVersion(gvr.GroupVersion().String())
+	if err != nil {
+		return false, err
+	}
+	for _, apiResource := range apiResourceList.APIResources {
+		if apiResource.Name == gvr.Resource {
+			return apiResource.Namespaced, nil
+		}
+	}
+	return false, constants.ErrResourceNotFound
+}
+
+// GetClusterWideResourcesForPolicies fetches all cluster wide resources that must be
+// audited and returns them in an AuditableResources array. Iterates through all
+// the rules in the ClusterAdmissionPolicy policies to find all relevant resources.
+// It creates a GVR (Group Version Resource) array for each rule defined in a policy.
+// Then fetches and aggregates the GVRs for all the policies. Returns an array of
+// AuditableResources. Each entry of the array will contain and array of resources
+// of the same kind, and an array of policies that should evaluate these resources.
+// Example: AuditableResources{Policies:[policy1, policy2] Resources:[podA, podB], Policies:[policy1] Resources:[deploymentA], Policies:[policy3] Resources:[ingressA]}
+func (f *Fetcher) GetClusterWideResourcesForPolicies(ctx context.Context, policies []policiesv1.Policy) ([]AuditableResources, error) {
+	auditableResources := []AuditableResources{}
+	gvrMap := createGVRPolicyMap(policies)
+	for gvr, policies := range gvrMap {
+		isNamespaced, err := f.isNamespacedResource(gvr)
+		if err != nil {
+			if errors.Is(err, constants.ErrResourceNotFound) {
+				log.Warn().Msg(fmt.Sprintf("API resource (%s) not found", gvr.String()))
+				continue
+			}
+			return nil, err
+		}
+		if isNamespaced {
+			continue
+		}
+		resources, err := f.getClusterWideResourcesDynamically(ctx, gvr.Group, gvr.Version, gvr.Resource)
+		// continue if resource doesn't exist.
+		if apimachineryerrors.IsNotFound(err) {
 			continue
 		}
 		if err != nil {
@@ -88,8 +155,28 @@ func (f *Fetcher) getResourcesDynamically(ctx context.Context,
 		Version:  version,
 		Resource: resource,
 	}
-	list, err := f.dynamicClient.Resource(resourceID).Namespace(namespace).
-		List(ctx, metav1.ListOptions{})
+	var list *unstructured.UnstructuredList
+	var err error
+	list, err = f.dynamicClient.Resource(resourceID).Namespace(namespace).List(ctx, metav1.ListOptions{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
+func (f *Fetcher) getClusterWideResourcesDynamically(ctx context.Context,
+	group string, version string, resource string) (
+	*unstructured.UnstructuredList, error) {
+	resourceID := schema.GroupVersionResource{
+		Group:    group,
+		Version:  version,
+		Resource: resource,
+	}
+	var list *unstructured.UnstructuredList
+	var err error
+	list, err = f.dynamicClient.Resource(resourceID).List(ctx, metav1.ListOptions{})
 
 	if err != nil {
 		return nil, err

@@ -63,6 +63,32 @@ func (f *Fetcher) GetPoliciesForANamespace(namespace string) ([]policiesv1.Polic
 	return filteredPolicies, skippedNum, nil
 }
 
+func (f *Fetcher) getClusterAdmissionPolicies() ([]policiesv1.ClusterAdmissionPolicy, error) {
+	policies := &policiesv1.ClusterAdmissionPolicyList{}
+	err := f.client.List(context.Background(), policies)
+	if err != nil {
+		return []policiesv1.ClusterAdmissionPolicy{}, err
+	}
+	return policies.Items, nil
+}
+
+// GetClusterAdmissionPolicies gets all auditable ClusterAdmissionPolicy policies,
+// and the number of skipped policies
+func (f *Fetcher) GetClusterAdmissionPolicies() ([]policiesv1.Policy, int, error) {
+	clusterAdmissionPolicies, err := f.getClusterAdmissionPolicies()
+	if err != nil {
+		return []policiesv1.Policy{}, 0, err
+	}
+	policies := []policiesv1.Policy{}
+	for _, policy := range clusterAdmissionPolicies {
+		policy := policy
+		policies = append(policies, &policy)
+	}
+	filteredPolicies := f.filter(policies)
+	skippedNum := len(policies) - len(filteredPolicies)
+	return filteredPolicies, skippedNum, nil
+}
+
 func (f *Fetcher) GetNamespace(nsName string) (*v1.Namespace, error) {
 	namespace := &v1.Namespace{}
 	err := f.client.Get(context.Background(),
@@ -104,7 +130,7 @@ func (f *Fetcher) findNamespacesForAllClusterAdmissionPolicies() (map[string][]p
 	policies := &policiesv1.ClusterAdmissionPolicyList{}
 	err = f.client.List(context.Background(), policies, &client.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("can't list AdmissionPolicies: %w", err)
+		return nil, fmt.Errorf("can't list ClusterAdmissionPolicies: %w", err)
 	}
 
 	for _, policy := range policies.Items {

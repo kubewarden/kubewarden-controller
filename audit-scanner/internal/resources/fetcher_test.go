@@ -2,17 +2,21 @@ package resources
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
+	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
@@ -106,7 +110,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
 	}}
 
-	fetcher := Fetcher{dynamicClient, "", ""}
+	fetcher := Fetcher{dynamicClient, "", "", nil}
 
 	tests := []struct {
 		name     string
@@ -246,7 +250,7 @@ func TestGetPolicyServerByName(t *testing.T) {
 	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
 
 	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policyServerObj)
-	fetcher := Fetcher{dynamicClient, "", ""}
+	fetcher := Fetcher{dynamicClient, "", "", nil}
 
 	policyServer, err := getPolicyServerByName(context.Background(), "testing-name", &fetcher.dynamicClient)
 	if err != nil {
@@ -274,7 +278,7 @@ func TestGetServiceByAppLabel(t *testing.T) {
 	customScheme := scheme.Scheme
 
 	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policyServerObj)
-	fetcher := Fetcher{dynamicClient, "", ""}
+	fetcher := Fetcher{dynamicClient, "", "", nil}
 
 	service, err := getServiceByAppLabel(context.Background(), "testing", "default", &fetcher.dynamicClient)
 	if err != nil {
@@ -282,5 +286,205 @@ func TestGetServiceByAppLabel(t *testing.T) {
 	}
 	if service.Name != "testing-service" {
 		t.Error("Service returned is not valid")
+	}
+}
+
+func TestGetClusterWideResourcesForPolicies(t *testing.T) {
+	pod := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "podDefault",
+			Namespace: "default",
+		},
+		Spec: v1.PodSpec{},
+	}
+	namespace := v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "testingns",
+		},
+	}
+	policy := policiesv1.ClusterAdmissionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cap",
+			// It's necessary to define ResourceVersion and Generation
+			// because the fake client can set values for these fields.
+			// See more at docs:
+			// ObjectMeta's `Generation` and `ResourceVersion` don't
+			// behave properly, Patch or Update operations that rely
+			// on these fields will fail, or give false positives.
+			// https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client/fake
+			ResourceVersion: "123",
+			Generation:      1,
+		},
+		Spec: policiesv1.ClusterAdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
+				BackgroundAudit: true,
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{""},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"pods", "namespaces"},
+					},
+				},
+				},
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: policiesv1.PolicyStatusActive,
+		},
+	}
+
+	customScheme := scheme.Scheme
+	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
+	customScheme.AddKnownTypes(v1.SchemeGroupVersion, &namespace)
+	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
+
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy, &pod, &namespace)
+
+	unstructuredNamespace := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Namespace",
+		"metadata": map[string]interface{}{
+			"name":              "testingns",
+			"creationTimestamp": nil,
+		},
+		"spec":   map[string]interface{}{},
+		"status": map[string]interface{}{},
+	}
+
+	expectedResource := []AuditableResources{{
+		Policies:  []policiesv1.Policy{&policy},
+		Resources: []unstructured.Unstructured{{Object: unstructuredNamespace}},
+	}}
+
+	apiResourceList := metav1.APIResourceList{
+		GroupVersion: "v1",
+		APIResources: []metav1.APIResource{
+			{
+				Name:         "namespaces",
+				SingularName: "namespace",
+				Kind:         "Namespace",
+				Namespaced:   false,
+			},
+			{
+				Name:         "pods",
+				SingularName: "pod",
+				Kind:         "Pod",
+				Namespaced:   true,
+			},
+		},
+	}
+
+	fakeClientSet := fakekubernetes.NewSimpleClientset()
+	fakeClientSet.Resources = []*metav1.APIResourceList{&apiResourceList}
+
+	fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
+
+	resources, err := fetcher.GetClusterWideResourcesForPolicies(context.Background(), []policiesv1.Policy{&policy})
+	if err != nil {
+		t.Errorf("unexpected error: " + err.Error())
+	}
+	if !cmp.Equal(resources, expectedResource) {
+		diff := cmp.Diff(expectedResource, resources)
+		t.Errorf("Expected AuditableResources differs from the expected value: %s", diff)
+	}
+}
+
+func TestIsNamespacedResource(t *testing.T) {
+	tests := []struct {
+		name                 string
+		apiResourceList      metav1.APIResourceList
+		gvr                  schema.GroupVersionResource
+		expectedIsNamespaced bool
+		expectedErr          error
+	}{
+		{"pods", metav1.APIResourceList{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "namespaces",
+					SingularName: "namespace",
+					Kind:         "Namespace",
+					Namespaced:   false,
+				},
+				{
+					Name:         "pods",
+					SingularName: "pod",
+					Kind:         "Pod",
+					Namespaced:   true,
+				},
+			},
+		},
+			schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "pods",
+			}, true, nil,
+		},
+		{"namespaces", metav1.APIResourceList{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "namespaces",
+					SingularName: "namespace",
+					Kind:         "Namespace",
+					Namespaced:   false,
+				},
+				{
+					Name:         "pods",
+					SingularName: "pod",
+					Kind:         "Pod",
+					Namespaced:   true,
+				},
+			},
+		},
+			schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "namespaces",
+			}, false, nil,
+		},
+		{"resource not found", metav1.APIResourceList{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "namespaces",
+					SingularName: "namespace",
+					Kind:         "Namespace",
+					Namespaced:   false,
+				},
+				{
+					Name:         "pods",
+					SingularName: "pod",
+					Kind:         "Pod",
+					Namespaced:   true,
+				},
+			},
+		},
+			schema.GroupVersionResource{
+				Group:    "",
+				Version:  "v1",
+				Resource: "foos",
+			}, false, constants.ErrResourceNotFound,
+		},
+	}
+
+	for _, ttest := range tests {
+		t.Run(ttest.name, func(t *testing.T) {
+			customScheme := scheme.Scheme
+			metav1.AddToGroupVersion(scheme.Scheme, policiesv1.GroupVersion)
+			dynamicClient := fake.NewSimpleDynamicClient(customScheme)
+			fakeClientSet := fakekubernetes.NewSimpleClientset()
+			fakeClientSet.Resources = []*metav1.APIResourceList{&ttest.apiResourceList}
+			fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
+
+			isNamespaced, err := fetcher.isNamespacedResource(ttest.gvr)
+			if (err != nil && ttest.expectedErr != nil && !errors.Is(err, ttest.expectedErr)) || (err != nil && ttest.expectedErr == nil) {
+				t.Errorf("unexpected error: " + err.Error())
+			}
+			if isNamespaced != ttest.expectedIsNamespaced {
+				t.Errorf("isNamespacedResource return expected to be %t, got %t", isNamespaced, ttest.expectedIsNamespaced)
+			}
+		})
 	}
 }

@@ -22,7 +22,7 @@ lint: $(GOLANGCI_LINT)
 
 .PHONY: unit-tests
 unit-tests: fmt vet ## Run unit tests.
-	go test ./internal/... -test.v -coverprofile cover.out
+	go test ./cmd/... ./internal/... -test.v -coverprofile cover.out
 
 build: fmt vet lint ## Build audit-scanner binary.
 	go build -o bin/audit-scanner .
