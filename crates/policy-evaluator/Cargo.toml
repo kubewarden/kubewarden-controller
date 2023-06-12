@@ -40,7 +40,7 @@ wapc = "1.0.0"
 wasmtime-provider = { version = "1.6.0", features = ["cache"] }
 picky = { version = "7.0.0-rc.5", default-features = false, features = [ "x509", "ec", "chrono_conversion" ] }
 chrono = "0.4.26"
-time = { version = "0.3.21", features = ["serde-human-readable"] }
+time = { version = "0.3.22", features = ["serde-human-readable"] }
 semver = { version = "1.0.17", features = ["serde"] }
 email_address = {version = "0.2.4", features = ["serde"] }
 mail-parser= {version = "0.8.2", features = ["serde"] }
