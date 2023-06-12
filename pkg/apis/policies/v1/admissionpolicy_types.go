@@ -149,3 +149,13 @@ func (r *AdmissionPolicy) GetContextAwareResources() []ContextAwareResource {
 func (r *AdmissionPolicy) GetBackgroundAudit() bool {
 	return r.Spec.BackgroundAudit
 }
+
+func (r *AdmissionPolicy) GetSeverity() (string, bool) {
+	severity, present := r.Annotations[AnnotationSeverity]
+	return severity, present
+}
+
+func (r *AdmissionPolicy) GetCategory() (string, bool) {
+	category, present := r.Annotations[AnnotationCategory]
+	return category, present
+}
