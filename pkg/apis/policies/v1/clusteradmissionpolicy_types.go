@@ -215,3 +215,13 @@ func (r *ClusterAdmissionPolicy) GetContextAwareResources() []ContextAwareResour
 func (r *ClusterAdmissionPolicy) GetBackgroundAudit() bool {
 	return r.Spec.BackgroundAudit
 }
+
+func (r *ClusterAdmissionPolicy) GetSeverity() (string, bool) {
+	severity, present := r.Annotations[AnnotationSeverity]
+	return severity, present
+}
+
+func (r *ClusterAdmissionPolicy) GetCategory() (string, bool) {
+	category, present := r.Annotations[AnnotationCategory]
+	return category, present
+}
