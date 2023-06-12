@@ -256,7 +256,7 @@ func (s *PolicyReportStore) SaveClusterPolicyReport() error {
 		if err != nil {
 			return fmt.Errorf("create failed: %w", err)
 		}
-		summary, _ := report.GetSummary()
+		summary, _ := report.GetSummaryJSON()
 		log.Info().
 			Dict("dict", zerolog.Dict().
 				Str("report name", report.Name).Str("report ns", report.Namespace).
@@ -285,7 +285,7 @@ func (s *PolicyReportStore) SaveClusterPolicyReport() error {
 		if retryErr != nil {
 			return fmt.Errorf("update failed: %w", retryErr)
 		}
-		summary, _ := report.GetSummary()
+		summary, _ := report.GetSummaryJSON()
 		log.Info().
 			Dict("dict", zerolog.Dict().
 				Str("report name", report.Name).Str("report ns", report.Namespace).

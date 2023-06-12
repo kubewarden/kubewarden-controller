@@ -129,7 +129,8 @@ func (r *PolicyReport) GetSummaryJSON() (string, error) {
 	return string(marshaled), nil
 }
 
-func (r *ClusterPolicyReport) GetSummary() (string, error) {
+// GetSummaryJSON gets the report.Summary formatted in JSON. Useful for logging
+func (r *ClusterPolicyReport) GetSummaryJSON() (string, error) {
 	marshaled, err := json.Marshal(r.Summary)
 	if err != nil {
 		return "error marshalling summary", err
