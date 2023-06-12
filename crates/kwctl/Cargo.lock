@@ -4720,9 +4720,9 @@ dependencies = [
 
 [[package]]
 name = "tiny-bench"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b5d366a619c58cc621169d481d049b286553c87ba10c17f1ceef2274f9b8ab7"
+checksum = "cfda840d8557c12ecdde25485f7dc85152339a61b759f98d4f682e7cb5d75948"
 
 [[package]]
 name = "tinyvec"
