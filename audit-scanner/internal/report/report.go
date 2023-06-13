@@ -1,6 +1,8 @@
 package report
 
 import (
+	"encoding/json"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
@@ -21,21 +23,38 @@ type ClusterPolicyReport struct {
 	v1alpha2.ClusterPolicyReport
 }
 
-// Status specifies state of a policy result
 const (
+	// Status specifies state of a policy result
 	StatusPass  = "pass"
 	StatusFail  = "fail"
 	StatusWarn  = "warn"
 	StatusError = "error"
 	StatusSkip  = "skip"
+
+	// Severity specifies severity of a policy result
+	SeverityCritical = "critical"
+	SeverityHigh     = "high"
+	SeverityMedium   = "medium"
+	SeverityLow      = "low"
+	SeverityInfo     = "info"
+
+	// Category specifies the category of a policy result
+	CategoryMutating   = "mutating"
+	CategoryValidating = "validating"
+
+	LabelAppManagedBy = "app.kubernetes.io/managed-by"
+	LabelApp          = "kubewarden"
 )
 
 func NewClusterPolicyReport(name string) ClusterPolicyReport {
+	labels := map[string]string{}
+	labels[LabelAppManagedBy] = LabelApp
 	return ClusterPolicyReport{
 		ClusterPolicyReport: v1alpha2.ClusterPolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              PrefixNameClusterPolicyReport + name,
 				CreationTimestamp: metav1.Now(),
+				Labels:            labels,
 			},
 			Summary: v1alpha2.PolicyReportSummary{
 				Pass:  0, // count of policies with requirements met
@@ -50,12 +69,15 @@ func NewClusterPolicyReport(name string) ClusterPolicyReport {
 }
 
 func NewPolicyReport(namespace *v1.Namespace) PolicyReport {
+	labels := map[string]string{}
+	labels[LabelAppManagedBy] = LabelApp
 	return PolicyReport{
 		PolicyReport: v1alpha2.PolicyReport{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              PrefixNamePolicyReport + namespace.Name,
 				Namespace:         namespace.Name,
 				CreationTimestamp: metav1.Now(),
+				Labels:            labels,
 			},
 			Scope: &v1.ObjectReference{
 				Kind:            namespace.Kind,
@@ -98,7 +120,28 @@ func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured
 		).Msg("added result to report")
 }
 
-func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {
+// GetSummaryJSON gets the report.Summary formatted in JSON. Useful for logging
+func (r *PolicyReport) GetSummaryJSON() (string, error) {
+	marshaled, err := json.Marshal(r.Summary)
+	if err != nil {
+		return "error marshalling summary", err
+	}
+	return string(marshaled), nil
+}
+
+// GetSummaryJSON gets the report.Summary formatted in JSON. Useful for logging
+func (r *ClusterPolicyReport) GetSummaryJSON() (string, error) {
+	marshaled, err := json.Marshal(r.Summary)
+	if err != nil {
+		return "error marshalling summary", err
+	}
+	return string(marshaled), nil
+}
+
+func (r *ClusterPolicyReport) AddResult(
+	policy policiesv1.Policy, resource unstructured.Unstructured,
+	auditResponse *admv1.AdmissionReview, responseErr error,
+) {
 	result := newPolicyReportResult(policy, resource, auditResponse, responseErr)
 	switch result.Result {
 	case StatusFail:
@@ -119,7 +162,10 @@ func (r *ClusterPolicyReport) AddResult(policy policiesv1.Policy, resource unstr
 		).Msg("added result to report")
 }
 
-func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) *v1alpha2.PolicyReportResult {
+func newPolicyReportResult( //nolint:funlen
+	policy policiesv1.Policy, resource unstructured.Unstructured,
+	auditResponse *admv1.AdmissionReview, responseErr error,
+) *v1alpha2.PolicyReportResult {
 	var result v1alpha2.PolicyResult
 	var description string
 	if responseErr != nil {
@@ -148,13 +194,28 @@ func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstr
 		Kind:    constants.KubewardenKindAdmissionPolicy,
 	}:
 		name = "ap-" + policy.GetName()
-	default:
-		// this never happens
+	default: // this never happens
 		log.Fatal().Msg("no policy found when creating PolicyReportResult")
 	}
 
 	time := metav1.Now()
 	timestamp := *time.ProtoTime()
+
+	var severity v1alpha2.PolicyResultSeverity
+	var scored bool
+	if policy.GetPolicyMode() == policiesv1.PolicyMode(policiesv1.PolicyModeStatusMonitor) {
+		scored = true
+		severity = SeverityInfo
+	}
+
+	var category string
+	if policy.IsMutating() {
+		category = CategoryMutating
+	} else {
+		category = CategoryValidating
+	}
+
+	rule := policy.GetName()
 
 	resourceObjectReference := &v1.ObjectReference{
 		Kind:            resource.GetKind(),
@@ -166,13 +227,19 @@ func newPolicyReportResult(policy policiesv1.Policy, resource unstructured.Unstr
 	}
 
 	return &v1alpha2.PolicyReportResult{
-		Source: PolicyReportSource,
-		Policy: name, // either cap-policy_name or ap-policy_name
+		Source:   PolicyReportSource,
+		Policy:   name,     // either cap-policy_name or ap-policy_name
+		Rule:     rule,     // policy name
+		Category: category, // either validating, or mutating and validating
+		Severity: severity, // either info for monitor or empty
 		// Timestamp shouldn't be used in go structs, and only gives seconds
 		// https://github.com/kubernetes/apimachinery/blob/v0.27.2/pkg/apis/meta/v1/time_proto.go#LL48C9-L48C9
-		Timestamp:   timestamp,                                      // time the result was found
-		Result:      result,                                         // pass, fail, error
-		Subjects:    []*v1.ObjectReference{resourceObjectReference}, // reference to object evaluated
-		Description: description,                                    // output message of the policy
+		Timestamp:       timestamp, // time the result was computed
+		Result:          result,    // pass, fail, error
+		Scored:          scored,
+		Subjects:        []*v1.ObjectReference{resourceObjectReference}, // reference to object evaluated
+		SubjectSelector: &metav1.LabelSelector{},
+		Description:     description, // output message of the policy
+		Properties:      map[string]string{},
 	}
 }

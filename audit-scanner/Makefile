@@ -1,5 +1,6 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
+IMG ?= audit-scanner:latest
 
 GOLANGCI_LINT_VER := v1.52.2
 GOLANGCI_LINT_BIN := golangci-lint
@@ -26,3 +27,6 @@ unit-tests: fmt vet ## Run unit tests.
 build: fmt vet lint ## Build audit-scanner binary.
 	go build -o bin/audit-scanner .
 
+.PHONY: docker-build
+docker-build: unit-tests
+	docker build -t ${IMG} .

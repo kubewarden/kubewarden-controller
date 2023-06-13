@@ -70,8 +70,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	if err != nil {
 		return err
 	}
-	// log.Debug().Str("namespace", nsName).Int("count", len(policies)).Msg("number of policies to evaluate")
-	log.Debug().
+	log.Info().
 		Str("namespace", nsName).
 		Dict("dict", zerolog.Dict().
 			Int("policies to evaluate", len(policies)).
