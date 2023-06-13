@@ -89,6 +89,7 @@ type Policy interface {
 	SetPolicyModeStatus(policyMode PolicyModeStatus)
 	GetModule() string
 	IsMutating() bool
+	IsContextAware() bool
 	GetSettings() runtime.RawExtension
 	GetStatus() *PolicyStatus
 	SetStatus(status PolicyStatusEnum)
