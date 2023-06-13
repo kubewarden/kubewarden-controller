@@ -228,3 +228,13 @@ func (r *ClusterAdmissionPolicy) GetCategory() (string, bool) {
 	category, present := r.Annotations[AnnotationCategory]
 	return category, present
 }
+
+func (r *ClusterAdmissionPolicy) GetTitle() (string, bool) {
+	title, present := r.Annotations[AnnotationTitle]
+	return title, present
+}
+
+func (r *ClusterAdmissionPolicy) GetDescription() (string, bool) {
+	desc, present := r.Annotations[AnnotationDescription]
+	return desc, present
+}

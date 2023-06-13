@@ -55,8 +55,10 @@ const (
 )
 
 const (
-	AnnotationSeverity string = "io.kubewarden.policy.severity"
-	AnnotationCategory string = "io.kubewarden.policy.category"
+	AnnotationSeverity    string = "io.kubewarden.policy.severity"
+	AnnotationCategory    string = "io.kubewarden.policy.category"
+	AnnotationTitle       string = "io.artifacthub.displayName"
+	AnnotationDescription string = "io.kubewarden.policy.description"
 )
 
 // PolicyStatus defines the observed state of ClusterAdmissionPolicy and AdmissionPolicy
@@ -105,4 +107,6 @@ type Policy interface {
 	GetBackgroundAudit() bool
 	GetSeverity() (string, bool)
 	GetCategory() (string, bool)
+	GetTitle() (string, bool)
+	GetDescription() (string, bool)
 }
