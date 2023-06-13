@@ -55,7 +55,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			policiesFetcher, err := policies.NewFetcher()
+			policiesFetcher, err := policies.NewFetcher(kubewardenNamespace)
 			if err != nil {
 				return err
 			}

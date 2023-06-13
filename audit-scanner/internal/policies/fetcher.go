@@ -20,19 +20,23 @@ import (
 // Fetcher fetches Kubewarden policies from the Kubernetes cluster, and filters policies that are auditable.
 type Fetcher struct {
 	client client.Client
+	// Namespace where the Kubewarden components (e.g. policy server) are installed
+	// This is the namespace used to fetch the policy server resources
+	kubewardenNamespace string
+	// filter cribes the passed policies and returns only those that should be audited
 	filter func(policies []policiesv1.Policy) []policiesv1.Policy
 }
 
 // NewFetcher returns a Fetcher. It will try to use in-cluster config, which will work just if audit-scanner is deployed
 // inside a Pod. If in-cluster fails, it will try to fetch the kube config from the home dir. It will return an error
 // if both attempts fail.
-func NewFetcher() (*Fetcher, error) {
+func NewFetcher(kubewardenNamespace string) (*Fetcher, error) {
 	client, err := newClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return &Fetcher{client: client, filter: filterAuditablePolicies}, nil
+	return &Fetcher{client: client, kubewardenNamespace: kubewardenNamespace, filter: filterAuditablePolicies}, nil
 }
 
 // GetPoliciesForAllNamespace gets all auditable policies, and the number of
@@ -150,7 +154,7 @@ func (f *Fetcher) findNamespacesForAllClusterAdmissionPolicies() (map[string][]p
 // finds all namespaces where this ClusterAdmissionPolicy will evaluate resources. It uses the namespaceSelector field to filter the namespaces.
 func (f *Fetcher) findNamespacesForClusterAdmissionPolicy(policy policiesv1.ClusterAdmissionPolicy) ([]v1.Namespace, error) {
 	namespaceList := &v1.NamespaceList{}
-	labelSelector, err := metav1.LabelSelectorAsSelector(policy.GetNamespaceSelector())
+	labelSelector, err := metav1.LabelSelectorAsSelector(policy.GetUpdatedNamespaceSelector(f.kubewardenNamespace))
 	if err != nil {
 		return nil, err
 	}

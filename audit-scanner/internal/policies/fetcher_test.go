@@ -47,21 +47,25 @@ func TestFindNamespacesForAllClusterAdmissionPolicies(t *testing.T) {
 		policies []k8sClient.Object
 		expect   map[string][]policiesv1.Policy
 	}{
-		{"policy available in all ns", []k8sClient.Object{&allNs}, map[string][]policiesv1.Policy{"default": {&allNs}, "test": {&allNs}, "kubewarden": {&allNs}}},
+		{"policy available in all ns", []k8sClient.Object{&allNs}, map[string][]policiesv1.Policy{"default": {&allNs}, "test": {&allNs}, "kubewarden": {}}},
 		{"policy available in test ns", []k8sClient.Object{&testNs}, map[string][]policiesv1.Policy{"test": {&testNs}, "default": {}, "kubewarden": {}}},
-		{"policies available in all ns and in test ns", []k8sClient.Object{&allNs, &testNs}, map[string][]policiesv1.Policy{"default": {&allNs}, "test": {&allNs, &testNs}, "kubewarden": {&allNs}}},
+		{"policies available in all ns and in test ns", []k8sClient.Object{&allNs, &testNs}, map[string][]policiesv1.Policy{"default": {&allNs}, "test": {&allNs, &testNs}, "kubewarden": {}}},
+		{"policy available in kubewarden space get always skipped", []k8sClient.Object{&allNs}, map[string][]policiesv1.Policy{"default": {&allNs}, "test": {&allNs}, "kubewarden": {}}},
 		{"no policies availables", []k8sClient.Object{}, map[string][]policiesv1.Policy{"default": {}, "test": {}, "kubewarden": {}}},
 	}
+
+	policyComparer := cmp.Comparer(func(n, p policiesv1.Policy) bool { return p.GetUniqueName() == n.GetUniqueName() })
+	policySorter := cmpopts.SortSlices(func(n, p policiesv1.Policy) bool { return p.GetUniqueName() > n.GetUniqueName() })
 
 	for _, test := range tests {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
-			c := Fetcher{client: mockClient(ttest.policies...)}
+			c := Fetcher{client: mockClient(ttest.policies...), kubewardenNamespace: "kubewarden"}
 			ns, err := c.findNamespacesForAllClusterAdmissionPolicies()
 			if err != nil {
 				t.Errorf("error should be nil:  %s", err.Error())
 			}
-			if !cmp.Equal(ns, ttest.expect) {
+			if !cmp.Equal(ns, ttest.expect, policySorter, policyComparer) {
 				t.Errorf("expected %v, but got %v", ttest.expect, ns)
 			}
 		})
