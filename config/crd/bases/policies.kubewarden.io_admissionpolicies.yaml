@@ -40,6 +40,17 @@ spec:
       jsonPath: .status.policyStatus
       name: Status
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .metadata.annotations['io\.kubewarden\.policy\.severity']
+      name: Severity
+      priority: 1
+      type: string
+    - jsonPath: .metadata.annotations['io\.kubewarden\.policy\.category']
+      name: Category
+      priority: 1
+      type: string
     name: v1
     schema:
       openAPIV3Schema:
