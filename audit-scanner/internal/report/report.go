@@ -39,8 +39,10 @@ const (
 	SeverityInfo     = "info"
 
 	// Category specifies the category of a policy result
-	CategoryMutating   = "mutating"
-	CategoryValidating = "validating"
+	TypeMutating     = "mutating"
+	TypeValidating   = "validating"
+	TypeContextAware = "context-aware"
+	ValueTypeTrue    = "true"
 
 	LabelAppManagedBy = "app.kubernetes.io/managed-by"
 	LabelApp          = "kubewarden"
@@ -99,27 +101,6 @@ func NewPolicyReport(namespace *v1.Namespace) PolicyReport {
 	}
 }
 
-func (r *PolicyReport) AddResult(policy policiesv1.Policy, resource unstructured.Unstructured, auditResponse *admv1.AdmissionReview, responseErr error) {
-	result := newPolicyReportResult(policy, resource, auditResponse, responseErr)
-	switch result.Result {
-	case StatusFail:
-		r.Summary.Fail++
-	case StatusError:
-		r.Summary.Error++
-	case StatusPass:
-		r.Summary.Pass++
-	}
-	r.Results = append(r.Results, result)
-	log.Debug().
-		Str("report name", r.Name).
-		Dict("result", zerolog.Dict().
-			Str("policy", policy.GetName()).
-			Str("resource", resource.GetName()).
-			Bool("allowed", auditResponse.Response.Allowed).
-			Str("result", string(result.Result)),
-		).Msg("added result to report")
-}
-
 // GetSummaryJSON gets the report.Summary formatted in JSON. Useful for logging
 func (r *PolicyReport) GetSummaryJSON() (string, error) {
 	marshaled, err := json.Marshal(r.Summary)
@@ -138,7 +119,7 @@ func (r *ClusterPolicyReport) GetSummaryJSON() (string, error) {
 	return string(marshaled), nil
 }
 
-func (r *ClusterPolicyReport) AddResult(
+func (r *PolicyReport) AddResult( //nolint:dupl
 	policy policiesv1.Policy, resource unstructured.Unstructured,
 	auditResponse *admv1.AdmissionReview, responseErr error,
 ) {
@@ -150,6 +131,15 @@ func (r *ClusterPolicyReport) AddResult(
 		r.Summary.Error++
 	case StatusPass:
 		r.Summary.Pass++
+	default:
+		// this should never happen
+		log.Error().
+			Str("report name", r.Name).
+			Dict("result", zerolog.Dict().
+				Str("policy", policy.GetName()).
+				Str("resource", resource.GetName()).
+				Str("result", string(result.Result)),
+			).Msg("result unknown")
 	}
 	r.Results = append(r.Results, result)
 	log.Debug().
@@ -162,7 +152,34 @@ func (r *ClusterPolicyReport) AddResult(
 		).Msg("added result to report")
 }
 
-func newPolicyReportResult( //nolint:funlen
+func (r *ClusterPolicyReport) AddResult( //nolint:dupl
+	policy policiesv1.Policy, resource unstructured.Unstructured,
+	auditResponse *admv1.AdmissionReview, responseErr error,
+) {
+	result := newPolicyReportResult(policy, resource, auditResponse, responseErr)
+	switch result.Result {
+	case StatusFail:
+		r.Summary.Fail++
+	case StatusError:
+		r.Summary.Error++
+	case StatusPass:
+		r.Summary.Pass++
+	default:
+		// this should never happen
+		log.Error().Str("report name", r.Name).Dict("result", zerolog.Dict().
+			Str("policy", policy.GetName()).Str("resource", resource.GetName()).
+			Str("result", string(result.Result)),
+		).Msg("result unknown")
+	}
+	r.Results = append(r.Results, result)
+	log.Debug().Str("report name", r.Name).Dict("result", zerolog.Dict().
+		Str("policy", policy.GetName()).Str("resource", resource.GetName()).
+		Bool("allowed", auditResponse.Response.Allowed).
+		Str("result", string(result.Result)),
+	).Msg("added result to report")
+}
+
+func newPolicyReportResult( //nolint:funlen,cyclop
 	policy policiesv1.Policy, resource unstructured.Unstructured,
 	auditResponse *admv1.AdmissionReview, responseErr error,
 ) *v1alpha2.PolicyReportResult {
@@ -206,13 +223,44 @@ func newPolicyReportResult( //nolint:funlen
 	if policy.GetPolicyMode() == policiesv1.PolicyMode(policiesv1.PolicyModeStatusMonitor) {
 		scored = true
 		severity = SeverityInfo
+	} else {
+		if sev, present := policy.GetSeverity(); present {
+			scored = true
+			switch sev {
+			case SeverityCritical:
+				severity = SeverityCritical
+			case SeverityHigh:
+				severity = SeverityHigh
+			case SeverityMedium:
+				severity = SeverityMedium
+			case SeverityLow:
+				severity = SeverityLow
+			default:
+				// this should never happen
+				log.Error().
+					Dict("result", zerolog.Dict().
+						Str("policy", policy.GetName()).
+						Str("resource", resource.GetName()).
+						Bool("allowed", auditResponse.Response.Allowed).
+						Str("severity", sev),
+					).Msg("severity unknown")
+			}
+		}
 	}
 
 	var category string
+	if cat, present := policy.GetCategory(); present {
+		category = cat
+	}
+
+	properties := map[string]string{}
 	if policy.IsMutating() {
-		category = CategoryMutating
+		properties[TypeMutating] = ValueTypeTrue
 	} else {
-		category = CategoryValidating
+		properties[TypeValidating] = ValueTypeTrue
+	}
+	if policy.IsContextAware() {
+		properties[TypeContextAware] = ValueTypeTrue
 	}
 
 	rule := policy.GetName()
@@ -240,6 +288,6 @@ func newPolicyReportResult( //nolint:funlen
 		Subjects:        []*v1.ObjectReference{resourceObjectReference}, // reference to object evaluated
 		SubjectSelector: &metav1.LabelSelector{},
 		Description:     description, // output message of the policy
-		Properties:      map[string]string{},
+		Properties:      properties,
 	}
 }
