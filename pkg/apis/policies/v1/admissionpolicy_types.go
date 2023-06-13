@@ -162,3 +162,13 @@ func (r *AdmissionPolicy) GetCategory() (string, bool) {
 	category, present := r.Annotations[AnnotationCategory]
 	return category, present
 }
+
+func (r *AdmissionPolicy) GetTitle() (string, bool) {
+	title, present := r.Annotations[AnnotationTitle]
+	return title, present
+}
+
+func (r *AdmissionPolicy) GetDescription() (string, bool) {
+	desc, present := r.Annotations[AnnotationDescription]
+	return desc, present
+}
