@@ -54,6 +54,13 @@ const (
 	PolicyUniquelyReachable PolicyConditionType = "PolicyUniquelyReachable"
 )
 
+const (
+	AnnotationSeverity    string = "io.kubewarden.policy.severity"
+	AnnotationCategory    string = "io.kubewarden.policy.category"
+	AnnotationTitle       string = "io.artifacthub.displayName"
+	AnnotationDescription string = "io.kubewarden.policy.description"
+)
+
 // PolicyStatus defines the observed state of ClusterAdmissionPolicy and AdmissionPolicy
 type PolicyStatus struct {
 	// PolicyStatus represents the observed status of the policy
@@ -98,4 +105,8 @@ type Policy interface {
 	GetUniqueName() string
 	GetContextAwareResources() []ContextAwareResource
 	GetBackgroundAudit() bool
+	GetSeverity() (string, bool)
+	GetCategory() (string, bool)
+	GetTitle() (string, bool)
+	GetDescription() (string, bool)
 }

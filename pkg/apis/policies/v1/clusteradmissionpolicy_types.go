@@ -99,6 +99,9 @@ type ClusterAdmissionPolicySpec struct {
 // +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.mode`,description="Policy deployment mode"
 // +kubebuilder:printcolumn:name="Observed mode",type=string,JSONPath=`.status.mode`,description="Policy deployment mode observed on the assigned Policy Server"
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.policyStatus`,description="Status of the policy"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:printcolumn:name="Severity",type=string,JSONPath=".metadata.annotations['io\\.kubewarden\\.policy\\.severity']",priority=1
+// +kubebuilder:printcolumn:name="Category",type=string,JSONPath=".metadata.annotations['io\\.kubewarden\\.policy\\.category']",priority=1
 type ClusterAdmissionPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -214,4 +217,24 @@ func (r *ClusterAdmissionPolicy) GetContextAwareResources() []ContextAwareResour
 
 func (r *ClusterAdmissionPolicy) GetBackgroundAudit() bool {
 	return r.Spec.BackgroundAudit
+}
+
+func (r *ClusterAdmissionPolicy) GetSeverity() (string, bool) {
+	severity, present := r.Annotations[AnnotationSeverity]
+	return severity, present
+}
+
+func (r *ClusterAdmissionPolicy) GetCategory() (string, bool) {
+	category, present := r.Annotations[AnnotationCategory]
+	return category, present
+}
+
+func (r *ClusterAdmissionPolicy) GetTitle() (string, bool) {
+	title, present := r.Annotations[AnnotationTitle]
+	return title, present
+}
+
+func (r *ClusterAdmissionPolicy) GetDescription() (string, bool) {
+	desc, present := r.Annotations[AnnotationDescription]
+	return desc, present
 }
