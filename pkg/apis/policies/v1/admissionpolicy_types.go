@@ -82,6 +82,10 @@ func (r *AdmissionPolicy) IsMutating() bool {
 	return r.Spec.Mutating
 }
 
+func (r *AdmissionPolicy) IsContextAware() bool {
+	return false
+}
+
 func (r *AdmissionPolicy) GetSettings() runtime.RawExtension {
 	return r.Spec.Settings
 }

@@ -142,6 +142,10 @@ func (r *ClusterAdmissionPolicy) IsMutating() bool {
 	return r.Spec.Mutating
 }
 
+func (r *ClusterAdmissionPolicy) IsContextAware() bool {
+	return len(r.Spec.ContextAwareResources) > 0
+}
+
 func (r *ClusterAdmissionPolicy) GetSettings() runtime.RawExtension {
 	return r.Spec.Settings
 }
