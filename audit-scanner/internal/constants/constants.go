@@ -7,6 +7,7 @@ const (
 	KubewardenPoliciesVersion            = "v1"
 	KubewardenKindClusterAdmissionPolicy = "ClusterAdmissionPolicy"
 	KubewardenKindAdmissionPolicy        = "AdmissionPolicy"
+	DefaultClusterwideReportName         = "clusterwide"
 )
 
 // ErrResourceNotFound is an error used to tell that the required resource is not found
