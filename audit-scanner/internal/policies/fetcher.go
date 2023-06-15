@@ -113,6 +113,24 @@ func (f *Fetcher) GetNamespace(nsName string) (*v1.Namespace, error) {
 	return namespace, nil
 }
 
+// GetAuditedNamespaces gets all namespaces besides the ones in fetcher.skippedNs
+// This function cannot be tested with fake.client, as fake.client doesn't
+// support fields.OneTermNotEqualSelector()
+func (f *Fetcher) GetAuditedNamespaces() (*v1.NamespaceList, error) {
+	skipNsFields := fields.Everything()
+	for _, nsName := range f.skippedNs {
+		skipNsFields = fields.AndSelectors(skipNsFields, fields.OneTermNotEqualSelector("metadata.name", nsName))
+		log.Debug().Str("ns", nsName).Msg("skipping ns")
+	}
+
+	namespaceList := &v1.NamespaceList{}
+	err := f.client.List(context.Background(), namespaceList, &client.ListOptions{FieldSelector: skipNsFields})
+	if err != nil {
+		return nil, fmt.Errorf("can't list namespaces: %w", err)
+	}
+	return namespaceList, nil
+}
+
 // initializes map with an entry for all namespaces with an empty policies array as value
 func (f *Fetcher) initNamespacePoliciesMap() (map[string][]policiesv1.Policy, error) {
 	namespacePolicies := make(map[string][]policiesv1.Policy)

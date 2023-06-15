@@ -28,6 +28,8 @@ type PoliciesFetcher interface {
 	GetPoliciesForANamespace(namespace string) ([]policiesv1.Policy, int, error)
 	// GetNamespace gets a given namespace
 	GetNamespace(namespace string) (*v1.Namespace, error)
+	// GetAuditedNamespaces gets all namespaces, minus those in the skipped ns list
+	GetAuditedNamespaces() (*v1.NamespaceList, error)
 	// GetPoliciesForAllNamespaces gets all auditable policies for all
 	// namespaces, and the number of skipped policies
 	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error)
@@ -118,11 +120,26 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	return nil
 }
 
-// ScanAllNamespaces scans resources for all namespaces
+// ScanAllNamespaces scans resources for all namespaces. Skips those namespaces
+// passed in the skipped list on the policy fetcher.
+// Returns errors if there's any when fetching policies or resources, but only
+// logs them if there's a problem auditing the resource of saving the Report or
+// Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanAllNamespaces() error {
-	// for all namespaces not on the skip-ns list, call ScanNamespace()
-
-	return errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
+	log.Info().Msg("all-namespaces scan started")
+	nsList, err := s.policiesFetcher.GetAuditedNamespaces()
+	if err != nil {
+		log.Error().Err(err).Msg("error scanning all namespaces")
+	}
+	var errs error
+	for _, ns := range nsList.Items {
+		if err := s.ScanNamespace(ns.Name); err != nil {
+			log.Error().Err(err).Str("ns", ns.Name).Msg("error scanning namespace")
+			errs = errors.New(errs.Error() + err.Error())
+		}
+	}
+	log.Info().Msg("all-namespaces scan finished")
+	return errs
 }
 
 func (s *Scanner) ScanClusterWideResources() error {
