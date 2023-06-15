@@ -6,7 +6,9 @@ import (
 	"fmt"
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
+	"github.com/rs/zerolog/log"
 	errorsApi "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,10 +21,13 @@ import (
 
 // Fetcher fetches Kubewarden policies from the Kubernetes cluster, and filters policies that are auditable.
 type Fetcher struct {
+	// client knows about policies.kubewarden.io GVK
 	client client.Client
 	// Namespace where the Kubewarden components (e.g. policy server) are installed
 	// This is the namespace used to fetch the policy server resources
 	kubewardenNamespace string
+	// list of skipped namespaces from audit, by name
+	skippedNs []string
 	// filter cribes the passed policies and returns only those that should be audited
 	filter func(policies []policiesv1.Policy) []policiesv1.Policy
 }
@@ -30,13 +35,12 @@ type Fetcher struct {
 // NewFetcher returns a Fetcher. It will try to use in-cluster config, which will work just if audit-scanner is deployed
 // inside a Pod. If in-cluster fails, it will try to fetch the kube config from the home dir. It will return an error
 // if both attempts fail.
-func NewFetcher(kubewardenNamespace string) (*Fetcher, error) {
+func NewFetcher(kubewardenNamespace string, skippedNs []string) (*Fetcher, error) {
 	client, err := newClient()
 	if err != nil {
 		return nil, err
 	}
-
-	return &Fetcher{client: client, kubewardenNamespace: kubewardenNamespace, filter: filterAuditablePolicies}, nil
+	return &Fetcher{client: client, kubewardenNamespace: kubewardenNamespace, skippedNs: skippedNs, filter: filterAuditablePolicies}, nil
 }
 
 // GetPoliciesForAllNamespace gets all auditable policies, and the number of

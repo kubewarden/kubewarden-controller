@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
@@ -55,7 +56,13 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			policiesFetcher, err := policies.NewFetcher(kubewardenNamespace)
+			skippedNsCSV, err := cmd.Flags().GetString("skipped-ns")
+			if err != nil {
+				return err
+			}
+			skippedNs := strings.Split(skippedNsCSV, ",")
+
+			policiesFetcher, err := policies.NewFetcher(kubewardenNamespace, skippedNs)
 			if err != nil {
 				return err
 			}
@@ -116,4 +123,5 @@ func init() {
 	rootCmd.Flags().StringP("policy-server-url", "u", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 	rootCmd.Flags().BoolVarP(&printJSON, "print", "p", false, "print result of scan in JSON to stdout")
+	rootCmd.Flags().StringP("skipped-ns", "s", "", "Comma separated list of namespace names to be skipped from scan")
 }
