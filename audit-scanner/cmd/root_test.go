@@ -19,16 +19,16 @@ func TestStartScannerForANamespace(t *testing.T) {
 	if mockScanner.scanAllNamespacesCalled == true {
 		t.Errorf("scanAllNamespaces should have not been called")
 	}
-	if mockScanner.scanClusterResources == true {
+	if mockScanner.scanClusterResourcesCalled == true {
 		t.Errorf("ScanClusterWideResources should have not been called")
 	}
 }
 
 func TestStartScannerForAllNamespaces(t *testing.T) {
-	const namespace = ""
 	mockScanner := mockScanner{}
 
-	err := startScanner(namespace, false, &mockScanner)
+	// analogous to passing no flags
+	err := startScanner("", false, &mockScanner)
 
 	if err != nil {
 		t.Errorf("err should be nil, but got %s", err.Error())
@@ -39,8 +39,8 @@ func TestStartScannerForAllNamespaces(t *testing.T) {
 	if mockScanner.scanAllNamespacesCalled != true {
 		t.Errorf("scanAllNamespaces not called")
 	}
-	if mockScanner.scanClusterResources == true {
-		t.Errorf("ScanClusterWideResources should have not been called")
+	if mockScanner.scanClusterResourcesCalled != true {
+		t.Errorf("scanClusterWideResources not called")
 	}
 }
 
@@ -59,15 +59,15 @@ func TestScanClusterResources(t *testing.T) {
 		t.Errorf("scanAllNamespaces should have not been called")
 	}
 
-	if mockScanner.scanClusterResources == false {
+	if mockScanner.scanClusterResourcesCalled == false {
 		t.Errorf("ScanClusterWideResources not called")
 	}
 }
 
 type mockScanner struct {
-	scanNamespaceCalledWith string
-	scanAllNamespacesCalled bool
-	scanClusterResources    bool
+	scanNamespaceCalledWith    string
+	scanAllNamespacesCalled    bool
+	scanClusterResourcesCalled bool
 }
 
 func (s *mockScanner) ScanNamespace(namespace string) error {
@@ -81,6 +81,6 @@ func (s *mockScanner) ScanAllNamespaces() error {
 }
 
 func (s *mockScanner) ScanClusterWideResources() error {
-	s.scanClusterResources = true
+	s.scanClusterResourcesCalled = true
 	return nil
 }

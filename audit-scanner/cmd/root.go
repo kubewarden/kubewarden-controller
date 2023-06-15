@@ -81,24 +81,31 @@ func Execute() {
 	}
 }
 func startScanner(namespace string, clusterWide bool, scanner Scanner) error {
-	if clusterWide {
-		if err := scanner.ScanClusterWideResources(); err != nil {
-			return err
+	switch clusterWide {
+	case true:
+		if namespace != "" {
+			log.Fatal().Msg("Cannot scan cluster wide and only a namespace at the same time")
+		} else {
+			if err := scanner.ScanClusterWideResources(); err != nil {
+				return err
+			}
+		}
+	case false:
+		if namespace != "" {
+			if err := scanner.ScanNamespace(namespace); err != nil {
+				return err
+			}
+		} else {
+			// neither clusterWide flag nor namespace was provided, default
+			// behaviour of scanning cluster wide and all ns
+			if err := scanner.ScanClusterWideResources(); err != nil {
+				return err
+			}
+			if err := scanner.ScanAllNamespaces(); err != nil {
+				return err
+			}
 		}
 	}
-
-	if namespace != "" {
-		if err := scanner.ScanNamespace(namespace); err != nil {
-			return err
-		}
-	} else if !clusterWide {
-		// FIXME ScanAllNamespaces is not implemented. Therefore, if we are
-		// scanning cluster wide resource do not trigger this scan. It will failed anyway
-		if err := scanner.ScanAllNamespaces(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
