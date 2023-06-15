@@ -25,6 +25,7 @@ const policyServerResource = "policyservers"
 // Fetcher fetches all auditable resources.
 // Uses a dynamic client to get all resources from the rules defined in a policy
 type Fetcher struct {
+	// dynamicClient is used to fetch resource data
 	dynamicClient dynamic.Interface
 	// Namespace where the Kubewarden components (e.g. policy server) are installed
 	// This is the namespace used to fetch the policy server resources
@@ -32,10 +33,8 @@ type Fetcher struct {
 	// FQDN of the policy server to query. If not empty, Fetcher will query on
 	// port 3000. Useful for out-of-cluster debugging
 	policyServerURL string
-	// We use two different clients to facilitate the interaction with
-	// the discovery API. Therefore, the clientset is used to call the discovery
-	// API and see if a resource is namespaced or not. While the dynamicClient
-	// client is used to fetch resource data.
+	// clientset is used to call the discovery API and see if a resource is
+	// namespaced or not
 	clientset kubernetes.Interface
 }
 
