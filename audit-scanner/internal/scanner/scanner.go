@@ -64,7 +64,7 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 
 // ScanNamespace scans resources for a given namespace
 func (s *Scanner) ScanNamespace(nsName string) error {
-	log.Info().Str("namespace", nsName).Msg("scan started")
+	log.Info().Str("namespace", nsName).Msg("namespace scan started")
 
 	namespace, err := s.policiesFetcher.GetNamespace(nsName)
 	if err != nil {
@@ -106,7 +106,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 			log.Error().Err(err).Msg("error adding PolicyReport to store")
 		}
 	}
-	log.Info().Str("namespace", nsName).Msg("scan finished")
+	log.Info().Str("namespace", nsName).Msg("namespace scan finished")
 
 	if s.printJSON {
 		str, err := s.reportStore.ToJSON()
@@ -116,6 +116,13 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 		fmt.Println(str)
 	}
 	return nil
+}
+
+// ScanAllNamespaces scans resources for all namespaces
+func (s *Scanner) ScanAllNamespaces() error {
+	// for all namespaces not on the skip-ns list, call ScanNamespace()
+
+	return errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
 
 func (s *Scanner) ScanClusterWideResources() error {
@@ -286,9 +293,4 @@ func sendAdmissionReviewToPolicyServer(url *url.URL, admissionRequest *admv1.Adm
 		return nil, fmt.Errorf("cannot deserialize the audit review response: %w", err)
 	}
 	return &admissionReview, nil
-}
-
-// ScanAllNamespaces scans resources for all namespaces
-func (s *Scanner) ScanAllNamespaces() error {
-	return errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
