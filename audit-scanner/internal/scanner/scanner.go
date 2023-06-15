@@ -64,7 +64,10 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 	return &Scanner{policiesFetcher, resourcesFetcher, *report, http.Client{}, printJSON}, nil
 }
 
-// ScanNamespace scans resources for a given namespace
+// ScanNamespace scans resources for a given namespace.
+// Returns errors if there's any when fetching policies or resources, but only
+// logs them if there's a problem auditing the resource of saving the Report or
+// Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanNamespace(nsName string) error {
 	log.Info().Str("namespace", nsName).Msg("namespace scan started")
 
@@ -142,6 +145,10 @@ func (s *Scanner) ScanAllNamespaces() error {
 	return errs
 }
 
+// ScanClusterWideResources scans all cluster wide resources.
+// Returns errors if there's any when fetching policies or resources, but only
+// logs them if there's a problem auditing the resource of saving the Report or
+// Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanClusterWideResources() error {
 	log.Info().Msg("cluster wide scan started")
 	policies, skippedNum, err := s.policiesFetcher.GetClusterAdmissionPolicies()
