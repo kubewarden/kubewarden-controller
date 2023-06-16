@@ -2,7 +2,6 @@ package policies
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
@@ -41,13 +40,6 @@ func NewFetcher(kubewardenNamespace string, skippedNs []string) (*Fetcher, error
 		return nil, err
 	}
 	return &Fetcher{client: client, kubewardenNamespace: kubewardenNamespace, skippedNs: skippedNs, filter: filterAuditablePolicies}, nil
-}
-
-// GetPoliciesForAllNamespace gets all auditable policies, and the number of
-// skipped policies
-// TODO implement this in the future
-func (f *Fetcher) GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error) {
-	return nil, 0, errors.New("scanning all namespaces is not implemented yet. Please pass the --namespace flag to scan a namespace")
 }
 
 // GetPoliciesForANamespace gets all auditable policies for a given namespace, and the number

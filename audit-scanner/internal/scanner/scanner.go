@@ -30,9 +30,6 @@ type PoliciesFetcher interface {
 	GetNamespace(namespace string) (*v1.Namespace, error)
 	// GetAuditedNamespaces gets all namespaces, minus those in the skipped ns list
 	GetAuditedNamespaces() (*v1.NamespaceList, error)
-	// GetPoliciesForAllNamespaces gets all auditable policies for all
-	// namespaces, and the number of skipped policies
-	GetPoliciesForAllNamespaces() ([]policiesv1.Policy, int, error)
 	// Get all auditable ClusterAdmissionPolicies and the number of skipped policies
 	GetClusterAdmissionPolicies() ([]policiesv1.Policy, int, error)
 }
