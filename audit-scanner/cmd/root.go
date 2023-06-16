@@ -123,5 +123,5 @@ func init() {
 	rootCmd.Flags().StringP("policy-server-url", "u", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 	rootCmd.Flags().BoolVarP(&printJSON, "print", "p", false, "print result of scan in JSON to stdout")
-	rootCmd.Flags().StringP("skipped-ns", "s", "", "Comma separated list of namespace names to be skipped from scan")
+	rootCmd.Flags().StringP("ignore-namespaces", "i", "", "Comma separated list of namespace names to be skipped from scan")
 }
