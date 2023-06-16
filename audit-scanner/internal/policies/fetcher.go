@@ -25,7 +25,7 @@ type Fetcher struct {
 	// Namespace where the Kubewarden components (e.g. policy server) are installed
 	// This is the namespace used to fetch the policy server resources
 	kubewardenNamespace string
-	// list of skipped namespaces from audit, by name
+	// list of skipped namespaces from audit, by name. It includes kubewardenNamespace
 	skippedNs []string
 	// filter cribes the passed policies and returns only those that should be audited
 	filter func(policies []policiesv1.Policy) []policiesv1.Policy
@@ -39,6 +39,7 @@ func NewFetcher(kubewardenNamespace string, skippedNs []string) (*Fetcher, error
 	if err != nil {
 		return nil, err
 	}
+	skippedNs = append(skippedNs, kubewardenNamespace)
 	return &Fetcher{client: client, kubewardenNamespace: kubewardenNamespace, skippedNs: skippedNs, filter: filterAuditablePolicies}, nil
 }
 
