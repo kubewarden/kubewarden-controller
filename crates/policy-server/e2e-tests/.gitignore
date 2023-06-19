@@ -1,6 +1,6 @@
-*.json
-*.log
-*.prof
-*.pid
-*.out
-*.err
+/*.json
+/*.log
+/*.prof
+/*.pid
+/*.out
+/*.err
