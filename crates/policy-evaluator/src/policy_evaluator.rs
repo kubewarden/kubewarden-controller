@@ -9,6 +9,7 @@ use crate::admission_response::AdmissionResponse;
 use crate::policy::Policy;
 use crate::runtimes::burrego::Runtime as BurregoRuntime;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
+use crate::runtimes::wasi_cli::Runtime as WasiRuntime;
 use crate::runtimes::Runtime;
 
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -20,6 +21,8 @@ pub enum PolicyExecutionMode {
     Opa,
     #[serde(rename = "gatekeeper")]
     OpaGatekeeper,
+    #[serde(rename = "wasi")]
+    Wasi,
 }
 
 impl fmt::Display for PolicyExecutionMode {
@@ -59,7 +62,7 @@ impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
         match execution_mode {
             PolicyExecutionMode::Opa => Ok(RegoPolicyExecutionMode::Opa),
             PolicyExecutionMode::OpaGatekeeper => Ok(RegoPolicyExecutionMode::Gatekeeper),
-            PolicyExecutionMode::KubewardenWapc => Err(anyhow!(
+            PolicyExecutionMode::KubewardenWapc | PolicyExecutionMode::Wasi => Err(anyhow!(
                 "execution mode not convertible to a Rego based executon mode"
             )),
         }
@@ -104,6 +107,9 @@ impl Evaluator for PolicyEvaluator {
             Runtime::Burrego(ref mut burrego_evaluator) => {
                 BurregoRuntime(burrego_evaluator).validate(&self.settings, &request)
             }
+            Runtime::Cli(ref mut cli_stack) => {
+                WasiRuntime(cli_stack).validate(&self.settings, &request)
+            }
         }
     }
 
@@ -125,6 +131,9 @@ impl Evaluator for PolicyEvaluator {
             }
             Runtime::Burrego(ref mut burrego_evaluator) => {
                 BurregoRuntime(burrego_evaluator).validate_settings(settings_str)
+            }
+            Runtime::Cli(ref mut cli_stack) => {
+                WasiRuntime(cli_stack).validate_settings(settings_str)
             }
         }
     }
