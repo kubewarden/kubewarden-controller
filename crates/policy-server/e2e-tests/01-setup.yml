@@ -28,8 +28,8 @@ testcases:
   - type: http
     method: GET
     url: http://localhost:3000/readiness
-    retry: 10
-    delay: 1
+    retry: 20
+    delay: 5
     assertions:
     - result.statuscode ShouldEqual 200
   - script: |

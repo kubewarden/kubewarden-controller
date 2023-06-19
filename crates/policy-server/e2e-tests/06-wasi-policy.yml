@@ -1,0 +1,44 @@
+name: WASI policy execution
+
+testcases:
+
+- name: fixtures
+  steps:
+  - type: readfile
+    path: ./test_data/pod_creation_flux_cat.json
+    assertions:
+    - result.err ShouldBeEmpty
+    vars:
+      pod_flux_cat:
+        from: result.content
+  - type: readfile
+    path: ./test_data/pod_creation_flux_cow.json
+    assertions:
+    - result.err ShouldBeEmpty
+    vars:
+      pod_flux_cow:
+        from: result.content
+
+- name: WASI policies work as expected
+  steps:
+  - name: Send violating request
+    type: http
+    method: POST
+    url: http://localhost:3000/validate/flux
+    headers:
+      Content-Type: application/json
+    body: "{{ .fixtures.pod_flux_cat}}"
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.response.allowed ShouldEqual false
+    - result.bodyjson.response.status.code ShouldNotEqual 500
+  - name: Send non violating request
+    type: http
+    method: POST
+    url: http://localhost:3000/validate/flux
+    headers:
+      Content-Type: application/json
+    body: "{{ .fixtures.pod_flux_cow }}"
+    assertions:
+    - result.statuscode ShouldEqual 200
+    - result.bodyjson.response.allowed ShouldEqual true
