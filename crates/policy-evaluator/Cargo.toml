@@ -41,7 +41,7 @@ wasmtime          = { workspace = true }
 wasmtime-wasi     = { workspace = true }
 wasi-common       = { workspace = true }
 wasi-cap-std-sync = { workspace = true }
-wasmtime-provider = { version = "1.6.0", features = ["cache"] }
+wasmtime-provider = { version = "1.7.0", features = ["cache"] }
 picky = { version = "7.0.0-rc.5", default-features = false, features = [ "x509", "ec", "chrono_conversion" ] }
 chrono = "0.4.26"
 time = { version = "0.3.22", features = ["serde-human-readable"] }
@@ -51,10 +51,10 @@ mail-parser= {version = "0.8.2", features = ["serde"] }
 thiserror = "1.0"
 
 [workspace.dependencies]
-wasmtime = "9.0"
-wasmtime-wasi = "9.0"
-wasi-common = "9.0"
-wasi-cap-std-sync = "9.0"
+wasmtime          = "10.0"
+wasmtime-wasi     = "10.0"
+wasi-common       = "10.0"
+wasi-cap-std-sync = "10.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
