@@ -246,6 +246,7 @@ fn determine_execution_mode(
             // metadata is not set
             let is_rego_policy = backend_detector.is_rego_policy(wasm_path)?;
             match user_execution_mode {
+                Some(PolicyExecutionMode::Wasi) => Ok(PolicyExecutionMode::Wasi),
                 Some(PolicyExecutionMode::Opa) => {
                     if is_rego_policy {
                         Ok(PolicyExecutionMode::Opa)
@@ -444,6 +445,10 @@ mod tests {
                     mock_rego_policy_detector_true,
                     mock_protocol_version_detector_v1,
                 ),
+                PolicyExecutionMode::Wasi => BackendDetector::new(
+                    mock_rego_policy_detector_false,
+                    mock_protocol_version_detector_v1,
+                ),
             };
 
             let actual = determine_execution_mode(
@@ -481,6 +486,10 @@ mod tests {
                     mock_protocol_version_detector_v1,
                 ),
                 PolicyExecutionMode::KubewardenWapc => BackendDetector::new(
+                    mock_rego_policy_detector_false,
+                    mock_protocol_version_detector_v1,
+                ),
+                PolicyExecutionMode::Wasi => BackendDetector::new(
                     mock_rego_policy_detector_false,
                     mock_protocol_version_detector_v1,
                 ),

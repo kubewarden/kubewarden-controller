@@ -40,8 +40,9 @@ fn prepare_metadata(
     let backend = backend_detector.detect(wasm_path, &metadata)?;
 
     match backend {
-        Backend::Opa => metadata.protocol_version = Some(ProtocolVersion::Unknown),
-        Backend::OpaGatekeeper => metadata.protocol_version = Some(ProtocolVersion::Unknown),
+        Backend::Opa | Backend::OpaGatekeeper | Backend::Wasi => {
+            metadata.protocol_version = Some(ProtocolVersion::Unknown)
+        }
         Backend::KubewardenWapc(protocol_version) => {
             metadata.protocol_version = Some(protocol_version)
         }
