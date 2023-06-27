@@ -29,24 +29,6 @@ use crate::communication::{EvalRequest, WorkerPoolBootRequest};
 use crate::policy_downloader::FetchedPolicies;
 use crate::worker::Worker;
 
-/// This structure holds a precompiled WebAssembly module
-/// representing a policy.
-///
-/// Compiling a WebAssembly module is an expensive operation. Each
-/// worker thread needs to do that, for each policy defined by the user.
-///
-/// Precompiling the policies ahead of time reduces the bootstrap time by a lot.
-///
-/// **Warning:** when "rehydrating" the module, you have to use a `wasmtime::Engine`
-/// that has been created with the same `wasmtime::Config` used at compilation time.
-#[derive(Clone)]
-pub(crate) struct PrecompiledPolicy {
-    /// A precompiled [`wasmtime::Module`]
-    pub precompiled_module: Vec<u8>,
-
-    /// The execution mode of the policy
-    pub execution_mode: PolicyExecutionMode,
-}
 lazy_static! {
     static ref KUBEWARDEN_VERSION: Version = {
         let mut version = Version::parse(env!("CARGO_PKG_VERSION")).expect("Cannot parse CARGO_PKG_VERSION version");
@@ -80,6 +62,25 @@ fn has_minimum_kubewarden_version(metadata: &Metadata) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// This structure holds a precompiled WebAssembly module
+/// representing a policy.
+///
+/// Compiling a WebAssembly module is an expensive operation. Each
+/// worker thread needs to do that, for each policy defined by the user.
+///
+/// Precompiling the policies ahead of time reduces the bootstrap time by a lot.
+///
+/// **Warning:** when "rehydrating" the module, you have to use a `wasmtime::Engine`
+/// that has been created with the same `wasmtime::Config` used at compilation time.
+#[derive(Clone)]
+pub(crate) struct PrecompiledPolicy {
+    /// A precompiled [`wasmtime::Module`]
+    pub precompiled_module: Vec<u8>,
+
+    /// The execution mode of the policy
+    pub execution_mode: PolicyExecutionMode,
 }
 
 impl PrecompiledPolicy {

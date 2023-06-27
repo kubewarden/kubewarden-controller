@@ -111,8 +111,8 @@ fn main() -> Result<()> {
     // world (the waPC host_callback) to request the execution of code that   //
     // can be run only inside of asynchronous world.                          //
     // An example of that, is a policy that changes the container image       //
-    // references to ensure they use immutable shasum instead of tags.   The  //
-    // act of retrieving the container image manifest digest requires a       //
+    // references to ensure they use immutable shasum instead of tags.        //
+    // The act of retrieving the container image manifest digest requires a   //
     // network request, which is fulfilled using asynchronous code.           //
     //                                                                        //
     // The communication between the two worlds happens via tokio channels.   //
