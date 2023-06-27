@@ -24,6 +24,10 @@ spec:
       jsonPath: .spec.mutating
       name: Mutating
       type: boolean
+    - description: Whether the policy is used in audit checks
+      jsonPath: .spec.backgroundAudit
+      name: BackgroundAudit
+      type: boolean
     - description: Policy deployment mode
       jsonPath: .spec.mode
       name: Mode
@@ -35,6 +39,17 @@ spec:
     - description: Status of the policy
       jsonPath: .status.policyStatus
       name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .metadata.annotations['io\.kubewarden\.policy\.severity']
+      name: Severity
+      priority: 1
+      type: string
+    - jsonPath: .metadata.annotations['io\.kubewarden\.policy\.category']
+      name: Category
+      priority: 1
       type: string
     name: v1
     schema:
@@ -56,6 +71,13 @@ spec:
           spec:
             description: AdmissionPolicySpec defines the desired state of AdmissionPolicy
             properties:
+              backgroundAudit:
+                default: true
+                description: BackgroundAudit indicates whether a policy should be
+                  used or skipped when performing audit checks. If false, the policy
+                  cannot produce meaningful evaluation results during audit checks
+                  and will be skipped. The default is "true".
+                type: boolean
               failurePolicy:
                 description: FailurePolicy defines how unrecognized errors and timeout
                   errors from the policy are handled. Allowed values are "Ignore"

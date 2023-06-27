@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"

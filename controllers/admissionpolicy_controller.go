@@ -21,10 +21,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

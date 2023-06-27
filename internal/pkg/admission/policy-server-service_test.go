@@ -3,8 +3,8 @@ package admission
 import (
 	"testing"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

@@ -11,7 +11,7 @@ RUN go mod download
 
 # Copy the go source
 COPY *.go ./
-COPY apis/ apis/
+COPY pkg/ pkg/
 COPY controllers/ controllers/
 COPY internal/ internal/
 
