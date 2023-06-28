@@ -6,6 +6,7 @@ categories:
   - title: '🚀 Features'
     labels:
       - 'kind/enhancement'
+      - 'kind/feature'
   - title: '🐛 Bug Fixes'
     labels:
       - 'kind/bug'
@@ -34,14 +35,16 @@ autolabeler:
     title: '/.*!:.*/'
   - label: 'area/dependencies'
     title: 'chore(deps)'
+  - label: 'area/dependencies'
+    title: 'fix(deps)'
+  - label: 'area/dependencies'
+    title: 'build(deps)'
   - label: 'kind/feature'
     title: 'feat'
   - label: 'kind/bug'
     title: 'fix'
   - label: 'kind/chore'
     title: 'chore'
-  - label: 'area/dependencies'
-    title: 'build(deps)'
 
 version-resolver:
   major:
