@@ -1,4 +1,3 @@
-
 categories:
   - title: '⚠️  Breaking changes'
     labels:
@@ -7,6 +6,7 @@ categories:
   - title: '🚀 Features'
     labels:
       - 'kind/enhancement'
+      - 'kind/feature'
   - title: '🐛 Bug Fixes'
     labels:
       - 'kind/bug'
@@ -21,7 +21,7 @@ exclude-labels:
   - later
   - wontfix
   - kind/question
-  - skip-changelog
+  - release/skip-changelog
 
 change-template: '- $TITLE (#$NUMBER)'
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
@@ -35,7 +35,11 @@ autolabeler:
     title: '/.*!:.*/'
   - label: 'area/dependencies'
     title: 'chore(deps)'
-  - label: 'kind/enhancement'
+  - label: 'area/dependencies'
+    title: 'fix(deps)'
+  - label: 'area/dependencies'
+    title: 'build(deps)'
+  - label: 'kind/feature'
     title: 'feat'
   - label: 'kind/bug'
     title: 'fix'
@@ -54,9 +58,9 @@ version-resolver:
       - 'kind/enhancement'
   patch:
     labels:
-      - 'area/dependencies'
       - 'kind/patch'
       - 'kind/fix'
       - 'kind/bug'
       - 'kind/chore'
+      - 'area/dependencies'
   default: patch
