@@ -6,6 +6,7 @@ categories:
   - title: '🚀 Features'
     labels:
       - 'kind/enhancement'
+      - 'kind/feature'
   - title: '🐛 Bug Fixes'
     labels:
       - 'kind/bug'
