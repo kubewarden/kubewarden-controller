@@ -115,26 +115,10 @@ jobs:
               prerelease: `${{ contains(github.event.workflow_run.head_branch, '-alpha') || contains(github.event.workflow_run.head_branch, '-beta') || contains(github.event.workflow_run.head_branch, '-rc') }}`,
             });
 
-      - name: Get new release tag
-        id: get_new_release_tag
-        uses: actions/github-script@v6
-        with:
-          script: |
-            let release = await github.rest.repos.getLatestRelease({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-            });
-
-            if (release.status  === 200 ) {
-              core.setOutput('release_tag', release.data.tag_name)
-              return
-            }
-            core.setFailed("Cannot find latest release")
-
       - name: Trigger chart update
         uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588 # v2.1.1
         with:
           token: ${{ secrets.WORKFLOW_PAT }}
           repository: "${{github.repository_owner}}/helm-charts"
           event-type: update-chart
-          client-payload: '{"version": "${{ steps.get_new_release_tag.outputs.release_tag }}", "oldVersion": "${{ steps.get_old_release_tag.outputs.release_tag }}", "repository": "${{ github.repository }}"}'
+          client-payload: '{"version": "${{ github.event.workflow_run.head_branch }}", "oldVersion": "${{ steps.get_old_release_tag.outputs.release_tag }}", "repository": "${{ github.repository }}"}'
