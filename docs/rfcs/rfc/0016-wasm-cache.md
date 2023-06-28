@@ -193,6 +193,19 @@ Another possibility is to use a Kubernetes primitive called
 [`Lease`](https://kubernetes.io/docs/concepts/architecture/leases/) to ensure
 that only one of the Pods (the leader) has write access to the PV.
 
+### Leverage the `ReadWriteOncePod` access mode
+
+Another variation on this theme could leverage the
+new [`ReadWriteOncePod` access mode](https://kubernetes.io/blog/2023/04/20/read-write-once-pod-access-mode-beta/).
+
+This feature just gratuated beta as part of the Kubernetes 1.27 release.
+This access mode can be only used by PV is provided by a
+[CSI driver](https://kubernetes-csi.github.io/docs/drivers.html);
+moreover the CSI driver must be offer this access mode.
+
+I think we should not investigate the usage of this access mode because
+we would greatly limit the availability of the WASM caching feature.
+
 ## Use Stateful Set
 
 We could deploy PolicyServer via a Stateful set. This would allow each Pod to
@@ -202,6 +215,7 @@ vanilla and the optimized WASM files.
 The only disadvantage of this solution is that no sharing is done among the
 Pods that are part of the Stateful set. Which means, the same download & optimization
 task is going to be done multiple times, one per Pod.
+
 
 # Unresolved questions
 [unresolved]: #unresolved-questions
