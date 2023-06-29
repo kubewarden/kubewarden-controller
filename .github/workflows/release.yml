@@ -37,7 +37,7 @@ jobs:
         run: go install sigs.k8s.io/bom/cmd/bom@v0.2.2
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v2.8.1
+        uses: sigstore/cosign-installer@v3
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -61,7 +61,7 @@ jobs:
 
       - name: Sign BOM file
         run: |
-          cosign sign-blob --output-certificate kubewarden-controller-sbom.spdx.cert \
+          cosign sign-blob --yes --output-certificate kubewarden-controller-sbom.spdx.cert \
             --output-signature kubewarden-controller-sbom.spdx.sig \
             kubewarden-controller-sbom.spdx
         env:
