@@ -32,7 +32,7 @@ jobs:
       - ci
     steps:
       - name: Install cosign
-        uses: sigstore/cosign-installer@v2.8.1
+        uses: sigstore/cosign-installer@v3
 
       - name: Install SBOM generator tool
         uses: kubewarden/github-actions/sbom-generator-installer@v1
@@ -101,11 +101,9 @@ jobs:
 
       - name: Sign BOM file
         run: |
-          cosign sign-blob --output-certificate policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.cert \
+          cosign sign-blob --yes --output-certificate policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.cert \
             --output-signature policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.sig \
             policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.json
-        env:
-          COSIGN_EXPERIMENTAL: 1
 
       - name: Upload policy-server directory
         uses: actions/upload-artifact@v3
@@ -215,21 +213,17 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/policy-server:${{ env.TAG_NAME }}
 
       # Sign the container image that has just been built
-      - uses: sigstore/cosign-installer@v2.8.1
+      - uses: sigstore/cosign-installer@v3
       - name: Sign the images for releases
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          cosign sign \
+          cosign sign --yes \
             ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-tag.outputs.digest }}
-        env:
-          COSIGN_EXPERIMENTAL: 1
       - name: Sign latest image
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
-          cosign sign \
+          cosign sign --yes \
             ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-latest.outputs.digest }}
-        env:
-          COSIGN_EXPERIMENTAL: 1
 
       # Generate SBOM of the container image that has just been built
       - name: Install the bom command
@@ -254,11 +248,9 @@ jobs:
       # Sign SBOM files of the container image that has just been built
       - name: Sign container image SBOM file
         run: |
-          cosign sign-blob --output-certificate policy-server-container-image-sbom/policy-server-container-image-sbom.spdx.cert \
+          cosign sign-blob --yes --output-certificate policy-server-container-image-sbom/policy-server-container-image-sbom.spdx.cert \
             --output-signature policy-server-container-image-sbom/policy-server-container-image-sbom.spdx.sig \
             policy-server-container-image-sbom/policy-server-container-image-sbom.spdx
-        env:
-          COSIGN_EXPERIMENTAL: 1
 
       # Upload the SBOM files of the container image as assets
       - name: Upload policy-server container image SBOM files
