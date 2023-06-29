@@ -12,12 +12,15 @@ jobs:
   code-checks:
     name: Basic source code checks
     uses: ./.github/workflows/source-code-checks.yml
+
   cargo-checks:
     name: Cargo file checks
     uses: ./.github/workflows/cargo-file-checks.yml
+
   tests:
     name: Running tests
     uses: ./.github/workflows/tests.yml
+
   build:
     name: Build kwctl
     permissions:

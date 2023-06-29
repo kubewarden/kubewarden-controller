@@ -26,12 +26,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - name: Setup BATS
         uses: mig4/setup-bats@v1
         with:
           bats-version: 1.5.0
-      - uses: sigstore/cosign-installer@v2.8.1
-        with:
-          cosign-release: v1.13.1
+
+      - uses: sigstore/cosign-installer@v3
+
       - name: run e2e tests
         run: make e2e-test
