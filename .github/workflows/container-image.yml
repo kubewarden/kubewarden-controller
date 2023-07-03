@@ -63,7 +63,7 @@ jobs:
       -
         name: Install Cosign
         if: ${{ inputs.generate-sbom == true }}
-        uses: sigstore/cosign-installer@v2.8.1
+        uses: sigstore/cosign-installer@v3
       -
         name: Retrieve tag name (main branch)
         if: ${{ startsWith(github.ref, 'refs/heads/main') }}
