@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
@@ -28,6 +27,9 @@ var level logconfig.Level
 
 // print result of scan as JSON to stdout
 var printJSON bool
+
+// list of namespaces to be skipped from scan
+var skippedNs []string
 
 // rootCmd represents the base command when called without any subcommands
 var (
@@ -56,12 +58,6 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			skippedNsCSV, err := cmd.Flags().GetString("skipped-ns")
-			if err != nil {
-				return err
-			}
-			skippedNs := strings.Split(skippedNsCSV, ",")
-
 			policiesFetcher, err := policies.NewFetcher(kubewardenNamespace, skippedNs)
 			if err != nil {
 				return err
@@ -123,5 +119,5 @@ func init() {
 	rootCmd.Flags().StringP("policy-server-url", "u", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 	rootCmd.Flags().BoolVarP(&printJSON, "print", "p", false, "print result of scan in JSON to stdout")
-	rootCmd.Flags().StringP("ignore-namespaces", "i", "", "Comma separated list of namespace names to be skipped from scan")
+	rootCmd.Flags().StringSliceVarP(&skippedNs, "ignore-namespaces", "i", nil, "Comma separated list of namespace names to be skipped from scan")
 }
