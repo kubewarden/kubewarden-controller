@@ -63,6 +63,22 @@ var policy3 = policiesv1.AdmissionPolicy{
 	}},
 }
 
+var policy4 = policiesv1.AdmissionPolicy{
+	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{""},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"pods"},
+			},
+		}},
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"testing": "label"},
+		},
+	}},
+}
+
 func TestGetResourcesForPolicies(t *testing.T) {
 	pod1 := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -78,6 +94,14 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		},
 		Spec: v1.PodSpec{},
 	}
+	pod3 := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "podKubewarden2",
+			Namespace: "kubewarden",
+			Labels:    map[string]string{"testing": "label"},
+		},
+		Spec: v1.PodSpec{},
+	}
 	deployment1 := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deploymentDefault",
@@ -89,7 +113,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
 	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
 
-	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &deployment1)
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &pod3, &deployment1)
 
 	unstructuredPod1 := map[string]interface{}{
 		"apiVersion": "v1",
@@ -104,32 +128,56 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		},
 		"status": map[string]interface{}{},
 	}
+	unstructuredPod3 := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Pod",
+		"metadata": map[string]interface{}{
+			"name":      "podKubewarden2",
+			"namespace": "kubewarden",
+			"labels": map[string]interface{}{
+				"testing": "label",
+			},
+			"creationTimestamp": nil,
+		},
+		"spec": map[string]interface{}{
+			"containers": nil,
+		},
+		"status": map[string]interface{}{},
+	}
 
 	expectedP1 := []AuditableResources{{
 		Policies:  []policiesv1.Policy{&policy1},
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
 	}}
 
+	expectedP4 := []AuditableResources{{
+		Policies:  []policiesv1.Policy{&policy4},
+		Resources: []unstructured.Unstructured{{Object: unstructuredPod3}},
+	}}
+
 	fetcher := Fetcher{dynamicClient, "", "", nil}
 
 	tests := []struct {
-		name     string
-		policies []policiesv1.Policy
-		expect   []AuditableResources
+		name      string
+		policies  []policiesv1.Policy
+		expect    []AuditableResources
+		namespace string
 	}{
-		{"policy1 (just pods)", []policiesv1.Policy{&policy1}, expectedP1},
-		{"no policies", []policiesv1.Policy{}, []AuditableResources{}},
+		{"policy1 (just pods)", []policiesv1.Policy{&policy1}, expectedP1, "default"},
+		{"no policies", []policiesv1.Policy{}, []AuditableResources{}, "default"},
+		{"policy with label filter", []policiesv1.Policy{&policy4}, expectedP4, "kubewarden"},
 	}
 
 	for _, test := range tests {
 		ttest := test
 		t.Run(ttest.name, func(t *testing.T) {
-			resources, err := fetcher.GetResourcesForPolicies(context.Background(), ttest.policies, "default")
+			resources, err := fetcher.GetResourcesForPolicies(context.Background(), ttest.policies, ttest.namespace)
 			if err != nil {
 				t.Errorf("error shouldn't have happened " + err.Error())
 			}
 			if !cmp.Equal(resources, ttest.expect) {
-				t.Errorf("expected %v, but got %v", ttest.expect, resources)
+				diff := cmp.Diff(ttest.expect, resources)
+				t.Errorf("Invalid resources: %s", diff)
 			}
 		})
 	}
@@ -137,50 +185,76 @@ func TestGetResourcesForPolicies(t *testing.T) {
 
 func TestCreateGVRPolicyMap(t *testing.T) {
 	// all posible combination of GVR (Group, Version, Resource) for p1, p2 and p3
-	gvr1 := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "pods",
+	gvr1 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "",
+			Version:  "v1",
+			Resource: "pods",
+		},
+		objectSelector: nil,
 	}
-	gvr2 := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "v1",
-		Resource: "deployments",
+	gvr2 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "",
+			Version:  "v1",
+			Resource: "deployments",
+		},
+		objectSelector: nil,
 	}
-	gvr3 := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "alphav1",
-		Resource: "pods",
+	gvr3 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "",
+			Version:  "alphav1",
+			Resource: "pods",
+		}, objectSelector: nil,
 	}
-	gvr4 := schema.GroupVersionResource{
-		Group:    "",
-		Version:  "alphav1",
-		Resource: "deployments",
+	gvr4 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "",
+			Version:  "alphav1",
+			Resource: "deployments",
+		}, objectSelector: nil,
 	}
-	gvr5 := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "v1",
-		Resource: "pods",
+	gvr5 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "apps",
+			Version:  "v1",
+			Resource: "pods",
+		}, objectSelector: nil,
 	}
-	gvr6 := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "v1",
-		Resource: "deployments",
+	gvr6 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "apps",
+			Version:  "v1",
+			Resource: "deployments",
+		}, objectSelector: nil,
 	}
-	gvr7 := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "alphav1",
-		Resource: "pods",
+	gvr7 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "apps",
+			Version:  "alphav1",
+			Resource: "pods",
+		}, objectSelector: nil,
 	}
-	gvr8 := schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "alphav1",
-		Resource: "deployments",
+	gvr8 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "apps",
+			Version:  "alphav1",
+			Resource: "deployments",
+		}, objectSelector: nil,
+	}
+	gvr9 := resourceFilter{
+		groupVersionResource: schema.GroupVersionResource{
+			Group:    "",
+			Version:  "v1",
+			Resource: "pods",
+		},
+		objectSelector: policy4.Spec.ObjectSelector,
 	}
 
 	// expected outcome
 
-	expectedP1andP2 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
+	expectedP1andP2 := make(map[resourceFilter][]policiesv1.Policy)
 
 	expectedP1andP2[gvr1] = []policiesv1.Policy{&policy1, &policy2}
 	expectedP1andP2[gvr2] = []policiesv1.Policy{&policy2}
@@ -191,7 +265,7 @@ func TestCreateGVRPolicyMap(t *testing.T) {
 	expectedP1andP2[gvr7] = []policiesv1.Policy{&policy2}
 	expectedP1andP2[gvr8] = []policiesv1.Policy{&policy2}
 
-	expectedP1P2andP3 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
+	expectedP1P2andP3 := make(map[resourceFilter][]policiesv1.Policy)
 
 	expectedP1P2andP3[gvr1] = []policiesv1.Policy{&policy1, &policy2, &policy3}
 	expectedP1P2andP3[gvr2] = []policiesv1.Policy{&policy2, &policy3}
@@ -202,27 +276,31 @@ func TestCreateGVRPolicyMap(t *testing.T) {
 	expectedP1P2andP3[gvr7] = []policiesv1.Policy{&policy2}
 	expectedP1P2andP3[gvr8] = []policiesv1.Policy{&policy2}
 
-	expectedP1andP3 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
+	expectedP1andP3 := make(map[resourceFilter][]policiesv1.Policy)
 
 	expectedP1andP3[gvr1] = []policiesv1.Policy{&policy1, &policy3}
 	expectedP1andP3[gvr2] = []policiesv1.Policy{&policy3}
 	expectedP1andP3[gvr5] = []policiesv1.Policy{&policy3}
 	expectedP1andP3[gvr6] = []policiesv1.Policy{&policy3}
 
-	expectedP1 := make(map[schema.GroupVersionResource][]policiesv1.Policy)
+	expectedP1 := make(map[resourceFilter][]policiesv1.Policy)
 
 	expectedP1[gvr1] = []policiesv1.Policy{&policy1}
+
+	expectedP4 := make(map[resourceFilter][]policiesv1.Policy)
+	expectedP4[gvr9] = []policiesv1.Policy{&policy4}
 
 	tests := []struct {
 		name     string
 		policies []policiesv1.Policy
-		expect   map[schema.GroupVersionResource][]policiesv1.Policy
+		expect   map[resourceFilter][]policiesv1.Policy
 	}{
 		{"policy1 (just pods) and policy2 (pods, deployments, v1 and alphav1)", []policiesv1.Policy{&policy1, &policy2}, expectedP1andP2},
 		{"policy1 (just pods), policy2 (pods, deployments, v1 and alphav1) and policy3 (pods, deployments, v1)", []policiesv1.Policy{&policy1, &policy2, &policy3}, expectedP1P2andP3},
 		{"policy1 (just pods) and policy3 (pods, deployments, v1)", []policiesv1.Policy{&policy1, &policy3}, expectedP1andP3},
 		{"policy1 (just pods)", []policiesv1.Policy{&policy1}, expectedP1},
-		{"empty array", []policiesv1.Policy{}, make(map[schema.GroupVersionResource][]policiesv1.Policy)},
+		{"empty array", []policiesv1.Policy{}, make(map[resourceFilter][]policiesv1.Policy)},
+		{"with label filters", []policiesv1.Policy{&policy4}, expectedP4},
 	}
 
 	for _, test := range tests {
@@ -230,7 +308,8 @@ func TestCreateGVRPolicyMap(t *testing.T) {
 		t.Run(ttest.name, func(t *testing.T) {
 			gvrPolicyMap := createGVRPolicyMap(ttest.policies)
 			if !cmp.Equal(gvrPolicyMap, ttest.expect) {
-				t.Errorf("expected %v, but got %v", ttest.expect, gvrPolicyMap)
+				diff := cmp.Diff(ttest.expect, gvrPolicyMap)
+				t.Errorf("Invalid gvrPolicyMap: %s", diff)
 			}
 		})
 	}
@@ -302,6 +381,14 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 			Name: "testingns",
 		},
 	}
+	namespace2 := v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "testingns-with-label",
+			Labels: map[string]string{
+				"testing": "label",
+			},
+		},
+	}
 	policy := policiesv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "cap",
@@ -333,13 +420,47 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 			PolicyStatus: policiesv1.PolicyStatusActive,
 		},
 	}
+	policyWithLabelFilter := policiesv1.ClusterAdmissionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cap-with-label-filter",
+			// It's necessary to define ResourceVersion and Generation
+			// because the fake client can set values for these fields.
+			// See more at docs:
+			// ObjectMeta's `Generation` and `ResourceVersion` don't
+			// behave properly, Patch or Update operations that rely
+			// on these fields will fail, or give false positives.
+			// https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client/fake
+			ResourceVersion: "123",
+			Generation:      1,
+		},
+		Spec: policiesv1.ClusterAdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
+				BackgroundAudit: true,
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{""},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"pods", "namespaces"},
+					},
+				},
+				},
+				ObjectSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"testing": "label"},
+				},
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: policiesv1.PolicyStatusActive,
+		},
+	}
 
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
 	customScheme.AddKnownTypes(v1.SchemeGroupVersion, &namespace)
 	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
 
-	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy, &pod, &namespace)
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy, &policyWithLabelFilter, &pod, &namespace, &namespace2)
 
 	unstructuredNamespace := map[string]interface{}{
 		"apiVersion": "v1",
@@ -351,11 +472,18 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 		"spec":   map[string]interface{}{},
 		"status": map[string]interface{}{},
 	}
-
-	expectedResource := []AuditableResources{{
-		Policies:  []policiesv1.Policy{&policy},
-		Resources: []unstructured.Unstructured{{Object: unstructuredNamespace}},
-	}}
+	unstructuredNamespace2 := map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "Namespace",
+		"metadata": map[string]interface{}{
+			"name":              "testingns-with-label",
+			"creationTimestamp": nil,
+			"labels": map[string]interface{}{
+				"testing": "label"},
+		},
+		"spec":   map[string]interface{}{},
+		"status": map[string]interface{}{},
+	}
 
 	apiResourceList := metav1.APIResourceList{
 		GroupVersion: "v1",
@@ -380,13 +508,33 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 
 	fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
 
-	resources, err := fetcher.GetClusterWideResourcesForPolicies(context.Background(), []policiesv1.Policy{&policy})
-	if err != nil {
-		t.Errorf("unexpected error: " + err.Error())
+	tests := []struct {
+		name             string
+		policies         []policiesv1.Policy
+		expectedResource []AuditableResources
+	}{
+		{"Filter cluster wide resource with no label filter", []policiesv1.Policy{&policy}, []AuditableResources{{
+			Policies:  []policiesv1.Policy{&policy},
+			Resources: []unstructured.Unstructured{{Object: unstructuredNamespace}, {Object: unstructuredNamespace2}},
+		}}},
+		{"Filter cluster wide resource with label filter", []policiesv1.Policy{&policyWithLabelFilter}, []AuditableResources{{
+			Policies:  []policiesv1.Policy{&policyWithLabelFilter},
+			Resources: []unstructured.Unstructured{{Object: unstructuredNamespace2}},
+		}}},
 	}
-	if !cmp.Equal(resources, expectedResource) {
-		diff := cmp.Diff(expectedResource, resources)
-		t.Errorf("Expected AuditableResources differs from the expected value: %s", diff)
+
+	for _, test := range tests {
+		ttest := test
+		t.Run(ttest.name, func(t *testing.T) {
+			resources, err := fetcher.GetClusterWideResourcesForPolicies(context.Background(), ttest.policies)
+			if err != nil {
+				t.Errorf("unexpected error: " + err.Error())
+			}
+			if !cmp.Equal(resources, ttest.expectedResource) {
+				diff := cmp.Diff(ttest.expectedResource, resources)
+				t.Errorf("Expected AuditableResources differs from the expected value: %s", diff)
+			}
+		})
 	}
 }
 
