@@ -47,5 +47,5 @@ semver = { version = "1.0.17", features = ["serde"] }
 reqwest = { version = "0", default-features = false, features = ["rustls-tls-native-roots"] }
 
 [dev-dependencies]
-rstest = "0.17.0"
+rstest = "0.18.1"
 tempfile = "3.6.0"
