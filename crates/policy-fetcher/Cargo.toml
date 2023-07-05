@@ -36,6 +36,6 @@ docker_credential = "1.2"
 tokio = { version = "1", default_features = false }
 
 [dev-dependencies]
-rstest = "0.17"
+rstest = "0.18"
 tempfile = "3.2"
 textwrap = "0.16"
