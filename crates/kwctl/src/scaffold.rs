@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use policy_evaluator::validator::Validate;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::path::PathBuf;
@@ -10,7 +10,10 @@ use std::str::FromStr;
 use time::OffsetDateTime;
 use tracing::warn;
 
-use policy_evaluator::constants::KUBEWARDEN_ANNOTATION_POLICY_TITLE;
+use policy_evaluator::constants::{
+    KUBEWARDEN_ANNOTATION_POLICY_CATEGORY, KUBEWARDEN_ANNOTATION_POLICY_SEVERITY,
+    KUBEWARDEN_ANNOTATION_POLICY_TITLE,
+};
 use policy_evaluator::policy_artifacthub::ArtifactHubPkg;
 use policy_evaluator::policy_fetcher::verify::config::{
     LatestVerificationConfig, Signature, VersionedVerificationConfig,
@@ -74,10 +77,7 @@ impl TryFrom<ScaffoldPolicyData> for ClusterAdmissionPolicy {
         Ok(ClusterAdmissionPolicy {
             api_version: String::from("policies.kubewarden.io/v1"),
             kind: String::from("ClusterAdmissionPolicy"),
-            metadata: ObjectMeta {
-                name: data.policy_title,
-                ..Default::default()
-            },
+            metadata: build_objmetadata(data.clone()),
             spec: ClusterAdmissionPolicySpec {
                 module: data.uri,
                 settings: data.settings,
@@ -120,10 +120,7 @@ impl TryFrom<ScaffoldPolicyData> for AdmissionPolicy {
         Ok(AdmissionPolicy {
             api_version: String::from("policies.kubewarden.io/v1"),
             kind: String::from("AdmissionPolicy"),
-            metadata: ObjectMeta {
-                name: data.policy_title,
-                ..Default::default()
-            },
+            metadata: build_objmetadata(data.clone()),
             spec: AdmissionPolicySpec {
                 module: data.uri,
                 settings: data.settings,
@@ -223,6 +220,35 @@ fn get_policy_title_from_cli_or_metadata(
             .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
             .map(|s| s.to_string())
     })
+}
+
+fn build_objmetadata(data: ScaffoldPolicyData) -> ObjectMeta {
+    let mut annots: BTreeMap<String, String> = BTreeMap::new();
+    if let Some(an) = data.metadata.annotations {
+        if let Some(severity) = an.get(KUBEWARDEN_ANNOTATION_POLICY_SEVERITY) {
+            annots.insert(
+                String::from(KUBEWARDEN_ANNOTATION_POLICY_SEVERITY),
+                severity.to_owned(),
+            );
+        }
+        if let Some(category) = an.get(KUBEWARDEN_ANNOTATION_POLICY_CATEGORY) {
+            annots.insert(
+                String::from(KUBEWARDEN_ANNOTATION_POLICY_CATEGORY),
+                category.to_owned(),
+            );
+        }
+    }
+
+    let annots_option: Option<BTreeMap<String, String>> = match !annots.is_empty() {
+        true => Some(annots),
+        false => None,
+    };
+
+    ObjectMeta {
+        name: data.policy_title,
+        annotations: annots_option,
+        ..Default::default()
+    }
 }
 
 pub(crate) fn verification_config() -> Result<String> {
@@ -334,6 +360,32 @@ mod tests {
         }
     }
 
+    fn mock_metadata_with_severity_category() -> Metadata {
+        Metadata {
+            protocol_version: None,
+            rules: vec![],
+            annotations: Some(HashMap::from([
+                (
+                    KUBEWARDEN_ANNOTATION_POLICY_TITLE.to_string(),
+                    String::from("test"),
+                ),
+                (
+                    KUBEWARDEN_ANNOTATION_POLICY_SEVERITY.to_string(),
+                    String::from("medium"),
+                ),
+                (
+                    KUBEWARDEN_ANNOTATION_POLICY_CATEGORY.to_string(),
+                    String::from("PSP"),
+                ),
+            ])),
+            mutating: false,
+            background_audit: true,
+            context_aware_resources: HashSet::new(),
+            execution_mode: Default::default(),
+            minimum_kubewarden_version: None,
+        }
+    }
+
     #[test]
     fn get_policy_title_from_cli_or_metadata_returns_name_from_cli_if_present() {
         let policy_title = "name";
@@ -362,6 +414,54 @@ mod tests {
             Some(policy_title.to_string()),
             get_policy_title_from_cli_or_metadata(None, &mock_metadata_with_title(policy_title))
         )
+    }
+
+    #[test]
+    fn build_objmetadata_when_no_annotation() {
+        let mut metadata = mock_metadata_with_no_annotations();
+        metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
+        let scaffold_data = ScaffoldPolicyData {
+            uri: "not_relevant".to_string(),
+            policy_title: Some("test".to_string()),
+            metadata,
+            settings: Default::default(),
+        };
+
+        let obj_metadata = build_objmetadata(scaffold_data);
+        assert!(obj_metadata.annotations.is_none());
+    }
+
+    #[test]
+    fn build_objmetadata_with_annot_severity_category() {
+        let mut metadata = mock_metadata_with_severity_category();
+        metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
+        let scaffold_data = ScaffoldPolicyData {
+            uri: "not_relevant".to_string(),
+            policy_title: Some("test".to_string()),
+            metadata,
+            settings: Default::default(),
+        };
+
+        let obj_metadata = build_objmetadata(scaffold_data);
+        assert!(obj_metadata.annotations.is_some());
+        assert_eq!(
+            obj_metadata
+                .annotations
+                .as_ref()
+                .unwrap()
+                .get(KUBEWARDEN_ANNOTATION_POLICY_SEVERITY)
+                .unwrap(),
+            &String::from("medium")
+        );
+        assert_eq!(
+            obj_metadata
+                .annotations
+                .as_ref()
+                .unwrap()
+                .get(KUBEWARDEN_ANNOTATION_POLICY_CATEGORY)
+                .unwrap(),
+            &String::from("PSP")
+        );
     }
 
     #[test]
