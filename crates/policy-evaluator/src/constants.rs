@@ -8,6 +8,8 @@ pub const KUBEWARDEN_ANNOTATION_POLICY_OCIURL: &str = "io.kubewarden.policy.ociU
 pub const KUBEWARDEN_ANNOTATION_POLICY_SOURCE: &str = "io.kubewarden.policy.source";
 pub const KUBEWARDEN_ANNOTATION_POLICY_LICENSE: &str = "io.kubewarden.policy.license";
 pub const KUBEWARDEN_ANNOTATION_POLICY_USAGE: &str = "io.kubewarden.policy.usage";
+pub const KUBEWARDEN_ANNOTATION_POLICY_SEVERITY: &str = "io.kubewarden.policy.severity";
+pub const KUBEWARDEN_ANNOTATION_POLICY_CATEGORY: &str = "io.kubewarden.policy.category";
 
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES: &str = "io.artifacthub.resources";
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME: &str = "io.artifacthub.displayName";
