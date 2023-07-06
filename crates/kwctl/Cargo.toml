@@ -20,7 +20,8 @@ itertools = "0.11.0"
 k8s-openapi = { version = "0.18.0", default-features = false, features = ["v1_26"] }
 lazy_static = "1.4.0"
 pulldown-cmark-mdcat = { version = "2.0.3", default-features = false, features = ["regex-fancy"]}
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.10.0" }
+# policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.10.0" }
+policy-evaluator = { git = "https://github.com/viccuad/policy-evaluator", branch = "main" }
 prettytable-rs = "^0.10"
 pulldown-cmark = { version = "0.9.3", default-features = false }
 regex = "1"
