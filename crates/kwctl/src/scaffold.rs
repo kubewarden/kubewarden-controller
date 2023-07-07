@@ -443,23 +443,22 @@ mod tests {
         };
 
         let obj_metadata = build_objmetadata(scaffold_data);
-        assert!(obj_metadata.annotations.is_some());
         assert_eq!(
             obj_metadata
                 .annotations
                 .as_ref()
-                .unwrap()
+                .expect("we should have annotations")
                 .get(KUBEWARDEN_ANNOTATION_POLICY_SEVERITY)
-                .unwrap(),
+                .expect("we should have severity"),
             &String::from("medium")
         );
         assert_eq!(
             obj_metadata
                 .annotations
                 .as_ref()
-                .unwrap()
+                .expect("we should have annotations")
                 .get(KUBEWARDEN_ANNOTATION_POLICY_CATEGORY)
-                .unwrap(),
+                .expect("we should have category"),
             &String::from("PSP")
         );
     }
