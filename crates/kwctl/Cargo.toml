@@ -38,7 +38,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.4.0"
 walrus = "0.20.1"
 wasmparser = "0.107"
-time = "0.3.22"
+time = "0.3.23"
 semver = { version = "1.0.17", features = ["serde"] }
 
 # This is required to have reqwest built using the `rustls-tls-native-roots`
