@@ -35,6 +35,8 @@ linters:
     - testpackage
     - wsl
     - lll # long lines
+    - wrapcheck
+    - godox
     # https://github.com/golangci/golangci-lint/issues/541
     - interfacer
     - interfacebloat
@@ -48,11 +50,6 @@ linters:
     - rowserrcheck
     - sqlclosecheck
     - wastedassign
-    # TODO REMOVE THESE BEFORE RELEASE
-    - wrapcheck
-    - godox
-    - forbidigo
-    - ireturn
 
 linters-settings:
   cyclop:
