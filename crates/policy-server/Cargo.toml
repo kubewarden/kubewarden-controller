@@ -20,7 +20,7 @@ lazy_static = "1.4.0"
 num_cpus = "1.16.0"
 opentelemetry-otlp = { version = "0.10.0", features = ["metrics", "tonic"] }
 opentelemetry = { version = "0.17", default-features = false, features = ["metrics", "trace", "rt-tokio", "serialize"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.10.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.11.0" }
 rayon = "1.6"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
