@@ -95,8 +95,8 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	// old policy report to be used as cache
 	previousNamespacedReport, err := s.reportStore.GetPolicyReport(nsName)
 	if err != nil {
-		log.Error().Err(err).Str("namespace", nsName).
-			Msg("error getting previous PolicyReport from store")
+		log.Info().Err(err).Str("namespace", nsName).
+			Msg("no pre-existing PolicyReport, will create one at the end of the scan")
 	}
 
 	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need
@@ -167,7 +167,7 @@ func (s *Scanner) ScanClusterWideResources() error {
 	// old policy report to be used as cache
 	previousClusterReport, err := s.reportStore.GetClusterPolicyReport(constants.DefaultClusterwideReportName)
 	if err != nil {
-		log.Error().Err(err).Msg("error getting ClusterPolicyReport from store")
+		log.Info().Err(err).Msg("no-prexisting ClusterPolicyReport, will create one at the end of the scan")
 	}
 	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need
 	// to evaluate them.
