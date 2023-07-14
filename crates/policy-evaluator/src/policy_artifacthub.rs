@@ -373,14 +373,13 @@ fn compose_install(oci_url: String) -> String {
     format!(
         r#"The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
 ```console
-kwctl pull {}
+kwctl pull {oci_url}
 ```
 Then, generate the policy manifest and tune it to your liking. For example:
 ```console
-kwctl scaffold manifest -t ClusterAdmissionPolicy registry://{}
+kwctl scaffold manifest -t ClusterAdmissionPolicy registry://{oci_url}
 ```
-"#,
-        oci_url
+"#
     )
 }
 
@@ -826,6 +825,10 @@ mod tests {
 ```console
 kwctl pull ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
 ```
+Then, generate the policy manifest and tune it to your liking. For example:
+```console
+kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
+```
 "#,
             "containersImages": [
             {
@@ -889,7 +892,12 @@ kwctl pull ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
 ```console
 kwctl pull ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
 ```
+Then, generate the policy manifest and tune it to your liking. For example:
+```console
+kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
+```
 "#,
+
             "maintainers": [
             {
                 "name": "Tux Tuxedo",
