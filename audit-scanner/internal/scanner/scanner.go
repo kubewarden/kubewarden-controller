@@ -115,7 +115,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 		if err != nil {
 			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 		}
-		fmt.Println(str)
+		fmt.Println(str) //nolint:forbidigo
 	}
 	return nil
 }
@@ -184,7 +184,7 @@ func (s *Scanner) ScanClusterWideResources() error {
 		if err != nil {
 			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 		}
-		fmt.Println(str)
+		fmt.Println(str) //nolint:forbidigo
 	}
 	return nil
 }
@@ -193,7 +193,6 @@ func auditClusterResource(resource *resources.AuditableResources, resourcesFetch
 	for _, policy := range resource.Policies {
 		url, err := resourcesFetcher.GetPolicyServerURLRunningPolicy(context.Background(), policy)
 		if err != nil {
-			// TODO what's the better thing to do here?
 			log.Error().Err(err).Msg("cannot get policy server url")
 			continue
 		}
@@ -243,7 +242,6 @@ func auditResource(toBeAudited *resources.AuditableResources, resourcesFetcher R
 	for _, policy := range toBeAudited.Policies {
 		url, err := resourcesFetcher.GetPolicyServerURLRunningPolicy(context.Background(), policy)
 		if err != nil {
-			// TODO what's the better thing to do here?
 			log.Error().Err(err)
 			continue
 		}

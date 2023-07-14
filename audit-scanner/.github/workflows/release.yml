@@ -137,11 +137,10 @@ jobs:
               name: `${TAG_NAME}`
             });
 
-      # TODO
-      # - name: Trigger chart update
-      #   uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588
-      #   with:
-      #     token: ${{ secrets.HELM_CHART_REPO_ACCESS_TOKEN }}
-      #     repository: "${{github.repository_owner}}/helm-charts"
-      #     event-type: update-chart
-      #     client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}", "crds_asset_id": "${{steps.upload_release_assets.outputs.crds_asset_id}}"}'
+      - name: Trigger chart update
+        uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588
+        with:
+          token: ${{ secrets.HELM_CHART_REPO_ACCESS_TOKEN }}
+          repository: "${{github.repository_owner}}/helm-charts"
+          event-type: update-chart
+          client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}", "crds_asset_id": "${{steps.upload_release_assets.outputs.crds_asset_id}}"}'
