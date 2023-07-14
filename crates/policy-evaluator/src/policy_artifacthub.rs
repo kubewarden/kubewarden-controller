@@ -375,6 +375,10 @@ fn compose_install(oci_url: String) -> String {
 ```console
 kwctl pull {}
 ```
+Then, generate the policy manifest and tune it to your liking. For example:
+```console
+kwctl scaffold manifest -t ClusterAdmissionPolicy registry://{}
+```
 "#,
         oci_url
     )
