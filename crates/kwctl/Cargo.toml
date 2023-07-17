@@ -27,9 +27,9 @@ pulldown-cmark = { version = "0.9.3", default-features = false }
 regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.22"
+serde_yaml = "0.9.23"
 syntect = { version = "5.0" , default-features = false, features = ["default-syntaxes", "parsing"] }
-tar = "0.4.38"
+tar = "0.4.39"
 tiny-bench = "0.3"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
@@ -39,7 +39,7 @@ url = "2.4.0"
 walrus = "0.20.1"
 wasmparser = "0.108"
 time = "0.3.23"
-semver = { version = "1.0.17", features = ["serde"] }
+semver = { version = "1.0.18", features = ["serde"] }
 
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of kwctl
