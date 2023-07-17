@@ -163,9 +163,11 @@ impl WorkerPool {
             }
         };
 
-        let precompiled_policies =
+        // Use a reference counter to share access to precompiled policies
+        // between workers. This reduces memory usage
+        let precompiled_policies: Arc<PrecompiledPolicies> =
             match precompile_policies(&engine, &bootstrap_data.fetched_policies) {
-                Ok(pp) => pp,
+                Ok(pp) => Arc::new(pp),
                 Err(e) => {
                     eprintln!("{e}");
                     std::process::exit(1);
@@ -202,10 +204,16 @@ impl WorkerPool {
             warn!("policy timeout protection is disabled");
         }
 
+        // Use a reference counter to share access to policies
+        // between workers. This reduces memory usage
+        let policies = Arc::new(bootstrap_data.policies);
+
         for n in 1..=pool_size {
             let (tx, rx) = mpsc::channel::<EvalRequest>(32);
             worker_tx_chans.push(tx);
 
+            // Each worker has its own wasmtime::Engine, sharing the
+            // same engine across all the workers leads to bad performance
             let engine = match wasmtime::Engine::new(&wasmtime_config) {
                 Ok(e) => e,
                 Err(e) => {
@@ -225,16 +233,17 @@ impl WorkerPool {
             };
             worker_engines.push(engine.clone());
 
-            let policies = bootstrap_data.policies.clone();
             let modules = precompiled_policies.clone();
             let b = barrier.clone();
             let canary = boot_canary.clone();
             let callback_handler_tx = self.callback_handler_tx.clone();
             let always_accept_admission_reviews_on_namespace =
                 self.always_accept_admission_reviews_on_namespace.clone();
+            let policies = policies.clone();
 
             let join = thread::spawn(move || -> Result<()> {
                 info!(spawned = n, total = pool_size, "spawning worker");
+
                 let mut worker = match Worker::new(
                     rx,
                     &policies,
@@ -252,6 +261,10 @@ impl WorkerPool {
                         return Err(anyhow!("Worker {} couldn't start: {}", n, e));
                     }
                 };
+                // Drop the Arc references ASAP, they are no longer needed
+                // at this point
+                drop(policies);
+                drop(modules);
                 b.wait();
 
                 debug!(id = n, "worker loop start");
@@ -262,6 +275,13 @@ impl WorkerPool {
             });
             join_handles.push(join);
         }
+
+        // Deallocate all the memory used by the precompiled policies since
+        // they are no longer needed. Without this explicit cleanup
+        // the reference would be dropped right before Policy Server exits,
+        // meaning a lot of memory would have been consumed without a valid reason
+        // during the whole execution time
+        drop(precompiled_policies);
         barrier.wait();
 
         if !boot_canary.load(Ordering::SeqCst) {

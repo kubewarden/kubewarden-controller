@@ -9,7 +9,7 @@ use policy_evaluator::policy_fetcher::verify::FulcioAndRekorData;
 use policy_evaluator::{callback_handler::CallbackHandlerBuilder, kube};
 use std::{fs, path::PathBuf, process, sync::RwLock, thread};
 use tokio::{runtime::Runtime, sync::mpsc, sync::oneshot};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 mod admission_review;
 mod api;
@@ -335,6 +335,7 @@ fn main() -> Result<()> {
             }
         }
         info!(status = "done", "worker pool bootstrap");
+        memory_usage(pool_size);
 
         // All is good, we can start listening for incoming requests through the
         // web server
@@ -365,6 +366,37 @@ fn main() -> Result<()> {
     };
 
     Ok(())
+}
+
+fn memory_usage(pool_size: usize) {
+    let process = match procfs::process::Process::myself() {
+        Ok(p) => p,
+        Err(e) => {
+            warn!(error =? e, "cannot access process stats");
+            return;
+        }
+    };
+    let mem_stats = match process.statm() {
+        Ok(s) => s,
+        Err(e) => {
+            warn!(error =? e, "cannot access process memory stats");
+            return;
+        }
+    };
+
+    let formatter = humansize::make_format(humansize::DECIMAL);
+
+    let vm_size = mem_stats.size * procfs::page_size();
+    let vm_rss = mem_stats.resident * procfs::page_size();
+
+    debug!(
+        VmSize = formatter(vm_size),
+        VmSizeBytes = vm_size,
+        VmRSS = formatter(vm_rss),
+        VmRSSBytes = vm_rss,
+        pool_size,
+        "memory usage"
+    );
 }
 
 fn fatal_error(msg: String) {
