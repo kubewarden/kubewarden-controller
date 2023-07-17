@@ -152,7 +152,7 @@ func (s *Scanner) ScanClusterWideResources() error {
 	if err != nil {
 		return err
 	}
-	log.Debug().
+	log.Info().
 		Dict("dict", zerolog.Dict().
 			Int("policies to evaluate", len(policies)).
 			Int("policies skipped", skippedNum),
@@ -242,7 +242,7 @@ func auditResource(toBeAudited *resources.AuditableResources, resourcesFetcher R
 	for _, policy := range toBeAudited.Policies {
 		url, err := resourcesFetcher.GetPolicyServerURLRunningPolicy(context.Background(), policy)
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("error obtaining polucy-server URL")
 			continue
 		}
 		for _, resource := range toBeAudited.Resources {
@@ -287,7 +287,6 @@ func auditResource(toBeAudited *resources.AuditableResources, resourcesFetcher R
 
 func sendAdmissionReviewToPolicyServer(url *url.URL, admissionRequest *admv1.AdmissionReview, httpClient *http.Client) (*admv1.AdmissionReview, error) {
 	payload, err := json.Marshal(admissionRequest)
-
 	if err != nil {
 		return nil, err
 	}
