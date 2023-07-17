@@ -24,14 +24,14 @@ policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag
 rayon = "1.6"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.22"
+serde_yaml = "0.9.23"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 tracing-opentelemetry = "0.17.4"
 tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 warp = { version = "0.3.5", default_features = false, features = [ "multipart", "tls"] }
-semver = { version = "1.0.17", features = ["serde"] }
+semver = { version = "1.0.18", features = ["serde"] }
 
 [dev-dependencies]
 rstest = "0.18"
