@@ -37,6 +37,7 @@ linters:
     - lll # long lines
     - wrapcheck
     - godox
+    - depguard
     # https://github.com/golangci/golangci-lint/issues/541
     - interfacer
     - interfacebloat
