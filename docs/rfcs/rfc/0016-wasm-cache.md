@@ -3,8 +3,8 @@
 | Feature Name | WASM cache                       |
 | Start Date   | Jun 28 2023                      |
 | Category     | [Category]                       |
-| RFC PR       | [fill this in after opening PR]  |
-| State        | **ACCEPTED**                         |
+| RFC PR       | [PR21](https://github.com/kubewarden/rfc/pull/21)  |
+| State        | **REJECTED**                         |
 
 
 # Summary
