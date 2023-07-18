@@ -1,23 +1,69 @@
-name: Release policy server
+name: policy-server release
 on:
-  workflow_run:
-    workflows: ["Build policy server"]
-    types:
-      - completed
-    branches:
-      - "v*"
+  push:
+    tags:
+    - 'v*'
+
+# Declare default permissions as read only.
+permissions: read-all
 
 jobs:
-  release:
-    name: Create release
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    steps:
+  ci:
+    uses: kubewarden/policy-server/.github/workflows/ci.yml@main
+    permissions: read-all
 
-      - name: Get old release tag
-        id: get_old_release_tag
+  container-build:
+    uses: kubewarden/policy-server/.github/workflows/container-build.yml@main
+    permissions:
+      id-token: write
+      packages: write
+  release:
+    permissions:
+      id-token: write
+      contents: write
+    name: Create release
+    runs-on: ubuntu-latest
+    needs:
+      - ci
+      - container-build
+    steps:
+      - name: Install Golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Install the bom command
+        shell: bash
+        run: go install sigs.k8s.io/bom/cmd/bom@v0.2.2
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v2.8.1
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Retrieve tag name
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo ${{ github.ref_name }}) >> $GITHUB_ENV
+
+      - name: Create SBOM file
+        shell: bash
+        run: |
+          bom generate -n https://kubewarden.io/kubewarden.spdx \
+            --image "ghcr.io/${{github.repository_owner}}/policy-server@${{ needs.container-build.outputs.digest }}" \
+            . > policy-server-sbom.spdx
+
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --output-certificate policy-server-sbom.spdx.cert \
+            --output-signature policy-server-sbom.spdx.sig \
+            policy-server-sbom.spdx
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - name: Get latest release tag
+        id: get_last_release_tag
         uses: actions/github-script@v6
         with:
           script: |
@@ -27,7 +73,7 @@ jobs:
             });
 
             if (release.status  === 200 ) {
-              core.setOutput('release_tag', release.data.tag_name)
+              core.setOutput('old_release_tag', release.data.tag_name)
               return
             }
             core.setFailed("Cannot find latest release")
@@ -49,47 +95,17 @@ jobs:
             }
             core.setFailed(`Draft release not found`)
 
-      - name: Download build artifacts
-        uses: actions/github-script@v6
-        with:
-          script: |
-            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               run_id: context.payload.workflow_run.id,
-            });
-            const matchArtifact = allArtifacts.data.artifacts.filter((artifact) => {
-              return artifact.name.startsWith("policy-server")
-            });
-            for (const artifact of matchArtifact) {
-              let download = await github.rest.actions.downloadArtifact({
-                 owner: context.repo.owner,
-                 repo: context.repo.repo,
-                 artifact_id: artifact.id,
-                 archive_format: 'zip',
-              });
-              let fs = require('fs');
-              file_path = `${process.env.GITHUB_WORKSPACE}/${artifact.name}.zip`;
-              fs.writeFileSync(file_path, Buffer.from(download.data));
-            }
-
-      - name: 'Unzip build artifacts'
-        run: unzip -n "policy-server-*.zip" -d artifacts
-
       - name: Upload release assets
         id: upload_release_assets
         uses: actions/github-script@v6
         with:
           script: |
             let fs = require('fs');
-            // The artifact directory is defined in the previous step. When the
-            // zip files are expanded.
-            let files = fs.readdirSync("artifacts")
-            // Envvar exported in the step para the draft release is found
+            let files = ['policy-server-sbom.spdx', 'policy-server-sbom.spdx.cert', 'policy-server-sbom.spdx.sig']
             const {RELEASE_ID} = process.env
 
             for (const file of files) {
-              let file_data = fs.readFileSync(`artifacts/${file}`);
+              let file_data = fs.readFileSync(file);
 
               let response = await github.rest.repos.uploadReleaseAsset({
                 owner: context.repo.owner,
@@ -105,20 +121,20 @@ jobs:
         with:
           script: |
             const {RELEASE_ID} = process.env
+            const {TAG_NAME} = process.env
             github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: `${RELEASE_ID}`,
               draft: false,
-              tag_name: `${{ github.event.workflow_run.head_branch }}`,
-              name: `${{ github.event.workflow_run.head_branch }}`,
-              prerelease: `${{ contains(github.event.workflow_run.head_branch, '-alpha') || contains(github.event.workflow_run.head_branch, '-beta') || contains(github.event.workflow_run.head_branch, '-rc') }}`,
+              tag_name: `${TAG_NAME}`,
+              name: `${TAG_NAME}`
             });
 
       - name: Trigger chart update
-        uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588 # v2.1.1
+        uses: peter-evans/repository-dispatch@4c03f6fcc3d786d9feef89ed5544ccf37d52e232
         with:
           token: ${{ secrets.WORKFLOW_PAT }}
           repository: "${{github.repository_owner}}/helm-charts"
           event-type: update-chart
-          client-payload: '{"version": "${{ github.event.workflow_run.head_branch }}", "oldVersion": "${{ steps.get_old_release_tag.outputs.release_tag }}", "repository": "${{ github.repository }}"}'
+          client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}", "crds_asset_id": "${{steps.upload_release_assets.outputs.crds_asset_id}}"}'

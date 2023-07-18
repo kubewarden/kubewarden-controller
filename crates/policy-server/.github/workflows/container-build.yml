@@ -1,0 +1,51 @@
+name: Build container image every change.
+
+on:
+  workflow_call:
+    outputs:
+      digest:
+        description: "Container image digest"
+        value: ${{jobs.build.outputs.digest}}
+  push:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/container-image.yml
+    permissions:
+      packages: write
+    with:
+      push-image: true
+
+  sign:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      id-token: write
+    needs: build
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: sigstore/cosign-installer@v2.8.1
+      - name: Sign the images
+        run: |
+          cosign sign \
+            ${{needs.build.outputs.repository}}@${{needs.build.outputs.digest}}
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - uses: sigstore/cosign-installer@v2.8.1
+      - name: Sign the SBOM
+        run: |
+          tag=$(echo '${{needs.build.outputs.digest}}' | sed 's/:/-/g')
+          cosign sign \
+            "${{needs.build.outputs.repository}}:$tag.sbom"
+        env:
+          COSIGN_EXPERIMENTAL: 1
