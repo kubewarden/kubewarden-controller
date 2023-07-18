@@ -457,7 +457,7 @@ checksum = "a3e2c3daef883ecc1b5d58c15adae93470a91d425f3532ba1695849656af3fc1"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/viccuad/policy-evaluator?branch=main#401c2a51e1d8c8659ee4ce8a1549969c8253b217"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.11.0#640338128112fd929c76bcd0d5faacc798e71ad3"
 dependencies = [
  "base64 0.21.2",
  "chrono",
@@ -2449,7 +2449,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "walrus",
- "wasmparser 0.108.0",
+ "wasmparser 0.109.0",
 ]
 
 [[package]]
@@ -3320,7 +3320,7 @@ dependencies = [
 [[package]]
 name = "policy-evaluator"
 version = "0.11.0"
-source = "git+https://github.com/viccuad/policy-evaluator?branch=main#401c2a51e1d8c8659ee4ce8a1549969c8253b217"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.11.0#640338128112fd929c76bcd0d5faacc798e71ad3"
 dependencies = [
  "anyhow",
  "base64 0.21.2",
@@ -3353,7 +3353,7 @@ dependencies = [
  "wapc",
  "wasi-cap-std-sync",
  "wasi-common",
- "wasmparser 0.107.0",
+ "wasmparser 0.108.0",
  "wasmtime",
  "wasmtime-provider",
  "wasmtime-wasi",
@@ -5370,6 +5370,16 @@ name = "wasmparser"
 version = "0.108.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76c956109dcb41436a39391139d9b6e2d0a5e0b158e1293ef352ec977e5e36c5"
+dependencies = [
+ "indexmap 2.0.0",
+ "semver",
+]
+
+[[package]]
+name = "wasmparser"
+version = "0.109.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bf9564f29de2890ee34406af52d2a92dec6ef044c8ddfc5add5db8dcfd36e6c"
 dependencies = [
  "indexmap 2.0.0",
  "semver",
