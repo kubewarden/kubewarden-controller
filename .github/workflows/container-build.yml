@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     name: Build
-    uses: kubewarden/kubewarden-controller/.github/workflows/container-image.yml@main
+    uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
     with:
