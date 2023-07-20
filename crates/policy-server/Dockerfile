@@ -7,8 +7,6 @@ RUN rustup target add $(arch)-unknown-linux-musl
 # Fix ring building using musl - see https://github.com/briansmith/ring/issues/1414#issuecomment-1055177218
 RUN apt-get update && apt-get install musl-tools clang llvm -y
 ENV CC="clang"
-ENV AR="llvm-ar"
-ENV RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld"
 
 RUN mkdir /usr/src/policy-server
 WORKDIR /usr/src/policy-server
