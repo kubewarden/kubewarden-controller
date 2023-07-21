@@ -59,8 +59,6 @@ jobs:
           cosign sign-blob --yes --output-certificate policy-server-sbom.spdx.cert \
             --output-signature policy-server-sbom.spdx.sig \
             policy-server-sbom.spdx
-        env:
-          COSIGN_EXPERIMENTAL: 1
 
       - name: Get latest release tag
         id: get_last_release_tag
