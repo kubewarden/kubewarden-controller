@@ -6,10 +6,6 @@ on:
       push-image:
         type: boolean
         required: true
-      generate-sbom:
-        type: boolean
-        required: false
-        default: true
     outputs:
       repository:
         description: "Repository used to build the container image"
@@ -53,18 +49,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Install Golang
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.19'
-      -
-        name: Install the bom command
-        uses: kubewarden/github-actions/kubernetes-bom-installer@v2
-      -
-        name: Install Cosign
-        if: ${{ inputs.generate-sbom == true }}
-        uses: sigstore/cosign-installer@v3
-      -
         name: Retrieve tag name (main branch)
         if: ${{ startsWith(github.ref, 'refs/heads/main') }}
         run: |
@@ -105,19 +89,6 @@ jobs:
           outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      -
-        name: Create SBOM file
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          bom generate -n https://kubewarden.io/kubewarden.spdx -o kubewarden-controller.spdx .
-      -
-        name: Attach SBOM file in the container image
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          set -e
-          cosign attach sbom --sbom kubewarden-controller.spdx "ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}"
       -
         name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}

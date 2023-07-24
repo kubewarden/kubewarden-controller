@@ -1,0 +1,77 @@
+name: Build container image
+
+on:
+  workflow_call:
+    inputs:
+      image-digest:
+        type: string
+        required: true
+
+jobs:
+  sbom:
+    name: Build SBOM, sign and attach them to OCI image
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    permissions:
+      packages: write
+      id-token: write
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install the syft command
+        #TODO: change origin
+        uses: flavio/github-actions/syft-installer@main
+
+      - name: Install the crane command
+        #TODO: change origin
+        uses: flavio/github-actions/crane-installer@main
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find platform digest
+        shell: bash
+        run: |
+          set -e
+          DIGEST=$(crane digest \
+            --platform "linux/${{ matrix.arch }}" \
+            ghcr.io/${{ github.repository_owner }}/kubewarden-controller@${{ inputs.image-digest }})
+          echo "PLATFORM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Create SBOM file
+        shell: bash
+        run: |
+          syft \
+            -o spdx-json \
+            --file kubewarden-controller-sbom-${{ matrix.arch }}.spdx \
+            ghcr.io/${{ github.repository_owner }}/kubewarden-controller@${{ env.PLATFORM_DIGEST }}
+
+      - name: Sign BOM file
+        run: |
+          cosign sign-blob --yes \
+            --output-certificate kubewarden-controller-sbom-${{ matrix.arch }}.spdx.cert \
+            --output-signature kubewarden-controller-sbom-${{ matrix.arch }}.spdx.sig \
+            kubewarden-controller-sbom-${{ matrix.arch }}.spdx
+
+      - name: Attach SBOM file in the container image
+        shell: bash
+        run: |
+          cosign attach \
+            sbom --sbom kubewarden-controller-sbom-${{ matrix.arch }}.spdx \
+            ghcr.io/${{ github.repository_owner }}/kubewarden-controller@${{ env.PLATFORM_DIGEST }}
+
+      -
+        name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: kubewarden-controller-sbom-*

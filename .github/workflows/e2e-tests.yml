@@ -16,7 +16,6 @@ jobs:
       packages: write
     with:
       push-image: false
-      generate-sbom: false
   run-e2e-tests:
     name: "Tests"
     needs: [build]
