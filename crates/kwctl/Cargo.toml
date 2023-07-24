@@ -26,7 +26,7 @@ pulldown-cmark = { version = "0.9.3", default-features = false }
 regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.23"
+serde_yaml = "0.9.25"
 syntect = { version = "5.0" , default-features = false, features = ["default-syntaxes", "parsing"] }
 tar = "0.4.39"
 tiny-bench = "0.3"
