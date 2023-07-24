@@ -59,7 +59,8 @@ func NewFetcher(kubewardenNamespace string, policyServerURL string) (*Fetcher, e
 	return &Fetcher{dynamicClient, kubewardenNamespace, policyServerURL, clientset}, nil
 }
 
-// GetResourcesForPolicies fetches all resources that must be audited and returns them in an AuditableResources array.
+// GetResourcesForPolicies fetches all namespaced resources that must be audited
+// in a specific namespace and returns them in an AuditableResources array.
 // Iterates through all the rules in the policies to find all relevant resources. It creates a GVR (Group Version Resource)
 // array for each rule defined in a policy. Then fetches and aggregates the GVRs for all the policies.
 // Returns an array of AuditableResources. Each entry of the array will contain and array of resources of the same kind, and an array of
@@ -69,6 +70,21 @@ func (f *Fetcher) GetResourcesForPolicies(ctx context.Context, policies []polici
 	auditableResources := []AuditableResources{}
 	gvrMap := createGVRPolicyMap(policies)
 	for resourceFilter, policies := range gvrMap {
+		isNamespaced, err := f.isNamespacedResource(resourceFilter.groupVersionResource)
+		if err != nil {
+			if errors.Is(err, constants.ErrResourceNotFound) {
+				log.Warn().
+					Str("resource GVK", resourceFilter.groupVersionResource.String()).
+					Msg("API resource not found")
+				continue
+			}
+			return nil, err
+		}
+		if !isNamespaced {
+			// continue if resource is clusterwide
+			continue
+		}
+
 		resources, err := f.getResourcesDynamically(ctx, &resourceFilter, namespace)
 		// continue if resource doesn't exist.
 		if apimachineryerrors.IsNotFound(err) {
