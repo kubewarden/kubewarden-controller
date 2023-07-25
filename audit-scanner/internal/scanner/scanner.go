@@ -210,7 +210,7 @@ func auditClusterResource(resource *resources.AuditableResources, resourcesFetch
 					Str("policyUID", string(policy.GetUID())).
 					Str("resource", resource.GetName()).
 					Str("resourceResourceVersion", resource.GetResourceVersion()),
-				).Msg("Previous result found. Reuse result")
+				).Msg("Previous result found. Reusing result")
 				continue
 			}
 			admissionRequest := resources.GenerateAdmissionReview(resource)
@@ -259,7 +259,7 @@ func auditResource(toBeAudited *resources.AuditableResources, resourcesFetcher R
 					Str("policyUID", string(policy.GetUID())).
 					Str("resource", resource.GetName()).
 					Str("resourceResourceVersion", resource.GetResourceVersion()),
-				).Msg("Previous result found. Reuse result")
+				).Msg("Previous result found. Reusing result")
 				continue
 			}
 
