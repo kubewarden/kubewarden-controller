@@ -735,13 +735,13 @@ func TestLackOfPermsWhenGettingResources(t *testing.T) {
 	// simulate lacking permissions when listing pods or namespaces. This should
 	// make the filtering skip these resources, and produce no error
 	dynamicClient.PrependReactor("list", "pods",
-		func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+		func(action clienttesting.Action) (bool, runtime.Object, error) {
 			return true, nil, apimachineryerrors.NewForbidden(schema.GroupResource{
 				Resource: "pods",
 			}, "", errors.New("reason"))
 		})
 	dynamicClient.PrependReactor("list", "namespaces",
-		func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+		func(action clienttesting.Action) (bool, runtime.Object, error) {
 			return true, nil, apimachineryerrors.NewForbidden(schema.GroupResource{
 				Resource: "namespaces",
 			}, "", errors.New("reason"))
@@ -767,7 +767,7 @@ func TestLackOfPermsWhenGettingResources(t *testing.T) {
 	fakeClientSet := fakekubernetes.NewSimpleClientset()
 	fakeClientSet.Resources = []*metav1.APIResourceList{&apiResourceList}
 
-	// the pairs policies,resources should be empty, as pods,namespaces have
+	// the pairs (policies,resources) should be empty, as (pods,namespaces) have
 	// been skipped because of lack of permissions
 	expectedP1 := []AuditableResources{}
 
