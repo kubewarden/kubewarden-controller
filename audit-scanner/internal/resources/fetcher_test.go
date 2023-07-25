@@ -21,6 +21,7 @@ import (
 )
 
 // policies for testing
+
 var policy1 = policiesv1.AdmissionPolicy{
 	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -35,6 +36,7 @@ var policy1 = policiesv1.AdmissionPolicy{
 	}},
 }
 
+// used to test incorrect or unknown GVKs
 var policy2 = policiesv1.ClusterAdmissionPolicy{
 	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -75,6 +77,21 @@ var policy4 = policiesv1.AdmissionPolicy{
 		}},
 		ObjectSelector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{"testing": "label"},
+		},
+	}},
+}
+
+// used to test incorrect or unknown GVKs
+var policyIncorrectRules = policiesv1.ClusterAdmissionPolicy{
+	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{""},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"pods", "Unexistent"},
+			},
+		},
 		},
 	}},
 }
@@ -175,6 +192,11 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod3}},
 	}}
 
+	expectedPIncorrectRules := []AuditableResources{{
+		Policies:  []policiesv1.Policy{&policyIncorrectRules},
+		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
+		// note that the resource "Unexistent" is correctly missing here
+	}}
 	fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
 
 	tests := []struct {
@@ -186,6 +208,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		{"policy1 (just pods)", []policiesv1.Policy{&policy1}, expectedP1, "default"},
 		{"no policies", []policiesv1.Policy{}, []AuditableResources{}, "default"},
 		{"policy with label filter", []policiesv1.Policy{&policy4}, expectedP4, "kubewarden"},
+		{"we skip incorrect GVKs", []policiesv1.Policy{&policyIncorrectRules}, expectedPIncorrectRules, "default"},
 	}
 
 	for _, test := range tests {
