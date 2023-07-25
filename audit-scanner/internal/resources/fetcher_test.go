@@ -115,6 +115,26 @@ func TestGetResourcesForPolicies(t *testing.T) {
 
 	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &pod3, &deployment1)
 
+	apiResourceList := metav1.APIResourceList{
+		GroupVersion: "v1",
+		APIResources: []metav1.APIResource{
+			{
+				Name:         "namespaces",
+				SingularName: "namespace",
+				Kind:         "Namespace",
+				Namespaced:   false,
+			},
+			{
+				Name:         "pods",
+				SingularName: "pod",
+				Kind:         "Pod",
+				Namespaced:   true,
+			},
+		},
+	}
+	fakeClientSet := fakekubernetes.NewSimpleClientset()
+	fakeClientSet.Resources = []*metav1.APIResourceList{&apiResourceList}
+
 	unstructuredPod1 := map[string]interface{}{
 		"apiVersion": "v1",
 		"kind":       "Pod",
@@ -155,7 +175,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod3}},
 	}}
 
-	fetcher := Fetcher{dynamicClient, "", "", nil}
+	fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
 
 	tests := []struct {
 		name      string
