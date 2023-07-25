@@ -22,7 +22,7 @@ dns-lookup = "2.0"
 json-patch = "1.0"
 kube = { version = "0.84.0", default-features = false, features = ["client", "rustls-tls"] }
 k8s-openapi = { version = "0.18.0", default-features = false }
-kubewarden-policy-sdk = "0.9.4"
+kubewarden-policy-sdk = "0.9.5"
 itertools = "0.11"
 lazy_static = "1.4"
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.23" }
@@ -41,9 +41,9 @@ wasmtime          = { workspace = true }
 wasmtime-wasi     = { workspace = true }
 wasi-common       = { workspace = true }
 wasi-cap-std-sync = { workspace = true }
-wasmtime-provider = { version = "1.7.0", features = ["cache"] }
+wasmtime-provider = { version = "1.8.0", features = ["cache"] }
 picky = { version = "7.0.0-rc.6", default-features = false, features = [ "x509", "chrono_conversion" ] }
-chrono = "0.4.26"
+chrono = { version = "0.4.26", default-features = false }
 time = { version = "0.3.23", features = ["serde-human-readable"] }
 semver = { version = "1.0.18", features = ["serde"] }
 email_address = {version = "0.2.4", features = ["serde"] }
@@ -51,10 +51,10 @@ mail-parser= {version = "0.8.2", features = ["serde"] }
 thiserror = "1.0"
 
 [workspace.dependencies]
-wasmtime          = "10.0"
-wasmtime-wasi     = "10.0"
-wasi-common       = "10.0"
-wasi-cap-std-sync = "10.0"
+wasmtime          = "11.0"
+wasmtime-wasi     = "11.0"
+wasi-common       = "11.0"
+wasi-cap-std-sync = "11.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
