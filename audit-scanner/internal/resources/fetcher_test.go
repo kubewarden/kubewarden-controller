@@ -96,6 +96,21 @@ var policyIncorrectRules = policiesv1.ClusterAdmissionPolicy{
 	}},
 }
 
+// used to test skipping of clusterwide resources
+var policyPodsNamespaces = policiesv1.ClusterAdmissionPolicy{
+	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{""},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"pods", "namespaces"},
+			},
+		},
+		},
+	}},
+}
+
 func TestGetResourcesForPolicies(t *testing.T) {
 	pod1 := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -126,11 +141,17 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		},
 		Spec: appsv1.DeploymentSpec{},
 	}
+	namespace1 := v1.Namespace{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-namespace",
+		},
+	}
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
 	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
 
-	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &pod3, &deployment1)
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &pod3, &deployment1, &namespace1)
 
 	apiResourceList := metav1.APIResourceList{
 		GroupVersion: "v1",
@@ -197,6 +218,13 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
 		// note that the resource "Unexistent" is correctly missing here
 	}}
+
+	expectedPPodsNamespaces := []AuditableResources{{
+		Policies:  []policiesv1.Policy{&policyPodsNamespaces},
+		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
+		// note that the namespacej resource is correctly missing here
+	}}
+
 	fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
 
 	tests := []struct {
@@ -209,6 +237,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		{"no policies", []policiesv1.Policy{}, []AuditableResources{}, "default"},
 		{"policy with label filter", []policiesv1.Policy{&policy4}, expectedP4, "kubewarden"},
 		{"we skip incorrect GVKs", []policiesv1.Policy{&policyIncorrectRules}, expectedPIncorrectRules, "default"},
+		{"we skip clusterwide resources", []policiesv1.Policy{&policyPodsNamespaces}, expectedPPodsNamespaces, "default"}, // namespaces get filtered
 	}
 
 	for _, test := range tests {
