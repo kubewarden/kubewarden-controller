@@ -1,4 +1,4 @@
-name: Build container image every change.
+name: Build container image and SBOMs
 
 on:
   workflow_call:
@@ -14,15 +14,16 @@ on:
 
 jobs:
   build:
-    name: Build
+    name: Build container image
     uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
+      id-token: write
     with:
       push-image: true
 
   sbom:
-    name: SBOM
+    name: Generate SBOM and push them to OCI registry
     needs: build
     uses: ./.github/workflows/sbom.yml
     permissions:

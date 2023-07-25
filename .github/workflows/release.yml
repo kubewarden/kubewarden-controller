@@ -13,7 +13,7 @@ jobs:
     permissions: read-all
 
   build:
-    name: Build container
+    name: Build container image and SBOMs
     uses: ./.github/workflows/container-build.yml
     permissions:
       id-token: write
