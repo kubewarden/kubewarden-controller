@@ -23,6 +23,10 @@ RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -o manager .
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
+# Copy the Go Modules manifests - these are used by BOM generators
+# and by security scanner
+COPY go.mod /go.mod
+COPY go.sum /go.sum
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]

@@ -1,4 +1,4 @@
-name: Build container image every change.
+name: Build container image and SBOMs
 
 on:
   workflow_call:
@@ -6,6 +6,7 @@ on:
       digest:
         description: "Container image digest"
         value: ${{jobs.build.outputs.digest}}
+
   push:
     branches:
       - "main"
@@ -13,36 +14,20 @@ on:
 
 jobs:
   build:
-    name: Build
+    name: Build container image
     uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
+      id-token: write
     with:
       push-image: true
 
-  sign:
-    runs-on: ubuntu-latest
+  sbom:
+    name: Generate SBOM and push them to OCI registry
+    needs: build
+    uses: ./.github/workflows/sbom.yml
     permissions:
       packages: write
       id-token: write
-    needs: build
-    steps:
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: sigstore/cosign-installer@v3
-
-      - name: Sign the images
-        run: |
-          cosign sign --yes \
-            ${{needs.build.outputs.repository}}@${{needs.build.outputs.digest}}
-
-      - name: Sign the SBOM
-        run: |
-          tag=$(echo '${{needs.build.outputs.digest}}' | sed 's/:/-/g')
-          cosign sign --yes \
-            "${{needs.build.outputs.repository}}:$tag.sbom"
+    with:
+      image-digest: ${{ needs.build.outputs.digest }}
