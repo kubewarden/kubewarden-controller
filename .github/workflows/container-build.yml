@@ -14,7 +14,6 @@ on:
 
 jobs:
   build:
-    name: Build container image
     uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
@@ -22,7 +21,6 @@ jobs:
       push-image: true
 
   sign:
-    name: Sign container image
     needs: build
     uses: ./.github/workflows/sign-image.yml
     permissions:
@@ -32,7 +30,6 @@ jobs:
       image-digest: ${{ needs.build.outputs.digest }}
 
   sbom:
-    name: Generate SBOM and push them to OCI registry
     needs: build
     uses: ./.github/workflows/sbom.yml
     permissions:

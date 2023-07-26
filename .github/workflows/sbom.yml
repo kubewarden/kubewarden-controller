@@ -9,7 +9,7 @@ on:
 
 jobs:
   sbom:
-    name: Build SBOM, sign and attach them to OCI image
+    name: Generate SBOM, sign and attach them to OCI image
     strategy:
       matrix:
         arch: [amd64, arm64]
