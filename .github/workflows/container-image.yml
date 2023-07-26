@@ -25,7 +25,6 @@ jobs:
     name: Build container image
     permissions:
       packages: write
-      id-token: write
     runs-on: ubuntu-latest
     outputs:
       repository: ${{ steps.setoutput.outputs.repository }}
@@ -49,10 +48,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Install cosign
-        if: ${{ inputs.push-image }}
-        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3
       -
         name: Retrieve tag name (main branch)
         if: ${{ startsWith(github.ref, 'refs/heads/main') }}
@@ -80,12 +75,6 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      -
-        name: Sign container image
-        if: ${{ inputs.push-image }}
-        run: |
-          cosign sign --yes \
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
       -
         # Only build amd64 because buildx does not allow multiple platforms when
         # exporting the image to a tarball. As we use this only for end-to-end tests
