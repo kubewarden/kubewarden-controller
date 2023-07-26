@@ -1,4 +1,4 @@
-name: Build container image and SBOMs
+name: Build container image, sign it, and generate SBOMs
 
 on:
   workflow_call:
