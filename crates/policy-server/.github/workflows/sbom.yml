@@ -1,4 +1,4 @@
-name: Build container image
+name: Generate SBOMs
 
 on:
   workflow_call:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   sbom:
-    name: Build SBOM, sign and attach them to OCI image
+    name: Generate SBOM, sign and attach them to OCI image
     strategy:
       matrix:
         arch: [amd64, arm64]
@@ -21,16 +21,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@v3.1.5
+        uses: kubewarden/github-actions/syft-installer@00836d4962f80890a32cca1dd324d2ebafc4e29c # v3.1.5
 
       - name: Install the crane command
-        uses: kubewarden/github-actions/crane-installer@v3.1.5
+        uses: kubewarden/github-actions/crane-installer@00836d4962f80890a32cca1dd324d2ebafc4e29c # v3.1.5
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -78,7 +78,7 @@ jobs:
 
       -
         name: Upload SBOMs as artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
         with:
           name: sbom
           path: policy-server-sbom-*
