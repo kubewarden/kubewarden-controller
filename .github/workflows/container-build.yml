@@ -18,9 +18,18 @@ jobs:
     uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
-      id-token: write
     with:
       push-image: true
+
+  sign:
+    name: Sign container image
+    needs: build
+    uses: ./.github/workflows/sign-image.yml
+    permissions:
+      packages: write
+      id-token: write
+    with:
+      image-digest: ${{ needs.build.outputs.digest }}
 
   sbom:
     name: Generate SBOM and push them to OCI registry
