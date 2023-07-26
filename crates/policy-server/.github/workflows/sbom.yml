@@ -1,0 +1,84 @@
+name: Build container image
+
+on:
+  workflow_call:
+    inputs:
+      image-digest:
+        type: string
+        required: true
+
+jobs:
+  sbom:
+    name: Build SBOM, sign and attach them to OCI image
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    permissions:
+      packages: write
+      id-token: write
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install the syft command
+        uses: kubewarden/github-actions/syft-installer@v3.1.5
+
+      - name: Install the crane command
+        uses: kubewarden/github-actions/crane-installer@v3.1.5
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find platform digest
+        shell: bash
+        run: |
+          set -e
+          DIGEST=$(crane digest \
+            --platform "linux/${{ matrix.arch }}" \
+            ghcr.io/${{ github.repository_owner }}/policy-server@${{ inputs.image-digest }})
+          echo "PLATFORM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Create SBOM file
+        shell: bash
+        run: |
+          syft \
+            -o spdx-json \
+            --file policy-server-sbom-${{ matrix.arch }}.spdx \
+            ghcr.io/${{ github.repository_owner }}/policy-server@${{ env.PLATFORM_DIGEST }}
+
+      - name: Sign SBOM file
+        run: |
+          cosign sign-blob --yes \
+            --output-certificate policy-server-sbom-${{ matrix.arch }}.spdx.cert \
+            --output-signature policy-server-sbom-${{ matrix.arch }}.spdx.sig \
+            policy-server-sbom-${{ matrix.arch }}.spdx
+
+      - name: Attach SBOM file in the container image
+        shell: bash
+        run: |
+          cosign attach \
+            sbom --sbom policy-server-sbom-${{ matrix.arch }}.spdx \
+            ghcr.io/${{ github.repository_owner }}/policy-server@${{ env.PLATFORM_DIGEST }}
+
+      - name: Sign SBOM file pushed to OCI registry
+        shell: bash
+        run: |
+          set -e
+          SBOM_TAG="$(echo ${{ env.PLATFORM_DIGEST }} | sed -e 's/:/-/g').sbom"
+
+          cosign sign --yes \
+            ghcr.io/${{github.repository_owner}}/policy-server:${SBOM_TAG}
+
+      -
+        name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: policy-server-sbom-*

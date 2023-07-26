@@ -6,10 +6,6 @@ on:
       push-image:
         type: boolean
         required: true
-      generate-sbom:
-        type: boolean
-        required: false
-        default: true
     outputs:
       repository:
         description: "Repository used to build the container image"
@@ -29,6 +25,7 @@ jobs:
     name: Build container image
     permissions:
       packages: write
+      id-token: write
     runs-on: ubuntu-latest
     outputs:
       repository: ${{ steps.setoutput.outputs.repository }}
@@ -53,16 +50,8 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Install Golang
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.20'
-      -
-        name: Install the bom command
-        uses: kubewarden/github-actions/kubernetes-bom-installer@v2
-      -
-        name: Install Cosign
-        if: ${{ inputs.generate-sbom == true }}
+        name: Install cosign
+        if: ${{ inputs.push-image }}
         uses: sigstore/cosign-installer@v3
       -
         name: Retrieve tag name (main branch)
@@ -92,6 +81,12 @@ jobs:
           tags: |
             ghcr.io/${{github.repository_owner}}/policy-server:${{ env.TAG_NAME }}
       -
+        name: Sign container image
+        if: ${{ inputs.push-image }}
+        run: |
+          cosign sign --yes \
+            ghcr.io/${{github.repository_owner}}/policy-server@${{ steps.build-image.outputs.digest }}
+      -
         # Only build amd64 because buildx does not allow multiple platforms when
         # exporting the image to a tarball. As we use this only for end-to-end tests
         # and they run on amd64 arch, let's skip the arm64 build for now.
@@ -105,19 +100,6 @@ jobs:
           outputs: type=docker,dest=/tmp/policy-server-image-${{ env.TAG_NAME }}.tar
           tags: |
             ghcr.io/${{github.repository_owner}}/policy-server:${{ env.TAG_NAME }}
-      -
-        name: Create SBOM file
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          bom generate -n https://kubewarden.io/kubewarden.spdx -o policy-server.spdx .
-      -
-        name: Attach SBOM file in the container image
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          set -e
-          cosign attach sbom --sbom policy-server.spdx "ghcr.io/${{github.repository_owner}}/policy-server@${{ steps.build-image.outputs.digest }}"
       -
         name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
