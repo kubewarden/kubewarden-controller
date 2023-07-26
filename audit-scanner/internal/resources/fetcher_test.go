@@ -11,16 +11,21 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+
+	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
+
 	fakekubernetes "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	clienttesting "k8s.io/client-go/testing"
 )
 
 // policies for testing
+
 var policy1 = policiesv1.AdmissionPolicy{
 	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -35,6 +40,7 @@ var policy1 = policiesv1.AdmissionPolicy{
 	}},
 }
 
+// used to test incorrect or unknown GVKs
 var policy2 = policiesv1.ClusterAdmissionPolicy{
 	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
 		Rules: []admissionregistrationv1.RuleWithOperations{{
@@ -79,6 +85,36 @@ var policy4 = policiesv1.AdmissionPolicy{
 	}},
 }
 
+// used to test incorrect or unknown GVKs
+var policyIncorrectRules = policiesv1.ClusterAdmissionPolicy{
+	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{""},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"pods", "Unexistent"},
+			},
+		},
+		},
+	}},
+}
+
+// used to test skipping of clusterwide resources
+var policyPodsNamespaces = policiesv1.ClusterAdmissionPolicy{
+	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: nil,
+			Rule: admissionregistrationv1.Rule{
+				APIGroups:   []string{""},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"pods", "namespaces"},
+			},
+		},
+		},
+	}},
+}
+
 func TestGetResourcesForPolicies(t *testing.T) {
 	pod1 := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -109,11 +145,37 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		},
 		Spec: appsv1.DeploymentSpec{},
 	}
+	namespace1 := v1.Namespace{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-namespace",
+		},
+	}
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
 	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
 
-	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &pod3, &deployment1)
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &pod2, &pod3, &deployment1, &namespace1)
+
+	apiResourceList := metav1.APIResourceList{
+		GroupVersion: "v1",
+		APIResources: []metav1.APIResource{
+			{
+				Name:         "namespaces",
+				SingularName: "namespace",
+				Kind:         "Namespace",
+				Namespaced:   false,
+			},
+			{
+				Name:         "pods",
+				SingularName: "pod",
+				Kind:         "Pod",
+				Namespaced:   true,
+			},
+		},
+	}
+	fakeClientSet := fakekubernetes.NewSimpleClientset()
+	fakeClientSet.Resources = []*metav1.APIResourceList{&apiResourceList}
 
 	unstructuredPod1 := map[string]interface{}{
 		"apiVersion": "v1",
@@ -155,7 +217,19 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		Resources: []unstructured.Unstructured{{Object: unstructuredPod3}},
 	}}
 
-	fetcher := Fetcher{dynamicClient, "", "", nil}
+	expectedPIncorrectRules := []AuditableResources{{
+		Policies:  []policiesv1.Policy{&policyIncorrectRules},
+		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
+		// note that the resource "Unexistent" is correctly missing here
+	}}
+
+	expectedPPodsNamespaces := []AuditableResources{{
+		Policies:  []policiesv1.Policy{&policyPodsNamespaces},
+		Resources: []unstructured.Unstructured{{Object: unstructuredPod1}},
+		// note that the namespacej resource is correctly missing here
+	}}
+
+	fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
 
 	tests := []struct {
 		name      string
@@ -166,6 +240,8 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		{"policy1 (just pods)", []policiesv1.Policy{&policy1}, expectedP1, "default"},
 		{"no policies", []policiesv1.Policy{}, []AuditableResources{}, "default"},
 		{"policy with label filter", []policiesv1.Policy{&policy4}, expectedP4, "kubewarden"},
+		{"we skip incorrect GVKs", []policiesv1.Policy{&policyIncorrectRules}, expectedPIncorrectRules, "default"},
+		{"we skip clusterwide resources", []policiesv1.Policy{&policyPodsNamespaces}, expectedPPodsNamespaces, "default"}, // namespaces get filtered
 	}
 
 	for _, test := range tests {
@@ -634,5 +710,84 @@ func TestIsNamespacedResource(t *testing.T) {
 				t.Errorf("isNamespacedResource return expected to be %t, got %t", isNamespaced, ttest.expectedIsNamespaced)
 			}
 		})
+	}
+}
+
+func TestLackOfPermsWhenGettingResources(t *testing.T) {
+	pod1 := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "podDefault",
+			Namespace: "default",
+		},
+		Spec: v1.PodSpec{},
+	}
+	namespace1 := v1.Namespace{
+		TypeMeta: metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-namespace",
+		},
+	}
+	customScheme := scheme.Scheme
+	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
+	metav1.AddToGroupVersion(customScheme, policiesv1.GroupVersion)
+
+	dynamicClient := fake.NewSimpleDynamicClient(customScheme, &policy1, &pod1, &namespace1)
+	// simulate lacking permissions when listing pods or namespaces. This should
+	// make the filtering skip these resources, and produce no error
+	dynamicClient.PrependReactor("list", "pods",
+		func(action clienttesting.Action) (bool, runtime.Object, error) {
+			return true, nil, apimachineryerrors.NewForbidden(schema.GroupResource{
+				Resource: "pods",
+			}, "", errors.New("reason"))
+		})
+	dynamicClient.PrependReactor("list", "namespaces",
+		func(action clienttesting.Action) (bool, runtime.Object, error) {
+			return true, nil, apimachineryerrors.NewForbidden(schema.GroupResource{
+				Resource: "namespaces",
+			}, "", errors.New("reason"))
+		})
+
+	apiResourceList := metav1.APIResourceList{
+		GroupVersion: "v1",
+		APIResources: []metav1.APIResource{
+			{
+				Name:         "namespaces",
+				SingularName: "namespace",
+				Kind:         "Namespace",
+				Namespaced:   false,
+			},
+			{
+				Name:         "pods",
+				SingularName: "pod",
+				Kind:         "Pod",
+				Namespaced:   true,
+			},
+		},
+	}
+	fakeClientSet := fakekubernetes.NewSimpleClientset()
+	fakeClientSet.Resources = []*metav1.APIResourceList{&apiResourceList}
+
+	// the pairs (policies,resources) should be empty, as (pods,namespaces) have
+	// been skipped because of lack of permissions
+	expectedP1 := []AuditableResources{}
+
+	fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
+
+	resources, err := fetcher.GetResourcesForPolicies(context.Background(), []policiesv1.Policy{&policy1}, "default")
+	if err != nil {
+		t.Errorf("error shouldn't have happened " + err.Error())
+	}
+	if !cmp.Equal(resources, expectedP1) {
+		diff := cmp.Diff(expectedP1, resources)
+		t.Errorf("Invalid resources: %s", diff)
+	}
+
+	resources, err = fetcher.GetClusterWideResourcesForPolicies(context.Background(), []policiesv1.Policy{&policy1})
+	if err != nil {
+		t.Errorf("error shouldn't have happened " + err.Error())
+	}
+	if !cmp.Equal(resources, expectedP1) {
+		diff := cmp.Diff(expectedP1, resources)
+		t.Errorf("Invalid resources: %s", diff)
 	}
 }

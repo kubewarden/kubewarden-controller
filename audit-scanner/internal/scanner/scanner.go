@@ -94,9 +94,12 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	namespacedsReport.Summary.Skip = skippedNum
 	// old policy report to be used as cache
 	previousNamespacedReport, err := s.reportStore.GetPolicyReport(nsName)
-	if err != nil {
-		log.Info().Err(err).Str("namespace", nsName).
-			Msg("no pre-existing PolicyReport, will create one at the end of the scan")
+	if errors.Is(err, constants.ErrResourceNotFound) {
+		log.Info().Str("namespace", nsName).
+			Msg("no pre-existing PolicyReport, will create one at end of the scan if needed")
+	} else if err != nil {
+		log.Err(err).Str("namespace", nsName).
+			Msg("error when obtaining PolicyReport")
 	}
 
 	// Iterate through all auditableResources. Each item contains a list of resources and the policies that would need
@@ -207,7 +210,7 @@ func auditClusterResource(resource *resources.AuditableResources, resourcesFetch
 					Str("policyUID", string(policy.GetUID())).
 					Str("resource", resource.GetName()).
 					Str("resourceResourceVersion", resource.GetResourceVersion()),
-				).Msg("Previous result found. Reuse result")
+				).Msg("Previous result found. Reusing result")
 				continue
 			}
 			admissionRequest := resources.GenerateAdmissionReview(resource)
@@ -256,7 +259,7 @@ func auditResource(toBeAudited *resources.AuditableResources, resourcesFetcher R
 					Str("policyUID", string(policy.GetUID())).
 					Str("resource", resource.GetName()).
 					Str("resourceResourceVersion", resource.GetResourceVersion()),
-				).Msg("Previous result found. Reuse result")
+				).Msg("Previous result found. Reusing result")
 				continue
 			}
 
