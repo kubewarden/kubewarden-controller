@@ -2334,9 +2334,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "577989da1c70867d32431303fb24152455ef697c78f2631f005ce9021699c6e4"
+checksum = "b2b5f89a2e97652ca998205c3aaffbdfcf35feadc37580e06fb77fd7ca5abfbc"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -2641,13 +2641,13 @@ dependencies = [
 
 [[package]]
 name = "num-derive"
-version = "0.3.3"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
+checksum = "9e6a0fd4f737c707bd9086cc16c925f294943eb62eb71499e9fd4cf71f8b9f4e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.27",
 ]
 
 [[package]]
@@ -4134,9 +4134,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.174"
+version = "1.0.175"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b88756493a5bd5e5395d53baa70b194b05764ab85b59e43e4b8f4e1192fa9b1"
+checksum = "5d25439cd7397d044e2748a6fe2432b5e85db703d6d097bd014b3c0ad1ebff0b"
 dependencies = [
  "serde_derive",
 ]
@@ -4162,9 +4162,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.174"
+version = "1.0.175"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e5c3a298c7f978e53536f95a63bdc4c4a64550582f31a0359a9afda6aede62e"
+checksum = "b23f7ade6f110613c0d63858ddb8b94c1041f550eab58a16b371bdf2c9c80ab4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6178,9 +6178,9 @@ dependencies = [
 
 [[package]]
 name = "x509-cert"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "077a1672d8ecfa5c1fe69fa7c5d043962e4e32866d4375495536261c0b4781f5"
+checksum = "25eefca1d99701da3a57feb07e5079fc62abba059fc139e98c13bbb250f3ef29"
 dependencies = [
  "const-oid 0.9.4",
  "der 0.7.7",
