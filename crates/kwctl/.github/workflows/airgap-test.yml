@@ -11,7 +11,7 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2.5.0
+      - uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2.5.0
       - name: Run registry
         run: |
           export CONTAINER_ID=$(docker run -d -p 5000:5000 --name registry registry:2) 
@@ -40,5 +40,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
       - run: shellcheck $(find scripts/ -name '*.sh')

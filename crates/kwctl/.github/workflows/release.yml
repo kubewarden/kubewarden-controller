@@ -21,14 +21,14 @@ jobs:
     steps:
       - name: Download all artifact
         id: download
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@cbed621e49e4c01b044d60f6c80ea4ed6328b281 # v2
 
       - name: Retrieve tag name
         run: |
           echo TAG_NAME=$(echo ${{ github.ref }} | sed -e "s|refs/tags/||") >> $GITHUB_ENV
 
       - name: Get release ID from the release created by release drafter
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             let releases = await github.rest.repos.listReleases({
@@ -45,7 +45,7 @@ jobs:
             core.setFailed(`Draft release not found`)
 
       - name: Upload release assets
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         env:
           DOWNLOAD_PATH: "${{steps.download.outputs.download-path}}"
         with:
@@ -77,7 +77,7 @@ jobs:
 
       - name: Get previous release tag
         id: get_previous_release_tag
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             let release = await github.rest.repos.getLatestRelease({
@@ -92,7 +92,7 @@ jobs:
             core.setFailed("Cannot find latest release")
 
       - name: Publish release
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             const {RELEASE_ID} = process.env
