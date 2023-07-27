@@ -1,7 +1,8 @@
 {
   "extends": [
     "config:base",
-    "schedule:earlyMondays"
+    "schedule:earlyMondays",
+    "helpers:pinGitHubActionDigests"
   ],
   "labels": ["dependencies"],
   "lockFileMaintenance": { "enabled": true },
