@@ -55,7 +55,7 @@ func NewFetcher(kubewardenNamespace string, policyServerURL string) (*Fetcher, e
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	clientset := kubernetes.NewForConfigOrDie(config)
 	if policyServerURL != "" {
-		log.Info().Msg(fmt.Sprintf("Querying PolicyServers at %s for debugging purposes. Don't forget to start `kwctl port-forward` if needed", policyServerURL))
+		log.Info().Msg(fmt.Sprintf("querying PolicyServers at %s for debugging purposes. Don't forget to start `kwctl port-forward` if needed", policyServerURL))
 	}
 	return &Fetcher{dynamicClient, kubewardenNamespace, policyServerURL, clientset}, nil
 }
