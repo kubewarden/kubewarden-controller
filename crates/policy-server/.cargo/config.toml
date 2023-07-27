@@ -1,9 +1,0 @@
-[target.aarch64-unknown-linux-musl]
-linker = "clang"
-ar = "llvm-ar"
-rustflags = ["-C", "link-self-contained=yes", "-C", "linker=rust-lld"]
-
-[target.x86_64-unknown-linux-musl]
-linker = "clang"
-ar = "llvm-ar"
-rustflags = ["-C", "link-self-contained=yes", "-C", "linker=rust-lld"]

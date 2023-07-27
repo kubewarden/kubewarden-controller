@@ -22,6 +22,7 @@ FROM scratch
 COPY --from=cfg /etc/passwd /etc/passwd
 COPY --from=cfg /etc/group /etc/group
 COPY --from=build --chmod=0755 /usr/local/cargo/bin/policy-server /policy-server
+ADD Cargo.lock /Cargo.lock
 USER 65533:65533
 EXPOSE 3000
 ENTRYPOINT ["/policy-server"]

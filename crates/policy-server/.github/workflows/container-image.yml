@@ -2,29 +2,52 @@ name: Build container image
 
 on:
   workflow_call:
-    inputs:
-      push-image:
-        type: boolean
-        required: true
     outputs:
-      repository:
-        description: "Repository used to build the container image"
-        value: ${{ jobs.build.outputs.repository }}
-      tag:
-        description: "Tag used to build the container image"
-        value: ${{ jobs.build.outputs.tag }}
-      artifact:
-        description: "Uploaded artifact with the container tarball"
-        value: ${{ jobs.build.outputs.artifact }}
       digest:
         description: "Image digest"
         value: ${{ jobs.build.outputs.digest }}
 
 jobs:
+  cross-build:
+    name: Cross compile policy-server binary
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        targetarch:
+          - aarch64
+          - x86_64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{matrix.targetarch}}-unknown-linux-musl
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target ${{matrix.targetarch}}-unknown-linux-musl
+
+      - name: Upload policy-server binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: policy-server-${{ matrix.targetarch }}
+          path: |
+            target/${{ matrix.targetarch }}-unknown-linux-musl/release/policy-server
+
   build:
     name: Build container image
     permissions:
       packages: write
+    needs:
+    - cross-build
     runs-on: ubuntu-latest
     outputs:
       repository: ${{ steps.setoutput.outputs.repository }}
@@ -48,6 +71,23 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Download the policy-server artifacts we've built inside of the previous job
+      - name: Download policy-server-x86_64 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: policy-server-x86_64
+          path: artifacts-x86_64
+      - name: Download policy-server-aarch64 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: policy-server-aarch64
+          path: artifacts-aarch64
+      - name: Move binaries to project root
+        run: |
+          mv artifacts-x86_64/policy-server policy-server-x86_64
+          mv artifacts-aarch64/policy-server policy-server-aarch64
+
       -
         name: Retrieve tag name (main branch)
         if: ${{ startsWith(github.ref, 'refs/heads/main') }}
@@ -64,43 +104,18 @@ jobs:
         run: |
             echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
       -
-        name: Build and push container image
-        if: ${{ inputs.push-image }}
+        name: Push and push container image
         id: build-image
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4
         with:
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.github
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
             ghcr.io/${{github.repository_owner}}/policy-server:${{ env.TAG_NAME }}
       -
-        # Only build amd64 because buildx does not allow multiple platforms when
-        # exporting the image to a tarball. As we use this only for end-to-end tests
-        # and they run on amd64 arch, let's skip the arm64 build for now.
-        name: Build linux/amd64 container image
-        if: ${{ inputs.push-image == false }}
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          outputs: type=docker,dest=/tmp/policy-server-image-${{ env.TAG_NAME }}.tar
-          tags: |
-            ghcr.io/${{github.repository_owner}}/policy-server:${{ env.TAG_NAME }}
-      -
-        name: Upload container image to use in other jobs
-        if: ${{ inputs.push-image == false }}
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
-        with:
-          name: policy-server-image-${{ env.TAG_NAME }}
-          path: /tmp/policy-server-image-${{ env.TAG_NAME }}.tar
-      -
         id: setoutput
         name: Set output parameters
         run: |
-          echo "repository=ghcr.io/${{github.repository_owner}}/policy-server" >> $GITHUB_OUTPUT
-          echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
-          echo "artifact=policy-server-image-${{env.TAG_NAME}}" >> $GITHUB_OUTPUT
           echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
