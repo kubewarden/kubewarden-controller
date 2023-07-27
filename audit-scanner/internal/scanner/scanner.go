@@ -81,7 +81,7 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 		// Read in the cert file
 		certs, err := os.ReadFile(caCertFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", caCertFile, err)
+			log.Fatal().Msg(fmt.Sprintf("failed to read file %q with CA cert: %v", caCertFile, err))
 		}
 		// Append our cert to the inherited system pool
 		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
