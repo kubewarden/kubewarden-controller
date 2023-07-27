@@ -1,0 +1,37 @@
+name: Build container image, sign it, and generate SBOMs
+
+on:
+  workflow_call:
+    outputs:
+      digest:
+        description: "Container image digest"
+        value: ${{jobs.build.outputs.digest}}
+
+  push:
+    branches:
+      - "main"
+      - "feat-**"
+
+jobs:
+  build:
+    uses: ./.github/workflows/container-image.yml
+    permissions:
+      packages: write
+
+  sign:
+    needs: build
+    uses: ./.github/workflows/sign-image.yml
+    permissions:
+      packages: write
+      id-token: write
+    with:
+      image-digest: ${{ needs.build.outputs.digest }}
+
+  sbom:
+    needs: build
+    uses: ./.github/workflows/sbom.yml
+    permissions:
+      packages: write
+      id-token: write
+    with:
+      image-digest: ${{ needs.build.outputs.digest }}

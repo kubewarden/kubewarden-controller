@@ -1,77 +1,24 @@
-name: Build policy server
+name: Build container image
+
 on:
-  push:
-    branches:
-    - main
-    - "feat-**"
-    tags:
-    - 'v*'
+  workflow_call:
+    outputs:
+      digest:
+        description: "Image digest"
+        value: ${{ jobs.build.outputs.digest }}
 
 jobs:
-  ci:
-    # A branch is required, and cannot be dynamic - https://github.com/actions/runner/issues/1493
-    uses: kubewarden/policy-server/.github/workflows/tests.yml@main
-    permissions: read-all
-  build-policy-server-binaries:
-    name: Build container image
-    runs-on: ubuntu-22.04
+  cross-build:
+    name: Cross compile policy-server binary
+    runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        targetarch: [ "aarch64", "x86_64" ]
-        include:
-          - targetarch: aarch64
-            arch: arm64
-            rustflags: ""
-          - targetarch: x86_64
-            arch: amd64
-            rustflags: "-C target-feature=+crt-static"
-    permissions:
-      packages: write
-      id-token: write
-    needs:
-      - ci
+        targetarch:
+          - aarch64
+          - x86_64
+
     steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Install SBOM generator tool
-        uses: kubewarden/github-actions/sbom-generator-installer@v1
-
-      - name: Configure Ubuntu repositories
-        run: |
-          sudo dpkg --add-architecture arm64
-
-          sudo sed -i "s/deb h/deb [arch=amd64] h/g" /etc/apt/sources.list
-
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy universe" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates universe" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy multiverse" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates multiverse" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security universe" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security multiverse" /etc/apt/sources.list
-
-          sudo apt update -y
-      - name: Install Musl and configure gcc spec
-        run: |
-          sudo apt install -y musl-dev:${{ matrix.arch }}
-          # patching the .spec file, as by default it has a bug where it tries to
-          # set old_cpp_options but it already exists. using *+cpp_options achieves
-          # the same desired functionality of appending preexisting options
-          sudo sed -i 1d /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-          sudo sed -i "s/*cpp_options/+cpp_options/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-          sudo sed -i "s/ %(old_cpp_options)//g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-
-      - name: Configure gcc spec for x86_64
-        if: ${{ matrix.targetarch == 'x86_64' }}
-        run: |
-          # The cargo configuration to build static binaries is not working. Thus,
-          # update the spec file to ensure that.
-          sudo sed -i "s/-dynamic-linker.*/-no-dynamic-linker  -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-no-export-dynamic}/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -79,184 +26,96 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: ${{matrix.targetarch}}-unknown-linux-musl
+          override: true
 
-      - name: Install rust target
-        run: rustup target add ${{ matrix.targetarch }}-unknown-linux-musl
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target ${{matrix.targetarch}}-unknown-linux-musl
 
-      - name: Build policy-server
-        env:
-          CC: ${{ matrix.targetarch }}-linux-musl-gcc
-          RUSTFLAGS: "-C link_arg=-lgcc -C link_arg=-specs -C link_arg=/usr/lib/${{ matrix.targetarch}}-linux-musl/musl-gcc.specs ${{ matrix.rustflags }}"
-        run: |
-          cargo build --release --target ${{ matrix.targetarch }}-unknown-linux-musl
-          mkdir policy-server-${{ matrix.targetarch }}
-          mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/policy-server policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}
-
-      - name: Generate SBOM
-        run: |
-          spdx-sbom-generator -f json
-          # SBOM files should have "sbom" in the name due the CLO monitor
-          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-          mv bom-cargo.json policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.json
-
-      - name: Sign BOM file
-        run: |
-          cosign sign-blob --yes --output-certificate policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.cert \
-            --output-signature policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.sig \
-            policy-server-${{ matrix.targetarch }}/policy-server-${{ matrix.targetarch }}.spdx.json
-
-      - name: Upload policy-server directory
+      - name: Upload policy-server binary
         uses: actions/upload-artifact@v3
         with:
           name: policy-server-${{ matrix.targetarch }}
           path: |
-            policy-server-${{ matrix.targetarch }}
+            target/${{ matrix.targetarch }}-unknown-linux-musl/release/policy-server
 
-  build-container-image:
-    name: Build policy server container image
-    runs-on: ubuntu-latest
+  build:
+    name: Build container image
     permissions:
       packages: write
-      id-token: write
     needs:
-     - build-policy-server-binaries
+    - cross-build
+    runs-on: ubuntu-latest
+    outputs:
+      repository: ${{ steps.setoutput.outputs.repository }}
+      tag: ${{ steps.setoutput.outputs.tag }}
+      artifact: ${{ steps.setoutput.outputs.artifact }}
+      digest: ${{ steps.setoutput.outputs.digest }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      -
+        name: Checkout code
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2
+      -
+        name: Login to GitHub Container Registry
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Download the policy-server artifacts we've built inside of the previous job
-      - name: Download policy-server-x86_64 artifacts
+      - name: Download policy-server-x86_64 artifact
         uses: actions/download-artifact@v3
         with:
           name: policy-server-x86_64
           path: artifacts-x86_64
-      - name: Download policy-server-aarch64 artifacts
+      - name: Download policy-server-aarch64 artifact
         uses: actions/download-artifact@v3
         with:
           name: policy-server-aarch64
           path: artifacts-aarch64
       - name: Move binaries to project root
         run: |
-          mv artifacts-x86_64/policy-server-x86_64 policy-server-x86_64
-          mv artifacts-aarch64/policy-server-aarch64 policy-server-aarch64
+          mv artifacts-x86_64/policy-server policy-server-x86_64
+          mv artifacts-aarch64/policy-server policy-server-aarch64
 
-      # Prepare docker environment
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Build and push `latest` image
-      - name: Build and export to docker
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          load: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/policy-server:latest
-      - name: Test container image
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        run: |
-          docker run --rm ghcr.io/${{ github.repository_owner }}/policy-server:latest --help
-      - name: Build and push
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        id: build-latest
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          platforms: linux/amd64, linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/policy-server:latest
-
-      # Build and push the `:<version>` image
-      - name: Retrieve tag name (main branch)
+      -
+        name: Retrieve tag name (main branch)
         if: ${{ startsWith(github.ref, 'refs/heads/main') }}
         run: |
           echo TAG_NAME=latest >> $GITHUB_ENV
-      - name: Retrieve tag name (feat branch)
+      -
+        name: Retrieve tag name (feat branch)
         if: ${{ startsWith(github.ref, 'refs/heads/feat') }}
         run: |
           echo "TAG_NAME=latest-$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
-      - name: Retrieve tag name (tag)
+      -
+        name: Retrieve tag name (tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
-      - name: Build and export to docker
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/build-push-action@v4
+            echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+      -
+        name: Push and push container image
+        id: build-image
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4
         with:
           context: .
-          load: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/policy-server:${{ env.TAG_NAME }}
-      - name: Test container image
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        run: |
-          docker run --rm ghcr.io/${{ github.repository_owner }}/policy-server:${{ env.TAG_NAME }} --help
-      - name: Build and push
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        id: build-tag
-        uses: docker/build-push-action@v4
-        with:
-          context: .
+          file: ./Dockerfile.github
           platforms: linux/amd64, linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/policy-server:${{ env.TAG_NAME }}
-
-      # Sign the container image that has just been built
-      - uses: sigstore/cosign-installer@v3
-      - name: Sign the images for releases
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+            ghcr.io/${{github.repository_owner}}/policy-server:${{ env.TAG_NAME }}
+      -
+        id: setoutput
+        name: Set output parameters
         run: |
-          cosign sign --yes \
-            ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-tag.outputs.digest }}
-      - name: Sign latest image
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        run: |
-          cosign sign --yes \
-            ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-latest.outputs.digest }}
-
-      # Generate SBOM of the container image that has just been built
-      - name: Install the bom command
-        uses: kubewarden/github-actions/kubernetes-bom-installer@v1
-      - name: Create directory to store container SBOM files
-        shell: bash
-        run: |
-          mkdir policy-server-container-image-sbom
-      - name: Create SBOM file for the latest container image
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
-        shell: bash
-        run: |
-          set -e
-          bom generate -n https://kubewarden.io/ --image ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-latest.outputs.digest }} -o policy-server-container-image-sbom/policy-server-container-image-sbom.spdx
-      - name: Create SBOM file for the tagged container image
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        shell: bash
-        run: |
-          set -e
-          bom generate -n https://kubewarden.io/ --image ghcr.io/${{ github.repository_owner }}/policy-server@${{ steps.build-tag.outputs.digest }} -o policy-server-container-image-sbom/policy-server-container-image-sbom.spdx
-
-      # Sign SBOM files of the container image that has just been built
-      - name: Sign container image SBOM file
-        run: |
-          cosign sign-blob --yes --output-certificate policy-server-container-image-sbom/policy-server-container-image-sbom.spdx.cert \
-            --output-signature policy-server-container-image-sbom/policy-server-container-image-sbom.spdx.sig \
-            policy-server-container-image-sbom/policy-server-container-image-sbom.spdx
-
-      # Upload the SBOM files of the container image as assets
-      - name: Upload policy-server container image SBOM files
-        uses: actions/upload-artifact@v3
-        with:
-          name: policy-server-container-image-sbom
-          path: |
-            policy-server-container-image-sbom/
-
+          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
