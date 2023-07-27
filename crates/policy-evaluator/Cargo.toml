@@ -35,7 +35,7 @@ tracing = "0.1"
 tracing-futures = "0.2"
 url = { version = "2.2", features = ["serde"] }
 validator = { version = "0.16", features = ["derive"] }
-wasmparser = "0.109"
+wasmparser = "0.110"
 wapc = "1.0.0"
 wasmtime          = { workspace = true }
 wasmtime-wasi     = { workspace = true }
