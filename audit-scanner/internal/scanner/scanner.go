@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/report"
@@ -52,13 +54,57 @@ type Scanner struct {
 	printJSON  bool
 }
 
-// NewScanner creates a new scanner with the PoliciesFetcher provided
-func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher, printJSON bool) (*Scanner, error) {
+// NewScanner creates a new scanner with the PoliciesFetcher provided. If
+// insecureClient is false, it will read the caCertFile and add it to the in-app
+// cert trust store. This gets used by the httpCLient when connection to
+// PolicyServers endpoints.
+func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher,
+	printJSON bool,
+	insecureClient bool, caCertFile string) (*Scanner, error) {
 	report, err := report.NewPolicyReportStore()
 	if err != nil {
 		return nil, err
 	}
-	return &Scanner{policiesFetcher, resourcesFetcher, *report, http.Client{}, printJSON}, nil
+
+	// configure client for TLS
+	var httpClient http.Client
+	if insecureClient {
+		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint
+		httpClient = http.Client{Transport: tr}
+		log.Info().Msg("connecting to PolicyServers endpoints in insecure SSL mode")
+	} else {
+		// Get the SystemCertPool, continue with an empty pool on error
+		rootCAs, _ := x509.SystemCertPool()
+		if rootCAs == nil {
+			rootCAs = x509.NewCertPool()
+		}
+		// Read in the cert file
+		certs, err := os.ReadFile(caCertFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", caCertFile, err)
+		}
+		// Append our cert to the inherited system pool
+		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+			log.Fatal().Msg("failed to append cert to in-app RootCAs trust store")
+		}
+		log.Debug().Str("ca-cert-file", caCertFile).
+			Msg("appended cert file to in-app RootCAs trust store")
+		// Trust the augmented cert pool in our client
+		config := &tls.Config{
+			InsecureSkipVerify: false,
+			RootCAs:            rootCAs,
+			MinVersion:         tls.VersionTLS12,
+		}
+		// initialize httpClient while conserving default settings
+		httpClient = *http.DefaultClient
+		httpClient.Transport = http.DefaultTransport
+		tr, ok := httpClient.Transport.(*http.Transport)
+		if !ok {
+			log.Fatal().Msg("failed to build httpClient: failed http.Transport type assertion")
+		}
+		tr.TLSClientConfig = config
+	}
+	return &Scanner{policiesFetcher, resourcesFetcher, *report, httpClient, printJSON}, nil
 }
 
 // ScanNamespace scans resources for a given namespace.
@@ -293,8 +339,7 @@ func sendAdmissionReviewToPolicyServer(url *url.URL, admissionRequest *admv1.Adm
 	if err != nil {
 		return nil, err
 	}
-	// TODO remove the following line and properly configure the certificates
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint
+
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, url.String(), bytes.NewBuffer(payload))
 	res, err := httpClient.Do(req)
 	if err != nil {

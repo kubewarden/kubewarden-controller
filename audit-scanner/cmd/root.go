@@ -75,7 +75,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher, printJSON)
+			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher, printJSON, insecureSSL, caCertFile)
 			if err != nil {
 				return err
 			}
