@@ -28,7 +28,7 @@ jobs:
       - container-build
     steps:
       - name: Install Golang
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4
         with:
           go-version: '1.19'
 
@@ -37,10 +37,10 @@ jobs:
         run: go install sigs.k8s.io/bom/cmd/bom@v0.2.2
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
 
       - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -62,7 +62,7 @@ jobs:
 
       - name: Get latest release tag
         id: get_last_release_tag
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             let release = await github.rest.repos.getLatestRelease({
@@ -77,7 +77,7 @@ jobs:
             core.setFailed("Cannot find latest release")
 
       - name: Get release ID from the release created by release drafter
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             let releases = await github.rest.repos.listReleases({
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload release assets
         id: upload_release_assets
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             let fs = require('fs');
@@ -123,7 +123,7 @@ jobs:
             }
 
       - name: Publish release
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             const {RELEASE_ID} = process.env
