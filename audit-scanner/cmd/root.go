@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
@@ -13,7 +12,6 @@ import (
 )
 
 const defaultKubewardenNamespace = "kubewarden"
-const defaultPolicyServersCARootFile = "./policyservers-ca-cert"
 
 // A Scanner verifies that existing resources don't violate any of the policies
 type Scanner interface {
@@ -36,9 +34,6 @@ var skippedNs []string
 
 // skip SSL cert validation when connecting to PolicyServers endpoints
 var insecureSSL bool
-
-// path to CA cert for the PolicyServers endpoints
-var caCertFile string
 
 var (
 	// rootCmd represents the base command when called without any subcommands
@@ -67,6 +62,11 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
+			caCertFile, err := cmd.Flags().GetString("extra-ca")
+			if err != nil {
+				return err
+			}
+
 			policiesFetcher, err := policies.NewFetcher(kubewardenNamespace, skippedNs)
 			if err != nil {
 				return err
@@ -123,11 +123,5 @@ func init() {
 	rootCmd.Flags().BoolVarP(&printJSON, "print", "p", false, "print result of scan in JSON to stdout")
 	rootCmd.Flags().StringSliceVarP(&skippedNs, "ignore-namespaces", "i", nil, "comma separated list of namespace names to be skipped from scan. This flag can be repeated")
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
-
-	rootCmd.Flags().StringVarP(&caCertFile, "filepath-cacert", "f", defaultPolicyServersCARootFile, "File path to CA cert in PEM format of PolicyServer endpoints (setting KUBEWARDEN_CACERT_PEM_POLICYSERVERS has precedence)")
-
-	// Prioritize env var before default value
-	if caEnv, present := os.LookupEnv("KUBEWARDEN_CACERT_PEM_POLICYSERVERS"); present {
-		caCertFile = caEnv
-	}
+	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
 }
