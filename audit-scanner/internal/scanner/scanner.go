@@ -71,7 +71,7 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 	if insecureClient {
 		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint
 		httpClient = http.Client{Transport: tr}
-		log.Info().Msg("connecting to PolicyServers endpoints in insecure SSL mode")
+		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
 	} else {
 		// Get the SystemCertPool, continue with an empty pool on error
 		rootCAs, _ := x509.SystemCertPool()
