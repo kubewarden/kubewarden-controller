@@ -66,44 +66,43 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 		return nil, err
 	}
 
-	// configure client for TLS
-	var httpClient http.Client
-	if insecureClient {
-		tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint
-		httpClient = http.Client{Transport: tr}
-		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
-	} else {
-		// Get the SystemCertPool, continue with an empty pool on error
-		rootCAs, _ := x509.SystemCertPool()
-		if rootCAs == nil {
-			rootCAs = x509.NewCertPool()
-		}
-		// Read in the cert file
+	// Get the SystemCertPool to build an in-app cert pool from it
+	// Continue with an empty pool on error
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	if caCertFile != "" {
 		certs, err := os.ReadFile(caCertFile)
 		if err != nil {
 			log.Fatal().Msg(fmt.Sprintf("failed to read file %q with CA cert: %v", caCertFile, err))
 		}
-		// Append our cert to the inherited system pool
+		// Append our cert to the in-app cert pool
 		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
 			log.Fatal().Msg("failed to append cert to in-app RootCAs trust store")
 		}
 		log.Debug().Str("ca-cert-file", caCertFile).
 			Msg("appended cert file to in-app RootCAs trust store")
-		// Trust the augmented cert pool in our client
-		config := &tls.Config{
-			InsecureSkipVerify: false,
-			RootCAs:            rootCAs,
-			MinVersion:         tls.VersionTLS12,
-		}
-		// initialize httpClient while conserving default settings
-		httpClient = *http.DefaultClient
-		httpClient.Transport = http.DefaultTransport
-		tr, ok := httpClient.Transport.(*http.Transport)
-		if !ok {
-			log.Fatal().Msg("failed to build httpClient: failed http.Transport type assertion")
-		}
-		tr.TLSClientConfig = config
 	}
+
+	// initialize httpClient while conserving default settings
+	httpClient := *http.DefaultClient
+	httpClient.Transport = http.DefaultTransport
+	transport, ok := httpClient.Transport.(*http.Transport)
+	if !ok {
+		log.Fatal().Msg("failed to build httpClient: failed http.Transport type assertion")
+	}
+	transport.TLSClientConfig = &tls.Config{
+		RootCAs:    rootCAs, // our augmented in-app cert pool
+		MinVersion: tls.VersionTLS12,
+	}
+
+	if insecureClient {
+		transport.TLSClientConfig.InsecureSkipVerify = true
+		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
+	}
+
 	return &Scanner{policiesFetcher, resourcesFetcher, *report, httpClient, printJSON}, nil
 }
 
