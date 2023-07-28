@@ -23,6 +23,7 @@ type Scanner interface {
 	ScanClusterWideResources() error
 }
 
+// log level
 var level logconfig.Level
 
 // print result of scan as JSON to stdout
@@ -31,8 +32,11 @@ var printJSON bool
 // list of namespaces to be skipped from scan
 var skippedNs []string
 
-// rootCmd represents the base command when called without any subcommands
+// skip SSL cert validation when connecting to PolicyServers endpoints
+var insecureSSL bool
+
 var (
+	// rootCmd represents the base command when called without any subcommands
 	rootCmd = &cobra.Command{
 		Use:   "audit-scanner",
 		Short: "Reports evaluation of existing Kubernetes resources with your already deployed Kubewarden policies",
@@ -58,6 +62,11 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
+			caCertFile, err := cmd.Flags().GetString("extra-ca")
+			if err != nil {
+				return err
+			}
+
 			policiesFetcher, err := policies.NewFetcher(kubewardenNamespace, skippedNs)
 			if err != nil {
 				return err
@@ -66,7 +75,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher, printJSON)
+			scanner, err := scanner.NewScanner(policiesFetcher, resourcesFetcher, printJSON, insecureSSL, caCertFile)
 			if err != nil {
 				return err
 			}
@@ -79,6 +88,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	// make sure we always get json formatted errors, even for flag errors
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
+
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal().Err(err).Msg("Error on cmd.Execute()")
 	}
@@ -107,10 +120,12 @@ func startScanner(namespace string, clusterWide bool, scanner Scanner) error {
 
 func init() {
 	rootCmd.Flags().StringP("namespace", "n", "", "namespace to be evaluated")
-	rootCmd.Flags().BoolP("cluster", "c", false, "Scan cluster wide resources")
-	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. Policy Server) are installed (required)")
-	rootCmd.Flags().StringP("policy-server-url", "u", "", "Full URL to the PolicyServers, for example https://localhost:3000. Audit scanner will query the needed HTTP path. Useful for out-of-cluster debugging")
+	rootCmd.Flags().BoolP("cluster", "c", false, "scan cluster wide resources")
+	rootCmd.Flags().StringP("kubewarden-namespace", "k", defaultKubewardenNamespace, "namespace where the Kubewarden components (e.g. PolicyServer) are installed (required)")
+	rootCmd.Flags().StringP("policy-server-url", "u", "", "URI to the PolicyServers the Audit Scanner will query. Example: https://localhost:3000. Useful for out-of-cluster debugging")
 	rootCmd.Flags().VarP(&level, "loglevel", "l", fmt.Sprintf("level of the logs. Supported values are: %v", logconfig.SupportedValues))
 	rootCmd.Flags().BoolVarP(&printJSON, "print", "p", false, "print result of scan in JSON to stdout")
-	rootCmd.Flags().StringSliceVarP(&skippedNs, "ignore-namespaces", "i", nil, "Comma separated list of namespace names to be skipped from scan")
+	rootCmd.Flags().StringSliceVarP(&skippedNs, "ignore-namespaces", "i", nil, "comma separated list of namespace names to be skipped from scan. This flag can be repeated")
+	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
+	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
 }
