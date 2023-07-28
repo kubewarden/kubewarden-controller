@@ -88,6 +88,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	// make sure we always get json formatted errors, even for flag errors
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
+
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal().Err(err).Msg("Error on cmd.Execute()")
 	}
