@@ -76,11 +76,11 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 	if caCertFile != "" {
 		certs, err := os.ReadFile(caCertFile)
 		if err != nil {
-			log.Fatal().Msg(fmt.Sprintf("failed to read file %q with CA cert: %v", caCertFile, err))
+			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", caCertFile, err)
 		}
 		// Append our cert to the in-app cert pool
 		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
-			log.Fatal().Msg("failed to append cert to in-app RootCAs trust store")
+			return nil, errors.New("failed to append cert to in-app RootCAs trust store")
 		}
 		log.Debug().Str("ca-cert-file", caCertFile).
 			Msg("appended cert file to in-app RootCAs trust store")
@@ -91,7 +91,7 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 	httpClient.Transport = http.DefaultTransport
 	transport, ok := httpClient.Transport.(*http.Transport)
 	if !ok {
-		log.Fatal().Msg("failed to build httpClient: failed http.Transport type assertion")
+		return nil, errors.New("failed to build httpClient: failed http.Transport type assertion")
 	}
 	transport.TLSClientConfig = &tls.Config{
 		RootCAs:    rootCAs, // our augmented in-app cert pool
