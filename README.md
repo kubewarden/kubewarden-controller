@@ -51,14 +51,14 @@ spec:
       apiVersions: ["v1"]
       resources: ["pods"]
       operations:
-      - CREATE
-      - UPDATE
+        - CREATE
+        - UPDATE
   mutating: true
   settings:
     allowed_capabilities:
-    - CHOWN
+      - CHOWN
     required_drop_capabilities:
-    - NET_ADMIN
+      - NET_ADMIN
 ```
 
 This `ClusterAdmissionPolicy` will evaluate all the `CREATE` and
@@ -104,12 +104,11 @@ See our [governance document](https://github.com/kubewarden/rfc/blob/main/rfc/00
 
 We host regular online meetings for contributors, adopters, maintainers, and anyone else interested to connect in a synchronous fashion. These meetings usually take place on second Thursday of the month at 4PM UTC.
 
-* [Zoom link](https://zoom.us/j/92928111886)
-* [Minutes from previous meetings](https://docs.google.com/document/d/1TgPIFKygkR2_vViCSfBEzwDDactfTcedc9fc4AeVJ9w/edit#)
+- [Zoom link](https://zoom.us/j/92928111886)
+- [Minutes from previous meetings](https://docs.google.com/document/d/1TgPIFKygkR2_vViCSfBEzwDDactfTcedc9fc4AeVJ9w/edit#)
 
 We're a friendly group, so please feel free to join us!
 
 # Community
 
 - Slack: [#kubewarden](https://kubernetes.slack.com/archives/kubewarden) and [#kubewarden-dev](https://kubernetes.slack.com/archives/kubewarden-dev)
-
