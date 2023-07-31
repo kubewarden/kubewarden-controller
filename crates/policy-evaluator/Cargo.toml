@@ -44,7 +44,7 @@ wasi-cap-std-sync = { workspace = true }
 wasmtime-provider = { version = "1.8.0", features = ["cache"] }
 picky = { version = "7.0.0-rc.6", default-features = false, features = [ "x509", "chrono_conversion" ] }
 chrono = { version = "0.4.26", default-features = false }
-time = { version = "0.3.23", features = ["serde-human-readable"] }
+time = { version = "0.3.24", features = ["serde-human-readable"] }
 semver = { version = "1.0.18", features = ["serde"] }
 email_address = {version = "0.2.4", features = ["serde"] }
 mail-parser= {version = "0.8.2", features = ["serde"] }
