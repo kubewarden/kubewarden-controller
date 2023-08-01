@@ -1,5 +1,4 @@
-name: Build container image
-# to depend on other workflows, or provide container image for all branches
+name: Build container image, sign it, and generate SBOMs
 
 on:
   workflow_call:
@@ -7,42 +6,34 @@ on:
       digest:
         description: "Container image digest"
         value: ${{jobs.build.outputs.digest}}
+
   push:
     branches:
-      - main
+      - "main"
+      - "feat-**"
 
 jobs:
   build:
-    name: Build
-    uses: kubewarden/audit-scanner/.github/workflows/reusable-container-image.yml@main
+    uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
     with:
       push-image: true
 
   sign:
-    runs-on: ubuntu-latest
+    needs: build
+    uses: ./.github/workflows/sign-image.yml
     permissions:
       packages: write
       id-token: write
+    with:
+      image-digest: ${{ needs.build.outputs.digest }}
+
+  sbom:
     needs: build
-    steps:
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3
-
-      - name: Sign the images
-        run: |
-          cosign sign --yes \
-            ${{needs.build.outputs.repository}}@${{needs.build.outputs.digest}}
-
-      - name: Sign the SBOM
-        run: |
-          tag=$(echo '${{needs.build.outputs.digest}}' | sed 's/:/-/g')
-          cosign sign --yes \
-            "${{needs.build.outputs.repository}}:$tag.sbom"
+    uses: ./.github/workflows/sbom.yml
+    permissions:
+      packages: write
+      id-token: write
+    with:
+      image-digest: ${{ needs.build.outputs.digest }}

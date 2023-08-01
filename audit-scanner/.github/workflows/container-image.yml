@@ -1,5 +1,4 @@
-name: Reusable container image build
-# useful to call from the real workflows
+name: Build container image
 
 on:
   workflow_call:
@@ -7,10 +6,6 @@ on:
       push-image:
         type: boolean
         required: true
-      generate-sbom:
-        type: boolean
-        required: false
-        default: true
     outputs:
       repository:
         description: "Repository used to build the container image"
@@ -54,24 +49,17 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Install Golang
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4
-        with:
-          go-version: '1.19'
-      -
-        name: Install the bom command
-        uses: kubewarden/github-actions/kubernetes-bom-installer@d849020c9137340c2373d1cbc9cc571b2b18c17e # v2
-      -
-        name: Install Cosign
-        if: ${{ inputs.generate-sbom == true }}
-        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3
-      -
-        name: Retrieve tag name
-        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        name: Retrieve tag name (main branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/main') }}
         run: |
           echo TAG_NAME=latest >> $GITHUB_ENV
       -
-        name: Retrieve tag name
+        name: Retrieve tag name (feat branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/feat') }}
+        run: |
+          echo "TAG_NAME=latest-$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+      -
+        name: Retrieve tag name (tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
             echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
@@ -101,24 +89,6 @@ jobs:
           outputs: type=docker,dest=/tmp/audit-scanner-image-${{ env.TAG_NAME }}.tar
           tags: |
             ghcr.io/${{github.repository_owner}}/audit-scanner:${{ env.TAG_NAME }}
-      -
-        name: Test container image
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        run: |
-          docker run --rm ghcr.io/${{ github.repository_owner }}/audit-scanner:${{ env.TAG_NAME }} --help
-      -
-        name: Create SBOM file
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          bom generate -n https://kubewarden.io/kubewarden.spdx -o audit-scanner.spdx .
-      -
-        name: Attach SBOM file in the container image
-        if: ${{ inputs.generate-sbom == true }}
-        shell: bash
-        run: |
-          set -e
-          cosign attach sbom --sbom audit-scanner.spdx "ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}"
       -
         name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
