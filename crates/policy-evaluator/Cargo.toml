@@ -1,6 +1,6 @@
 [package]
 name = "policy-evaluator"
-version = "0.11.0"
+version = "0.11.1"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
@@ -22,7 +22,7 @@ dns-lookup = "2.0"
 json-patch = "1.0"
 kube = { version = "0.84.0", default-features = false, features = ["client", "rustls-tls"] }
 k8s-openapi = { version = "0.18.0", default-features = false }
-kubewarden-policy-sdk = "0.9.5"
+kubewarden-policy-sdk = "0.9.6"
 itertools = "0.11"
 lazy_static = "1.4"
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.23" }
