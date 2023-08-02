@@ -1,8 +1,8 @@
-name: policy-server release
+name: kwctl release
 on:
   push:
     tags:
-    - 'v*'
+      - "v*"
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -16,8 +16,8 @@ jobs:
     permissions: read-all
 
   build:
-    name: Build container image, sign it, and generate SBOMs
-    uses: ./.github/workflows/container-build.yml
+    name: Build kwctl, sign it, and generate SBOMs
+    uses: ./.github/workflows/build.yml
     permissions:
       id-token: write
       packages: write
@@ -73,10 +73,9 @@ jobs:
             }
             core.setFailed(`Draft release not found`)
 
-      - name: Download SBOM artifact
+      - name: Download all artifacts
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
-        with:
-          name: sbom
+        # no name provided, download all artifacts. Puts them in folders.
 
       - name: Display structure of downloaded files
         run: ls -R
@@ -88,12 +87,29 @@ jobs:
           script: |
             let fs = require('fs');
             let files = [
-              'policy-server-sbom-amd64.spdx',
-              'policy-server-sbom-amd64.spdx.cert',
-              'policy-server-sbom-amd64.spdx.sig',
-              'policy-server-sbom-arm64.spdx',
-              'policy-server-sbom-arm64.spdx.cert',
-              'policy-server-sbom-arm64.spdx.sig']
+              './kwctl-airgap-scripts/kubewarden-load-policies.sh',
+              './kwctl-airgap-scripts/kubewarden-save-policies.sh',
+              './kwctl-darwin-aarch64/kwctl-darwin-aarch64.zip',
+              './kwctl-darwin-aarch64-sbom/kwctl-darwin-aarch64-sbom.spdx',
+              './kwctl-darwin-aarch64-sbom/kwctl-darwin-aarch64-sbom.spdx.cert',
+              './kwctl-darwin-aarch64-sbom/kwctl-darwin-aarch64-sbom.spdx.sig',
+              './kwctl-darwin-x86_64/kwctl-darwin-x86_64.zip',
+              './kwctl-darwin-x86_64-sbom/kwctl-darwin-x86_64-sbom.spdx',
+              './kwctl-darwin-x86_64-sbom/kwctl-darwin-x86_64-sbom.spdx.cert',
+              './kwctl-darwin-x86_64-sbom/kwctl-darwin-x86_64-sbom.spdx.sig',
+              './kwctl-linux-aarch64/kwctl-linux-aarch64.zip',
+              './kwctl-linux-aarch64-sbom/kwctl-linux-aarch64-sbom.spdx',
+              './kwctl-linux-aarch64-sbom/kwctl-linux-aarch64-sbom.spdx.cert',
+              './kwctl-linux-aarch64-sbom/kwctl-linux-aarch64-sbom.spdx.sig',
+              './kwctl-linux-x86_64/kwctl-linux-x86_64.zip',
+              './kwctl-linux-x86_64-sbom/kwctl-linux-x86_64-sbom.spdx',
+              './kwctl-linux-x86_64-sbom/kwctl-linux-x86_64-sbom.spdx.cert',
+              './kwctl-linux-x86_64-sbom/kwctl-linux-x86_64-sbom.spdx.sig',
+              './kwctl-windows-x86_64/kwctl-windows-x86_64.exe.zip',
+              './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx',
+              './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx.cert',
+              './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx.sig',
+              ]
             const {RELEASE_ID} = process.env
 
             for (const file of files) {
@@ -123,11 +139,3 @@ jobs:
               name: `${TAG_NAME}`,
               prerelease: `${{ contains(github.event.workflow_run.head_branch, '-alpha') || contains(github.event.workflow_run.head_branch, '-beta') || contains(github.event.workflow_run.head_branch, '-rc') }}`
             });
-
-      - name: Trigger chart update
-        uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588 # v2.1.1
-        with:
-          token: ${{ secrets.WORKFLOW_PAT }}
-          repository: "${{github.repository_owner}}/helm-charts"
-          event-type: update-chart
-          client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}"}'
