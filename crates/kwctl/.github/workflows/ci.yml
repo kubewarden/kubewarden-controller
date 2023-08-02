@@ -1,33 +1,115 @@
-name: Continuous integration
 on:
-  push:
-    branches:
-      - "main"
-  workflow_call: {}
+  - push
+  - pull_request
+  - workflow_call
+
+name: Continuous integration
 
 # Declare default permissions as read only.
 permissions: read-all
 
 jobs:
-  code-checks:
-    name: Basic source code checks
-    uses: ./.github/workflows/source-code-checks.yml
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        with:
+          command: check
 
-  cargo-checks:
-    name: Cargo file checks
-    uses: ./.github/workflows/cargo-file-checks.yml
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        with:
+          command: test
+          args: --workspace
 
-  tests:
-    name: Running tests
-    uses: ./.github/workflows/tests.yml
+  e2e-tests:
+    name: End to end tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        with:
+          command: build
+          args: --release
+      - name: Install venom cli tool
+        run: |
+          INSTALL_DIR=$HOME/.venom
+          mkdir -p $INSTALL_DIR
+          curl https://github.com/ovh/venom/releases/download/v1.1.0/venom.linux-amd64 -L -o $INSTALL_DIR/venom
+          chmod +x $INSTALL_DIR/venom
+          echo $INSTALL_DIR >> $GITHUB_PATH
+      - name: run e2e tests
+        run: |
+          make e2e-tests
+      # upload e2e logs - simplifies debugging
+      - name: upload venom.lom
+        if: success() || failure()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
+        with:
+          name: venom.log
+          path: e2e-tests/venom.log
+      - name: upload policy-server stdout
+        if: success() || failure()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
+        with:
+          name: policy-server.stdout.log
+          path: e2e-tests/policy-server.out
+      - name: upload policy-server stderr
+        if: success() || failure()
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
+        with:
+          name: policy-server.stderr.log
+          path: e2e-tests/policy-server.err
 
-  build:
-    name: Build kwctl
-    permissions:
-      packages: write
-      id-token: write
-    needs:
-      - code-checks
-      - cargo-checks
-      - tests
-    uses: ./.github/workflows/build.yml
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add clippy
+      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
+        with:
+          command: clippy
+          args: -- -D warnings
