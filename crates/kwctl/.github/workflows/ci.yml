@@ -8,9 +8,12 @@ name: Continuous integration
 # Declare default permissions as read only.
 permissions: read-all
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   check:
-    name: Check
+    name: Cargo check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
@@ -23,8 +26,25 @@ jobs:
         with:
           command: check
 
+  version-check:
+    name: Check Cargo.toml version
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download source code
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+      - name: Check cargo file version
+        run: |
+          CARGO_VERSION=$(sed  -n 's,^version = \"\(.*\)\",\1,p' Cargo.toml)
+          TAG_VERSION=$(echo ${{ github.ref_name }} | sed 's/v//')
+
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ];then
+              echo "::error title=Invalid Cargo.toml version::Cargo.toml version does not match the tag version"
+              exit 1
+          fi
+
   test:
-    name: Test Suite
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
@@ -39,48 +59,17 @@ jobs:
           args: --workspace
 
   e2e-tests:
-    name: End to end tests
+    name: E2E tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+      - name: Setup BATS
+        uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1
-        with:
-          command: build
-          args: --release
-      - name: Install venom cli tool
-        run: |
-          INSTALL_DIR=$HOME/.venom
-          mkdir -p $INSTALL_DIR
-          curl https://github.com/ovh/venom/releases/download/v1.1.0/venom.linux-amd64 -L -o $INSTALL_DIR/venom
-          chmod +x $INSTALL_DIR/venom
-          echo $INSTALL_DIR >> $GITHUB_PATH
+          bats-version: 1.5.0
+      - uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3
       - name: run e2e tests
-        run: |
-          make e2e-tests
-      # upload e2e logs - simplifies debugging
-      - name: upload venom.lom
-        if: success() || failure()
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
-        with:
-          name: venom.log
-          path: e2e-tests/venom.log
-      - name: upload policy-server stdout
-        if: success() || failure()
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
-        with:
-          name: policy-server.stdout.log
-          path: e2e-tests/policy-server.out
-      - name: upload policy-server stderr
-        if: success() || failure()
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
-        with:
-          name: policy-server.stderr.log
-          path: e2e-tests/policy-server.err
+        run: make e2e-test
 
   fmt:
     name: Rustfmt
@@ -113,3 +102,46 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3
+      - run: shellcheck $(find scripts/ -name '*.sh')
+
+  airgap-e2e-test:
+    name: Airgap E2E test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2.5.0
+      - name: Run registry
+        run: |
+          export CONTAINER_ID=$(docker run -d -p 5000:5000 --name registry registry:2)
+          echo "CONTAINER_ID=${CONTAINER_ID}" >> $GITHUB_ENV
+      - name: Install kwctl
+        run: cargo install --path .
+      - name: Save policies
+        run: ./scripts/kubewarden-save-policies.sh --policies-list e2e-tests/airgap/policies.txt --policies policies.tar.gz
+      - name: Remove policies from store
+        run: |
+          kwctl rm registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+          kwctl rm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm
+      - name: Load policies
+        run: |
+          ./scripts/kubewarden-load-policies.sh \
+              --policies policies.tar.gz \
+              --policies-list e2e-tests/airgap/policies.txt \
+              --registry localhost:5000 \
+              --sources-path e2e-tests/airgap/insecure.yml
+      - name: Verify policies in local registry
+        run: |
+          kwctl pull registry://localhost:5000/kubewarden/tests/pod-privileged:v0.1.9 \
+              --sources-path e2e-tests/airgap/insecure.yml
+          kwctl pull registry://localhost:5000/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm \
+              --sources-path e2e-tests/airgap/insecure.yml
+      - name: Clean up - delete registry
+        if: always()
+        run: |
+          docker rm -f ${{ env.CONTAINER_ID }}
