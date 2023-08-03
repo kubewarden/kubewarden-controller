@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        targetarch: [ "aarch64", "x86_64" ]
+        targetarch: ["aarch64", "x86_64"]
         include:
           - targetarch: aarch64
             arch: arm64
@@ -21,6 +21,7 @@ jobs:
     permissions:
       packages: write
       id-token: write
+
     steps:
       - name: Configure Ubuntu repositories
         run: |
@@ -93,28 +94,33 @@ jobs:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
 
-      - name: Install SBOM generator tool
-        uses: kubewarden/github-actions/sbom-generator-installer@d849020c9137340c2373d1cbc9cc571b2b18c17e # v2
+      - name: Install the syft command
+        uses: kubewarden/github-actions/syft-installer@2b1605e00a16f618214dbfff64e020f07e4a4ecb # v3.1.6
 
-      - name: Generate SBOM
+      - name: Create SBOM file
+        shell: bash
         run: |
-          spdx-sbom-generator -f json
-          # SBOM files should have "sbom" in the name due the CLO monitor
-          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-          mv bom-cargo.json kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+          syft \
+          --file kwctl-linux-${{ matrix.targetarch }}-sbom.spdx \
+          --output spdx-json \
+          --source-name kwctl-linux-${{ matrix.targetarch }} \
+          --source-version ${{ github.sha }} \
+          -vv \
+          dir:. # use dir default catalogers, which includes Cargo.toml
 
-      - name: Sign BOM file
+      - name: Sign SBOM file
         run: |
-          cosign sign-blob --yes --output-certificate kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert \
+          cosign sign-blob --yes \
+            --output-certificate kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert \
             --output-signature kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig \
-            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
         with:
           name: kwctl-linux-${{ matrix.targetarch }}-sbom
           path: |
-            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig
 
@@ -130,7 +136,7 @@ jobs:
     name: Build darwin binary
     strategy:
       matrix:
-        targetarch: [ "aarch64", "x86_64" ]
+        targetarch: ["aarch64", "x86_64"]
     runs-on: macos-latest
     permissions:
       id-token: write
@@ -153,6 +159,10 @@ jobs:
 
       - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
 
+      - name: Smoke test build
+        if: matrix.targetarch == 'x86_64'
+        run: ./kwctl-darwin-x86_64 --help
+
       - name: Sign kwctl
         run: cosign sign-blob --yes kwctl-darwin-${{ matrix.targetarch }} --output-certificate kwctl-darwin-${{ matrix.targetarch }}.pem --output-signature kwctl-darwin-${{ matrix.targetarch }}.sig
 
@@ -164,36 +174,46 @@ jobs:
           name: kwctl-darwin-${{ matrix.targetarch }}
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
-      - name: Install SBOM generator tool
-        uses: kubewarden/github-actions/sbom-generator-installer@d849020c9137340c2373d1cbc9cc571b2b18c17e # v2
+      - name: Install the syft command
+        uses: kubewarden/github-actions/syft-installer@2b1605e00a16f618214dbfff64e020f07e4a4ecb # v3.1.6
         with:
-          sbom-generator-arch: darwin-amd64
+          arch: darwin_amd64
 
-      - name: Generate SBOM
+      - name: Create SBOM file
+        shell: bash
         run: |
-          spdx-sbom-generator -f json
-          # SBOM files should have "sbom" in the name due the CLO monitor
-          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-          mv bom-cargo.json kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+          syft \
+          --file kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx \
+          --output spdx-json \
+          --source-name kwctl-darwin-${{ matrix.targetarch }} \
+          --source-version ${{ github.sha }} \
+          -vv \
+          dir:. # use dir default catalogers, which includes Cargo.toml
 
-      - name: Sign BOM file
+      - name: Sign SBOM file
         run: |
-          cosign sign-blob --yes --output-certificate kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert \
+          cosign sign-blob --yes \
+            --output-certificate kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert \
             --output-signature kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig \
-            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}-sbom
           path: |
-            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.json
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
             kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert
-            kwctl-darwin-#{{ matrix.targetarch }}-sbom.spdx.sig
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig
 
   build-windows-x86_64:
     name: Build windows (x86_64) binary
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        # workaround to have the same GH UI for all jobs
+        targetarch: [ "x86_64" ]
+        os: [ "windows-latest" ]
+    runs-on:  ${{ matrix.os }}
     permissions:
       id-token: write
     steps:
@@ -212,6 +232,9 @@ jobs:
         run: cargo build --target=x86_64-pc-windows-msvc --release
       - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
 
+      - name: Smoke test build
+        run: .\kwctl-windows-x86_64.exe --help
+
       - name: Sign kwctl
         run: cosign sign-blob --yes kwctl-windows-x86_64.exe --output-certificate kwctl-windows-x86_64.pem --output-signature kwctl-windows-x86_64.sig
 
@@ -225,27 +248,31 @@ jobs:
           name: kwctl-windows-x86_64
           path: kwctl-windows-x86_64.exe.zip
 
-      - name: Generate SBOM
-        run: |
-          # if change the version used, remember to update the default version used for
-          # Mac and Linux in the Makefile.
-          curl -LO https://github.com/opensbom-generator/spdx-sbom-generator/releases/download/v0.0.15/spdx-sbom-generator-v0.0.15-windows-amd64.zip
-          7z e spdx-sbom-generator-v0.0.15-windows-amd64.zip
-          ./spdx-sbom-generator -f json
+      - name: Install the syft command
+        uses: kubewarden/github-actions/syft-installer@2b1605e00a16f618214dbfff64e020f07e4a4ecb # v3.1.6
+        with:
+          arch: windows_amd64
 
-          # SBOM files should have "sbom" in the name due the CLO monitor
-          # https://clomonitor.io/docs/topics/checks/#software-bill-of-materials-sbom
-          mv bom-cargo.json kwctl-windows-x86_64-sbom.spdx.json
-
-      - name: Sign BOM file
+      - name: Create SBOM file
+        shell: bash
         run: |
-          cosign sign-blob --yes --output-certificate kwctl-windows-x86_64-sbom.spdx.cert --output-signature kwctl-windows-x86_64-sbom.spdx.sig kwctl-windows-x86_64-sbom.spdx.json
+          syft \
+          --file kwctl-windows-x86_64-sbom.spdx \
+          --output spdx-json \
+          --source-name kwctl-windows-x86_64 \
+          --source-version ${{ github.sha }} \
+          -vv \
+          dir:. # use dir default catalogers, which includes Cargo.toml
+
+      - name: Sign SBOM file
+        run: |
+          cosign sign-blob --yes --output-certificate kwctl-windows-x86_64-sbom.spdx.cert --output-signature kwctl-windows-x86_64-sbom.spdx.sig kwctl-windows-x86_64-sbom.spdx
 
       - name: Upload kwctl SBOM files
         uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
         with:
           name: kwctl-windows-x86_64-sbom
           path: |
-            kwctl-windows-x86_64-sbom.spdx.json
+            kwctl-windows-x86_64-sbom.spdx
             kwctl-windows-x86_64-sbom.spdx.cert
             kwctl-windows-x86_64-sbom.spdx.sig
