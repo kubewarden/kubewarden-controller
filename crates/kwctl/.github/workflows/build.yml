@@ -175,7 +175,7 @@ jobs:
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@2b1605e00a16f618214dbfff64e020f07e4a4ecb # v3.1.6
+        uses: kubewarden/github-actions/syft-installer@v3.1.8
         with:
           arch: darwin_amd64
 
@@ -249,7 +249,7 @@ jobs:
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@2b1605e00a16f618214dbfff64e020f07e4a4ecb # v3.1.6
+        uses: kubewarden/github-actions/syft-installer@v3.1.8
         with:
           arch: windows_amd64
 
