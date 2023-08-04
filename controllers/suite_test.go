@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"crypto/x509"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,6 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -123,6 +126,33 @@ var _ = BeforeSuite(func() {
 		},
 	}); err != nil {
 		log.Fatalf("could not create namespace %q needed for the integration tests", DeploymentsNamespace)
+	}
+
+	// Create the CA root secret used by policy server controller
+	caRoot, err := admissionregistration.GenerateCA()
+	if err != nil {
+		log.Fatalf("cannot generate policy-server secret CA: %v", err)
+	}
+	caPEMEncoded, err := admissionregistration.PemEncodeCertificate(caRoot.CaCert)
+	if err != nil {
+		log.Fatalf("cannot encode policy-server secret CA: %v", err)
+	}
+	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(caRoot.CaPrivateKey)
+	secretContents := map[string][]byte{
+		constants.KubewardenCARootCACert:             caRoot.CaCert,
+		constants.KubewardenCARootPemName:            caPEMEncoded,
+		constants.KubewardenCARootPrivateKeyCertName: caPrivateKeyBytes,
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.KubewardenCARootSecretName,
+			Namespace: DeploymentsNamespace,
+		},
+		Data: secretContents,
+		Type: corev1.SecretTypeOpaque,
+	}
+	if err := k8sClient.Create(ctx, secret); err != nil {
+		log.Fatalf("could not create root CA required: %v", err)
 	}
 
 	go func() {

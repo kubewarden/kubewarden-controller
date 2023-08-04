@@ -3,7 +3,7 @@ package admission
 import (
 	"bytes"
 	"context"
-	"crypto/rsa"
+	// "crypto/rsa"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -12,8 +12,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -36,9 +40,9 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	}
 
 	caSecretContents := map[string][]byte{
-		constants.PolicyServerCARootCACert:             admissionregCA.CaCert,
-		constants.PolicyServerCARootPemName:            caPemBytes,
-		constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(admissionregCA.CaPrivateKey),
+		constants.KubewardenCARootCACert:             admissionregCA.CaCert,
+		constants.KubewardenCARootPemName:            caPemBytes,
+		constants.KubewardenCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(admissionregCA.CaPrivateKey),
 	}
 
 	var tests = []struct {
@@ -55,7 +59,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	for _, test := range tests {
 		ttest := test // ensure tt is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			secret, err := ttest.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
+			secret, _, err := ttest.r.FetchOrInitializeRootCASecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
 			if diff := cmp.Diff(secret.Data, ttest.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
@@ -72,53 +76,108 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	}
 }
 
-func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
-	generateCertCalled := false
-	servingCert := []byte{1}
-	servingKey := []byte{2}
-	admissionregCA, _ := admissionregistration.GenerateCA()
-	caSecret := &corev1.Secret{Data: map[string][]byte{constants.PolicyServerCARootCACert: admissionregCA.CaCert, constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(admissionregCA.CaPrivateKey)}}
-
-	//nolint:unparam
-	generateCertFunc := func(ca []byte, commonName string, extraSANs []string, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
-		generateCertCalled = true
-		return servingCert, servingKey, nil
+func TestUpdateAllPolicyServerSecrets(t *testing.T) {
+	caRoot, err := admissionregistration.GenerateCA()
+	if err != nil {
+		t.Fatal("cannot generate policy-server secret CA: ", err)
+	}
+	caPEMEncoded, err := admissionregistration.PemEncodeCertificate(caRoot.CaCert)
+	if err != nil {
+		t.Fatal("cannot encode policy-server secret CA: ", err)
+	}
+	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(caRoot.CaPrivateKey)
+	secretContents := map[string][]byte{
+		constants.KubewardenCARootCACert:             caRoot.CaCert,
+		constants.KubewardenCARootPemName:            caPEMEncoded,
+		constants.KubewardenCARootPrivateKeyCertName: caPrivateKeyBytes,
+	}
+	mockRootCASecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.KubewardenCARootSecretName,
+			Namespace: namespace,
+		},
+		Data: secretContents,
+		Type: corev1.SecretTypeOpaque,
 	}
 
-	caSecretContents := map[string]string{
-		constants.PolicyServerTLSCert: string(servingCert),
-		constants.PolicyServerTLSKey:  string(servingKey),
+	policyServer1 := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+		},
+	}
+	policyServer1.Name = "policyServer1"
+	policyServerSecret1 := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer1.NameWithPrefix(),
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.PolicyServerLabelKey: policyServer1.Name,
+			},
+		},
+		StringData: map[string]string{
+			constants.PolicyServerTLSCert: string("policyserver1-cert"),
+			constants.PolicyServerTLSKey:  string("policyserver1-key"),
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+	policyServer2 := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+		},
+	}
+	policyServer2.Name = "policyServer2"
+	policyServerSecret2 := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer2.NameWithPrefix(),
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.PolicyServerLabelKey: policyServer2.Name,
+			},
+		},
+		StringData: map[string]string{
+			constants.PolicyServerTLSCert: string("policyserver2-cert"),
+			constants.PolicyServerTLSKey:  string("policyserver2-key"),
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+	randomSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "random",
+			Namespace: namespace,
+		},
+		StringData: map[string]string{
+			constants.PolicyServerTLSCert: string("policyserver2-cert"),
+			constants.PolicyServerTLSKey:  string("policyserver2-key"),
+		},
+		Type: corev1.SecretTypeOpaque,
 	}
 
-	var tests = []struct {
-		name               string
-		r                  Reconciler
-		err                error
-		secretContents     map[string]string
-		generateCertCalled bool
-	}{
-		{"Existing cert", createReconcilerWithExistingCert(), nil, mockSecretCert, false},
-		{"cert does not exist", createReconcilerWithEmptyClient(), nil, caSecretContents, true},
+	// Create a fake client to mock API calls. It will return the mock secret
+	customScheme := scheme.Scheme
+	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"}, policyServer1)
+	cl := fake.NewClientBuilder().WithObjects(mockRootCASecret, policyServer1, policyServerSecret1, policyServer2, policyServerSecret2, randomSecret).Build()
+	reconciler := Reconciler{
+		Client:               cl,
+		DeploymentsNamespace: namespace,
+	}
+	reconciler.UpdateAllPolicyServerSecrets(context.Background(), mockRootCASecret)
+	secret := corev1.Secret{}
+	cl.Get(context.Background(), client.ObjectKey{Name: policyServerSecret1.Name, Namespace: namespace}, &secret)
+	if cmp.Equal(secret.StringData, policyServerSecret1.StringData) {
+		diff := cmp.Diff(secret.StringData, policyServerSecret2.StringData)
+		t.Errorf("secret data not updated: %s", diff)
+	}
+	cl.Get(context.Background(), client.ObjectKey{Name: policyServerSecret2.Name, Namespace: namespace}, &secret)
+	if cmp.Equal(secret.StringData, policyServerSecret2.StringData) {
+		diff := cmp.Diff(secret.StringData, policyServerSecret2.StringData)
+		t.Errorf("secret data not updated: %s", diff)
+	}
+	cl.Get(context.Background(), client.ObjectKey{Name: randomSecret.Name, Namespace: namespace}, &secret)
+	if !cmp.Equal(secret.StringData, randomSecret.StringData) {
+		diff := cmp.Diff(secret.StringData, policyServerSecret2.StringData)
+		t.Errorf("secret with no policy server label should not be updated: %s", diff)
 	}
 
-	for _, test := range tests {
-		ttest := test // ensure tt is correctly scoped when used in function literal
-		t.Run(ttest.name, func(t *testing.T) {
-			secret, err := ttest.r.fetchOrInitializePolicyServerCASecret(context.Background(), "policyServer", caSecret, generateCertFunc)
-			if diff := cmp.Diff(secret.StringData, ttest.secretContents); diff != "" {
-				t.Errorf("got an unexpected secret, diff %s", diff)
-			}
-
-			if !errors.Is(err, ttest.err) {
-				t.Errorf("got %s, want %s", err, ttest.err)
-			}
-
-			if generateCertCalled != ttest.generateCertCalled {
-				t.Errorf("got %t, want %t", generateCertCalled, ttest.generateCertCalled)
-			}
-			generateCertCalled = false
-		})
-	}
 }
 
 const namespace = "namespace"
@@ -128,7 +187,7 @@ var mockSecretContents = map[string][]byte{"ca": []byte("secretContents")}
 func createReconcilerWithExistingCA() Reconciler {
 	mockSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.PolicyServerCARootSecretName,
+			Name:      constants.KubewardenCARootSecretName,
 			Namespace: namespace,
 		},
 		Data: mockSecretContents,
@@ -148,7 +207,7 @@ var mockSecretCert = map[string]string{"cert": "certString"}
 func createReconcilerWithExistingCert() Reconciler {
 	mockSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "policyServer",
+			Name:      "policy-server-policyServer",
 			Namespace: namespace,
 		},
 		StringData: mockSecretCert,

@@ -31,6 +31,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,6 +45,7 @@ import (
 
 	controllers "github.com/kubewarden/kubewarden-controller/controllers"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -231,6 +233,18 @@ func main() {
 		return
 	}
 
+	caReconciler := controllers.KubewardenCAReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Log:        ctrl.Log.WithName("ca-reconciler"),
+		Reconciler: reconciler,
+	}
+	if err := caReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CA")
+		retcode = 1
+		return
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -244,12 +258,25 @@ func main() {
 		return
 	}
 
+	// Ensure that the CA root secret is created when the controller start to run.
+	// This is necessary because the CAController will be trigger only when an
+	// event happens. As we do not want to create a secret on helm, this is required.
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		_, _, err := reconciler.FetchOrInitializeRootCASecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+		return err
+	})); err != nil {
+		setupLog.Error(err, "cannot add runnable to create root CA")
+		retcode = 1
+		return
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		retcode = 1
 		return
 	}
+
 }
 
 func webhooks() []webhookwrapper.WebhookRegistrator {

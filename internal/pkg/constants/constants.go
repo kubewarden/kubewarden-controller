@@ -9,12 +9,12 @@ var (
 
 const (
 	// PolicyServer CA Secret
-	PolicyServerTLSCert                  = "policy-server-cert"
-	PolicyServerTLSKey                   = "policy-server-key"
-	PolicyServerCARootSecretName         = "policy-server-root-ca"
-	PolicyServerCARootPemName            = "policy-server-root-ca-pem"
-	PolicyServerCARootCACert             = "policy-server-root-ca-cert"
-	PolicyServerCARootPrivateKeyCertName = "policy-server-root-ca-privatekey-cert"
+	PolicyServerTLSCert                = "policy-server-cert"
+	PolicyServerTLSKey                 = "policy-server-key"
+	KubewardenCARootSecretName         = "kubewarden-root-ca"
+	KubewardenCARootPemName            = "kubewarden-root-ca-pem"
+	KubewardenCARootCACert             = "kubewarden-root-ca-cert"
+	KubewardenCARootPrivateKeyCertName = "kubewarden-root-ca-privatekey-cert"
 
 	// PolicyServer Deployment
 	PolicyServerEnableMetricsEnvVar                 = "KUBEWARDEN_ENABLE_METRICS"

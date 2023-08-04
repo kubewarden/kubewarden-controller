@@ -90,7 +90,7 @@ func (r *Reconciler) validatingWebhookConfiguration(
 				Name: fmt.Sprintf("%s.kubewarden.admission", policy.GetUniqueName()),
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.PolicyServerCARootPemName],
+					CABundle: admissionSecret.Data[constants.KubewardenCARootPemName],
 				},
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),

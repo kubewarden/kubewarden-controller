@@ -26,6 +26,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -60,6 +61,15 @@ type PolicyServerReconciler struct {
 //+kubebuilder:rbac:namespace=kubewarden,groups=core,resources=pods,verbs=get;list;watch
 
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_, err := r.Reconciler.FetchKubewardenCARootSecret(ctx)
+	if err != nil {
+		r.Log.Info("cannot reconcile policy server: missing root CA. Rescheduling...")
+		return ctrl.Result{
+			Requeue:      true,
+			RequeueAfter: time.Second * 5,
+		}, nil
+	}
+
 	var policyServer policiesv1.PolicyServer
 	if err := r.Get(ctx, req.NamespacedName, &policyServer); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -80,6 +90,12 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileResult, reconcileErr := r.reconcile(ctx, &policyServer, policies)
 
 	if err := r.Client.Status().Update(ctx, &policyServer); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: time.Second * 5,
+			}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("update policy server status error: %w", err)
 	}
 
@@ -187,6 +203,28 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				{
 					NamespacedName: client.ObjectKey{
 						Name: policy.Spec.PolicyServer,
+					},
+				},
+			}
+		})).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			// This watch ensures that if the policy server CA
+			// secret is deleted, it will be recreated.
+			secret, ok := object.(*corev1.Secret)
+			if !ok {
+				r.Log.Info("object is not type of corev1.Secret: %+v", secret)
+				return []ctrl.Request{}
+			}
+			// the controller just care about policy server secrets. It ignore any other secret.
+			policyServerName, ok := secret.Labels[constants.PolicyServerLabelKey]
+			if !ok {
+				return []ctrl.Request{}
+			}
+
+			return []ctrl.Request{
+				{
+					NamespacedName: client.ObjectKey{
+						Name: policyServerName,
 					},
 				},
 			}

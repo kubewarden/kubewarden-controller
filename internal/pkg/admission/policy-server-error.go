@@ -8,6 +8,12 @@ type policyServerNotReady interface {
 	PolicyServerNotReady() bool
 }
 
+type PolicyServerMissingRootCAError struct{}
+
+func (e *PolicyServerMissingRootCAError) Error() string {
+	return "Cannot reconcile policy server because there is no root CA"
+}
+
 // PolicyServerNotReadyError error is raised when the PolicyServer
 // deployment is not yet ready
 type PolicyServerNotReadyError struct {
@@ -33,4 +39,10 @@ func IsPolicyServerNotReady(err error) bool {
 	}
 
 	return false
+}
+
+// Check if the policy server cannot reconcile due the lack of the root CA
+func IsPolicyServerMissingCA(err error) bool {
+	var e *PolicyServerMissingRootCAError
+	return errors.As(err, &e)
 }

@@ -20,7 +20,7 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	const maxRetries = 10
 	r := createReconcilerWithEmptyClient()
 	// create CA
-	caSecret, err := r.buildPolicyServerCARootSecret(admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	caSecret, err := r.buildRootCASecret(admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
 		t.Errorf("CA secret could not be created: %s", err.Error())
 	}
@@ -64,7 +64,7 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	// wait for https server to be ready to avoid race conditions
 	waitGroup.Wait()
 	rootCAs := x509.NewCertPool()
-	rootCAs.AppendCertsFromPEM(caSecret.Data[constants.PolicyServerCARootPemName])
+	rootCAs.AppendCertsFromPEM(caSecret.Data[constants.KubewardenCARootPemName])
 	retries := 0
 	var conn *tls.Conn
 	for retries < maxRetries {

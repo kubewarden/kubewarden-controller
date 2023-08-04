@@ -144,7 +144,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 	)
 
 	secret := corev1.Secret{}
-	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
+	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.KubewardenCARootSecretName}, &secret); err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "cannot find policy server secret")
 	}
 

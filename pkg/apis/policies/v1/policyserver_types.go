@@ -100,8 +100,8 @@ const (
 	// Policy Server Secret reconciliation
 	PolicyServerCASecretReconciled PolicyServerConditionType = "CASecretReconciled"
 	// PolicyServerCARootSecretReconciled represents the condition of the
-	// Policy Server CA Root Secret reconciliation
-	PolicyServerCARootSecretReconciled PolicyServerConditionType = "CARootSecretReconciled"
+	// Kubewarden CA Root Secret reconciliation
+	KubewardenCARootSecretReconciled PolicyServerConditionType = "KubewardenCARootSecretReconciled"
 	// PolicyServerConfigMapReconciled represents the condition of the
 	// Policy Server ConfigMap reconciliation
 	PolicyServerConfigMapReconciled PolicyServerConditionType = "ConfigMapReconciled"

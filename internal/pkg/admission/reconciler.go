@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -154,53 +153,24 @@ func (r *Reconciler) Reconcile(
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
 ) error {
-	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+
+	CARootSecret, err := r.FetchKubewardenCARootSecret(ctx)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
+			string(policiesv1.KubewardenCARootSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return err
 	}
-
-	if err := r.reconcileCASecret(ctx, policyServerCARootSecret); err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
-		return err
-	}
-
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCARootSecretReconciled),
+		string(policiesv1.KubewardenCARootSecretReconciled),
 	)
 
-	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
-	if err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
+	if err := r.ReconcilePolicyServerSecret(ctx, policyServer, CARootSecret, false); err != nil {
 		return err
 	}
-
-	if err := r.reconcileCASecret(ctx, policyServerCASecret); err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
-		return err
-	}
-
-	setTrueConditionType(
-		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCASecretReconciled),
-	)
 
 	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, policies); err != nil {
 		setFalseConditionType(
