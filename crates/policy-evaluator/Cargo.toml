@@ -22,7 +22,7 @@ dns-lookup = "2.0"
 json-patch = "1.0"
 kube = { version = "0.85.0", default-features = false, features = ["client", "rustls-tls"] }
 k8s-openapi = { version = "0.19.0", default-features = false }
-kubewarden-policy-sdk = "0.9.6"
+kubewarden-policy-sdk = "0.9.7"
 itertools = "0.11"
 lazy_static = "1.4"
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.23" }
