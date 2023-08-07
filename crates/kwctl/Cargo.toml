@@ -37,7 +37,7 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.4.0"
 walrus = "0.20.1"
 wasmparser = "0.110"
-time = "0.3.24"
+time = "0.3.25"
 semver = { version = "1.0.18", features = ["serde"] }
 
 # This is required to have reqwest built using the `rustls-tls-native-roots`
@@ -48,4 +48,4 @@ reqwest = { version = "0", default-features = false, features = ["rustls-tls-nat
 
 [dev-dependencies]
 rstest = "0.18.1"
-tempfile = "3.7.0"
+tempfile = "3.7.1"
