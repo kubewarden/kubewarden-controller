@@ -452,7 +452,7 @@ checksum = "a3e2c3daef883ecc1b5d58c15adae93470a91d425f3532ba1695849656af3fc1"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.11.1#ed6417c38bee88a2fd89852fe186055b4284b863"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.11.3#bf96c0f01731fafbc94933e82107cbd76a1027ad"
 dependencies = [
  "base64 0.21.2",
  "chrono",
@@ -596,9 +596,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.81"
+version = "1.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c6b2562119bf28c3439f7f02db99faf0aa1a8cdfe5772a2ee155d32227239f0"
+checksum = "305fe645edc1442a0fa8b6726ba61d422798d37a52e12eaecf4b022ebbb88f01"
 dependencies = [
  "jobserver",
  "libc",
@@ -2309,9 +2309,9 @@ dependencies = [
 
 [[package]]
 name = "k8s-openapi"
-version = "0.18.0"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd990069640f9db34b3b0f7a1afc62a05ffaa3be9b66aa3c313f58346df7f788"
+checksum = "95578de7d6eac4fba42114bc751e38c59a739968769df1be56feba6f17fd148e"
 dependencies = [
  "base64 0.21.2",
  "bytes",
@@ -2332,9 +2332,9 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.84.0"
+version = "0.85.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14bd236a6f6ddeac3fefa2863eb4e363cb3a2c49d66619e181b5b8f8f0787575"
+checksum = "a189cb8721a47de68d883040713bbb9c956763d784fcf066828018d32c180b96"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -2343,16 +2343,16 @@ dependencies = [
 
 [[package]]
 name = "kube-client"
-version = "0.84.0"
+version = "0.85.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04a28620131ca89b2509e52f5e1b71bfa3e61a50321836b2ae373bc18e0309e6"
+checksum = "98989b6e1f27695afe22aa29c94136fa06be5e8d28b91222e6dfbe5a460c803f"
 dependencies = [
  "base64 0.20.0",
  "bytes",
  "chrono",
- "dirs-next",
  "either",
  "futures",
+ "home",
  "http",
  "http-body",
  "hyper",
@@ -2379,9 +2379,9 @@ dependencies = [
 
 [[package]]
 name = "kube-core"
-version = "0.84.0"
+version = "0.85.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8227a989f1eeee3bcbf045165d6aca462af3744ecd4dfdcfba81051fb7de428e"
+checksum = "c24d23bf764ec9a5652f943442ff062b91fd52318ea6d2fc11115f19d8c84d13"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -2395,9 +2395,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.9.6"
+version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "845b954c96cafeeb0ead2c558a0d1d961a514552740e660fb16a0750d7fc9497"
+checksum = "fb4fdd3b3a463c5efeed9a263ed6ba66173f34906527448837845d05365a45e3"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -3329,8 +3329,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.11.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.11.1#ed6417c38bee88a2fd89852fe186055b4284b863"
+version = "0.11.3"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.11.3#bf96c0f01731fafbc94933e82107cbd76a1027ad"
 dependencies = [
  "anyhow",
  "base64 0.21.2",
@@ -4114,9 +4114,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.182"
+version = "1.0.183"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdb30a74471f5b7a1fa299f40b4bf1be93af61116df95465b2b5fc419331e430"
+checksum = "32ac8da02677876d532745a130fc9d8e6edfa81a269b107c5b00829b91d8eb3c"
 dependencies = [
  "serde_derive",
 ]
@@ -4142,9 +4142,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.182"
+version = "1.0.183"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f4c2c6ea4bc09b5c419012eafcdb0fcef1d9119d626c8f3a0708a5b92d38a70"
+checksum = "aafe972d60b0b9bee71a91b92fee2d4fb3c9d7e8f6b179aa99f27203d99a4816"
 dependencies = [
  "proc-macro2",
  "quote",
