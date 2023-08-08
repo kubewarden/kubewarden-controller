@@ -213,7 +213,7 @@ jobs:
         # workaround to have the same GH UI for all jobs
         targetarch: [ "x86_64" ]
         os: [ "windows-latest" ]
-    runs-on:  ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     permissions:
       id-token: write
     steps:
@@ -249,7 +249,7 @@ jobs:
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@v3.1.8
+        uses: kubewarden/github-actions/syft-installer@v3.1.9
         with:
           arch: windows_amd64
 
