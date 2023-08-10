@@ -237,7 +237,7 @@ func envVarsContainVariable(envVars []corev1.EnvVar, envVarName string) int {
 	return -1
 }
 
-func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1.PolicyServer) *appsv1.Deployment {
+func (r *Reconciler) admissionContainer(policyServer *policiesv1.PolicyServer) corev1.Container {
 	admissionContainer := corev1.Container{
 		Name:  policyServer.NameWithPrefix(),
 		Image: policyServer.Spec.Image,
@@ -350,6 +350,107 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		admissionContainer.SecurityContext = defaultContainerSecurityContext()
 	}
 
+	return admissionContainer
+}
+
+func (r *Reconciler) initContainer(policyServer *policiesv1.PolicyServer) corev1.Container {
+	initContainer := corev1.Container{
+		Name:    "policy-optimizer",
+		Image:   policyServer.Spec.Image,
+		Command: []string{"/policy-optimizer"},
+
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      policiesVolumeName,
+				ReadOnly:  true,
+				MountPath: policiesConfigContainerPath,
+			},
+			{
+				Name:      policyStoreVolume,
+				MountPath: policyStoreVolumePath,
+			},
+		},
+		Env: append([]corev1.EnvVar{
+			{
+				Name:  "KUBEWARDEN_POLICY_SERVER_DEPLOYMENT_NAME",
+				Value: policyServer.Name,
+			},
+			{
+				Name:  "NAMESPACE",
+				Value: r.DeploymentsNamespace,
+			},
+			{
+				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
+				Value: policyStoreVolumePath,
+			},
+			{
+				Name:  "KUBEWARDEN_POLICIES",
+				Value: filepath.Join(policiesConfigContainerPath, policiesFilename),
+			},
+			{
+				Name:  "KUBEWARDEN_SIGSTORE_CACHE_DIR",
+				Value: sigstoreCacheDirPath,
+			},
+		}, policyServer.Spec.Env...),
+	}
+	if policyServer.Spec.VerificationConfig != "" {
+		initContainer.VolumeMounts = append(initContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      verificationConfigVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerVerificationConfigContainerPath,
+			},
+		)
+		initContainer.Env = append(initContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_VERIFICATION_CONFIG_PATH",
+				Value: filepath.Join(constants.PolicyServerVerificationConfigContainerPath, verificationFilename),
+			},
+		)
+	}
+	if policyServer.Spec.ImagePullSecret != "" {
+		initContainer.VolumeMounts = append(initContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      imagePullSecretVolumeName,
+				ReadOnly:  true,
+				MountPath: dockerConfigJSONPolicyServerPath,
+			},
+		)
+		initContainer.Env = append(initContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
+				Value: dockerConfigJSONPolicyServerPath,
+			},
+		)
+	}
+	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
+		initContainer.VolumeMounts = append(initContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      sourcesVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerSourcesConfigContainerPath,
+			},
+		)
+		initContainer.Env = append(initContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_SOURCES_PATH",
+				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
+			},
+		)
+	}
+	if policyServer.Spec.SecurityContexts.Container != nil {
+		initContainer.SecurityContext = policyServer.Spec.SecurityContexts.Container
+	} else {
+		initContainer.SecurityContext = defaultContainerSecurityContext()
+	}
+
+	return initContainer
+}
+
+func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1.PolicyServer) *appsv1.Deployment {
+	admissionContainer := r.admissionContainer(policyServer)
+	initContainer := r.initContainer(policyServer)
+
 	templateAnnotations := policyServer.Spec.Annotations
 	if templateAnnotations == nil {
 		templateAnnotations = make(map[string]string)
@@ -404,6 +505,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				},
 				Spec: corev1.PodSpec{
 					Containers:         []corev1.Container{admissionContainer},
+					InitContainers:     []corev1.Container{initContainer},
 					ServiceAccountName: policyServer.Spec.ServiceAccountName,
 					Volumes: []corev1.Volume{
 						{
