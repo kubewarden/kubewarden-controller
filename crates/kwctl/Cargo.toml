@@ -33,7 +33,7 @@ syntect = { version = "5.0", default-features = false, features = [
         "default-syntaxes",
         "parsing",
 ] }
-tar = "0.4.39"
+tar = "0.4.40"
 tiny-bench = "0.3"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
