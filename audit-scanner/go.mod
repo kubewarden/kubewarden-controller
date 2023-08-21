@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/google/go-cmp v0.5.9
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/kubewarden/kubewarden-controller v1.7.0-rc1
 	github.com/rs/zerolog v1.30.0
 	github.com/spf13/cobra v1.7.0
