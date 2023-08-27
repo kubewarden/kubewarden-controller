@@ -4,7 +4,7 @@ version = "0.7.23"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
-  "Víctor Cuadrado Juan <vcuadradojuan@suse.de>"
+  "Víctor Cuadrado Juan <vcuadradojuan@suse.de>",
 ]
 edition = "2021"
 
@@ -18,22 +18,31 @@ async-trait = "0.1"
 base64 = "0.21"
 directories = "5.0"
 lazy_static = "1.4"
-oci-distribution = { version = "0.9.4", default-features = false, features =  ["rustls-tls"] }
+oci-distribution = { version = "0.9.4", default-features = false, features = [
+  "rustls-tls",
+] }
 path-slash = "0.2"
 regex = "1.5"
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.11", default-features = false, features = [
+  "rustls-tls",
+] }
 rustls = "0.21"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
-sigstore = { version = "0.7.2", default-features = false, features = ["full-rustls-tls", "tuf", "cached-client"] }
+sigstore = { version = "0.7.2", default-features = false, features = [
+  "full-rustls-tls",
+  "tuf",
+  "cached-client",
+] }
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
 walkdir = "2"
 rayon = "1.5"
 docker_credential = "1.2"
 tokio = { version = "1", default_features = false }
+cfg-if = "1.0"
 
 [dev-dependencies]
 rstest = "0.18"
