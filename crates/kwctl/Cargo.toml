@@ -39,10 +39,10 @@ tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
-url = "2.4.0"
+url = "2.4.1"
 walrus = "0.20.1"
 wasmparser = "0.110"
-time = "0.3.27"
+time = "0.3.28"
 semver = { version = "1.0.18", features = ["serde"] }
 
 # This is required to have reqwest built using the `rustls-tls-native-roots`
