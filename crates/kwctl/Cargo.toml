@@ -41,7 +41,7 @@ tracing-futures = "0.2"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.4.1"
 walrus = "0.20.1"
-wasmparser = "0.110"
+wasmparser = "0.112"
 time = "0.3.28"
 semver = { version = "1.0.18", features = ["serde"] }
 
