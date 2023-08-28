@@ -137,7 +137,7 @@ impl MetadataPrinter {
             .clone()
             .ok_or_else(|| anyhow!("Invalid policy: protocol_version not defined"))?;
 
-        let pretty_annotations = vec![
+        let pretty_annotations = [
             KUBEWARDEN_ANNOTATION_POLICY_TITLE,
             KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION,
             KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
