@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base64 = "0.21.2"
+base64 = "0.21.3"
 chrono = { version = "0.4", default-features = false }
 chrono-tz = "0.8.3"
 gtmpl = "0.7.1"
