@@ -60,8 +60,8 @@ var _ = Describe("Given an AdmissionPolicy", func() {
 			Context("and it has a non-empty policy server set on its spec", func() {
 				var (
 					policyNamespace  = someNamespace.Name
-					policyName       = "scheduled-policy"
 					policyServerName = "some-policy-server"
+					policyName       = "scheduled-policy"
 				)
 				BeforeEach(func() {
 					Expect(
@@ -76,15 +76,18 @@ var _ = Describe("Given an AdmissionPolicy", func() {
 							func(admissionPolicy *policiesv1.AdmissionPolicy) policiesv1.PolicyStatusEnum {
 								return admissionPolicy.Status.PolicyStatus
 							},
-							Equal(policiesv1.PolicyStatusScheduled),
-						),
-					)
+							Equal(policiesv1.PolicyStatusScheduled)))
 				})
 				Context("and the targeted policy server is created", func() {
 					BeforeEach(func() {
 						Expect(
 							k8sClient.Create(ctx, policyServer(policyServerName)),
 						).To(HaveSucceededOrAlreadyExisted())
+					})
+					AfterEach(func() {
+						Expect(
+							k8sClient.Delete(ctx, policyServer(policyServerName)),
+						).To(Succeed())
 					})
 					It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusPending), func() {
 						Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {

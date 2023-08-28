@@ -23,19 +23,109 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
 var _ = Describe("Given a PolicyServer", func() {
 	var (
-		policyServerName = "policy-server"
+		policyServerName           = "policy-server"
+		policyServerNameWithPrefix = policyServer(policyServerName).NameWithPrefix()
 	)
 	BeforeEach(func() {
 		Expect(
 			k8sClient.Create(ctx, policyServer(policyServerName)),
 		).To(HaveSucceededOrAlreadyExisted())
+	})
+	Context("policy server certificate", func() {
+		It("a secret for the policy server certificate should be created", func() {
+			Eventually(func(g Gomega) ([]string, error) {
+				secret := &corev1.Secret{}
+				err := k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, secret)
+				if err != nil {
+					return []string{}, fmt.Errorf("failed to get policy server certificate secret: %s", err.Error())
+				}
+				dataKeys := []string{}
+				for key := range secret.Data {
+					dataKeys = append(dataKeys, key)
+				}
+				return dataKeys, nil
+			}, 30*time.Second, 250*time.Millisecond).Should(Equal([]string{constants.PolicyServerTLSCert, constants.PolicyServerTLSKey}))
+		})
+		It("policy server should have a label with the latest certificate secret resource version", func() {
+			Eventually(func(g Gomega) bool {
+				secret := &corev1.Secret{}
+				err := k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, secret)
+				Expect(err).ToNot(HaveOccurred())
+
+				policyServerDeploy := &appsv1.Deployment{}
+				err = k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, policyServerDeploy)
+				Expect(err).ToNot(HaveOccurred())
+
+				return secret.GetResourceVersion() == policyServerDeploy.Spec.Template.Labels[constants.PolicyServerCertificateSecret]
+			}, 30*time.Second, 250*time.Millisecond).Should(Equal(true))
+		})
+	})
+	When("policy server secret is deleted", func() {
+		BeforeEach(func() {
+			Expect(
+				k8sClient.Delete(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      policyServerNameWithPrefix,
+						Namespace: DeploymentsNamespace,
+					},
+				})).To(Succeed())
+			Eventually(func(g Gomega) bool {
+				err := k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, &corev1.Secret{})
+				return apierrors.IsNotFound(err)
+			}, 30*time.Second, 250*time.Millisecond).Should(BeTrue())
+		})
+		It("it should be recreated", func() {
+			Eventually(func(g Gomega) ([]string, error) {
+				secret := &corev1.Secret{}
+				err := k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, secret)
+				if err != nil {
+					return []string{}, fmt.Errorf("failed to get policy server certificate secret: %s", err.Error())
+				}
+				dataKeys := []string{}
+				for key := range secret.Data {
+					dataKeys = append(dataKeys, key)
+				}
+				return dataKeys, nil
+			}, 30*time.Second, 250*time.Millisecond).Should(Equal([]string{constants.PolicyServerTLSCert, constants.PolicyServerTLSKey}))
+		})
+		It("policy server should have a label with the latest certificate secret resource version", func() {
+			Eventually(func(g Gomega) (bool, error) {
+				secret := &corev1.Secret{}
+				if err := k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, secret); err != nil {
+					return false, fmt.Errorf("failed to get policy server certificate secret: $%s", err.Error())
+				}
+
+				policyServerDeploy := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, policyServerDeploy); err != nil {
+					return false, fmt.Errorf("failed to get policy server deployment: %s", err.Error())
+				}
+
+				return secret.GetResourceVersion() == policyServerDeploy.Spec.Template.Labels[constants.PolicyServerCertificateSecret], nil
+			}, 30*time.Second, 250*time.Millisecond).Should(Equal(true))
+		})
+	})
+	When("policy server is deleted", func() {
+		It("its secret should be deleted as well", func() {
+			Expect(
+				k8sClient.Delete(ctx, policyServer(policyServerName)),
+			).To(Succeed())
+
+			Eventually(func(g Gomega) bool {
+				err := k8sClient.Get(ctx, client.ObjectKey{Name: policyServerNameWithPrefix, Namespace: DeploymentsNamespace}, &corev1.Secret{})
+				return apierrors.IsNotFound(err)
+			}, 30*time.Second, 250*time.Millisecond).Should(BeTrue())
+		})
 	})
 	When("it has no assigned policies", func() {
 		Context("and it is deleted", func() {
@@ -64,6 +154,7 @@ var _ = Describe("Given a PolicyServer", func() {
 				k8sClient.Create(ctx, clusterAdmissionPolicyWithPolicyServerName(policyName, policyServerName)),
 			).To(HaveSucceededOrAlreadyExisted())
 		})
+
 		Context("and it is deleted", func() {
 			BeforeEach(func() {
 				Expect(

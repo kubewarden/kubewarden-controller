@@ -18,24 +18,23 @@ const port = "8181"
 func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	const domain = "localhost"
 	const maxRetries = 10
-	r := createReconcilerWithEmptyClient()
 	// create CA
-	caSecret, err := r.buildPolicyServerCARootSecret(admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	caSecret, err := buildCARootSecret("namespace", admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
 		t.Errorf("CA secret could not be created: %s", err.Error())
 	}
-	admissionregCA, err := extractCaFromSecret(caSecret)
-	if err != nil {
-		t.Errorf("CA could not be extracted from secret: %s", err.Error())
-	}
-	// create cert using CA previously created
-	servingCert, servingKey, err := admissionregistration.GenerateCert(
-		admissionregCA.CaCert,
-		domain,
-		[]string{domain},
-		admissionregCA.CaPrivateKey)
+	// create serving certificate
+	servingCertSecret, err := buildCertificateSecret([]string{domain}, "secretName", "namespace", caSecret, admissionregistration.GenerateCert)
 	if err != nil {
 		t.Errorf("failed generating cert: %s", err.Error())
+	}
+	servingCert, ok := servingCertSecret.StringData[constants.PolicyServerTLSCert]
+	if !ok {
+		t.Fatalf("missing cert data")
+	}
+	servingKey, ok := servingCertSecret.StringData[constants.PolicyServerTLSKey]
+	if !ok {
+		t.Fatalf("missing key data")
 	}
 
 	var server http.Server
@@ -44,7 +43,7 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 
 	// create https server with the certificates created
 	go func() {
-		cert, err := tls.X509KeyPair(servingCert, servingKey)
+		cert, err := tls.X509KeyPair([]byte(servingCert), []byte(servingKey))
 		if err != nil {
 			t.Errorf("could not load cert: %s", err.Error())
 		}
@@ -64,7 +63,7 @@ func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	// wait for https server to be ready to avoid race conditions
 	waitGroup.Wait()
 	rootCAs := x509.NewCertPool()
-	rootCAs.AppendCertsFromPEM(caSecret.Data[constants.PolicyServerCARootPemName])
+	rootCAs.AppendCertsFromPEM(caSecret.Data[constants.CARootCACertPem])
 	retries := 0
 	var conn *tls.Conn
 	for retries < maxRetries {

@@ -63,7 +63,7 @@ var (
 	}
 )
 
-func AlreadyExists() types.GomegaMatcher { //nolint:ireturn
+func AlreadyExists() types.GomegaMatcher { //nolint:ireturn,nolintlint
 	return WithTransform(
 		func(err error) bool {
 			return err != nil && apierrors.IsAlreadyExists(err)

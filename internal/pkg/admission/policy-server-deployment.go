@@ -51,8 +51,12 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 			return err
 		}
 	}
+	certificateSecret, err := fetchSecret(ctx, r.Client, r.DeploymentsNamespace, policyServer.NameWithPrefix())
+	if err != nil {
+		return &PolicyServerNotReadyError{fmt.Sprintf("cannot get certificate secret for policy server: %s", err.Error())}
+	}
 
-	deployment := r.deployment(configMapVersion, policyServer)
+	deployment := r.deployment(configMapVersion, policyServer, certificateSecret.GetResourceVersion())
 	err = r.Client.Create(ctx, deployment)
 	if err == nil {
 		return nil
@@ -153,6 +157,7 @@ func shouldUpdatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, o
 		containerImageChanged ||
 		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
 		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
+		originalDeployment.Spec.Template.Labels[constants.PolicyServerCertificateSecret] != newDeployment.Spec.Template.Labels[constants.PolicyServerCertificateSecret] ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
 		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment), nil
 }
@@ -237,7 +242,7 @@ func envVarsContainVariable(envVars []corev1.EnvVar, envVarName string) int {
 	return -1
 }
 
-func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1.PolicyServer) *appsv1.Deployment {
+func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1.PolicyServer, certificateSecretVersion string) *appsv1.Deployment {
 	admissionContainer := corev1.Container{
 		Name:  policyServer.NameWithPrefix(),
 		Image: policyServer.Spec.Image,
@@ -399,6 +404,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 						constants.AppLabelKey: policyServer.AppLabel(),
 						constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
 						constants.PolicyServerLabelKey:                            policyServer.Name,
+						constants.PolicyServerCertificateSecret:                   certificateSecretVersion,
 					},
 					Annotations: templateAnnotations,
 				},

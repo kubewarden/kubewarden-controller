@@ -67,7 +67,7 @@ func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ct
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("cannot retrieve admission policy: %w", err)
+		return ctrl.Result{}, fmt.Errorf("cannot retrieve cluster admission policy: %w", err)
 	}
 
 	return startReconciling(ctx, r.Reconciler.Client, r.Reconciler, &clusterAdmissionPolicy)

@@ -20,9 +20,12 @@ import (
 	"fmt"
 	"time"
 
+	// "github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	// admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	// "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Given a ClusterAdmissionPolicy", func() {
@@ -54,11 +57,11 @@ var _ = Describe("Given a ClusterAdmissionPolicy", func() {
 				var (
 					policyName       = "scheduled-policy"
 					policyServerName = "other-policy-server"
+					policy           *policiesv1.ClusterAdmissionPolicy
 				)
 				BeforeEach(func() {
-					Expect(
-						k8sClient.Create(ctx, clusterAdmissionPolicyWithPolicyServerName(policyName, policyServerName)),
-					).To(HaveSucceededOrAlreadyExisted())
+					policy = clusterAdmissionPolicyWithPolicyServerName(policyName, policyServerName)
+					Expect(k8sClient.Create(ctx, policy)).To(HaveSucceededOrAlreadyExisted())
 				})
 				It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusScheduled), func() {
 					Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {

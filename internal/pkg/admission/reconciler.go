@@ -154,17 +154,8 @@ func (r *Reconciler) Reconcile(
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
 ) error {
-	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	rootCASecret, err := fetchKubewardenCARootSecret(ctx, r.Client, r.DeploymentsNamespace)
 	if err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
-		return err
-	}
-
-	if err := r.reconcileCASecret(ctx, policyServerCARootSecret); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			string(policiesv1.PolicyServerCARootSecretReconciled),
@@ -178,7 +169,7 @@ func (r *Reconciler) Reconcile(
 		string(policiesv1.PolicyServerCARootSecretReconciled),
 	)
 
-	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
+	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.Name, policyServer.NameWithPrefix(), rootCASecret, admissionregistration.GenerateCert)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,

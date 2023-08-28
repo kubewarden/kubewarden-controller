@@ -76,6 +76,12 @@ func startReconciling(ctx context.Context, client client.Client, reconciler admi
 
 	_ = setPolicyStatus(ctx, reconciler.DeploymentsNamespace, reconciler.APIReader, policy)
 	if err := client.Status().Update(ctx, policy); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: time.Second * 5,
+			}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("update admission policy status error: %w", err)
 	}
 
@@ -144,8 +150,8 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 	)
 
 	secret := corev1.Secret{}
-	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "cannot find policy server secret")
+	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.KubewardenCARootSecretName}, &secret); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "cannot find root CA secret")
 	}
 
 	if policy.IsMutating() {

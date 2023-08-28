@@ -239,7 +239,7 @@ func TestPolicyServerWithContainerSecurityContext(t *testing.T) {
 			},
 		},
 	}
-	deployment := reconciler.deployment("v1", policyServer)
+	deployment := reconciler.deployment("v1", policyServer, "1")
 
 	if deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem == nil ||
 		*deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem != readOnlFileSystem {
@@ -285,7 +285,7 @@ func TestPolicyServerWithPodSecurityContext(t *testing.T) {
 			},
 		},
 	}
-	deployment := reconciler.deployment("v1", policyServer)
+	deployment := reconciler.deployment("v1", policyServer, "1")
 
 	if deployment.Spec.Template.Spec.SecurityContext == nil {
 		t.Error("Pod securityContext should be defined ")
@@ -312,7 +312,7 @@ func TestPolicyServerWithoutSecurityContext(t *testing.T) {
 			SecurityContexts: policiesv1.PolicyServerSecurity{},
 		},
 	}
-	deployment := reconciler.deployment("v1", policyServer)
+	deployment := reconciler.deployment("v1", policyServer, "1")
 	containerDefaultSecurityContext := defaultContainerSecurityContext()
 
 	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem != *containerDefaultSecurityContext.ReadOnlyRootFilesystem {
@@ -367,7 +367,7 @@ func TestPolicyServerWithPodAndContainerSecurityContext(t *testing.T) {
 			},
 		},
 	}
-	deployment := reconciler.deployment("v1", policyServer)
+	deployment := reconciler.deployment("v1", policyServer, "1")
 
 	if *deployment.Spec.Template.Spec.Containers[0].SecurityContext.ReadOnlyRootFilesystem != readOnlFileSystem {
 		t.Error("Policy server container ReadOnlyRootFilesystem diverge from the expected value")
@@ -462,7 +462,7 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "0"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
 		},
 	}
-	deployment := reconciler.deployment("v1", policyServer)
+	deployment := reconciler.deployment("v1", policyServer, "1")
 	hasMetricEnvvar := false
 	hasLogFmtEnvvar := false
 	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
@@ -507,7 +507,7 @@ func TestPolicyServerDeploymentMetricConfigurationWithNoValueDefinedByUSer(t *te
 			Env:   []corev1.EnvVar{},
 		},
 	}
-	deployment := reconciler.deployment("v1", policyServer)
+	deployment := reconciler.deployment("v1", policyServer, "1")
 	hasMetricEnvvar := false
 	hasLogFmtEnvvar := false
 	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {

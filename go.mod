@@ -3,7 +3,6 @@ module github.com/kubewarden/kubewarden-controller
 go 1.20
 
 require (
-	github.com/ereslibre/kube-webhook-wrapper v0.0.2
 	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
 	github.com/onsi/ginkgo/v2 v2.9.2
@@ -46,6 +45,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
+	github.com/kubewarden/kube-webhook-wrapper v0.0.0-20230830124812-3fdf2b58aa57
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

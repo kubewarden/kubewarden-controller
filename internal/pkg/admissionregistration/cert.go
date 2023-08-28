@@ -14,7 +14,6 @@ import (
 )
 
 func GenerateCert(ca []byte,
-	commonName string,
 	extraSANs []string,
 	CAPrivateKey *rsa.PrivateKey,
 ) ([]byte, []byte, error) {
@@ -50,7 +49,7 @@ func GenerateCert(ca []byte,
 	newCertificate := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName:    commonName,
+			CommonName:    "", // CommonName is deprecated. Use SANS instead.
 			Organization:  []string{""},
 			Country:       []string{""},
 			Province:      []string{""},

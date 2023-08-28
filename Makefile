@@ -108,6 +108,7 @@ setup-envtest: $(SETUP_ENVTEST) # Build setup-envtest
 unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
 	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./internal/... -test.v -coverprofile cover.out
 	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... -test.v -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test . -test.v -coverprofile cover.out
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
@@ -124,7 +125,7 @@ build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager .
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run . -deployments-namespace kubewarden --default-policy-server default
+	go run . -deployments-namespace kubewarden --default-policy-server default -zap-log-level debug
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .

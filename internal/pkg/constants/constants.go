@@ -9,12 +9,16 @@ var (
 
 const (
 	// PolicyServer CA Secret
-	PolicyServerTLSCert                  = "policy-server-cert"
-	PolicyServerTLSKey                   = "policy-server-key"
-	PolicyServerCARootSecretName         = "policy-server-root-ca"
-	PolicyServerCARootPemName            = "policy-server-root-ca-pem"
-	PolicyServerCARootCACert             = "policy-server-root-ca-cert"
-	PolicyServerCARootPrivateKeyCertName = "policy-server-root-ca-privatekey-cert"
+	PolicyServerTLSCert          = "tls.crt"
+	PolicyServerTLSKey           = "tls.key"
+	PolicyServerCARootSecretName = "policy-server-root-ca"
+	PolicyServerCARootPemName    = "policy-server-root-ca-pem"
+	// Root CA secret
+	CARootCACert                    = "tls.crt"
+	CARootCACertPem                 = "cert-pem"
+	CARootPrivateKeyCertName        = "tls.key"
+	KubewardenCARootSecretName      = "kubewarden-root-ca"
+	ControllerCertificateSecretName = "webhook-server-cert" //nolint:gosec
 
 	// PolicyServer Deployment
 	PolicyServerEnableMetricsEnvVar                 = "KUBEWARDEN_ENABLE_METRICS"
@@ -37,8 +41,9 @@ const (
 	PolicyServerVerificationConfigContainerPath = "/verification"
 
 	// Label
-	AppLabelKey          = "app"
-	PolicyServerLabelKey = "kubewarden/policy-server"
+	AppLabelKey                   = "app"
+	PolicyServerLabelKey          = "kubewarden/policy-server"
+	PolicyServerCertificateSecret = "kubewarden/policy-server-certificate-secret-version" //nolint:gosec
 
 	// Index
 	PolicyServerIndexKey = ".spec.policyServer"
@@ -51,4 +56,8 @@ const (
 
 	// OPTEL
 	OptelInjectAnnotation = "sidecar.opentelemetry.io/inject"
+
+	ControllerReturnCodeSuccess       = 0
+	ControllerReturnCodeError         = 1
+	ControllerReturnCodeCAInitialized = 2
 )

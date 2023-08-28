@@ -26,6 +26,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -80,6 +81,12 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileResult, reconcileErr := r.reconcile(ctx, &policyServer, policies)
 
 	if err := r.Client.Status().Update(ctx, &policyServer); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{
+				Requeue:      true,
+				RequeueAfter: time.Second * 5,
+			}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("update policy server status error: %w", err)
 	}
 
@@ -190,6 +197,27 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					},
 				},
 			}
+		})).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			// watches for secret to detect when a policy server
+			// secret change. Therefore, the certificate can be
+			// recreated and the webhooks updated
+			secret, ok := object.(*corev1.Secret)
+			if !ok {
+				r.Log.Info("object is not type of secret: %+v", "secret", secret)
+				return []ctrl.Request{}
+			}
+
+			if policyServerName, isPolicyServerSecret := secret.Labels[constants.PolicyServerLabelKey]; isPolicyServerSecret {
+				return []ctrl.Request{
+					{
+						NamespacedName: client.ObjectKey{
+							Name: policyServerName,
+						},
+					},
+				}
+			}
+			return []ctrl.Request{}
 		})).
 		Complete(r)
 

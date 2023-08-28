@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/x509"
 	"log"
 	"path/filepath"
 	"testing"
@@ -36,6 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -48,6 +51,7 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var reconciler admission.Reconciler
+var caRootSecret *corev1.Secret
 
 const (
 	DeploymentsNamespace = "kubewarden-integration-tests"
@@ -123,6 +127,34 @@ var _ = BeforeSuite(func() {
 		},
 	}); err != nil {
 		log.Fatalf("could not create namespace %q needed for the integration tests", DeploymentsNamespace)
+	}
+
+	// Create the root CA generated in the main of the controller
+	caRoot, err := admissionregistration.GenerateCA()
+	if err != nil {
+		log.Fatalf("cannot generate policy-server secret CA")
+	}
+	caPEMEncoded, err := admissionregistration.PemEncodeCertificate(caRoot.CaCert)
+	if err != nil {
+		log.Fatalf("cannot encode policy-server secret CA")
+	}
+	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(caRoot.CaPrivateKey)
+	caRootSecret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.KubewardenCARootSecretName,
+			Namespace: DeploymentsNamespace,
+		},
+		Data: map[string][]byte{
+			constants.CARootCACert:             caRoot.CaCert,
+			constants.CARootCACertPem:          caPEMEncoded,
+			constants.CARootPrivateKeyCertName: caPrivateKeyBytes,
+		},
+		Type: corev1.SecretTypeOpaque,
+	}
+
+	// Create the integration tests deployments namespace
+	if err := k8sClient.Create(ctx, caRootSecret); err != nil {
+		log.Fatalf("could not create root CA secret: ")
 	}
 
 	go func() {
