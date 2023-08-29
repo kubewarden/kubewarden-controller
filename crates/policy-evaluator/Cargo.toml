@@ -1,61 +1,67 @@
 [package]
-name = "policy-evaluator"
-version = "0.11.3"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
-  "Víctor Cuadrado Juan <vcuadradojuan@suse.com>"
+  "Víctor Cuadrado Juan <vcuadradojuan@suse.com>",
 ]
 edition = "2021"
+name = "policy-evaluator"
+version = "0.11.3"
 
 [workspace]
-members = [
-  "crates/burrego"
-]
+members = ["crates/burrego"]
 
 [dependencies]
 anyhow = "1.0"
 base64 = "0.21"
 burrego = { path = "crates/burrego" }
 cached = "0.44"
+chrono = { version = "0.4.26", default-features = false }
 dns-lookup = "2.0"
-json-patch = "1.0"
-kube = { version = "0.85.0", default-features = false, features = ["client", "rustls-tls"] }
-k8s-openapi = { version = "0.19.0", default-features = false }
-kubewarden-policy-sdk = "0.9.7"
+email_address = { version = "0.2.4", features = ["serde"] }
 itertools = "0.11"
+json-patch = "1.0"
+k8s-openapi = { version = "0.19.0", default-features = false }
+kube = { version = "0.85.0", default-features = false, features = [
+  "client",
+  "rustls-tls",
+] }
+kubewarden-policy-sdk = "0.9.7"
 lazy_static = "1.4"
+mail-parser = { version = "0.8.2", features = ["serde"] }
+picky = { version = "7.0.0-rc.8", default-features = false, features = [
+  "chrono_conversion",
+  "x509",
+] }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.23" }
+semver = { version = "1.0.18", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-serde = { version = "1.0", features = ["derive"] }
 sha2 = "0.10"
+thiserror = "1.0"
+time = { version = "0.3.28", features = ["serde-human-readable"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 url = { version = "2.2", features = ["serde"] }
 validator = { version = "0.16", features = ["derive"] }
-wasmparser = "0.112"
 wapc = "1.0.0"
-wasmtime          = { workspace = true }
-wasmtime-wasi     = { workspace = true }
-wasi-common       = { workspace = true }
 wasi-cap-std-sync = { workspace = true }
-wasmtime-provider = { version = "1.8.0", features = ["cache"] }
-picky = { version = "7.0.0-rc.8", default-features = false, features = [ "x509", "chrono_conversion" ] }
-chrono = { version = "0.4.26", default-features = false }
-time = { version = "0.3.28", features = ["serde-human-readable"] }
-semver = { version = "1.0.18", features = ["serde"] }
-email_address = {version = "0.2.4", features = ["serde"] }
-mail-parser= {version = "0.8.2", features = ["serde"] }
-thiserror = "1.0"
+wasi-common = { workspace = true }
+wasmparser = "0.112"
+wasmtime = { workspace = true }
+wasmtime-provider = { version = "1.9.0", features = ["cache"] }
+wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
-wasmtime          = "11.0"
-wasmtime-wasi     = "11.0"
-wasi-common       = "11.0"
-wasi-cap-std-sync = "11.0"
+wasi-cap-std-sync = "12.0"
+wasi-common       = "12.0"
+wasmtime          = "12.0"
+wasmtime-wasi     = "12.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
-k8s-openapi = { version = "0.19.0", default-features = false, features = ["v1_26"] }
+k8s-openapi = { version = "0.19.0", default-features = false, features = [
+  "v1_26",
+] }
