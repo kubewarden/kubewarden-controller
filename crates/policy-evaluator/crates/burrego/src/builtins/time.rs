@@ -91,7 +91,7 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         }
     };
 
-    let unix_epoch = DateTime::<chrono::Utc>::from_utc(
+    let unix_epoch = DateTime::<chrono::Utc>::from_naive_utc_and_offset(
         chrono::NaiveDateTime::from_timestamp_opt(0, 0).ok_or_else(|| {
             BurregoError::BuiltinError {
                 name: "time.date".to_string(),
@@ -112,7 +112,7 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 }
 
 pub fn date_local(ns: i64) -> Result<serde_json::Value> {
-    let unix_epoch = DateTime::<chrono::Utc>::from_utc(
+    let unix_epoch = DateTime::<chrono::Utc>::from_naive_utc_and_offset(
         chrono::NaiveDateTime::from_timestamp_opt(0, 0).ok_or_else(|| {
             BurregoError::BuiltinError {
                 name: "time.date".to_string(),
