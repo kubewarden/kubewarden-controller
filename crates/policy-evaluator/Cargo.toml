@@ -16,7 +16,7 @@ anyhow = "1.0"
 base64 = "0.21"
 burrego = { path = "crates/burrego" }
 cached = "0.44"
-chrono = { version = "0.4.26", default-features = false }
+chrono = { version = "0.4.27", default-features = false }
 dns-lookup = "2.0"
 email_address = { version = "0.2.4", features = ["serde"] }
 itertools = "0.11"
