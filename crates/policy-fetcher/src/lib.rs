@@ -253,7 +253,7 @@ mod tests {
     }
 
     fn store_path(path: &str) -> PathBuf {
-        Store::default().root.join(path)
+        Store::default().root.join(store::path::encode_path(path))
     }
 
     struct UrlParseDetails {
