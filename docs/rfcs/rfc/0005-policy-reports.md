@@ -1,12 +1,18 @@
 |              |                                                                       |
-|:-------------|:----------------------------------------------------------------------|
+| :----------- | :-------------------------------------------------------------------- |
 | Feature Name | Policy reports                                                        |
 | Start Date   | Feb 22nd 2022                                                         |
 | Category     | Policy Enforcement                                                    |
 | RFC PR       | [PR176](https://github.com/kubewarden/kubewarden-controller/pull/176) |
-| State        | **ACCEPTED**                                                          |
+| State        | **REJECTED**                                                          |
+
+# SUPERSEDED BY [RFC 12](./0012-policy-report.md).
+
+What follows is the RFC as it was until its rejection, for historical
+purposes.
 
 # Summary
+
 [summary]: #summary
 
 Policy Reports are a lightweight form of policy result reporting that
@@ -15,6 +21,7 @@ without the need to deploy the whole telemetry and observability
 stack.
 
 # Motivation
+
 [motivation]: #motivation
 
 In order to understand how a policy behaves in a live cluster, it's
@@ -26,6 +33,7 @@ in a live context, they can relay on this new feature -- Policy
 Reports.
 
 ## Examples / User Stories
+
 [examples]: #examples
 
 > As a user testing Kubewarden, I can check in a simple and
@@ -70,6 +78,7 @@ Reports.
 > organization in one place.
 
 # Detailed design
+
 [design]: #detailed-design
 
 This is the bulk of the RFC. Explain the design in enough detail for somebody familiar with the product to understand, and for somebody familiar with the internals to implement.
@@ -77,22 +86,25 @@ This is the bulk of the RFC. Explain the design in enough detail for somebody fa
 This section should cover architecture aspects and the rationale behind disruptive technical decisions (when applicable), as well as corner-cases and warnings.
 
 # Drawbacks
+
 [drawbacks]: #drawbacks
 
 Why should we **not** do this?
 
-  * obscure corner cases
-  * will it impact performance?
-  * what other parts of the product will be affected?
-  * will the solution be hard to maintain in the future?
+- obscure corner cases
+- will it impact performance?
+- what other parts of the product will be affected?
+- will the solution be hard to maintain in the future?
 
 # Alternatives
+
 [alternatives]: #alternatives
 
 - What other designs/options have been considered?
 - What is the impact of not doing this?
 
 # Unresolved questions
+
 [unresolved]: #unresolved-questions
 
 - What are the unknowns?
