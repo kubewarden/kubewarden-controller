@@ -1,12 +1,10 @@
-
-|              |                                            |
-| :----------- | :----------------------------------------- |
-| Feature Name | Policy Report format audit checks          |
-| Start Date   | 08/05/2022                                 |
-| Category     | enhancement,feature                        |
-| RFC PR       | https://github.com/kubewarden/rfc/pull/13  |
-| State        | **ACCEPTED**                                   |
-
+|              |                                           |
+| :----------- | :---------------------------------------- |
+| Feature Name | Policy Report format audit checks         |
+| Start Date   | 08/05/2022                                |
+| Category     | enhancement,feature                       |
+| RFC PR       | https://github.com/kubewarden/rfc/pull/13 |
+| State        | **ACCEPTED**                              |
 
 # Summary
 
@@ -112,12 +110,12 @@ lead to several policy evaluations being performed.
 
 The `PolicyReport` is a namespaced CR that provides these information:
 
-* How many policy evaluations have been done during the audit run of the Namespace
-* How many policy evaluations led to a resource being accepted, rejected or
+- How many policy evaluations have been done during the audit run of the Namespace
+- How many policy evaluations led to a resource being accepted, rejected or
   could not be performed because of an error.
   Policy failures happen when an error occurs during the policy evaluation,
   for example, because of a runtime panic
-* Detailed results about all the evaluations performed. An evaluation result contains
+- Detailed results about all the evaluations performed. An evaluation result contains
   the following information: the policy being used, the resource that was
   evaluated, the final outcome (accept/reject/failure) and the eventual message
   returned by the policy
@@ -125,17 +123,16 @@ The `PolicyReport` is a namespaced CR that provides these information:
 The `PolicyReport` of the Namespace is kept updated during the lifetime of the
 cluster, meaning:
 
-* New Policies might become "interested" about the events happening inside of
+- New Policies might become "interested" about the events happening inside of
   the cluster. New evaluations results will be added to the PolicyReport
-* Existing Kubernetes objects and policies can change over time: some evaluations
+- Existing Kubernetes objects and policies can change over time: some evaluations
   could change their outcome (pass -> fail and vice versa). The evaluation results
   must reflect that
-* Policies might be deleted/might be no longer "interested" about the Namespace:
+- Policies might be deleted/might be no longer "interested" about the Namespace:
   the report must be updated to not container any reference the these policies
   and their evaluation results
-* Kubernetes resources might be deleted: the report must be updated to not contain
+- Kubernetes resources might be deleted: the report must be updated to not contain
   any reference to them
-
 
 **Note:** PolicyReport resources contain security/compliance information. Regular
 users of the cluster should only have READ access to them. They should not be
@@ -173,33 +170,33 @@ inside of the Namespace. There's going to be only one `PolicyReport` per Namespa
 
 The `PolicyReport` resource has the following fields:
 
-* `apiVersion` and `kind`: these are defined by the CRDs
-* `metadata`: this is the usual `meta/v1.ObjectMeta` resource. In the
+- `apiVersion` and `kind`: these are defined by the CRDs
+- `metadata`: this is the usual `meta/v1.ObjectMeta` resource. In the
   beginning we will set only the `name` field. We will do that by using the
   following pattern: `polr-ns-<namespace name>`
-* `scope`: this is a `core/v1.ObjectReference` resource. We will use that to
+- `scope`: this is a `core/v1.ObjectReference` resource. We will use that to
   reference the Kubernetes Namespace resource that has been analyzed
-* `scopeSelector`: we will not use that, because we are using the `scope` field
-* `summary`: this is an object defined by a CRD `PolicyReportSummary`. It's made
+- `scopeSelector`: we will not use that, because we are using the `scope` field
+- `summary`: this is an object defined by a CRD `PolicyReportSummary`. It's made
   of the following fields:
-  * `pass`: count of policies whose requirements were met
-  * `fail`: count of policies whose requirements were not met
-  * `warn:`: we will not set it, it doesn't relate to us
-  * `error`: count of policies that could not be evaluated.
+  - `pass`: count of policies whose requirements were met
+  - `fail`: count of policies whose requirements were not met
+  - `warn:`: we will not set it, it doesn't relate to us
+  - `error`: count of policies that could not be evaluated.
     The policies could not be evaluated because of errors
     (for example: a runtime panic of a broken policy)
-  * `skip`: count of policies that were not selected for evaluation.
+  - `skip`: count of policies that were not selected for evaluation.
     We will allow some policies to be excluded from the background checks, more
     on that later.
-* `results` this probably the most important field. It's a list of `PolicyReportResult`
+- `results` this probably the most important field. It's a list of `PolicyReportResult`
   objects
 
 The structure of the `PolicyReportResult` is flexible. This is how we are going
 to use its fields:
 
-* `source`: identifier for the policy engine that manages this report. We will
+- `source`: identifier for the policy engine that manages this report. We will
   set that to be `kubewarden`
-* `policy`: this is the name of the policy that evaluated the resource. This
+- `policy`: this is the name of the policy that evaluated the resource. This
   could be both a `ClusterAdmissionPolicy` or a `AdmissionPolicy`.
   Because of that we cannot use the name of the policy, there could be clashes
   between cluster and namespaced policy names. We will instead use the following
@@ -207,103 +204,103 @@ to use its fields:
   For example, a `ClusterAdmissionPolicy` named `provileged-containers` will
   be identified via `cap-privileged-containers`. On the other hand, a `AdmissionPolicy`
   called `required-labels` will be identified via `ap-required-labels`.
-* `rule`, `category`, `severity`, `scored`: we are going to leave these fields empty
+- `rule`, `category`, `severity`, `scored`: we are going to leave these fields empty
   because they do not relate to concepts we have
-* `timestamp`: the time the result was found
-* `result`: this is a string enum. These are the values we will be using:
+- `timestamp`: the time the result was found
+- `result`: this is a string enum. These are the values we will be using:
   `pass`, `fail` and `error`
-* `resources`: this is a list of `core/v1.ObjectReference` objects. We will
+- `resources`: this is a list of `core/v1.ObjectReference` objects. We will
   put only one object reference inside of this list. This is going to be a
   reference to the resource that has been analyzed by the policy
-* `resourceSelector`: we are not going to use it, because we are using the `resources` field
-* `message`: this is used when the policy result is `fail` or `error`. It will hold
+- `resourceSelector`: we are not going to use it, because we are using the `resources` field
+- `message`: this is used when the policy result is `fail` or `error`. It will hold
   the output message provided by the policy
-* `properties`: we are not going to use this free-form dictionary in the beginning
+- `properties`: we are not going to use this free-form dictionary in the beginning
 
 Let's see a concrete example about the contents of the `results` list.
 
 Assume the following scenario:
 
-* The Namespace being inspected contains:
-  * 2 Pods
-  * 1 Ingress resource
-  * 1 AdmissionPolicy: `safe-labels` interested about any kind of Kubernetes resource
-* 2 ClusterAdmissionPolicy are defined:
-  * `privileged-containers`: interested about Pods objects
-  * `ingress-lets-encrypt`: interested about Ingress objects
+- The Namespace being inspected contains:
+  - 2 Pods
+  - 1 Ingress resource
+  - 1 AdmissionPolicy: `safe-labels` interested about any kind of Kubernetes resource
+- 2 ClusterAdmissionPolicy are defined:
+  - `privileged-containers`: interested about Pods objects
+  - `ingress-lets-encrypt`: interested about Ingress objects
 
 The policy report will have the following results:
 
 ```yaml
 ---
-  Source:  kubewarden
-  Policy:  cap-privileged-containers
-  Result:  fail
-  Message: privileged containers are not allowed
-  Timestamp: <a timestamp>
-  Resources:
-    API Version: v1
-    Kind:        Pod
-    Name:        nginx-abuse
-    Namespace:   default
-    UID:         nginx-abuse-pod-uuid
+Source: kubewarden
+Policy: cap-privileged-containers
+Result: fail
+Message: privileged containers are not allowed
+Timestamp: <a timestamp>
+Resources:
+  API Version: v1
+  Kind: Pod
+  Name: nginx-abuse
+  Namespace: default
+  UID: nginx-abuse-pod-uuid
 ---
-  Source:  kubewarden
-  Policy:  ap-safe-labels
-  Result:  pass
-  Timestamp: <a timestamp>
-  Resources:
-    API Version: v1
-    Kind:        Pod
-    Name:        nginx-abuse
-    Namespace:   default
-    UID:         nginx-abuse-pod-uuid
+Source: kubewarden
+Policy: ap-safe-labels
+Result: pass
+Timestamp: <a timestamp>
+Resources:
+  API Version: v1
+  Kind: Pod
+  Name: nginx-abuse
+  Namespace: default
+  UID: nginx-abuse-pod-uuid
 ---
-  Source:  kubewarden
-  Policy:  cap-privileged-containers
-  Result:  pass
-  Timestamp: <a timestamp>
-  Resources:
-    API Version: v1
-    Kind:        Pod
-    Name:        docker-registry
-    Namespace:   default
-    UID:         docker-registry-pod-uuid
+Source: kubewarden
+Policy: cap-privileged-containers
+Result: pass
+Timestamp: <a timestamp>
+Resources:
+  API Version: v1
+  Kind: Pod
+  Name: docker-registry
+  Namespace: default
+  UID: docker-registry-pod-uuid
 ---
-  Source:  kubewarden
-  Policy:  ap-safe-labels
-  Result:  fail
-  Message: the `hello-world` label is not allowed
-  Timestamp: <a timestamp>
-  Resources:
-    API Version: v1
-    Kind:        Pod
-    Name:        docker-registry
-    Namespace:   default
-    UID:         docker-registry-pod-uuid
+Source: kubewarden
+Policy: ap-safe-labels
+Result: fail
+Message: the `hello-world` label is not allowed
+Timestamp: <a timestamp>
+Resources:
+  API Version: v1
+  Kind: Pod
+  Name: docker-registry
+  Namespace: default
+  UID: docker-registry-pod-uuid
 ---
-  Source:  kubewarden
-  Policy:  ap-safe-labels
-  Result:  pass
-  Timestamp: <a timestamp>
-  Resources:
-    API Version: networking.k8s.io/v1
-    Kind:        Ingress
-    Name:        docker-registry
-    Namespace:   default
-    UID:         docker-registry-ingress-uuid
+Source: kubewarden
+Policy: ap-safe-labels
+Result: pass
+Timestamp: <a timestamp>
+Resources:
+  API Version: networking.k8s.io/v1
+  Kind: Ingress
+  Name: docker-registry
+  Namespace: default
+  UID: docker-registry-ingress-uuid
 ---
-  Source:  kubewarden
-  Policy:  cap-ingress-lets-encrypt
-  Result:  fail
-  Message: wrong let's encrypt configuration is being used
-  Timestamp: <a timestamp>
-  Resources:
-    API Version: networking.k8s.io/v1
-    Kind:        Ingress
-    Name:        docker-registry
-    Namespace:   default
-    UID:         docker-registry-ingress-uuid
+Source: kubewarden
+Policy: cap-ingress-lets-encrypt
+Result: fail
+Message: wrong let's encrypt configuration is being used
+Timestamp: <a timestamp>
+Resources:
+  API Version: networking.k8s.io/v1
+  Kind: Ingress
+  Name: docker-registry
+  Namespace: default
+  UID: docker-registry-ingress-uuid
 ```
 
 ## Creating `ClusterPolicyReport` resource
@@ -314,13 +311,13 @@ Kubernetes resources.
 Since Kubewarden allows this kind of resources to be inspected only by
 `ClusterAdmissionPolicy` policies, the report will be built in the following way:
 
-* Find all the `ClusterAdmissionPolicy` policies that are interested about cluster wide
+- Find all the `ClusterAdmissionPolicy` policies that are interested about cluster wide
   objects
-* Remove from this list all the `ClusterAdmissionPolicy` that are not interested
+- Remove from this list all the `ClusterAdmissionPolicy` that are not interested
   about `CREATE` events
-* Find all the cluster wide resources that are relevant to these policies
-* Evaluate the resources using the policies
-* Store the evaluation results inside of the `ClusterPolicyReport` object
+- Find all the cluster wide resources that are relevant to these policies
+- Evaluate the resources using the policies
+- Store the evaluation results inside of the `ClusterPolicyReport` object
 
 The CRD of `ClusterAdmissionPolicy` is basically equal to the one of `PolicyReport`.
 Because of that, we will use it in the same way as described in the previous
@@ -347,7 +344,7 @@ cluster performance because of the load put on ETCD.
 Quoting [this section](https://etcd.io/docs/v3.5/dev-guide/limit/#request-size-limit)
 of ETCD's documentation:
 
->etcd is designed to handle small key value pairs typical for metadata. Larger requests will work, but may increase the latency of other requests. By default, the maximum size of any request is 1.5 MiB. This limit is configurable through --max-request-bytes flag for etcd server
+> etcd is designed to handle small key value pairs typical for metadata. Larger requests will work, but may increase the latency of other requests. By default, the maximum size of any request is 1.5 MiB. This limit is configurable through --max-request-bytes flag for etcd server
 
 # Alternatives
 
