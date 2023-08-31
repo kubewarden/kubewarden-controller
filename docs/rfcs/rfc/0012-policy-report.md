@@ -35,11 +35,55 @@ in an easy way.
 
 ## Examples / User Stories
 
-As a operator, I want to know if some resource in my cluster violates the latest policies.
+> As a operator, I want to know if some resource in my cluster violates the
+> latest policies.
 
-As a user, I want to know if some of resource that I own violates the cluster compliance policies.
+> As a user, I want to know if some of resource that I own violates the cluster
+> compliance policies.
 
-As a Kubernetes developer, I want access to the audit checks results to allow me pro-grammatically act upon it.
+> As a Kubernetes developer, I want access to the audit checks results to allow
+> me pro-grammatically act upon it.
+
+> As a user testing Kubewarden, I can check in a simple and
+> understandable way how a policy or set of policies behave -- what
+> is/are accepting, rejecting or mutating -- just by deploying
+> Kubewarden, without the need of deploying an observability stack.
+
+> As a user that does not want to deploy the whole stack --
+> kubewarden + observability stack --, I can deploy policies in
+> `monitor` mode, so they don't impact my cluster behavior, and at the
+> same time, check what decisions they would have taken had they been
+> in `protect` mode. Only when I'm sure they won't wreak havoc in my
+> cluster, I can promote them from `monitor` to `protect`.
+
+> As a user, I am able to ask for a report of a specific policy or set
+> of policies and understand how they are behaving (regardless of they
+> deployment mode -- `monitor` or `protect`).
+
+> As a user, I can check if a settings change on a policy is impacting
+> the number of rejections or mutations the policy is resolving to in
+> a noticeable way.
+
+> As a user, I can understand if a policy is targeting a wider number
+> of requests than it should by looking at the evaluation number
+> without the need of deploying the observability stack.
+
+> As a UI integrator, I can show rich stats about evaluations without
+> the need of doing any computations, just by consuming reports, which
+> have a well known, stable and versioned structure.
+
+> As a third party integrator, the interface to fetch Kubewarden stats
+> is the well known and versioned Report resource. I can use this
+> information from Kubewarden to aggregate to other security relevant
+> data about the cluster in a hollistic security-focused control
+> plane.
+
+> As a third party integrator, the interface to fetch Kubewarden stats
+> is the well known and versioned Report resource. I can use this
+> information from Kubewarden to aggregate data across different
+> clusters, forming a hollistic security-focused control plane across
+> clusters, giving me a rich multi-cluster security view of my
+> organization in one place.
 
 # Detailed design
 
