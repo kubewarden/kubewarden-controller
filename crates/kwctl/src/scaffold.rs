@@ -160,7 +160,7 @@ pub(crate) fn manifest(
     let settings_yml: serde_yaml::Mapping = serde_yaml::from_str(settings.unwrap_or("{}"))?;
 
     let scaffold_data = ScaffoldPolicyData {
-        uri: String::from(uri),
+        uri,
         policy_title: get_policy_title_from_cli_or_metadata(policy_title, &metadata),
         metadata,
         settings: settings_yml,
