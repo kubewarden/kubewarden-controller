@@ -14,12 +14,13 @@ pub(crate) fn save(policies: Vec<&String>, output: &str) -> Result<()> {
 
     for policy in policies {
         let store = Store::default();
-        let wasm_path = crate::utils::wasm_path(policy.as_str())
+        let uri = crate::utils::map_path_to_uri(policy.as_str())?;
+        let wasm_path = crate::utils::wasm_path(&uri)
             .map_err(|e| anyhow!("cannot find policy {}: {}", policy, e))?;
         let mut file = File::open(wasm_path)
             .map_err(|e| anyhow!("cannot open policy file {}: {}", policy, e))?;
         let policy_path = store
-            .policy_path(policy, PolicyPath::PrefixAndFilename)
+            .policy_path(&uri, PolicyPath::PrefixAndFilename)
             .map_err(|e| anyhow!("cannot find path for policy {}: {}", policy, e))?;
         tar.append_file(policy_path, &mut file)
             .map_err(|e| anyhow!("cannot append policy {} to tar file: {}", policy, e))?;

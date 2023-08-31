@@ -23,19 +23,19 @@ use std::{convert::TryFrom, str::FromStr};
 use syntect::parsing::SyntaxSet;
 
 pub(crate) async fn inspect(
-    uri: &str,
+    uri_or_sha_prefix: &str,
     output: OutputType,
     sources: Option<Sources>,
     no_color: bool,
 ) -> Result<()> {
-    let uri = crate::utils::map_path_to_uri(uri)?;
-    let wasm_path = crate::utils::wasm_path(uri.as_str())?;
+    let uri = crate::utils::map_path_to_uri(uri_or_sha_prefix)?;
+    let wasm_path = crate::utils::wasm_path(&uri)?;
     let metadata_printer = MetadataPrinter::from(&output);
 
     let metadata = Metadata::from_path(&wasm_path)
         .map_err(|e| anyhow!("Error parsing policy metadata: {}", e))?;
 
-    let signatures = fetch_signatures_manifest(uri.as_str(), sources).await;
+    let signatures = fetch_signatures_manifest(&uri, sources).await;
 
     match metadata {
         Some(metadata) => metadata_printer.print(&metadata, no_color)?,
