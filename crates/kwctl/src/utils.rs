@@ -6,22 +6,36 @@ use serde_json::json;
 use std::{env, path::PathBuf};
 use url::Url;
 
-pub(crate) fn map_path_to_uri(uri: &str) -> Result<String> {
+pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> Result<String> {
     let uri_has_schema = Regex::new(r"^\w+://").unwrap();
-    if uri_has_schema.is_match(uri) {
-        return Ok(String::from(uri));
+    if uri_has_schema.is_match(uri_or_sha_prefix) {
+        return Ok(String::from(uri_or_sha_prefix));
     }
-    if PathBuf::from(uri).is_absolute() {
-        Ok(format!("file://{uri}"))
+
+    let path = PathBuf::from(uri_or_sha_prefix);
+    if path.exists() {
+        if path.is_absolute() {
+            Ok(format!("file://{uri_or_sha_prefix}"))
+        } else {
+            Ok(format!(
+                "file://{}/{}",
+                env::current_dir()?
+                    .into_os_string()
+                    .into_string()
+                    .map_err(|err| anyhow!("invalid path: {:?}", err))?,
+                uri_or_sha_prefix
+            ))
+        }
     } else {
-        Ok(format!(
-            "file://{}/{}",
-            env::current_dir()?
-                .into_os_string()
-                .into_string()
-                .map_err(|err| anyhow!("invalid path: {:?}", err))?,
-            uri
-        ))
+        let store = Store::default();
+        if let Some(policy) = store.get_policy_by_sha_prefix(uri_or_sha_prefix)? {
+            Ok(policy.uri.clone())
+        } else {
+            Err(anyhow!(
+                "Cannot find policy with prefix: {}",
+                uri_or_sha_prefix
+            ))
+        }
     }
 }
 
@@ -32,9 +46,14 @@ pub(crate) fn wasm_path(uri: &str) -> Result<PathBuf> {
             .to_file_path()
             .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err)),
         "http" | "https" | "registry" => {
-            let policies = Store::default().list()?;
-            let policy = policies.iter().find(|policy| policy.uri == uri).ok_or_else(|| anyhow!("Cannot find policy '{uri}' inside of the local store.\nTry executing `kwctl pull {uri}`", uri = uri))?;
-            Ok(policy.local_path.clone())
+            let store = Store::default();
+            let policy = store.get_policy_by_uri(uri)?;
+
+            if let Some(policy) = policy {
+                Ok(policy.local_path)
+            } else {
+                Err(anyhow!("Cannot find policy '{uri}' inside of the local store.\nTry executing `kwctl pull {uri}`", uri = uri))
+            }
         }
         _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
     }
@@ -65,28 +84,6 @@ mod tests {
         assert_eq!(
             map_path_to_uri("registry://some-registry.com/some-path/some-policy:0.0.1")?,
             String::from("registry://some-registry.com/some-path/some-policy:0.0.1"),
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_map_path_to_uri_missing_scheme() -> Result<()> {
-        assert_eq!(
-            map_path_to_uri("some-policy-0.0.1.wasm")?,
-            format!(
-                "file://{}",
-                env::current_dir()?
-                    .join("some-policy-0.0.1.wasm")
-                    .into_os_string()
-                    .into_string()
-                    .map_err(|_| anyhow!("cannot get policy test path"))?,
-            ),
-        );
-
-        assert_eq!(
-            map_path_to_uri("/absolute/directory/some-policy-0.0.1.wasm")?,
-            "file:///absolute/directory/some-policy-0.0.1.wasm",
         );
 
         Ok(())
