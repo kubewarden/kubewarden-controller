@@ -3,7 +3,7 @@ use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_evaluator::policy_fetcher::store::Store;
 use regex::Regex;
 use serde_json::json;
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 use url::Url;
 
 pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> Result<String> {
@@ -14,18 +14,9 @@ pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> Result<String> {
 
     let path = PathBuf::from(uri_or_sha_prefix);
     if path.exists() {
-        if path.is_absolute() {
-            Ok(format!("file://{uri_or_sha_prefix}"))
-        } else {
-            Ok(format!(
-                "file://{}/{}",
-                env::current_dir()?
-                    .into_os_string()
-                    .into_string()
-                    .map_err(|err| anyhow!("invalid path: {:?}", err))?,
-                uri_or_sha_prefix
-            ))
-        }
+        let path = path.canonicalize()?;
+
+        Ok(Url::from_file_path(path).unwrap().to_string())
     } else {
         let store = Store::default();
         if let Some(policy) = store.get_policy_by_sha_prefix(uri_or_sha_prefix)? {
