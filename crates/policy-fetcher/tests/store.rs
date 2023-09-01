@@ -6,8 +6,8 @@ use policy_fetcher::store::{path, Store};
 use tempfile::tempdir;
 
 #[test]
-fn test_list() -> Result<()> {
-    let store_root = tempdir()?;
+fn test_list() {
+    let store_root = tempdir().unwrap();
 
     let mut expected_policies = vec![
         Policy {
@@ -31,17 +31,124 @@ fn test_list() -> Result<()> {
         },
     ];
 
-    setup_store(&expected_policies)?;
+    setup_store(&expected_policies).unwrap();
 
     let store = Store::new(store_root.path());
-    let mut list = store.list()?;
+    let mut list = store.list().expect("failed to list policies");
 
     expected_policies.sort_by_key(|p| p.uri.clone());
     list.sort_by_key(|p| p.uri.clone());
 
     assert_eq!(expected_policies, list);
+}
 
-    Ok(())
+#[test]
+fn test_get_policy_by_uri() {
+    let store_root = tempdir().unwrap();
+
+    let expected_policy = Policy {
+        uri: "https://internal.host.company/some/path/to/1.0.0/wasm-module.wasm".to_owned(),
+        local_path: store_root.path().join(path::encode_path(
+            "https/internal.host.company/some/path/to/1.0.0/wasm-module.wasm",
+        )),
+    };
+
+    setup_store(&[expected_policy.clone()]).unwrap();
+
+    let store = Store::new(store_root.path());
+    let policy = store
+        .get_policy_by_uri(&expected_policy.uri)
+        .expect("failed to get policy by uri");
+
+    assert_eq!(Some(expected_policy), policy);
+}
+
+#[test]
+fn test_get_policy_by_uri_not_found() {
+    let store_root = tempdir().unwrap();
+    let store = Store::new(store_root.path());
+
+    let result = store.get_policy_by_uri("https://does/not/exist").unwrap();
+
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_get_policy_by_uri_unknown_scheme() {
+    let store_root = tempdir().unwrap();
+
+    let policies = vec![Policy {
+        uri: "https://internal.host.company/some/path/to/1.0.0/wasm-module.wasm".to_owned(),
+        local_path: store_root.path().join(path::encode_path(
+            "https/internal.host.company/some/path/to/1.0.0/wasm-module.wasm",
+        )),
+    }];
+
+    setup_store(&policies).unwrap();
+
+    let store = Store::new(store_root.path());
+    let result =
+        store.get_policy_by_uri("ftp://internal.host.company/some/path/to/1.0.0/wasm-module.wasm");
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_get_policy_by_sha_prefix() {
+    let store_root = tempdir().unwrap();
+
+    let expected_policy = Policy {
+        uri: "https://internal.host.company/some/path/to/1.0.0/wasm-module.wasm".to_owned(),
+        local_path: store_root.path().join(path::encode_path(
+            "https/internal.host.company/some/path/to/1.0.0/wasm-module.wasm",
+        )),
+    };
+
+    setup_store(&[expected_policy.clone()]).unwrap();
+
+    let store = Store::new(store_root.path());
+    let policy = store
+        .get_policy_by_sha_prefix("93a")
+        .expect("failed to get policy by sha prefix");
+
+    assert_eq!(Some(expected_policy), policy);
+}
+
+#[test]
+fn test_get_policy_by_sha_prefix_not_found() {
+    let store_root = tempdir().unwrap();
+    let store = Store::new(store_root.path());
+
+    let result = store.get_policy_by_sha_prefix("93a").unwrap();
+
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_get_policy_by_sha_prefix_duplicate() {
+    let store_root = tempdir().unwrap();
+    let store = Store::new(store_root.path());
+
+    let policies = vec![
+        Policy {
+            uri: "https://internal.host.company/some/path/to/1.0.0/wasm-module.wasm".to_owned(),
+            local_path: store_root.path().join(path::encode_path(
+                "https/internal.host.company/some/path/to/1.0.0/wasm-module.wasm",
+            )),
+        },
+        Policy {
+            uri: "registry://ghcr.io/some/path/to/wasm-module.wasm:1.0.0".to_owned(),
+            local_path: store_root.path().join(path::encode_path(
+                "registry/internal.host.company/some/path/to/1.0.0/wasm-module.wasm:1.0.0",
+            )),
+        },
+    ];
+
+    setup_store(&policies).unwrap();
+
+    let result = store.get_policy_by_sha_prefix("93a");
+
+    assert!(result.is_err());
 }
 
 fn setup_store(policies: &[Policy]) -> Result<()> {

@@ -3,7 +3,7 @@ use std::fmt;
 use std::fmt::Display;
 use std::path::PathBuf;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Policy {
     pub uri: String,
     pub local_path: PathBuf,

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use path_slash::PathExt;
@@ -157,6 +157,43 @@ impl Store {
             }
         }
         Ok(policies)
+    }
+
+    /// Get a policy by its URI, if it exists.
+    pub fn get_policy_by_uri(&self, uri: &str) -> Result<Option<Policy>> {
+        let uri = Url::parse(uri)?;
+
+        if !scheme::is_known_remote_scheme(uri.scheme()) {
+            return Err(anyhow!("Unknown scheme: {}", uri.scheme()));
+        }
+
+        let policy_path = self.policy_full_path(uri.as_str(), PolicyPath::PrefixAndFilename)?;
+        if policy_path.exists() {
+            Ok(Some(Policy {
+                uri: uri.to_string(),
+                local_path: policy_path,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Get a policy that matches the given SHA prefix, if it exists.
+    pub fn get_policy_by_sha_prefix(&self, sha_prefix: &str) -> Result<Option<Policy>> {
+        self.list()?.into_iter().try_fold(None, |acc, policy| {
+            if !policy.digest()?.starts_with(sha_prefix) {
+                return Ok(acc);
+            }
+
+            if acc.is_some() {
+                Err(anyhow!(
+                    "Multiple policies found with the same prefix: {}",
+                    sha_prefix
+                ))
+            } else {
+                Ok(Some(policy))
+            }
+        })
     }
 }
 
