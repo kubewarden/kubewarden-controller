@@ -43,6 +43,15 @@ fn test_list() {
 }
 
 #[test]
+fn test_list_non_existing_store_root() {
+    let store = Store::new(Path::new("./does/not/exist"));
+
+    let list = store.list().expect("failed to list policies");
+
+    assert!(list.is_empty());
+}
+
+#[test]
 fn test_get_policy_by_uri() {
     let store_root = tempdir().unwrap();
 
