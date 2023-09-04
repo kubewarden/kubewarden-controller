@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_execution_mode_cannot_be_opa_or_gatekeeper_for_a_kubewarden_policy() {
-        for execution_mode in vec![PolicyExecutionMode::Opa, PolicyExecutionMode::OpaGatekeeper] {
+        for execution_mode in [PolicyExecutionMode::Opa, PolicyExecutionMode::OpaGatekeeper] {
             let metadata = Metadata {
                 execution_mode,
                 ..Default::default()
