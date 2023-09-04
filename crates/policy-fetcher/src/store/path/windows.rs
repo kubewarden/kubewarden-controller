@@ -71,7 +71,7 @@ mod tests {
 
     use std::ffi::OsStr;
     #[test]
-    fn test_encode_path() -> Result<()> {
+    fn test_encode_path() {
         let expected_path = PathBuf::from("/")
             .join("registry")
             .join(encode_filename("ghcr.io"))
@@ -86,12 +86,10 @@ mod tests {
         assert_eq!(expected_path, encode_path(OsStr::new(path)));
         assert_eq!(expected_path, encode_path(Path::new(path)));
         assert_eq!(expected_path, encode_path(Path::new(path)));
-
-        Ok(())
     }
 
     #[test]
-    fn test_decode_path() -> Result<()> {
+    fn test_decode_path() {
         assert_eq!(
             PathBuf::from("/registry/example.com:1234/some/path/to/wasm-module.wasm:1.0.0"),
             decode_path(
@@ -102,9 +100,8 @@ mod tests {
                     .join(encode_filename("path"))
                     .join(encode_filename("to"))
                     .join(encode_filename("wasm-module.wasm:1.0.0"))
-            )?,
+            )
+            .expect("failed to decode path"),
         );
-
-        Ok(())
     }
 }

@@ -7,8 +7,8 @@ use tempfile::NamedTempFile;
 use textwrap::indent;
 
 #[test]
-fn test_read_sources_file() -> Result<(), Error> {
-    let mut sources_file = NamedTempFile::new()?;
+fn test_read_sources_file() {
+    let mut sources_file = NamedTempFile::new().unwrap();
 
     let expected_contents = r#"
 insecure_sources:
@@ -18,12 +18,13 @@ source_authorities:
     - type: Data
       data: |
 "#;
-    write!(sources_file, "{}", expected_contents)?;
+    write!(sources_file, "{}", expected_contents).unwrap();
     write!(
         sources_file,
         "{}",
         indent(common::CERT_DATA, "            ")
-    )?;
+    )
+    .unwrap();
 
     let expected_cert = Certificate::Pem(common::CERT_DATA.into());
     let path = sources_file.path();
@@ -46,5 +47,4 @@ source_authorities:
             panic!("Didn't get what I was expecting: {:?}", unexpected);
         }
     }
-    Ok(())
 }
