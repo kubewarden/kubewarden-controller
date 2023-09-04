@@ -86,6 +86,8 @@ jobs:
         with:
           script: |
             let fs = require('fs');
+            let path = require('path');
+
             let files = [
               './kwctl-airgap-scripts/kubewarden-load-policies.sh',
               './kwctl-airgap-scripts/kubewarden-save-policies.sh',
@@ -119,7 +121,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 release_id: `${RELEASE_ID}`,
-                name: file,
+                name: path.basename(file),
                 data: file_data,
               });
             }
