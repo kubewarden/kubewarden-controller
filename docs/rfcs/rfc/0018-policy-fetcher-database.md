@@ -66,13 +66,28 @@ It is battle-tested and allows multiple processes to access the database concurr
 This would be an improvement over the current implementation, which is not safe for concurrent access to the store.
 It is possible to compile sqlite client library statically, which is a requirement for the `kwctl` and `policy-server` binaries.
 
+Additional refactoring and cleanup might be needed to allow testing of the database and filesystem access in isolation.
+
+## Migration and backward compatibility
+
 A migration path from the old directory-based store to the new database-based store should be provided.
-This should happen automatically when any command is executed if the database does not exist, ensuring backward compatibility.
+This should happen automatically when the store is instantiated if the database does not exist, ensuring backward compatibility.
+
+The migration path should be as follows:
+
+1. When the store is instantiated, if the database does not exist, trigger the migration.
+2. Create a temporary store path.
+3. For each policy in the old store:
+
+- Compute the sha of the policy wasm file.
+- Write the wasm file to the new store directory as `<sha>.wasm`.
+
+1. If there are errors during the migration, the migration should be aborted and the old store should be kept. By using `tempfile` we can ensure that the temporary store path is removed when the migration is aborted.
+2. Rename the old store path to ".bkp" and copy the new store to the store path.
+3. Finally, remove the old store path.
 
 This change does not involve `policy-server`, since it currently
 uses an ephemeral store when running inside of Kubernetes, hence policies are always downloaded at startup time.
-
-Additional refactoring and cleanup might be needed to allow testing of the database and filesystem access in isolation.
 
 # Drawbacks
 
