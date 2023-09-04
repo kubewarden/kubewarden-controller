@@ -123,6 +123,10 @@ impl Store {
     pub fn list(&self) -> Result<Vec<Policy>> {
         let mut policies = Vec::new();
 
+        if !self.root.exists() {
+            return Ok(policies);
+        }
+
         let store_root_path = std::fs::read_dir(self.root.as_path())?;
         for scheme in store_root_path {
             let scheme = scheme?;
