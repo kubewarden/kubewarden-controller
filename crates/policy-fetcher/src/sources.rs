@@ -288,11 +288,11 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
     }
 
     #[test]
-    fn test_raw_path_based_source_authority_convertion_into_raw_certificate() -> Result<()> {
-        let mut file = NamedTempFile::new()?;
+    fn test_raw_path_based_source_authority_convertion_into_raw_certificate() {
+        let mut file = NamedTempFile::new().unwrap();
 
         let expected_contents = "hello world";
-        write!(file, "{}", expected_contents)?;
+        write!(file, "{}", expected_contents).unwrap();
 
         let path = file.path();
         let auth = RawSourceAuthority::Path {
@@ -308,8 +308,6 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
                 panic!("Didn't get what I was expecting: {:?}", unexpected);
             }
         }
-
-        Ok(())
     }
 
     #[test]

@@ -391,96 +391,102 @@ mod tests {
     }
 
     #[test]
-    fn local_file_pull_destination_excluding_filename() -> Result<()> {
+    fn local_file_pull_destination_excluding_filename() {
         assert_eq!(
             pull_destination(
-                &Url::parse("https://host.example.com:1234/path/to/policy.wasm")?,
-                &PullDestination::LocalFile(std::env::current_dir()?),
-            )?,
-            (None, std::env::current_dir()?.join("policy.wasm"),),
+                &Url::parse("https://host.example.com:1234/path/to/policy.wasm").unwrap(),
+                &PullDestination::LocalFile(std::env::current_dir().unwrap()),
+            )
+            .expect("pull_destination failed"),
+            (None, std::env::current_dir().unwrap().join("policy.wasm"),),
         );
-        Ok(())
     }
 
     #[test]
-    fn local_file_pull_destination_including_filename() -> Result<()> {
+    fn local_file_pull_destination_including_filename() {
         assert_eq!(
             pull_destination(
-                &Url::parse("https://host.example.com:1234/path/to/policy.wasm")?,
-                &PullDestination::LocalFile(std::env::current_dir()?.join("named-policy.wasm")),
-            )?,
-            (None, std::env::current_dir()?.join("named-policy.wasm"),),
+                &Url::parse("https://host.example.com:1234/path/to/policy.wasm").unwrap(),
+                &PullDestination::LocalFile(
+                    std::env::current_dir().unwrap().join("named-policy.wasm")
+                ),
+            )
+            .expect("pull_destination failed"),
+            (
+                None,
+                std::env::current_dir().unwrap().join("named-policy.wasm"),
+            ),
         );
-        Ok(())
     }
 
     #[test]
-    fn store_pull_destination_from_http_with_port() -> Result<()> {
+    fn store_pull_destination_from_http_with_port() {
         assert_eq!(
             pull_destination(
-                &Url::parse("http://host.example.com:1234/path/to/policy.wasm")?,
+                &Url::parse("http://host.example.com:1234/path/to/policy.wasm").unwrap(),
                 &PullDestination::MainStore,
-            )?,
+            )
+            .expect("pull_destination failed"),
             (
                 Some(Store::default()),
                 store_path("http/host.example.com:1234/path/to/policy.wasm"),
             ),
         );
-        Ok(())
     }
 
     #[test]
-    fn store_pull_destination_from_http() -> Result<()> {
+    fn store_pull_destination_from_http() {
         assert_eq!(
             pull_destination(
-                &Url::parse("http://host.example.com/path/to/policy.wasm")?,
+                &Url::parse("http://host.example.com/path/to/policy.wasm").unwrap(),
                 &PullDestination::MainStore,
-            )?,
+            )
+            .expect("pull_destination failed"),
             (
                 Some(Store::default()),
                 store_path("http/host.example.com/path/to/policy.wasm"),
             ),
         );
-        Ok(())
     }
 
     #[test]
-    fn store_pull_destination_from_https() -> Result<()> {
+    fn store_pull_destination_from_https() {
         assert_eq!(
             pull_destination(
-                &Url::parse("https://host.example.com/path/to/policy.wasm")?,
+                &Url::parse("https://host.example.com/path/to/policy.wasm").unwrap(),
                 &PullDestination::MainStore,
-            )?,
+            )
+            .expect("pull_destination failed"),
             (
                 Some(Store::default()),
                 store_path("https/host.example.com/path/to/policy.wasm"),
             ),
         );
-        Ok(())
     }
 
     #[test]
-    fn store_pull_destination_from_https_with_port() -> Result<()> {
+    fn store_pull_destination_from_https_with_port() {
         assert_eq!(
             pull_destination(
-                &Url::parse("https://host.example.com:1234/path/to/policy.wasm")?,
+                &Url::parse("https://host.example.com:1234/path/to/policy.wasm").unwrap(),
                 &PullDestination::MainStore,
-            )?,
+            )
+            .expect("pull_destination failed"),
             (
                 Some(Store::default()),
                 store_path("https/host.example.com:1234/path/to/policy.wasm"),
             ),
         );
-        Ok(())
     }
 
     #[test]
-    fn store_pull_destination_from_registry() -> Result<()> {
+    fn store_pull_destination_from_registry() {
         assert_eq!(
             pull_destination(
-                &Url::parse("registry://host.example.com/path/to/policy:tag")?,
+                &Url::parse("registry://host.example.com/path/to/policy:tag").unwrap(),
                 &PullDestination::MainStore,
-            )?,
+            )
+            .expect("pull_destination failed"),
             (
                 Some(Store::default()),
                 store_path("registry/host.example.com/path/to/policy:tag"),
@@ -488,30 +494,30 @@ mod tests {
         );
         assert_eq!(
             pull_destination(
-                &Url::parse("registry://host.example.com/policy:tag")?,
+                &Url::parse("registry://host.example.com/policy:tag").unwrap(),
                 &PullDestination::MainStore,
-            )?,
+            )
+            .expect("pull_destination failed"),
             (
                 Some(Store::default()),
                 store_path("registry/host.example.com/policy:tag"),
             ),
         );
-        Ok(())
     }
 
     #[test]
-    fn store_pull_destination_from_registry_with_port() -> Result<()> {
+    fn store_pull_destination_from_registry_with_port() {
         assert_eq!(
             pull_destination(
-                &Url::parse("registry://host.example.com:1234/path/to/policy:tag")?,
+                &Url::parse("registry://host.example.com:1234/path/to/policy:tag").unwrap(),
                 &PullDestination::MainStore,
-            )?,
+            )
+            .expect("pull_destination failed"),
             (
                 Some(Store::default()),
                 store_path("registry/host.example.com:1234/path/to/policy:tag"),
             ),
         );
-        Ok(())
     }
 
     #[rstest]
