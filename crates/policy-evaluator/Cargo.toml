@@ -33,7 +33,7 @@ picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
   "x509",
 ] }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.7.23" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.8.0" }
 semver = { version = "1.0.18", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
