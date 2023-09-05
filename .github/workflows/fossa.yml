@@ -2,9 +2,9 @@ name: fossa scanning
 on:
   push:
     tags:
-    - 'v*'
+      - "v*"
     branches:
-    - 'main'
+      - "main"
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -13,7 +13,7 @@ jobs:
   fossa-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
       - uses: fossas/fossa-action@f61a4c0c263690f2ddb54b9822a719c25a7b608f # v1.3.1
         with:
           api-key: ${{secrets.FOSSA_API_TOKEN}}
