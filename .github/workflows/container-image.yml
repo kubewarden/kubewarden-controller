@@ -32,42 +32,34 @@ jobs:
       artifact: ${{ steps.setoutput.outputs.artifact }}
       digest: ${{ steps.setoutput.outputs.digest }}
     steps:
-      -
-        name: Checkout code
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # v2
-      -
-        name: Login to GitHub Container Registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2
+      - name: Checkout code
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2.2.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # v2.10.0
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Retrieve tag name (main branch)
+      - name: Retrieve tag name (main branch)
         if: ${{ startsWith(github.ref, 'refs/heads/main') }}
         run: |
           echo TAG_NAME=latest >> $GITHUB_ENV
-      -
-        name: Retrieve tag name (feat branch)
+      - name: Retrieve tag name (feat branch)
         if: ${{ startsWith(github.ref, 'refs/heads/feat') }}
         run: |
           echo "TAG_NAME=latest-$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
-      -
-        name: Retrieve tag name (tag)
+      - name: Retrieve tag name (tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-            echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
-      -
-        name: Build and push container image
+          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+      - name: Build and push container image
         if: ${{ inputs.push-image }}
         id: build-image
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
           context: .
           file: ./Dockerfile
@@ -75,13 +67,12 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      -
-        # Only build amd64 because buildx does not allow multiple platforms when
+      - # Only build amd64 because buildx does not allow multiple platforms when
         # exporting the image to a tarball. As we use this only for end-to-end tests
         # and they run on amd64 arch, let's skip the arm64 build for now.
         name: Build linux/amd64 container image
         if: ${{ inputs.push-image == false }}
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
           context: .
           file: ./Dockerfile
@@ -89,15 +80,13 @@ jobs:
           outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      -
-        name: Upload container image to use in other jobs
+      - name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kubewarden-controller-image-${{ env.TAG_NAME }}
           path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
-      -
-        id: setoutput
+      - id: setoutput
         name: Set output parameters
         run: |
           echo "repository=ghcr.io/${{github.repository_owner}}/kubewarden-controller" >> $GITHUB_OUTPUT
