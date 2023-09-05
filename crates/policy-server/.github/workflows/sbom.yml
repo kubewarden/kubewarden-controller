@@ -22,10 +22,10 @@ jobs:
     steps:
       # this is required to obtain the syft configuration
       - name: Checkout code
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3
+        uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3.1.2
 
       - name: Install the syft command
         uses: kubewarden/github-actions/syft-installer@0b73198f5d655ef4ad84e423f8047044ed73fd4b # v3.1.9
@@ -34,7 +34,7 @@ jobs:
         uses: kubewarden/github-actions/crane-installer@0b73198f5d655ef4ad84e423f8047044ed73fd4b # v3.1.9
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -80,9 +80,8 @@ jobs:
           cosign sign --yes \
             ghcr.io/${{github.repository_owner}}/policy-server:${SBOM_TAG}
 
-      -
-        name: Upload SBOMs as artifacts
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: sbom
           path: policy-server-sbom-*

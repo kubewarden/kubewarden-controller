@@ -2,7 +2,7 @@ name: policy-server release
 on:
   push:
     tags:
-    - 'v*'
+      - "v*"
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -39,7 +39,7 @@ jobs:
 
       - name: Get latest release tag
         id: get_last_release_tag
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             let release = await github.rest.repos.getLatestRelease({
@@ -54,7 +54,7 @@ jobs:
             core.setFailed("Cannot find latest release")
 
       - name: Get release ID from the release created by release drafter
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             let releases = await github.rest.repos.listReleases({
@@ -71,7 +71,7 @@ jobs:
             core.setFailed(`Draft release not found`)
 
       - name: Download SBOM artifact
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: sbom
 
@@ -80,10 +80,12 @@ jobs:
 
       - name: Upload release assets
         id: upload_release_assets
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             let fs = require('fs');
+            let path = require('path');
+
             let files = [
               'policy-server-sbom-amd64.spdx',
               'policy-server-sbom-amd64.spdx.cert',
@@ -100,13 +102,13 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 release_id: `${RELEASE_ID}`,
-                name: file,
+                name: path.basename(file),
                 data: file_data,
               });
             }
 
       - name: Publish release
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             const {RELEASE_ID} = process.env
@@ -122,7 +124,7 @@ jobs:
             });
 
       - name: Trigger chart update
-        uses: peter-evans/repository-dispatch@26b39ed245ab8f31526069329e112ab2fb224588 # v2.1.1
+        uses: peter-evans/repository-dispatch@bf47d102fdb849e755b0b0023ea3e81a44b6f570 # v2.1.2
         with:
           token: ${{ secrets.WORKFLOW_PAT }}
           repository: "${{github.repository_owner}}/helm-charts"
