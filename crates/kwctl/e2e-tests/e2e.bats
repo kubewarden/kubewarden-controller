@@ -54,7 +54,9 @@ kwctl() {
 }
 
 @test "execute a remote policy that is rejected" {
-    kwctl run --request-path test-data/privileged-pod.json registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    kwctl pull registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+    # the policy has SHA256: 59e34f482b40
+    kwctl run --request-path test-data/privileged-pod.json 59e34f
     [ "$status" -eq 0 ]
     [ $(expr "$output" : '.*"allowed":false.*') -ne 0 ]
 }
@@ -114,7 +116,8 @@ kwctl() {
     kwctl policies
     [[ $(echo "$output" | wc -l) -eq 5 ]]
     [[ "$output" =~ "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm" ]]
-    kwctl rm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
+    # the policy has SHA256: 59e34f482b40
+    kwctl rm 59e34f
     kwctl policies
     [ "$output" = "" ]
 }

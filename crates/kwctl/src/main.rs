@@ -238,8 +238,8 @@ async fn main() -> Result<()> {
         }
         Some("rm") => {
             if let Some(matches) = matches.subcommand_matches("rm") {
-                let uri = matches.get_one::<String>("uri").unwrap();
-                rm::rm(uri)?;
+                let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
+                rm::rm(uri_or_sha_prefix)?;
             }
             Ok(())
         }
@@ -314,13 +314,13 @@ async fn main() -> Result<()> {
         }
         Some("inspect") => {
             if let Some(matches) = matches.subcommand_matches("inspect") {
-                let uri = matches.get_one::<String>("uri").unwrap();
+                let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
                 let output = inspect::OutputType::try_from(
                     matches.get_one::<String>("output").map(|s| s.as_str()),
                 )?;
                 let sources = remote_server_options(matches)?;
 
-                inspect::inspect(uri, output, sources, no_color).await?;
+                inspect::inspect(uri_or_sha_prefix, output, sources, no_color).await?;
             };
             Ok(())
         }
@@ -351,7 +351,7 @@ async fn main() -> Result<()> {
             }
             if let Some(matches) = matches.subcommand_matches("scaffold") {
                 if let Some(matches) = matches.subcommand_matches("manifest") {
-                    let uri = matches.get_one::<String>("uri").unwrap();
+                    let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
                     let resource_type = matches.get_one::<String>("type").unwrap();
                     if matches.contains_id("settings-path") && matches.contains_id("settings-json")
                     {
@@ -381,7 +381,7 @@ async fn main() -> Result<()> {
                         .to_owned();
 
                     scaffold::manifest(
-                        uri,
+                        uri_or_sha_prefix,
                         resource_type.parse()?,
                         settings.as_deref(),
                         policy_title.as_deref(),
@@ -613,7 +613,9 @@ fn build_verification_options_from_flags(
 
 /// Takes clap flags and builds a Result<run::PullAndRunSettings> instance
 async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAndRunSettings> {
-    let uri = matches.get_one::<String>("uri").unwrap();
+    let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
+    let uri = crate::utils::map_path_to_uri(uri_or_sha_prefix)?;
+
     let request = match matches
         .get_one::<String>("request-path")
         .map(|s| s.as_str())
@@ -669,7 +671,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         // verified manifest digest:
         verified_manifest_digest = Some(
             verify::verify(
-                uri,
+                &uri,
                 sources.as_ref(),
                 verification_options.as_ref().unwrap(),
                 fulcio_and_rekor_data.as_ref(),
@@ -712,7 +714,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
     }
 
     Ok(run::PullAndRunSettings {
-        uri: uri.to_owned(),
+        uri,
         user_execution_mode: execution_mode,
         sources,
         request,

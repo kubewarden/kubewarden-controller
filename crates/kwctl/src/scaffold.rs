@@ -141,13 +141,15 @@ struct ScaffoldPolicyData {
 }
 
 pub(crate) fn manifest(
-    uri: &str,
+    uri_or_sha_prefix: &str,
     resource_type: ManifestType,
     settings: Option<&str>,
     policy_title: Option<&str>,
     allow_context_aware_resources: bool,
 ) -> Result<()> {
-    let wasm_path = crate::utils::wasm_path(uri)?;
+    let uri = crate::utils::map_path_to_uri(uri_or_sha_prefix)?;
+    let wasm_path = crate::utils::wasm_path(&uri)?;
+
     let metadata = Metadata::from_path(&wasm_path)?
         .ok_or_else(||
             anyhow!(
@@ -158,7 +160,7 @@ pub(crate) fn manifest(
     let settings_yml: serde_yaml::Mapping = serde_yaml::from_str(settings.unwrap_or("{}"))?;
 
     let scaffold_data = ScaffoldPolicyData {
-        uri: String::from(uri),
+        uri,
         policy_title: get_policy_title_from_cli_or_metadata(policy_title, &metadata),
         metadata,
         settings: settings_yml,

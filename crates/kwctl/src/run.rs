@@ -52,13 +52,12 @@ pub(crate) struct RunEnv {
 }
 
 pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> {
-    let uri = crate::utils::map_path_to_uri(&cfg.uri)?;
     let sources = cfg.sources.as_ref();
     let fulcio_and_rekor_data = cfg.fulcio_and_rekor_data.as_ref();
 
-    let policy = pull::pull(&uri, sources, PullDestination::MainStore)
+    let policy = pull::pull(&cfg.uri, sources, PullDestination::MainStore)
         .await
-        .map_err(|e| anyhow!("error pulling policy {}: {}", uri, e))?;
+        .map_err(|e| anyhow!("error pulling policy {}: {}", &cfg.uri, e))?;
 
     if let Some(digest) = cfg.verified_manifest_digest.as_ref() {
         verify::verify_local_checksum(&policy, sources, digest, fulcio_and_rekor_data).await?
@@ -68,7 +67,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     has_minimum_kubewarden_version(metadata.as_ref())?;
 
     let policy_id =
-        read_policy_title_from_metadata(metadata.as_ref()).unwrap_or_else(|| uri.clone());
+        read_policy_title_from_metadata(metadata.as_ref()).unwrap_or_else(|| cfg.uri.clone());
 
     let request = serde_json::from_str::<serde_json::Value>(&cfg.request)?;
 

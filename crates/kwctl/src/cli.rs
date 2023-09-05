@@ -191,7 +191,7 @@ fn subcommand_push() -> Command {
         Arg::new("policy")
             .required(true)
             .index(1)
-            .help("Policy to push. Can be the path to a local file, or a policy URI"),
+            .help("Policy to push. Can be the path to a local file, a policy URI or the SHA prefix of a policy in the store."),
     );
     args.push(
         Arg::new("uri")
@@ -312,10 +312,10 @@ fn subcommand_run() -> Command {
     let mut args = run_args();
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
-        Arg::new("uri")
+        Arg::new("uri_or_sha_prefix")
             .required(true)
             .index(1)
-            .help("Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
+            .help("Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.")
     );
 
     Command::new("run")
@@ -382,10 +382,10 @@ fn subcommand_inspect() -> Command {
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
-        Arg::new("uri")
+        Arg::new("uri_or_sha_prefix")
             .required(true)
             .index(1)
-            .help("Policy URI. Supported schemes: registry://, https://, file://"),
+            .help("Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory."),
     );
 
     Command::new("inspect")
@@ -449,10 +449,10 @@ fn subcommand_scaffold() -> Command {
     ];
     manifest_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     manifest_args.push(
-        Arg::new("uri")
+        Arg::new("uri_or_sha_prefix")
             .required(true)
             .index(1)
-            .help("Policy URI. Supported schemes: registry://, https://, file://"),
+            .help("Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory."),
     );
 
     let mut subcommands = vec![
@@ -523,14 +523,14 @@ fn subcommand_bench() -> Command {
     args.append(&mut run_args);
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
-        Arg::new("uri")
+        Arg::new("uri_or_sha_prefix")
             .required(true)
             .index(1)
-            .help("Policy URI. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory")
+            .help("Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.")
     );
 
     Command::new("bench")
-        .about("Benchmarks a Kubewarden policy from a given URI")
+        .about("Benchmarks a Kubewarden policy")
         .args(args)
         .group(
             // these flags cannot be used at the same time
@@ -566,7 +566,12 @@ pub fn build_cli() -> Command {
         Command::new("info").about("Display system information"),
         Command::new("rm")
             .about("Removes a Kubewarden policy from the store")
-            .arg(Arg::new("uri").required(true).index(1).help("Policy URI")),
+            .arg(
+                Arg::new("uri_or_sha_prefix")
+                    .required(true)
+                    .index(1)
+                    .help("Policy URI or SHA prefix"),
+            ),
         Command::new("completions")
             .about("Generate shell completions")
             .arg(
