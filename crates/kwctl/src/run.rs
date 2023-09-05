@@ -424,12 +424,12 @@ mod tests {
     #[test]
     fn test_determine_execution_mode_metadata_is_not_set_and_user_mode_is_set_but_the_user_value_is_wrong(
     ) {
-        for mode in vec![
+        for mode in [
             PolicyExecutionMode::Opa,
             PolicyExecutionMode::OpaGatekeeper,
             PolicyExecutionMode::KubewardenWapc,
         ] {
-            let user_execution_mode = Some(mode.clone());
+            let user_execution_mode = Some(mode);
             let metadata = None;
 
             let backend_detector = match mode {
@@ -468,12 +468,12 @@ mod tests {
     #[test]
     fn test_determine_execution_mode_metadata_is_not_set_and_user_mode_is_set_and_the_user_value_is_right(
     ) {
-        for mode in vec![
+        for mode in [
             PolicyExecutionMode::Opa,
             PolicyExecutionMode::OpaGatekeeper,
             PolicyExecutionMode::KubewardenWapc,
         ] {
-            let user_execution_mode = Some(mode.clone());
+            let user_execution_mode = Some(mode);
             let metadata = None;
 
             let backend_detector = match mode {

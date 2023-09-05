@@ -42,7 +42,7 @@ jobs:
 
       - name: Get latest release tag
         id: get_last_release_tag
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             let release = await github.rest.repos.getLatestRelease({
@@ -57,7 +57,7 @@ jobs:
             core.setFailed("Cannot find latest release")
 
       - name: Get release ID from the release created by release drafter
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             let releases = await github.rest.repos.listReleases({
@@ -74,7 +74,7 @@ jobs:
             core.setFailed(`Draft release not found`)
 
       - name: Download all artifacts
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         # no name provided, download all artifacts. Puts them in folders.
 
       - name: Display structure of downloaded files
@@ -82,10 +82,12 @@ jobs:
 
       - name: Upload release assets
         id: upload_release_assets
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             let fs = require('fs');
+            let path = require('path');
+
             let files = [
               './kwctl-airgap-scripts/kubewarden-load-policies.sh',
               './kwctl-airgap-scripts/kubewarden-save-policies.sh',
@@ -119,13 +121,13 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 release_id: `${RELEASE_ID}`,
-                name: file,
+                name: path.basename(file),
                 data: file_data,
               });
             }
 
       - name: Publish release
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           script: |
             const {RELEASE_ID} = process.env

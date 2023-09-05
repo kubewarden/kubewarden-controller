@@ -6,90 +6,46 @@ env:
 
 jobs:
   build-linux-binaries:
-    name: Build linux binary
-    runs-on: ubuntu-22.04
+    name: Build linux binaries
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        targetarch: [ "aarch64", "x86_64" ]
-        include:
-          - targetarch: aarch64
-            arch: arm64
-            rustflags: ""
-          - targetarch: x86_64
-            arch: amd64
-            rustflags: "-C target-feature=+crt-static"
+        targetarch:
+          - aarch64
+          - x86_64
+
     permissions:
       packages: write
       id-token: write
 
     steps:
-      - name: Configure Ubuntu repositories
-        run: |
-          sudo dpkg --add-architecture arm64
+      - uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3.1.2
 
-          sudo sed -i "s/deb h/deb [arch=amd64] h/g" /etc/apt/sources.list
+      - name: checkout code
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main restricted" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy universe" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates universe" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy multiverse" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates multiverse" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security universe" /etc/apt/sources.list
-          sudo sed -i "$ a deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security multiverse" /etc/apt/sources.list
-
-          sudo apt update -y
-      - name: Install dependencies
-        run: |
-          sudo apt install -y libssl-dev:${{ matrix.arch }}
-
-      - name: Install Musl and configure gcc spec
-        run: |
-          sudo apt install -y musl-dev:${{ matrix.arch }}
-          # patching the .spec file, as by default it has a bug where it tries to
-          # set old_cpp_options but it already exists. using *+cpp_options achieves
-          # the same desired functionality of appending preexisting options
-          sudo sed -i 1d /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-          sudo sed -i "s/*cpp_options/+cpp_options/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-          sudo sed -i "s/ %(old_cpp_options)//g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-
-      - name: Configure gcc spec for x86_64
-        if: ${{ matrix.targetarch == 'x86_64' }}
-        run: |
-          # The cargo configuration to build static binaries is not working. Thus,
-          # update the spec file to ensure that.
-          sudo sed -i "s/-dynamic-linker.*/-no-dynamic-linker  -nostdlib %{shared:-shared} %{static:-static} %{rdynamic:-no-export-dynamic}/g" /usr/lib/${{ matrix.targetarch }}-linux-musl/musl-gcc.specs
-
-      - uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3
-
-      - name: Checkout code
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v2
-
-      - name: Setup rust toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+      - name: setup rust toolchain
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f # v1.0.6
         with:
           toolchain: stable
+          target: ${{matrix.targetarch}}-unknown-linux-musl
+          override: true
 
-      - name: Install rust target
-        run: rustup target add ${{ matrix.targetarch }}-unknown-linux-musl
-
-      - name: Build kwctl
-        env:
-          CC: ${{ matrix.targetarch }}-linux-musl-gcc
-          RUSTFLAGS: "-C link_arg=-lgcc -C link_arg=-specs -C link_arg=/usr/lib/${{ matrix.targetarch}}-linux-musl/musl-gcc.specs ${{ matrix.rustflags }}"
-        run: |
-          cargo build --release --target ${{ matrix.targetarch }}-unknown-linux-musl
-          mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/kwctl kwctl-linux-${{ matrix.targetarch }}
+      - uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b # v1.0.1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target ${{matrix.targetarch}}-unknown-linux-musl
 
       - name: Sign kwctl
-        run: cosign sign-blob --yes kwctl-linux-${{ matrix.targetarch }} --output-certificate kwctl-linux-${{ matrix.targetarch}}.pem --output-signature kwctl-linux-${{ matrix.targetarch }}.sig
+        run: |
+          mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/kwctl kwctl-linux-${{ matrix.targetarch }}
+          cosign sign-blob --yes kwctl-linux-${{ matrix.targetarch }} --output-certificate kwctl-linux-${{ matrix.targetarch}}.pem --output-signature kwctl-linux-${{ matrix.targetarch }}.sig
 
       - run: zip -j9 kwctl-linux-${{ matrix.targetarch }}.zip kwctl-linux-${{ matrix.targetarch }} kwctl-linux-${{ matrix.targetarch }}.sig kwctl-linux-${{ matrix.targetarch }}.pem
 
       - name: Upload binary
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
@@ -116,7 +72,7 @@ jobs:
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kwctl-linux-${{ matrix.targetarch }}-sbom
           path: |
@@ -125,7 +81,7 @@ jobs:
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig
 
       - name: Upload kwctl air gap scripts
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kwctl-airgap-scripts
           path: |
@@ -136,17 +92,17 @@ jobs:
     name: Build darwin binary
     strategy:
       matrix:
-        targetarch: [ "aarch64", "x86_64" ]
+        targetarch: ["aarch64", "x86_64"]
     runs-on: macos-latest
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v2
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
-      - uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3
+      - uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3.1.2
 
       - name: Setup rust toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f # v1.0.6
         with:
           toolchain: stable
           target: ${{ matrix.targetarch }}-apple-darwin
@@ -155,7 +111,10 @@ jobs:
       - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
 
       - name: Build kwctl
-        run: cargo build --target=${{ matrix.targetarch }}-apple-darwin --release
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b # v1.0.1
+        with:
+          command: build
+          args: --target=${{ matrix.targetarch }}-apple-darwin --release
 
       - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
 
@@ -169,13 +128,13 @@ jobs:
       - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.sig kwctl-darwin-${{ matrix.targetarch }}.pem
 
       - name: Upload binary
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@0b73198f5d655ef4ad84e423f8047044ed73fd4b
+        uses: kubewarden/github-actions/syft-installer@0b73198f5d655ef4ad84e423f8047044ed73fd4b # v3.1.9
         with:
           arch: darwin_amd64
 
@@ -198,7 +157,7 @@ jobs:
             kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}-sbom
           path: |
@@ -211,25 +170,28 @@ jobs:
     strategy:
       matrix:
         # workaround to have the same GH UI for all jobs
-        targetarch: [ "x86_64" ]
-        os: [ "windows-latest" ]
+        targetarch: ["x86_64"]
+        os: ["windows-latest"]
     runs-on: ${{ matrix.os }}
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v2
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
 
-      - uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3
+      - uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3.1.2
 
       - name: Setup rust toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1
+        uses: actions-rs/toolchain@b2417cde72dcf67f306c0ae8e0828a81bf0b189f # v1.0.6
         with:
           toolchain: stable
       - run: rustup target add x86_64-pc-windows-msvc
 
       - name: Build kwctl
+        uses: actions-rs/cargo@ae10961054e4aa8b4aa7dffede299aaf087aa33b # v1.0.1
+        with:
+          command: build
+          args: --target=x86_64-pc-windows-msvc --release
 
-        run: cargo build --target=x86_64-pc-windows-msvc --release
       - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
 
       - name: Smoke test build
@@ -243,7 +205,7 @@ jobs:
         shell: bash
 
       - name: Upload binary
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kwctl-windows-x86_64
           path: kwctl-windows-x86_64.exe.zip
@@ -273,7 +235,7 @@ jobs:
           kwctl-windows-x86_64-sbom.spdx
 
       - name: Upload kwctl SBOM files
-        uses: actions/upload-artifact@82c141cc518b40d92cc801eee768e7aafc9c2fa2 # v2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: kwctl-windows-x86_64-sbom
           path: |
