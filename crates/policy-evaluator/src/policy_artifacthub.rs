@@ -1,9 +1,9 @@
 use email_address::*;
-use mail_parser::*;
 use policy_fetcher::oci_distribution::{ParseError, Reference};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::convert::TryInto;
 use std::str::FromStr;
 use time::OffsetDateTime;
 use url::Url;
@@ -391,46 +391,30 @@ fn parse_maintainers(metadata_annots: &HashMap<String, String>) -> Result<Option
             // name-addr https://www.rfc-editor.org/rfc/rfc5322#section-3.4
             let mut maintainers: Vec<Maintainer> = vec![];
             let to = format!("To: {s}");
-            let msg = mail_parser::Message::parse(to.as_bytes()).ok_or(
+            let msg: mail_parser::Message = to.as_bytes().try_into().map_err(|_| {
                 ArtifactHubError::MalformedCSVEmail(String::from(
                     KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
-                )),
-            )?;
+                ))
+            })?;
 
-            let addr = msg.to();
+            let addr = msg
+                .to()
+                .ok_or(ArtifactHubError::MalformedCSVEmail(String::from(
+                    KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
+                )))?;
 
-            match addr {
-                HeaderValue::Address(addr) => {
-                    let email = EmailAddress::from_str(&addr.address.clone().unwrap_or_default())
-                        .map_err(|e| ArtifactHubError::MalformedEmail {
+            for addr in addr.iter() {
+                let email = EmailAddress::from_str(&addr.address.clone().unwrap_or_default())
+                    .map_err(|e| ArtifactHubError::MalformedEmail {
                         annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
                         error: e.to_string(),
                     })?;
-
-                    maintainers.push(Maintainer {
-                        name: addr.name.clone().unwrap_or_default().to_string(),
-                        email: email.to_string(),
-                    });
-                }
-                HeaderValue::AddressList(vec_addr) => {
-                    for a in vec_addr {
-                        let email = EmailAddress::from_str(&a.address.clone().unwrap_or_default())
-                            .map_err(|e| ArtifactHubError::MalformedEmail {
-                                annot: String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
-                                error: e.to_string(),
-                            })?;
-                        maintainers.push(Maintainer {
-                            name: a.name.clone().unwrap_or_default().to_string(),
-                            email: email.to_string(),
-                        });
-                    }
-                }
-                _ => {
-                    return Err(ArtifactHubError::MalformedCSVEmail(String::from(
-                        KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
-                    )))
-                }
+                maintainers.push(Maintainer {
+                    name: addr.name.clone().unwrap_or_default().to_string(),
+                    email: email.to_string(),
+                });
             }
+
             Ok(Some(maintainers))
         }
         None => Ok(None),
@@ -783,6 +767,7 @@ mod tests {
             parse_maintainers(&author_annot_bademail).unwrap_err(),
             ArtifactHubError::MalformedEmail { .. }
         ));
+
         Ok(())
     }
 
