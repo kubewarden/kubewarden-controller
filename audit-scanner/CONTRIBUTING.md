@@ -20,7 +20,7 @@ or to get results in JSON:
 ./bin/audit-scanner \
   -k kubewarden --namespace default \
   --policy-server-url https://localhost:3000 \
-  -l debug --print
+  -l debug --output-scan
 ```
 
 ### Run against audit-scanner SA
@@ -38,8 +38,8 @@ If needed, patch the resulting kubeconfig, adding the missing
 
 ```yaml
 clusters:
-- cluster:
-  certificate-authority: /home/vic/.minikube/ca.crt
+  - cluster:
+    certificate-authority: /home/vic/.minikube/ca.crt
 ```
 
 And use it:
