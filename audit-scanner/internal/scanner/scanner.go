@@ -60,7 +60,8 @@ type Scanner struct {
 // PolicyServers endpoints.
 func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher,
 	printJSON bool,
-	insecureClient bool, caCertFile string) (*Scanner, error) {
+	insecureClient bool, caCertFile string,
+) (*Scanner, error) {
 	report, err := report.NewPolicyReportStore()
 	if err != nil {
 		return nil, err
@@ -128,7 +129,6 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 			Int("policies to evaluate", len(policies)).
 			Int("policies skipped", skippedNum),
 		).Msg("policy count")
-
 	auditableResources, err := s.resourcesFetcher.GetResourcesForPolicies(context.Background(), policies, nsName)
 	if err != nil {
 		return err
@@ -195,7 +195,7 @@ func (s *Scanner) ScanAllNamespaces() error {
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanClusterWideResources() error {
-	log.Info().Msg("cluster wide scan started")
+	log.Info().Msg("clusterwide resources scan started")
 	policies, skippedNum, err := s.policiesFetcher.GetClusterAdmissionPolicies()
 	if err != nil {
 		return err
@@ -222,11 +222,12 @@ func (s *Scanner) ScanClusterWideResources() error {
 	for i := range auditableResources {
 		auditClusterResource(&auditableResources[i], s.resourcesFetcher, &s.httpClient, &clusterReport, &previousClusterReport)
 	}
-	log.Info().Msg("scan finished")
 	err = s.reportStore.SaveClusterPolicyReport(&clusterReport)
 	if err != nil {
 		log.Error().Err(err).Msg("error adding PolicyReport to store")
 	}
+	log.Info().Msg("clusterwide resources scan finished")
+
 	if s.printJSON {
 		str, err := s.reportStore.ToJSON()
 		if err != nil {
