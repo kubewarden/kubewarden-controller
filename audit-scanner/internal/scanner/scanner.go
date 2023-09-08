@@ -151,10 +151,10 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	// to evaluate them.
 	for i := range auditableResources {
 		auditResource(&auditableResources[i], s.resourcesFetcher, &s.httpClient, &namespacedsReport, &previousNamespacedReport)
-		err = s.reportStore.SavePolicyReport(&namespacedsReport)
-		if err != nil {
-			log.Error().Err(err).Msg("error adding PolicyReport to store")
-		}
+	}
+	err = s.reportStore.SavePolicyReport(&namespacedsReport)
+	if err != nil {
+		log.Error().Err(err).Msg("error adding PolicyReport to store")
 	}
 	log.Info().Str("namespace", nsName).Msg("namespace scan finished")
 
