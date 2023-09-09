@@ -93,7 +93,7 @@ pub async fn fetch_policy(
         "registry" | "http" | "https" => Ok(()),
         _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
     }?;
-    let (store, destination) = pull_destination(&url, &destination)?;
+    let (store, mut destination) = pull_destination(&url, &destination)?;
     if let Some(store) = store {
         store.ensure(&store.policy_full_path(url.as_str(), store::PolicyPath::PrefixOnly)?)?;
     }
@@ -106,6 +106,11 @@ pub async fn fetch_policy(
                     uri: url.to_string(),
                     local_path: destination,
                 });
+            }
+            // If the reference tag is `latest` and the URL does not contain `:latest`
+            // we need to add it to the destination
+            if Some("latest") == reference.tag() && !str::ends_with(url.as_str(), ":latest") {
+                destination = PathBuf::from(destination.to_string_lossy().to_string() + ":latest");
             }
         }
         "http" | "https" => {
