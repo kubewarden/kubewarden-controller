@@ -694,6 +694,7 @@ func TestIsNamespacedResource(t *testing.T) {
 	}
 
 	for _, ttest := range tests {
+		ttest := ttest
 		t.Run(ttest.name, func(t *testing.T) {
 			customScheme := scheme.Scheme
 			metav1.AddToGroupVersion(scheme.Scheme, policiesv1.GroupVersion)
