@@ -1,13 +1,13 @@
 use crate::metrics::PolicyEvaluation;
 use lazy_static::lazy_static;
-use opentelemetry::{metrics::ValueRecorder, KeyValue};
+use opentelemetry::{metrics::Histogram, KeyValue};
 use std::convert::TryFrom;
 use std::time::Duration;
 
 lazy_static! {
-    static ref POLICY_EVALUATION_LATENCY: ValueRecorder<u64> =
+    static ref POLICY_EVALUATION_LATENCY: Histogram<u64> =
         opentelemetry::global::meter(super::METER_NAME)
-            .u64_value_recorder("kubewarden_policy_evaluation_latency_milliseconds")
+            .u64_histogram("kubewarden_policy_evaluation_latency_milliseconds")
             .init();
 }
 

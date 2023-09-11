@@ -1,6 +1,6 @@
 use opentelemetry::metrics;
-use opentelemetry::sdk::metrics::PushController;
-use opentelemetry::KeyValue;
+use opentelemetry::sdk::metrics::MeterProvider;
+use opentelemetry::{runtime, KeyValue};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
 
 mod policy_evaluations_total;
@@ -10,9 +10,9 @@ pub use policy_evaluations_latency::record_policy_latency;
 
 const METER_NAME: &str = "kubewarden";
 
-pub(crate) fn init_meter() -> metrics::Result<PushController> {
+pub(crate) fn init_meter() -> metrics::Result<MeterProvider> {
     opentelemetry_otlp::new_pipeline()
-        .metrics(tokio::spawn, opentelemetry::util::tokio_interval_stream)
+        .metrics(runtime::Tokio)
         .with_exporter(
             opentelemetry_otlp::new_exporter()
                 .tonic()
