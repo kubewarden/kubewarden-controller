@@ -33,7 +33,7 @@ picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
   "x509",
 ] }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.8.0" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.8.1" }
 semver = { version = "1.0.18", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -56,9 +56,9 @@ wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
 wasi-cap-std-sync = "12.0"
-wasi-common       = "12.0"
-wasmtime          = "12.0"
-wasmtime-wasi     = "12.0"
+wasi-common = "12.0"
+wasmtime = "12.0"
+wasmtime-wasi = "12.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
