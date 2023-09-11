@@ -36,6 +36,14 @@ kwctl() {
     [[ "$output" =~ "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9" ]]
 }
 
+@test "pull a policy from a registry without a tag" {
+    kwctl pull registry://ghcr.io/kubewarden/tests/sleeping-policy
+    [ "$status" -eq 0 ]
+    kwctl policies
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "registry://ghcr.io/kubewarden/tests/sleeping-policy:latest" ]]
+}
+
 @test "pull a policy from HTTPS to a file" {
     kwctl pull -o ${KWCTL_TMPDIR}/my-policy.wasm https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm
     [ "$status" -eq 0 ]
