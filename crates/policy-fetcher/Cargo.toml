@@ -1,6 +1,6 @@
 [package]
 name = "policy-fetcher"
-version = "0.8.0"
+version = "0.8.1"
 authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
