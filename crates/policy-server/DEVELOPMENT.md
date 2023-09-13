@@ -7,9 +7,9 @@ kubernetes.
 
 Following this tutorial you will end up with the following setup:
 
-  * policy-server: running locally, uncontainerized
-  * OpenTelemetry collector: running locally, inside of a container
-  * Jaeger all-in-one: running locally, inside of a container
+- policy-server: running locally, uncontainerized
+- OpenTelemetry collector: running locally, inside of a container
+- Jaeger all-in-one: running locally, inside of a container
 
 As a first step, start Jaeger:
 
@@ -18,7 +18,7 @@ docker run --rm \
   --name jaeger \
   -p14250:14250 \
   -p16686:16686 \
-  jaegertracing/all-in-one:1.27.0
+  jaegertracing/all-in-one:latest
 ```
 
 On another console, obtain the IP address of the
@@ -37,10 +37,9 @@ Start the OpenTelemetry collector:
 docker run --rm \
   -p 4317:4317 \
   -p 8889:8889 \
-  -v `pwd`/otel-collector-minimal-config.yaml:/etc/otel/config.yaml:ro \
-  otel/opentelemetry-collector:0.36.0 \
-    --log-level debug \
-    --config /etc/otel/config.yaml
+  -v $(pwd)/otel-collector-minimal-config.yaml:/etc/otel/config.yaml:ro \
+  otel/opentelemetry-collector:0.84.0 \
+  --config /etc/otel/config.yaml
 ```
 
 Start prometheus, so it can start scraping metrics. By adding the `host.docker.internal`, the
@@ -52,7 +51,7 @@ docker run -d --rm \
   --add-host=host.docker.internal:host-gateway \
   -p 9090:9090 \
   -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml \
-  prom/prometheus:v2.30.3
+  prom/prometheus:latest
 ```
 
 Now start policy-server:
@@ -63,13 +62,15 @@ cargo run --release -- \
   --workers 2 \
   --log-fmt otlp \
   --log-level debug \
-  --enable-metrics
+  --enable-metrics true \
+  --ignore-kubernetes-connection-failure true
 ```
 
 Some notes about this command:
-  * We are running policy-server in release mode. That's because wasmtime is
-    pretty slow at initializing WASM modules when ran in `debug` mode.
-  * You must provide a `policies.yml` file, you can take inspiration from `policies.yml.example`
+
+- We are running policy-server in release mode. That's because wasmtime is
+  pretty slow at initializing WASM modules when ran in `debug` mode.
+- You must provide a `policies.yml` file, you can take inspiration from `policies.yml.example`
 
 The Jaeger UI can be accessed by opening [localhost:16686](http://localhost:16686).
 
@@ -266,11 +267,11 @@ curl --location --request POST 'localhost:3000/validate/psp-capabilities' \
 }'
 ```
 
-If you want to visualize the metrics in a Grafana dashboard you can start a Grafana 
+If you want to visualize the metrics in a Grafana dashboard you can start a Grafana
 instance locally:
 
 ```
-docker run -d --add-host=host.docker.internal:host-gateway --name=grafana -p 3001:3000 grafana/grafana
+docker run -d --add-host=host.docker.internal:host-gateway --name=grafana -p 3001:3000 grafana/grafana:latest
 ```
 
 After that, you can access Grafana WebUI at [localhost:3001](http://localhost:3001), create a Prometheus
