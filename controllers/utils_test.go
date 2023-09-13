@@ -17,9 +17,10 @@ limitations under the License.
 package controllers
 
 import (
+	"errors"
+
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/onsi/gomega/types"
-	"github.com/pkg/errors"
 
 	. "github.com/onsi/gomega"
 
@@ -104,7 +105,7 @@ func admissionPolicyWithPolicyServerName(name, policyServerName string) *policie
 func getFreshAdmissionPolicy(namespace, name string) (*policiesv1.AdmissionPolicy, error) {
 	newAdmissionPolicy := policiesv1.AdmissionPolicy{}
 	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &newAdmissionPolicy); err != nil {
-		return nil, errors.Wrap(err, "could not find admission policy")
+		return nil, errors.Join(errors.New("could not find admission policy"), err)
 	}
 	return &newAdmissionPolicy, nil
 }
@@ -123,7 +124,7 @@ func clusterAdmissionPolicyWithPolicyServerName(name, policyServerName string) *
 func getFreshClusterAdmissionPolicy(name string) (*policiesv1.ClusterAdmissionPolicy, error) {
 	newClusterAdmissionPolicy := policiesv1.ClusterAdmissionPolicy{}
 	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &newClusterAdmissionPolicy); err != nil {
-		return nil, errors.Wrap(err, "could not find cluster admission policy")
+		return nil, errors.Join(errors.New("could not find cluster admission policy"), err)
 	}
 	return &newClusterAdmissionPolicy, nil
 }
@@ -131,7 +132,7 @@ func getFreshClusterAdmissionPolicy(name string) (*policiesv1.ClusterAdmissionPo
 func getFreshPolicyServer(name string) (*policiesv1.PolicyServer, error) {
 	newPolicyServer := policiesv1.PolicyServer{}
 	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &newPolicyServer); err != nil {
-		return nil, errors.Wrap(err, "could not find policy server")
+		return nil, errors.Join(errors.New("could not find policy server"), err)
 	}
 	return &newPolicyServer, nil
 }

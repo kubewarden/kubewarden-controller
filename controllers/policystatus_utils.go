@@ -19,12 +19,12 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -36,7 +36,7 @@ func getPolicyMapFromConfigMap(configMap *corev1.ConfigMap) (admission.PolicyCon
 	policyMap := admission.PolicyConfigEntryMap{}
 	if policies, ok := configMap.Data[constants.PolicyServerConfigPoliciesEntry]; ok {
 		if err := json.Unmarshal([]byte(policies), &policyMap); err != nil {
-			return policyMap, errors.Wrap(err, "failed to unmarshal policy mapping")
+			return policyMap, errors.Join(errors.New("failed to unmarshal policy mapping"), err)
 		}
 	} else {
 		return policyMap, nil

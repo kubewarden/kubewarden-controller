@@ -33,7 +33,7 @@ SETUP_ENVTEST_VER := v0.0.0-20211110210527-619e6b92dab9
 SETUP_ENVTEST_BIN := setup-envtest
 SETUP_ENVTEST := $(abspath $(BIN_DIR)/$(SETUP_ENVTEST_BIN))
 
-GOLANGCI_LINT_VER := v1.52.2
+GOLANGCI_LINT_VER := v1.54.2
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 
@@ -111,7 +111,7 @@ unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
-	ACK_GINKGO_DEPRECATIONS=2.9.2 KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
+	ACK_GINKGO_DEPRECATIONS=2.12.0 KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
 
 .PHONY: generate-crds
 generate-crds: $(KUSTOMIZE) manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
