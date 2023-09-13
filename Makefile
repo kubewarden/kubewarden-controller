@@ -111,7 +111,7 @@ unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
-	ACK_GINKGO_DEPRECATIONS=2.9.2 KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
+	ACK_GINKGO_DEPRECATIONS=2.12.0 KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
 
 .PHONY: generate-crds
 generate-crds: $(KUSTOMIZE) manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
