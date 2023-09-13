@@ -10,48 +10,13 @@ Following this tutorial you will end up with the following setup:
 - policy-server: running locally, uncontainerized
 - OpenTelemetry collector: running locally, inside of a container
 - Jaeger all-in-one: running locally, inside of a container
+- Prometheus: running locally, inside of a container
+- Grafana: running locally, inside of a container
 
-As a first step, start Jaeger:
-
-```console
-docker run --rm \
-  --name jaeger \
-  -p14250:14250 \
-  -p16686:16686 \
-  jaegertracing/all-in-one:latest
-```
-
-On another console, obtain the IP address of the
-Jaeger server:
+As a first step, start the development docker-compose:
 
 ```console
-docker container inspect -f '{{ .NetworkSettings.IPAddress }}' jaeger
-```
-
-Edit the `otel-collector-minimal-config.yaml` file, ensure you change the
-IP address of the Jaeger endpoint.
-
-Start the OpenTelemetry collector:
-
-```console
-docker run --rm \
-  -p 4317:4317 \
-  -p 8889:8889 \
-  -v $(pwd)/otel-collector-minimal-config.yaml:/etc/otel/config.yaml:ro \
-  otel/opentelemetry-collector:0.84.0 \
-  --config /etc/otel/config.yaml
-```
-
-Start prometheus, so it can start scraping metrics. By adding the `host.docker.internal`, the
-prometheus container will be able to reach the OpenTelemetry collector exposed port in the host, and
-scrape that endpoint. Check the `prometheus.yml` configuration for more details.
-
-```console
-docker run -d --rm \
-  --add-host=host.docker.internal:host-gateway \
-  -p 9090:9090 \
-  -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml \
-  prom/prometheus:latest
+cd hack && docker-compose up -d
 ```
 
 Now start policy-server:
@@ -267,17 +232,10 @@ curl --location --request POST 'localhost:3000/validate/psp-capabilities' \
 }'
 ```
 
-If you want to visualize the metrics in a Grafana dashboard you can start a Grafana
-instance locally:
-
-```
-docker run -d --add-host=host.docker.internal:host-gateway --name=grafana -p 3001:3000 grafana/grafana:latest
-```
-
-After that, you can access Grafana WebUI at [localhost:3001](http://localhost:3001), create a Prometheus
-data source using the `http://host.docker.internal:9090` as the data source URL,
+If you want to visualize the metrics, you can access Grafana WebUI at [localhost:3001](http://localhost:3001),
 and [import](https://grafana.com/docs/grafana/latest/dashboards/export-import/#import-dashboard)
 the dashboard definition kubewarden-dashboard.json file into the Grafana instance.
+Be sure to select the `Prometheus` datasource.
 
 ## Debugging policy-server pod
 

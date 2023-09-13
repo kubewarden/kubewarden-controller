@@ -1,0 +1,30 @@
+version: "3"
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14250:14250"
+  otel-collector:
+    image: otel/opentelemetry-collector:0.84.0
+    volumes:
+      - ./otel-collector-minimal-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "4317:4317"
+      - "8889:8889"
+    command: ["--config=/etc/otel-collector-config.yml"]
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
