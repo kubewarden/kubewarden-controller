@@ -10,7 +10,7 @@ require (
 	github.com/onsi/gomega v1.27.10
 	go.opentelemetry.io/otel v1.14.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.37.0
-	go.opentelemetry.io/otel/metric v0.37.0
+	go.opentelemetry.io/otel/metric v1.18.0
 	go.opentelemetry.io/otel/sdk/metric v0.37.0
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
