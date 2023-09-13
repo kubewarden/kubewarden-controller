@@ -19,8 +19,7 @@ processors:
 
 exporters:
   jaeger:
-    # TODO: change the IP address with the IP/FQDN of your jaeger endpoint
-    endpoint: "172.17.0.2:14250"
+    endpoint: "jaeger:14250"
     tls:
       insecure: true
   prometheus:
