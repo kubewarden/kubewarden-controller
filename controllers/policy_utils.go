@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	"github.com/pkg/errors"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,12 +42,12 @@ import (
 func setPolicyStatus(ctx context.Context, deploymentsNamespace string, apiReader client.Reader, policy policiesv1.Policy) error {
 	policyServerDeployment := appsv1.Deployment{}
 	if err := apiReader.Get(ctx, types.NamespacedName{Namespace: deploymentsNamespace, Name: naming.PolicyServerDeploymentNameForPolicyServerName(policy.GetPolicyServer())}, &policyServerDeployment); err != nil {
-		return errors.Wrap(err, "could not get policy server deployment")
+		return errors.Join(errors.New("could not get policy server deployment"), err)
 	}
 
 	policyServerConfigMap := corev1.ConfigMap{}
 	if err := apiReader.Get(ctx, types.NamespacedName{Namespace: deploymentsNamespace, Name: naming.PolicyServerDeploymentNameForPolicyServerName(policy.GetPolicyServer())}, &policyServerConfigMap); err != nil {
-		return errors.Wrap(err, "could not get configmap")
+		return errors.Join(errors.New("could not get configmap"), err)
 	}
 
 	policyMap, err := getPolicyMapFromConfigMap(&policyServerConfigMap)
@@ -117,7 +117,7 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, errors.Wrap(err, "could not read policy server Deployment")
+		return ctrl.Result{}, errors.Join(errors.New("could not read policy server Deployment"), err)
 	}
 
 	if !isPolicyUniquelyReachable(ctx, client, &policyServerDeployment, policy.GetUniqueName()) {
@@ -145,16 +145,16 @@ func reconcilePolicy(ctx context.Context, client client.Client, reconciler admis
 
 	secret := corev1.Secret{}
 	if err := client.Get(ctx, types.NamespacedName{Namespace: reconciler.DeploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "cannot find policy server secret")
+		return ctrl.Result{}, errors.Join(errors.New("cannot find policy server secret"), err)
 	}
 
 	if policy.IsMutating() {
 		if err := reconciler.ReconcileMutatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "error reconciling mutating webhook")
+			return ctrl.Result{}, errors.Join(errors.New("error reconciling mutating webhook"), err)
 		}
 	} else {
 		if err := reconciler.ReconcileValidatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "error reconciling validating webhook")
+			return ctrl.Result{}, errors.Join(errors.New("error reconciling validating webhook"), err)
 		}
 	}
 	setPolicyAsActive(policy)
@@ -178,7 +178,7 @@ func setPolicyAsActive(policy policiesv1.Policy) {
 func getPolicyServer(ctx context.Context, client client.Client, policy policiesv1.Policy) (*policiesv1.PolicyServer, error) {
 	policyServer := policiesv1.PolicyServer{}
 	if err := client.Get(ctx, types.NamespacedName{Name: policy.GetPolicyServer()}, &policyServer); err != nil {
-		return nil, errors.Wrap(err, "could not get policy server")
+		return nil, errors.Join(errors.New("could not get policy server"), err)
 	}
 	return &policyServer, nil
 }

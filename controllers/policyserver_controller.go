@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,7 +70,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	policies, err := r.Reconciler.GetPolicies(ctx, &policyServer, admission.SkipDeleted)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "could not get policies")
+		return ctrl.Result{}, errors.Join(errors.New("could not get policies"), err)
 	}
 
 	if policyServer.ObjectMeta.DeletionTimestamp != nil {
@@ -112,7 +112,7 @@ func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policySe
 	}
 	if len(policies) == 0 {
 		if err := r.Reconciler.ReconcileDeletion(ctx, policyServer); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "could not reconcile policy server deletion")
+			return ctrl.Result{}, errors.Join(errors.New("could not reconcile policy server deletion"), err)
 		}
 		controllerutil.RemoveFinalizer(policyServer, constants.KubewardenFinalizer)
 		if err := r.Update(ctx, policyServer); err != nil {
@@ -193,5 +193,8 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		})).
 		Complete(r)
 
-	return errors.Wrap(err, "failed enrolling controller with manager")
+	if err != nil {
+		return errors.Join(errors.New("failed enrolling controller with manager"), err)
+	}
+	return nil
 }
