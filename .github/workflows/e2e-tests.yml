@@ -17,6 +17,7 @@ jobs:
     with:
       push-image: false
   run-e2e-tests:
+    if: github.repository_owner == 'kubewarden' || github.event_name != 'schedule'
     name: "Tests"
     needs: [build]
     uses: kubewarden/kubewarden-end-to-end-tests/.github/workflows/e2e-tests.yml@main
