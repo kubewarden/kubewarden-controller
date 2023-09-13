@@ -2358,7 +2358,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.7.0-rc2"
+version = "1.7.0-rc3"
 dependencies = [
  "anyhow",
  "clap",
