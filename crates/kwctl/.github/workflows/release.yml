@@ -141,3 +141,11 @@ jobs:
               name: `${TAG_NAME}`,
               prerelease: `${{ contains(github.event.workflow_run.head_branch, '-alpha') || contains(github.event.workflow_run.head_branch, '-beta') || contains(github.event.workflow_run.head_branch, '-rc') }}`
             });
+
+      - name: Trigger chart update
+        uses: peter-evans/repository-dispatch@bf47d102fdb849e755b0b0023ea3e81a44b6f570 # v2.1.2
+        with:
+          token: ${{ secrets.WORKFLOW_PAT }}
+          repository: "${{github.repository_owner}}/helm-charts"
+          event-type: update-chart
+          client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}"}'
