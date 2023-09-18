@@ -10,7 +10,7 @@ pub fn now_ns(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         });
     }
     let now = Local::now();
-    serde_json::to_value(now.timestamp_nanos()).map_err(|e| BurregoError::BuiltinError {
+    serde_json::to_value(now.timestamp_nanos_opt()).map_err(|e| BurregoError::BuiltinError {
         name: "time.now_ns".to_string(),
         message: format!("cannot convert value into JSON: {e:?}"),
     })
@@ -34,7 +34,7 @@ pub fn parse_rfc3339_ns(args: &[serde_json::Value]) -> Result<serde_json::Value>
         message: format!(": cannot convert {value}: {e:?}"),
     })?;
 
-    serde_json::to_value(dt.timestamp_nanos()).map_err(|e| BurregoError::BuiltinError {
+    serde_json::to_value(dt.timestamp_nanos_opt()).map_err(|e| BurregoError::BuiltinError {
         name: "time.parse_rfc3339_ns".to_string(),
         message: format!("cannot convert value into JSON: {e:?}"),
     })
@@ -145,14 +145,14 @@ mod test {
 
         let actual = parse_rfc3339_ns(&args);
         assert!(actual.is_ok());
-        assert_eq!(json!(input_dt.timestamp_nanos()), actual.unwrap());
+        assert_eq!(json!(input_dt.timestamp_nanos_opt()), actual.unwrap());
     }
 
     #[test]
     fn date_with_no_tz() {
         let input_dt = Local::now().naive_utc();
 
-        let args: Vec<serde_json::Value> = vec![json!(input_dt.timestamp_nanos())];
+        let args: Vec<serde_json::Value> = vec![json!(input_dt.timestamp_nanos_opt())];
 
         let actual = date(&args);
         assert!(actual.is_ok());
@@ -169,7 +169,8 @@ mod test {
             _ => panic!("didn't get the expected datetime object"),
         };
 
-        let args: Vec<serde_json::Value> = vec![json!([input_dt.timestamp_nanos(), "US/Pacific"])];
+        let args: Vec<serde_json::Value> =
+            vec![json!([input_dt.timestamp_nanos_opt(), "US/Pacific"])];
 
         let actual = date(&args);
         assert!(actual.is_ok());
@@ -183,7 +184,7 @@ mod test {
     fn date_with_local_tz() {
         let input_dt = Local::now().naive_utc();
 
-        let args: Vec<serde_json::Value> = vec![json!([input_dt.timestamp_nanos(), "Local"])];
+        let args: Vec<serde_json::Value> = vec![json!([input_dt.timestamp_nanos_opt(), "Local"])];
 
         let actual = date(&args);
         assert!(actual.is_ok());
