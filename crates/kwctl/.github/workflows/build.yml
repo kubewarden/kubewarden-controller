@@ -211,7 +211,7 @@ jobs:
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@0b73198f5d655ef4ad84e423f8047044ed73fd4b
+        uses: kubewarden/github-actions/syft-installer@0b73198f5d655ef4ad84e423f8047044ed73fd4b # v3.1.9
         with:
           arch: windows_amd64
 
