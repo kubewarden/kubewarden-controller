@@ -117,3 +117,23 @@ webhooks:
     resources:
     - clusteradmissionpolicies
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-policies-kubewarden-io-v1-policyserver
+  failurePolicy: Fail
+  name: vpolicyserver.kb.io
+  rules:
+  - apiGroups:
+    - policies.kubewarden.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - policyservers
+  sideEffects: None

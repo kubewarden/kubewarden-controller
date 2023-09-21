@@ -181,7 +181,7 @@ func main() {
 		setupLog,
 		environment.developmentMode,
 		environment.webhookHostAdvertise,
-		webhooks(),
+		webhooks(deploymentsNamespace),
 	)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -252,10 +252,10 @@ func main() {
 	}
 }
 
-func webhooks() []webhookwrapper.WebhookRegistrator {
+func webhooks(deploymentsNamespace string) []webhookwrapper.WebhookRegistrator {
 	return []webhookwrapper.WebhookRegistrator{
 		{
-			Registrator: (&policiesv1.PolicyServer{}).SetupWebhookWithManager,
+			Registrator: policiesv1.SetupPolicyServerWebhookWithManager(deploymentsNamespace),
 			Name:        "mutate-policyservers.kubewarden.dev",
 			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -271,6 +271,25 @@ func webhooks() []webhookwrapper.WebhookRegistrator {
 				},
 			},
 			WebhookPath: "/mutate-policies-kubewarden-io-v1-policyserver",
+			Mutating:    true,
+		},
+		{
+			Registrator: policiesv1.SetupPolicyServerWebhookWithManager(deploymentsNamespace),
+			Name:        "validate-policyservers.kubewarden.dev",
+			RulesWithOperations: []admissionregistrationv1.RuleWithOperations{
+				{
+					Operations: []admissionregistrationv1.OperationType{
+						admissionregistrationv1.Create,
+						admissionregistrationv1.Update,
+					},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{policiesv1.GroupVersion.Group},
+						APIVersions: []string{policiesv1.GroupVersion.Version},
+						Resources:   []string{"policyservers"},
+					},
+				},
+			},
+			WebhookPath: "/validate-policies-kubewarden-io-v1-policyserver",
 			Mutating:    true,
 		},
 		{

@@ -48,10 +48,12 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var k8sClient client.Client
-var testEnv *envtest.Environment
-var ctx context.Context
-var cancel context.CancelFunc
+var (
+	k8sClient client.Client
+	testEnv   *envtest.Environment
+	ctx       context.Context
+	cancel    context.CancelFunc
+)
 
 func TestWebhooks(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -104,7 +106,7 @@ var _ = BeforeSuite(func() {
 	err = (&ClusterAdmissionPolicy{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&PolicyServer{}).SetupWebhookWithManager(mgr)
+	err = SetupPolicyServerWebhookWithManager("kubewarden")(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook
@@ -128,7 +130,6 @@ var _ = BeforeSuite(func() {
 		conn.Close()
 		return nil
 	}).Should(Succeed())
-
 })
 
 var _ = AfterSuite(func() {
@@ -139,7 +140,7 @@ var _ = AfterSuite(func() {
 })
 
 func makeClusterAdmissionPolicyTemplate(name, namespace, policyServerName string, customRules []admissionregistrationv1.RuleWithOperations) *ClusterAdmissionPolicy {
-	var rules = customRules
+	rules := customRules
 
 	if rules == nil {
 		rules = append(rules, admissionregistrationv1.RuleWithOperations{
@@ -569,7 +570,7 @@ var _ = Describe("validate ClusterAdmissionPolicy webhook with ", func() {
 })
 
 var _ = Describe("validate PolicyServer webhook with ", func() {
-	namespace := "default"
+	namespace := "kubewarden"
 
 	It("should add kubewarden finalizer when creating a PolicyServer", func() {
 		pol := makePolicyServerTemplate("policyserver-test", namespace)
@@ -588,4 +589,13 @@ var _ = Describe("validate PolicyServer webhook with ", func() {
 		deletePolicyServer(ctx, "policyserver-test", namespace)
 	})
 
+	It("should deny creating a PolicyServer with an invalid name", func() {
+		name := make([]byte, 64)
+		for i := range name {
+			name[i] = 'a'
+		}
+
+		pol := makePolicyServerTemplate(string(name), namespace)
+		Expect(k8sClient.Create(ctx, pol)).ToNot(Succeed())
+	})
 })
