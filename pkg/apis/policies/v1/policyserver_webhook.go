@@ -80,7 +80,7 @@ func (v *policyServerValidator) validate(ctx context.Context, obj runtime.Object
 
 	// The PolicyServer name must be maximum 63 like all Kubernetes objects to fit in a DNS subdomain name
 	if len(policyServer.GetName()) > validationutils.DNS1035LabelMaxLength {
-		return fmt.Errorf("spec.ImagePullSecret cannot be longer than %d characters", validationutils.DNS1035LabelMaxLength)
+		return fmt.Errorf("the PolicyServer name cannot be longer than %d characters", validationutils.DNS1035LabelMaxLength)
 	}
 
 	if policyServer.Spec.ImagePullSecret != "" {
