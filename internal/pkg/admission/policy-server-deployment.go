@@ -11,13 +11,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/policyserver"
 )
 
 const (
@@ -46,9 +44,9 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 	}
 
 	if policyServer.Spec.ImagePullSecret != "" {
-		err := r.policyServerImagePullSecretPresent(ctx, policyServer)
+		err = policyserver.ValidateImagePullSecret(ctx, r.Client, policyServer.Spec.ImagePullSecret, r.DeploymentsNamespace)
 		if err != nil {
-			return err
+			r.Log.Error(err, "error while validating policy-server imagePullSecret")
 		}
 	}
 
@@ -62,35 +60,6 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 	}
 
 	return r.updatePolicyServerDeployment(ctx, policyServer, deployment)
-}
-
-func (r *Reconciler) policyServerImagePullSecretPresent(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
-	// By using Unstructured data we force the client to fetch fresh, uncached
-	// data from the API server
-	unstructuredObj := &unstructured.Unstructured{}
-	unstructuredObj.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "Secret",
-		Version: "v1",
-	})
-	err := r.Client.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      policyServer.Spec.ImagePullSecret,
-	}, unstructuredObj)
-	if err != nil {
-		return fmt.Errorf("cannot get spec.ImagePullSecret: %w", err)
-	}
-
-	var secret corev1.Secret
-	err = runtime.DefaultUnstructuredConverter.
-		FromUnstructured(unstructuredObj.UnstructuredContent(), &secret)
-	if err != nil {
-		return fmt.Errorf("spec.ImagePullSecret is not of Kind Secret: %w", err)
-	}
-
-	if secret.Type != "kubernetes.io/dockerconfigjson" {
-		return fmt.Errorf("spec.ImagePullSecret secret \"%s\" is not of type kubernetes.io/dockerconfigjson", secret.Name)
-	}
-	return nil
 }
 
 func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer, newDeployment *appsv1.Deployment) error {
