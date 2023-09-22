@@ -266,7 +266,7 @@ impl PolicyEvaluatorBuilder {
 
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
-                    self.callback_channel.clone(),
+                    None, // callback_channel is not used by WASI policies
                     None,
                     || None,
                     Policy::new,
@@ -279,7 +279,7 @@ impl PolicyEvaluatorBuilder {
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
-                    self.callback_channel.clone(),
+                    None, // callback_channel is not used by Rego policies
                     None,
                     || None,
                     Policy::new,
