@@ -6,11 +6,12 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const kubewardenNamespace = "kubewarden"
+
 func TestGetNamespaceSelectorWithEmptyNamespaceSelector(t *testing.T) {
-	kubewardenNs := "kubewarden"
 	c := ClusterAdmissionPolicy{}
-	nsSelector := c.GetUpdatedNamespaceSelector(kubewardenNs)
-	isKubewardenNsFound := isNamespaceFoundInSelector(nsSelector, kubewardenNs)
+	nsSelector := c.GetUpdatedNamespaceSelector(kubewardenNamespace)
+	isKubewardenNsFound := isNamespaceFoundInSelector(nsSelector, kubewardenNamespace)
 
 	if !isKubewardenNsFound {
 		t.Errorf("Kubewarden namespace not added to namespace selector")
@@ -18,7 +19,6 @@ func TestGetNamespaceSelectorWithEmptyNamespaceSelector(t *testing.T) {
 }
 
 func TestGetNamespaceSelectorWithExistingMatchExpressions(t *testing.T) {
-	kubewardenNs := "kubewarden"
 	policy := ClusterAdmissionPolicy{
 		Spec: ClusterAdmissionPolicySpec{
 			NamespaceSelector: &v1.LabelSelector{
@@ -32,8 +32,8 @@ func TestGetNamespaceSelectorWithExistingMatchExpressions(t *testing.T) {
 			},
 		},
 	}
-	nsSelector := policy.GetUpdatedNamespaceSelector(kubewardenNs)
-	isKubewardenNsFound := isNamespaceFoundInSelector(nsSelector, kubewardenNs)
+	nsSelector := policy.GetUpdatedNamespaceSelector(kubewardenNamespace)
+	isKubewardenNsFound := isNamespaceFoundInSelector(nsSelector, kubewardenNamespace)
 
 	if !isKubewardenNsFound {
 		t.Errorf("Kubewarden namespace not added to namespace selector")
