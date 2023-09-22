@@ -491,6 +491,20 @@ impl WapcStack {
     }
 }
 
+impl Drop for WapcStack {
+    fn drop(&mut self) {
+        // ensure we clean this entry from the WAPC_POLICY_MAPPING mapping
+        match WAPC_POLICY_MAPPING.write() {
+            Ok(mut map) => {
+                map.remove(&self.wapc_host.id());
+            }
+            Err(_) => {
+                warn!("cannot cleanup policy from WAPC_POLICY_MAPPING");
+            }
+        }
+    }
+}
+
 impl<'a> Runtime<'a> {
     pub fn validate(
         &mut self,
