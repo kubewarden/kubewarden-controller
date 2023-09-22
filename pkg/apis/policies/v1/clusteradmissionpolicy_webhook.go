@@ -27,6 +27,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -68,23 +69,23 @@ func (r *ClusterAdmissionPolicy) Default() {
 var _ webhook.Validator = &ClusterAdmissionPolicy{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *ClusterAdmissionPolicy) ValidateCreate() error {
+func (r *ClusterAdmissionPolicy) ValidateCreate() (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate create", "name", r.Name)
 
-	return validateRulesField(r)
+	return nil, validateRulesField(r)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) error {
+func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate update", "name", r.Name)
 
 	oldPolicy, ok := old.(*ClusterAdmissionPolicy)
 	if !ok {
-		return apierrors.NewInternalError(
+		return admission.Warnings{}, apierrors.NewInternalError(
 			fmt.Errorf("object is not of type ClusterAdmissionPolicy: %#v", old))
 	}
 
-	return validatePolicyUpdate(oldPolicy, r)
+	return nil, validatePolicyUpdate(oldPolicy, r)
 }
 
 // Validates the spec.Rules field for non-empty, webhook-valid rules
@@ -193,7 +194,7 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *ClusterAdmissionPolicy) ValidateDelete() error {
+func (r *ClusterAdmissionPolicy) ValidateDelete() (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate delete", "name", r.Name)
-	return nil
+	return nil, nil
 }

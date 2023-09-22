@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -61,26 +62,25 @@ func (r *AdmissionPolicy) Default() {
 var _ webhook.Validator = &AdmissionPolicy{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *AdmissionPolicy) ValidateCreate() error {
+func (r *AdmissionPolicy) ValidateCreate() (admission.Warnings, error) {
 	admissionpolicylog.Info("validate create", "name", r.Name)
-
-	return validateRulesField(r)
+	return nil, validateRulesField(r)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *AdmissionPolicy) ValidateUpdate(old runtime.Object) error {
+func (r *AdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	admissionpolicylog.Info("validate update", "name", r.Name)
 
 	oldPolicy, ok := old.(*AdmissionPolicy)
 	if !ok {
-		return apierrors.NewInternalError(
+		return admission.Warnings{}, apierrors.NewInternalError(
 			fmt.Errorf("object is not of type AdmissionPolicy: %#v", old))
 	}
-	return validatePolicyUpdate(oldPolicy, r)
+	return nil, validatePolicyUpdate(oldPolicy, r)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *AdmissionPolicy) ValidateDelete() error {
+func (r *AdmissionPolicy) ValidateDelete() (admission.Warnings, error) {
 	admissionpolicylog.Info("validate delete", "name", r.Name)
-	return nil
+	return nil, nil
 }
