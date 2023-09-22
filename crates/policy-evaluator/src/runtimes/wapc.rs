@@ -353,8 +353,12 @@ fn send_request_and_wait_for_response(
     req: CallbackRequest,
     mut rx: Receiver<Result<CallbackResponse>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-    let policy = policy_mapping.get(&policy_id).unwrap();
+    let policy_mapping = WAPC_POLICY_MAPPING
+        .read()
+        .map_err(|e| anyhow!("cannot get READ access to WAPC_POLICY_MAPPING: {e}"))?;
+    let policy = policy_mapping
+        .get(&policy_id)
+        .ok_or(anyhow!("cannot find policy with id {policy_id}"))?;
 
     let cb_channel: mpsc::Sender<CallbackRequest> = if let Some(c) = policy.callback_channel.clone()
     {
