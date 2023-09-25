@@ -42,8 +42,8 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.4.1"
 walrus = "0.20.1"
 wasmparser = "0.113"
-time = "0.3.28"
-semver = { version = "1.0.18", features = ["serde"] }
+time = "0.3.29"
+semver = { version = "1.0.19", features = ["serde"] }
 
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of kwctl
