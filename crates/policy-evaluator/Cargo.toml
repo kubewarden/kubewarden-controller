@@ -28,19 +28,19 @@ kube = { version = "0.86.0", default-features = false, features = [
 ] }
 kubewarden-policy-sdk = "0.9.8"
 lazy_static = "1.4"
-mail-parser = { version = "0.9.0", features = ["serde"] }
+mail-parser = { version = "0.9.1", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
   "x509",
 ] }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.8.1" }
-semver = { version = "1.0.18", features = ["serde"] }
+semver = { version = "1.0.19", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
 thiserror = "1.0"
-time = { version = "0.3.28", features = ["serde-human-readable"] }
+time = { version = "0.3.29", features = ["serde-human-readable"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
 tracing-futures = "0.2"
