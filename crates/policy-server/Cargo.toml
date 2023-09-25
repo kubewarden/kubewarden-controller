@@ -42,7 +42,7 @@ warp = { version = "0.3.5", default_features = false, features = [
   "multipart",
   "tls",
 ] }
-semver = { version = "1.0.18", features = ["serde"] }
+semver = { version = "1.0.19", features = ["serde"] }
 
 [dev-dependencies]
 rstest = "0.18"
