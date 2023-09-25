@@ -266,7 +266,7 @@ impl PolicyEvaluatorBuilder {
 
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
-                    self.callback_channel.clone(),
+                    None, // callback_channel is not used by WASI policies
                     None,
                     || None,
                     Policy::new,
@@ -279,7 +279,7 @@ impl PolicyEvaluatorBuilder {
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
-                    self.callback_channel.clone(),
+                    None, // callback_channel is not used by Rego policies
                     None,
                     || None,
                     Policy::new,
@@ -382,6 +382,34 @@ mod tests {
         assert!(found.is_some());
 
         Ok(())
+    }
+
+    #[test]
+    fn policy_wapc_mapping_is_cleaned_when_the_evaluator_is_dropped() {
+        // we need a real WASM module, we don't care about the contents yet
+
+        let engine = wasmtime::Engine::default();
+        let wat = include_bytes!("../test_data/endless_wasm/wapc_endless_loop.wat");
+        let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
+
+        let builder = PolicyEvaluatorBuilder::new("test".to_string())
+            .execution_mode(PolicyExecutionMode::KubewardenWapc)
+            .engine(engine)
+            .policy_module(module);
+        let evaluator = builder.build().expect("cannot create evaluator");
+        {
+            let map = WAPC_POLICY_MAPPING
+                .read()
+                .expect("cannot get READ access to WAPC_POLICY_MAPPING");
+            assert_eq!(map.len(), 1);
+        }
+        drop(evaluator);
+        {
+            let map = WAPC_POLICY_MAPPING
+                .read()
+                .expect("cannot get READ access to WAPC_POLICY_MAPPING");
+            assert_eq!(map.len(), 0);
+        }
     }
 
     #[test]

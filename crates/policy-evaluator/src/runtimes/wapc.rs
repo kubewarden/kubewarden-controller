@@ -353,8 +353,12 @@ fn send_request_and_wait_for_response(
     req: CallbackRequest,
     mut rx: Receiver<Result<CallbackResponse>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-    let policy = policy_mapping.get(&policy_id).unwrap();
+    let policy_mapping = WAPC_POLICY_MAPPING
+        .read()
+        .map_err(|e| anyhow!("cannot get READ access to WAPC_POLICY_MAPPING: {e}"))?;
+    let policy = policy_mapping
+        .get(&policy_id)
+        .ok_or(anyhow!("cannot find policy with id {policy_id}"))?;
 
     let cb_channel: mpsc::Sender<CallbackRequest> = if let Some(c) = policy.callback_channel.clone()
     {
@@ -484,6 +488,20 @@ impl WapcStack {
 
     pub fn wapc_host_id(&self) -> u64 {
         self.wapc_host.id()
+    }
+}
+
+impl Drop for WapcStack {
+    fn drop(&mut self) {
+        // ensure we clean this entry from the WAPC_POLICY_MAPPING mapping
+        match WAPC_POLICY_MAPPING.write() {
+            Ok(mut map) => {
+                map.remove(&self.wapc_host.id());
+            }
+            Err(_) => {
+                warn!("cannot cleanup policy from WAPC_POLICY_MAPPING");
+            }
+        }
     }
 }
 
