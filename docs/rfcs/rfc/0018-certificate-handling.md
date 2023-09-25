@@ -1,10 +1,10 @@
-|              |                                 |
-| :----------- | :------------------------------ |
-| Feature Name | Certificate Handling            |
-| Start Date   | Aug 11 2023                     |
-| Category     | enhancement, feature                      |
+|              |                                                  |
+| :----------- | :----------------------------------------------- |
+| Feature Name | Certificate Handling                             |
+| Start Date   | Aug 11 2023                                      |
+| Category     | enhancement, feature                             |
 | RFC PR       | [#24](https://github.com/kubewarden/rfc/pull/24) |
-| State        | **ACCEPTED**                    |
+| State        | **ACCEPTED**                                     |
 
 # Summary
 
@@ -161,17 +161,22 @@ most disruptive event that can happen, especially once some policies are deploye
 
 Once the new CA is generated, the following actions have to be performed:
 
+- Generate a new CA bundle that contains the previous internal CA and the new one
+- For each webhook configuration managed by Kubewarden (meaning all the policies deployed, plus the kubewarden-controller):
+  - Update the `clientConfig.caBundle`: ensure it contains the CA bundle created during the previous step
 - For each `PolicyServer` defined:
   - Generate a new certificate, sign it with the new CA
   - Force a rollout of the PolicyServer Deployment
 - Kubewarden Controller:
   - Generate a new certificate, sign it with the new CA
   - Restart the controller to ensure its HTTPS endpoint uses the new certificate
-- For each webhook configuration managed by Kubewarden (meaning all the policies deployed, plus the kubewarden-controller):
-  - Update the `clientConfig.caBundle`: ensure it contains the certificate of the new CA
 
-This change is massive and could lead to connection errors for as long as the PolicyServer are using a certificate
-signed by a CA that is not the one mentioned inside of the `clientConfig.caBundle`.
+Once all the rollout of the new Policy Server instances is done, and the kubewarden controller is using the new certificate:
+
+- For each webhook configuration managed by Kubewarden (meaning all the policies deployed, plus the kubewarden-controller):
+  - Update the `clientConfig.caBundle`: ensure it contains only the certitificate of the new CA
+
+By respecing these steps we can avoid communication failures between the Kubernetes API server and the webhooks.
 
 ## Controller Bootstrap
 
@@ -250,10 +255,4 @@ resources.
 
 [unresolved]: #unresolved-questions
 
-The renewal of the root CA is the most disruptive event that can happen. Letting the reconciler loops run and wait
-for the system to converge towards the desired state is not a viable option. During the convergence
-time there could be requests being rejected due to Policy Server instances not being available or be using
-a certificate signed by an unexpected root CA.
-
-We must do some research and find a way to reduce this disruption. However, given our root CA has an expiration
-time of 10 years, this is a problem that should not block the implementation of this RFC.
+None
