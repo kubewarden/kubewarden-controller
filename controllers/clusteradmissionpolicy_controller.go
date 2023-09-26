@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // Warning: this controller is deployed by a helm chart which has its own
@@ -78,7 +77,7 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1.ClusterAdmissionPolicy{}).
 		Watches(
-			&source.Kind{Type: &corev1.Pod{}},
+			&corev1.Pod{},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
 		).
 		// Despite this policy server watch is not strictly necessary, we
@@ -86,7 +85,7 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 		// policy server creations even when the controller-manager is not
 		// present (so no pods end up being created)
 		Watches(
-			&source.Kind{Type: &policiesv1.PolicyServer{}},
+			&policiesv1.PolicyServer{},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPolicyServer),
 		).
 		Complete(r)
@@ -109,7 +108,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForConfig
 	return policyMap.ToClusterAdmissionPolicyReconcileRequests()
 }
 
-func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(object client.Object) []reconcile.Request {
+func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
 	pod, ok := object.(*corev1.Pod)
 	if !ok {
 		return []reconcile.Request{}
@@ -120,7 +119,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ob
 	}
 	policyServerDeploymentName := naming.PolicyServerDeploymentNameForPolicyServerName(policyServerName)
 	configMap := corev1.ConfigMap{}
-	err := r.Reconciler.APIReader.Get(context.TODO(), client.ObjectKey{
+	err := r.Reconciler.APIReader.Get(ctx, client.ObjectKey{
 		Namespace: pod.ObjectMeta.Namespace,
 		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
 	}, &configMap)
@@ -130,14 +129,14 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ob
 	return r.findClusterAdmissionPoliciesForConfigMap(&configMap)
 }
 
-func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicyServer(object client.Object) []reconcile.Request {
+func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
 	policyServer, ok := object.(*policiesv1.PolicyServer)
 	if !ok {
 		return []reconcile.Request{}
 	}
 	policyServerDeploymentName := naming.PolicyServerDeploymentNameForPolicyServerName(policyServer.Name)
 	configMap := corev1.ConfigMap{}
-	err := r.Reconciler.APIReader.Get(context.TODO(), client.ObjectKey{
+	err := r.Reconciler.APIReader.Get(ctx, client.ObjectKey{
 		Namespace: r.Reconciler.DeploymentsNamespace,
 		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
 	}, &configMap)

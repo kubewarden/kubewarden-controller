@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -93,14 +94,14 @@ func (v *policyServerValidator) validate(ctx context.Context, obj runtime.Object
 	return nil
 }
 
-func (v *policyServerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return v.validate(ctx, obj)
+func (v *policyServerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, v.validate(ctx, obj)
 }
 
-func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, obj runtime.Object) error {
-	return v.validate(ctx, obj)
+func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, obj runtime.Object) (admission.Warnings, error) {
+	return nil, v.validate(ctx, obj)
 }
 
-func (v *policyServerValidator) ValidateDelete(_ context.Context, _ runtime.Object) error {
-	return nil
+func (v *policyServerValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }

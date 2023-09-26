@@ -27,10 +27,12 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/ereslibre/kube-webhook-wrapper/webhookwrapper"
+	"github.com/kubewarden/kube-webhook-wrapper/webhookwrapper"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -127,16 +129,21 @@ func main() {
 		}()
 	}
 
-	namespaceSelector := cache.ObjectSelector{
+	namespaceSelector := cache.ByObject{
 		Field: fields.ParseSelectorOrDie(fmt.Sprintf("metadata.namespace=%s", deploymentsNamespace)),
 	}
 
+	serverOptions := webhook.Options{
+		Host: environment.webhookHostListen,
+		Port: 9443,
+	}
 	mgr, err := webhookwrapper.NewManager(
 		ctrl.Options{
-			Scheme:                 scheme,
-			MetricsBindAddress:     metricsAddr,
-			Host:                   environment.webhookHostListen,
-			Port:                   9443,
+			Scheme: scheme,
+			Metrics: metricsserver.Options{
+				BindAddress: metricsAddr,
+			},
+			WebhookServer:          webhook.NewServer(serverOptions),
 			HealthProbeBindAddress: probeAddr,
 			LeaderElection:         enableLeaderElection,
 			LeaderElectionID:       "a4ddbf36.kubewarden.io",
@@ -163,20 +170,24 @@ func main() {
 			// On the other hand, AdmissionPolicy resources are namespaced, but the controller
 			// requires to access them across all the namespaces of the cluster; hence the
 			// cache must not be namespaced.
-			NewCache: cache.BuilderWithOptions(cache.Options{
-				SelectorsByObject: map[client.Object]cache.ObjectSelector{
+			Cache: cache.Options{
+				ByObject: map[client.Object]cache.ByObject{
 					&appsv1.ReplicaSet{}: namespaceSelector,
 					&corev1.Secret{}:     namespaceSelector,
 					&corev1.Pod{}:        namespaceSelector,
 					&corev1.Service{}:    namespaceSelector,
 				},
-			}),
+			},
 			// These types of resources should never be cached because we need fresh
 			// data coming from the cliet. This is required to perform the rollout
 			// of the PolicyServer Deployment whenever a policy is added/changed/removed.
 			// Because of that, there's not need to scope these resources inside
 			// of the cache, like we did for Pods, Services,... right above.
-			ClientDisableCacheFor: []client.Object{&corev1.ConfigMap{}, &appsv1.Deployment{}},
+			Client: client.Options{
+				Cache: &client.CacheOptions{
+					DisableFor: []client.Object{&corev1.ConfigMap{}, &appsv1.Deployment{}},
+				},
+			},
 		},
 		setupLog,
 		environment.developmentMode,
