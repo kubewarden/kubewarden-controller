@@ -14,8 +14,8 @@ lint:
 test: fmt lint
 	cargo test --workspace --bins
 
-.PHONY: e2e-test
-e2e-test:
+.PHONY: e2e-tests
+e2e-tests:
 	cargo test --test '*'
 
 .PHONY: clean
