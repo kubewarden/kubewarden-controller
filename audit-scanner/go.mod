@@ -5,11 +5,11 @@ go 1.21
 require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.1
-	github.com/kubewarden/kubewarden-controller v1.7.0
+	github.com/kubewarden/kubewarden-controller v1.7.1
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.7.0
-	k8s.io/api v0.28.1
-	k8s.io/apimachinery v0.28.1
+	k8s.io/api v0.28.2
+	k8s.io/apimachinery v0.28.2
 	k8s.io/client-go v0.28.1
 	sigs.k8s.io/controller-runtime v0.16.2
 	sigs.k8s.io/wg-policy-prototypes v0.0.0-20230505033312-51c21979086a
