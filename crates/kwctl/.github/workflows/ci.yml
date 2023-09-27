@@ -63,13 +63,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
-      - name: Setup BATS
-        uses: mig4/setup-bats@af9a00deb21b5d795cabfeaa8d9060410377686d # v1.2.0
-        with:
-          bats-version: 1.5.0
       - uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3.1.2
       - name: run e2e tests
-        run: make e2e-test
+        run: make e2e-tests
 
   fmt:
     name: Rustfmt
@@ -124,7 +120,7 @@ jobs:
       - name: Install kwctl
         run: cargo install --path .
       - name: Save policies
-        run: ./scripts/kubewarden-save-policies.sh --policies-list e2e-tests/airgap/policies.txt --policies policies.tar.gz
+        run: ./scripts/kubewarden-save-policies.sh --policies-list tests/data/airgap/policies.txt --policies policies.tar.gz
       - name: Remove policies from store
         run: |
           kwctl rm registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
@@ -133,15 +129,15 @@ jobs:
         run: |
           ./scripts/kubewarden-load-policies.sh \
               --policies policies.tar.gz \
-              --policies-list e2e-tests/airgap/policies.txt \
+              --policies-list tests/data/airgap/policies.txt \
               --registry localhost:5000 \
-              --sources-path e2e-tests/airgap/insecure.yml
+              --sources-path tests/data/airgap/insecure.yml
       - name: Verify policies in local registry
         run: |
           kwctl pull registry://localhost:5000/kubewarden/tests/pod-privileged:v0.1.9 \
-              --sources-path e2e-tests/airgap/insecure.yml
+              --sources-path tests/data/airgap/insecure.yml
           kwctl pull registry://localhost:5000/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm \
-              --sources-path e2e-tests/airgap/insecure.yml
+              --sources-path tests/data/airgap/insecure.yml
       - name: Clean up - delete registry
         if: always()
         run: |
