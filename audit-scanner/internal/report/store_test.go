@@ -68,10 +68,10 @@ func TestAddPolicyReportStore(t *testing.T) {
 	})
 
 	t.Run("Clusterwide Add then Get", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(customScheme).
+		client := fake.NewClientBuilder().WithScheme(customScheme).
 			WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).
 			Build()
-		store := report.MockNewPolicyReportStore(cl)
+		store := report.MockNewPolicyReportStore(client)
 		_ = store.SaveClusterPolicyReport(&cpr)
 		_, err := store.GetClusterPolicyReport(cpr.ObjectMeta.Name)
 		if err != nil {
@@ -92,9 +92,9 @@ func TestUpdatePolicyReportStore(t *testing.T) {
 
 	//nolint:dupl
 	t.Run("Update then Get namespaced PolicyReport", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(customScheme).
+		client := fake.NewClientBuilder().WithScheme(customScheme).
 			WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).Build()
-		store := report.MockNewPolicyReportStore(cl)
+		store := report.MockNewPolicyReportStore(client)
 
 		err := store.SavePolicyReport(&npr)
 		if err != nil {
@@ -124,10 +124,10 @@ func TestUpdatePolicyReportStore(t *testing.T) {
 
 	//nolint:dupl
 	t.Run("Clusterwide Update then Get", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(customScheme).
+		client := fake.NewClientBuilder().WithScheme(customScheme).
 			WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).
 			Build()
-		store := report.MockNewPolicyReportStore(cl)
+		store := report.MockNewPolicyReportStore(client)
 
 		err := store.SaveClusterPolicyReport(&cpr)
 		if err != nil {
@@ -167,9 +167,9 @@ func TestDeletePolicyReportStore(t *testing.T) {
 	)
 
 	t.Run("Delete then Get namespaced PolicyReport", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(customScheme).
+		client := fake.NewClientBuilder().WithScheme(customScheme).
 			WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).Build()
-		store := report.MockNewPolicyReportStore(cl)
+		store := report.MockNewPolicyReportStore(client)
 		_, err := store.GetPolicyReport(npr.GetNamespace())
 		if err != nil {
 			t.Errorf("Should be found in Store after adding report to the store")
@@ -183,9 +183,9 @@ func TestDeletePolicyReportStore(t *testing.T) {
 	})
 
 	t.Run("Remove all namespaced", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(customScheme).
+		client := fake.NewClientBuilder().WithScheme(customScheme).
 			WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).Build()
-		store := report.MockNewPolicyReportStore(cl)
+		store := report.MockNewPolicyReportStore(client)
 		_ = store.SavePolicyReport(&npr)
 
 		_ = store.RemoveAllNamespacedPolicyReports()
@@ -207,11 +207,8 @@ func TestSaveReports(t *testing.T) {
 	)
 
 	t.Run("Save ClusterPolicyReport (create)", func(t *testing.T) {
-		//nolint
-		// fake client has been undeprecated due to overwhemling feedback
-		// https://github.com/kubernetes-sigs/controller-runtime/pull/1101
-		cl := fake.NewFakeClientWithScheme(customScheme, &npr.PolicyReport, &cpr.ClusterPolicyReport)
-		store := report.MockNewPolicyReportStore(cl)
+		client := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).Build()
+		store := report.MockNewPolicyReportStore(client)
 		report := report.NewClusterPolicyReport("testing")
 		if err := store.SaveClusterPolicyReport(&report); err != nil {
 			// always updates ClusterPolicyReport, store initializes with blank
@@ -221,11 +218,8 @@ func TestSaveReports(t *testing.T) {
 	})
 
 	t.Run("Save PolicyReport (create)", func(t *testing.T) {
-		//nolint
-		// fake client has been undeprecated due to overwhemling feedback
-		// https://github.com/kubernetes-sigs/controller-runtime/pull/1101
-		cl := fake.NewFakeClientWithScheme(customScheme, &npr.PolicyReport, &cpr.ClusterPolicyReport)
-		store := report.MockNewPolicyReportStore(cl)
+		client := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).Build()
+		store := report.MockNewPolicyReportStore(client)
 		npr2 := report.PolicyReport{
 			v1alpha2.PolicyReport{
 				ObjectMeta: metav1.ObjectMeta{
@@ -242,7 +236,7 @@ func TestSaveReports(t *testing.T) {
 			t.Errorf("Should not return errors: %v", err)
 		}
 		getObj := &v1alpha2.PolicyReport{}
-		getErr := cl.Get(context.TODO(), types.NamespacedName{
+		getErr := client.Get(context.TODO(), types.NamespacedName{
 			Namespace: npr2.GetNamespace(),
 			Name:      npr2.GetName(),
 		}, getObj)
@@ -252,11 +246,8 @@ func TestSaveReports(t *testing.T) {
 	})
 
 	t.Run("Save PolicyReport (update)", func(t *testing.T) {
-		//nolint
-		// fake client has been undeprecated due to overwhemling feedback
-		// https://github.com/kubernetes-sigs/controller-runtime/pull/1101
-		cl := fake.NewFakeClientWithScheme(customScheme, &npr.PolicyReport, &cpr.ClusterPolicyReport)
-		store := report.MockNewPolicyReportStore(cl)
+		client := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(&npr.PolicyReport, &cpr.ClusterPolicyReport).Build()
+		store := report.MockNewPolicyReportStore(client)
 		// copy first resource version
 		upr := npr
 		// do some change
@@ -266,7 +257,7 @@ func TestSaveReports(t *testing.T) {
 			t.Fatalf("Should not return errors: %v", err)
 		}
 		getObj := &v1alpha2.PolicyReport{}
-		getErr := cl.Get(context.TODO(), types.NamespacedName{
+		getErr := client.Get(context.TODO(), types.NamespacedName{
 			Namespace: npr.GetNamespace(),
 			Name:      npr.GetName(),
 		}, getObj)
