@@ -1,4 +1,5 @@
 /*
+
 Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,13 +28,9 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/kubewarden/kube-webhook-wrapper/webhookwrapper"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -43,11 +40,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	controllers "github.com/kubewarden/kubewarden-controller/controllers"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/webhookwrapper"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1alpha2"
 	//+kubebuilder:scaffold:imports
@@ -66,7 +66,7 @@ func init() {
 }
 
 func main() {
-	retcode := 0
+	retcode := constants.ControllerReturnCodeSuccess
 	defer func() { os.Exit(retcode) }()
 
 	var metricsAddr string
@@ -110,7 +110,7 @@ func main() {
 		shutdown, err := metrics.New(openTelemetryEndpoint)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize metrics provider")
-			retcode = 1
+			retcode = constants.ControllerReturnCodeError
 			return
 		}
 		setupLog.Info("Metrics initialized")
@@ -123,7 +123,7 @@ func main() {
 
 			if err := shutdown(ctx); err != nil {
 				setupLog.Error(err, "Unable to shutdown telemetry")
-				retcode = 1
+				retcode = constants.ControllerReturnCodeError
 				return
 			}
 		}()
@@ -137,7 +137,7 @@ func main() {
 		Host: environment.webhookHostListen,
 		Port: 9443,
 	}
-	mgr, err := webhookwrapper.NewManager(
+	mgr := webhookwrapper.NewManager(
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: metricsserver.Options{
@@ -159,7 +159,7 @@ func main() {
 			// this privilege.
 			// For example, when we access a secret inside the `kubewarden`
 			// namespace, the cache will create a Watch against Secrets, that will require
-			// privileged to acccess ALL the secrets of the cluster.
+			// privileged to access ALL the secrets of the cluster.
 			//
 			// To be able to have stricter RBAC rules, we need to instruct the cache to
 			// only watch objects inside of the namespace where the controller is running.
@@ -179,7 +179,7 @@ func main() {
 				},
 			},
 			// These types of resources should never be cached because we need fresh
-			// data coming from the cliet. This is required to perform the rollout
+			// data coming from the client. This is required to perform the rollout
 			// of the PolicyServer Deployment whenever a policy is added/changed/removed.
 			// Because of that, there's not need to scope these resources inside
 			// of the cache, like we did for Pods, Services,... right above.
@@ -194,11 +194,6 @@ func main() {
 		environment.webhookHostAdvertise,
 		webhooks(deploymentsNamespace),
 	)
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		retcode = 1
-		return
-	}
 
 	reconciler := admission.Reconciler{
 		Client:               mgr.GetClient(),
@@ -209,36 +204,36 @@ func main() {
 		MetricsEnabled: enableMetrics,
 	}
 
-	if err = (&controllers.PolicyServerReconciler{
+	if err := (&controllers.PolicyServerReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		Log:        ctrl.Log.WithName("policy-server-reconciler"),
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
-		retcode = 1
+		retcode = constants.ControllerReturnCodeError
 		return
 	}
 
-	if err = (&controllers.AdmissionPolicyReconciler{
+	if err := (&controllers.AdmissionPolicyReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		Log:        ctrl.Log.WithName("admission-policy-reconciler"),
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
-		retcode = 1
+		retcode = constants.ControllerReturnCodeError
 		return
 	}
 
-	if err = (&controllers.ClusterAdmissionPolicyReconciler{
+	if err := (&controllers.ClusterAdmissionPolicyReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		Log:        ctrl.Log.WithName("cluster-admission-policy-reconciler"),
 		Reconciler: reconciler,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
-		retcode = 1
+		retcode = constants.ControllerReturnCodeError
 		return
 	}
 
@@ -246,19 +241,18 @@ func main() {
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
-		retcode = 1
 		return
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
-		retcode = 1
+		retcode = constants.ControllerReturnCodeError
 		return
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		retcode = 1
+		retcode = constants.ControllerReturnCodeError
 		return
 	}
 }

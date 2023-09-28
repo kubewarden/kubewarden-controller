@@ -4,10 +4,6 @@ import (
 	"errors"
 )
 
-type policyServerNotReady interface {
-	PolicyServerNotReady() bool
-}
-
 // PolicyServerNotReadyError error is raised when the PolicyServer
 // deployment is not yet ready
 type PolicyServerNotReadyError struct {

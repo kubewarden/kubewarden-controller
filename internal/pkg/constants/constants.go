@@ -51,4 +51,8 @@ const (
 
 	// OPTEL
 	OptelInjectAnnotation = "sidecar.opentelemetry.io/inject"
+
+	ControllerReturnCodeSuccess       = 0
+	ControllerReturnCodeError         = 1
+	ControllerReturnCodeCAInitialized = 2
 )

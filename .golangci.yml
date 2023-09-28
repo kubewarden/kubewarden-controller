@@ -1,8 +1,7 @@
 # This file contains all available configuration options
 # with their default values.
 
-# options for analysis running
-run:
+# options for analysis running run:
   tests: true
   timeout: 10m
 
@@ -60,6 +59,14 @@ linters:
     - ifshort # deprecated
 
 linters-settings:
+  ireturn:
+    allow:
+      - anon # anonymous interfaces 
+      - error # errors
+      - empty # interfaces{}
+      - stdlib # standard library
+      - sigs.k8s.io/controller-runtime/pkg/manager.Manager # controller manager interface
+
   cyclop:
     max-complexity: 13
   nestif:
