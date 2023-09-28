@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -155,7 +154,7 @@ func (r *Reconciler) Reconcile(
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
 ) error {
-	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
@@ -179,7 +178,7 @@ func (r *Reconciler) Reconcile(
 		string(policiesv1.PolicyServerCARootSecretReconciled),
 	)
 
-	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
+	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret)
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,

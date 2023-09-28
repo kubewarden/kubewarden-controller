@@ -1,4 +1,5 @@
 /*
+
 Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,8 +31,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -41,9 +40,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	controllers "github.com/kubewarden/kubewarden-controller/controllers"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/certificates"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/metrics"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -75,6 +76,7 @@ func main() {
 	var enableMetrics bool
 	var enableTracing bool
 	var openTelemetryEndpoint string
+	var controllerWebhookServiceName string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -97,9 +99,22 @@ func main() {
 		"always-accept-admission-reviews-on-deployments-namespace",
 		false,
 		"Always accept admission reviews targeting the deployments-namespace.")
+	// the following cli flag is required because the service name is defined
+	// in the helm chart templates.
+	flag.StringVar(&controllerWebhookServiceName,
+		"webhook-server-service",
+		"kubewarden-controller-webhook-service",
+		"The service name of the controller webhook server service")
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	controllerContext := ctrl.SetupSignalHandler()
+	if err := setupCA(controllerContext, deploymentsNamespace, controllerWebhookServiceName); err != nil {
+		setupLog.Error(err, "failed to setup required certificates")
+		retcode = 1
+		return
+	}
 
 	if enableMetrics {
 		shutdown, err := metrics.New(openTelemetryEndpoint)
@@ -148,7 +163,7 @@ func main() {
 		// this privilege.
 		// For example, when we access a secret inside the `kubewarden`
 		// namespace, the cache will create a Watch against Secrets, that will require
-		// privileged to acccess ALL the secrets of the cluster.
+		// privileged to access ALL the secrets of the cluster.
 		//
 		// To be able to have stricter RBAC rules, we need to instruct the cache to
 		// only watch objects inside of the namespace where the controller is running.
@@ -168,7 +183,7 @@ func main() {
 			},
 		},
 		// These types of resources should never be cached because we need fresh
-		// data coming from the cliet. This is required to perform the rollout
+		// data coming from the client. This is required to perform the rollout
 		// of the PolicyServer Deployment whenever a policy is added/changed/removed.
 		// Because of that, there's not need to scope these resources inside
 		// of the cache, like we did for Pods, Services,... right above.
@@ -184,45 +199,7 @@ func main() {
 		return
 	}
 
-	reconciler := admission.Reconciler{
-		Client:               mgr.GetClient(),
-		APIReader:            mgr.GetAPIReader(),
-		Log:                  ctrl.Log.WithName("reconciler"),
-		DeploymentsNamespace: deploymentsNamespace,
-		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
-		MetricsEnabled: enableMetrics,
-		TracingEnabled: enableTracing,
-	}
-
-	if err = (&controllers.PolicyServerReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		Log:        ctrl.Log.WithName("policy-server-reconciler"),
-		Reconciler: reconciler,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
-		retcode = 1
-		return
-	}
-
-	if err = (&controllers.AdmissionPolicyReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		Log:        ctrl.Log.WithName("admission-policy-reconciler"),
-		Reconciler: reconciler,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
-		retcode = 1
-		return
-	}
-
-	if err = (&controllers.ClusterAdmissionPolicyReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		Log:        ctrl.Log.WithName("cluster-admission-policy-reconciler"),
-		Reconciler: reconciler,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
+	if err := setupReconcilers(mgr, deploymentsNamespace, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace); err != nil {
 		retcode = 1
 		return
 	}
@@ -236,7 +213,6 @@ func main() {
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
-		retcode = 1
 		return
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
@@ -246,11 +222,54 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(controllerContext); err != nil {
 		setupLog.Error(err, "problem running manager")
 		retcode = 1
 		return
 	}
+}
+
+func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool) error {
+	reconciler := admission.Reconciler{
+		Client:               mgr.GetClient(),
+		APIReader:            mgr.GetAPIReader(),
+		Log:                  ctrl.Log.WithName("reconciler"),
+		DeploymentsNamespace: deploymentsNamespace,
+		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
+		MetricsEnabled: enableMetrics,
+		TracingEnabled: enableTracing,
+	}
+
+	if err := (&controllers.PolicyServerReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Log:        ctrl.Log.WithName("policy-server-reconciler"),
+		Reconciler: reconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
+		return errors.Join(errors.New("unable to create PolicyServer controller"), err)
+	}
+
+	if err := (&controllers.AdmissionPolicyReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Log:        ctrl.Log.WithName("admission-policy-reconciler"),
+		Reconciler: reconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
+		return errors.Join(errors.New("unable to create AdmissionPolicy policy server controller"), err)
+	}
+
+	if err := (&controllers.ClusterAdmissionPolicyReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		Log:        ctrl.Log.WithName("cluster-admission-policy-reconciler"),
+		Reconciler: reconciler,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
+		return errors.Join(errors.New("unable to create ClusterAdmissionPolicy policy server controller"), err)
+	}
+	return nil
 }
 
 func setupWebhooks(mgr ctrl.Manager, deploymentsNamespace string) error {
@@ -262,6 +281,17 @@ func setupWebhooks(mgr ctrl.Manager, deploymentsNamespace string) error {
 	}
 	if err := (&policiesv1.AdmissionPolicy{}).SetupWebhookWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create webhook for admission policies"), err)
+	}
+	return nil
+}
+
+func setupCA(ctx context.Context, deploymentsNamespace string, controllerWebhookServiceName string) error {
+	k8sClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{})
+	if err != nil {
+		return errors.Join(fmt.Errorf("cannot create kubernetes client"), err)
+	}
+	if err := certificates.SetupCA(ctx, k8sClient, deploymentsNamespace, controllerWebhookServiceName); err != nil {
+		return errors.Join(fmt.Errorf("failed to setup CA"), err)
 	}
 	return nil
 }

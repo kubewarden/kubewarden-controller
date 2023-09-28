@@ -1,4 +1,4 @@
-package admissionregistration
+package certificates
 
 import (
 	"bytes"

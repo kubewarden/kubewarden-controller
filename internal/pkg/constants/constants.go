@@ -6,6 +6,8 @@ package constants
 var DefaultPolicyServer string
 
 const (
+	RootCASecretName          = "kubewarden-root-ca"
+	ControllerCertsSecretName = "webhook-server-cert" //nolint:gosec
 	// PolicyServer CA Secret
 	PolicyServerTLSCert                  = "policy-server-cert"
 	PolicyServerTLSKey                   = "policy-server-key"
@@ -54,4 +56,7 @@ const (
 	WebhookConfigurationPolicyScopeLabelKey          = "kubewardenPolicyScope"
 	WebhookConfigurationPolicyNameAnnotationKey      = "kubewardenPolicyName"
 	WebhookConfigurationPolicyNamespaceAnnotationKey = "kubewardenPolicyNamespace"
+
+	ControllerValidatingWebhookName = "kubewarden-controller-validating-webhook-configuration"
+	ControllerMutatingWebhookName   = "kubewarden-controller-mutating-webhook-configuration"
 )
