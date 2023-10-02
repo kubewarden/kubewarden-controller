@@ -2,12 +2,6 @@
 # that collects traces via the otlp protocol, and then sends them via
 # batches to a central jaeger collector
 #
-# A simple otel-collector instance can be started in this way:
-#
-#   docker run --rm -p 4317:4317 \
-#     -v `pwd`/otel-collector-minimal-config.yaml:/etc/otel/config.yaml:ro \
-#     otel/opentelemetry-collector-dev:latest
-#
 
 receivers:
   otlp:
@@ -18,8 +12,8 @@ processors:
   batch:
 
 exporters:
-  jaeger:
-    endpoint: "jaeger:14250"
+  otlp/jaeger:
+    endpoint: "jaeger:4317"
     tls:
       insecure: true
   prometheus:
@@ -34,4 +28,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [jaeger]
+      exporters: [otlp/jaeger]
