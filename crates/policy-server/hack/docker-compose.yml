@@ -4,9 +4,9 @@ services:
     image: jaegertracing/all-in-one:latest
     ports:
       - "16686:16686"
-      - "14250:14250"
+      - "4318:4317"
   otel-collector:
-    image: otel/opentelemetry-collector:0.84.0
+    image: otel/opentelemetry-collector:0.85.0
     volumes:
       - ./otel-collector-minimal-config.yml:/etc/otel-collector-config.yml
     ports:
