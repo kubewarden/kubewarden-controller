@@ -21,7 +21,7 @@ fn test_verify_tuf_integration() {
     cmd.arg("verify")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config-keyless.yml"))
-        .arg("registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9");
 
     cmd.assert().success();
 
@@ -108,7 +108,7 @@ fn test_verify_missing_signatures() {
         .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
-        .arg("registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9");
 
     cmd.assert().failure();
     cmd.assert()
@@ -130,7 +130,7 @@ fn test_verify_keyless() {
         .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
-        .arg("registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9");
 
     cmd.assert().failure();
     cmd.assert()
@@ -165,7 +165,7 @@ fn test_verify_scaffolded_verification_config() {
         .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(&verification_config_path)
-        .arg("registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9");
 
     cmd.assert().success();
 }
@@ -315,7 +315,7 @@ fn test_run_signed_policy(
     contains("Policy successfully verified")
 )]
 #[case::missing_signatures(
-    "registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9",
+    "registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9",
     false,
     contains("Image verification failed: missing signatures")
 )]
