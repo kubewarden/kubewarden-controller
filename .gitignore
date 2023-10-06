@@ -26,6 +26,6 @@ testbin/*
 
 # Manually generated crds. Directory is needed though
 generated-crds/*
-
 # Tilt settings
 tilt-settings.yaml
+vendor/
