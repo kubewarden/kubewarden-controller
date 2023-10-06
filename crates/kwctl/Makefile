@@ -12,11 +12,11 @@ lint:
 
 .PHONY: test
 test: fmt lint
-	cargo test --workspace
+	cargo test --workspace --bins
 
-.PHONY: e2e-test
-e2e-test:
-	sh -c 'cd e2e-tests; bats --print-output-on-failure .'
+.PHONY: e2e-tests
+e2e-tests:
+	cargo test --test '*'
 
 .PHONY: clean
 clean:
