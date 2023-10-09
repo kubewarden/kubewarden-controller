@@ -437,7 +437,7 @@ func TestDefaultContainerSecurityContext(t *testing.T) {
 	}
 }
 
-func TestMetricAndLogFmtEnvVarsDetection(t *testing.T) {
+func TestMetricsEnvVarDetection(t *testing.T) {
 	for _, envVarName := range []string{constants.PolicyServerEnableMetricsEnvVar} {
 		env := []corev1.EnvVar{{Name: "env1"}, {Name: "env2"}, {Name: envVarName}, {Name: "env3"}}
 		envIndex := envVarsContainVariable(env, envVarName)
