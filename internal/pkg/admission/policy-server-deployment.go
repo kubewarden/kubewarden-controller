@@ -332,12 +332,6 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		} else {
 			admissionContainer.Env = append(admissionContainer.Env, envvar)
 		}
-		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
-		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
-			admissionContainer.Env[index] = logFmtEnvVar
-		} else {
-			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
-		}
 	}
 
 	policyServerDeployment := &appsv1.Deployment{
