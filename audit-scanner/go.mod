@@ -3,7 +3,7 @@ module github.com/kubewarden/audit-scanner
 go 1.21
 
 require (
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.3.1
 	github.com/kubewarden/kubewarden-controller v1.7.1
 	github.com/rs/zerolog v1.31.0
