@@ -11,14 +11,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const policyServerName = "testing"
-const policyServerContainerName = "policy-server-testing"
-const invalidPolicyServerName = "invalid"
-const dropCapabilityAll = "all"
+const (
+	policyServerName          = "testing"
+	policyServerContainerName = "policy-server-testing"
+	invalidPolicyServerName   = "invalid"
+	dropCapabilityAll         = "all"
+)
 
 func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{})
-	var tests = []struct {
+	tests := []struct {
 		name     string
 		original *appsv1.Deployment
 		new      *appsv1.Deployment
@@ -57,7 +59,8 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 
 func createDeployment(replicasInt int, serviceAccount, imagePullSecret, image string,
 	insecureSources []string,
-	env []corev1.EnvVar, annotations map[string]string) *appsv1.Deployment {
+	env []corev1.EnvVar, annotations map[string]string,
+) *appsv1.Deployment {
 	replicas := int32(replicasInt)
 	const (
 		imagePullSecretVolumeName        = "imagepullsecret"
@@ -450,7 +453,7 @@ func TestMetricAndLogFmtEnvVarsDetection(t *testing.T) {
 	}
 }
 
-func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *testing.T) {
+func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *testing.T) { //nolint:dupl
 	reconciler := Reconciler{
 		Client:               nil,
 		DeploymentsNamespace: "kubewarden",
@@ -464,7 +467,6 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 	}
 	deployment := reconciler.deployment("v1", policyServer)
 	hasMetricEnvvar := false
-	hasLogFmtEnvvar := false
 	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
 		if envvar.Name == constants.PolicyServerEnableMetricsEnvVar {
 			hasMetricEnvvar = true
@@ -472,15 +474,41 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 				t.Error("Present but not reconciled {} value", constants.PolicyServerEnableMetricsEnvVar)
 			}
 		}
+	}
+	if !hasMetricEnvvar {
+		t.Error("Missing {} environment variable", constants.PolicyServerEnableMetricsEnvVar)
+	}
+
+	value, hasAnnotation := deployment.Spec.Template.Annotations["sidecar.opentelemetry.io/inject"]
+	if !hasAnnotation {
+		t.Error("Missing OTEL annotation")
+	}
+	if value != "true" {
+		t.Error("OTEL annotation invalid value")
+	}
+}
+
+func TestPolicyServerDeploymentTracingConfigurationWithValueDefinedByUser(t *testing.T) { //nolint:dupl
+	reconciler := Reconciler{
+		Client:               nil,
+		DeploymentsNamespace: "kubewarden",
+		TracingEnabled:       true,
+	}
+	policyServer := &policiesv1.PolicyServer{
+		Spec: policiesv1.PolicyServerSpec{
+			Image: "image",
+			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "0"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
+		},
+	}
+	deployment := reconciler.deployment("v1", policyServer)
+	hasLogFmtEnvvar := false
+	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
 		if envvar.Name == constants.PolicyServerLogFmtEnvVar {
 			hasLogFmtEnvvar = true
 			if envvar.Value != "otlp" {
 				t.Error("Present but not reconciled {} value", constants.PolicyServerLogFmtEnvVar)
 			}
 		}
-	}
-	if !hasMetricEnvvar {
-		t.Error("Missing {} environment variable", constants.PolicyServerEnableMetricsEnvVar)
 	}
 	if !hasLogFmtEnvvar {
 		t.Error("Missing {} environment variable", constants.PolicyServerLogFmtEnvVar)

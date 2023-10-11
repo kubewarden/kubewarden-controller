@@ -25,6 +25,7 @@ type Reconciler struct {
 	AlwaysAcceptAdmissionReviewsInDeploymentsNamespace bool
 	Log                                                logr.Logger
 	MetricsEnabled                                     bool
+	TracingEnabled                                     bool
 }
 
 type reconcilerErrors []error
