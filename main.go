@@ -75,6 +75,7 @@ func main() {
 	var alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool
 	var probeAddr string
 	var enableMetrics bool
+	var enableTracing bool
 	var openTelemetryEndpoint string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -82,7 +83,9 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&enableMetrics, "enable-metrics", false,
-		"Enable metrics collection about policy server and cluster admission policies")
+		"Enable metrics collection for PolicyServers and ClusterAdmissionPolicies")
+	flag.BoolVar(&enableTracing, "enable-tracing", false,
+		"Enable tracing collection for PolicyServerReconciler and ClusterAdmissionPolicies")
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
 	flag.StringVar(&constants.DefaultPolicyServer, "default-policy-server", "", "The default policy server to set on policies before they are persisted")
 	opts := zap.Options{
@@ -207,6 +210,7 @@ func main() {
 		DeploymentsNamespace: deploymentsNamespace,
 		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
 		MetricsEnabled: enableMetrics,
+		TracingEnabled: enableTracing,
 	}
 
 	if err = (&controllers.PolicyServerReconciler{
