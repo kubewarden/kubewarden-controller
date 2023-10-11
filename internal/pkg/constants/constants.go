@@ -1,9 +1,11 @@
 package constants
 
-// DefaultPolicyServer is set to a non empty value if policies that
-// are missing a policy server should be defaulted to this one
-// before being persisted.
-var DefaultPolicyServer string
+var (
+	// DefaultPolicyServer is set to a non empty value if policies that
+	// are missing a policy server should be defaulted to this one
+	// before being persisted.
+	DefaultPolicyServer string
+)
 
 const (
 	// PolicyServer CA Secret
@@ -22,6 +24,7 @@ const (
 	PolicyServerMetricsPortEnvVar                   = "KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT"
 	PolicyServerMetricsPort                         = 8080
 	PolicyServerReadinessProbe                      = "/readiness"
+	PolicyServerLogFmtEnvVar                        = "KUBEWARDEN_LOG_FMT"
 
 	// PolicyServer ConfigMap
 	PolicyServerConfigPoliciesEntry         = "policies.yml"
