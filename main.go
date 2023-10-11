@@ -85,7 +85,7 @@ func main() {
 	flag.BoolVar(&enableMetrics, "enable-metrics", false,
 		"Enable metrics collection for all Policy Servers and the Kubewarden Controller")
 	flag.BoolVar(&enableTracing, "enable-tracing", false,
-		"Enable tracing collection for PolicyServerReconciler and ClusterAdmissionPolicies")
+		"Enable tracing collection for all Policy Servers")
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
 	flag.StringVar(&constants.DefaultPolicyServer, "default-policy-server", "", "The default policy server to set on policies before they are persisted")
 	opts := zap.Options{
