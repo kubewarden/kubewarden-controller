@@ -11,16 +11,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	policyServerName          = "testing"
-	policyServerContainerName = "policy-server-testing"
-	invalidPolicyServerName   = "invalid"
-	dropCapabilityAll         = "all"
-)
+const policyServerName = "testing"
+const policyServerContainerName = "policy-server-testing"
+const invalidPolicyServerName = "invalid"
+const dropCapabilityAll = "all"
 
 func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{})
-	tests := []struct {
+	var tests = []struct {
 		name     string
 		original *appsv1.Deployment
 		new      *appsv1.Deployment
@@ -59,8 +57,7 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 
 func createDeployment(replicasInt int, serviceAccount, imagePullSecret, image string,
 	insecureSources []string,
-	env []corev1.EnvVar, annotations map[string]string,
-) *appsv1.Deployment {
+	env []corev1.EnvVar, annotations map[string]string) *appsv1.Deployment {
 	replicas := int32(replicasInt)
 	const (
 		imagePullSecretVolumeName        = "imagepullsecret"
@@ -437,8 +434,8 @@ func TestDefaultContainerSecurityContext(t *testing.T) {
 	}
 }
 
-func TestMetricsEnvVarDetection(t *testing.T) {
-	for _, envVarName := range []string{constants.PolicyServerEnableMetricsEnvVar} {
+func TestMetricAndLogFmtEnvVarsDetection(t *testing.T) {
+	for _, envVarName := range []string{constants.PolicyServerEnableMetricsEnvVar, constants.PolicyServerLogFmtEnvVar} {
 		env := []corev1.EnvVar{{Name: "env1"}, {Name: "env2"}, {Name: envVarName}, {Name: "env3"}}
 		envIndex := envVarsContainVariable(env, envVarName)
 		if envIndex != 2 {
@@ -462,11 +459,12 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 	policyServer := &policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
 			Image: "image",
-			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "0"}},
+			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "0"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
 		},
 	}
 	deployment := reconciler.deployment("v1", policyServer)
 	hasMetricEnvvar := false
+	hasLogFmtEnvvar := false
 	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
 		if envvar.Name == constants.PolicyServerEnableMetricsEnvVar {
 			hasMetricEnvvar = true
@@ -474,9 +472,18 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 				t.Error("Present but not reconciled {} value", constants.PolicyServerEnableMetricsEnvVar)
 			}
 		}
+		if envvar.Name == constants.PolicyServerLogFmtEnvVar {
+			hasLogFmtEnvvar = true
+			if envvar.Value != "otlp" {
+				t.Error("Present but not reconciled {} value", constants.PolicyServerLogFmtEnvVar)
+			}
+		}
 	}
 	if !hasMetricEnvvar {
 		t.Error("Missing {} environment variable", constants.PolicyServerEnableMetricsEnvVar)
+	}
+	if !hasLogFmtEnvvar {
+		t.Error("Missing {} environment variable", constants.PolicyServerLogFmtEnvVar)
 	}
 
 	value, hasAnnotation := deployment.Spec.Template.Annotations["sidecar.opentelemetry.io/inject"]
@@ -502,13 +509,20 @@ func TestPolicyServerDeploymentMetricConfigurationWithNoValueDefinedByUSer(t *te
 	}
 	deployment := reconciler.deployment("v1", policyServer)
 	hasMetricEnvvar := false
+	hasLogFmtEnvvar := false
 	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
 		if envvar.Name == constants.PolicyServerEnableMetricsEnvVar {
 			hasMetricEnvvar = true
 		}
+		if envvar.Name == constants.PolicyServerLogFmtEnvVar {
+			hasLogFmtEnvvar = true
+		}
 	}
 	if hasMetricEnvvar {
 		t.Error("{} should not be set", constants.PolicyServerEnableMetricsEnvVar)
+	}
+	if hasLogFmtEnvvar {
+		t.Error("{} should not be set", constants.PolicyServerLogFmtEnvVar)
 	}
 
 	_, hasAnnotation := deployment.Spec.Template.Annotations["sidecar.opentelemetry.io/inject"]
