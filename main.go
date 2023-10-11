@@ -83,7 +83,7 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.BoolVar(&enableMetrics, "enable-metrics", false,
-		"Enable metrics collection for PolicyServers and ClusterAdmissionPolicies")
+		"Enable metrics collection for all Policy Servers and the Kubewarden Controller")
 	flag.BoolVar(&enableTracing, "enable-tracing", false,
 		"Enable tracing collection for PolicyServerReconciler and ClusterAdmissionPolicies")
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
