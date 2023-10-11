@@ -86,17 +86,20 @@ type PolicySpec struct {
 
 	// matchPolicy defines how the "rules" list is used to match incoming requests.
 	// Allowed values are "Exact" or "Equivalent".
-	//
-	// - Exact: match a request only if it exactly matches a specified rule.
+	// <ul>
+	// <li>
+	// Exact: match a request only if it exactly matches a specified rule.
 	// For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,
 	// but "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`,
 	// a request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook.
-	//
-	// - Equivalent: match a request if modifies a resource listed in rules, even via another API group or version.
+	// </li>
+	// <li>
+	// Equivalent: match a request if modifies a resource listed in rules, even via another API group or version.
 	// For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,
 	// and "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`,
 	// a request to apps/v1beta1 or extensions/v1beta1 would be converted to apps/v1 and sent to the webhook.
-	//
+	// </li>
+	// </ul>
 	// Defaults to "Equivalent"
 	// +optional
 	MatchPolicy *admissionregistrationv1.MatchPolicyType `json:"matchPolicy,omitempty"`
