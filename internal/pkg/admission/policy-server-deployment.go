@@ -323,8 +323,9 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	if templateAnnotations == nil {
 		templateAnnotations = make(map[string]string)
 	}
+
 	if r.MetricsEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
+		templateAnnotations[constants.OptelInjectAnnotation] = "true" //nolint:goconst
 
 		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "1"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
@@ -332,6 +333,11 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 		} else {
 			admissionContainer.Env = append(admissionContainer.Env, envvar)
 		}
+	}
+
+	if r.TracingEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
+
 		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
 			admissionContainer.Env[index] = logFmtEnvVar

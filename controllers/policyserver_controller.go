@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // PolicyServerReconciler reconciles a PolicyServer object
@@ -153,7 +152,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1.PolicyServer{}).
-		Watches(&source.Kind{Type: &policiesv1.AdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+		Watches(&policiesv1.AdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			// The watch will trigger twice per object change; once with the old
 			// object, and once the new object. We need to be mindful when doing
 			// Updates since they will invalidate the newever versions of the
@@ -172,7 +171,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				},
 			}
 		})).
-		Watches(&source.Kind{Type: &policiesv1.ClusterAdmissionPolicy{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+		Watches(&policiesv1.ClusterAdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			// The watch will trigger twice per object change; once with the old
 			// object, and once the new object. We need to be mindful when doing
 			// Updates since they will invalidate the newever versions of the
