@@ -76,7 +76,7 @@ type PolicySpec struct {
 
 	// matchPolicy defines how the "rules" list is used to match incoming requests.
 	// Allowed values are "Exact" or "Equivalent".
-	//<ul>
+	// <ul>
 	// <li>
 	// Exact: match a request only if it exactly matches a specified rule.
 	// For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,
