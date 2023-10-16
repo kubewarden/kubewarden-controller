@@ -34,13 +34,13 @@ picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "x509",
 ] }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.8.1" }
-semver = { version = "1.0.19", features = ["serde"] }
+semver = { version = "1.0.20", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
 thiserror = "1.0"
-time = { version = "0.3.29", features = ["serde-human-readable"] }
+time = { version = "0.3.30", features = ["serde-human-readable"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
 tracing-futures = "0.2"
