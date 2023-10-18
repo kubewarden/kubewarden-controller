@@ -8,7 +8,7 @@ use std::{convert::TryFrom, fmt};
 use crate::admission_request::AdmissionRequest;
 use crate::admission_response::AdmissionResponse;
 use crate::policy::Policy;
-use crate::runtimes::burrego::Runtime as BurregoRuntime;
+use crate::runtimes::rego::Runtime as BurregoRuntime;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
 use crate::runtimes::wasi_cli::Runtime as WasiRuntime;
 use crate::runtimes::Runtime;

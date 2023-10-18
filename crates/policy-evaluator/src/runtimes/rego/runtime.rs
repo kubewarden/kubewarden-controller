@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use burrego::host_callbacks::HostCallbacks;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use serde::Deserialize;
 use serde_json::json;
@@ -16,19 +15,6 @@ pub(crate) struct BurregoStack {
 }
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut BurregoStack);
-
-#[tracing::instrument(level = "error")]
-fn opa_abort(msg: &str) {}
-
-#[tracing::instrument(level = "info")]
-fn opa_println(msg: &str) {}
-
-pub(crate) fn new_host_callbacks() -> HostCallbacks {
-    HostCallbacks {
-        opa_abort,
-        opa_println,
-    }
-}
 
 impl<'a> Runtime<'a> {
     pub fn validate(
