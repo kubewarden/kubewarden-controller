@@ -119,11 +119,20 @@ impl<'a> Runtime<'a> {
                     )
                 }
                 match serde_json::from_slice::<PolicyValidationResponse>(stdout.as_bytes()) {
-                    Ok(pvr) => AdmissionResponse::from_policy_validation_response(
-                        request.uid().to_string(),
-                        request.0.get("object"),
-                        &pvr,
-                    )
+                    Ok(pvr) => {
+                        let req_json_value = serde_json::to_value(request)
+                            .expect("cannot convert request to json value");
+                        let req_obj = match request {
+                            ValidateRequest::Raw(_) => Some(&req_json_value),
+                            ValidateRequest::AdmissionRequest(_) => req_json_value.get("object"),
+                        };
+
+                        AdmissionResponse::from_policy_validation_response(
+                            request.uid().to_string(),
+                            req_obj,
+                            &pvr,
+                        )
+                    }
                     .unwrap_or_else(|e| {
                         AdmissionResponse::reject_internal_server_error(
                             request.uid().to_string(),
