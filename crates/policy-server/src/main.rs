@@ -15,6 +15,7 @@ mod admission_review;
 mod api;
 mod cli;
 mod metrics;
+mod raw_review;
 mod server;
 mod settings;
 mod worker;
