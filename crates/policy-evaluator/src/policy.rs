@@ -13,7 +13,7 @@ use crate::policy_metadata::ContextAwareResource;
 /// This struct is used extensively inside of the `host_callback`
 /// function to obtain information about the policy that is invoking
 /// a host waPC function, and handle the request.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Policy {
     /// The policy identifier. This is mostly relevant for Policy Server,
     /// which uses the identifier provided by the user inside of the `policy.yml`
@@ -53,18 +53,6 @@ impl fmt::Debug for Policy {
 impl PartialEq for Policy {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id && self.instance_id == other.instance_id
-    }
-}
-
-#[cfg(test)]
-impl Default for Policy {
-    fn default() -> Self {
-        Policy {
-            id: String::default(),
-            instance_id: None,
-            callback_channel: None,
-            ctx_aware_resources_allow_list: HashSet::new(),
-        }
     }
 }
 
@@ -167,18 +155,18 @@ mod tests {
         let id = "test".to_string();
         let policy_id = Some(1);
         let callback_channel = None;
-        let ctx_aware_resources_allow_list = Some(HashSet::new());
+        let ctx_aware_resources_allow_list = HashSet::new();
 
         let policy = Policy::new(
             id.clone(),
-            policy_id.clone(),
+            policy_id,
             callback_channel.clone(),
-            ctx_aware_resources_allow_list.clone(),
+            Some(ctx_aware_resources_allow_list.clone()),
         )
         .expect("cannot create policy");
 
         assert!(policy.id == id);
         assert!(policy.instance_id == policy_id);
-        assert!(policy.ctx_aware_resources_allow_list == ctx_aware_resources_allow_list.unwrap());
+        assert!(policy.ctx_aware_resources_allow_list == ctx_aware_resources_allow_list);
     }
 }

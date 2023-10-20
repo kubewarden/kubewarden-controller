@@ -199,7 +199,7 @@ mod tests {
 
         for (mode_str, expected) in &test_data {
             let actual: std::result::Result<PolicyExecutionMode, serde_json::Error> =
-                serde_json::from_str(&mode_str);
+                serde_json::from_str(mode_str);
             assert_eq!(expected, &actual.unwrap());
         }
 

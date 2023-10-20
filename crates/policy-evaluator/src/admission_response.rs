@@ -147,7 +147,7 @@ mod tests {
 
         let response = AdmissionResponse::reject(uid.clone(), message.clone(), code);
         assert_eq!(response.uid, uid);
-        assert_eq!(response.allowed, false);
+        assert!(!response.allowed);
         assert_eq!(response.patch, None);
         assert_eq!(response.patch_type, None);
 
@@ -187,7 +187,7 @@ mod tests {
         let response = response.unwrap();
 
         assert_eq!(response.uid, uid);
-        assert_eq!(response.allowed, false);
+        assert!(!response.allowed);
         assert_eq!(response.patch, None);
         assert_eq!(response.patch_type, None);
         assert_eq!(response.audit_annotations, Some(audit_annotations));

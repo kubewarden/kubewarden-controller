@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn metadata_with_rego_execution_mode_must_have_a_valid_protocol() {
-        for mode in vec![PolicyExecutionMode::Opa, PolicyExecutionMode::OpaGatekeeper] {
+        for mode in [PolicyExecutionMode::Opa, PolicyExecutionMode::OpaGatekeeper] {
             let metadata = Metadata {
                 protocol_version: Some(ProtocolVersion::Unknown),
                 execution_mode: mode,
