@@ -1,6 +1,7 @@
 pub extern crate burrego;
 extern crate wasmparser;
 
+pub mod admission_request;
 pub mod admission_response;
 pub mod callback_handler;
 pub mod callback_requests;
