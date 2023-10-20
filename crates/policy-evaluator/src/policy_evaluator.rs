@@ -33,6 +33,8 @@ impl fmt::Display for PolicyExecutionMode {
     }
 }
 
+/// A validation request that can be sent to a policy evaluator.
+/// It can be either a raw JSON object, or a Kubernetes AdmissionRequest.
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
 pub enum ValidateRequest {
