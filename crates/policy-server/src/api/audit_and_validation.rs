@@ -389,4 +389,70 @@ mod tests {
                 .expect("cannot send back evaluation response");
         }
     }
+
+    #[tokio::test]
+    async fn success_raw() {
+        let (tx, mut rx) = mpsc::channel::<EvalRequest>(1);
+
+        let policy_id = "test_policy".to_string();
+        let raw_review = RawReviewRequest {
+            request: serde_json::json!(r#"{"foo": "bar"}"#),
+        };
+
+        tokio::spawn(async move {
+            let response = validation_raw(policy_id, raw_review, tx)
+                .await
+                .expect("validation should not fail")
+                .into_response();
+
+            assert_eq!(response.status(), StatusCode::OK);
+        });
+
+        while let Some(eval_req) = rx.recv().await {
+            assert!(matches!(
+                eval_req.request_origin,
+                crate::communication::RequestOrigin::Validate
+            ));
+            let admission_response = AdmissionResponse {
+                uid: "test_uid".to_string(),
+                allowed: true,
+                ..Default::default()
+            };
+            eval_req
+                .resp_chan
+                .send(Some(admission_response))
+                .expect("cannot send back evaluation response");
+        }
+    }
+
+    #[tokio::test]
+    async fn requested_policy_not_found_raw() {
+        let (tx, mut rx) = mpsc::channel::<EvalRequest>(1);
+
+        let policy_id = "test_policy".to_string();
+        let raw_review = RawReviewRequest {
+            request: serde_json::json!(r#"{"foo": "bar"}"#),
+        };
+
+        tokio::spawn(async move {
+            let response = validation_raw(policy_id, raw_review, tx)
+                .await
+                .expect("validation should not fail")
+                .into_response();
+
+            assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        });
+
+        while let Some(eval_req) = rx.recv().await {
+            assert!(matches!(
+                eval_req.request_origin,
+                crate::communication::RequestOrigin::Validate
+            ));
+
+            eval_req
+                .resp_chan
+                .send(None)
+                .expect("cannot send back evaluation response");
+        }
+    }
 }

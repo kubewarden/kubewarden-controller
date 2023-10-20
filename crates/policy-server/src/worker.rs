@@ -705,6 +705,78 @@ mod tests {
         }
     }
 
+    #[test]
+    fn evaluate_policy_evaluator_accepts_request_raw() {
+        let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+
+        let request = serde_json::json!(r#"{"foo": "bar"}"#);
+        let req = ValidateRequest::Raw(request.clone());
+
+        let eval_req = EvalRequest {
+            policy_id: "test_policy1".to_string(),
+            req,
+            resp_chan: tx,
+            parent_span: tracing::Span::none(),
+            request_origin: RequestOrigin::Validate,
+        };
+
+        let mock_evaluator = MockPolicyEvaluator::new_allowed();
+        let mut pes = PolicyEvaluatorWithSettings {
+            policy_evaluator: Box::new(mock_evaluator),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: false,
+            always_accept_admission_reviews_on_namespace: None,
+        };
+
+        let result = Worker::evaluate(eval_req, &mut pes);
+        assert!(result.is_ok());
+
+        let response = rx
+            .try_recv()
+            .expect("Got an error")
+            .expect("expected a AdmissionResponse object");
+        assert!(response.allowed);
+    }
+
+    #[test]
+    fn evaluate_policy_evaluator_rejects_request_raw() {
+        let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+
+        let request = serde_json::json!(r#"{"foo": "bar"}"#);
+        let req = ValidateRequest::Raw(request.clone());
+
+        let eval_req = EvalRequest {
+            policy_id: "test_policy1".to_string(),
+            req,
+            resp_chan: tx,
+            parent_span: tracing::Span::none(),
+            request_origin: RequestOrigin::Validate,
+        };
+
+        let message = Some("boom".to_string());
+        let code = Some(500);
+        let mock_evaluator = MockPolicyEvaluator::new_rejected(message.clone(), code);
+        let mut pes = PolicyEvaluatorWithSettings {
+            policy_evaluator: Box::new(mock_evaluator),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: false,
+            always_accept_admission_reviews_on_namespace: None,
+        };
+
+        let result = Worker::evaluate(eval_req, &mut pes);
+        assert!(result.is_ok());
+
+        let response = rx
+            .try_recv()
+            .expect("Got an error")
+            .expect("expected a AdmissionResponse object");
+
+        assert!(!response.allowed);
+        let response_status = response.status.expect("should be set");
+        assert_eq!(response_status.message, message);
+        assert_eq!(response_status.code, code);
+    }
+
     #[rstest]
     #[test]
     #[case(RequestOrigin::Validate)]
