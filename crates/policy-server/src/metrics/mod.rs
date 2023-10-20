@@ -21,6 +21,8 @@ pub(crate) fn init_meter() -> metrics::Result<MeterProvider> {
         .build()
 }
 
+pub trait PolicyEvaluationMetric: Into<Vec<KeyValue>> {}
+
 #[derive(Clone)]
 pub struct PolicyEvaluation {
     pub(crate) policy_name: String,
@@ -32,6 +34,8 @@ pub struct PolicyEvaluation {
     pub(crate) mutated: bool,
     pub(crate) error_code: Option<u16>,
 }
+
+impl PolicyEvaluationMetric for &PolicyEvaluation {}
 
 #[allow(clippy::from_over_into)]
 impl Into<Vec<KeyValue>> for &PolicyEvaluation {
@@ -53,6 +57,34 @@ impl Into<Vec<KeyValue>> for &PolicyEvaluation {
                 resource_namespace.clone(),
             )]);
         }
+        if let Some(error_code) = self.error_code {
+            baggage.append(&mut vec![KeyValue::new("error_code", error_code as i64)]);
+        }
+        baggage
+    }
+}
+
+#[derive(Clone)]
+pub struct RawPolicyEvaluation {
+    pub(crate) policy_name: String,
+    pub(crate) policy_mode: String,
+    pub(crate) accepted: bool,
+    pub(crate) mutated: bool,
+    pub(crate) error_code: Option<u16>,
+}
+
+impl PolicyEvaluationMetric for &RawPolicyEvaluation {}
+
+#[allow(clippy::from_over_into)]
+impl Into<Vec<KeyValue>> for &RawPolicyEvaluation {
+    fn into(self) -> Vec<KeyValue> {
+        let mut baggage = vec![
+            KeyValue::new("policy_name", self.policy_name.clone()),
+            KeyValue::new("policy_mode", self.policy_mode.clone()),
+            KeyValue::new("accepted", self.accepted),
+            KeyValue::new("mutated", self.mutated),
+        ];
+
         if let Some(error_code) = self.error_code {
             baggage.append(&mut vec![KeyValue::new("error_code", error_code as i64)]);
         }

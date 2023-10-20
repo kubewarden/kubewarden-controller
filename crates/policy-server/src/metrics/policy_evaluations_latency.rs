@@ -1,8 +1,9 @@
-use crate::metrics::PolicyEvaluation;
 use lazy_static::lazy_static;
 use opentelemetry::{metrics::Histogram, KeyValue};
 use std::convert::TryFrom;
 use std::time::Duration;
+
+use super::PolicyEvaluationMetric;
 
 lazy_static! {
     static ref POLICY_EVALUATION_LATENCY: Histogram<u64> =
@@ -11,7 +12,7 @@ lazy_static! {
             .init();
 }
 
-pub fn record_policy_latency(latency: Duration, policy_evaluation: &PolicyEvaluation) {
+pub fn record_policy_latency(latency: Duration, policy_evaluation: impl PolicyEvaluationMetric) {
     let millis_latency = u64::try_from(latency.as_millis()).unwrap_or(u64::MAX);
     POLICY_EVALUATION_LATENCY.record(
         millis_latency,
