@@ -1,3 +1,4 @@
+/// This models the admission/v1/AdmissionRequest object of Kubernetes
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdmissionRequest {
