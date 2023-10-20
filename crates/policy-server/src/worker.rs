@@ -11,7 +11,7 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info, info_span};
 
 use crate::communication::{EvalRequest, RequestOrigin};
-use crate::metrics;
+use crate::metrics::{self};
 use crate::settings::{Policy, PolicyMode};
 use crate::worker_pool::PrecompiledPolicies;
 
@@ -173,82 +173,82 @@ impl Worker {
     }
 
     fn evaluate(req: EvalRequest, pes: &mut PolicyEvaluatorWithSettings) -> anyhow::Result<()> {
-        match serde_json::to_value(req.req.clone()) {
-            Ok(json) => {
-                let start_time = Instant::now();
+        let start_time = Instant::now();
 
-                let policy_name = pes.policy_evaluator.policy_id();
-                let policy_mode = pes.policy_mode.clone();
-                let allowed_to_mutate = pes.allowed_to_mutate;
-                let vanilla_validation_response =
-                    pes.policy_evaluator.validate(ValidateRequest::new(json));
-                let policy_evaluation_duration = start_time.elapsed();
-                let error_code = if let Some(status) = &vanilla_validation_response.status {
-                    status.code
-                } else {
-                    None
-                };
-                let validation_response = match req.request_origin {
-                    RequestOrigin::Validate => Worker::validation_response_with_constraints(
-                        &req.policy_id,
-                        &policy_mode,
-                        allowed_to_mutate,
-                        vanilla_validation_response.clone(),
-                    ),
-                    RequestOrigin::Audit => vanilla_validation_response.clone(),
-                };
-                let validation_response =
-                    if let Some(namespace) = &pes.always_accept_admission_reviews_on_namespace {
-                        // If the policy server is configured to
-                        // always accept admission reviews on a
-                        // given namespace, just set the `allowed`
-                        // part of the response to `true` if the
-                        // request matches this namespace. Keep
-                        // the rest of the behaviors unchanged,
-                        // such as checking if the policy is
-                        // allowed to mutate.
+        let policy_name = pes.policy_evaluator.policy_id();
+        let policy_mode = pes.policy_mode.clone();
+        let allowed_to_mutate = pes.allowed_to_mutate;
+        let vanilla_validation_response = pes.policy_evaluator.validate(req.req.clone());
+        let policy_evaluation_duration = start_time.elapsed();
+        let accepted = vanilla_validation_response.allowed;
+        let mutated = vanilla_validation_response.patch.is_some();
+        let error_code = if let Some(status) = &vanilla_validation_response.status {
+            status.code
+        } else {
+            None
+        };
 
-                        if req.req.namespace == Some(namespace.to_string()) {
-                            AdmissionResponse {
-                                allowed: true,
-                                status: None,
-                                ..validation_response
-                            }
-                        } else {
-                            validation_response
-                        }
-                    } else {
-                        validation_response
-                    };
-                let accepted = vanilla_validation_response.allowed;
-                let mutated = vanilla_validation_response.patch.is_some();
-                let res = req.resp_chan.send(Some(validation_response));
+        let mut validation_response = match req.request_origin {
+            RequestOrigin::Validate => Worker::validation_response_with_constraints(
+                &req.policy_id,
+                &policy_mode,
+                allowed_to_mutate,
+                vanilla_validation_response.clone(),
+            ),
+            RequestOrigin::Audit => vanilla_validation_response.clone(),
+        };
+
+        match req.req.clone() {
+            ValidateRequest::AdmissionRequest(adm_req) => {
+                if let Some(namespace) = &pes.always_accept_admission_reviews_on_namespace {
+                    // If the policy server is configured to
+                    // always accept admission reviews on a
+                    // given namespace, just set the `allowed`
+                    // part of the response to `true` if the
+                    // request matches this namespace. Keep
+                    // the rest of the behaviors unchanged,
+                    // such as checking if the policy is
+                    // allowed to mutate.
+
+                    if adm_req.namespace == Some(namespace.to_string()) {
+                        validation_response = AdmissionResponse {
+                            allowed: true,
+                            status: None,
+                            ..validation_response
+                        };
+                    }
+                }
+
                 let policy_evaluation = metrics::PolicyEvaluation {
                     policy_name,
                     policy_mode: policy_mode.into(),
-                    resource_namespace: req.req.namespace,
-                    resource_kind: req.req.request_kind.unwrap_or_default().kind,
-                    resource_request_operation: req.req.operation,
+                    resource_namespace: adm_req.clone().namespace,
+                    resource_kind: adm_req.clone().request_kind.unwrap_or_default().kind,
+                    resource_request_operation: adm_req.clone().operation,
                     accepted,
                     mutated,
                     error_code,
                 };
                 metrics::record_policy_latency(policy_evaluation_duration, &policy_evaluation);
                 metrics::add_policy_evaluation(&policy_evaluation);
-                res.map_err(|_| anyhow!("cannot send response back"))
             }
-            Err(e) => {
-                let error_msg = format!("Failed to serialize AdmissionReview: {e:?}");
-                error!("{}", error_msg);
-                req.resp_chan
-                    .send(Some(AdmissionResponse::reject(
-                        req.policy_id,
-                        error_msg,
-                        warp::http::StatusCode::BAD_REQUEST.as_u16(),
-                    )))
-                    .map_err(|_| anyhow!("cannot send response back"))
+            ValidateRequest::Raw(_) => {
+                let accepted = vanilla_validation_response.allowed;
+                let mutated = vanilla_validation_response.patch.is_some();
+                let policy_evaluation = metrics::RawPolicyEvaluation {
+                    policy_name,
+                    policy_mode: policy_mode.into(),
+                    accepted,
+                    mutated,
+                    error_code,
+                };
+                metrics::record_policy_latency(policy_evaluation_duration, &policy_evaluation);
+                metrics::add_policy_evaluation(&policy_evaluation);
             }
-        }
+        };
+
+        let res = req.resp_chan.send(Some(validation_response));
+        res.map_err(|_| anyhow!("cannot send response back"))
     }
 }
 
@@ -622,10 +622,13 @@ mod tests {
         #[case] request_origin: RequestOrigin,
     ) {
         let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+        let req = ValidateRequest::AdmissionRequest(
+            build_admission_review().request.expect("no request"),
+        );
 
         let eval_req = EvalRequest {
             policy_id: "test_policy1".to_string(),
-            req: build_admission_review().request.expect("no request"),
+            req,
             resp_chan: tx,
             parent_span: tracing::Span::none(),
             request_origin,
@@ -661,10 +664,13 @@ mod tests {
         #[case] accept: bool,
     ) {
         let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+        let req = ValidateRequest::AdmissionRequest(
+            build_admission_review().request.expect("no request"),
+        );
 
         let eval_req = EvalRequest {
             policy_id: "test_policy1".to_string(),
-            req: build_admission_review().request.expect("no request"),
+            req,
             resp_chan: tx,
             parent_span: tracing::Span::none(),
             request_origin,
@@ -714,8 +720,9 @@ mod tests {
 
         let allowed_namespace = "kubewarden_special".to_string();
 
-        let mut req = build_admission_review().request.expect("no request");
-        req.namespace = Some(allowed_namespace.clone());
+        let mut request = build_admission_review().request.expect("no request");
+        request.namespace = Some(allowed_namespace.clone());
+        let req = ValidateRequest::AdmissionRequest(request);
 
         let eval_req = EvalRequest {
             policy_id: "test_policy1".to_string(),
