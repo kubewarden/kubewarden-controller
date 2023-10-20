@@ -311,7 +311,7 @@ mod tests {
       url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     "#;
 
-        let mut policies: HashMap<String, Policy> =
+        let policies: HashMap<String, Policy> =
             serde_yaml::from_str(policies_cfg).expect("Cannot parse policy cfg");
 
         let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
@@ -328,7 +328,7 @@ mod tests {
                 .lock()
                 .unwrap()
                 .download_policies(
-                    &mut policies,
+                    &policies,
                     policy_download_dir.path().to_str().unwrap(),
                     Some(&verification_config),
                 )
@@ -358,7 +358,7 @@ mod tests {
       url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     "#;
 
-        let mut policies: HashMap<String, Policy> =
+        let policies: HashMap<String, Policy> =
             serde_yaml::from_str(policies_cfg).expect("Cannot parse policy cfg");
 
         let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
@@ -375,7 +375,7 @@ mod tests {
                 .lock()
                 .unwrap()
                 .download_policies(
-                    &mut policies,
+                    &policies,
                     policy_download_dir.path().to_str().unwrap(),
                     Some(&verification_config),
                 )

@@ -143,7 +143,7 @@ example:
         assert!(!policies2.is_empty());
 
         let policy2 = policies2.get("example").unwrap();
-        assert_eq!(policy2.allowed_to_mutate.unwrap(), false);
+        assert!(!policy2.allowed_to_mutate.unwrap());
         assert!(policy2.settings.is_some());
     }
 
