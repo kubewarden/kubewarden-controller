@@ -300,6 +300,24 @@ impl CallbackHandler {
                                     )
                                 }
                             }
+                            CallbackRequestType::KubernetesGetResourcePluralName {
+                                api_version,
+                                kind,
+                            } => {
+                                handle_callback!(
+                                    req,
+                                    format!("{api_version}/{kind}"),
+                                    "Is Kubernetes resource namespaced",
+                                    {
+                                        kubernetes::get_resource_plural_name(
+                                            self.kubernetes_client.as_mut(),
+                                            &api_version,
+                                            &kind,
+                                        )
+                                    }
+                                )
+                            }
+
                         }
                     }
                 },

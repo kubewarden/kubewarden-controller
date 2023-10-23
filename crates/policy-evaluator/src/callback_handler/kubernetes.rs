@@ -182,6 +182,11 @@ impl Client {
             .map_err(anyhow::Error::new)?
             .ok_or_else(|| anyhow!("Cannot find {api_version}/{kind} named '{name}' inside of namespace '{namespace:?}'"))
     }
+
+    async fn get_resource_plural_name(&mut self, api_version: &str, kind: &str) -> Result<String> {
+        let resource = self.build_kube_resource(api_version, kind).await?;
+        Ok(resource.resource.plural)
+    }
 }
 
 #[cached(
@@ -286,4 +291,25 @@ pub(crate) async fn get_resource_cached(
     namespace: Option<&str>,
 ) -> Result<cached::Return<kube::core::DynamicObject>> {
     get_resource(client, api_version, kind, name, namespace).await
+}
+
+pub(crate) async fn get_resource_plural_name(
+    client: Option<&mut Client>,
+    api_version: &str,
+    kind: &str,
+) -> Result<cached::Return<String>> {
+    if client.is_none() {
+        return Err(anyhow!("kube::Client was not initialized properly"));
+    }
+
+    client
+        .unwrap()
+        .get_resource_plural_name(api_version, kind)
+        .await
+        .map(|value| cached::Return {
+            // this is always cached, because the client builds an overview of
+            // the cluster resources at bootstrap time
+            was_cached: true,
+            value,
+        })
 }
