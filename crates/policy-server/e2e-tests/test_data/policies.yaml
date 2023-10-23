@@ -29,3 +29,46 @@ flux:
   settings:
     requiredAnnotations:
       "fluxcd.io/cat": "felix"
+
+raw-validation:
+  url: ghcr.io/kubewarden/tests/raw-validation-policy:v0.1.0
+  settings:
+    validUsers:
+      - "tonio"
+      - "wanda"
+    validActions:
+      - "eats"
+      - "likes"
+    validResources:
+      - "banana"
+      - "hay"
+
+raw-mutation:
+  url: ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0
+  allowedToMutate: true
+  settings: {}
+
+raw-validation-opa:
+  url: ghcr.io/kubewarden/tests/raw-validation-opa-policy:v0.1.0
+  settings: {}
+
+raw-validation-wasi:
+  url: ghcr.io/kubewarden/tests/raw-validation-wasi-policy:v0.1.0
+  settings:
+    validUsers:
+      - "tonio"
+      - "wanda"
+    validActions:
+      - "eats"
+      - "likes"
+    validResources:
+      - "banana"
+      - "hay"
+
+raw-mutation-wasi:
+  url: ghcr.io/kubewarden/tests/raw-mutation-wasi-policy:v0.1.0
+  allowedToMutate: true
+  settings:
+    forbiddenResources:
+      - "banana"
+      - "carrot"
