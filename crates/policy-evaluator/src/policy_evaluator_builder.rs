@@ -279,8 +279,8 @@ impl PolicyEvaluatorBuilder {
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
-                    None, // callback_channel is not used by Rego policies
-                    None,
+                    self.callback_channel.clone(),
+                    Some(self.ctx_aware_resources_allow_list.clone()),
                     || None,
                     Policy::new,
                     execution_mode,

@@ -110,7 +110,18 @@ impl Evaluator for PolicyEvaluator {
                 WapcRuntime(wapc_host).validate(&self.settings, &request)
             }
             Runtime::Burrego(ref mut burrego_evaluator) => {
-                BurregoRuntime(burrego_evaluator).validate(&self.settings, &request)
+                let kube_ctx = burrego_evaluator.build_kubernetes_context(
+                    self.policy.callback_channel.as_ref(),
+                    &self.policy.ctx_aware_resources_allow_list,
+                );
+                match kube_ctx {
+                    Ok(ctx) => {
+                        BurregoRuntime(burrego_evaluator).validate(&self.settings, &request, &ctx)
+                    }
+                    Err(e) => {
+                        AdmissionResponse::reject(request.uid().to_string(), e.to_string(), 500)
+                    }
+                }
             }
             Runtime::Cli(ref mut cli_stack) => {
                 WasiRuntime(cli_stack).validate(&self.settings, &request)

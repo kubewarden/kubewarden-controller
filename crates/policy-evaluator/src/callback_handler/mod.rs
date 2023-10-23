@@ -307,7 +307,7 @@ impl CallbackHandler {
                                 handle_callback!(
                                     req,
                                     format!("{api_version}/{kind}"),
-                                    "Is Kubernetes resource namespaced",
+                                    "Get Kubernetes resource plural name",
                                     {
                                         kubernetes::get_resource_plural_name(
                                             self.kubernetes_client.as_mut(),
