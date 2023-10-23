@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "name": "cert-manager"
+  },
+  "spec": {
+    "finalizers": [
+      "kubernetes"
+    ]
+  },
+  "status": {
+    "phase": "Active"
+  }
+}

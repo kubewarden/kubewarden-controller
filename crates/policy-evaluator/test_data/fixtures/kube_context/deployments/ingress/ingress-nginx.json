@@ -1,0 +1,10 @@
+{
+  "metadata": {
+    "name": "ingress-nginx",
+    "namespace": "ingress"
+  },
+  "spec": {
+    "replicas": 1
+  },
+  "status": {}
+}

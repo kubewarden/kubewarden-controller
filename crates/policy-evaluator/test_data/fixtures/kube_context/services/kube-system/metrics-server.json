@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "metrics-server",
+    "namespace": "kube-system"
+  },
+  "spec": {
+    "clusterIP": "10.43.117.145"
+  },
+  "status": {
+    "loadBalancer": {}
+  }
+}
