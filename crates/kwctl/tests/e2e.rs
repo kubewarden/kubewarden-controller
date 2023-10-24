@@ -164,6 +164,22 @@ fn test_run_remote() {
     cmd.assert().stdout(contains("\"allowed\":true"));
 }
 
+#[test]
+fn test_run_raw() {
+    let tempdir = tempdir().unwrap();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--raw")
+        .arg("--request-path")
+        .arg(test_data("raw.json"))
+        .arg("registry://ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0");
+
+    cmd.assert().success();
+    cmd.assert().stdout(contains("\"allowed\":true"));
+    cmd.assert().stdout(contains("\"patchType\":\"JSONPatch\""));
+}
+
 #[rstest]
 fn test_bench() {
     let tempdir = tempdir().unwrap();
