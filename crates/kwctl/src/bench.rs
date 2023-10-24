@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_evaluator::{Evaluator, ValidateRequest};
+use policy_evaluator::policy_evaluator::Evaluator;
 use tiny_bench::{bench_with_configuration_labeled, BenchmarkConfig};
 use tracing::error;
 
@@ -15,7 +15,7 @@ pub(crate) async fn pull_and_bench(cfg: &PullAndBenchSettings) -> Result<()> {
     let mut policy_evaluator = run_env.policy_evaluator;
     let mut callback_handler = run_env.callback_handler;
     let callback_handler_shutdown_channel_tx = run_env.callback_handler_shutdown_channel_tx;
-    let req_obj = run_env.req_obj;
+    let request = run_env.request;
 
     // validate the settings given by the user
     let settings_validation_response = policy_evaluator.validate_settings();
@@ -46,7 +46,7 @@ pub(crate) async fn pull_and_bench(cfg: &PullAndBenchSettings) -> Result<()> {
     });
 
     bench_with_configuration_labeled("validate", &cfg.benchmark_cfg, || {
-        let _response = policy_evaluator.validate(ValidateRequest::new(req_obj.clone()));
+        let _response = policy_evaluator.validate(request.clone());
     });
 
     // The evaluation is done, we can shutdown the tokio task that is running
