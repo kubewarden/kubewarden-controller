@@ -9,8 +9,8 @@ use testcontainers::{clients, core::WaitFor};
 mod common;
 
 const POLICIES: &[&str] = &[
-    // SHA: 59e34f482b40
-    "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
+    // SHA: 01690a10f9c3
+    "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
     // SHA: 828617a7cf3e
     "registry://ghcr.io/kubewarden/tests/safe-labels:v0.1.13",
 ];
@@ -46,16 +46,16 @@ fn test_policies() {
     cmd.assert().success();
     cmd.assert()
         .stdout(contains("pod-privileged"))
-        .stdout(contains("v0.1.9"))
+        .stdout(contains("v0.2.5"))
         .stdout(contains("safe-labels"))
         .stdout(contains("v0.1.13"));
 }
 
 #[rstest]
 #[case::https(
-    "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.9/policy.wasm"
+    "https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.2.5/policy.wasm"
 )]
-#[case::registry("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")]
+#[case::registry("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5")]
 fn test_pull(#[case] uri: &str) {
     let tempdir = tempdir().unwrap();
 
@@ -103,7 +103,7 @@ fn test_run(#[case] request: &str, #[case] allowed: bool) {
     cmd.arg("run")
         .arg("--request-path")
         .arg(test_data(request))
-        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5");
 
     cmd.assert().success();
     cmd.assert()
@@ -144,7 +144,7 @@ fn test_run_sha_prefix() {
     cmd.arg("run")
         .arg("--request-path")
         .arg(test_data("unprivileged-pod.json"))
-        .arg("59e");
+        .arg("0169");
 
     cmd.assert().success();
     cmd.assert().stdout(contains("\"allowed\":true"));
@@ -158,7 +158,7 @@ fn test_run_remote() {
     cmd.arg("run")
         .arg("--request-path")
         .arg(test_data("unprivileged-pod.json"))
-        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5");
 
     cmd.assert().success();
     cmd.assert().stdout(contains("\"allowed\":true"));
@@ -180,7 +180,7 @@ fn test_bench() {
         .arg("2")
         .arg("--request-path")
         .arg(test_data("unprivileged-pod.json"))
-        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5");
 
     cmd.assert().success();
     cmd.assert()
@@ -189,8 +189,8 @@ fn test_bench() {
 
 #[rstest]
 #[case(
-    "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
-    "0d6611ea12cf2904066308dde1c480b5d4f40e19b12f51f101a256b44d6c2dd5"
+    "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+    "5ddb9b97ac5e466ae81c34b856d526eed784784024133ba67b1a907f63dfa0a2"
 )]
 #[case(
     "ghcr.io/kubewarden/tests/safe-labels:v0.1.13",
@@ -208,11 +208,11 @@ fn test_digest(#[case] uri: &str, #[case] expected_sha: &str) {
 
 #[rstest]
 #[case(
-    "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
+    "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
     true,
     is_empty()
 )]
-#[case::sha_prefix("59e3", true, is_empty())]
+#[case::sha_prefix("0169", true, is_empty())]
 #[case::non_existing("non-existing", false, contains("Cannot find policy"))]
 fn test_rm(
     #[case] policy_ref: &str,
@@ -293,7 +293,7 @@ fn test_push() {
     cmd.arg("push")
         .arg("--sources-path")
         .arg("sources.yml")
-        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")
+        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5")
         .arg(format!(
             "registry://localhost:{}/my-pod-priviliged-policy:v0.1.10",
             port
