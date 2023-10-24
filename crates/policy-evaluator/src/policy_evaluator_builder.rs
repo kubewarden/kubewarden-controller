@@ -384,6 +384,22 @@ mod tests {
         Ok(())
     }
 
+    fn find_wapc_policy_id(policy: &Policy) -> Option<u64> {
+        let map = WAPC_POLICY_MAPPING
+            .read()
+            .expect("cannot get READ access to WAPC_POLICY_MAPPING");
+        map.iter()
+            .find(|(_, v)| *v == policy)
+            .map(|(k, _)| k.to_owned())
+    }
+
+    fn is_wapc_instance_registered(policy_id: u64) -> bool {
+        let map = WAPC_POLICY_MAPPING
+            .read()
+            .expect("cannot get READ access to WAPC_POLICY_MAPPING");
+        map.get(&policy_id).is_some()
+    }
+
     #[test]
     fn policy_wapc_mapping_is_cleaned_when_the_evaluator_is_dropped() {
         // we need a real WASM module, we don't care about the contents yet
@@ -396,20 +412,13 @@ mod tests {
             .execution_mode(PolicyExecutionMode::KubewardenWapc)
             .engine(engine)
             .policy_module(module);
+
         let evaluator = builder.build().expect("cannot create evaluator");
-        {
-            let map = WAPC_POLICY_MAPPING
-                .read()
-                .expect("cannot get READ access to WAPC_POLICY_MAPPING");
-            assert_eq!(map.len(), 1);
-        }
+        let policy_id =
+            find_wapc_policy_id(&evaluator.policy).expect("cannot find the wapc we just created");
+
         drop(evaluator);
-        {
-            let map = WAPC_POLICY_MAPPING
-                .read()
-                .expect("cannot get READ access to WAPC_POLICY_MAPPING");
-            assert_eq!(map.len(), 0);
-        }
+        assert!(!is_wapc_instance_registered(policy_id));
     }
 
     #[test]
