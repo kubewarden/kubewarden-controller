@@ -5,6 +5,7 @@ use serde::Serialize;
 use serde_json::value;
 use std::{convert::TryFrom, fmt};
 
+use crate::admission_request::AdmissionRequest;
 use crate::admission_response::AdmissionResponse;
 use crate::policy::Policy;
 use crate::runtimes::burrego::Runtime as BurregoRuntime;
@@ -32,19 +33,23 @@ impl fmt::Display for PolicyExecutionMode {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct ValidateRequest(pub(crate) serde_json::Value);
+/// A validation request that can be sent to a policy evaluator.
+/// It can be either a raw JSON object, or a Kubernetes AdmissionRequest.
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum ValidateRequest {
+    Raw(serde_json::Value),
+    AdmissionRequest(AdmissionRequest),
+}
 
 impl ValidateRequest {
-    pub fn new(request: serde_json::Value) -> Self {
-        ValidateRequest(request)
-    }
-
     pub(crate) fn uid(&self) -> &str {
-        if let Some(uid) = self.0.get("uid").and_then(value::Value::as_str) {
-            uid
-        } else {
-            ""
+        match self {
+            ValidateRequest::Raw(raw_req) => raw_req
+                .get("uid")
+                .and_then(value::Value::as_str)
+                .unwrap_or_default(),
+            ValidateRequest::AdmissionRequest(adm_req) => &adm_req.uid,
         }
     }
 }
@@ -196,7 +201,7 @@ mod tests {
 
         for (mode_str, expected) in &test_data {
             let actual: std::result::Result<PolicyExecutionMode, serde_json::Error> =
-                serde_json::from_str(&mode_str);
+                serde_json::from_str(mode_str);
             assert_eq!(expected, &actual.unwrap());
         }
 

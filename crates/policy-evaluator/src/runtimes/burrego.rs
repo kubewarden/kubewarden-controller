@@ -40,20 +40,24 @@ impl<'a> Runtime<'a> {
 
         // OPA and Gatekeeper expect arguments in different ways. Provide the ones that each expect.
         let (document_to_evaluate, data) = match self.0.policy_execution_mode {
-            RegoPolicyExecutionMode::Opa => {
-                // Policies for OPA expect the whole `AdmissionReview`
-                // object: produce a synthetic external one so
-                // existing OPA policies are compatible.
-                (
-                    json!({
-                        "apiVersion": "admission.k8s.io/v1",
-                        "kind": "AdmissionReview",
-                        "request": &request.0,
-                    }),
-                    json!(settings),
-                )
-            }
+            RegoPolicyExecutionMode::Opa => (
+                json!({
+                    "request": &request,
+                }),
+                json!(settings),
+            ),
             RegoPolicyExecutionMode::Gatekeeper => {
+                // Gatekeeper policies expect the `AdmissionRequest` variant only.
+                let request = match request {
+                    ValidateRequest::AdmissionRequest(adm_req) => adm_req,
+                    ValidateRequest::Raw(_) => {
+                        return AdmissionResponse::reject_internal_server_error(
+                            uid.to_string(),
+                            "Gatekeeper does not support raw validation requests".to_string(),
+                        );
+                    }
+                };
+
                 // Gatekeeper policies include a toplevel `review`
                 // object that contains the AdmissionRequest to be
                 // evaluated in an `object` attribute, and the
@@ -62,7 +66,7 @@ impl<'a> Runtime<'a> {
                 (
                     json!({
                         "parameters": settings,
-                        "review": &request.0,
+                        "review": &request,
                     }),
                     json!({"kubernetes": ""}), // TODO (ereslibre): Kubernetes context goes here
                 )

@@ -513,8 +513,14 @@ impl<'a> Runtime<'a> {
     ) -> AdmissionResponse {
         let uid = request.uid();
 
+        let req_json_value =
+            serde_json::to_value(request).expect("cannot convert request to json value");
+
         //NOTE: object is null for DELETE operations
-        let req_obj = request.0.get("object");
+        let req_obj = match request {
+            ValidateRequest::Raw(_) => Some(&req_json_value),
+            ValidateRequest::AdmissionRequest(_) => req_json_value.get("object"),
+        };
 
         let validate_params = json!({
             "request": request,
