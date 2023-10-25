@@ -128,6 +128,15 @@ pub struct ContextAwareResource {
     pub kind: String,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+pub enum PolicyType {
+    #[default]
+    #[serde(rename = "kubernetes")]
+    Kubernetes,
+    #[serde(rename = "raw")]
+    Raw,
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Validate)]
 #[serde(rename_all = "camelCase")]
 #[validate(schema(function = "validate_metadata", skip_on_field_errors = false))]
@@ -143,6 +152,8 @@ pub struct Metadata {
     pub background_audit: bool,
     #[serde(default)]
     pub execution_mode: PolicyExecutionMode,
+    #[serde(default)]
+    pub policy_type: PolicyType,
     #[serde(default)]
     #[validate]
     pub context_aware_resources: HashSet<ContextAwareResource>,
@@ -163,6 +174,7 @@ impl Default for Metadata {
             mutating: false,
             background_audit: true,
             execution_mode: PolicyExecutionMode::KubewardenWapc,
+            policy_type: PolicyType::Kubernetes,
             context_aware_resources: HashSet::new(),
             minimum_kubewarden_version: None,
         }
@@ -345,6 +357,7 @@ mod tests {
             "backgroundAudit": true,
             "contextAwareResources": [ ],
             "executionMode": "kubewarden-wapc",
+            "policyType": "kubernetes"
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
@@ -369,6 +382,7 @@ mod tests {
             annotations: None,
             background_audit: true,
             context_aware_resources: HashSet::new(),
+            policy_type: PolicyType::Kubernetes,
             ..Default::default()
         };
 
@@ -417,6 +431,7 @@ mod tests {
             "backgroundAudit": true,
             "contextAwareResources": [ ],
             "executionMode": "kubewarden-wapc",
+            "policyType": "kubernetes"
         });
 
         let actual = serde_json::to_value(&metadata).unwrap();
