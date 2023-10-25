@@ -44,7 +44,7 @@ func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 		Name: policy.GetUniqueName(),
 	}, &originalWebhook)
 	if err != nil && apierrors.IsNotFound(err) {
-		return fmt.Errorf("cannot retrieve mutating webhook: %w", err)
+		return fmt.Errorf("cannot retrieve validating webhook: %w", err)
 	}
 
 	if !reflect.DeepEqual(originalWebhook.Webhooks, newWebhook.Webhooks) {

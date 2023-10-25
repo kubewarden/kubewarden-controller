@@ -80,11 +80,11 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 			&corev1.Pod{},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
 		).
-		// Despite this policy server watch is not strictly necessary, we
-		// include it for the integration tests, so that we identify
-		// policy server creations even when the controller-manager is not
-		// present (so no pods end up being created)
 		Watches(
+			// Despite this PolicyServer watch not being strictly necessary, we
+			// include it for the integration tests, so that we identify
+			// PolicyServer creations even when the controller-manager is not
+			// present (so no pods end up being created)
 			&policiesv1.PolicyServer{},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPolicyServer),
 		).
