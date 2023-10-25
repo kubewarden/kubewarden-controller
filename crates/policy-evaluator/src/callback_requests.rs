@@ -162,6 +162,14 @@ pub enum CallbackRequestType {
         /// might cause issues to the cluster
         disable_cache: bool,
     },
+
+    /// Get the plural name of a Kubernetes resource. E.g. `v1/Service` -> `services`
+    KubernetesGetResourcePluralName {
+        /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+        api_version: String,
+        /// Singular PascalCase name of the resource
+        kind: String,
+    },
 }
 
 impl From<SigstoreVerificationInputV2> for CallbackRequestType {

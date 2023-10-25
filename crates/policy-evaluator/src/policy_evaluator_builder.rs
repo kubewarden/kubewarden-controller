@@ -10,7 +10,7 @@ use crate::policy::Policy;
 use crate::policy_evaluator::{PolicyEvaluator, PolicyExecutionMode};
 use crate::policy_metadata::ContextAwareResource;
 use crate::runtimes::wapc::WAPC_POLICY_MAPPING;
-use crate::runtimes::{burrego::BurregoStack, wapc::WapcStack, wasi_cli, Runtime};
+use crate::runtimes::{rego::BurregoStack, wapc::WapcStack, wasi_cli, Runtime};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
 ///
@@ -279,8 +279,8 @@ impl PolicyEvaluatorBuilder {
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
                 let policy = Self::from_contents_internal(
                     self.policy_id.clone(),
-                    None, // callback_channel is not used by Rego policies
-                    None,
+                    self.callback_channel.clone(),
+                    Some(self.ctx_aware_resources_allow_list.clone()),
                     || None,
                     Policy::new,
                     execution_mode,
@@ -289,7 +289,7 @@ impl PolicyEvaluatorBuilder {
                 let mut builder = burrego::EvaluatorBuilder::default()
                     .engine(&engine)
                     .module(module)
-                    .host_callbacks(crate::runtimes::burrego::new_host_callbacks());
+                    .host_callbacks(crate::runtimes::rego::new_host_callbacks());
 
                 if let Some(deadlines) = self.epoch_deadlines {
                     builder = builder.enable_epoch_interruptions(deadlines.wapc_func);

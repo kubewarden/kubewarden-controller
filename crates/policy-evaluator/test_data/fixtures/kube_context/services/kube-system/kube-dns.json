@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "kube-dns",
+    "namespace": "kube-system"
+  },
+  "spec": {
+    "clusterIP": "10.43.0.10"
+  },
+  "status": {
+    "loadBalancer": {}
+  }
+}

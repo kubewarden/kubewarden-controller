@@ -300,6 +300,24 @@ impl CallbackHandler {
                                     )
                                 }
                             }
+                            CallbackRequestType::KubernetesGetResourcePluralName {
+                                api_version,
+                                kind,
+                            } => {
+                                handle_callback!(
+                                    req,
+                                    format!("{api_version}/{kind}"),
+                                    "Get Kubernetes resource plural name",
+                                    {
+                                        kubernetes::get_resource_plural_name(
+                                            self.kubernetes_client.as_mut(),
+                                            &api_version,
+                                            &kind,
+                                        )
+                                    }
+                                )
+                            }
+
                         }
                     }
                 },

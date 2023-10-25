@@ -1,51 +1,53 @@
 use anyhow::anyhow;
-use burrego::host_callbacks::HostCallbacks;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use serde::Deserialize;
 use serde_json::json;
-use tracing::error;
+use tracing::{error, warn};
 
 use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
 use crate::policy_evaluator::RegoPolicyExecutionMode;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
+use crate::runtimes::rego::{context_aware, BurregoStack};
 
-pub(crate) struct BurregoStack {
-    pub evaluator: burrego::Evaluator,
-    pub entrypoint_id: i32,
-    pub policy_execution_mode: RegoPolicyExecutionMode,
-}
+use super::context_aware::KubernetesContext;
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut BurregoStack);
-
-#[tracing::instrument(level = "error")]
-fn opa_abort(msg: &str) {}
-
-#[tracing::instrument(level = "info")]
-fn opa_println(msg: &str) {}
-
-pub(crate) fn new_host_callbacks() -> HostCallbacks {
-    HostCallbacks {
-        opa_abort,
-        opa_println,
-    }
-}
 
 impl<'a> Runtime<'a> {
     pub fn validate(
         &mut self,
         settings: &PolicySettings,
         request: &ValidateRequest,
+        ctx_data: &context_aware::KubernetesContext,
     ) -> AdmissionResponse {
         let uid = request.uid();
 
         // OPA and Gatekeeper expect arguments in different ways. Provide the ones that each expect.
         let (document_to_evaluate, data) = match self.0.policy_execution_mode {
-            RegoPolicyExecutionMode::Opa => (
-                json!({
+            RegoPolicyExecutionMode::Opa => {
+                let input = json!({
                     "request": &request,
-                }),
-                json!(settings),
-            ),
+                });
+
+                // OPA data seems to be free-form, except for the
+                // Kubernetes context aware data that must be under the
+                // `kubernetes` key
+                // We don't know the data that is provided by the users via
+                // their settings, hence set the context aware data, to
+                // ensure we overwrite what a user might have set.
+                let data = match ctx_data {
+                    KubernetesContext::Opa(ctx) => {
+                        let mut data = settings.clone();
+                        if data.insert("kubernetes".to_string(), json!(ctx)).is_some() {
+                            warn!("OPA policy had user provided setting with key `kubernetes`. This value has been overwritten with the actual kubernetes context data");
+                        }
+                        json!(data)
+                    }
+                    _ => json!(settings),
+                };
+
+                (input, data)
+            }
             RegoPolicyExecutionMode::Gatekeeper => {
                 // Gatekeeper policies expect the `AdmissionRequest` variant only.
                 let request = match request {
@@ -68,7 +70,7 @@ impl<'a> Runtime<'a> {
                         "parameters": settings,
                         "review": &request,
                     }),
-                    json!({"kubernetes": ""}), // TODO (ereslibre): Kubernetes context goes here
+                    json!({"inventory": ctx_data}),
                 )
             }
         };
