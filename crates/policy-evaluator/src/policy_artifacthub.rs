@@ -474,7 +474,7 @@ fn parse_annotations(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::policy_metadata::ContextAwareResource;
+    use crate::policy_metadata::{ContextAwareResource, PolicyType};
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
@@ -509,7 +509,7 @@ mod tests {
             background_audit: true,
             context_aware_resources: HashSet::new(),
             execution_mode: Default::default(),
-            policy_type: Default::default(),
+            policy_type: PolicyType::Kubernetes,
             minimum_kubewarden_version: None,
         }
     }

@@ -382,6 +382,7 @@ mod tests {
             annotations: None,
             background_audit: true,
             context_aware_resources: HashSet::new(),
+            policy_type: PolicyType::Kubernetes,
             ..Default::default()
         };
 
