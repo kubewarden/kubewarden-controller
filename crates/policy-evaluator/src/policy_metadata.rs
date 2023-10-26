@@ -3,6 +3,7 @@ use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::fmt::{self, Display};
 use std::path::Path;
 use validator::{Validate, ValidationError};
 use wasmparser::{Parser, Payload};
@@ -128,13 +129,20 @@ pub struct ContextAwareResource {
     pub kind: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default, PartialEq)]
 pub enum PolicyType {
     #[default]
     #[serde(rename = "kubernetes")]
     Kubernetes,
     #[serde(rename = "raw")]
     Raw,
+}
+
+impl Display for PolicyType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let json = serde_json::to_string(self).map_err(|_| fmt::Error {})?;
+        write!(f, "{}", json)
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Validate)]
