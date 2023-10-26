@@ -7,7 +7,7 @@ use policy_evaluator::{
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
-    policy_metadata::{ContextAwareResource, Metadata},
+    policy_metadata::{ContextAwareResource, Metadata, PolicyType},
 };
 use std::{
     collections::HashSet,
@@ -120,7 +120,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     }
     let policy_evaluator = policy_evaluator_builder.build()?;
 
-    let request = if cfg.raw {
+    let request = if cfg.raw || has_raw_policy_type(metadata.as_ref()) {
         ValidateRequest::Raw(req_obj)
     } else {
         let req_obj = match req_obj.clone() {
@@ -284,6 +284,14 @@ fn determine_execution_mode(
                 }
             }
         }
+    }
+}
+
+fn has_raw_policy_type(metadata: Option<&Metadata>) -> bool {
+    if let Some(metadata) = metadata {
+        metadata.policy_type == PolicyType::Raw
+    } else {
+        false
     }
 }
 
