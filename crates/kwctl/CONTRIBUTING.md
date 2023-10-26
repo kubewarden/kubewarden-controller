@@ -20,3 +20,8 @@ write permissions".
 
 Also, given how the release and release-drafter workflows work, they need git
 tags present; push the tags from origin to your fork.
+
+## Code conventions
+
+
+Check out our global [CONTRIBUTING guidelines](https://github.com/kubewarden/.github/blob/main/CONTRIBUTING.md) for Rust code conventions
