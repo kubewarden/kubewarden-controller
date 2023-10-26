@@ -1,3 +1,5 @@
+use crate::raw_review::{RawReviewRequest, RawReviewResponse};
+use policy_evaluator::{admission_response::AdmissionResponse, policy_evaluator::ValidateRequest};
 use std::convert::Infallible;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, span::Span, warn};
@@ -7,8 +9,11 @@ use super::{
     populate_span_with_admission_request_data, populate_span_with_policy_evaluation_results,
     ServerErrorResponse,
 };
-use crate::admission_review::AdmissionReview;
-use crate::communication::{EvalRequest, RequestOrigin};
+
+use crate::{
+    admission_review::AdmissionReview,
+    communication::{EvalRequest, RequestOrigin},
+};
 
 // note about tracing: we are manually adding the `policy_id` field
 // because otherwise the automatic "export" would cause the string to be
@@ -43,7 +48,7 @@ pub(crate) async fn audit(
     tx: mpsc::Sender<EvalRequest>,
 ) -> Result<impl warp::Reply, Infallible> {
     let request_origin = crate::communication::RequestOrigin::Audit;
-    evaluate(policy_id, admission_review, tx, request_origin).await
+    extract_admission_request_and_evaluate(policy_id, admission_review, tx, request_origin).await
 }
 
 // note about tracing: we are manually adding the `policy_id` field
@@ -79,10 +84,39 @@ pub(crate) async fn validation(
     tx: mpsc::Sender<EvalRequest>,
 ) -> Result<impl warp::Reply, Infallible> {
     let request_origin = crate::communication::RequestOrigin::Validate;
-    evaluate(policy_id, admission_review, tx, request_origin).await
+    extract_admission_request_and_evaluate(policy_id, admission_review, tx, request_origin).await
 }
 
-pub(crate) async fn evaluate(
+#[tracing::instrument(
+    name = "validation_raw",
+    fields(
+        request_uid=tracing::field::Empty,
+        host=crate::cli::HOSTNAME.as_str(),
+        policy_id=policy_id.as_str(),
+        allowed=tracing::field::Empty,
+        mutated=tracing::field::Empty,
+        response_code=tracing::field::Empty,
+        response_message=tracing::field::Empty,
+    ),
+    skip_all)]
+pub(crate) async fn validation_raw(
+    policy_id: String,
+    raw_review: RawReviewRequest,
+    tx: mpsc::Sender<EvalRequest>,
+) -> Result<impl warp::Reply, Infallible> {
+    debug!(payload = %serde_json::to_string(&raw_review).unwrap().as_str());
+
+    let request_origin = crate::communication::RequestOrigin::Validate;
+    evaluate(
+        policy_id,
+        ValidateRequest::Raw(raw_review.request),
+        tx,
+        request_origin,
+    )
+    .await
+}
+
+async fn extract_admission_request_and_evaluate(
     policy_id: String,
     admission_review: AdmissionReview,
     tx: mpsc::Sender<EvalRequest>,
@@ -106,10 +140,25 @@ pub(crate) async fn evaluate(
     };
     populate_span_with_admission_request_data(&adm_req);
 
+    evaluate(
+        policy_id,
+        ValidateRequest::AdmissionRequest(adm_req),
+        tx,
+        request_origin,
+    )
+    .await
+}
+
+async fn evaluate(
+    policy_id: String,
+    request: ValidateRequest,
+    tx: mpsc::Sender<EvalRequest>,
+    request_origin: RequestOrigin,
+) -> Result<warp::reply::WithStatus<warp::reply::Json>, Infallible> {
     let (resp_tx, resp_rx) = oneshot::channel();
     let eval_req = EvalRequest {
         policy_id,
-        req: adm_req,
+        req: request.clone(),
         resp_chan: resp_tx,
         parent_span: Span::current(),
         request_origin,
@@ -127,16 +176,14 @@ pub(crate) async fn evaluate(
     let res = resp_rx.await;
 
     match res {
-        Ok(r) => match r {
-            Some(vr) => {
-                populate_span_with_policy_evaluation_results(&vr);
-                let admission_review = AdmissionReview::new_with_response(vr);
-                debug!(response =? admission_review, "policy evaluated");
+        Ok(response) => match response {
+            Some(admission_response) => {
+                populate_span_with_policy_evaluation_results(&admission_response);
 
-                Ok(warp::reply::with_status(
-                    warp::reply::json(&admission_review),
-                    StatusCode::OK,
-                ))
+                let response = build_response(request, admission_response.clone());
+                debug!(response =? &admission_response, "policy evaluated");
+
+                Ok(warp::reply::with_status(response, StatusCode::OK))
             }
             None => {
                 let message = String::from("requested policy not known");
@@ -162,6 +209,22 @@ pub(crate) async fn evaluate(
                 warp::reply::json(&error_reply),
                 StatusCode::INTERNAL_SERVER_ERROR,
             ))
+        }
+    }
+}
+
+fn build_response(
+    request: ValidateRequest,
+    admission_response: AdmissionResponse,
+) -> warp::reply::Json {
+    match request {
+        ValidateRequest::AdmissionRequest(_) => {
+            let admission_review = AdmissionReview::new_with_response(admission_response);
+            warp::reply::json(&admission_review)
+        }
+        ValidateRequest::Raw(_) => {
+            let admission_response = RawReviewResponse::new(admission_response);
+            warp::reply::json(&admission_response)
         }
     }
 }
@@ -320,6 +383,72 @@ mod tests {
                     ))
                 }
             };
+            eval_req
+                .resp_chan
+                .send(None)
+                .expect("cannot send back evaluation response");
+        }
+    }
+
+    #[tokio::test]
+    async fn success_raw() {
+        let (tx, mut rx) = mpsc::channel::<EvalRequest>(1);
+
+        let policy_id = "test_policy".to_string();
+        let raw_review = RawReviewRequest {
+            request: serde_json::json!(r#"{"foo": "bar"}"#),
+        };
+
+        tokio::spawn(async move {
+            let response = validation_raw(policy_id, raw_review, tx)
+                .await
+                .expect("validation should not fail")
+                .into_response();
+
+            assert_eq!(response.status(), StatusCode::OK);
+        });
+
+        while let Some(eval_req) = rx.recv().await {
+            assert!(matches!(
+                eval_req.request_origin,
+                crate::communication::RequestOrigin::Validate
+            ));
+            let admission_response = AdmissionResponse {
+                uid: "test_uid".to_string(),
+                allowed: true,
+                ..Default::default()
+            };
+            eval_req
+                .resp_chan
+                .send(Some(admission_response))
+                .expect("cannot send back evaluation response");
+        }
+    }
+
+    #[tokio::test]
+    async fn requested_policy_not_found_raw() {
+        let (tx, mut rx) = mpsc::channel::<EvalRequest>(1);
+
+        let policy_id = "test_policy".to_string();
+        let raw_review = RawReviewRequest {
+            request: serde_json::json!(r#"{"foo": "bar"}"#),
+        };
+
+        tokio::spawn(async move {
+            let response = validation_raw(policy_id, raw_review, tx)
+                .await
+                .expect("validation should not fail")
+                .into_response();
+
+            assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        });
+
+        while let Some(eval_req) = rx.recv().await {
+            assert!(matches!(
+                eval_req.request_origin,
+                crate::communication::RequestOrigin::Validate
+            ));
+
             eval_req
                 .resp_chan
                 .send(None)

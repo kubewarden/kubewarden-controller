@@ -1,12 +1,11 @@
+use policy_evaluator::admission_request::AdmissionRequest;
 use policy_evaluator::admission_response::AdmissionResponse;
 use std::convert::Infallible;
 use tracing::span::Span;
 use warp::http::StatusCode;
 
-use crate::admission_review::AdmissionRequest;
-
 mod audit_and_validation;
-pub(crate) use audit_and_validation::{audit, validation};
+pub(crate) use audit_and_validation::{audit, validation, validation_raw};
 
 pub(crate) fn populate_span_with_admission_request_data(adm_req: &AdmissionRequest) {
     Span::current().record("kind", adm_req.kind.kind.as_str());

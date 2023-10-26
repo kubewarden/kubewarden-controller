@@ -500,9 +500,9 @@ mod tests {
 
     fn generate_metadata(major: u64, minor: u64, patch: u64) -> Metadata {
         let minimum_kubewarden_version = Version {
-            major: major,
-            minor: minor,
-            patch: patch,
+            major,
+            minor,
+            patch,
             pre: Prerelease::EMPTY,
             build: BuildMetadata::EMPTY,
         };

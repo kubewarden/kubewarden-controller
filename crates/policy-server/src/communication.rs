@@ -1,9 +1,9 @@
 use anyhow::Result;
 use policy_evaluator::admission_response::AdmissionResponse;
+use policy_evaluator::policy_evaluator::ValidateRequest;
 use std::collections::HashMap;
 use tokio::sync::oneshot;
 
-use crate::admission_review::AdmissionRequest;
 use crate::policy_downloader::FetchedPolicies;
 use crate::settings::Policy;
 
@@ -16,7 +16,7 @@ pub(crate) enum RequestOrigin {
 #[derive(Debug)]
 pub(crate) struct EvalRequest {
     pub policy_id: String,
-    pub req: AdmissionRequest,
+    pub req: ValidateRequest,
     pub resp_chan: oneshot::Sender<Option<AdmissionResponse>>,
     pub parent_span: tracing::Span,
     pub request_origin: RequestOrigin,

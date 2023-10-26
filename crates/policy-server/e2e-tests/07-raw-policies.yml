@@ -1,0 +1,115 @@
+name: Raw policies execution
+
+testcases:
+  - name: fixtures
+    steps:
+      - type: readfile
+        path: ./test_data/raw_validation.json
+        assertions:
+          - result.err ShouldBeEmpty
+        vars:
+          raw_validation:
+            from: result.content
+      - type: readfile
+        path: ./test_data/raw_mutation.json
+        assertions:
+          - result.err ShouldBeEmpty
+        vars:
+          raw_mutation:
+            from: result.content
+
+  - name: Raw waPC validation policy works as expected
+    steps:
+      - name: Accept
+        type: http
+        method: POST
+        url: http://localhost:3000/validate_raw/raw-validation
+        headers:
+          Content-Type: application/json
+        body: "{{ .fixtures.raw_validation }}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.response.allowed ShouldEqual true
+          - result.bodyjson.response.status.code ShouldNotEqual 500
+          - result.bodyjson.response ShouldNotContainKey patch
+          - result.bodyjson.response ShouldNotContainKey patchType
+
+  - name: Raw waPC mutation policy accepts without mutating
+    steps:
+      - name: Accept
+        type: http
+        method: POST
+        url: http://localhost:3000/validate_raw/raw-mutation
+        headers:
+          Content-Type: application/json
+        body: "{{ .fixtures.raw_validation }}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.response.allowed ShouldEqual true
+          - result.bodyjson.response.status.code ShouldNotEqual 500
+          - result.bodyjson.response ShouldNotContainKey patch
+          - result.bodyjson.response ShouldNotContainKey patchType
+
+  - name: Raw waPC mutation policy mutates the request
+    steps:
+      - name: Accept
+        type: http
+        method: POST
+        url: http://localhost:3000/validate_raw/raw-mutation
+        headers:
+          Content-Type: application/json
+        body: "{{ .fixtures.raw_mutation }}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.response.allowed ShouldEqual true
+          - result.bodyjson.response.status.code ShouldNotEqual 500
+          - result.bodyjson.response ShouldContainKey patch
+          - result.bodyjson.response ShouldContainKey patchType
+
+  - name: Raw OPA validation policy works as expected
+    steps:
+      - name: Accept
+        type: http
+        method: POST
+        url: http://localhost:3000/validate_raw/raw-validation-opa
+        headers:
+          Content-Type: application/json
+        body: "{{ .fixtures.raw_validation }}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.response.allowed ShouldEqual true
+          - result.bodyjson.response.status.code ShouldNotEqual 500
+          - result.bodyjson.response ShouldNotContainKey patch
+          - result.bodyjson.response ShouldNotContainKey patchType
+
+  - name: Raw WASI validation policy works as expected
+    steps:
+      - name: Accept
+        type: http
+        method: POST
+        url: http://localhost:3000/validate_raw/raw-validation-wasi
+        headers:
+          Content-Type: application/json
+        body: "{{ .fixtures.raw_validation }}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.response.allowed ShouldEqual true
+          - result.bodyjson.response.status.code ShouldNotEqual 500
+          - result.bodyjson.response ShouldNotContainKey patch
+          - result.bodyjson.response ShouldNotContainKey patchType
+
+  - name: Raw WASI mutation policy mutates the request
+    steps:
+      - name: Accept
+        type: http
+        method: POST
+        url: http://localhost:3000/validate_raw/raw-mutation-wasi
+        headers:
+          Content-Type: application/json
+        body: "{{ .fixtures.raw_mutation }}"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.response.allowed ShouldEqual true
+          - result.bodyjson.response.status.code ShouldNotEqual 500
+          - result.bodyjson.response ShouldContainKey patch
+          - result.bodyjson.response ShouldContainKey patchType
