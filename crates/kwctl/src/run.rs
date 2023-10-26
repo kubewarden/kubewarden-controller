@@ -1,14 +1,13 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::admission_request::AdmissionRequest;
 use policy_evaluator::kube;
-use policy_evaluator::policy_metadata::PolicyType;
 use policy_evaluator::{
     constants::*,
     policy_evaluator::{Evaluator, PolicyEvaluator},
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
-    policy_metadata::{ContextAwareResource, Metadata},
+    policy_metadata::{ContextAwareResource, Metadata, PolicyType},
 };
 use std::{
     collections::HashSet,
