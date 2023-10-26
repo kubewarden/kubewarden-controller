@@ -63,3 +63,7 @@ executed succesfully.
 Now that the policy-server has a new tag released, consider bumping
 the version in the kubewarden-defaults
 [`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-defaults).
+
+## Code conventions
+
+Check out our global [CONTRIBUTING guidelines](https://github.com/kubewarden/.github/blob/main/CONTRIBUTING.md) for Rust code conventions
