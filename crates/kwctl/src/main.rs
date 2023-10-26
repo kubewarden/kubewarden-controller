@@ -713,11 +713,14 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
             HostCapabilitiesMode::Proxy(callback_handler::ProxyMode::Replay { source });
     }
 
+    let raw = matches.get_one::<bool>("raw").unwrap_or(&false).to_owned();
+
     Ok(run::PullAndRunSettings {
         uri,
         user_execution_mode: execution_mode,
         sources,
         request,
+        raw,
         settings,
         verified_manifest_digest,
         fulcio_and_rekor_data,

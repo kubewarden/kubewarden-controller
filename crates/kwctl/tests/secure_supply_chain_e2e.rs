@@ -50,7 +50,7 @@ fn test_verify_fulcio_cert_path() {
         .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
-        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5");
 
     cmd.assert().success();
 }
@@ -66,7 +66,7 @@ fn test_verify_fulcio_cert_path_no_rekor_public_key() {
         .arg(".sigstore/root/targets/fulcio.crt.pem")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
-        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5");
 
     cmd.assert().failure();
     cmd.assert().stderr(contains(
@@ -85,7 +85,7 @@ fn test_verify_rekor_public_key_no_certs() {
         .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
-        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9");
+        .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5");
 
     cmd.assert().failure();
     cmd.assert().stderr(contains(

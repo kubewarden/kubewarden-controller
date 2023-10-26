@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use policy_evaluator::admission_request::AdmissionRequest;
 use policy_evaluator::kube;
 use policy_evaluator::{
     constants::*,
@@ -36,6 +37,7 @@ pub(crate) struct PullAndRunSettings {
     pub user_execution_mode: Option<PolicyExecutionMode>,
     pub sources: Option<Sources>,
     pub request: String,
+    pub raw: bool,
     pub settings: Option<String>,
     pub verified_manifest_digest: Option<String>,
     pub fulcio_and_rekor_data: Option<FulcioAndRekorData>,
@@ -46,7 +48,7 @@ pub(crate) struct PullAndRunSettings {
 
 pub(crate) struct RunEnv {
     pub policy_evaluator: PolicyEvaluator,
-    pub req_obj: serde_json::Value,
+    pub request: ValidateRequest,
     pub callback_handler: CallbackHandler,
     pub callback_handler_shutdown_channel_tx: oneshot::Sender<()>,
 }
@@ -69,7 +71,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     let policy_id =
         read_policy_title_from_metadata(metadata.as_ref()).unwrap_or_else(|| cfg.uri.clone());
 
-    let request = serde_json::from_str::<serde_json::Value>(&cfg.request)?;
+    let req_obj = serde_json::from_str::<serde_json::Value>(&cfg.request)?;
 
     let execution_mode = determine_execution_mode(
         metadata.clone(),
@@ -118,23 +120,30 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     }
     let policy_evaluator = policy_evaluator_builder.build()?;
 
-    let req_obj = match request {
-        serde_json::Value::Object(ref object) => {
-            if object.get("kind").and_then(serde_json::Value::as_str) == Some("AdmissionReview") {
-                object
-                    .get("request")
-                    .cloned()
-                    .ok_or_else(|| anyhow!("invalid admission review object"))
-            } else {
-                Ok(request)
+    let request = if cfg.raw {
+        ValidateRequest::Raw(req_obj)
+    } else {
+        let req_obj = match req_obj.clone() {
+            serde_json::Value::Object(object) => {
+                if object.get("kind").and_then(serde_json::Value::as_str) == Some("AdmissionReview")
+                {
+                    object
+                        .get("request")
+                        .cloned()
+                        .ok_or_else(|| anyhow!("invalid admission review object"))
+                } else {
+                    Ok(req_obj)
+                }
             }
-        }
-        _ => Err(anyhow!("request to evaluate is invalid")),
-    }?;
+            _ => Err(anyhow!("request to evaluate is invalid")),
+        }?;
+        let adm_req: AdmissionRequest = serde_json::from_value(req_obj)?;
+        ValidateRequest::AdmissionRequest(adm_req)
+    };
 
     Ok(RunEnv {
         policy_evaluator,
-        req_obj,
+        request,
         callback_handler,
         callback_handler_shutdown_channel_tx,
     })
@@ -145,7 +154,6 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
     let mut policy_evaluator = run_env.policy_evaluator;
     let mut callback_handler = run_env.callback_handler;
     let callback_handler_shutdown_channel_tx = run_env.callback_handler_shutdown_channel_tx;
-    let req_obj = run_env.req_obj;
 
     // validate the settings given by the user
     let settings_validation_response = policy_evaluator.validate_settings();
@@ -163,7 +171,7 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
     });
 
     // evaluate request
-    let response = policy_evaluator.validate(ValidateRequest::new(req_obj));
+    let response = policy_evaluator.validate(run_env.request);
     println!("{}", serde_json::to_string(&response)?);
 
     // The evaluation is done, we can shutdown the tokio task that is running

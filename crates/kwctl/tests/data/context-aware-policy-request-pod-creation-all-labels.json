@@ -1,8 +1,14 @@
 {
   "uid": "1299d386-525b-4032-98ae-1949f69f9cfc",
   "kind": {
+    "group": "",
     "kind": "Pod",
     "version": "v1"
+  },
+  "resource": {
+    "group": "",
+    "version": "v1",
+    "resource": "pods"
   },
   "namespace": "test-policy",
   "object": {
@@ -23,14 +29,13 @@
   },
   "operation": "CREATE",
   "requestKind": {
+    "group": "",
     "version": "v1",
     "kind": "Pod"
   },
   "userInfo": {
     "username": "alice",
     "uid": "alice-uid",
-    "groups": [
-      "system:authenticated"
-    ]
+    "groups": ["system:authenticated"]
   }
 }
