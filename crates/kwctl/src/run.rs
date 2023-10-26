@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::admission_request::AdmissionRequest;
 use policy_evaluator::kube;
+use policy_evaluator::policy_metadata::PolicyType;
 use policy_evaluator::{
     constants::*,
     policy_evaluator::{Evaluator, PolicyEvaluator},
@@ -120,7 +121,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
     }
     let policy_evaluator = policy_evaluator_builder.build()?;
 
-    let request = if cfg.raw {
+    let request = if cfg.raw || has_raw_policy_type(metadata.as_ref()) {
         ValidateRequest::Raw(req_obj)
     } else {
         let req_obj = match req_obj.clone() {
@@ -284,6 +285,14 @@ fn determine_execution_mode(
                 }
             }
         }
+    }
+}
+
+fn has_raw_policy_type(metadata: Option<&Metadata>) -> bool {
+    if let Some(metadata) = metadata {
+        metadata.policy_type == PolicyType::Raw
+    } else {
+        false
     }
 }
 
