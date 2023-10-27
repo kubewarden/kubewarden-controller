@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/kubewarden/kubewarden-controller v1.9.0-rc1
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.7.0
