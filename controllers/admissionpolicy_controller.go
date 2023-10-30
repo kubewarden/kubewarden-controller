@@ -26,6 +26,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -88,8 +89,9 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&policiesv1.PolicyServer{},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPolicyServer),
 		).
+		Owns(&admissionregistrationv1.ValidatingWebhookConfiguration{}).
+		Owns(&admissionregistrationv1.MutatingWebhookConfiguration{}).
 		Complete(r)
-
 	if err != nil {
 		return errors.Join(errors.New("failed enrolling controller with manager"), err)
 	}
