@@ -28,7 +28,7 @@ pulldown-cmark = { version = "0.9.3", default-features = false }
 regex = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.25"
+serde_yaml = "0.9.27"
 syntect = { version = "5.0", default-features = false, features = [
   "default-syntaxes",
   "parsing",
@@ -55,7 +55,7 @@ reqwest = { version = "0", default-features = false, features = [
 
 [dev-dependencies]
 rstest = "0.18.2"
-tempfile = "3.8.0"
+tempfile = "3.8.1"
 assert_cmd = "2.0.12"
 predicates = "3.0.4"
 testcontainers = "0.15"
