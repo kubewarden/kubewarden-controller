@@ -32,7 +32,7 @@ policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag
 rayon = "1.8"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.25"
+serde_yaml = "0.9.27"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
@@ -46,4 +46,4 @@ semver = { version = "1.0.20", features = ["serde"] }
 
 [dev-dependencies]
 rstest = "0.18"
-tempfile = "3.8.0"
+tempfile = "3.8.1"
