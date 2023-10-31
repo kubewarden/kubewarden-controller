@@ -172,6 +172,8 @@ fn test_run_raw() {
     cmd.arg("run")
         .arg("--request-path")
         .arg(test_data("raw.json"))
+        .arg("--settings-json")
+        .arg(r#"{"defaultResource": "rice","forbiddenResources": ["banana","apple"]}"#)
         .arg("registry://ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0");
 
     cmd.assert().success();
