@@ -305,7 +305,7 @@ func webhooks(deploymentsNamespace string) []webhookwrapper.WebhookRegistrator {
 				},
 			},
 			WebhookPath: "/validate-policies-kubewarden-io-v1-policyserver",
-			Mutating:    true,
+			Mutating:    false,
 		},
 		{
 			Registrator: (&policiesv1.ClusterAdmissionPolicy{}).SetupWebhookWithManager,
