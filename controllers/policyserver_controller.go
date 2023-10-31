@@ -155,7 +155,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&policiesv1.AdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			// The watch will trigger twice per object change; once with the old
 			// object, and once the new object. We need to be mindful when doing
-			// Updates since they will invalidate the newever versions of the
+			// Updates since they will invalidate the newer versions of the
 			// object.
 			policy, ok := object.(*policiesv1.AdmissionPolicy)
 			if !ok {
@@ -174,7 +174,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&policiesv1.ClusterAdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			// The watch will trigger twice per object change; once with the old
 			// object, and once the new object. We need to be mindful when doing
-			// Updates since they will invalidate the newever versions of the
+			// Updates since they will invalidate the newer versions of the
 			// object.
 			policy, ok := object.(*policiesv1.ClusterAdmissionPolicy)
 			if !ok {

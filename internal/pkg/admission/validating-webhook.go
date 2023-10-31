@@ -8,7 +8,9 @@ import (
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,9 +25,13 @@ func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 	ctx context.Context,
 	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
-	policyServerNameWithPrefix string) error {
-	webhook := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerNameWithPrefix)
-	err := r.Client.Create(ctx, webhook)
+	policyServerNameWithPrefix string,
+) error {
+	webhook, err := r.validatingWebhookConfiguration(policy, admissionSecret, policyServerNameWithPrefix)
+	if err != nil {
+		return err
+	}
+	err = r.Client.Create(ctx, webhook)
 	if err == nil {
 		return nil
 	}
@@ -37,14 +43,15 @@ func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 
 func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 	policy policiesv1.Policy,
-	newWebhook *admissionregistrationv1.ValidatingWebhookConfiguration) error {
+	newWebhook *admissionregistrationv1.ValidatingWebhookConfiguration,
+) error {
 	var originalWebhook admissionregistrationv1.ValidatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{
 		Name: policy.GetUniqueName(),
 	}, &originalWebhook)
 	if err != nil && apierrors.IsNotFound(err) {
-		return fmt.Errorf("cannot retrieve mutating webhook: %w", err)
+		return fmt.Errorf("cannot retrieve validating webhook: %w", err)
 	}
 
 	if !reflect.DeepEqual(originalWebhook.Webhooks, newWebhook.Webhooks) {
@@ -62,7 +69,8 @@ func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 func (r *Reconciler) validatingWebhookConfiguration(
 	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
-	policyServerName string) *admissionregistrationv1.ValidatingWebhookConfiguration {
+	policyServerName string,
+) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
 	admissionPath := filepath.Join("/validate", policy.GetUniqueName())
 	admissionPort := int32(constants.PolicyServerPort)
 
@@ -78,7 +86,8 @@ func (r *Reconciler) validatingWebhookConfiguration(
 		noneSideEffects := admissionregistrationv1.SideEffectClassNone
 		sideEffects = &noneSideEffects
 	}
-	return &admissionregistrationv1.ValidatingWebhookConfiguration{
+
+	webhook := admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: policy.GetUniqueName(),
 			Labels: map[string]string{
@@ -103,4 +112,15 @@ func (r *Reconciler) validatingWebhookConfiguration(
 			},
 		},
 	}
+
+	// set policy as the owner of the webhook
+	scheme := runtime.NewScheme()
+	if err := policiesv1.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("cannot add policies.kubewarden.io/v1 to scheme: %w", err)
+	}
+	if err := controllerutil.SetControllerReference(policy, &webhook, scheme); err != nil {
+		return nil, fmt.Errorf("cannot set OwnerReference on WebhookConfiguration: %w", err)
+	}
+
+	return &webhook, nil
 }
