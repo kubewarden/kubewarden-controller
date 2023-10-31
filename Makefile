@@ -124,7 +124,11 @@ build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager .
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run . -deployments-namespace kubewarden --default-policy-server default
+	rm -rf cert
+	mkdir cert
+	kubectl get secrets -n kubewarden webhook-server-cert -o jsonpath --template '{.data.tls\.crt}' | base64 -d > cert/tls.crt
+	kubectl get secrets -n kubewarden webhook-server-cert -o jsonpath --template '{.data.tls\.key}' | base64 -d > cert/tls.key
+	go run . -deployments-namespace kubewarden --default-policy-server default --cert-dir cert
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .

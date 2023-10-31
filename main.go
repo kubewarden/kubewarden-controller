@@ -77,6 +77,7 @@ func main() {
 	var enableMetrics bool
 	var enableTracing bool
 	var openTelemetryEndpoint string
+	var certDir string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -95,6 +96,10 @@ func main() {
 		"deployments-namespace",
 		"",
 		"The namespace where the kubewarden resources will be created.")
+	flag.StringVar(&certDir,
+		"cert-dir",
+		"",
+		"directory that contains the server key and certificate. Defaults to `<temp-dir>/k8s-webhook-server/serving-certs`")
 	flag.BoolVar(&alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
 		"always-accept-admission-reviews-on-deployments-namespace",
 		false,
@@ -140,6 +145,10 @@ func main() {
 		Host: environment.webhookHostListen,
 		Port: 9443,
 	}
+	if certDir != "" {
+		serverOptions.CertDir = certDir
+	}
+
 	mgr, err := webhookwrapper.NewManager(
 		ctrl.Options{
 			Scheme: scheme,
