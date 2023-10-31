@@ -46,7 +46,11 @@ raw-validation:
 raw-mutation:
   url: ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0
   allowedToMutate: true
-  settings: {}
+  settings:
+    forbiddenResources:
+      - "banana"
+      - "carrot"
+    defaultResource: "hay"
 
 raw-validation-opa:
   url: ghcr.io/kubewarden/tests/raw-validation-opa-policy:v0.1.0
@@ -72,3 +76,4 @@ raw-mutation-wasi:
     forbiddenResources:
       - "banana"
       - "carrot"
+    defaultResource: "hay"
