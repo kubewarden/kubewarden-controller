@@ -1,0 +1,52 @@
+{
+  "uid": "1299d386-525b-4032-98ae-1949f69f9cfc",
+  "kind": {
+    "group": "networking.k8s.io",
+    "kind": "Ingress",
+    "version": "v1"
+  },
+  "resource": {
+    "group": "networking.k8s.io",
+    "version": "v1",
+    "resource": "ingresses"
+  },
+  "name": "foobar",
+  "operation": "CREATE",
+  "userInfo": {
+    "username": "kubernetes-admin",
+    "groups": [
+      "system:masters",
+      "system:authenticated"
+    ]
+  },
+  "object": {
+    "apiVersion": "networking.k8s.io/v1",
+    "kind": "Ingress",
+    "metadata": {
+      "name": "foobar"
+    },
+    "spec": {
+      "rules": [
+        {
+          "host": "foo.bar.com",
+          "http": {
+            "paths": [
+              {
+                "pathType": "Prefix",
+                "path": "/bar",
+                "backend": {
+                  "service": {
+                    "name": "service1",
+                    "port": {
+                      "number": 3000
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

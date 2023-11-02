@@ -111,9 +111,36 @@ fn test_run(#[case] request: &str, #[case] allowed: bool) {
 }
 
 #[rstest]
-#[case::allowed("context-aware-demo-namespace-found.yml", true)]
-#[case::rejected("context-aware-demo-namespace-not-found.yml", false)]
-fn test_run_context(#[case] session: &str, #[case] allowed: bool) {
+#[case::allowed(
+    "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0",
+    "context-aware-policy-request-pod-creation-all-labels.json",
+    "context-aware-demo-namespace-found.yml",
+    true
+)]
+#[case::rejected(
+    "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0",
+    "context-aware-policy-request-pod-creation-all-labels.json",
+    "context-aware-demo-namespace-not-found.yml",
+    false
+)]
+#[case::gatekeeper_allowed(
+    "registry://ghcr.io/kubewarden/tests/unique-ingress-policy:v0.1.3",
+    "ingress.json",
+    "context-aware-unique-ingress-no-duplicate.yml",
+    true
+)]
+#[case::gatekeeper_rejected(
+    "registry://ghcr.io/kubewarden/tests/unique-ingress-policy:v0.1.3",
+    "ingress.json",
+    "context-aware-unique-ingress-duplicate.yml",
+    false
+)]
+fn test_run_context(
+    #[case] policy_uri: &str,
+    #[case] request: &str,
+    #[case] session: &str,
+    #[case] allowed: bool,
+) {
     let tempdir = tempdir().unwrap();
     pull_policies(tempdir.path(), POLICIES);
 
@@ -123,12 +150,10 @@ fn test_run_context(#[case] session: &str, #[case] allowed: bool) {
     cmd.arg("run")
         .arg("--allow-context-aware")
         .arg("--request-path")
-        .arg(test_data(
-            "context-aware-policy-request-pod-creation-all-labels.json",
-        ))
+        .arg(test_data(request))
         .arg("--replay-host-capabilities-interactions")
         .arg(session_path)
-        .arg("registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0");
+        .arg(policy_uri);
 
     cmd.assert().success();
     cmd.assert()
