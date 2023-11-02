@@ -141,7 +141,7 @@ pub enum PolicyType {
 impl Display for PolicyType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let json = serde_json::to_string(self).map_err(|_| fmt::Error {})?;
-        write!(f, "{}", json)
+        write!(f, "{}", json.replace('"', ""))
     }
 }
 
