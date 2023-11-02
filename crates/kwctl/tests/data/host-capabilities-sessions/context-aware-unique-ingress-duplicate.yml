@@ -1,0 +1,48 @@
+- type: Exchange
+  request: |
+    !KubernetesListResourceAll
+    api_version: networking.k8s.io/v1
+    kind: Ingress
+    label_selector: null
+    field_selector: null
+  response:
+    type: Success
+    payload: |
+      {
+        "metadata": {"resourceVersion":"450657254"},
+        "items":[
+          {
+            "metadata": {
+              "creationTimestamp": "2021-07-23T21:16:28Z",
+              "generation": 2,
+              "name": "test",
+              "namespace": "default",
+              "resourceVersion": "126783215",
+              "uid": "25e07786-fe09-49ba-a0f4-3008f3517120"
+            },
+            "spec": {
+              "rules": [
+                {
+                  "host": "foo.bar.com",
+                  "http": {
+                    "paths": [
+                      {
+                        "path": "/",
+                        "pathType": "Prefix",
+                        "backend": {
+                          "service": {
+                            "name": "demo",
+                            "port": {
+                              "number": 80
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
