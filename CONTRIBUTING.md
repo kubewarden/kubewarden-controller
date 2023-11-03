@@ -1,6 +1,6 @@
 # Contributing
 
-This document contains instructions on how to build and run locally the controller
+This document contains instructions on how to build and run the controller locally
 allowing developers to test their changes.
 
 ## Building
@@ -54,7 +54,7 @@ to access workloads in the cluster and receive requests to the controller runnin
 in the developer machine.  
 
 > Install the telepresence binary from the Github releases page. The official 
-> once from Ambassador Labs may require login. 
+> ones from Ambassador Labs may require login. 
 
 Before running the controller, install the custom resource definitions:
 
@@ -71,10 +71,10 @@ kubectl create ns kubewarden
 Now, as we are using `telepresence` to intercept the intra cluster
 communication, we need to create the controller deployment and service that
 `telepresence` will intercept. For this, install the Kuberwarden stack
-following the steps described quickstart guide. In other words, install
-Kubewarden controller helm chart. However, a change is required. The controller
-deployment must allow root users. This is disable by default and it is required
-because `telepresence` will add a init container in the deployment which need
+following the steps described in the quickstart guide. In other words, install
+the Kubewarden controller helm chart. However, a change is required. The controller
+deployment must allow root users. This is disabled by default and it is required
+because `telepresence` will add a init container in the deployment which needs
 root access.
 
 ```console
@@ -137,9 +137,9 @@ spec:
 EOF
 ```
 
-> Note: if you want to use some kind o NetworkPolicy to block the original controller traffic
-> you may need to have a multi node cluster. Because in a single node cluster the traffic 
-> policies will not be applied. Because the traffic will not leave the node and never the
+> Note: if you want to use some kind of NetworkPolicy to block the original controller traffic
+> you may need to have a multi node cluster. In a single node cluster the traffic 
+> policies will not be applied. Because the traffic will not leave the node and will never be
 > checked against the network policies
 
 To intercept requests sent to the Kubewarden controller run the following command:
