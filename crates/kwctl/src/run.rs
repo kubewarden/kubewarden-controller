@@ -137,7 +137,8 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
             }
             _ => Err(anyhow!("request to evaluate is invalid")),
         }?;
-        let adm_req: AdmissionRequest = serde_json::from_value(req_obj)?;
+        let adm_req: AdmissionRequest = serde_json::from_value(req_obj)
+            .map_err(|e| anyhow!("cannot build AdmissionRequest object from given input: {e}"))?;
         ValidateRequest::AdmissionRequest(adm_req)
     };
 
