@@ -36,6 +36,8 @@ for o in objects:
     # running process.
     if o.get('kind') == 'Deployment' and o.get('metadata').get('name') == 'kubewarden-controller':
         o['spec']['template']['spec']['securityContext']['runAsNonRoot'] = False
+        # Disable the leader election to speed up the startup time.
+        o['spec']['template']['spec']['containers'][0]['args'].remove('--leader-elect')
         break
 updated_install = encode_yaml_stream(objects)
 k8s_yaml(updated_install)
