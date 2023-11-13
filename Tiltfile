@@ -27,7 +27,7 @@ install = helm(
     settings.get('helm_charts_path') + '/charts/kubewarden-controller/', 
     name='kubewarden-controller', 
     namespace='kubewarden', 
-    set='image.repository=' + settings.get('image'),
+    set=['image.repository=' + settings.get('image'), 'global.cattle.SystemDefaultRegistry=' + settings.get('registry')]
 )
 
 objects = decode_yaml_stream(install)
@@ -41,7 +41,6 @@ for o in objects:
         break
 updated_install = encode_yaml_stream(objects)
 k8s_yaml(updated_install)
-
 
 # enable hot reloading by doing the following:
 # - locally build the whole project
@@ -69,7 +68,7 @@ dockerfile = 'tilt.dockerfile'
 
 load('ext://restart_process', 'docker_build_with_restart')
 docker_build_with_restart(
-    'ghcr.io/' + settings.get('image'),
+    settings.get('registry') + '/' + settings.get('image'),
     '.',
     dockerfile = dockerfile,
     entrypoint = entrypoint,
