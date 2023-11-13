@@ -15,76 +15,56 @@ Then, can run the following command to build the package:
 make
 ```
 
-## Running
+## Development
 
-You can run the controller by executing `make run`. This Makefile
-target executes the controller locally as a regular process.
+To run the controller for development purposes, you can use [Tilt](https://tilt.dev/).
 
-In order to execute this Makefile target, you need to have created a
-Kubernetes cluster with `k3d`, `kind` or `minikube` that is reachable
-through your `~/.kube/config` kubeconfig file.
+### Pre-requisites
 
-These are the relevant environment variables:
-
-- `KUBEWARDEN_DEVELOPMENT_MODE`: if its value is `1` or `true`, the
-  controller will generate certificates and register Kubewarden
-  webhooks in the configured default Kubernetes cluster present in the
-  current context in the kubeconfig file.
-
-- `WEBHOOK_HOST_LISTEN`: host or IP address where the webhook server
-  is listening. Only applicable if `KUBEWARDEN_DEVELOPMENT_MODE` is
-  enabled. If not provided and `WEBHOOK_HOST_ADVERTISE` is provided,
-  it will be defaulted to `WEBHOOK_HOST_ADVERTISE`.
-
-- `WEBHOOK_HOST_ADVERTISE`: how the API server will try to reach the
-  webhook endpoint. Only applicable if `KUBEWARDEN_DEVELOPMENT_MODE` is
-  enabled. If not provided and `WEBHOOK_HOST_LISTEN` is provided,
-  it will be defaulted to `WEBHOOK_HOST_LISTEN`.
-
-The Subject Alternative Names of the generated certificate in
-development mode will contain whatever was provided on
-`WEBHOOK_HOST_ADVERTISE` (or whatever it was defaulted to, if it was
-not provided).
-
-### Install Custom Resource Definitions
-
-Before running the controller, install the custom resource definitions:
+Please follow the [Tilt installation documentation](https://docs.tilt.dev/install.html) to install the command line tool.
+You need to clone the [kubewarden helm-charts repository](https://github.com/kubewarden/helm-charts) in your local machine:
 
 ```console
-kubectl apply -f config/crd/bases
+$ git clone git@github.com/kubewarden/helm-charts.git
 ```
 
-### Create the `kubewarden` namespace
+A development Kubernetes cluster is needed to run the controller.
+You can use [k3d](https://k3d.io/) to create a local cluster for development purposes.
 
-```console
-kubectl create ns kubewarden
+### Settings
+
+The `tilt-settings.yaml.example` acts as a template for the `tilt-settings.yaml` file that you need to create in the root of this repository.
+Copy the example file and edit it to match your environment.
+The `tilt-settings.yaml` file is ignored by git, so you can safely edit it without worrying about committing it by mistake.
+
+The following settings can be configured:
+
+- `registry`: the container registry where the controller image will be pushed. If you don't have a private registry, you can use `ghcr.io` as long as your cluster has access to it.
+- `image`: the name of the controller image. If you are using `ghcr.io` as your registry, you need to prefix the image name with your GitHub username.
+- `helm_charts_path`: the path to the `helm-charts` repository that you cloned in the previous step.
+
+Example:
+
+```yaml
+registry: ghcr.io
+image: your-github-username/kubewarden-controller
+helmChartPath: /path/to/helm-charts
 ```
 
-### Running
+### Running the controller
 
-#### Running with k3d
+The `Tiltfile` included in this repository will take care of the following:
 
-```console
-KUBEWARDEN_DEVELOPMENT_MODE=1 \
-  WEBHOOK_HOST_LISTEN=$(docker inspect k3d-k3s-default-server-0 | jq -r '.[] | .NetworkSettings.Networks."k3d-k3s-default".Gateway') \
-  make run
-```
+- Install the CRDs from the `config/crd/` directory of this repository.
+- Install `cert-manager`.
+- Create the `kubewarden` namespace and install the controller helm-chart in it.
+- Inject the development image in the deployment.
+- Automatically reload the controller when you make changes to the code.
 
-#### Running with kind
-
-```console
-KUBEWARDEN_DEVELOPMENT_MODE=1 \
-  WEBHOOK_HOST_LISTEN=$(docker inspect kind-control-plane | jq -r '.[] | .NetworkSettings.Networks.kind.Gateway') \
-  make run
-```
-
-#### Running with minikube
+To run the controller, you just need to run the following command against an empty cluster:
 
 ```console
-KUBEWARDEN_DEVELOPMENT_MODE=1 \
-  WEBHOOK_HOST_LISTEN=0.0.0.0 \
-  WEBHOOK_HOST_ADVERTISE=host.minikube.internal \
-  make run
+$ tilt up --stream
 ```
 
 ## Tagging a new release
@@ -123,4 +103,3 @@ Now that the controller has a new tag released, the automation will bump the
 [`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-controller).
 
 ### Consider announcing the new release in channels!
-
