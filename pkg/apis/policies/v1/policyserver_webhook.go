@@ -35,22 +35,15 @@ import (
 // log is for logging in this package.
 var policyserverlog = logf.Log.WithName("policyserver-resource")
 
-// SetupPolicyServerWebhookWithManager returns a function that can be used to setup the PolicyServer webhook with the manager.
-// This is needed since we are using github.com/ereslibre/kube-webhook-wrapper and will be removed once we no longer use it.
-func SetupPolicyServerWebhookWithManager(deploymentsNamespace string) func(mgr ctrl.Manager) error {
-	return func(mgr ctrl.Manager) error {
-		ps := &PolicyServer{}
-
-		err := ctrl.NewWebhookManagedBy(mgr).
-			For(ps).
-			WithValidator(&policyServerValidator{k8sClient: mgr.GetClient(), deploymentsNamespace: deploymentsNamespace}).
-			Complete()
-		if err != nil {
-			return fmt.Errorf("failed enrolling webhook with manager: %w", err)
-		}
-
-		return nil
+func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager, deploymentsNamespace string) error {
+	err := ctrl.NewWebhookManagedBy(mgr).
+		For(ps).
+		WithValidator(&policyServerValidator{k8sClient: mgr.GetClient(), deploymentsNamespace: deploymentsNamespace}).
+		Complete()
+	if err != nil {
+		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
 	}
+	return nil
 }
 
 // +kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}

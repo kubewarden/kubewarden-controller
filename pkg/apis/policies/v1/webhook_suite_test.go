@@ -114,7 +114,7 @@ var _ = BeforeSuite(func() {
 	err = (&ClusterAdmissionPolicy{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupPolicyServerWebhookWithManager("kubewarden")(mgr)
+	err = (&PolicyServer{}).SetupWebhookWithManager(mgr, "kubewarden")
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook
