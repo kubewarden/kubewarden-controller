@@ -26,6 +26,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/naming"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -88,8 +89,15 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&policiesv1.PolicyServer{},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPolicyServer),
 		).
+		Watches(
+			&admissionregistrationv1.ValidatingWebhookConfiguration{},
+			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyForWebhookConfiguration),
+		).
+		Watches(
+			&admissionregistrationv1.MutatingWebhookConfiguration{},
+			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyForWebhookConfiguration),
+		).
 		Complete(r)
-
 	if err != nil {
 		return errors.Join(errors.New("failed enrolling controller with manager"), err)
 	}
@@ -147,4 +155,42 @@ func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPolicyServer(ctx con
 		return []reconcile.Request{}
 	}
 	return r.findAdmissionPoliciesForConfigMap(&configMap)
+}
+
+func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
+	if _, found := webhookConfiguration.GetLabels()["kubewarden"]; !found {
+		return []reconcile.Request{}
+	}
+
+	policyScope, found := webhookConfiguration.GetLabels()["kubewardenPolicyScope"]
+	if !found {
+		r.Log.Error(nil, "Found a webhook configuration without a scope label", "name", webhookConfiguration.GetName())
+		return []reconcile.Request{}
+	}
+
+	// Filter out ClusterAdmissionPolicies
+	if policyScope != "namespace" {
+		return []reconcile.Request{}
+	}
+
+	policyNamespace, found := webhookConfiguration.GetAnnotations()["kubewardenPolicyNamespace"]
+	if !found {
+		r.Log.Error(nil, "Found a webhook configuration without a namespace annotation", "name", webhookConfiguration.GetName())
+		return []reconcile.Request{}
+	}
+
+	policyName, found := webhookConfiguration.GetAnnotations()["kubewardenPolicyName"]
+	if !found {
+		r.Log.Error(nil, "Found webhook configuration without a policy name annotation", "name", webhookConfiguration.GetName())
+		return []reconcile.Request{}
+	}
+
+	return []reconcile.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name:      policyName,
+				Namespace: policyNamespace,
+			},
+		},
+	}
 }
