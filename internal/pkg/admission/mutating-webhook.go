@@ -23,7 +23,8 @@ func (r *Reconciler) ReconcileMutatingWebhookConfiguration(
 	ctx context.Context,
 	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
-	policyServerNameWithPrefix string) error {
+	policyServerNameWithPrefix string,
+) error {
 	webhook := r.mutatingWebhookConfiguration(policy, admissionSecret, policyServerNameWithPrefix)
 	err := r.Client.Create(ctx, webhook)
 	if err == nil {
@@ -37,7 +38,8 @@ func (r *Reconciler) ReconcileMutatingWebhookConfiguration(
 
 func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
 	policy policiesv1.Policy,
-	newWebhook *admissionregistrationv1.MutatingWebhookConfiguration) error {
+	newWebhook *admissionregistrationv1.MutatingWebhookConfiguration,
+) error {
 	var originalWebhook admissionregistrationv1.MutatingWebhookConfiguration
 
 	err := r.Client.Get(ctx, client.ObjectKey{
@@ -47,13 +49,23 @@ func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
 		return fmt.Errorf("cannot retrieve mutating webhook: %w", err)
 	}
 
+	patch := originalWebhook.DeepCopy()
+
+	for key, value := range newWebhook.ObjectMeta.Labels {
+		patch.ObjectMeta.Labels[key] = value
+	}
+
+	for key, value := range newWebhook.ObjectMeta.Annotations {
+		patch.ObjectMeta.Annotations[key] = value
+	}
+
 	if !reflect.DeepEqual(originalWebhook.Webhooks, newWebhook.Webhooks) {
-		patch := originalWebhook.DeepCopy()
 		patch.Webhooks = newWebhook.Webhooks
-		err = r.Client.Patch(ctx, patch, client.MergeFrom(&originalWebhook))
-		if err != nil {
-			return fmt.Errorf("cannot patch mutating webhook: %w", err)
-		}
+	}
+
+	err = r.Client.Patch(ctx, patch, client.MergeFrom(&originalWebhook))
+	if err != nil {
+		return fmt.Errorf("cannot patch mutating webhook: %w", err)
 	}
 
 	return nil
@@ -62,7 +74,8 @@ func (r *Reconciler) updateMutatingWebhook(ctx context.Context,
 func (r *Reconciler) mutatingWebhookConfiguration(
 	policy policiesv1.Policy,
 	admissionSecret *corev1.Secret,
-	policyServerName string) *admissionregistrationv1.MutatingWebhookConfiguration {
+	policyServerName string,
+) *admissionregistrationv1.MutatingWebhookConfiguration {
 	admissionPath := filepath.Join("/validate", policy.GetUniqueName())
 	admissionPort := int32(constants.PolicyServerPort)
 
@@ -78,11 +91,22 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 		noneSideEffects := admissionregistrationv1.SideEffectClassNone
 		sideEffects = &noneSideEffects
 	}
+
+	policyScope := "namespace"
+	if policy.GetNamespace() == "" {
+		policyScope = "cluster"
+	}
+
 	return &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: policy.GetUniqueName(),
 			Labels: map[string]string{
-				"kubewarden": "true",
+				"kubewarden":            "true",
+				"kubewardenPolicyScope": policyScope,
+			},
+			Annotations: map[string]string{
+				"kubewardenPolicyName":      policy.GetName(),
+				"kubewardenPolicyNamespace": policy.GetNamespace(),
 			},
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
