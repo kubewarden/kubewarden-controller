@@ -1,18 +1,24 @@
-|              |                                  |
-| :----------- | :------------------------------- |
-| Feature Name | Upgrade Statement                |
-| Start Date   | 05/23/2022                       |
-| Category     | updates and versioning           |
-| RFC PR       | https://github.com/kubewarden/rfc/pull/6  |
-| State        | **ACCEPTED**                  |
+|              |                                          |
+| :----------- | :--------------------------------------- |
+| Feature Name | Upgrade Statement                        |
+| Start Date   | 05/23/2022                               |
+| Category     | updates and versioning                   |
+| RFC PR       | https://github.com/kubewarden/rfc/pull/6 |
+| State        | **ACCEPTED, later DEPRECATED**           |
 
+# SUPERSEDED BY entry in docs.kubewarden.io
+
+Note: the canonical single source of truth is now under docs.kubewarden.io,
+this is just here for historical documentation purposes.
 
 # Summary
+
 [summary]: #summary
 
 This RFC proposes how the upgrade of the Kuberwarden stack will work and how to do it.
 
 # Motivation
+
 [motivation]: #motivation
 
 Kubewarden is reaching the v1.0 milestone and we need to define a upgrade process
@@ -21,6 +27,7 @@ to plan when and how to upgrade their Kuberwarden stack. And the Kuberwarden dev
 will be able to define when and how ship new features and fixes.
 
 ## Examples / User Stories
+
 [examples]: #examples
 
 As Kubewarden user, I want to know, among all Kubewarden components, what are the
@@ -33,12 +40,13 @@ Kubewarden versions, so that I can perform proper QA before releasing a new
 version of the stack.
 
 # Detailed design
+
 [design]: #detailed-design
 
 This document describes how Kubewarden versioning works and how users can upgrade
 their stack. The Kubewarden project uses [Semantic versioning](https://semver.org/)
 to define the version of all its components. In other words, the version follows
-the `MAJOR.MINOR.PATCH` pattern.  The supported version is only the latest release.
+the `MAJOR.MINOR.PATCH` pattern. The supported version is only the latest release.
 
 The Kubewarden components that follow the rules described here are:
 
@@ -75,20 +83,21 @@ Kuberwarden users should upgrade the stack starting in the `kubewarden-controlle
 After that, the `policy-server` and `kwctl` can be upgraded.
 
 # Drawbacks
+
 [drawbacks]: #drawbacks
 
-
 # Alternatives
+
 [alternatives]: #alternatives
 
-
 # Unresolved questions
+
 [unresolved]: #unresolved-questions
+
 When upgrading major version, is it necessary upgrade minor version individually as well?
 
 Do we really want to keep the two latest releases under active maintenance?
 I think just keeping the latest version is enough for now.
-
 
 # References
 
