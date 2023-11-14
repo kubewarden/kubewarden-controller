@@ -314,13 +314,13 @@ pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
             let tracer = opentelemetry_otlp::new_pipeline()
                 .tracing()
                 .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-                .with_trace_config(opentelemetry::sdk::trace::config().with_resource(
-                    opentelemetry::sdk::Resource::new(vec![opentelemetry::KeyValue::new(
+                .with_trace_config(opentelemetry_sdk::trace::config().with_resource(
+                    opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
                         "service.name",
                         SERVICE_NAME,
                     )]),
                 ))
-                .install_batch(opentelemetry::runtime::Tokio)?;
+                .install_batch(opentelemetry_sdk::runtime::Tokio)?;
 
             // Create a tracing layer with the configured tracer
             let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);

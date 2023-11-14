@@ -1,7 +1,7 @@
-use opentelemetry::metrics;
-use opentelemetry::sdk::metrics::MeterProvider;
-use opentelemetry::{runtime, KeyValue};
+use opentelemetry::{metrics, KeyValue};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
+use opentelemetry_sdk::metrics::MeterProvider;
+use opentelemetry_sdk::runtime;
 
 mod policy_evaluations_total;
 pub use policy_evaluations_total::add_policy_evaluation;
