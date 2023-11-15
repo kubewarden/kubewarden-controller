@@ -39,14 +39,14 @@ var (
 	}
 	templatePolicyServer = policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
-			Image:    "some-registry/some-policy-server:latest",
+			Image:    "ghcr.io/kubewarden/policy-server:latest",
 			Replicas: 1,
 		},
 	}
 	templateClusterAdmissionPolicy = policiesv1.ClusterAdmissionPolicy{
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
-				Module: "registry://some-registry/some/module:latest",
+				Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
 				Rules:  []admissionregistrationv1.RuleWithOperations{},
 			},
 		},
@@ -57,7 +57,7 @@ var (
 		},
 		Spec: policiesv1.AdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
-				Module: "registry://some-registry/some/module:latest",
+				Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
 				Rules:  []admissionregistrationv1.RuleWithOperations{},
 			},
 		},
@@ -83,6 +83,7 @@ func HaveSucceededOrAlreadyExisted() types.GomegaMatcher { //nolint:ireturn
 func policyServer(name string) *policiesv1.PolicyServer {
 	policyServer := templatePolicyServer.DeepCopy()
 	policyServer.Name = name
+
 	// By adding this finalizer automatically, we ensure that when
 	// testing removal of finalizers on deleted objects, that they will
 	// exist at all times

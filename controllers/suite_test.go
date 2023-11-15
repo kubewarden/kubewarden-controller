@@ -18,36 +18,41 @@ package controllers
 
 import (
 	"context"
-	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/k3s"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/admission"
 	//+kubebuilder:scaffold:imports
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config //nolint
-var k8sClient client.Client
-var testEnv *envtest.Environment
-var ctx context.Context
-var cancel context.CancelFunc
-var reconciler admission.Reconciler
+var (
+	cfg        *rest.Config //nolint
+	k8sClient  client.Client
+	testEnv    *envtest.Environment
+	ctx        context.Context
+	cancel     context.CancelFunc
+	reconciler admission.Reconciler
+)
 
 const (
 	DeploymentsNamespace = "kubewarden-integration-tests"
@@ -65,9 +70,28 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
+	k3sTestcontainerVersion, ok := os.LookupEnv("K3S_TESTCONTAINER_VERSION")
+	if !ok {
+		k3sTestcontainerVersion = "latest"
+	}
+
+	k3sContainer, err := k3s.RunContainer(ctx,
+		testcontainers.WithImage("docker.io/rancher/k3s:"+k3sTestcontainerVersion),
+	)
+	Expect(err).NotTo(HaveOccurred())
+
+	kubeConfigYaml, err := k3sContainer.GetKubeConfig(ctx)
+	Expect(err).NotTo(HaveOccurred())
+
+	restcfg, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigYaml)
+	Expect(err).NotTo(HaveOccurred())
+
+	trueValue := true
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
+		Config:                restcfg,
+		UseExistingCluster:    &trueValue,
 	}
 
 	cfg, err := testEnv.Start()
@@ -117,25 +141,24 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	// Create the integration tests deployments namespace
-	if err := k8sClient.Create(ctx, &corev1.Namespace{
+	err = k8sClient.Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: DeploymentsNamespace,
 		},
-	}); err != nil {
-		log.Fatalf("could not create namespace %q needed for the integration tests", DeploymentsNamespace)
-	}
+	})
+	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
 		defer GinkgoRecover()
 		err = k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
-
 })
 
 var _ = AfterSuite(func() {
-	cancel()
+	cancel() // This also stops the k3s testcontainer
 	By("tearing down the test environment")
+
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
