@@ -18,25 +18,26 @@ package controllers
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
+	"time"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	"github.com/onsi/gomega/types"
 
 	. "github.com/onsi/gomega" //nolint:revive
+	"github.com/onsi/gomega/types"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	timeout      = 120 * time.Second
+	pollInterval = 250 * time.Millisecond
+)
+
 var (
-	someNamespace = corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "some-namespace",
-		},
-	}
 	templatePolicyServer = policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
 			Image:    "ghcr.io/kubewarden/policy-server:latest",
@@ -52,9 +53,6 @@ var (
 		},
 	}
 	templateAdmissionPolicy = policiesv1.AdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: someNamespace.Name,
-		},
 		Spec: policiesv1.AdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
@@ -64,23 +62,7 @@ var (
 	}
 )
 
-func AlreadyExists() types.GomegaMatcher { //nolint:ireturn
-	return WithTransform(
-		func(err error) bool {
-			return err != nil && apierrors.IsAlreadyExists(err)
-		},
-		BeTrue(),
-	)
-}
-
-func HaveSucceededOrAlreadyExisted() types.GomegaMatcher { //nolint:ireturn
-	return SatisfyAny(
-		BeNil(),
-		AlreadyExists(),
-	)
-}
-
-func policyServer(name string) *policiesv1.PolicyServer {
+func policyServerFactory(name string) *policiesv1.PolicyServer {
 	policyServer := templatePolicyServer.DeepCopy()
 	policyServer.Name = name
 
@@ -91,11 +73,12 @@ func policyServer(name string) *policiesv1.PolicyServer {
 	return policyServer
 }
 
-func admissionPolicyWithPolicyServerName(name, policyServerName string) *policiesv1.AdmissionPolicy {
+func admissionPolicyFactory(name, policyNamespace, policyServerName string, mutating bool) *policiesv1.AdmissionPolicy {
 	admissionPolicy := templateAdmissionPolicy.DeepCopy()
 	admissionPolicy.Name = name
-	admissionPolicy.Namespace = someNamespace.Name
+	admissionPolicy.Namespace = policyNamespace
 	admissionPolicy.Spec.PolicyServer = policyServerName
+	admissionPolicy.Spec.PolicySpec.Mutating = mutating
 	// By adding this finalizer automatically, we ensure that when
 	// testing removal of finalizers on deleted objects, that they will
 	// exist at all times
@@ -103,18 +86,11 @@ func admissionPolicyWithPolicyServerName(name, policyServerName string) *policie
 	return admissionPolicy
 }
 
-func getFreshAdmissionPolicy(namespace, name string) (*policiesv1.AdmissionPolicy, error) {
-	newAdmissionPolicy := policiesv1.AdmissionPolicy{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &newAdmissionPolicy); err != nil {
-		return nil, errors.Join(errors.New("could not find admission policy"), err)
-	}
-	return &newAdmissionPolicy, nil
-}
-
-func clusterAdmissionPolicyWithPolicyServerName(name, policyServerName string) *policiesv1.ClusterAdmissionPolicy {
+func clusterAdmissionPolicyFactory(name, policyServerName string, mutating bool) *policiesv1.ClusterAdmissionPolicy {
 	clusterAdmissionPolicy := templateClusterAdmissionPolicy.DeepCopy()
 	clusterAdmissionPolicy.Name = name
 	clusterAdmissionPolicy.Spec.PolicyServer = policyServerName
+	clusterAdmissionPolicy.Spec.PolicySpec.Mutating = mutating
 	// By adding this finalizer automatically, we ensure that when
 	// testing removal of finalizers on deleted objects, that they will
 	// exist at all times
@@ -122,18 +98,73 @@ func clusterAdmissionPolicyWithPolicyServerName(name, policyServerName string) *
 	return clusterAdmissionPolicy
 }
 
-func getFreshClusterAdmissionPolicy(name string) (*policiesv1.ClusterAdmissionPolicy, error) {
-	newClusterAdmissionPolicy := policiesv1.ClusterAdmissionPolicy{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &newClusterAdmissionPolicy); err != nil {
-		return nil, errors.Join(errors.New("could not find cluster admission policy"), err)
+func getTestAdmissionPolicy(namespace, name string) (*policiesv1.AdmissionPolicy, error) {
+	admissionPolicy := policiesv1.AdmissionPolicy{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &admissionPolicy); err != nil {
+		return nil, errors.Join(errors.New("could not find AdmissionPolicy"), err)
 	}
-	return &newClusterAdmissionPolicy, nil
+	return &admissionPolicy, nil
 }
 
-func getFreshPolicyServer(name string) (*policiesv1.PolicyServer, error) {
-	newPolicyServer := policiesv1.PolicyServer{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &newPolicyServer); err != nil {
-		return nil, errors.Join(errors.New("could not find policy server"), err)
+func getTestClusterAdmissionPolicy(name string) (*policiesv1.ClusterAdmissionPolicy, error) {
+	clusterAdmissionPolicy := policiesv1.ClusterAdmissionPolicy{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &clusterAdmissionPolicy); err != nil {
+		return nil, errors.Join(errors.New("could not find ClusterAdmissionPolicy"), err)
 	}
-	return &newPolicyServer, nil
+	return &clusterAdmissionPolicy, nil
+}
+
+func getTestPolicyServer(name string) (*policiesv1.PolicyServer, error) {
+	policyServer := policiesv1.PolicyServer{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &policyServer); err != nil {
+		return nil, errors.Join(errors.New("could not find PolicyServer"), err)
+	}
+	return &policyServer, nil
+}
+
+func getTestValidatingWebhookConfiguration(name string) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+	validatingWebhookConfiguration := admissionregistrationv1.ValidatingWebhookConfiguration{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &validatingWebhookConfiguration); err != nil {
+		return nil, errors.Join(errors.New("could not find ValidatingWebhookConfiguration"), err)
+	}
+	return &validatingWebhookConfiguration, nil
+}
+
+func getTestMutatingWebhookConfiguration(name string) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+	mutatingWebhookConfiguration := admissionregistrationv1.MutatingWebhookConfiguration{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &mutatingWebhookConfiguration); err != nil {
+		return nil, errors.Join(errors.New("could not find ValidatingWebhookConfiguration"), err)
+	}
+	return &mutatingWebhookConfiguration, nil
+}
+
+func alreadyExists() types.GomegaMatcher { //nolint:ireturn
+	return WithTransform(
+		func(err error) bool {
+			return err != nil && apierrors.IsAlreadyExists(err)
+		},
+		BeTrue(),
+	)
+}
+
+func haveSucceededOrAlreadyExisted() types.GomegaMatcher { //nolint:ireturn
+	return SatisfyAny(
+		BeNil(),
+		alreadyExists(),
+	)
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))] //nolint:gosec
+	}
+
+	return string(b)
+}
+
+func newName(prefix string) string {
+	return fmt.Sprintf("%s-%s", prefix, randStringRunes(8))
 }

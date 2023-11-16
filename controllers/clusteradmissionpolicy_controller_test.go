@@ -14,84 +14,162 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//nolint:dupl
 package controllers
 
 import (
 	"fmt"
-	"time"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 )
 
-var _ = Describe("Given a ClusterAdmissionPolicy", func() {
-	When("it does not have a status set", func() {
-		Context("and it is not deleted", func() {
-			Context("and it has an empty policy server set on its spec", func() {
-				var (
-					policyName = "unscheduled-policy"
-				)
-				BeforeEach(func() {
-					Expect(
-						k8sClient.Create(ctx, clusterAdmissionPolicyWithPolicyServerName(policyName, "")),
-					).To(HaveSucceededOrAlreadyExisted())
-				})
-				It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusUnscheduled), func() {
-					Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
-						return getFreshClusterAdmissionPolicy(policyName)
-					}).Should(
-						WithTransform(
-							func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) policiesv1.PolicyStatusEnum {
-								return clusterAdmissionPolicy.Status.PolicyStatus
-							},
-							Equal(policiesv1.PolicyStatusUnscheduled),
-						),
-					)
-				})
-			})
-			Context("and it has a non-empty policy server set on its spec", func() {
-				var (
-					policyName       = "scheduled-policy"
-					policyServerName = "other-policy-server"
-				)
-				BeforeEach(func() {
-					Expect(
-						k8sClient.Create(ctx, clusterAdmissionPolicyWithPolicyServerName(policyName, policyServerName)),
-					).To(HaveSucceededOrAlreadyExisted())
-				})
-				It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusScheduled), func() {
-					Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
-						return getFreshClusterAdmissionPolicy(policyName)
-					}).Should(
-						WithTransform(
-							func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) policiesv1.PolicyStatusEnum {
-								return clusterAdmissionPolicy.Status.PolicyStatus
-							},
-							Equal(policiesv1.PolicyStatusScheduled),
-						),
-					)
-				})
-				Context("and the targeted policy server is created", func() {
-					BeforeEach(func() {
-						Expect(
-							k8sClient.Create(ctx, policyServer(policyServerName)),
-						).To(HaveSucceededOrAlreadyExisted())
-					})
-					It(fmt.Sprintf("should set its policy status to %q", policiesv1.PolicyStatusPending), func() {
-						Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
-							return getFreshClusterAdmissionPolicy(policyName)
-						}, 30*time.Second, 250*time.Millisecond).Should(
-							WithTransform(
-								func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) policiesv1.PolicyStatusEnum {
-									return clusterAdmissionPolicy.Status.PolicyStatus
-								},
-								Equal(policiesv1.PolicyStatusPending),
-							),
-						)
-					})
-				})
-			})
+var _ = Describe("ClusterAdmissionPolicy controller", func() {
+	When("creating a validating ClusterAdmissionPolicy", func() {
+		policyServerName := newName("policy-server")
+		policyName := newName("validating-policy")
+
+		It("should set the ClusterAdmissionPolicy to active", func() {
+			By("creating the PolicyServer")
+			Expect(
+				k8sClient.Create(ctx, policyServerFactory(policyServerName)),
+			).To(Succeed())
+
+			By("creating the ClusterAdmissionPolicy")
+			Expect(
+				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, false)),
+			).To(Succeed())
+
+			By("changing the policy status to pending")
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
+			)
+
+			By("changing the policy status to active")
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
+			)
+		})
+
+		It("should create the ValidatingWebhookConfiguration", func() {
+			Eventually(func(g Gomega) {
+				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
+				Expect(validatingWebhookConfiguration.Labels["kubewardenPolicyScope"]).To(Equal("cluster"))
+				Expect(validatingWebhookConfiguration.Annotations["kubewardenPolicyName"]).To(Equal(policyName))
+				Expect(validatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"]).To(BeEmpty())
+				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
+				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+			}, timeout, pollInterval).Should(Succeed())
+		})
+	})
+
+	When("creating a mutating ClusterAdmissionPolicy", func() {
+		policyServerName := newName("policy-server")
+		policyName := newName("mutating-policy")
+
+		It("should set the AdmissionPolicy to active", func() {
+			By("creating the PolicyServer")
+			Expect(
+				k8sClient.Create(ctx, policyServerFactory(policyServerName)),
+			).To(Succeed())
+
+			By("creating the AdmissionPolicy")
+			Expect(
+				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, true)),
+			).To(Succeed())
+
+			By("changing the policy status to pending")
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
+			)
+
+			By("changing the policy status to active")
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
+			)
+		})
+
+		It("should create the MutatingWebhookConfiguration", func() {
+			Eventually(func(g Gomega) {
+				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
+				Expect(mutatingWebhookConfiguration.Labels["kubewardenPolicyScope"]).To(Equal("cluster"))
+				Expect(mutatingWebhookConfiguration.Annotations["kubewardenPolicyName"]).To(Equal(policyName))
+				Expect(mutatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"]).To(BeEmpty())
+				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
+				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+			}, timeout, pollInterval).Should(Succeed())
+		})
+	})
+
+	When("creating a ClusterAdmissionPolicy without a PolicyServer assigned", func() {
+		policyName := newName("unscheduled-policy")
+
+		It("should set the policy status to unscheduled", func() {
+			Expect(
+				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, "", false)),
+			).To(haveSucceededOrAlreadyExisted())
+
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusUnscheduled)),
+			)
+		})
+	})
+
+	When("creating a ClusterAdmissionPolicy with a PolicyServer assigned but not running yet", func() {
+		var (
+			policyName       = newName("scheduled-policy")
+			policyServerName = newName("policy-server")
+		)
+
+		It("should set the policy status to scheduled", func() {
+			Expect(
+				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, false)),
+			).To(haveSucceededOrAlreadyExisted())
+
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusScheduled)),
+			)
+		})
+
+		It("should set the policy status to active when the PolicyServer is created", func() {
+			By("creating the PolicyServer")
+			Expect(
+				k8sClient.Create(ctx, policyServerFactory(policyServerName)),
+			).To(haveSucceededOrAlreadyExisted())
+
+			By("changing the policy status to pending")
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
+			)
+
+			By("changing the policy status to active")
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).Should(
+				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
+			)
 		})
 	})
 })
