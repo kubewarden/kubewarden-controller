@@ -33,6 +33,7 @@ rayon = "1.8"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.27"
+sha2 = "0.10"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"

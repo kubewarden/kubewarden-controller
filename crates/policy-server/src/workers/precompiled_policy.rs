@@ -4,6 +4,7 @@ use policy_evaluator::{
     policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata, wasmtime,
 };
 use semver::{BuildMetadata, Prerelease, Version};
+use sha2::{Digest, Sha256};
 use std::{collections::HashMap, fs, path::Path, vec::Vec};
 
 lazy_static! {
@@ -35,6 +36,9 @@ pub(crate) struct PrecompiledPolicy {
 
     /// The execution mode of the policy
     pub execution_mode: PolicyExecutionMode,
+
+    /// sha256 digest of the precompiled module
+    pub digest: String,
 }
 
 impl PrecompiledPolicy {
@@ -48,9 +52,14 @@ impl PrecompiledPolicy {
 
         let precompiled_module = engine.precompile_module(&policy_contents)?;
 
+        let mut hasher = Sha256::new();
+        hasher.update(&precompiled_module);
+        let digest = hasher.finalize();
+
         Ok(Self {
             precompiled_module,
             execution_mode,
+            digest: format!("{digest:x}"),
         })
     }
 }
