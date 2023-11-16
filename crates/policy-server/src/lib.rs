@@ -3,8 +3,7 @@ mod communication;
 mod metrics;
 mod policy_downloader;
 mod server;
-mod worker;
-mod worker_pool;
+mod workers;
 
 pub mod admission_review;
 pub mod config;
@@ -26,7 +25,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 use communication::{EvalRequest, WorkerPoolBootRequest};
 use config::Config;
 use policy_downloader::Downloader;
-use worker_pool::WorkerPool;
+use workers::pool::WorkerPool;
 
 lazy_static! {
     static ref TRACE_SYSTEM_INITIALIZED: RwLock<bool> = RwLock::new(false);

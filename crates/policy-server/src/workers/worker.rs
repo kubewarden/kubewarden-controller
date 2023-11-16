@@ -13,7 +13,7 @@ use tracing::{error, info, info_span};
 use crate::communication::{EvalRequest, RequestOrigin};
 use crate::config::{Policy, PolicyMode};
 use crate::metrics::{self};
-use crate::worker_pool::PrecompiledPolicies;
+use crate::workers::precompiled_policy::PrecompiledPolicies;
 
 struct PolicyEvaluatorWithSettings {
     policy_evaluator: Box<dyn Evaluator>,
@@ -60,7 +60,7 @@ impl Worker {
         for (id, policy) in policies.iter() {
             // It's safe to clone the outer engine. This creates a shallow copy
             let inner_engine = engine.clone();
-            let policy_evaluator = match crate::worker_pool::build_policy_evaluator(
+            let policy_evaluator = match crate::workers::pool::build_policy_evaluator(
                 id,
                 policy,
                 &inner_engine,
