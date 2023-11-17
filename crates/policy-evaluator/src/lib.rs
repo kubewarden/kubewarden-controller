@@ -7,7 +7,7 @@ pub mod callback_handler;
 pub mod callback_requests;
 pub mod constants;
 pub mod errors;
-pub(crate) mod policy;
+pub mod evaluation_context;
 pub mod policy_artifacthub;
 pub mod policy_evaluator;
 pub mod policy_evaluator_builder;

@@ -9,29 +9,22 @@ use tracing::{debug, error, warn};
 
 use crate::callback_handler::verify_certificate;
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
-use crate::runtimes::wapc::mapping::get_policy;
+use crate::runtimes::wapc::evaluation_context_registry::get_eval_ctx;
 
 pub(crate) fn host_callback(
-    policy_id: u64,
+    wapc_id: u64,
     binding: &str,
     namespace: &str,
     operation: &str,
     payload: &[u8],
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    //TODO: the code could be DRY-ed using some macros
     match binding {
         "kubewarden" => match namespace {
             "tracing" => match operation {
                 "log" => {
-                    let policy = get_policy(policy_id).map_err(|e| {
-                        error!(
-                            ?policy_id,
-                            ?binding,
-                            ?namespace,
-                            ?operation,
-                            error = ?e, "Cannot find requested policy");
-                        e
-                    })?;
-                    if let Err(e) = policy.log(payload) {
+                    let eval_ctx = get_eval_ctx(wapc_id);
+                    if let Err(e) = eval_ctx.log(payload) {
                         let p =
                             String::from_utf8(payload.to_vec()).unwrap_or_else(|e| e.to_string());
                         error!(
@@ -58,7 +51,7 @@ pub(crate) fn host_callback(
                         response_channel: tx,
                     };
 
-                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                    send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
                 }
                 "v2/verify" => {
                     let req: SigstoreVerificationInputV2 =
@@ -70,12 +63,12 @@ pub(crate) fn host_callback(
                         response_channel: tx,
                     };
 
-                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                    send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
                 }
                 "v1/manifest_digest" => {
                     let image: String = serde_json::from_slice(payload.to_vec().as_ref())?;
                     debug!(
-                        policy_id,
+                        wapc_id,
                         binding,
                         operation,
                         image = image.as_str(),
@@ -86,7 +79,7 @@ pub(crate) fn host_callback(
                         request: CallbackRequestType::OciManifestDigest { image },
                         response_channel: tx,
                     };
-                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                    send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
                 }
                 _ => {
                     error!("unknown operation: {}", operation);
@@ -97,7 +90,7 @@ pub(crate) fn host_callback(
                 "v1/dns_lookup_host" => {
                     let host: String = serde_json::from_slice(payload.to_vec().as_ref())?;
                     debug!(
-                        policy_id,
+                        wapc_id,
                         binding,
                         operation,
                         ?host,
@@ -108,7 +101,7 @@ pub(crate) fn host_callback(
                         request: CallbackRequestType::DNSLookupHost { host },
                         response_channel: tx,
                     };
-                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                    send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
                 }
                 _ => {
                     error!("unknown operation: {}", operation);
@@ -134,24 +127,16 @@ pub(crate) fn host_callback(
             },
             "kubernetes" => match operation {
                 "list_resources_by_namespace" => {
-                    let policy = get_policy(policy_id).map_err(|e| {
-                        error!(
-                            policy_id,
-                            ?binding,
-                            ?namespace,
-                            ?operation,
-                            error = ?e, "Cannot find requested policy");
-                        e
-                    })?;
+                    let eval_ctx = get_eval_ctx(wapc_id);
 
                     let req: ListResourcesByNamespaceRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
 
-                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                    if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind) {
                         error!(
-                            policy = policy.id,
+                            policy = eval_ctx.policy_id,
                             resource_requested = format!("{}/{}", req.api_version, req.kind),
-                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
                             "Policy tried to access a Kubernetes resource it doesn't have access to");
                         return Err(format!(
                                 "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
@@ -160,7 +145,7 @@ pub(crate) fn host_callback(
                     }
 
                     debug!(
-                        policy_id,
+                        wapc_id,
                         binding,
                         operation,
                         ?req,
@@ -171,26 +156,18 @@ pub(crate) fn host_callback(
                         request: CallbackRequestType::from(req),
                         response_channel: tx,
                     };
-                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                    send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
                 }
                 "list_resources_all" => {
-                    let policy = get_policy(policy_id).map_err(|e| {
-                        error!(
-                            policy_id,
-                            ?binding,
-                            ?namespace,
-                            ?operation,
-                            error = ?e, "Cannot find requested policy");
-                        e
-                    })?;
+                    let eval_ctx = get_eval_ctx(wapc_id);
 
                     let req: ListAllResourcesRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
-                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                    if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind) {
                         error!(
-                            policy = policy.id,
+                            policy = eval_ctx.policy_id,
                             resource_requested = format!("{}/{}", req.api_version, req.kind),
-                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
                             "Policy tried to access a Kubernetes resource it doesn't have access to");
                         return Err(format!(
                                 "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
@@ -199,7 +176,7 @@ pub(crate) fn host_callback(
                     }
 
                     debug!(
-                        policy_id,
+                        wapc_id,
                         binding,
                         operation,
                         ?req,
@@ -210,26 +187,18 @@ pub(crate) fn host_callback(
                         request: CallbackRequestType::from(req),
                         response_channel: tx,
                     };
-                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                    send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
                 }
                 "get_resource" => {
-                    let policy = get_policy(policy_id).map_err(|e| {
-                        error!(
-                            policy_id,
-                            ?binding,
-                            ?namespace,
-                            ?operation,
-                            error = ?e, "Cannot find requested policy");
-                        e
-                    })?;
+                    let eval_ctx = get_eval_ctx(wapc_id);
 
                     let req: GetResourceRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
-                    if !policy.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                    if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind) {
                         error!(
-                            policy = policy.id,
+                            policy = eval_ctx.policy_id,
                             resource_requested = format!("{}/{}", req.api_version, req.kind),
-                            resources_allowed = ?policy.ctx_aware_resources_allow_list,
+                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
                             "Policy tried to access a Kubernetes resource it doesn't have access to");
                         return Err(format!(
                                 "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
@@ -238,7 +207,7 @@ pub(crate) fn host_callback(
                     }
 
                     debug!(
-                        policy_id,
+                        wapc_id,
                         binding,
                         operation,
                         ?req,
@@ -249,7 +218,7 @@ pub(crate) fn host_callback(
                         request: CallbackRequestType::from(req),
                         response_channel: tx,
                     };
-                    send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                    send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
                 }
                 _ => {
                     error!(namespace, operation, "unknown operation");
@@ -270,13 +239,13 @@ pub(crate) fn host_callback(
                     field_selector: None,
                 };
 
-                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
                 let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                 let req = CallbackRequest {
                     request: req,
                     response_channel: tx,
                 };
-                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
             }
             "namespaces" => {
                 let req = CallbackRequestType::KubernetesListResourceAll {
@@ -286,13 +255,13 @@ pub(crate) fn host_callback(
                     field_selector: None,
                 };
 
-                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
                 let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                 let req = CallbackRequest {
                     request: req,
                     response_channel: tx,
                 };
-                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
             }
             "services" => {
                 let req = CallbackRequestType::KubernetesListResourceAll {
@@ -302,13 +271,13 @@ pub(crate) fn host_callback(
                     field_selector: None,
                 };
 
-                warn!(policy_id, ?req, "Usage of deprecated `ClusterContext`");
+                warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
                 let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                 let req = CallbackRequest {
                     request: req,
                     response_channel: tx,
                 };
-                send_request_and_wait_for_response(policy_id, binding, operation, req, rx)
+                send_request_and_wait_for_response(wapc_id, binding, operation, req, rx)
             }
             _ => {
                 error!("unknown namespace: {}", namespace);
@@ -329,20 +298,20 @@ fn send_request_and_wait_for_response(
     req: CallbackRequest,
     mut rx: Receiver<Result<CallbackResponse>>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    let policy = get_policy(policy_id)?;
+    let eval_ctx = get_eval_ctx(policy_id);
 
-    let cb_channel: mpsc::Sender<CallbackRequest> = if let Some(c) = policy.callback_channel.clone()
-    {
-        Ok(c)
-    } else {
-        error!(
-            policy_id,
-            binding, operation, "Cannot process waPC request: callback channel not provided"
-        );
-        Err(anyhow!(
-            "Cannot process waPC request: callback channel not provided"
-        ))
-    }?;
+    let cb_channel: mpsc::Sender<CallbackRequest> =
+        if let Some(c) = eval_ctx.callback_channel.clone() {
+            Ok(c)
+        } else {
+            error!(
+                policy_id,
+                binding, operation, "Cannot process waPC request: callback channel not provided"
+            );
+            Err(anyhow!(
+                "Cannot process waPC request: callback channel not provided"
+            ))
+        }?;
 
     let send_result = cb_channel.try_send(req);
     if let Err(e) = send_result {
