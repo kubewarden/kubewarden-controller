@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"strconv"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -237,7 +238,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 			{
 				Name:  "KUBEWARDEN_PORT",
-				Value: fmt.Sprintf("%d", constants.PolicyServerPort),
+				Value: strconv.Itoa(constants.PolicyServerPort),
 			},
 			{
 				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",

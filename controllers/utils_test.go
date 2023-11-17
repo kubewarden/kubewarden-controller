@@ -22,7 +22,7 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/onsi/gomega/types"
 
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega" //nolint:revive
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"

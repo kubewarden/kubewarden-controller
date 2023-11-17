@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/v2" //nolint:revive
+	. "github.com/onsi/gomega"    //nolint:revive
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
