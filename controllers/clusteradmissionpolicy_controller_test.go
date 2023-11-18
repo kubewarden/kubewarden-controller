@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 )
@@ -70,6 +71,35 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
 			}, timeout, pollInterval).Should(Succeed())
 		})
+
+		When("the ValidatingWebhookConfiguration is changed", func() {
+			It("should be reconciled to the original state", func() {
+				By("changing the ValidatingWebhookConfiguration")
+				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+				Expect(err).ToNot(HaveOccurred())
+				originalValidatingWebhookConfiguration := validatingWebhookConfiguration.DeepCopy()
+
+				delete(validatingWebhookConfiguration.Labels, "kubewarden")
+				validatingWebhookConfiguration.Labels["kubewardenPolicyScope"] = newName("scope")
+				delete(validatingWebhookConfiguration.Annotations, "kubewardenPolicyName")
+				validatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"] = newName("namespace")
+				validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
+				Expect(
+					k8sClient.Update(ctx, validatingWebhookConfiguration),
+				).To(Succeed())
+
+				By("reconciling the ValidatingWebhookConfiguration to its original state")
+				Eventually(func(g Gomega) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+					return getTestValidatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+				}, timeout, pollInterval).Should(
+					And(
+						HaveField("Labels", Equal(originalValidatingWebhookConfiguration.Labels)),
+						HaveField("Annotations", Equal(originalValidatingWebhookConfiguration.Annotations)),
+						HaveField("Webhooks", Equal(originalValidatingWebhookConfiguration.Webhooks)),
+					),
+				)
+			})
+		})
 	})
 
 	When("creating a mutating ClusterAdmissionPolicy", func() {
@@ -114,6 +144,35 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
 				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
 			}, timeout, pollInterval).Should(Succeed())
+		})
+
+		When("the MutatingWebhookConfiguration is changed", func() {
+			It("should be reconciled to the original state", func() {
+				By("changing the MutatingWebhookConfiguration")
+				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+				Expect(err).ToNot(HaveOccurred())
+				originalMutatingWebhookConfiguration := mutatingWebhookConfiguration.DeepCopy()
+
+				delete(mutatingWebhookConfiguration.Labels, "kubewarden")
+				mutatingWebhookConfiguration.Labels["kubewardenPolicyScope"] = newName("scope")
+				delete(mutatingWebhookConfiguration.Annotations, "kubewardenPolicyName")
+				mutatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"] = newName("namespace")
+				mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
+				Expect(
+					k8sClient.Update(ctx, mutatingWebhookConfiguration),
+				).To(Succeed())
+
+				By("reconciling the MutatingWebhookConfiguration to its original state")
+				Eventually(func(g Gomega) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+					return getTestMutatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+				}, timeout, pollInterval).Should(
+					And(
+						HaveField("Labels", Equal(originalMutatingWebhookConfiguration.Labels)),
+						HaveField("Annotations", Equal(originalMutatingWebhookConfiguration.Annotations)),
+						HaveField("Webhooks", Equal(originalMutatingWebhookConfiguration.Webhooks)),
+					),
+				)
+			})
 		})
 	})
 
