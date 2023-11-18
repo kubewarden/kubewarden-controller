@@ -162,7 +162,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_
 		return []reconcile.Request{}
 	}
 
-	policyScope, found := webhookConfiguration.GetLabels()["kubewardenPolicyScope"]
+	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
 	if !found {
 		r.Log.Error(nil, "Found a webhook configuration without a scope label", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
@@ -173,13 +173,13 @@ func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_
 		return []reconcile.Request{}
 	}
 
-	policyNamespace, found := webhookConfiguration.GetAnnotations()["kubewardenPolicyNamespace"]
+	policyNamespace, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]
 	if !found {
 		r.Log.Error(nil, "Found a webhook configuration without a namespace annotation", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 
-	policyName, found := webhookConfiguration.GetAnnotations()["kubewardenPolicyName"]
+	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
 	if !found {
 		r.Log.Error(nil, "Found webhook configuration without a policy name annotation", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}

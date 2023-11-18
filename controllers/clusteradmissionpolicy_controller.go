@@ -159,7 +159,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 		return []reconcile.Request{}
 	}
 
-	policyScope, found := webhookConfiguration.GetLabels()["kubewardenPolicyScope"]
+	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
 	if !found {
 		r.Log.Error(nil, "Found a webhook configuration without a scope label", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
@@ -170,7 +170,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 		return []reconcile.Request{}
 	}
 
-	policyName, found := webhookConfiguration.GetAnnotations()["kubewardenPolicyName"]
+	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
 	if !found {
 		r.Log.Error(nil, "Found webhook configuration without a policy name annotation", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}

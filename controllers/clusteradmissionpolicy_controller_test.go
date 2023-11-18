@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"    //nolint:revive
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 )
 
@@ -64,9 +65,9 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
-				Expect(validatingWebhookConfiguration.Labels["kubewardenPolicyScope"]).To(Equal("cluster"))
-				Expect(validatingWebhookConfiguration.Annotations["kubewardenPolicyName"]).To(Equal(policyName))
-				Expect(validatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"]).To(BeEmpty())
+				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("cluster"))
+				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
+				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
 			}, timeout, pollInterval).Should(Succeed())
@@ -80,9 +81,9 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				originalValidatingWebhookConfiguration := validatingWebhookConfiguration.DeepCopy()
 
 				delete(validatingWebhookConfiguration.Labels, "kubewarden")
-				validatingWebhookConfiguration.Labels["kubewardenPolicyScope"] = newName("scope")
-				delete(validatingWebhookConfiguration.Annotations, "kubewardenPolicyName")
-				validatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"] = newName("namespace")
+				validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
+				delete(validatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
+				validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 				validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
 				Expect(
 					k8sClient.Update(ctx, validatingWebhookConfiguration),
@@ -138,9 +139,9 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
-				Expect(mutatingWebhookConfiguration.Labels["kubewardenPolicyScope"]).To(Equal("cluster"))
-				Expect(mutatingWebhookConfiguration.Annotations["kubewardenPolicyName"]).To(Equal(policyName))
-				Expect(mutatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"]).To(BeEmpty())
+				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("cluster"))
+				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
+				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
 				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
 			}, timeout, pollInterval).Should(Succeed())
@@ -154,9 +155,9 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				originalMutatingWebhookConfiguration := mutatingWebhookConfiguration.DeepCopy()
 
 				delete(mutatingWebhookConfiguration.Labels, "kubewarden")
-				mutatingWebhookConfiguration.Labels["kubewardenPolicyScope"] = newName("scope")
-				delete(mutatingWebhookConfiguration.Annotations, "kubewardenPolicyName")
-				mutatingWebhookConfiguration.Annotations["kubewardenPolicyNamespace"] = newName("namespace")
+				mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
+				delete(mutatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
+				mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 				mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
 				Expect(
 					k8sClient.Update(ctx, mutatingWebhookConfiguration),

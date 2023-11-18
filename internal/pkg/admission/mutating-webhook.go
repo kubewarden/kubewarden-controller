@@ -101,12 +101,12 @@ func (r *Reconciler) mutatingWebhookConfiguration(
 		ObjectMeta: metav1.ObjectMeta{
 			Name: policy.GetUniqueName(),
 			Labels: map[string]string{
-				"kubewarden":            "true",
-				"kubewardenPolicyScope": policyScope,
+				"kubewarden": "true",
+				constants.WebhookConfigurationPolicyScopeLabelKey: policyScope,
 			},
 			Annotations: map[string]string{
-				"kubewardenPolicyName":      policy.GetName(),
-				"kubewardenPolicyNamespace": policy.GetNamespace(),
+				constants.WebhookConfigurationPolicyNameAnnotationKey:      policy.GetName(),
+				constants.WebhookConfigurationPolicyNamespaceAnnotationKey: policy.GetNamespace(),
 			},
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
