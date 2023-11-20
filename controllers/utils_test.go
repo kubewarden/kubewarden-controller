@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -40,7 +41,7 @@ const (
 var (
 	templatePolicyServer = policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
-			Image:    "ghcr.io/kubewarden/policy-server:latest",
+			Image:    "ghcr.io/kubewarden/policy-server:" + policyServerVersion(),
 			Replicas: 1,
 		},
 	}
@@ -61,6 +62,15 @@ var (
 		},
 	}
 )
+
+func policyServerVersion() string {
+	version, ok := os.LookupEnv("POLICY_SERVER_VERSION")
+	if !ok {
+		return "latest"
+	}
+
+	return version
+}
 
 func policyServerFactory(name string) *policiesv1.PolicyServer {
 	policyServer := templatePolicyServer.DeepCopy()

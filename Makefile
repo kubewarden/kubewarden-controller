@@ -5,6 +5,8 @@ IMG ?= controller:latest
 ENVTEST_K8S_VERSION = 1.23
 # K3S_TESTCONTAINER_VERSION refers to the version of k3s testcontainer to be used by envtest to run integration tests.
 K3S_TESTCONTAINER_VERSION = v1.23.2-k3s1
+# POLICY_SERVER_VERSION refers to the version of the policy server to be used by integration tests.
+POLICY_SERVER_VERSION = v1.9.0
 # Binary directory
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
@@ -114,7 +116,7 @@ unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
 	ACK_GINKGO_DEPRECATIONS=2.12.0 KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
-	ACK_GINKGO_DEPRECATIONS=2.12.0 K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" go test ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
+	ACK_GINKGO_DEPRECATIONS=2.12.0 K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" POLICY_SERVER_VERSION="$(POLICY_SERVER_VERSION)" go test ./controllers/... -ginkgo.v -ginkgo.progress -test.v -coverprofile cover.out
 
 .PHONY: generate-crds
 generate-crds: $(KUSTOMIZE) manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
