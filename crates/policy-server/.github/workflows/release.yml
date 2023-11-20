@@ -39,7 +39,7 @@ jobs:
 
       - name: Get latest release tag
         id: get_last_release_tag
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
             let release = await github.rest.repos.getLatestRelease({
@@ -54,7 +54,7 @@ jobs:
             core.setFailed("Cannot find latest release")
 
       - name: Get release ID from the release created by release drafter
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
             let releases = await github.rest.repos.listReleases({
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload release assets
         id: upload_release_assets
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
             let fs = require('fs');
@@ -108,7 +108,7 @@ jobs:
             }
 
       - name: Publish release
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
             const {RELEASE_ID} = process.env
