@@ -1,7 +1,6 @@
-use crate::policy::Policy;
 use crate::sources::Sources;
+use crate::{errors::FailedToParseYamlDataError, policy::Policy};
 
-use anyhow::{anyhow, Result};
 use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
 use sigstore::{
     cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities},
@@ -9,7 +8,9 @@ use sigstore::{
 };
 
 use crate::verify::config::Signature;
+use crate::verify::errors::VerifyError;
 use crate::Registry;
+
 use oci_distribution::secrets::RegistryAuth;
 use oci_distribution::Reference;
 use sigstore::errors::SigstoreError;
@@ -19,6 +20,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
+use self::errors::VerifyResult;
+
 /// This structure simplifies the process of policy verification
 /// using Sigstore
 pub struct Verifier {
@@ -27,6 +30,7 @@ pub struct Verifier {
 }
 
 pub mod config;
+pub mod errors;
 pub mod verification_constraints;
 
 /// Define how Fulcio and Rekor data are going to be provided to sigstore cosign client
@@ -78,7 +82,7 @@ impl Verifier {
     pub fn new(
         sources: Option<Sources>,
         fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
-    ) -> Result<Self> {
+    ) -> VerifyResult<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
         let mut cosign_client_builder =
@@ -116,9 +120,7 @@ impl Verifier {
 
         cosign_client_builder = cosign_client_builder.enable_registry_caching();
 
-        let cosign_client = cosign_client_builder
-            .build()
-            .map_err(|e| anyhow!("could not build a cosign client: {}", e))?;
+        let cosign_client = cosign_client_builder.build()?;
         Ok(Verifier {
             cosign_client: Arc::new(Mutex::new(cosign_client)),
             sources,
@@ -140,7 +142,7 @@ impl Verifier {
         &mut self,
         image_url: &str,
         verification_config: &config::LatestVerificationConfig,
-    ) -> Result<String> {
+    ) -> VerifyResult<String> {
         let (source_image_digest, trusted_layers) =
             fetch_sigstore_remote_data(&self.cosign_client, image_url).await?;
 
@@ -166,22 +168,18 @@ impl Verifier {
         &mut self,
         policy: &Policy,
         verified_manifest_digest: &str,
-    ) -> Result<()> {
+    ) -> VerifyResult<()> {
         let image_name = match policy.uri.strip_prefix("registry://") {
             None => policy.uri.as_str(),
             Some(url) => url,
         };
         if let Err(e) = Reference::try_from(image_name) {
-            return Err(anyhow!(
-                "Verification only works with OCI images: Not a valid oci image {}",
-                e
-            ));
+            return Err(VerifyError::InvalidOCIImageReferenceError(e));
         }
 
         if !policy.local_path.exists() {
-            return Err(anyhow!(
-                "Policy cannot be verified, local wasm file doesn't exist: {:?}",
-                policy.local_path
+            return Err(VerifyError::MissingWasmFileError(
+                policy.local_path.display().to_string(),
             ));
         }
 
@@ -215,15 +213,15 @@ impl Verifier {
 
         if digests.len() != 1 {
             error!(manifest = ?manifest, "The manifest is expected to have one WASM layer");
-            return Err(anyhow!("Cannot verify local file integrity, the remote manifest doesn't have only one WASM layer"));
+            return Err(VerifyError::ChecksumVerificationError("Cannot verify local file integrity, the remote manifest doesn't have only one WASM layer".to_owned()));
         }
         let expected_digest = digests[0]
             .strip_prefix("sha256:")
-            .ok_or_else(|| anyhow!("The checksum inside of the remote manifest is not using the sha256 hashing algorithm as expected."))?;
+            .ok_or_else(|| VerifyError::ChecksumVerificationError("The checksum inside of the remote manifest is not using the sha256 hashing algorithm as expected.".to_owned()))?;
 
         let file_digest = policy.digest()?;
         if file_digest != expected_digest {
-            Err(anyhow!("The digest of the local file doesn't match with the one reported inside of the signed manifest. Got {} instead of {}", file_digest, expected_digest))
+            Err(VerifyError::ChecksumVerificationError(format!("The digest of the local file doesn't match with the one reported inside of the signed manifest. Got {} instead of {}", file_digest, expected_digest)))
         } else {
             info!("Local file checksum verification passed");
             Ok(())
@@ -237,13 +235,13 @@ impl Verifier {
 fn verify_signatures_against_config(
     verification_config: &config::LatestVerificationConfig,
     trusted_layers: &[SignatureLayer],
-) -> Result<()> {
+) -> VerifyResult<()> {
     // filter trusted_layers against our verification constraints:
     //
     if verification_config.all_of.is_none() && verification_config.any_of.is_none() {
         // deserialized config is already sanitized, and should not reach here anyways
-        return Err(anyhow!(
-            "Image verification failed: no signatures to verify"
+        return Err(VerifyError::ImageVerificationError(
+            "Image verification failed: no signatures to verify".to_owned(),
         ));
     }
 
@@ -278,9 +276,9 @@ fn verify_signatures_against_config(
             let mut errormsg = "Image verification failed: missing signatures\n".to_string();
             errormsg.push_str("The following constraints were not satisfied:\n");
             for s in unsatisfied_signatures {
-                errormsg.push_str(&serde_yaml::to_string(s)?);
+                errormsg.push_str(&serde_yaml::to_string(s).map_err(FailedToParseYamlDataError)?);
             }
-            return Err(anyhow!(errormsg));
+            return Err(VerifyError::ImageVerificationError(errormsg));
         }
     }
 
@@ -307,9 +305,10 @@ fn verify_signatures_against_config(
                     format!("Image verification failed: minimum number of signatures not reached: needed {}, got {}", signatures_any_of.minimum_matches, num_satisfied_constraints);
                 errormsg.push_str("\nThe following constraints were not satisfied:\n");
                 for s in unsatisfied_signatures.iter() {
-                    errormsg.push_str(&serde_yaml::to_string(s)?);
+                    errormsg
+                        .push_str(&serde_yaml::to_string(s).map_err(FailedToParseYamlDataError)?);
                 }
-                return Err(anyhow!(errormsg));
+                return Err(VerifyError::ImageVerificationError(errormsg));
             }
         }
     }
@@ -323,7 +322,7 @@ fn verify_signatures_against_config(
 pub async fn fetch_sigstore_remote_data(
     cosign_client_input: &Arc<Mutex<cosign::Client>>,
     image_url: &str,
-) -> Result<(String, Vec<SignatureLayer>)> {
+) -> VerifyResult<(String, Vec<SignatureLayer>)> {
     let mut cosign_client = cosign_client_input.lock().await;
 
     // obtain image name:
@@ -332,10 +331,7 @@ pub async fn fetch_sigstore_remote_data(
         Some(url) => url,
     };
     if let Err(e) = Reference::try_from(image_name) {
-        return Err(anyhow!(
-            "Verification only works with OCI images: Not a valid oci image {}",
-            e
-        ));
+        return Err(VerifyError::InvalidOCIImageReferenceError(e));
     }
 
     // obtain registry auth:
@@ -352,10 +348,12 @@ pub async fn fetch_sigstore_remote_data(
     //
     // trusted_signature_layers() will error early if cosign_client using
     // Fulcio,Rekor certs and signatures are not verified
-    let image_oci_ref = OciReference::from_str(image_name)?;
+    let image_oci_ref =
+        OciReference::from_str(image_name).map_err(VerifyError::FailedToFetchTrustedLayersError)?;
     let (cosign_signature_image, source_image_digest) = cosign_client
         .triangulate(&image_oci_ref, &sigstore_auth)
-        .await?;
+        .await
+        .map_err(VerifyError::FailedToFetchTrustedLayersError)?;
 
     // get trusted layers
     let layers = cosign_client
@@ -367,9 +365,12 @@ pub async fn fetch_sigstore_remote_data(
         .await
         .map_err(|e| match e {
             SigstoreError::RegistryPullManifestError { image: _, error: _ } => {
-                anyhow!("no signatures found for image: {} ", image_name)
+                VerifyError::ImageVerificationError(format!(
+                    "no signatures found for image: {} ",
+                    image_name
+                ))
             }
-            e => anyhow!(e),
+            e => VerifyError::FailedToFetchTrustedLayersError(e),
         })?;
     Ok((source_image_digest, layers))
 }
@@ -466,8 +467,8 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         assert!(verify_signatures_against_config(&verification_config, &trusted_layers).is_ok());
     }
 
+    //#[should_panic(expected = "Image verification failed: no signatures to verify")]
     #[test]
-    #[should_panic(expected = "Image verification failed: no signatures to verify")]
     fn test_verify_config_missing_both_any_of_all_of() {
         // build verification config:
         let verification_config = LatestVerificationConfig {
@@ -481,7 +482,11 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             "user-unrelated@provider.com",
         )];
 
-        verify_signatures_against_config(&verification_config, &trusted_layers).unwrap();
+        let error = verify_signatures_against_config(&verification_config, &trusted_layers);
+        let expected_msg = "Image verification failed: no signatures to verify";
+        assert!(
+            matches!(error, Err(VerifyError::ImageVerificationError(msg)) if msg == expected_msg)
+        );
     }
 
     #[test]
@@ -511,7 +516,9 @@ issuer: https://github.com/login/oauth
 subject: !equal user1@provider.com
 annotations: null
 "#;
-        assert_eq!(error.unwrap_err().to_string(), expected_msg);
+        assert!(
+            matches!(error, Err(VerifyError::ImageVerificationError(msg)) if msg == expected_msg)
+        );
     }
 
     #[test]
@@ -542,7 +549,9 @@ issuer: https://github.com/login/oauth
 subject: !equal user3@provider.com
 annotations: null
 "#;
-        assert_eq!(error.unwrap_err().to_string(), expected_msg);
+        assert!(
+            matches!(error, Err(VerifyError::ImageVerificationError(msg)) if msg == expected_msg)
+        );
     }
 
     #[test]
@@ -568,7 +577,6 @@ annotations: null
         )];
 
         let error = verify_signatures_against_config(&verification_config, &trusted_layers);
-        assert!(error.is_err());
         let expected_msg = r#"Image verification failed: minimum number of signatures not reached: needed 2, got 1
 The following constraints were not satisfied:
 kind: genericIssuer
@@ -580,7 +588,9 @@ issuer: https://github.com/login/oauth
 subject: !equal user3@provider.com
 annotations: null
 "#;
-        assert_eq!(error.unwrap_err().to_string(), expected_msg);
+        assert!(
+            matches!(error, Err(VerifyError::ImageVerificationError(msg)) if msg == expected_msg)
+        );
     }
 
     #[test]

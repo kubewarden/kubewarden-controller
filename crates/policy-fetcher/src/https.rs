@@ -1,6 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use std::{
     boxed::Box,
@@ -10,27 +9,39 @@ use url::Url;
 
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::sources::Certificate;
+use crate::sources::SourceError;
+use crate::sources::SourceResult;
 
 // Struct used to reference a WASM module that is hosted on a HTTP(s) server
 #[derive(Default)]
 pub(crate) struct Https {}
 
 impl TryFrom<&Certificate> for reqwest::Certificate {
-    type Error = anyhow::Error;
+    type Error = SourceError;
 
-    fn try_from(certificate: &Certificate) -> Result<Self> {
+    fn try_from(certificate: &Certificate) -> SourceResult<Self> {
         match certificate {
-            Certificate::Der(certificate) => reqwest::Certificate::from_der(certificate)
-                .map_err(|err| anyhow!("could not load certificate as DER encoded: {}", err)),
-            Certificate::Pem(certificate) => reqwest::Certificate::from_pem(certificate)
-                .map_err(|err| anyhow!("could not load certificate as PEM encoded: {}", err)),
+            Certificate::Der(certificate) => {
+                reqwest::Certificate::from_der(certificate).map_err(|err| {
+                    SourceError::InvalidCertificateError(format!(
+                        "could not load certificate as DER encoded: {err}"
+                    ))
+                })
+            }
+            Certificate::Pem(certificate) => {
+                reqwest::Certificate::from_pem(certificate).map_err(|err| {
+                    SourceError::InvalidCertificateError(format!(
+                        "could not load certificate as PEM encoded: {err}"
+                    ))
+                })
+            }
         }
     }
 }
 
 #[async_trait]
 impl PolicyFetcher for Https {
-    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Vec<u8>> {
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> SourceResult<Vec<u8>> {
         let mut client_builder = reqwest::Client::builder();
         match client_protocol {
             ClientProtocol::Http => {}

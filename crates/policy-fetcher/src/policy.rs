@@ -9,8 +9,17 @@ pub struct Policy {
     pub local_path: PathBuf,
 }
 
+#[derive(thiserror::Error, Debug)]
+#[error("cannot retrieve path from uri: {err}")]
+pub struct DigestError {
+    #[from]
+    err: std::io::Error,
+}
+
+type PolicyResult<T> = std::result::Result<T, DigestError>;
+
 impl Policy {
-    pub fn digest(&self) -> Result<String, std::io::Error> {
+    pub fn digest(&self) -> PolicyResult<String> {
         let d = Sha256::digest(std::fs::read(&self.local_path)?);
         Ok(format!("{:x}", d))
     }

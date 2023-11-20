@@ -1,11 +1,33 @@
-use anyhow::{anyhow, Result};
-
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
+use crate::errors::FailedToParseYamlDataError;
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
 use std::{fs, fs::File};
+
+pub type SourceResult<T> = std::result::Result<T, SourceError>;
+
+#[derive(Error, Debug)]
+pub enum SourceError {
+    #[error(transparent)]
+    InvalidURLError(#[from] crate::errors::InvalidURLError),
+    #[error("Fail to interact with OCI registry: {0}")]
+    OCIRegistryError(#[from] oci_distribution::errors::OciDistributionError),
+    #[error("Invalid OCI image reference: {0}")]
+    InvalidOCIImageReferenceError(#[from] oci_distribution::ParseError),
+    #[error("could not pull policy {0}: empty layers")]
+    EmptyLayersError(String),
+    #[error("Invalid certificate: {0}")]
+    InvalidCertificateError(String),
+    #[error("Cannot read certificate from file: {0}")]
+    CannotReadCertificateError(#[from] std::io::Error),
+    #[error(transparent)]
+    FailedToParseYamlDataError(#[from] FailedToParseYamlDataError),
+    #[error("failed to create the http client: {0}")]
+    FailedToCreateHttpClientError(#[from] reqwest::Error),
+}
 
 #[derive(Clone, Default, Deserialize, Debug)]
 struct RawSourceAuthorities(HashMap<String, Vec<RawSourceAuthority>>);
@@ -29,15 +51,14 @@ enum RawSourceAuthority {
 }
 
 impl TryFrom<RawSourceAuthority> for RawCertificate {
-    type Error = anyhow::Error;
+    type Error = SourceError;
 
-    fn try_from(raw_source_authority: RawSourceAuthority) -> Result<Self> {
+    fn try_from(raw_source_authority: RawSourceAuthority) -> SourceResult<Self> {
         match raw_source_authority {
             RawSourceAuthority::Data { data } => Ok(data),
             RawSourceAuthority::Path { path } => {
-                let file_data = fs::read(path.clone()).map_err(|e| {
-                    anyhow!("Cannot read certificate from file '{:?}': {:?}", path, e)
-                })?;
+                let file_data =
+                    fs::read(path.clone()).map_err(SourceError::CannotReadCertificateError)?;
                 Ok(RawCertificate(String::from_utf8(file_data).unwrap()))
             }
         }
@@ -58,9 +79,9 @@ struct RawCertificate(String);
 struct SourceAuthorities(HashMap<String, Vec<Certificate>>);
 
 impl TryFrom<RawSourceAuthorities> for SourceAuthorities {
-    type Error = anyhow::Error;
+    type Error = SourceError;
 
-    fn try_from(raw_source_authorities: RawSourceAuthorities) -> Result<SourceAuthorities> {
+    fn try_from(raw_source_authorities: RawSourceAuthorities) -> SourceResult<SourceAuthorities> {
         let mut sa = SourceAuthorities::default();
 
         for (host, authorities) in raw_source_authorities.0 {
@@ -90,9 +111,9 @@ pub enum Certificate {
 }
 
 impl TryFrom<RawSources> for Sources {
-    type Error = anyhow::Error;
+    type Error = SourceError;
 
-    fn try_from(sources: RawSources) -> Result<Sources> {
+    fn try_from(sources: RawSources) -> SourceResult<Sources> {
         Ok(Sources {
             insecure_sources: sources.insecure_sources.clone(),
             source_authorities: sources.source_authorities.try_into()?,
@@ -101,17 +122,16 @@ impl TryFrom<RawSources> for Sources {
 }
 
 impl TryFrom<RawCertificate> for Certificate {
-    type Error = anyhow::Error;
+    type Error = SourceError;
 
-    fn try_from(raw_certificate: RawCertificate) -> Result<Certificate> {
+    fn try_from(raw_certificate: RawCertificate) -> SourceResult<Certificate> {
         if reqwest::Certificate::from_pem(raw_certificate.0.as_bytes()).is_ok() {
             Ok(Certificate::Pem(raw_certificate.0.as_bytes().to_vec()))
         } else if reqwest::Certificate::from_der(raw_certificate.0.as_bytes()).is_ok() {
             Ok(Certificate::Der(raw_certificate.0.as_bytes().to_vec()))
         } else {
-            Err(anyhow!(
-                "certificate {:?} is not in PEM nor in DER encoding",
-                raw_certificate
+            Err(SourceError::InvalidCertificateError(
+                "raw certificate is not in PEM nor in DER encoding".to_owned(),
             ))
         }
     }
@@ -201,8 +221,10 @@ impl Sources {
     }
 }
 
-pub fn read_sources_file(path: &Path) -> Result<Sources> {
-    serde_yaml::from_reader::<_, RawSources>(File::open(path)?)?.try_into()
+pub fn read_sources_file(path: &Path) -> SourceResult<Sources> {
+    serde_yaml::from_reader::<_, RawSources>(File::open(path)?)
+        .map_err(FailedToParseYamlDataError)?
+        .try_into()
 }
 
 #[cfg(test)]
@@ -283,8 +305,11 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
         path.push("/boom");
         let auth = RawSourceAuthority::Path { path };
 
-        let expected: Result<RawCertificate> = auth.try_into();
-        assert!(expected.is_err());
+        let expected: SourceResult<RawCertificate> = auth.try_into();
+        assert!(matches!(
+            expected,
+            Err(SourceError::CannotReadCertificateError(_))
+        ));
     }
 
     #[test]
@@ -299,15 +324,8 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
             path: path.to_path_buf(),
         };
 
-        let expected: Result<RawCertificate> = auth.try_into();
-        match expected {
-            Ok(RawCertificate(data)) => {
-                assert_eq!(&data, expected_contents);
-            }
-            unexpected => {
-                panic!("Didn't get what I was expecting: {:?}", unexpected);
-            }
-        }
+        let expected: SourceResult<RawCertificate> = auth.try_into();
+        assert!(matches!(expected, Ok(RawCertificate(data)) if data == expected_contents));
     }
 
     #[test]
@@ -322,8 +340,9 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
         );
         let raw_source_authorities: RawSourceAuthorities = serde_json::from_value(raw).unwrap();
 
-        let actual: Result<SourceAuthorities> = raw_source_authorities.try_into();
-        assert!(actual.is_ok(), "Got an expected error: {:?}", actual);
+        let actual: SourceResult<SourceAuthorities> = raw_source_authorities.try_into();
+
+        assert!(actual.is_ok(), "Got an unexpected error: {:?}", actual);
 
         let actual_map = actual.unwrap().0;
         let actual_certs = actual_map.get("foo.com").unwrap();

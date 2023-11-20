@@ -1,11 +1,12 @@
-use anyhow::{anyhow, Result};
 use serde::{Deserialize, Deserializer, Serialize};
 use sigstore::cosign::verification_constraint::VerificationConstraint;
 use std::boxed::Box;
 use std::{collections::HashMap, fs, path::Path};
 use url::Url;
 
-use crate::verify::verification_constraints;
+use crate::{errors::FailedToParseYamlDataError, verify::verification_constraints};
+
+use super::errors::{VerifyError, VerifyResult};
 
 /// Alias to the type that is currently used to store the
 /// verification settings.
@@ -77,7 +78,7 @@ pub enum Signature {
 }
 
 impl Signature {
-    pub fn verifier(&self) -> Result<Box<dyn VerificationConstraint>> {
+    pub fn verifier(&self) -> VerifyResult<Box<dyn VerificationConstraint>> {
         match self {
             Signature::PubKey {
                 owner,
@@ -88,8 +89,7 @@ impl Signature {
                     owner.as_ref().map(|r| r.as_str()),
                     key,
                     annotations.as_ref(),
-                )
-                .map_err(|e| anyhow!("Cannot create public key verifier: {}", e))?;
+                )?;
                 Ok(Box::new(vc))
             }
             Signature::GenericIssuer {
@@ -138,7 +138,7 @@ where
     Ok(url)
 }
 
-pub fn read_verification_file(path: &Path) -> Result<LatestVerificationConfig> {
+pub fn read_verification_file(path: &Path) -> VerifyResult<LatestVerificationConfig> {
     let config = fs::read_to_string(path)?;
     build_latest_verification_config(&config)
 }
@@ -151,16 +151,19 @@ pub fn read_verification_file(path: &Path) -> Result<LatestVerificationConfig> {
 /// For example, when the configuration is missing a required attribute.
 /// This methods should be used instead of invoking `serde_yaml` deserialization functions against
 /// the YAML string.
-pub fn build_latest_verification_config(config_str: &str) -> Result<LatestVerificationConfig> {
-    let vc: VerificationConfig = serde_yaml::from_str(config_str)?;
+pub fn build_latest_verification_config(
+    config_str: &str,
+) -> VerifyResult<LatestVerificationConfig> {
+    let vc: VerificationConfig =
+        serde_yaml::from_str(config_str).map_err(FailedToParseYamlDataError)?;
     let config = match vc {
         VerificationConfig::Versioned(versioned_config) => match versioned_config {
             VersionedVerificationConfig::V1(c) => c,
             VersionedVerificationConfig::Unsupported => {
-                return Err(anyhow!(
+                return Err(VerifyError::InvalidVerifyFileError(format!(
                     "Not a supported configuration version: {:?}",
                     versioned_config
-                ))
+                )));
             }
         },
         VerificationConfig::Invalid(mut value) => {
@@ -183,14 +186,20 @@ pub fn build_latest_verification_config(config_str: &str) -> Result<LatestVerifi
             } else {
                 value
             };
-            let err = serde_yaml::from_value::<LatestVerificationConfig>(sanitized_value);
-            return Err(anyhow!("Not a valid configuration file: {:?}", err));
+            let err = serde_yaml::from_value::<LatestVerificationConfig>(sanitized_value).map_err(
+                |err| {
+                    VerifyError::InvalidVerifyFileError(format!(
+                        "Not a valid configuration file: {err}"
+                    ))
+                },
+            );
+            return err;
         }
     };
 
     if config.all_of.is_none() && config.any_of.is_none() {
-        return Err(anyhow!(
-            "config is missing signatures in both allOf and anyOff list"
+        return Err(VerifyError::InvalidVerifyFileError(
+            "config is missing signatures in both allOf and anyOff list".to_owned(),
         ));
     }
     Ok(config)
@@ -210,7 +219,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "missing field `subject`")]
     fn test_deserialize_on_missing_signature() {
         let config = r#"---
     apiVersion: v1
@@ -222,7 +230,12 @@ mod tests {
         #subject:
         #   urlPrefix: https://github.com/kubewarden/
     "#;
-        build_latest_verification_config(config).unwrap();
+        let error = build_latest_verification_config(config);
+        print!("{:?}", error);
+        let expected_msg = "Not a valid configuration file: missing field `subject`";
+        assert!(
+            matches!(error, Err(VerifyError::InvalidVerifyFileError(msg)) if msg.to_string() == expected_msg)
+        );
     }
 
     #[test]

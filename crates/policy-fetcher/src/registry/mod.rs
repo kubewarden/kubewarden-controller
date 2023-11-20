@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use docker_credential::DockerCredential;
 use lazy_static::lazy_static;
@@ -17,9 +16,19 @@ use std::str::FromStr;
 use tracing::{debug, warn};
 use url::Url;
 
-use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
+use crate::{
+    fetcher::TlsVerificationMode,
+    sources::{Certificate, SourceResult, Sources},
+};
+use crate::{
+    fetcher::{ClientProtocol, PolicyFetcher},
+    sources::SourceError,
+};
+use errors::RegistryError;
 
-use crate::sources::{Certificate, Sources};
+use self::errors::RegistryResult;
+
+pub mod errors;
 
 lazy_static! {
     static ref SHA256_DIGEST_RE: Regex = Regex::new(r"[A-Fa-f0-9]{64}").unwrap();
@@ -120,7 +129,7 @@ impl Registry {
         &self,
         url: &str,
         sources: Option<&Sources>,
-    ) -> Result<oci_distribution::manifest::OciManifest> {
+    ) -> RegistryResult<oci_distribution::manifest::OciManifest> {
         // Start by building the Reference, this will expand the input url to
         // ensure it contains also the registry. Example: `busybox` ->
         // `docker.io/library/busybox:latest`
@@ -138,7 +147,11 @@ impl Registry {
     }
 
     /// Fetch the manifest's digest of the OCI object referenced by the given url.
-    pub async fn manifest_digest(&self, url: &str, sources: Option<&Sources>) -> Result<String> {
+    pub async fn manifest_digest(
+        &self,
+        url: &str,
+        sources: Option<&Sources>,
+    ) -> RegistryResult<String> {
         // Start by building the Reference, this will expand the input url to
         // ensure it contains also the registry. Example: `busybox` ->
         // `docker.io/library/busybox:latest`
@@ -148,10 +161,9 @@ impl Registry {
         let sources: Sources = sources.cloned().unwrap_or_default();
         let cp = crate::client_protocol(&url, &sources)?;
 
-        Registry::client(cp)
+        Ok(Registry::client(cp)
             .fetch_manifest_digest(&reference, &registry_auth)
-            .await
-            .map_err(|e| anyhow!(e))
+            .await?)
     }
 
     /// Push the policy to the OCI registry specified by `url`.
@@ -163,12 +175,13 @@ impl Registry {
         policy: &[u8],
         destination: &str,
         sources: Option<&Sources>,
-    ) -> Result<String> {
-        let url = Url::parse(destination).map_err(|_| anyhow!("invalid URL: {}", destination))?;
+    ) -> RegistryResult<String> {
+        let url = Url::parse(destination)
+            .map_err(|_| crate::errors::InvalidURLError(destination.to_owned()))?;
         let sources: Sources = sources.cloned().unwrap_or_default();
         let destination = destination
             .strip_prefix("registry://")
-            .ok_or_else(|| anyhow!("Invalid destination format"))?;
+            .ok_or_else(|| RegistryError::InvalidDestinationError)?;
 
         match self
             .do_push(policy, &url, crate::client_protocol(&url, &sources)?)
@@ -179,7 +192,7 @@ impl Registry {
             }
             Err(err) => {
                 if !sources.is_insecure_source(&crate::host_and_port(&url)?) {
-                    return Err(anyhow!("could not push policy: {}", err,));
+                    return Err(err);
                 }
             }
         }
@@ -195,10 +208,7 @@ impl Registry {
             return build_immutable_ref(destination, &manifest_url);
         }
 
-        let manifest_url = self
-            .do_push(policy, &url, ClientProtocol::Http)
-            .await
-            .map_err(|_| anyhow!("could not push policy"))?;
+        let manifest_url = self.do_push(policy, &url, ClientProtocol::Http).await?;
 
         build_immutable_ref(destination, &manifest_url)
     }
@@ -208,7 +218,7 @@ impl Registry {
         policy: &[u8],
         url: &Url,
         client_protocol: ClientProtocol,
-    ) -> Result<String> {
+    ) -> RegistryResult<String> {
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
 
@@ -227,7 +237,7 @@ impl Registry {
         };
 
         let image_manifest = manifest::OciImageManifest::build(&layers, &config, None);
-        Registry::client(client_protocol)
+        Ok(Registry::client(client_protocol)
             .push(
                 &reference,
                 &layers,
@@ -236,25 +246,18 @@ impl Registry {
                 Some(image_manifest),
             )
             .await
-            .map(|push_response| push_response.manifest_url)
-            .map_err(|e| anyhow!("could not push policy: {}", e))
+            .map(|push_response| push_response.manifest_url)?)
     }
 }
 
-pub(crate) fn build_fully_resolved_reference(url: &str) -> Result<Reference> {
+pub(crate) fn build_fully_resolved_reference(url: &str) -> RegistryResult<Reference> {
     let image = url.strip_prefix("registry://").unwrap_or(url);
-    Reference::try_from(image).map_err(|e| {
-        anyhow!(
-            "Cannot parse {} into an OCI Reference object: {:?}",
-            image,
-            e
-        )
-    })
+    Ok(Reference::try_from(image)?)
 }
 
 #[async_trait]
 impl PolicyFetcher for Registry {
-    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> Result<Vec<u8>> {
+    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> SourceResult<Vec<u8>> {
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
         debug!(image=?reference, ?client_protocol, "fetching policy");
@@ -273,7 +276,7 @@ impl PolicyFetcher for Registry {
 
         match image_content {
             Some(image_content) => Ok(image_content),
-            None => Err(anyhow!("could not pull policy {}: empty layers", url)),
+            None => Err(SourceError::EmptyLayersError(url.to_string())),
         }
     }
 }
@@ -283,36 +286,35 @@ impl PolicyFetcher for Registry {
 /// * `image ref`: the mutable image reference. For example: `ghcr.io/kubewarden/secure-policy:latest`
 /// * `manifest_url`: the URL of the manifest, as returned when doing a push operation. For example
 ///   `https://ghcr.io/v2/kubewarden/secure-policy/manifests/sha256:72b4569c3daee67abeaa64192fb53895d0edb2d44fa6e1d9d4c5d3f8ece09f6e`
-fn build_immutable_ref(image_ref: &str, manifest_url: &str) -> Result<String> {
+fn build_immutable_ref(image_ref: &str, manifest_url: &str) -> RegistryResult<String> {
     let manifest_digest = manifest_url
         .rsplit_once('/')
         .map(|(_, digest)| digest.to_string())
         .ok_or_else(|| {
-            anyhow!(
+            RegistryError::BuildImmutableReferenceError(format!(
                 "Cannot extract manifest digest from the OCI registry response: {}",
                 manifest_url
-            )
+            ))
         })?;
 
-    let (digest, checksum) = manifest_digest
-        .split_once(':')
-        .ok_or_else(|| anyhow!("Invalid digest: {}", manifest_digest))?;
+    let (digest, checksum) = manifest_digest.split_once(':').ok_or_else(|| {
+        RegistryError::BuildImmutableReferenceError(format!("Invalid digest: {}", manifest_digest))
+    })?;
 
     let digest_valid = match digest {
         "sha256" => Ok(SHA256_DIGEST_RE.is_match(checksum)),
         "sha512" => Ok(SHA512_DIGEST_RE.is_match(checksum)),
-        unknown => Err(anyhow!(
+        unknown => Err(RegistryError::BuildImmutableReferenceError(format!(
             "unknown algorithm '{}' for manifest {}",
-            unknown,
-            manifest_digest
-        )),
+            unknown, manifest_digest
+        ))),
     }?;
 
     if !digest_valid {
-        return Err(anyhow!(
+        return Err(RegistryError::BuildImmutableReferenceError(format!(
             "The digest of the returned manifest is not valid: {}",
             manifest_digest
-        ));
+        )));
     }
 
     let oci_reference = oci_distribution::Reference::try_from(image_ref)?;
@@ -423,40 +425,47 @@ mod tests {
             "https://ghcr.io/v2/kubewarden/secure-policy/manifests/sha512:76ffb94a4cfdc6663b8a268d0c50685e1d2c87477b20f4b31fdff3f990af117b0943d16d0b6e2c197e8e3732876d317ef8bdfa1f82afdcd8ad0a1f62ba53653a",
             Ok(String::from("ghcr.io/kubewarden/secure-policy@sha512:76ffb94a4cfdc6663b8a268d0c50685e1d2c87477b20f4b31fdff3f990af117b0943d16d0b6e2c197e8e3732876d317ef8bdfa1f82afdcd8ad0a1f62ba53653a")),
         ),
-        // Error because invalid digest
-        case(
+        //// Error because invalid digest
+        case::invalid_digest(
             "ghcr.io/kubewarden/secure-policy:latest",
             "https://ghcr.io/v2/kubewarden/secure-policy/manifests/sha256:XYZ4569c3daee67abeaa64192fb53895d0edb2d44fa6e1d9d4c5d3f8ece09f6e",
-            Err(anyhow!("boom")),
+            Err(RegistryError::BuildImmutableReferenceError("The digest of the returned manifest is not valid: sha256:XYZ4569c3daee67abeaa64192fb53895d0edb2d44fa6e1d9d4c5d3f8ece09f6e".to_owned())),
         ),
-        // Error because of shorter digest
-        case(
+        //// Error because of shorter digest
+        case::shorter_digest(
             "ghcr.io/kubewarden/secure-policy:latest",
             "https://ghcr.io/v2/kubewarden/secure-policy/manifests/sha256:72b4569c",
-            Err(anyhow!("boom")),
+            Err(RegistryError::BuildImmutableReferenceError("The digest of the returned manifest is not valid: sha256:72b4569c".to_owned())),
         ),
-        // Error because unknown algorithm
-        case(
+        //// Error because unknown algorithm
+        case::unknown_algorithm(
             "ghcr.io/kubewarden/secure-policy:latest",
             "https://ghcr.io/v2/kubewarden/secure-policy/manifests/sha384:72b4569c3daee67abeaa64192fb53895d0edb2d44fa6e1d9d4c5d3f8ece09f6e",
-            Err(anyhow!("boom")),
+            Err(RegistryError::BuildImmutableReferenceError("unknown algorithm 'sha384' for manifest sha384:72b4569c3daee67abeaa64192fb53895d0edb2d44fa6e1d9d4c5d3f8ece09f6e".to_owned())),
         ),
         // Error because invalid url format
-        case(
+        case::invalid_url_format(
             "ghcr.io/kubewarden/secure-policy:latest",
             "not an url",
-            Err(anyhow!("boom")),
+            Err(RegistryError::BuildImmutableReferenceError("Cannot extract manifest digest from the OCI registry response: not an url".to_owned())),
         )
     )]
     fn test_extract_manifest_digest(
         image_ref: &str,
         manifest_url: &str,
-        immutable_ref: Result<String>,
+        immutable_ref: RegistryResult<String>,
     ) {
         let actual = build_immutable_ref(image_ref, manifest_url);
         match immutable_ref {
-            Err(_) => assert!(actual.is_err()),
             Ok(r) => assert_eq!(r, actual.unwrap()),
+            Err(RegistryError::BuildImmutableReferenceError(msg)) => {
+                assert!(matches!(
+                    actual,
+                    Err(RegistryError::BuildImmutableReferenceError(..))
+                ));
+                assert_eq!(msg, actual.unwrap_err().to_string());
+            }
+            Err(err) => panic!("unknown error: {:?}", err),
         }
     }
 }

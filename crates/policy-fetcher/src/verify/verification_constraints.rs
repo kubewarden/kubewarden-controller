@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use tracing::debug;
@@ -9,6 +8,8 @@ use sigstore::cosign::verification_constraint::{
 };
 use sigstore::cosign::{signature_layers::CertificateSubject, SignatureLayer};
 use sigstore::errors::{Result, SigstoreError};
+
+use super::errors::{VerifyError, VerifyResult};
 
 use super::config::Subject;
 
@@ -28,7 +29,7 @@ impl PublicKeyAndAnnotationsVerifier {
         owner: Option<&str>,
         key: &str,
         annotations: Option<&HashMap<String, String>>,
-    ) -> Result<Self> {
+    ) -> VerifyResult<Self> {
         let pub_key_verifier = PublicKeyVerifier::try_from(key.as_bytes())?;
         let annotation_verifier = annotations.map(|a| AnnotationVerifier {
             annotations: a.to_owned(),
@@ -282,22 +283,28 @@ struct GitHubRepo {
 }
 
 impl TryFrom<&str> for GitHubRepo {
-    type Error = anyhow::Error;
+    type Error = VerifyError;
 
     fn try_from(u: &str) -> std::result::Result<Self, Self::Error> {
-        let u = url::Url::parse(u).map_err(|e| anyhow!("Cannot parse github url: {}", e))?;
+        let u = url::Url::parse(u).map_err(|e| {
+            VerifyError::GithubUrlParserError(format!("Cannot parse github url: {}", e))
+        })?;
         if u.host_str() != Some("github.com") {
-            return Err(anyhow!("Not a GitHub url: host doesn't match"));
+            return Err(VerifyError::GithubUrlParserError(
+                "Not a GitHub url: host doesn't match".to_owned(),
+            ));
         }
-        let mut segments = u
-            .path_segments()
-            .ok_or_else(|| anyhow!("Cannot parse GitHub url: no path segments"))?;
-        let owner = segments
-            .next()
-            .ok_or_else(|| anyhow!("cannot parse github url: owner not found"))?;
-        let repo = segments
-            .next()
-            .ok_or_else(|| anyhow!("cannot parse github url: repo not found"))?;
+        let mut segments = u.path_segments().ok_or_else(|| {
+            VerifyError::GithubUrlParserError(
+                "Cannot parse GitHub url: no path segments".to_owned(),
+            )
+        })?;
+        let owner = segments.next().ok_or_else(|| {
+            VerifyError::GithubUrlParserError("cannot parse github url: owner not found".to_owned())
+        })?;
+        let repo = segments.next().ok_or_else(|| {
+            VerifyError::GithubUrlParserError("cannot parse github url: repo not found".to_owned())
+        })?;
 
         Ok(GitHubRepo {
             owner: owner.to_string(),
@@ -610,25 +617,21 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     )]
     fn github_repo_parser(url: &str, owner: Option<&str>, repo: Option<&str>) {
         let gh = GitHubRepo::try_from(url);
-
-        if owner.is_none() != repo.is_none() {
-            panic!("wrong input for the test case");
-        }
+        assert!(
+            owner.is_none() == repo.is_none(),
+            "wrong input for the test case"
+        );
 
         match gh {
-            Err(_) => {
-                if owner.is_some() {
-                    panic!("Didn't expect an error");
-                }
+            Err(VerifyError::GithubUrlParserError(_)) => {
+                assert!(owner.is_none(), "Didn't expect an error")
             }
             Ok(gh) => {
-                if owner.is_none() {
-                    panic!("An error was expected");
-                } else {
-                    assert_eq!(gh.owner, owner.unwrap(), "Didn't get the expected owner");
-                    assert_eq!(gh.repo, repo.unwrap(), "Didn't get the expected repo");
-                }
+                assert!(owner.is_some(), "An error was expected");
+                assert_eq!(gh.owner, owner.unwrap(), "Didn't get the expected owner");
+                assert_eq!(gh.repo, repo.unwrap(), "Didn't get the expected repo");
             }
+            Err(_) => panic!("Invalid error"),
         }
     }
 

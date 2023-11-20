@@ -1,5 +1,6 @@
-use anyhow::Result;
 use std::path::{Path, PathBuf};
+
+use crate::store::errors::StoreResult;
 
 /// Encode a path to a format that doesn't contain any invalid characters
 /// for the target platform.
@@ -15,6 +16,6 @@ pub fn encode_filename(filename: &str) -> String {
 }
 
 /// Retrieve a path that was transformed with `transform_path`.
-pub fn decode_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+pub fn decode_path<P: AsRef<Path>>(path: P) -> StoreResult<PathBuf> {
     Ok(path.as_ref().to_path_buf())
 }

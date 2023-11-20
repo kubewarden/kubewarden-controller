@@ -3,11 +3,13 @@ extern crate reqwest;
 extern crate rustls;
 extern crate walkdir;
 
-use anyhow::{anyhow, Result};
+use errors::FetcherResult;
 use std::boxed::Box;
 use std::fs;
+use store::errors::{StoreError, StoreResult};
 use url::Url;
 
+pub mod errors;
 pub mod fetcher;
 mod https;
 pub mod policy;
@@ -16,6 +18,7 @@ pub mod sources;
 pub mod store;
 pub mod verify;
 
+use crate::errors::{CannotCreateStoragePathError, FetcherError};
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
 use crate::policy::Policy;
@@ -78,7 +81,7 @@ pub async fn fetch_policy(
     url: &str,
     destination: PullDestination,
     sources: Option<&Sources>,
-) -> Result<Policy> {
+) -> FetcherResult<Policy> {
     let url = parse_url(url)?;
     match url.scheme() {
         "file" => {
@@ -87,15 +90,17 @@ pub async fn fetch_policy(
                 uri: url.to_string(),
                 local_path: url
                     .to_file_path()
-                    .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err))?,
+                    .map_err(|_| FetcherError::InvalidFilePathError(url.to_string()))?,
             });
         }
         "registry" | "http" | "https" => Ok(()),
-        _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
+        _ => Err(StoreError::UnknownSchemeError(url.scheme().to_owned())),
     }?;
     let (store, mut destination) = pull_destination(&url, &destination)?;
     if let Some(store) = store {
-        store.ensure(&store.policy_full_path(url.as_str(), store::PolicyPath::PrefixOnly)?)?;
+        store
+            .ensure(&store.policy_full_path(url.as_str(), store::PolicyPath::PrefixOnly)?)
+            .map_err(CannotCreateStoragePathError)?;
     }
     match url.scheme() {
         "registry" => {
@@ -134,11 +139,7 @@ pub async fn fetch_policy(
     {
         Err(err) => {
             if !sources.is_insecure_source(&host_and_port(&url)?) {
-                return Err(anyhow!(
-                    "the policy {} could not be downloaded due to error: {}",
-                    url,
-                    err
-                ));
+                return Err(FetcherError::SourceError(err));
             }
         }
         Ok(bytes) => return create_file_if_valid(&bytes, &destination, url.to_string()),
@@ -155,11 +156,14 @@ pub async fn fetch_policy(
 
     match policy_fetcher.fetch(&url, ClientProtocol::Http).await {
         Ok(bytes) => create_file_if_valid(&bytes, &destination, url.to_string()),
-        Err(e) => Err(anyhow!("could not pull policy {}: {}", url, e)),
+        Err(e) => Err(FetcherError::SourceError(e)),
     }
 }
 
-fn client_protocol(url: &Url, sources: &Sources) -> Result<ClientProtocol> {
+fn client_protocol(
+    url: &Url,
+    sources: &Sources,
+) -> std::result::Result<ClientProtocol, errors::InvalidURLError> {
     if let Some(certificates) = sources.source_authority(&host_and_port(url)?) {
         return Ok(ClientProtocol::Https(
             TlsVerificationMode::CustomCaCertificates(certificates),
@@ -168,7 +172,10 @@ fn client_protocol(url: &Url, sources: &Sources) -> Result<ClientProtocol> {
     Ok(ClientProtocol::Https(TlsVerificationMode::SystemCa))
 }
 
-fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<Store>, PathBuf)> {
+fn pull_destination(
+    url: &Url,
+    destination: &PullDestination,
+) -> FetcherResult<(Option<Store>, PathBuf)> {
     Ok(match destination {
         PullDestination::MainStore => {
             let store = Store::default();
@@ -196,19 +203,19 @@ fn pull_destination(url: &Url, destination: &PullDestination) -> Result<(Option<
 // Helper function, takes the URL of the policy and allocates the
 // right struct to interact with it
 #[allow(clippy::box_default)]
-fn url_fetcher(scheme: &str) -> Result<Box<dyn PolicyFetcher>> {
+fn url_fetcher(scheme: &str) -> StoreResult<Box<dyn PolicyFetcher>> {
     match scheme {
         "http" | "https" => Ok(Box::new(Https::default())),
         "registry" => Ok(Box::new(Registry::new())),
-        _ => Err(anyhow!("unknown scheme: {}", scheme)),
+        _ => Err(StoreError::UnknownSchemeError(scheme.to_owned())),
     }
 }
 
-pub(crate) fn host_and_port(url: &Url) -> Result<String> {
+pub(crate) fn host_and_port(url: &Url) -> std::result::Result<String, errors::InvalidURLError> {
     Ok(format!(
         "{}{}",
         url.host_str()
-            .ok_or_else(|| anyhow!("invalid URL {}", url))?,
+            .ok_or_else(|| errors::InvalidURLError(url.to_string()))?,
         url.port()
             .map(|port| format!(":{}", port))
             .unwrap_or_default(),
@@ -222,12 +229,13 @@ pub(crate) fn host_and_port(url: &Url) -> Result<String> {
 // https://webassembly.github.io/spec/core/bikeshed/#binary-magic
 const WASM_MAGIC_NUMBER: [u8; 4] = [0x00, 0x61, 0x73, 0x6D];
 
-fn create_file_if_valid(bytes: &[u8], destination: &Path, url: String) -> Result<Policy> {
+fn create_file_if_valid(bytes: &[u8], destination: &Path, url: String) -> FetcherResult<Policy> {
     if !bytes.starts_with(&WASM_MAGIC_NUMBER) {
-        return Err(anyhow!("invalid wasm file"));
+        return Err(FetcherError::InvalidWasmFileError);
     };
-    fs::write(destination, bytes)
-        .map_err(|e| anyhow!("wasm module cannot be save to {:?}: {}", destination, e))?;
+    fs::write(destination, bytes).map_err(|e| {
+        FetcherError::CannotWriteWasmModuleFile(destination.to_string_lossy().to_string(), e)
+    })?;
 
     Ok(Policy {
         uri: url,
@@ -359,7 +367,7 @@ mod tests {
         port: Some(5000),
         path: "/kubewarden/policies/test".to_string(),
     }))]
-    fn url_parsing(#[case] url: &str, #[case] expected: anyhow::Result<UrlParseDetails>) {
+    fn url_parsing(#[case] url: &str, #[case] expected: FetcherResult<UrlParseDetails>) {
         let res = parse_url(url);
         println!("{} -> {:?}", url, res);
         assert_eq!(res.is_ok(), expected.is_ok());
@@ -525,14 +533,31 @@ mod tests {
         );
     }
 
+    #[test]
+    fn save_wasm_files_to_invalid_path() {
+        //simulate a write with a invalid file name for linux and windows
+        let dest = Path::new(r"\/");
+        let file_contents = read_fixture(Path::new("simple.wasm"));
+
+        let outcome = create_file_if_valid(&file_contents, dest, "not relevant".to_string());
+        assert!(matches!(
+            outcome,
+            Err(FetcherError::CannotWriteWasmModuleFile(..))
+        ));
+    }
+
     #[rstest]
-    #[case("simple.wasm", true)]
-    #[case("auth-present.json", false)]
+    #[case::valid_wasm_file("simple.wasm", true)]
+    #[case::invalid_wasm_file("auth-present.json", false)]
     fn save_only_wasm_files_to_disk(#[case] fixture_file: &str, #[case] success: bool) {
         let dest = NamedTempFile::new().expect("Cannot create tmp file");
         let file_contents = read_fixture(Path::new(fixture_file));
 
         let outcome = create_file_if_valid(&file_contents, dest.path(), "not relevant".to_string());
         assert_eq!(outcome.is_ok(), success);
+        assert_eq!(
+            matches!(outcome, Err(FetcherError::InvalidWasmFileError),),
+            !success
+        );
     }
 }

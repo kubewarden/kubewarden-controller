@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use anyhow::Result;
 use policy_fetcher::policy::Policy;
 use policy_fetcher::store::{path, Store};
 use tempfile::tempdir;
@@ -160,7 +159,7 @@ fn test_get_policy_by_sha_prefix_duplicate() {
     assert!(result.is_err());
 }
 
-fn setup_store(policies: &[Policy]) -> Result<()> {
+fn setup_store(policies: &[Policy]) -> std::result::Result<(), std::io::Error> {
     for policy in policies {
         std::fs::create_dir_all(policy.local_path.parent().unwrap())?;
 

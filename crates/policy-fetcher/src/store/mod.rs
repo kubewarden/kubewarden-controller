@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use path_slash::PathExt;
@@ -7,7 +6,11 @@ use url::Url;
 use walkdir::WalkDir;
 
 use crate::policy::Policy;
+use errors::StoreError;
 
+use self::errors::StoreResult;
+
+pub mod errors;
 pub mod path;
 mod scheme;
 
@@ -80,7 +83,7 @@ impl Store {
     /// this store. If `policy_path` is set to `PrefixOnly`, the
     /// filename of the policy will be omitted, otherwise it will be
     /// included.
-    pub fn policy_full_path(&self, url: &str, policy_path: PolicyPath) -> Result<PathBuf> {
+    pub fn policy_full_path(&self, url: &str, policy_path: PolicyPath) -> StoreResult<PathBuf> {
         let path = self.policy_path(url, policy_path)?;
 
         Ok(self.root.join(path))
@@ -90,7 +93,7 @@ impl Store {
     /// without the store. If `policy_path` is set to `PrefixOnly`, the
     /// filename of the policy will be omitted, otherwise it will be
     /// included.
-    pub fn policy_path(&self, url: &str, policy_path: PolicyPath) -> Result<PathBuf> {
+    pub fn policy_path(&self, url: &str, policy_path: PolicyPath) -> StoreResult<PathBuf> {
         let url = Url::parse(url)?;
         let filename = policy_file_name(&url);
         let policy_prefix = self.policy_prefix(&url);
@@ -120,7 +123,7 @@ impl Store {
     }
 
     /// Lists all policies in this store
-    pub fn list(&self) -> Result<Vec<Policy>> {
+    pub fn list(&self) -> StoreResult<Vec<Policy>> {
         let mut policies = Vec::new();
 
         if !self.root.exists() {
@@ -164,11 +167,11 @@ impl Store {
     }
 
     /// Get a policy by its URI, if it exists.
-    pub fn get_policy_by_uri(&self, uri: &str) -> Result<Option<Policy>> {
+    pub fn get_policy_by_uri(&self, uri: &str) -> StoreResult<Option<Policy>> {
         let uri = Url::parse(uri)?;
 
         if !scheme::is_known_remote_scheme(uri.scheme()) {
-            return Err(anyhow!("Unknown scheme: {}", uri.scheme()));
+            return Err(StoreError::UnknownSchemeError(uri.scheme().to_owned()));
         }
 
         let policy_path = self.policy_full_path(uri.as_str(), PolicyPath::PrefixAndFilename)?;
@@ -183,16 +186,15 @@ impl Store {
     }
 
     /// Get a policy that matches the given SHA prefix, if it exists.
-    pub fn get_policy_by_sha_prefix(&self, sha_prefix: &str) -> Result<Option<Policy>> {
+    pub fn get_policy_by_sha_prefix(&self, sha_prefix: &str) -> StoreResult<Option<Policy>> {
         self.list()?.into_iter().try_fold(None, |acc, policy| {
             if !policy.digest()?.starts_with(sha_prefix) {
                 return Ok(acc);
             }
 
             if acc.is_some() {
-                Err(anyhow!(
-                    "Multiple policies found with the same prefix: {}",
-                    sha_prefix
+                Err(StoreError::MultiplePoliciesFoundError(
+                    sha_prefix.to_owned(),
                 ))
             } else {
                 Ok(Some(policy))
@@ -267,15 +269,14 @@ mod tests {
         input_url: &str,
         input_policy_path: PolicyPath,
         expected_relative_path: &str,
-    ) -> Result<()> {
+    ) {
         let default = Store::default();
-        let path = default.policy_full_path(input_url, input_policy_path)?;
+        let path = default.policy_full_path(input_url, input_policy_path);
+        assert!(matches!(path, Ok(_)));
         assert_eq!(
             default.root.join(path::encode_path(expected_relative_path)),
-            path
+            path.unwrap_or_default()
         );
-
-        Ok(())
     }
 
     #[rstest(
@@ -307,7 +308,7 @@ mod tests {
         input_url: &str,
         input_policy_path: PolicyPath,
         expected_path: &str,
-    ) -> Result<()> {
+    ) -> StoreResult<()> {
         let default = Store::default();
         let path = default.policy_path(input_url, input_policy_path)?;
         assert_eq!(path::encode_path(expected_path), path);

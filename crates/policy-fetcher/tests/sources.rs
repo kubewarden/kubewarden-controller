@@ -1,6 +1,6 @@
 mod common;
 
-use anyhow::Error;
+use policy_fetcher::sources::SourceResult;
 use policy_fetcher::sources::{read_sources_file, Certificate, Sources};
 use std::io::Write;
 use tempfile::NamedTempFile;
@@ -28,7 +28,7 @@ source_authorities:
 
     let expected_cert = Certificate::Pem(common::CERT_DATA.into());
     let path = sources_file.path();
-    let actual: Result<Sources, Error> = read_sources_file(path);
+    let actual: SourceResult<Sources> = read_sources_file(path);
 
     match actual {
         Ok(_) => {

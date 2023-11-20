@@ -1,7 +1,7 @@
-use anyhow::Result;
 use base64::{alphabet, engine::general_purpose, Engine as _};
 use std::path::{Path, PathBuf};
 
+use crate::store::errors::StoreResult;
 use crate::store::scheme;
 
 /// A base64 engine that uses URL_SAFE alphabet and escapes using no padding
@@ -42,7 +42,7 @@ pub fn encode_filename(filename: &str) -> String {
 }
 
 /// Decode a path that was transformed with `encode_path`.
-pub fn decode_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+pub fn decode_path<P: AsRef<Path>>(path: P) -> StoreResult<PathBuf> {
     let mut decoded_path = PathBuf::new();
 
     for component in path.as_ref().components() {
