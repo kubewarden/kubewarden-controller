@@ -18,79 +18,64 @@ package controllers
 
 import (
 	"fmt"
-	"time"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 )
 
-var _ = Describe("Given a PolicyServer", func() {
-	var (
-		policyServerName = "policy-server"
-	)
+var _ = Describe("PolicyServer controller", func() {
+	policyServerName := newName("policy-server")
+
 	BeforeEach(func() {
 		Expect(
-			k8sClient.Create(ctx, policyServer(policyServerName)),
-		).To(HaveSucceededOrAlreadyExisted())
+			k8sClient.Create(ctx, policyServerFactory(policyServerName)),
+		).To(haveSucceededOrAlreadyExisted())
 	})
-	When("it has no assigned policies", func() {
-		Context("and it is deleted", func() {
-			BeforeEach(func() {
-				Expect(
-					k8sClient.Delete(ctx, policyServer(policyServerName)),
-				).To(Succeed())
-			})
-			It("should get its finalizer removed", func() {
-				policyServer, err := getFreshPolicyServer(policyServerName)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(policyServer).ToNot(
-					WithTransform(func(policyServer *policiesv1.PolicyServer) []string {
-						return policyServer.Finalizers
-					}, ContainElement(constants.KubewardenFinalizer)),
-				)
-			})
-		})
-	})
-	When("it has some assigned policies", func() {
-		var (
-			policyName = "some-policy"
-		)
-		BeforeEach(func() {
+
+	Context("it has no assigned policies", func() {
+		It("should get its finalizer removed", func() {
+			By("deleting the policy server")
 			Expect(
-				k8sClient.Create(ctx, clusterAdmissionPolicyWithPolicyServerName(policyName, policyServerName)),
-			).To(HaveSucceededOrAlreadyExisted())
+				k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+			).To(Succeed())
+
+			policyServer, err := getTestPolicyServer(policyServerName)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(policyServer.Finalizers).ToNot(ContainElement(constants.KubewardenFinalizer))
 		})
-		Context("and it is deleted", func() {
-			BeforeEach(func() {
-				Expect(
-					k8sClient.Delete(ctx, policyServer(policyServerName)),
-				).To(Succeed())
-			})
-			It("should delete assigned policies", func() {
-				Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
-					return getFreshClusterAdmissionPolicy(policyName)
-				}, 30*time.Second, 250*time.Millisecond).ShouldNot(
-					WithTransform(
-						func(clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy) *metav1.Time {
-							return clusterAdmissionPolicy.DeletionTimestamp
-						},
-						BeNil(),
-					),
-				)
-			})
-			It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
-				Eventually(func(g Gomega) (*policiesv1.PolicyServer, error) {
-					return getFreshPolicyServer(policyServerName)
-				}, 30*time.Second, 250*time.Millisecond).ShouldNot(
-					WithTransform(func(policyServer *policiesv1.PolicyServer) []string {
-						return policyServer.Finalizers
-					}, ContainElement(constants.KubewardenFinalizer)),
-				)
-			})
+	})
+
+	Context("it has assigned policies", func() {
+		policyName := newName("policy")
+
+		It("should delete assigned policies", func() {
+			By("creating a policy and assigning it to the policy server")
+			Expect(
+				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, false)),
+			).To(haveSucceededOrAlreadyExisted())
+
+			By("deleting the policy server")
+			Expect(
+				k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+			).To(Succeed())
+
+			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				return getTestClusterAdmissionPolicy(policyName)
+			}, timeout, pollInterval).ShouldNot(
+				HaveField("DeletionTimestamp", BeNil()),
+			)
+		})
+
+		It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
+			Eventually(func(g Gomega) (*policiesv1.PolicyServer, error) {
+				return getTestPolicyServer(policyServerName)
+			}, timeout, pollInterval).ShouldNot(
+				HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
+			)
 		})
 	})
 })
