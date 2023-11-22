@@ -263,9 +263,8 @@ async fn create_verifier(
 mod tests {
     use super::*;
     use lazy_static::lazy_static;
-    use std::sync::Mutex;
     use tempfile::TempDir;
-    use tokio::runtime::Runtime;
+    use tokio::{runtime::Runtime, sync::Mutex};
 
     lazy_static! {
         // Allocate the DOWNLOADER once, this is needed to reduce the execution time
@@ -319,14 +318,14 @@ mod tests {
         // This is required to have lazy_static create the object right now,
         // outside of the tokio runtime. Creating the object inside of the tokio
         // rutime causes a panic because sigstore-rs' code invokes a `block_on` too
-        let downloader = DOWNLOADER.lock().unwrap();
+        let downloader = DOWNLOADER.lock();
         drop(downloader);
 
         let rt = Runtime::new().unwrap();
         let fetched_policies = rt.block_on(async {
             DOWNLOADER
                 .lock()
-                .unwrap()
+                .await
                 .download_policies(
                     &policies,
                     policy_download_dir.path().to_str().unwrap(),
@@ -366,14 +365,14 @@ mod tests {
         // This is required to have lazy_static create the object right now,
         // outside of the tokio runtime. Creating the object inside of the tokio
         // rutime causes a panic because sigstore-rs' code invokes a `block_on` too
-        let downloader = DOWNLOADER.lock().unwrap();
+        let downloader = DOWNLOADER.lock();
         drop(downloader);
 
         let rt = Runtime::new().unwrap();
         let err = rt.block_on(async {
             DOWNLOADER
                 .lock()
-                .unwrap()
+                .await
                 .download_policies(
                     &policies,
                     policy_download_dir.path().to_str().unwrap(),
