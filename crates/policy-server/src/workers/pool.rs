@@ -1,16 +1,15 @@
 use anyhow::{anyhow, Result};
 use core::time;
+use lazy_static::lazy_static;
 use policy_evaluator::{
-    callback_requests::CallbackRequest,
-    policy_evaluator::{Evaluator, PolicyEvaluator},
-    policy_evaluator_builder::PolicyEvaluatorBuilder,
-    wasmtime,
+    callback_requests::CallbackRequest, evaluation_context::EvaluationContext,
+    policy_evaluator::PolicyEvaluator, policy_evaluator_builder::PolicyEvaluatorBuilder, wasmtime,
 };
 use rayon::prelude::*;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Barrier, RwLock,
     },
     thread,
@@ -28,15 +27,44 @@ use crate::workers::{
     worker::Worker,
 };
 
+lazy_static! {
+    /// Used to create unique worker IDs
+    static ref WORKER_ID: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
+}
+
+/// Coordinates a set of workers.
+/// Each worker takes care of performing the evaluation of the requests received by Policy Server
+/// API endpoints.
+///
+/// The HTTP API communicates with the worker pool via a dedicated chanel. The pool then assigns
+/// the evaluation job to one of the workers. Currently this is done on a round-robin fashion.
 pub(crate) struct WorkerPool {
+    /// Channel used by the HTTP API to send to the pool the evaluation requests that have to be
+    /// processed
     api_rx: mpsc::Receiver<EvalRequest>,
+
+    /// A oneshot channel used during the bootstrap phase. It's being used by the `main` to send
+    /// the data used to bootstrap of the workers.
     bootstrap_rx: oneshot::Receiver<WorkerPoolBootRequest>,
+
+    /// The channel that connect the synchronous world of the workers with the tokio task that
+    /// handles all the async requests that might originate during the policy evaluation process.
+    /// For example, requesting Kubernetes resources, DNS resolution, Sigstore operations,...
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
+
+    /// When set, this is the Namespace where all the policies do not apply. This is usually set
+    /// to be the Namespace where the Kubewarden is deployed; ensuring the user policies are not
+    /// going to interfere with the Kubewarden stack.
     always_accept_admission_reviews_on_namespace: Option<String>,
+
+    /// When set enables the policy timeout feature which prevents a rogue policy to enter an
+    /// endless loop/consume all the resources of a worker
     policy_evaluation_limit_seconds: Option<u64>,
 }
 
 impl WorkerPool {
+    /// Create a new `WorkerPool`, no bootstrap operation is done yet. This happens when invoking
+    /// the `run` method.
     pub(crate) fn new(
         bootstrap_rx: oneshot::Receiver<WorkerPoolBootRequest>,
         api_rx: mpsc::Receiver<EvalRequest>,
@@ -53,9 +81,17 @@ impl WorkerPool {
         }
     }
 
+    /// Bootstrap the pool and then enter an endless loop that processes incoming requests.
     pub(crate) fn run(mut self) {
+        // The WorkerPool communicates with each worker over dedicated `mpsc::channel` (one per worker).
+        // This vector holds all the sender ends of these channels.
         let mut worker_tx_chans = Vec::<mpsc::Sender<EvalRequest>>::new();
+
+        // Each worker has its own `wasmtime::Engine`, we have to keep track of them here because
+        // we have to increase their epoch tick to implement the policy timeout protection feature
         let mut worker_engines = Vec::<wasmtime::Engine>::new();
+
+        // All the join handles of the spawned worker threads
         let mut join_handles = Vec::<JoinHandle<Result<()>>>::new();
 
         // Phase 1: wait for bootstrap data to be received by the main
@@ -96,6 +132,9 @@ impl WorkerPool {
                 }
             };
 
+        // For each policy defined by the user, ensure the given settings are valid
+        // We exit with an error if one or more policies do not have valid
+        // settings.
         if let Err(error) = verify_policy_settings(
             &engine,
             &bootstrap_data.policies,
@@ -134,8 +173,10 @@ impl WorkerPool {
             let (tx, rx) = mpsc::channel::<EvalRequest>(32);
             worker_tx_chans.push(tx);
 
-            // Each worker has its own wasmtime::Engine, sharing the
+            // Each worker has its own `wasmtime::Engine`, sharing the
             // same engine across all the workers leads to bad performance
+            // TODO: revisit this statement, it seems this issue has been solved by latest wasmtime
+            // releases
             let engine = match wasmtime::Engine::new(&wasmtime_config) {
                 Ok(e) => e,
                 Err(e) => {
@@ -153,6 +194,8 @@ impl WorkerPool {
                     return;
                 }
             };
+            // Note well: it's fast and cheap to clone a `wasmtime::Engine` as stated by the
+            // official docs. It's just a reference counter under the hood
             worker_engines.push(engine.clone());
 
             let modules = precompiled_policies.clone();
@@ -166,7 +209,9 @@ impl WorkerPool {
             let join = thread::spawn(move || -> Result<()> {
                 info!(spawned = n, total = pool_size, "spawning worker");
 
+                let worker_id = WORKER_ID.fetch_add(1, Ordering::Relaxed);
                 let mut worker = match Worker::new(
+                    worker_id,
                     rx,
                     &policies,
                     &modules,
@@ -204,6 +249,7 @@ impl WorkerPool {
         // meaning a lot of memory would have been consumed without a valid reason
         // during the whole execution time
         drop(precompiled_policies);
+        drop(policies);
         barrier.wait();
 
         if !boot_canary.load(Ordering::SeqCst) {
@@ -260,6 +306,7 @@ impl WorkerPool {
 
 pub(crate) fn build_policy_evaluator(
     policy_id: &str,
+    worker_id: u64,
     policy: &config::Policy,
     engine: &wasmtime::Engine,
     policy_modules: &PrecompiledPolicies,
@@ -287,13 +334,13 @@ pub(crate) fn build_policy_evaluator(
                 )
             })?;
 
-    let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new(policy_id.to_string())
-        .engine(engine.clone())
-        .policy_module(module)
-        .settings(policy.settings_to_json()?)
-        .context_aware_resources_allowed(policy.context_aware_resources.clone())
-        .callback_channel(callback_handler_tx)
-        .execution_mode(policy_module.execution_mode);
+    let mut policy_evaluator_builder =
+        PolicyEvaluatorBuilder::new(policy_id.to_string(), worker_id)
+            .engine(engine.clone())
+            .policy_module(module)
+            .context_aware_resources_allowed(policy.context_aware_resources.clone())
+            .callback_channel(callback_handler_tx)
+            .execution_mode(policy_module.execution_mode);
 
     if let Some(limit) = policy_evaluation_limit_seconds {
         policy_evaluator_builder =
@@ -346,6 +393,7 @@ fn precompile_policies(
         .collect())
 }
 
+/// Ensure the user provided valid settings for all the policies
 fn verify_policy_settings(
     engine: &wasmtime::Engine,
     policies: &HashMap<String, config::Policy>,
@@ -376,10 +424,15 @@ fn verify_policy_settings(
         });
     }
 
+    // We have to create a worker_id because this is what the `PolicyEvaluator` constructor needs.
+    // In this case there's no actual `Worker`, we're going to run all the setting validation Wasm
+    // invocations inside of the thread of `WorkerPool`
+    let worker_id = WORKER_ID.fetch_add(1, Ordering::Relaxed);
     let mut errors = vec![];
     for (id, policy) in policies.iter() {
         let mut policy_evaluator = match build_policy_evaluator(
             id,
+            worker_id,
             policy,
             engine,
             policy_modules,
@@ -392,7 +445,14 @@ fn verify_policy_settings(
                 continue;
             }
         };
-        let set_val_rep = policy_evaluator.validate_settings();
+        let eval_ctx = EvaluationContext {
+            policy_id: id.to_owned(),
+            callback_channel: Some(callback_handler_tx.clone()),
+            ctx_aware_resources_allow_list: policy.context_aware_resources.clone(),
+        };
+
+        let set_val_rep = policy_evaluator
+            .validate_settings(&policy.settings_to_json()?.unwrap_or_default(), &eval_ctx);
         if !set_val_rep.valid {
             errors.push(format!(
                 "[{}] settings are not valid: {:?}",

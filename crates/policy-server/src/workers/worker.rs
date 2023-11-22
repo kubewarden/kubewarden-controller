@@ -1,10 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use itertools::Itertools;
 use policy_evaluator::callback_requests::CallbackRequest;
 use policy_evaluator::wasmtime;
 use policy_evaluator::{
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
-    policy_evaluator::{Evaluator, ValidateRequest},
+    policy_evaluator::ValidateRequest,
 };
 use std::{collections::HashMap, fmt, time::Instant};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -13,17 +13,10 @@ use tracing::{error, info, info_span};
 use crate::communication::{EvalRequest, RequestOrigin};
 use crate::config::{Policy, PolicyMode};
 use crate::metrics::{self};
-use crate::workers::precompiled_policy::PrecompiledPolicies;
-
-struct PolicyEvaluatorWithSettings {
-    policy_evaluator: Box<dyn Evaluator>,
-    policy_mode: PolicyMode,
-    allowed_to_mutate: bool,
-    always_accept_admission_reviews_on_namespace: Option<String>,
-}
+use crate::workers::{precompiled_policy::PrecompiledPolicies, EvaluationEnvironment};
 
 pub(crate) struct Worker {
-    evaluators: HashMap<String, PolicyEvaluatorWithSettings>,
+    evaluation_environment: EvaluationEnvironment,
     channel_rx: Receiver<EvalRequest>,
 }
 
@@ -40,12 +33,19 @@ impl fmt::Display for PolicyErrors {
 }
 
 impl Worker {
+    /// Create a new Worker. Takes care of allocating the `PolicyEvaluator` environments
+    /// required to evaluate the policies.
+    ///
+    /// No check is done against the policy settings provided by the user. The `WorkerPool`
+    /// already verified that all the settings are valid.
+    #[allow(clippy::too_many_arguments)]
     #[tracing::instrument(
         name = "worker_new",
         fields(host=crate::config::HOSTNAME.as_str()),
         skip_all,
     )]
     pub(crate) fn new(
+        worker_id: u64,
         rx: Receiver<EvalRequest>,
         policies: &HashMap<String, Policy>,
         precompiled_policies: &PrecompiledPolicies,
@@ -55,12 +55,13 @@ impl Worker {
         policy_evaluation_limit_seconds: Option<u64>,
     ) -> Result<Worker, PolicyErrors> {
         let mut evs_errors = HashMap::new();
-        let mut evs = HashMap::new();
+        let mut evaluation_environment =
+            EvaluationEnvironment::new(worker_id, always_accept_admission_reviews_on_namespace);
 
         for (id, policy) in policies.iter() {
             // It's safe to clone the outer engine. This creates a shallow copy
             let inner_engine = engine.clone();
-            let policy_evaluator = match crate::workers::pool::build_policy_evaluator(
+            if let Err(e) = evaluation_environment.register(
                 id,
                 policy,
                 &inner_engine,
@@ -68,25 +69,11 @@ impl Worker {
                 callback_handler_tx.clone(),
                 policy_evaluation_limit_seconds,
             ) {
-                Ok(pe) => Box::new(pe),
-                Err(e) => {
-                    evs_errors.insert(
-                        id.clone(),
-                        format!("[{id}] could not create PolicyEvaluator: {e:?}"),
-                    );
-                    continue;
-                }
-            };
-
-            let policy_evaluator_with_settings = PolicyEvaluatorWithSettings {
-                policy_evaluator,
-                policy_mode: policy.policy_mode.clone(),
-                allowed_to_mutate: policy.allowed_to_mutate.unwrap_or(false),
-                always_accept_admission_reviews_on_namespace:
-                    always_accept_admission_reviews_on_namespace.clone(),
-            };
-
-            evs.insert(id.to_string(), policy_evaluator_with_settings);
+                evs_errors.insert(
+                    id.clone(),
+                    format!("[{id}] could not create PolicyEvaluator: {e:?}"),
+                );
+            }
         }
 
         if !evs_errors.is_empty() {
@@ -94,7 +81,7 @@ impl Worker {
         }
 
         Ok(Worker {
-            evaluators: evs,
+            evaluation_environment,
             channel_rx: rx,
         })
     }
@@ -154,31 +141,40 @@ impl Worker {
         }
     }
 
+    /// Endless loop that waits for the WorkerPool to give a new request to be processed.
+    /// The request is then evaluated and a response is returned back to the WorkerPool.
     pub(crate) fn run(&mut self) {
         while let Some(req) = self.channel_rx.blocking_recv() {
             let span = info_span!(parent: &req.parent_span, "policy_eval");
             let _enter = span.enter();
 
-            let res = match self.evaluators.get_mut(&req.policy_id) {
-                Some(pes) => Self::evaluate(req, pes),
-                None => req
-                    .resp_chan
-                    .send(None)
-                    .map_err(|_| anyhow!("cannot send response back")),
-            };
-            if res.is_err() {
-                error!("receiver dropped");
+            let admission_response = self.evaluate(&req).unwrap_or_else(|e| {
+                AdmissionResponse::reject_internal_server_error(
+                    req.req.uid().to_owned(),
+                    e.to_string(),
+                )
+            });
+            if let Err(e) = req.resp_chan.send(Some(admission_response)) {
+                error!("cannot send response back: {e:?}");
             }
         }
     }
 
-    fn evaluate(req: EvalRequest, pes: &mut PolicyEvaluatorWithSettings) -> anyhow::Result<()> {
+    /// Perform the actual evaluation
+    fn evaluate(&mut self, req: &EvalRequest) -> Result<AdmissionResponse> {
         let start_time = Instant::now();
 
-        let policy_name = pes.policy_evaluator.policy_id();
-        let policy_mode = pes.policy_mode.clone();
-        let allowed_to_mutate = pes.allowed_to_mutate;
-        let vanilla_validation_response = pes.policy_evaluator.validate(req.req.clone());
+        let policy_name = req.policy_id.clone();
+        let policy_mode = self
+            .evaluation_environment
+            .get_policy_mode(&req.policy_id)?;
+        let allowed_to_mutate = self
+            .evaluation_environment
+            .get_policy_allowed_to_mutate(&req.policy_id)?;
+
+        let vanilla_validation_response =
+            self.evaluation_environment.validate(&req.policy_id, req)?;
+
         let policy_evaluation_duration = start_time.elapsed();
         let accepted = vanilla_validation_response.allowed;
         let mutated = vanilla_validation_response.patch.is_some();
@@ -200,17 +196,23 @@ impl Worker {
 
         match req.req.clone() {
             ValidateRequest::AdmissionRequest(adm_req) => {
-                if let Some(namespace) = &pes.always_accept_admission_reviews_on_namespace {
-                    // If the policy server is configured to
-                    // always accept admission reviews on a
-                    // given namespace, just set the `allowed`
-                    // part of the response to `true` if the
-                    // request matches this namespace. Keep
-                    // the rest of the behaviors unchanged,
-                    // such as checking if the policy is
-                    // allowed to mutate.
+                // TODO: we should check immediately if the request is coming from the "always
+                // accepted" namespace ASAP. Right now we do an evaluation and then we discard the
+                // result if the namespace is the special one.
+                // Moreover, I (flavio) don't like the fact we're using a mutable variable for
+                // `validation_response`
+                if let Some(ref req_namespace) = adm_req.namespace {
+                    if self
+                        .evaluation_environment
+                        .should_always_accept_requests_made_inside_of_namespace(req_namespace)
+                    {
+                        // given namespace, just set the `allowed`
+                        // part of the response to `true` if the
+                        // request matches this namespace. Keep
+                        // the rest of the behaviors unchanged,
+                        // such as checking if the policy is
+                        // allowed to mutate.
 
-                    if adm_req.namespace == Some(namespace.to_string()) {
                         validation_response = AdmissionResponse {
                             allowed: true,
                             status: None,
@@ -218,7 +220,6 @@ impl Worker {
                         };
                     }
                 }
-
                 let policy_evaluation = metrics::PolicyEvaluation {
                     policy_name,
                     policy_mode: policy_mode.into(),
@@ -247,9 +248,7 @@ impl Worker {
                 metrics::add_policy_evaluation(&policy_evaluation);
             }
         };
-
-        let res = req.resp_chan.send(Some(validation_response));
-        res.map_err(|_| anyhow!("cannot send response back"))
+        Ok(validation_response)
     }
 }
 
@@ -257,82 +256,70 @@ impl Worker {
 mod tests {
     use crate::admission_review::tests::build_admission_review;
     use crate::communication::RequestOrigin;
-
-    use policy_evaluator::kubewarden_policy_sdk::settings::SettingsValidationResponse;
-    use policy_evaluator::ProtocolVersion;
     use rstest::*;
-    use tokio::sync::oneshot;
+    use tokio::sync::{mpsc, oneshot};
 
     use super::*;
 
     const POLICY_ID: &str = "policy-id";
 
-    struct MockPolicyEvaluator {
-        pub policy_id: String,
-        pub admission_response: AdmissionResponse,
-        pub settings_validation_response: SettingsValidationResponse,
-        pub protocol_version: Result<ProtocolVersion>,
-    }
-
-    impl Default for MockPolicyEvaluator {
-        fn default() -> Self {
-            Self {
-                policy_id: "mock_policy".to_string(),
-                admission_response: AdmissionResponse {
-                    allowed: false,
-                    ..Default::default()
-                },
-                settings_validation_response: SettingsValidationResponse {
-                    valid: true,
-                    message: None,
-                },
-                protocol_version: Ok(ProtocolVersion::V1),
-            }
-        }
-    }
-
-    impl MockPolicyEvaluator {
-        fn new_allowed() -> MockPolicyEvaluator {
-            MockPolicyEvaluator {
-                admission_response: AdmissionResponse {
+    fn create_evaluation_environment_that_accepts_request(
+        policy_mode: PolicyMode,
+    ) -> EvaluationEnvironment {
+        let mut mock_evaluation_environment = EvaluationEnvironment::default();
+        mock_evaluation_environment
+            .expect_validate()
+            .returning(|_policy_id, request| {
+                Ok(AdmissionResponse {
+                    uid: request.req.uid().to_owned(),
                     allowed: true,
                     ..Default::default()
-                },
-                ..Default::default()
-            }
-        }
-
-        fn new_rejected(message: Option<String>, code: Option<u16>) -> MockPolicyEvaluator {
-            MockPolicyEvaluator {
-                admission_response: AdmissionResponse {
-                    allowed: false,
-                    status: Some(AdmissionResponseStatus { message, code }),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }
-        }
+                })
+            });
+        mock_evaluation_environment
+            .expect_get_policy_mode()
+            .returning(move |_policy_id| Ok(policy_mode.clone()));
+        mock_evaluation_environment
+            .expect_get_policy_allowed_to_mutate()
+            .returning(|_policy_id| Ok(false));
+        mock_evaluation_environment
+            .expect_should_always_accept_requests_made_inside_of_namespace()
+            .returning(|_namespace| false);
+        mock_evaluation_environment
     }
 
-    impl Evaluator for MockPolicyEvaluator {
-        fn validate(&mut self, _request: ValidateRequest) -> AdmissionResponse {
-            self.admission_response.clone()
-        }
+    #[derive(Clone)]
+    struct EvaluationEnvironmentRejectionDetails {
+        message: String,
+        code: u16,
+    }
 
-        fn validate_settings(&mut self) -> SettingsValidationResponse {
-            self.settings_validation_response.clone()
-        }
+    fn create_evaluation_environment_that_reject_request(
+        policy_mode: PolicyMode,
+        rejection_details: EvaluationEnvironmentRejectionDetails,
+        allowed_namespace: String,
+    ) -> EvaluationEnvironment {
+        let mut mock_evaluation_environment = EvaluationEnvironment::default();
+        mock_evaluation_environment
+            .expect_validate()
+            .returning(move |_policy_id, request| {
+                Ok(AdmissionResponse::reject(
+                    request.req.uid().to_owned(),
+                    rejection_details.message.clone(),
+                    rejection_details.code,
+                ))
+            });
+        mock_evaluation_environment
+            .expect_get_policy_mode()
+            .returning(move |_policy_id| Ok(policy_mode.clone()));
+        mock_evaluation_environment
+            .expect_get_policy_allowed_to_mutate()
+            .returning(|_policy_id| Ok(false));
+        mock_evaluation_environment
+            .expect_should_always_accept_requests_made_inside_of_namespace()
+            .returning(move |namespace| namespace == allowed_namespace);
 
-        fn protocol_version(&mut self) -> Result<ProtocolVersion> {
-            match &self.protocol_version {
-                Ok(pv) => Ok(pv.clone()),
-                Err(e) => Err(anyhow::anyhow!("{}", e)),
-            }
-        }
-
-        fn policy_id(&self) -> String {
-            self.policy_id.clone()
-        }
+        mock_evaluation_environment
     }
 
     #[test]
@@ -622,7 +609,7 @@ mod tests {
         #[case] policy_mode: PolicyMode,
         #[case] request_origin: RequestOrigin,
     ) {
-        let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+        let (tx, _) = oneshot::channel::<Option<AdmissionResponse>>();
         let req = ValidateRequest::AdmissionRequest(
             build_admission_review().request.expect("no request"),
         );
@@ -635,21 +622,13 @@ mod tests {
             request_origin,
         };
 
-        let mock_evaluator = MockPolicyEvaluator::new_allowed();
-        let mut pes = PolicyEvaluatorWithSettings {
-            policy_evaluator: Box::new(mock_evaluator),
-            policy_mode,
-            allowed_to_mutate: false,
-            always_accept_admission_reviews_on_namespace: None,
+        let (_, channel_rx) = mpsc::channel::<EvalRequest>(10);
+        let mut worker = Worker {
+            channel_rx,
+            evaluation_environment: create_evaluation_environment_that_accepts_request(policy_mode),
         };
 
-        let result = Worker::evaluate(eval_req, &mut pes);
-        assert!(result.is_ok());
-
-        let response = rx
-            .try_recv()
-            .expect("Got an error")
-            .expect("expected a AdmissionResponse object");
+        let response = worker.evaluate(&eval_req).unwrap();
         assert!(response.allowed);
     }
 
@@ -664,7 +643,7 @@ mod tests {
         #[case] request_origin: RequestOrigin,
         #[case] accept: bool,
     ) {
-        let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+        let (tx, _) = oneshot::channel::<Option<AdmissionResponse>>();
         let req = ValidateRequest::AdmissionRequest(
             build_admission_review().request.expect("no request"),
         );
@@ -677,23 +656,22 @@ mod tests {
             request_origin,
         };
 
-        let message = Some("boom".to_string());
-        let code = Some(500);
-        let mock_evaluator = MockPolicyEvaluator::new_rejected(message.clone(), code);
-        let mut pes = PolicyEvaluatorWithSettings {
-            policy_evaluator: Box::new(mock_evaluator),
+        let (_, channel_rx) = mpsc::channel::<EvalRequest>(10);
+        let rejection_details = EvaluationEnvironmentRejectionDetails {
+            message: "boom".to_string(),
+            code: 500,
+        };
+        let mock_evaluation_environment = create_evaluation_environment_that_reject_request(
             policy_mode,
-            allowed_to_mutate: false,
-            always_accept_admission_reviews_on_namespace: None,
+            rejection_details.clone(),
+            "".to_string(),
+        );
+        let mut worker = Worker {
+            channel_rx,
+            evaluation_environment: mock_evaluation_environment,
         };
 
-        let result = Worker::evaluate(eval_req, &mut pes);
-        assert!(result.is_ok());
-
-        let response = rx
-            .try_recv()
-            .expect("Got an error")
-            .expect("expected a AdmissionResponse object");
+        let response = worker.evaluate(&eval_req).unwrap();
 
         if accept {
             assert!(response.allowed);
@@ -701,14 +679,14 @@ mod tests {
         } else {
             assert!(!response.allowed);
             let response_status = response.status.expect("should be set");
-            assert_eq!(response_status.message, message);
-            assert_eq!(response_status.code, code);
+            assert_eq!(response_status.message, Some(rejection_details.message));
+            assert_eq!(response_status.code, Some(rejection_details.code));
         }
     }
 
     #[test]
     fn evaluate_policy_evaluator_accepts_request_raw() {
-        let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+        let (tx, _) = oneshot::channel::<Option<AdmissionResponse>>();
 
         let request = serde_json::json!(r#"{"foo": "bar"}"#);
         let req = ValidateRequest::Raw(request.clone());
@@ -721,27 +699,21 @@ mod tests {
             request_origin: RequestOrigin::Validate,
         };
 
-        let mock_evaluator = MockPolicyEvaluator::new_allowed();
-        let mut pes = PolicyEvaluatorWithSettings {
-            policy_evaluator: Box::new(mock_evaluator),
-            policy_mode: PolicyMode::Protect,
-            allowed_to_mutate: false,
-            always_accept_admission_reviews_on_namespace: None,
+        let (_, channel_rx) = mpsc::channel::<EvalRequest>(10);
+        let mut worker = Worker {
+            channel_rx,
+            evaluation_environment: create_evaluation_environment_that_accepts_request(
+                PolicyMode::Protect,
+            ),
         };
 
-        let result = Worker::evaluate(eval_req, &mut pes);
-        assert!(result.is_ok());
-
-        let response = rx
-            .try_recv()
-            .expect("Got an error")
-            .expect("expected a AdmissionResponse object");
+        let response = worker.evaluate(&eval_req).unwrap();
         assert!(response.allowed);
     }
 
     #[test]
     fn evaluate_policy_evaluator_rejects_request_raw() {
-        let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+        let (tx, _) = oneshot::channel::<Option<AdmissionResponse>>();
 
         let request = serde_json::json!(r#"{"foo": "bar"}"#);
         let req = ValidateRequest::Raw(request.clone());
@@ -754,28 +726,26 @@ mod tests {
             request_origin: RequestOrigin::Validate,
         };
 
-        let message = Some("boom".to_string());
-        let code = Some(500);
-        let mock_evaluator = MockPolicyEvaluator::new_rejected(message.clone(), code);
-        let mut pes = PolicyEvaluatorWithSettings {
-            policy_evaluator: Box::new(mock_evaluator),
-            policy_mode: PolicyMode::Protect,
-            allowed_to_mutate: false,
-            always_accept_admission_reviews_on_namespace: None,
+        let (_, channel_rx) = mpsc::channel::<EvalRequest>(10);
+        let rejection_details = EvaluationEnvironmentRejectionDetails {
+            message: "boom".to_string(),
+            code: 500,
+        };
+        let mock_evaluation_environment = create_evaluation_environment_that_reject_request(
+            PolicyMode::Protect,
+            rejection_details.clone(),
+            "".to_string(),
+        );
+        let mut worker = Worker {
+            channel_rx,
+            evaluation_environment: mock_evaluation_environment,
         };
 
-        let result = Worker::evaluate(eval_req, &mut pes);
-        assert!(result.is_ok());
-
-        let response = rx
-            .try_recv()
-            .expect("Got an error")
-            .expect("expected a AdmissionResponse object");
-
+        let response = worker.evaluate(&eval_req).unwrap();
         assert!(!response.allowed);
         let response_status = response.status.expect("should be set");
-        assert_eq!(response_status.message, message);
-        assert_eq!(response_status.code, code);
+        assert_eq!(response_status.message, Some(rejection_details.message));
+        assert_eq!(response_status.code, Some(rejection_details.code));
     }
 
     #[rstest]
@@ -789,7 +759,7 @@ mod tests {
         // of a namespace that is ignored by kubewarden -> this leads the
         // request to still be accepted
 
-        let (tx, mut rx) = oneshot::channel::<Option<AdmissionResponse>>();
+        let (tx, _) = oneshot::channel::<Option<AdmissionResponse>>();
 
         let allowed_namespace = "kubewarden_special".to_string();
 
@@ -805,23 +775,22 @@ mod tests {
             request_origin,
         };
 
-        let message = Some("boom".to_string());
-        let code = Some(500);
-        let mock_evaluator = MockPolicyEvaluator::new_rejected(message, code);
-        let mut pes = PolicyEvaluatorWithSettings {
-            policy_evaluator: Box::new(mock_evaluator),
-            policy_mode: PolicyMode::Protect,
-            allowed_to_mutate: false,
-            always_accept_admission_reviews_on_namespace: Some(allowed_namespace),
+        let (_, channel_rx) = mpsc::channel::<EvalRequest>(10);
+        let rejection_details = EvaluationEnvironmentRejectionDetails {
+            message: "boom".to_string(),
+            code: 500,
+        };
+        let mock_evaluation_environment = create_evaluation_environment_that_reject_request(
+            PolicyMode::Protect,
+            rejection_details.clone(),
+            allowed_namespace,
+        );
+        let mut worker = Worker {
+            channel_rx,
+            evaluation_environment: mock_evaluation_environment,
         };
 
-        let result = Worker::evaluate(eval_req, &mut pes);
-        assert!(result.is_ok());
-
-        let response = rx
-            .try_recv()
-            .expect("Got an error")
-            .expect("expected a AdmissionResponse object");
+        let response = worker.evaluate(&eval_req).unwrap();
         assert!(response.allowed);
         assert!(response.status.is_none());
     }

@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 
 use clap::ArgMatches;
 use lazy_static::lazy_static;
+use policy_evaluator::policy_evaluator::PolicySettings;
 use policy_evaluator::policy_fetcher::sources::{read_sources_file, Sources};
 use policy_evaluator::policy_fetcher::verify::config::{
     read_verification_file, LatestVerificationConfig, VerificationConfigV1,
@@ -231,7 +232,7 @@ pub struct Policy {
 }
 
 impl Policy {
-    pub fn settings_to_json(&self) -> Result<Option<serde_json::Map<String, serde_json::Value>>> {
+    pub fn settings_to_json(&self) -> Result<Option<PolicySettings>> {
         match self.settings.as_ref() {
             None => Ok(None),
             Some(settings) => {
