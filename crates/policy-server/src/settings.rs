@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use policy_evaluator::policy_metadata::ContextAwareResource;
 use serde::Deserialize;
 use serde_yaml::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::fs::File;
 use std::iter::FromIterator;
 use std::path::Path;
@@ -35,7 +35,7 @@ pub struct Policy {
     pub allowed_to_mutate: Option<bool>,
     pub settings: Option<HashMap<String, Value>>,
     #[serde(default)]
-    pub context_aware_resources: HashSet<ContextAwareResource>,
+    pub context_aware_resources: BTreeSet<ContextAwareResource>,
 }
 
 impl Policy {
