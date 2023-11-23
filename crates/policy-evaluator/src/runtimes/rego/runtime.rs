@@ -6,10 +6,9 @@ use tracing::{error, warn};
 use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
 use crate::policy_evaluator::RegoPolicyExecutionMode;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
-use crate::runtimes::rego::{context_aware, BurregoStack};
-
-use super::context_aware::KubernetesContext;
-use super::errors::RegoRuntimeError;
+use crate::runtimes::rego::{
+    context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError, BurregoStack,
+};
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut BurregoStack);
 

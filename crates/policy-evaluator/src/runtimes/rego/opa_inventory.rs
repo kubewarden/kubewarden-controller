@@ -64,12 +64,12 @@
 /// }
 /// ```
 ///
-use crate::policy_metadata::ContextAwareResource;
 use kube::api::ObjectList;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
-use super::errors::{RegoRuntimeError, Result};
+use crate::policy_metadata::ContextAwareResource;
+use crate::runtimes::rego::errors::{RegoRuntimeError, Result};
 
 /// A wrapper around a dictionary that has the resource Name as key,
 /// and a DynamicObject as value

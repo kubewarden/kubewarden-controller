@@ -1,14 +1,16 @@
+use kube::api::ObjectList;
 use std::collections::{BTreeMap, BTreeSet};
+use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     policy_metadata::ContextAwareResource,
-    runtimes::rego::{gatekeeper_inventory::GatekeeperInventory, opa_inventory::OpaInventory},
+    runtimes::rego::{
+        errors::{RegoRuntimeError, Result},
+        gatekeeper_inventory::GatekeeperInventory,
+        opa_inventory::OpaInventory,
+    },
 };
-use kube::api::ObjectList;
-use tokio::sync::{mpsc, oneshot};
-
-use super::errors::{RegoRuntimeError, Result};
 
 #[derive(serde::Serialize)]
 #[serde(untagged)]
