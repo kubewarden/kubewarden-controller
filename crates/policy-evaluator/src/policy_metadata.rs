@@ -120,7 +120,7 @@ fn validate_resources(data: &[String]) -> Result<(), ValidationError> {
     Ok(())
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Validate, PartialEq, Hash, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Validate, PartialEq, Hash, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextAwareResource {
     #[validate(length(min = 1))]

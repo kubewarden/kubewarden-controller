@@ -58,12 +58,12 @@ use crate::policy_metadata::ContextAwareResource;
 use anyhow::{anyhow, Result};
 use kube::api::ObjectList;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// A wrapper around a dictionary that has the resource Name as key,
 /// and a DynamicObject as value
 #[derive(Serialize, Default)]
-pub(crate) struct ResourcesByName(HashMap<String, kube::core::DynamicObject>);
+pub(crate) struct ResourcesByName(BTreeMap<String, kube::core::DynamicObject>);
 
 impl ResourcesByName {
     fn register(&mut self, obj: &kube::core::DynamicObject) -> Result<()> {
@@ -80,7 +80,7 @@ impl ResourcesByName {
 /// A wrapper around a dictionary that has a Kubernetes Kind (e.g. `Pod`)
 /// as key, and a ResourcesByName as value
 #[derive(Serialize, Default)]
-pub(crate) struct ResourcesByKind(HashMap<String, ResourcesByName>);
+pub(crate) struct ResourcesByKind(BTreeMap<String, ResourcesByName>);
 
 impl ResourcesByKind {
     fn register(
@@ -98,7 +98,7 @@ impl ResourcesByKind {
 /// A wrapper around a dictionary that has a Kubernetes GroupVersion (e.g. `apps/v1`)
 /// as key, and a ResourcesByKind as value
 #[derive(Serialize, Default)]
-pub(crate) struct ResourcesByGroupVersion(HashMap<String, ResourcesByKind>);
+pub(crate) struct ResourcesByGroupVersion(BTreeMap<String, ResourcesByKind>);
 
 impl ResourcesByGroupVersion {
     fn register(
@@ -117,7 +117,7 @@ impl ResourcesByGroupVersion {
 /// the name of a Kubernetes Namespace (e.g. `kube-system`) as key,
 /// and a ResourcesByGroupVersion as value
 #[derive(Serialize, Default)]
-pub(crate) struct ResourcesByNamespace(HashMap<String, ResourcesByGroupVersion>);
+pub(crate) struct ResourcesByNamespace(BTreeMap<String, ResourcesByGroupVersion>);
 
 impl ResourcesByNamespace {
     fn register(
@@ -148,7 +148,7 @@ impl GatekeeperInventory {
     /// Creates a GatekeeperInventory by querying a Kubernetes cluster
     /// for all the resources specified
     pub(crate) fn new(
-        kube_resources: &HashMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>>,
+        kube_resources: &BTreeMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>>,
     ) -> Result<Self> {
         let mut inventory = GatekeeperInventory::default();
 
@@ -190,10 +190,10 @@ mod tests {
 
     #[test]
     fn create() {
-        let mut kube_resources: HashMap<
+        let mut kube_resources: BTreeMap<
             ContextAwareResource,
             ObjectList<kube::core::DynamicObject>,
-        > = HashMap::new();
+        > = BTreeMap::new();
 
         let services = [
             dynamic_object_from_fixture("services", Some("kube-system"), "kube-dns").unwrap(),
