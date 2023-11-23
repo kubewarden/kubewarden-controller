@@ -1,13 +1,16 @@
+use kube::api::ObjectList;
 use std::collections::{BTreeMap, BTreeSet};
+use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     policy_metadata::ContextAwareResource,
-    runtimes::rego::{gatekeeper_inventory::GatekeeperInventory, opa_inventory::OpaInventory},
+    runtimes::rego::{
+        errors::{RegoRuntimeError, Result},
+        gatekeeper_inventory::GatekeeperInventory,
+        opa_inventory::OpaInventory,
+    },
 };
-use anyhow::{anyhow, Result};
-use kube::api::ObjectList;
-use tokio::sync::{mpsc, oneshot};
 
 #[derive(serde::Serialize)]
 #[serde(untagged)]
@@ -49,9 +52,8 @@ fn get_all_resources_by_type(
     };
 
     let response = make_request_via_callback_channel(req_type, callback_channel)?;
-    serde_json::from_slice::<ObjectList<kube::core::DynamicObject>>(&response.payload).map_err(
-        |e| anyhow!("cannot convert callback response into a list of kubernetes objects: {e}"),
-    )
+    serde_json::from_slice::<ObjectList<kube::core::DynamicObject>>(&response.payload)
+        .map_err(RegoRuntimeError::CallbackConvertList)
 }
 
 /// Creates a map that has ContextAwareResource as key, and its plural name as value.
@@ -70,9 +72,8 @@ pub(crate) fn get_plural_names(
         };
 
         let response = make_request_via_callback_channel(req_type, callback_channel)?;
-        let plural_name = serde_json::from_slice::<String>(&response.payload).map_err(|e| {
-            anyhow!("get plural name failure, cannot convert callback response: {e}")
-        })?;
+        let plural_name = serde_json::from_slice::<String>(&response.payload)
+            .map_err(RegoRuntimeError::CallbackGetPluralName)?;
 
         plural_names_by_resource.insert(resource.to_owned(), plural_name);
     }
@@ -86,29 +87,25 @@ fn make_request_via_callback_channel(
     request_type: CallbackRequestType,
     callback_channel: &mpsc::Sender<CallbackRequest>,
 ) -> Result<CallbackResponse> {
-    let (tx, mut rx) = oneshot::channel::<Result<CallbackResponse>>();
+    let (tx, mut rx) = oneshot::channel::<std::result::Result<CallbackResponse, wasmtime::Error>>();
     let req = CallbackRequest {
         request: request_type,
         response_channel: tx,
     };
     callback_channel
         .try_send(req)
-        .map_err(|e| anyhow!("error sending request over callback channel: {e}"))?;
+        .map_err(|e| RegoRuntimeError::CallbackSend(e.to_string()))?;
 
     loop {
         // Note: we cannot use `rx.blocking_recv`. The code would compile, but at runtime we would
         // have a panic because this function is used inside of an async block. The `blocking_recv`
         // method causes the tokio reactor to stop, which leads to a panic
         match rx.try_recv() {
-            Ok(msg) => return msg,
+            Ok(msg) => return msg.map_err(RegoRuntimeError::CallbackRequest),
             Err(oneshot::error::TryRecvError::Empty) => {
                 //  do nothing, keep waiting for a reply
             }
-            Err(e) => {
-                return Err(anyhow!(
-                    "error obtaining response from callback channel: {e}"
-                ));
-            }
+            Err(e) => return Err(RegoRuntimeError::CallbackResponse(e.to_string())),
         }
     }
 }
@@ -116,6 +113,7 @@ fn make_request_via_callback_channel(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use anyhow::{anyhow, Result};
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
     use std::path::Path;

@@ -1,14 +1,17 @@
+use std::collections::BTreeSet;
+use tokio::sync::mpsc;
+
 use crate::{
     callback_requests::CallbackRequest,
     policy_evaluator::RegoPolicyExecutionMode,
     policy_metadata::ContextAwareResource,
     runtimes::rego::{
-        context_aware, gatekeeper_inventory::GatekeeperInventory, opa_inventory::OpaInventory,
+        context_aware,
+        errors::{RegoRuntimeError, Result},
+        gatekeeper_inventory::GatekeeperInventory,
+        opa_inventory::OpaInventory,
     },
 };
-use anyhow::{anyhow, Result};
-use std::collections::BTreeSet;
-use tokio::sync::mpsc;
 
 pub(crate) struct BurregoStack {
     pub evaluator: burrego::Evaluator,
@@ -27,9 +30,7 @@ impl BurregoStack {
         }
 
         match callback_channel {
-            None => Err(anyhow!(
-                "cannot build Rego context aware data: callback channel is not set"
-            )),
+            None => Err(RegoRuntimeError::CallbackChannelNotSet()),
             Some(chan) => {
                 let cluster_resources =
                     context_aware::get_allowed_resources(chan, ctx_aware_resources_allow_list)?;

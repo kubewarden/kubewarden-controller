@@ -5,7 +5,8 @@
 ///
 /// ## The `inventory` object
 ///
-/// As documented [here](https://open-policy-agent.github.io/gatekeeper/website/docs/sync/), the Kubernetes details are made available to all the policies via the `data.inventory` object.
+/// As documented [here](https://open-policy-agent.github.io/gatekeeper/website/docs/sync/), the
+/// Kubernetes details are made available to all the policies via the `data.inventory` object.
 ///
 /// Inventory is a JSON dictionary built using the rules mentioned by the doc:
 /// - For cluster-scoped objects: `data.inventory.cluster[<groupVersion>][<kind>][<name>]`
@@ -54,11 +55,12 @@
 ///    }
 /// ```
 ///
-use crate::policy_metadata::ContextAwareResource;
-use anyhow::{anyhow, Result};
 use kube::api::ObjectList;
 use serde::Serialize;
 use std::collections::BTreeMap;
+
+use crate::policy_metadata::ContextAwareResource;
+use crate::runtimes::rego::errors::{RegoRuntimeError, Result};
 
 /// A wrapper around a dictionary that has the resource Name as key,
 /// and a DynamicObject as value
@@ -71,7 +73,7 @@ impl ResourcesByName {
             .metadata
             .name
             .clone()
-            .ok_or(anyhow!("DynamicObject does not have name"))?;
+            .ok_or(RegoRuntimeError::GatekeeperInventoryMissingName())?;
         self.0.insert(name, obj.to_owned());
         Ok(())
     }
@@ -129,7 +131,7 @@ impl ResourcesByNamespace {
             .metadata
             .namespace
             .clone()
-            .ok_or(anyhow!("DynamicObject does not have a Namespace"))?;
+            .ok_or(RegoRuntimeError::GatekeeperInventoryMissingNamespace())?;
         self.0.entry(namespace).or_default().register(obj, resource)
     }
 }
