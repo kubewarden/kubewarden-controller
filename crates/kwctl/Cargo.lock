@@ -369,12 +369,6 @@ checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
 name = "base64"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
-
-[[package]]
-name = "base64"
 version = "0.21.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35636a1494ede3b646cc98f74f8e62c773a38a659ebc777a2cf26b9b74171df9"
@@ -485,14 +479,14 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.12.1#12f678594e30fc8f69747f272dd9130f9bfe127a"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.12.2#f43d8b2b9f21b4f9053058fc957649b8bbe7551e"
 dependencies = [
  "base64 0.21.5",
  "chrono",
  "chrono-tz",
  "gtmpl",
  "gtmpl_value",
- "itertools 0.11.0",
+ "itertools 0.12.0",
  "json-patch",
  "lazy_static",
  "regex",
@@ -2378,9 +2372,9 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.86.0"
+version = "0.87.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8647c2211a9b480d910b155d573602c52cd5f646acecb06a03d594865dc4784"
+checksum = "e34392aea935145070dcd5b39a6dea689ac6534d7d117461316c3d157b1d0fc3"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -2389,11 +2383,11 @@ dependencies = [
 
 [[package]]
 name = "kube-client"
-version = "0.86.0"
+version = "0.87.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af8952521f3e8ce11920229e5f2965fef70525aecd9efc7b65e39bf9e2c6f66d"
+checksum = "7266548b9269d9fa19022620d706697e64f312fb2ba31b93e6986453fcc82c92"
 dependencies = [
- "base64 0.20.0",
+ "base64 0.21.5",
  "bytes",
  "chrono",
  "either",
@@ -2425,9 +2419,9 @@ dependencies = [
 
 [[package]]
 name = "kube-core"
-version = "0.86.0"
+version = "0.87.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7608a0cd05dfa36167d2da982bb70f17feb5450f73ec601f6d428bbcf991c5b9"
+checksum = "b8321c315b96b59f59ef6b33f604b84b905ab8f9ff114a4f909d934c520227b1"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -3368,8 +3362,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.12.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.12.1#12f678594e30fc8f69747f272dd9130f9bfe127a"
+version = "0.12.2"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.12.2#f43d8b2b9f21b4f9053058fc957649b8bbe7551e"
 dependencies = [
  "anyhow",
  "base64 0.21.5",
@@ -3378,7 +3372,7 @@ dependencies = [
  "chrono",
  "dns-lookup",
  "email_address",
- "itertools 0.11.0",
+ "itertools 0.12.0",
  "json-patch",
  "k8s-openapi",
  "kube",
@@ -3402,7 +3396,7 @@ dependencies = [
  "wapc",
  "wasi-cap-std-sync",
  "wasi-common",
- "wasmparser 0.115.0",
+ "wasmparser 0.118.0",
  "wasmtime",
  "wasmtime-provider",
  "wasmtime-wasi",
