@@ -2,7 +2,7 @@ use anyhow::Result;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Display};
 use std::path::Path;
 use validator::{Validate, ValidationError};
@@ -164,7 +164,7 @@ pub struct Metadata {
     pub policy_type: PolicyType,
     #[serde(default)]
     #[validate]
-    pub context_aware_resources: HashSet<ContextAwareResource>,
+    pub context_aware_resources: BTreeSet<ContextAwareResource>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minimum_kubewarden_version: Option<Version>,
 }
@@ -183,7 +183,7 @@ impl Default for Metadata {
             background_audit: true,
             execution_mode: PolicyExecutionMode::KubewardenWapc,
             policy_type: PolicyType::Kubernetes,
-            context_aware_resources: HashSet::new(),
+            context_aware_resources: BTreeSet::new(),
             minimum_kubewarden_version: None,
         }
     }
@@ -389,7 +389,7 @@ mod tests {
             protocol_version: Some(ProtocolVersion::V1),
             annotations: None,
             background_audit: true,
-            context_aware_resources: HashSet::new(),
+            context_aware_resources: BTreeSet::new(),
             policy_type: PolicyType::Kubernetes,
             ..Default::default()
         };
@@ -619,7 +619,7 @@ mod tests {
             String::from("Flavio Castelli"),
         );
 
-        let mut context_aware_resources = HashSet::new();
+        let mut context_aware_resources = BTreeSet::new();
         context_aware_resources.insert(ContextAwareResource {
             api_version: "".to_string(),
             kind: "Pod".to_string(),
@@ -643,7 +643,7 @@ mod tests {
             String::from("Flavio Castelli"),
         );
 
-        let mut context_aware_resources = HashSet::new();
+        let mut context_aware_resources = BTreeSet::new();
         context_aware_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "".to_string(),

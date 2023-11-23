@@ -477,7 +477,7 @@ mod tests {
     use crate::policy_metadata::{ContextAwareResource, PolicyType};
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::{BTreeSet, HashMap};
 
     fn mock_metadata_with_minimum_required() -> Metadata {
         Metadata {
@@ -507,7 +507,7 @@ mod tests {
             ])),
             mutating: false,
             background_audit: true,
-            context_aware_resources: HashSet::new(),
+            context_aware_resources: BTreeSet::new(),
             execution_mode: Default::default(),
             policy_type: PolicyType::Kubernetes,
             minimum_kubewarden_version: None,
@@ -515,7 +515,7 @@ mod tests {
     }
 
     fn mock_metadata_with_all() -> Metadata {
-        let mut context_aware_resources: HashSet<ContextAwareResource> = HashSet::new();
+        let mut context_aware_resources: BTreeSet<ContextAwareResource> = BTreeSet::new();
         context_aware_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "Pod".to_string(),

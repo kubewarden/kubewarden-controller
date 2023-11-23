@@ -7,7 +7,7 @@ use crate::{
     },
 };
 use anyhow::{anyhow, Result};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use tokio::sync::mpsc;
 
 pub(crate) struct BurregoStack {
@@ -20,7 +20,7 @@ impl BurregoStack {
     pub fn build_kubernetes_context(
         &self,
         callback_channel: Option<&mpsc::Sender<CallbackRequest>>,
-        ctx_aware_resources_allow_list: &HashSet<ContextAwareResource>,
+        ctx_aware_resources_allow_list: &BTreeSet<ContextAwareResource>,
     ) -> Result<context_aware::KubernetesContext> {
         if ctx_aware_resources_allow_list.is_empty() {
             return Ok(context_aware::KubernetesContext::Empty);
