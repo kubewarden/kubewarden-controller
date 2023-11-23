@@ -21,4 +21,10 @@ pub enum RegoRuntimeError {
 
     #[error("get plural name failure, cannot convert callback response: {0}")]
     CallbackGetPluralName(#[source] serde_json::Error),
+
+    #[error("DynamicObject does not have a name")]
+    GatekeeperInventoryMissingName(),
+
+    #[error("DynamicObject does not have a namespace")]
+    GatekeeperInventoryMissingNamespace(),
 }
