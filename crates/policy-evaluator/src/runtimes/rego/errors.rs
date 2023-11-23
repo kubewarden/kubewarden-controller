@@ -27,4 +27,19 @@ pub enum RegoRuntimeError {
 
     #[error("DynamicObject does not have a namespace")]
     GatekeeperInventoryMissingNamespace(),
+
+    #[error("DynamicObject does not have a name")]
+    OpaInventoryMissingName(),
+
+    #[error("DynamicObject does not have a namespace")]
+    OpaInventoryMissingNamespace(),
+
+    #[error("trying to add a namespaced resource to a list of clusterwide resources")]
+    OpaInventoryAddNamespacedRes(),
+
+    #[error("trying to add a clusterwide resource to a list of namespaced resources")]
+    OpaInventoryAddClusterwideRes(),
+
+    #[error("cannot find plural name for resource {0}")]
+    OpaInventoryMissingPluralName(String),
 }

@@ -65,10 +65,11 @@
 /// ```
 ///
 use crate::policy_metadata::ContextAwareResource;
-use anyhow::{anyhow, Result};
 use kube::api::ObjectList;
 use serde::Serialize;
 use std::collections::BTreeMap;
+
+use super::errors::{RegoRuntimeError, Result};
 
 /// A wrapper around a dictionary that has the resource Name as key,
 /// and a DynamicObject as value
@@ -81,7 +82,7 @@ impl ResourcesByName {
             .metadata
             .name
             .clone()
-            .ok_or(anyhow!("DynamicObject does not have name"))?;
+            .ok_or(RegoRuntimeError::OpaInventoryMissingName())?;
         self.0.insert(name, obj.to_owned());
         Ok(())
     }
@@ -98,7 +99,7 @@ impl ResourcesByNamespace {
             .metadata
             .namespace
             .clone()
-            .ok_or(anyhow!("DynamicObject does not have a Namespace"))?;
+            .ok_or(RegoRuntimeError::OpaInventoryMissingNamespace())?;
         self.0.entry(namespace).or_default().register(obj)
     }
 }
@@ -134,12 +135,12 @@ impl ResourcesByPluralName {
                 match resources_by_scope {
                     ResourcesByScope::Cluster(_) => {
                         if obj_namespaced {
-                            return Err(anyhow!("trying to add a namespaced resource to a list of clusterwide resources"));
+                            return Err(RegoRuntimeError::OpaInventoryAddNamespacedRes());
                         }
                     }
                     ResourcesByScope::Namespace(_) => {
                         if !obj_namespaced {
-                            return Err(anyhow!("trying to add a clusterwide resource to a list of namespaced resources"));
+                            return Err(RegoRuntimeError::OpaInventoryAddClusterwideRes());
                         }
                     }
                 }
@@ -172,9 +173,9 @@ impl OpaInventory {
         let mut inventory = OpaInventory::default();
 
         for (resource, resources_list) in kube_resources {
-            let plural_name = plural_names
-                .get(resource)
-                .ok_or_else(|| anyhow!("cannot find plural name for resource {resource:?}"))?;
+            let plural_name = plural_names.get(resource).ok_or_else(|| {
+                RegoRuntimeError::OpaInventoryMissingPluralName(format!("{:?}", resource))
+            })?;
 
             for obj in resources_list {
                 inventory.register(obj, plural_name)?
