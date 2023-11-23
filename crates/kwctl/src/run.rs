@@ -9,8 +9,8 @@ use policy_evaluator::{
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
     policy_metadata::{ContextAwareResource, Metadata, PolicyType},
 };
+use std::collections::BTreeSet;
 use std::{
-    collections::HashSet,
     net::{Ipv4Addr, Ipv6Addr},
     path::Path,
 };
@@ -299,15 +299,15 @@ fn has_raw_policy_type(metadata: Option<&Metadata>) -> bool {
 fn compute_context_aware_resources(
     metadata: Option<&Metadata>,
     cfg: &PullAndRunSettings,
-) -> HashSet<ContextAwareResource> {
+) -> BTreeSet<ContextAwareResource> {
     match metadata {
         None => {
             info!("Policy is not annotated, access to Kubernetes resources is not allowed");
-            HashSet::new()
+            BTreeSet::new()
         }
         Some(metadata) => {
             if metadata.context_aware_resources.is_empty() {
-                return HashSet::new();
+                return BTreeSet::new();
             }
 
             if cfg.allow_context_aware_resources {
@@ -317,7 +317,7 @@ fn compute_context_aware_resources(
                 warn!("Policy requires access to Kubernetes resources at evaluation time. During this execution the access to Kubernetes resources is denied. This can cause the policy to not behave properly");
                 warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command, then run the policy using the `--allow-context-aware` flag.");
 
-                HashSet::new()
+                BTreeSet::new()
             }
         }
     }
@@ -585,7 +585,8 @@ mod tests {
 
     #[test]
     fn prevent_access_to_kubernetes_resources_when_allow_context_aware_resources_is_disabled() {
-        let mut context_aware_resources = HashSet::new();
+        let mut context_aware_resources = BTreeSet::new();
+
         context_aware_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "Pod".to_string(),
@@ -607,7 +608,7 @@ mod tests {
 
     #[test]
     fn allow_access_to_kubernetes_resources_when_allow_context_aware_resources_is_enabled() {
-        let mut context_aware_resources = HashSet::new();
+        let mut context_aware_resources = BTreeSet::new();
         context_aware_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "Pod".to_string(),

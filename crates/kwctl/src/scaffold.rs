@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use policy_evaluator::validator::Validate;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::path::PathBuf;
@@ -58,14 +58,14 @@ struct ClusterAdmissionPolicySpec {
     #[serde(skip_serializing_if = "is_true")]
     background_audit: bool,
     #[serde(skip_serializing_if = "is_empty")]
-    context_aware_resources: HashSet<ContextAwareResource>,
+    context_aware_resources: BTreeSet<ContextAwareResource>,
 }
 
 fn is_true(b: &bool) -> bool {
     *b
 }
 
-fn is_empty(h: &HashSet<ContextAwareResource>) -> bool {
+fn is_empty(h: &BTreeSet<ContextAwareResource>) -> bool {
     h.is_empty()
 }
 
@@ -196,7 +196,7 @@ fn generate_yaml_resource(
                     warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command an populate the `contextAwareResources` accordingly.");
                     warn!("Otherwise, invoke the `scaffold` command using the `--allow-context-aware` flag.");
 
-                    scaffold_data.metadata.context_aware_resources = HashSet::new();
+                    scaffold_data.metadata.context_aware_resources = BTreeSet::new();
                 }
             }
 
@@ -331,7 +331,6 @@ pub(crate) fn artifacthub(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     fn mock_metadata_with_no_annotations() -> Metadata {
         Metadata {
@@ -340,7 +339,7 @@ mod tests {
             annotations: None,
             mutating: false,
             background_audit: true,
-            context_aware_resources: HashSet::new(),
+            context_aware_resources: BTreeSet::new(),
             execution_mode: Default::default(),
             policy_type: Default::default(),
             minimum_kubewarden_version: None,
@@ -357,7 +356,7 @@ mod tests {
             )])),
             mutating: false,
             background_audit: true,
-            context_aware_resources: HashSet::new(),
+            context_aware_resources: BTreeSet::new(),
             execution_mode: Default::default(),
             policy_type: Default::default(),
             minimum_kubewarden_version: None,
@@ -384,7 +383,7 @@ mod tests {
             ])),
             mutating: false,
             background_audit: true,
-            context_aware_resources: HashSet::new(),
+            context_aware_resources: BTreeSet::new(),
             execution_mode: Default::default(),
             policy_type: Default::default(),
             minimum_kubewarden_version: None,
@@ -529,7 +528,7 @@ mod tests {
 
     #[test]
     fn scaffold_cluster_admission_policy_with_context_aware_enabled() {
-        let mut context_aware_resources: HashSet<ContextAwareResource> = HashSet::new();
+        let mut context_aware_resources: BTreeSet<ContextAwareResource> = BTreeSet::new();
         context_aware_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "Pod".to_string(),
@@ -559,7 +558,7 @@ mod tests {
 
     #[test]
     fn scaffold_cluster_admission_policy_with_context_aware_disabled() {
-        let mut context_aware_resources: HashSet<ContextAwareResource> = HashSet::new();
+        let mut context_aware_resources: BTreeSet<ContextAwareResource> = BTreeSet::new();
         context_aware_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "Pod".to_string(),
