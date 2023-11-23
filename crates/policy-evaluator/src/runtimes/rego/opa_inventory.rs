@@ -68,12 +68,12 @@ use crate::policy_metadata::ContextAwareResource;
 use anyhow::{anyhow, Result};
 use kube::api::ObjectList;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// A wrapper around a dictionary that has the resource Name as key,
 /// and a DynamicObject as value
 #[derive(Serialize, Default)]
-pub(crate) struct ResourcesByName(HashMap<String, kube::core::DynamicObject>);
+pub(crate) struct ResourcesByName(BTreeMap<String, kube::core::DynamicObject>);
 
 impl ResourcesByName {
     fn register(&mut self, obj: &kube::core::DynamicObject) -> Result<()> {
@@ -90,7 +90,7 @@ impl ResourcesByName {
 /// A wrapper around a dictionary that has the name of the namespace as key and the list of
 /// ResourcesByName as value
 #[derive(Serialize, Default)]
-pub(crate) struct ResourcesByNamespace(HashMap<String, ResourcesByName>);
+pub(crate) struct ResourcesByNamespace(BTreeMap<String, ResourcesByName>);
 
 impl ResourcesByNamespace {
     fn register(&mut self, obj: &kube::core::DynamicObject) -> Result<()> {
@@ -123,7 +123,7 @@ impl ResourcesByScope {
 /// the plural name of a Kubernetes resource (e.g. `services`) as key,
 /// and a ResourcesByScope as value
 #[derive(Serialize, Default)]
-pub(crate) struct ResourcesByPluralName(HashMap<String, ResourcesByScope>);
+pub(crate) struct ResourcesByPluralName(BTreeMap<String, ResourcesByScope>);
 
 impl ResourcesByPluralName {
     fn register(&mut self, obj: &kube::core::DynamicObject, plural_name: &str) -> Result<()> {
@@ -166,8 +166,8 @@ impl OpaInventory {
     /// Creates a GatekeeperInventory by querying a Kubernetes cluster
     /// for all the resources specified
     pub(crate) fn new(
-        kube_resources: &HashMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>>,
-        plural_names: &HashMap<ContextAwareResource, String>,
+        kube_resources: &BTreeMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>>,
+        plural_names: &BTreeMap<ContextAwareResource, String>,
     ) -> Result<Self> {
         let mut inventory = OpaInventory::default();
 
@@ -200,11 +200,11 @@ mod tests {
 
     #[test]
     fn create() {
-        let mut kube_resources: HashMap<
+        let mut kube_resources: BTreeMap<
             ContextAwareResource,
             ObjectList<kube::core::DynamicObject>,
-        > = HashMap::new();
-        let mut plural_names: HashMap<ContextAwareResource, String> = HashMap::new();
+        > = BTreeMap::new();
+        let mut plural_names: BTreeMap<ContextAwareResource, String> = BTreeMap::new();
 
         let services = [
             dynamic_object_from_fixture("services", Some("kube-system"), "kube-dns").unwrap(),

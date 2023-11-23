@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::convert::TryInto;
 use std::path::Path;
 use tokio::sync::mpsc;
@@ -41,7 +41,7 @@ pub struct PolicyEvaluatorBuilder {
     callback_channel: Option<mpsc::Sender<CallbackRequest>>,
     wasmtime_cache: bool,
     epoch_deadlines: Option<EpochDeadlines>,
-    ctx_aware_resources_allow_list: HashSet<ContextAwareResource>,
+    ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource>,
 }
 
 impl PolicyEvaluatorBuilder {
@@ -115,7 +115,7 @@ impl PolicyEvaluatorBuilder {
     /// Set the list of Kubernetes resources the policy can have access to
     pub fn context_aware_resources_allowed(
         mut self,
-        allowed_resources: HashSet<ContextAwareResource>,
+        allowed_resources: BTreeSet<ContextAwareResource>,
     ) -> PolicyEvaluatorBuilder {
         self.ctx_aware_resources_allow_list = allowed_resources;
         self
@@ -316,7 +316,7 @@ impl PolicyEvaluatorBuilder {
     fn from_contents_internal<E, P>(
         id: String,
         callback_channel: Option<mpsc::Sender<CallbackRequest>>,
-        ctx_aware_resources_allow_list: Option<HashSet<ContextAwareResource>>,
+        ctx_aware_resources_allow_list: Option<BTreeSet<ContextAwareResource>>,
         engine_initializer: E,
         policy_initializer: P,
         policy_execution_mode: PolicyExecutionMode,
@@ -327,7 +327,7 @@ impl PolicyEvaluatorBuilder {
             String,
             Option<u64>,
             Option<mpsc::Sender<CallbackRequest>>,
-            Option<HashSet<ContextAwareResource>>,
+            Option<BTreeSet<ContextAwareResource>>,
         ) -> Result<Policy>,
     {
         let instance_id = engine_initializer();

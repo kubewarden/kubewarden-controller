@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::clone::Clone;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::fmt;
 use tokio::sync::mpsc;
 
@@ -32,7 +32,7 @@ pub struct Policy {
 
     /// List of ContextAwareResource the policy is granted access to.
     /// Currently, this is relevant only for waPC based policies
-    pub ctx_aware_resources_allow_list: HashSet<ContextAwareResource>,
+    pub ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource>,
 }
 
 impl fmt::Debug for Policy {
@@ -61,7 +61,7 @@ impl Policy {
         id: String,
         policy_id: Option<u64>,
         callback_channel: Option<mpsc::Sender<CallbackRequest>>,
-        ctx_aware_resources_allow_list: Option<HashSet<ContextAwareResource>>,
+        ctx_aware_resources_allow_list: Option<BTreeSet<ContextAwareResource>>,
     ) -> Result<Policy> {
         Ok(Policy {
             id,
@@ -109,7 +109,7 @@ mod tests {
             kind: "Secret".to_string(),
         };
 
-        let mut allowed_resources = HashSet::new();
+        let mut allowed_resources = BTreeSet::new();
         allowed_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "Pod".to_string(),
@@ -131,7 +131,7 @@ mod tests {
             kind: "Secret".to_string(),
         };
 
-        let mut allowed_resources = HashSet::new();
+        let mut allowed_resources = BTreeSet::new();
         allowed_resources.insert(ContextAwareResource {
             api_version: "v1".to_string(),
             kind: "Pod".to_string(),
@@ -155,7 +155,7 @@ mod tests {
         let id = "test".to_string();
         let policy_id = Some(1);
         let callback_channel = None;
-        let ctx_aware_resources_allow_list = HashSet::new();
+        let ctx_aware_resources_allow_list = BTreeSet::new();
 
         let policy = Policy::new(
             id.clone(),

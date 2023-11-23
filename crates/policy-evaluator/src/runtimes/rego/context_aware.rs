@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
@@ -24,10 +24,10 @@ pub(crate) enum KubernetesContext {
 /// used by the runtime.
 pub(crate) fn get_allowed_resources(
     callback_channel: &mpsc::Sender<CallbackRequest>,
-    allowed_resources: &HashSet<ContextAwareResource>,
-) -> Result<HashMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>>> {
-    let mut kube_resources: HashMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>> =
-        HashMap::new();
+    allowed_resources: &BTreeSet<ContextAwareResource>,
+) -> Result<BTreeMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>>> {
+    let mut kube_resources: BTreeMap<ContextAwareResource, ObjectList<kube::core::DynamicObject>> =
+        BTreeMap::new();
 
     for resource in allowed_resources {
         let resource_list = get_all_resources_by_type(callback_channel, resource)?;
@@ -59,9 +59,9 @@ fn get_all_resources_by_type(
 /// The map is built by making request via the given callback channel.
 pub(crate) fn get_plural_names(
     callback_channel: &mpsc::Sender<CallbackRequest>,
-    allowed_resources: &HashSet<ContextAwareResource>,
-) -> Result<HashMap<ContextAwareResource, String>> {
-    let mut plural_names_by_resource: HashMap<ContextAwareResource, String> = HashMap::new();
+    allowed_resources: &BTreeSet<ContextAwareResource>,
+) -> Result<BTreeMap<ContextAwareResource, String>> {
+    let mut plural_names_by_resource: BTreeMap<ContextAwareResource, String> = BTreeMap::new();
 
     for resource in allowed_resources {
         let req_type = CallbackRequestType::KubernetesGetResourcePluralName {
@@ -211,10 +211,10 @@ pub(crate) mod tests {
         };
         let plural_name = "services";
 
-        let mut resources: HashSet<ContextAwareResource> = HashSet::new();
+        let mut resources: BTreeSet<ContextAwareResource> = BTreeSet::new();
         resources.insert(resource.clone());
 
-        let mut expected_names: HashMap<ContextAwareResource, String> = HashMap::new();
+        let mut expected_names: BTreeMap<ContextAwareResource, String> = BTreeMap::new();
         expected_names.insert(resource.clone(), plural_name.to_string());
 
         let expected_resource = resource.clone();
