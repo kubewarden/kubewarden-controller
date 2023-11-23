@@ -1,4 +1,5 @@
 mod context_aware;
+mod errors;
 mod gatekeeper_inventory;
 mod opa_inventory;
 mod runtime;
