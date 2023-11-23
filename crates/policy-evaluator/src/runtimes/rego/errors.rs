@@ -42,4 +42,10 @@ pub enum RegoRuntimeError {
 
     #[error("cannot find plural name for resource {0}")]
     OpaInventoryMissingPluralName(String),
+
+    #[error("invalid response from policy")]
+    InvalidResponse(),
+
+    #[error("invalid response from policy: {0}")]
+    InvalidResponseWithError(#[source] serde_json::Error),
 }

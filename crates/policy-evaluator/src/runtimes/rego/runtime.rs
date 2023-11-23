@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use serde::Deserialize;
 use serde_json::json;
@@ -10,6 +9,7 @@ use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::runtimes::rego::{context_aware, BurregoStack};
 
 use super::context_aware::KubernetesContext;
+use super::errors::RegoRuntimeError;
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut BurregoStack);
 
@@ -130,10 +130,10 @@ impl<'a> Runtime<'a> {
 
                         let violations: Violations = evaluation_result
                             .get(0)
-                            .ok_or_else(|| anyhow!("invalid response from policy"))
+                            .ok_or_else(RegoRuntimeError::InvalidResponse)
                             .and_then(|response| {
                                 serde_json::from_value(response.clone())
-                                    .map_err(|err| anyhow!("invalid response from policy: {}", err))
+                                    .map_err(RegoRuntimeError::InvalidResponseWithError)
                             })
                             .unwrap_or_default();
 
