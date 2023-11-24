@@ -1,4 +1,5 @@
 use anyhow::Result;
+use core::fmt;
 use policy_evaluator::admission_response::AdmissionResponse;
 use policy_evaluator::policy_evaluator::ValidateRequest;
 use std::collections::HashMap;
@@ -11,6 +12,15 @@ use crate::settings::Policy;
 pub(crate) enum RequestOrigin {
     Validate,
     Audit,
+}
+
+impl fmt::Display for RequestOrigin {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            RequestOrigin::Validate => write!(f, "validate"),
+            RequestOrigin::Audit => write!(f, "audit"),
+        }
+    }
 }
 
 #[derive(Debug)]

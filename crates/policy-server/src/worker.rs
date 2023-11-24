@@ -227,6 +227,7 @@ impl Worker {
                     resource_request_operation: adm_req.clone().operation,
                     accepted,
                     mutated,
+                    request_origin: req.request_origin.to_string(),
                     error_code,
                 };
                 metrics::record_policy_latency(policy_evaluation_duration, &policy_evaluation);
