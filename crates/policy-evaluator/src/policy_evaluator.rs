@@ -7,8 +7,9 @@ use std::{convert::TryFrom, fmt};
 
 use crate::admission_request::AdmissionRequest;
 use crate::admission_response::AdmissionResponse;
-use crate::policy::Policy;
+use crate::evaluation_context::EvaluationContext;
 use crate::runtimes::rego::Runtime as BurregoRuntime;
+use crate::runtimes::wapc;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
 use crate::runtimes::wasi_cli::Runtime as WasiRuntime;
 use crate::runtimes::Runtime;
@@ -43,7 +44,7 @@ pub enum ValidateRequest {
 }
 
 impl ValidateRequest {
-    pub(crate) fn uid(&self) -> &str {
+    pub fn uid(&self) -> &str {
         match self {
             ValidateRequest::Raw(raw_req) => raw_req
                 .get("uid")
@@ -74,64 +75,68 @@ impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
     }
 }
 
-pub(crate) type PolicySettings = serde_json::Map<String, serde_json::Value>;
-
-pub trait Evaluator {
-    fn validate(&mut self, request: ValidateRequest) -> AdmissionResponse;
-    fn validate_settings(&mut self) -> SettingsValidationResponse;
-    fn protocol_version(&mut self) -> Result<ProtocolVersion>;
-    fn policy_id(&self) -> String;
-}
+/// Settings specified by the user for a given policy.
+pub type PolicySettings = serde_json::Map<String, serde_json::Value>;
 
 pub struct PolicyEvaluator {
-    pub(crate) runtime: Runtime,
-    pub(crate) settings: PolicySettings,
-    pub policy: Policy,
+    runtime: Runtime,
+    worker_id: u64,
+    policy_id: String,
 }
 
-impl fmt::Debug for PolicyEvaluator {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("PolicyEvaluator")
-            .field("id", &self.policy.id)
-            .field("settings", &self.settings)
-            .finish()
-    }
-}
-
-impl Evaluator for PolicyEvaluator {
-    fn policy_id(&self) -> String {
-        self.policy.id.clone()
+impl PolicyEvaluator {
+    pub(crate) fn new(policy_id: &str, worker_id: u64, runtime: Runtime) -> Self {
+        Self {
+            runtime,
+            worker_id,
+            policy_id: policy_id.to_owned(),
+        }
     }
 
-    #[tracing::instrument(skip(request))]
-    fn validate(&mut self, request: ValidateRequest) -> AdmissionResponse {
+    #[cfg(test)]
+    pub(crate) fn runtime(&self) -> &Runtime {
+        &self.runtime
+    }
+
+    pub fn policy_id(&self) -> String {
+        self.policy_id.clone()
+    }
+
+    #[tracing::instrument(skip(request, eval_ctx))]
+    pub fn validate(
+        &mut self,
+        request: ValidateRequest,
+        settings: &PolicySettings,
+        eval_ctx: &EvaluationContext,
+    ) -> AdmissionResponse {
         match self.runtime {
             Runtime::Wapc(ref mut wapc_host) => {
-                WapcRuntime(wapc_host).validate(&self.settings, &request)
+                wapc::evaluation_context_registry::set_worker_ctx(self.worker_id, eval_ctx);
+                WapcRuntime(wapc_host).validate(settings, &request)
             }
             Runtime::Burrego(ref mut burrego_evaluator) => {
                 let kube_ctx = burrego_evaluator.build_kubernetes_context(
-                    self.policy.callback_channel.as_ref(),
-                    &self.policy.ctx_aware_resources_allow_list,
+                    eval_ctx.callback_channel.as_ref(),
+                    &eval_ctx.ctx_aware_resources_allow_list,
                 );
                 match kube_ctx {
-                    Ok(ctx) => {
-                        BurregoRuntime(burrego_evaluator).validate(&self.settings, &request, &ctx)
-                    }
+                    Ok(ctx) => BurregoRuntime(burrego_evaluator).validate(settings, &request, &ctx),
                     Err(e) => {
                         AdmissionResponse::reject(request.uid().to_string(), e.to_string(), 500)
                     }
                 }
             }
-            Runtime::Cli(ref mut cli_stack) => {
-                WasiRuntime(cli_stack).validate(&self.settings, &request)
-            }
+            Runtime::Cli(ref mut cli_stack) => WasiRuntime(cli_stack).validate(settings, &request),
         }
     }
 
-    #[tracing::instrument]
-    fn validate_settings(&mut self) -> SettingsValidationResponse {
-        let settings_str = match serde_json::to_string(&self.settings) {
+    #[tracing::instrument(skip(eval_ctx))]
+    pub fn validate_settings(
+        &mut self,
+        settings: &PolicySettings,
+        eval_ctx: &EvaluationContext,
+    ) -> SettingsValidationResponse {
+        let settings_str = match serde_json::to_string(settings) {
             Ok(settings) => settings,
             Err(err) => {
                 return SettingsValidationResponse {
@@ -143,6 +148,7 @@ impl Evaluator for PolicyEvaluator {
 
         match self.runtime {
             Runtime::Wapc(ref mut wapc_host) => {
+                wapc::evaluation_context_registry::set_worker_ctx(self.worker_id, eval_ctx);
                 WapcRuntime(wapc_host).validate_settings(settings_str)
             }
             Runtime::Burrego(ref mut burrego_evaluator) => {
@@ -154,13 +160,25 @@ impl Evaluator for PolicyEvaluator {
         }
     }
 
-    fn protocol_version(&mut self) -> Result<ProtocolVersion> {
+    pub fn protocol_version(&mut self) -> Result<ProtocolVersion> {
         match &mut self.runtime {
             Runtime::Wapc(ref mut wapc_host) => WapcRuntime(wapc_host).protocol_version(),
             _ => Err(anyhow!(
                 "protocol_version is only applicable to a Kubewarden policy"
             )),
         }
+    }
+}
+
+impl fmt::Debug for PolicyEvaluator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let runtime = self.runtime.to_string();
+
+        f.debug_struct("PolicyEvaluator")
+            .field("policy_id", &self.policy_id)
+            .field("worker_id", &self.worker_id)
+            .field("runtime", &runtime)
+            .finish()
     }
 }
 

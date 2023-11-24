@@ -1,8 +1,12 @@
-use anyhow::{anyhow, Result};
-use tracing::warn;
+use anyhow::Result;
+use std::sync::{Arc, RwLock};
 use wasmtime_provider::wasmtime;
 
-use crate::runtimes::wapc::{callback::host_callback, WAPC_POLICY_MAPPING};
+use crate::runtimes::wapc::{
+    callback::host_callback, evaluation_context_registry::unregister_policy,
+};
+
+use super::evaluation_context_registry::{get_eval_ctx, get_worker_id, register_policy};
 
 pub(crate) struct WapcStack {
     engine: wasmtime::Engine,
@@ -41,18 +45,15 @@ impl WapcStack {
             self.epoch_deadlines,
         )?;
         let old_wapc_host_id = self.wapc_host.id();
+        let worker_id = get_worker_id(old_wapc_host_id)?;
 
-        // Remove the old policy from WAPC_POLICY_MAPPING and add the new one
-        // We need a write lock to do that
-        {
-            let mut map = WAPC_POLICY_MAPPING
-                .write()
-                .expect("cannot get write access to WAPC_POLICY_MAPPING");
-            let policy = map.remove(&old_wapc_host_id).ok_or_else(|| {
-                anyhow!("cannot find old waPC policy with id {}", old_wapc_host_id)
-            })?;
-            map.insert(new_wapc_host.id(), policy);
-        }
+        let eval_ctx = get_eval_ctx(old_wapc_host_id);
+        unregister_policy(old_wapc_host_id);
+        register_policy(
+            new_wapc_host.id(),
+            worker_id,
+            Arc::new(RwLock::new(eval_ctx)),
+        );
 
         self.wapc_host = new_wapc_host;
 
@@ -94,13 +95,6 @@ impl WapcStack {
 impl Drop for WapcStack {
     fn drop(&mut self) {
         // ensure we clean this entry from the WAPC_POLICY_MAPPING mapping
-        match WAPC_POLICY_MAPPING.write() {
-            Ok(mut map) => {
-                map.remove(&self.wapc_host.id());
-            }
-            Err(_) => {
-                warn!("cannot cleanup policy from WAPC_POLICY_MAPPING");
-            }
-        }
+        unregister_policy(self.wapc_host.id());
     }
 }

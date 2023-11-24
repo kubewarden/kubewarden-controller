@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use tracing::{event, Level};
 
-use crate::policy::Policy;
+use crate::evaluation_context::EvaluationContext;
 
 #[derive(Debug, Serialize)]
 enum PolicyLogEntryLevel {
@@ -38,7 +38,7 @@ struct PolicyLogEntry {
     data: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
-impl Policy {
+impl EvaluationContext {
     #[tracing::instrument(name = "policy_log", skip(contents))]
     pub(crate) fn log(&self, contents: &[u8]) -> Result<()> {
         let log_entry: PolicyLogEntry = serde_json::from_slice(contents)?;

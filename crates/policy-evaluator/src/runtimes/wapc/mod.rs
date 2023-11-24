@@ -1,10 +1,7 @@
 mod callback;
-
-mod stack;
-pub(crate) use stack::WapcStack;
-
+pub(crate) mod evaluation_context_registry;
 mod runtime;
-pub(crate) use runtime::Runtime;
+mod stack;
 
-mod mapping;
-pub(crate) use mapping::WAPC_POLICY_MAPPING;
+pub(crate) use runtime::Runtime;
+pub(crate) use stack::WapcStack;

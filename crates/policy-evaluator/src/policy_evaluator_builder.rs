@@ -2,14 +2,15 @@ use anyhow::{anyhow, Result};
 use std::collections::BTreeSet;
 use std::convert::TryInto;
 use std::path::Path;
+use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 use wasmtime_provider::wasmtime;
 
 use crate::callback_requests::CallbackRequest;
-use crate::policy::Policy;
+use crate::evaluation_context::EvaluationContext;
 use crate::policy_evaluator::{PolicyEvaluator, PolicyExecutionMode};
 use crate::policy_metadata::ContextAwareResource;
-use crate::runtimes::wapc::WAPC_POLICY_MAPPING;
+use crate::runtimes::wapc::evaluation_context_registry::register_policy;
 use crate::runtimes::{rego::BurregoStack, wapc::WapcStack, wasi_cli, Runtime};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
@@ -33,11 +34,11 @@ pub(crate) struct EpochDeadlines {
 pub struct PolicyEvaluatorBuilder {
     engine: Option<wasmtime::Engine>,
     policy_id: String,
+    worker_id: u64,
     policy_file: Option<String>,
     policy_contents: Option<Vec<u8>>,
     policy_module: Option<wasmtime::Module>,
     execution_mode: Option<PolicyExecutionMode>,
-    settings: Option<serde_json::Map<String, serde_json::Value>>,
     callback_channel: Option<mpsc::Sender<CallbackRequest>>,
     wasmtime_cache: bool,
     epoch_deadlines: Option<EpochDeadlines>,
@@ -45,11 +46,16 @@ pub struct PolicyEvaluatorBuilder {
 }
 
 impl PolicyEvaluatorBuilder {
-    /// Create a new PolicyEvaluatorBuilder object. The `policy_id` must be
-    /// specified.
-    pub fn new(policy_id: String) -> PolicyEvaluatorBuilder {
+    /// Create a new PolicyEvaluatorBuilder object.
+    /// * `policy_id`: unique identifier of the policy. This is mostly relevant for PolicyServer.
+    ///    In this case, this is the value used to identify the policy inside of the `policies.yml`
+    ///    file
+    /// * `worker_id`: unique identifier of the worker that is going to evaluate the policy. This
+    ///    is mostly relevant for PolicyServer
+    pub fn new(policy_id: String, worker_id: u64) -> PolicyEvaluatorBuilder {
         PolicyEvaluatorBuilder {
             policy_id,
+            worker_id,
             ..Default::default()
         }
     }
@@ -100,15 +106,6 @@ impl PolicyEvaluatorBuilder {
     /// Enable Wasmtime cache feature
     pub fn enable_wasmtime_cache(mut self) -> PolicyEvaluatorBuilder {
         self.wasmtime_cache = true;
-        self
-    }
-
-    /// Set the settings the policy will use at evaluation time
-    pub fn settings(
-        mut self,
-        s: Option<serde_json::Map<String, serde_json::Value>>,
-    ) -> PolicyEvaluatorBuilder {
-        self.settings = s;
         self
     }
 
@@ -245,47 +242,21 @@ impl PolicyEvaluatorBuilder {
 
         let execution_mode = self.execution_mode.unwrap();
 
-        let (policy, runtime) = match execution_mode {
-            PolicyExecutionMode::KubewardenWapc => {
-                let wapc_stack = WapcStack::new(engine, module, self.epoch_deadlines)?;
-
-                let policy = Self::from_contents_internal(
-                    self.policy_id.clone(),
-                    self.callback_channel.clone(),
-                    Some(self.ctx_aware_resources_allow_list.clone()),
-                    || Some(wapc_stack.wapc_host_id()),
-                    Policy::new,
-                    execution_mode,
-                )?;
-
-                let policy_runtime = Runtime::Wapc(wapc_stack);
-                (policy, policy_runtime)
-            }
+        let runtime = match execution_mode {
+            PolicyExecutionMode::KubewardenWapc => create_wapc_runtime(
+                &self.policy_id,
+                self.worker_id,
+                engine,
+                module,
+                self.epoch_deadlines,
+                self.callback_channel.clone(),
+                &self.ctx_aware_resources_allow_list,
+            )?,
             PolicyExecutionMode::Wasi => {
                 let cli_stack = wasi_cli::Stack::new(engine, module, self.epoch_deadlines)?;
-
-                let policy = Self::from_contents_internal(
-                    self.policy_id.clone(),
-                    None, // callback_channel is not used by WASI policies
-                    None,
-                    || None,
-                    Policy::new,
-                    execution_mode,
-                )?;
-
-                let policy_runtime = Runtime::Cli(cli_stack);
-                (policy, policy_runtime)
+                Runtime::Cli(cli_stack)
             }
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
-                let policy = Self::from_contents_internal(
-                    self.policy_id.clone(),
-                    self.callback_channel.clone(),
-                    Some(self.ctx_aware_resources_allow_list.clone()),
-                    || None,
-                    Policy::new,
-                    execution_mode,
-                )?;
-
                 let mut builder = burrego::EvaluatorBuilder::default()
                     .engine(&engine)
                     .module(module)
@@ -296,157 +267,110 @@ impl PolicyEvaluatorBuilder {
                 }
                 let evaluator = builder.build()?;
 
-                let policy_runtime = Runtime::Burrego(BurregoStack {
+                Runtime::Burrego(BurregoStack {
                     evaluator,
                     entrypoint_id: 0, // currently hardcoded to this value
                     policy_execution_mode: execution_mode.try_into()?,
-                });
-
-                (policy, policy_runtime)
+                })
             }
         };
 
-        Ok(PolicyEvaluator {
+        Ok(PolicyEvaluator::new(
+            &self.policy_id,
+            self.worker_id,
             runtime,
-            policy,
-            settings: self.settings.clone().unwrap_or_default(),
-        })
+        ))
     }
+}
 
-    fn from_contents_internal<E, P>(
-        id: String,
-        callback_channel: Option<mpsc::Sender<CallbackRequest>>,
-        ctx_aware_resources_allow_list: Option<BTreeSet<ContextAwareResource>>,
-        engine_initializer: E,
-        policy_initializer: P,
-        policy_execution_mode: PolicyExecutionMode,
-    ) -> Result<Policy>
-    where
-        E: Fn() -> Option<u64>,
-        P: Fn(
-            String,
-            Option<u64>,
-            Option<mpsc::Sender<CallbackRequest>>,
-            Option<BTreeSet<ContextAwareResource>>,
-        ) -> Result<Policy>,
-    {
-        let instance_id = engine_initializer();
-        let policy = policy_initializer(
-            id,
-            instance_id,
-            callback_channel,
-            ctx_aware_resources_allow_list,
-        )?;
-        if policy_execution_mode == PolicyExecutionMode::KubewardenWapc {
-            WAPC_POLICY_MAPPING
-                .write()
-                .expect("cannot write to global WAPC_POLICY_MAPPING")
-                .insert(
-                    instance_id.ok_or_else(|| anyhow!("invalid policy id"))?,
-                    policy.clone(),
-                );
-        }
-        Ok(policy)
-    }
+fn create_wapc_runtime(
+    policy_id: &str,
+    worker_id: u64,
+    engine: wasmtime::Engine,
+    module: wasmtime::Module,
+    epoch_deadlines: Option<EpochDeadlines>,
+    callback_channel: Option<mpsc::Sender<CallbackRequest>>,
+    ctx_aware_resources_allow_list: &BTreeSet<ContextAwareResource>,
+) -> Result<Runtime> {
+    let wapc_stack = WapcStack::new(engine, module, epoch_deadlines)?;
+    let eval_ctx = Arc::new(RwLock::new(EvaluationContext {
+        policy_id: policy_id.to_owned(),
+        callback_channel,
+        ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
+    }));
+    register_policy(wapc_stack.wapc_host_id(), worker_id, eval_ctx);
+
+    Ok(Runtime::Wapc(wapc_stack))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtimes::wapc::evaluation_context_registry::{
+        get_eval_ctx, get_worker_id, tests::is_wapc_instance_registered,
+    };
 
     #[test]
-    fn policy_is_registered_in_the_mapping() -> Result<()> {
-        let policy_name = "policy_is_registered_in_the_mapping";
+    fn wapc_policy_is_registered() {
+        let policy_id = "a-policy";
+        let worker_id = 0;
 
-        // We cannot set policy.id at build time, because some attributes
-        // of Policy are private.
-        let mut policy = Policy::default();
-        policy.id = policy_name.to_string();
-
-        let policy_id = 1;
-
-        PolicyEvaluatorBuilder::from_contents_internal(
-            "mock_policy".to_string(),
-            None,
-            None,
-            || Some(policy_id),
-            |_, _, _, _| Ok(policy.clone()),
-            PolicyExecutionMode::KubewardenWapc,
-        )?;
-
-        let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-        let found = policy_mapping
-            .iter()
-            .find(|(_id, policy)| policy.id == policy_name);
-
-        assert!(found.is_some());
-
-        Ok(())
-    }
-
-    fn find_wapc_policy_id(policy: &Policy) -> Option<u64> {
-        let map = WAPC_POLICY_MAPPING
-            .read()
-            .expect("cannot get READ access to WAPC_POLICY_MAPPING");
-        map.iter()
-            .find(|(_, v)| *v == policy)
-            .map(|(k, _)| k.to_owned())
-    }
-
-    fn is_wapc_instance_registered(policy_id: u64) -> bool {
-        let map = WAPC_POLICY_MAPPING
-            .read()
-            .expect("cannot get READ access to WAPC_POLICY_MAPPING");
-        map.get(&policy_id).is_some()
-    }
-
-    #[test]
-    fn policy_wapc_mapping_is_cleaned_when_the_evaluator_is_dropped() {
-        // we need a real WASM module, we don't care about the contents yet
-
+        // we need a real waPC policy, we don't care about the contents yet
         let engine = wasmtime::Engine::default();
         let wat = include_bytes!("../test_data/endless_wasm/wapc_endless_loop.wat");
         let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
 
-        let builder = PolicyEvaluatorBuilder::new("test".to_string())
+        let epoch_deadlines = None;
+        let callback_channel = None;
+        let ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource> = BTreeSet::new();
+
+        let runtime = create_wapc_runtime(
+            policy_id,
+            worker_id,
+            engine,
+            module,
+            epoch_deadlines,
+            callback_channel,
+            &ctx_aware_resources_allow_list,
+        )
+        .expect("cannot create wapc runtime");
+        let wapc_stack = match runtime {
+            Runtime::Wapc(stack) => stack,
+            _ => panic!("not the runtime I was expecting"),
+        };
+
+        assert_eq!(
+            worker_id,
+            get_worker_id(wapc_stack.wapc_host_id()).expect("didn't find policy")
+        );
+
+        // this will panic if the evaluation context has not been registered
+        let eval_ctx = get_eval_ctx(wapc_stack.wapc_host_id());
+        assert_eq!(eval_ctx.policy_id, policy_id);
+    }
+
+    #[test]
+    fn wapc_policy_is_removed_from_registry_when_the_evaluator_is_dropped() {
+        // we need a real waPC policy, we don't care about the contents yet
+
+        let worker_id = 0;
+        let engine = wasmtime::Engine::default();
+        let wat = include_bytes!("../test_data/endless_wasm/wapc_endless_loop.wat");
+        let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
+
+        let builder = PolicyEvaluatorBuilder::new("test".to_string(), worker_id)
             .execution_mode(PolicyExecutionMode::KubewardenWapc)
             .engine(engine)
             .policy_module(module);
 
         let evaluator = builder.build().expect("cannot create evaluator");
-        let policy_id =
-            find_wapc_policy_id(&evaluator.policy).expect("cannot find the wapc we just created");
+        let wapc_stack = match evaluator.runtime() {
+            Runtime::Wapc(ref stack) => stack,
+            _ => panic!("not the runtime I was expecting"),
+        };
+        let wapc_id = wapc_stack.wapc_host_id();
 
         drop(evaluator);
-        assert!(!is_wapc_instance_registered(policy_id));
-    }
-
-    #[test]
-    fn policy_is_not_registered_in_the_mapping_if_not_wapc() -> Result<()> {
-        let policy_name = "policy_is_not_registered_in_the_mapping_if_not_wapc";
-
-        // We cannot set policy.id at build time, because some attributes
-        // of Policy are private.
-        let mut policy = Policy::default();
-        policy.id = policy_name.to_string();
-
-        let policy_id = 1;
-
-        PolicyEvaluatorBuilder::from_contents_internal(
-            policy_name.to_string(),
-            None,
-            None,
-            || Some(policy_id),
-            |_, _, _, _| Ok(policy.clone()),
-            PolicyExecutionMode::OpaGatekeeper,
-        )?;
-
-        let policy_mapping = WAPC_POLICY_MAPPING.read().unwrap();
-        let found = policy_mapping
-            .iter()
-            .find(|(_id, policy)| policy.id == policy_name);
-
-        assert!(found.is_none());
-        Ok(())
+        assert!(!is_wapc_instance_registered(wapc_id));
     }
 }
