@@ -32,6 +32,7 @@ pub struct PolicyEvaluation {
     pub(crate) resource_request_operation: String,
     pub(crate) accepted: bool,
     pub(crate) mutated: bool,
+    pub(crate) request_origin: String,
     pub(crate) error_code: Option<u16>,
 }
 
@@ -50,6 +51,7 @@ impl Into<Vec<KeyValue>> for &PolicyEvaluation {
             ),
             KeyValue::new("accepted", self.accepted),
             KeyValue::new("mutated", self.mutated),
+            KeyValue::new("request_origin", self.request_origin.clone()),
         ];
         if let Some(resource_namespace) = &self.resource_namespace {
             baggage.append(&mut vec![KeyValue::new(
