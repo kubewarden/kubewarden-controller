@@ -51,14 +51,14 @@ wasi-cap-std-sync = { workspace = true }
 wasi-common = { workspace = true }
 wasmparser = "0.118"
 wasmtime = { workspace = true }
-wasmtime-provider = { version = "1.11", features = ["cache"] }
+wasmtime-provider = { version = "1.12", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
-wasi-cap-std-sync = "14.0"
-wasi-common = "14.0"
-wasmtime = "14.0"
-wasmtime-wasi = "14.0"
+wasi-cap-std-sync = "15.0"
+wasi-common = "15.0"
+wasmtime = "15.0"
+wasmtime-wasi = "15.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
