@@ -1,3 +1,5 @@
+pub mod policy_evaluator_builder;
+
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
@@ -9,7 +11,6 @@ use crate::admission_request::AdmissionRequest;
 use crate::admission_response::AdmissionResponse;
 use crate::evaluation_context::EvaluationContext;
 use crate::runtimes::rego::Runtime as BurregoRuntime;
-use crate::runtimes::wapc;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
 use crate::runtimes::wasi_cli::Runtime as WasiRuntime;
 use crate::runtimes::Runtime;
@@ -93,11 +94,6 @@ impl PolicyEvaluator {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn runtime(&self) -> &Runtime {
-        &self.runtime
-    }
-
     pub fn policy_id(&self) -> String {
         self.policy_id.clone()
     }
@@ -110,9 +106,9 @@ impl PolicyEvaluator {
         eval_ctx: &EvaluationContext,
     ) -> AdmissionResponse {
         match self.runtime {
-            Runtime::Wapc(ref mut wapc_host) => {
-                wapc::evaluation_context_registry::set_worker_ctx(self.worker_id, eval_ctx);
-                WapcRuntime(wapc_host).validate(settings, &request)
+            Runtime::Wapc(ref mut wapc_stack) => {
+                wapc_stack.set_eval_ctx(eval_ctx);
+                WapcRuntime(wapc_stack).validate(settings, &request)
             }
             Runtime::Burrego(ref mut burrego_evaluator) => {
                 let kube_ctx = burrego_evaluator.build_kubernetes_context(
@@ -147,9 +143,9 @@ impl PolicyEvaluator {
         };
 
         match self.runtime {
-            Runtime::Wapc(ref mut wapc_host) => {
-                wapc::evaluation_context_registry::set_worker_ctx(self.worker_id, eval_ctx);
-                WapcRuntime(wapc_host).validate_settings(settings_str)
+            Runtime::Wapc(ref mut wapc_stack) => {
+                wapc_stack.set_eval_ctx(eval_ctx);
+                WapcRuntime(wapc_stack).validate_settings(settings_str)
             }
             Runtime::Burrego(ref mut burrego_evaluator) => {
                 BurregoRuntime(burrego_evaluator).validate_settings(settings_str)
@@ -162,7 +158,7 @@ impl PolicyEvaluator {
 
     pub fn protocol_version(&mut self) -> Result<ProtocolVersion> {
         match &mut self.runtime {
-            Runtime::Wapc(ref mut wapc_host) => WapcRuntime(wapc_host).protocol_version(),
+            Runtime::Wapc(ref mut wapc_stack) => WapcRuntime(wapc_stack).protocol_version(),
             _ => Err(anyhow!(
                 "protocol_version is only applicable to a Kubewarden policy"
             )),
