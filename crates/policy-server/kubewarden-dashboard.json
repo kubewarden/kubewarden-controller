@@ -9,12 +9,13 @@
       "pluginName": "Prometheus"
     }
   ],
+  "__elements": {},
   "__requires": [
     {
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "8.2.3"
+      "version": "10.1.4"
     },
     {
       "type": "panel",
@@ -45,7 +46,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -63,441 +67,29 @@
   "description": "",
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1637931173543,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 53,
+      "id": 83,
       "panels": [],
-      "title": "Kubewarden overview",
+      "title": "General overview",
       "type": "row"
     },
     {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "green",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "noValue": "0%",
-          "thresholds": {
-            "mode": "percentage",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 1
-      },
-      "id": 50,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\"})*100/sum(kubewarden_policy_evaluations_total{})",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Request accepted with no mutation percentage",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "red",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "noValue": "0%",
-          "thresholds": {
-            "mode": "percentage",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "id": 48,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\"})*100/sum(kubewarden_policy_evaluations_total{})",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Request rejection percentage ",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "purple",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "noValue": "0%",
-          "thresholds": {
-            "mode": "percentage",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "blue",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "id": 51,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\"})*100/sum(kubewarden_policy_evaluations_total{})",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Request mutation percentage ",
-      "type": "stat"
-    },
-    {
-      "datasource": "${DS_PROMETHEUS}",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "green",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 0,
-        "y": 9
-      },
-      "id": 37,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\"})",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Total accepted requests with no mutation",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "purple",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 6,
-        "y": 9
-      },
-      "id": 39,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "/^sum\\(kubewarden_policy_evaluations_total\\{accepted=\"true\",mutated=\"true\"\\}\\)$/",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"true\"})",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Total mutated requests",
-      "type": "stat"
-    },
-    {
-      "datasource": "${DS_PROMETHEUS}",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "red",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 12,
-        "y": 9
-      },
-      "id": 40,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\"})",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Total rejected requests",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "blue",
-            "mode": "fixed"
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "purple",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 18,
-        "y": 9
-      },
-      "id": 41,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.2.3",
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total)",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "title": "Request count",
-      "type": "stat"
-    },
-    {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -505,6 +97,8 @@
             "mode": "fixed"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -516,6 +110,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -553,25 +148,33 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 16
+        "y": 1
       },
       "id": 67,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (accepted) (\n  rate(kubewarden_policy_evaluations_total{accepted=\"true\"}[$__rate_interval])\n)",
+          "expr": "sum by (accepted) (\n  rate(kubewarden_policy_evaluations_total{accepted=\"true\",request_origin=\"validate\"}[$__rate_interval])\n)",
           "interval": "",
           "legendFormat": "Accepted requests",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -579,7 +182,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -587,6 +193,8 @@
             "mode": "fixed"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -598,6 +206,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -631,26 +240,34 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 16
+        "y": 1
       },
       "id": 66,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (accepted) (\n  rate(kubewarden_policy_evaluations_total{accepted=\"false\"}[$__rate_interval])\n)",
+          "expr": "sum by (accepted) (\n  rate(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\"}[$__rate_interval])\n)",
           "format": "time_series",
           "interval": "",
           "legendFormat": "Reject requests",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -658,7 +275,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -666,6 +286,8 @@
             "mode": "fixed"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -677,6 +299,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -710,25 +333,33 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 9
       },
       "id": 68,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (mutated) (\n  rate(kubewarden_policy_evaluations_total{mutated=\"true\"}[$__rate_interval])\n)",
+          "expr": "sum by (mutated) (\n  rate(kubewarden_policy_evaluations_total{mutated=\"true\",request_origin=\"validate\"}[$__rate_interval])\n)",
           "interval": "",
           "legendFormat": "Mutated requests",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -736,7 +367,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -744,6 +378,8 @@
             "mode": "fixed"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -755,6 +391,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -792,25 +429,33 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 9
       },
       "id": 69,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum (\n  rate(kubewarden_policy_evaluations_total[$__rate_interval])\n)",
+          "expr": "sum (\n  rate(kubewarden_policy_evaluations_total{request_origin=\"validate\"}[$__rate_interval])\n)",
           "interval": "",
           "legendFormat": "All requests",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -818,10 +463,276 @@
       "type": "timeseries"
     },
     {
-      "cards": {
-        "cardPadding": null,
-        "cardRound": null
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 17
+      },
+      "id": 95,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum (\n  rate(kubewarden_policy_evaluations_total{request_origin=\"audit\"}[$__rate_interval])\n)",
+          "interval": "",
+          "legendFormat": "All requests",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": " Audit requests rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "id": 96,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (accepted) (\n  rate(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"audit\"}[$__rate_interval])\n)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Reject requests",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Audit rejected requests rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 9,
+        "y": 25
+      },
+      "id": 63,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_total{policy_status=\"active\"})",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "{{policy_status}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Policy activations",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "id": 81,
+      "panels": [],
+      "title": "Latency",
+      "type": "row"
+    },
+    {
+      "cards": {},
       "color": {
         "cardColor": "#b4ff00",
         "colorScale": "sqrt",
@@ -830,12 +741,30 @@
         "mode": "spectrum"
       },
       "dataFormat": "timeseries",
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 32
+        "y": 34
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -844,9 +773,58 @@
       "legend": {
         "show": true
       },
+      "options": {
+        "calculate": true,
+        "calculation": {
+          "yBuckets": {
+            "mode": "size",
+            "value": "10"
+          }
+        },
+        "cellGap": 2,
+        "cellValues": {},
+        "color": {
+          "exponent": 0.5,
+          "fill": "#b4ff00",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Oranges",
+          "steps": 128
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "showValue": "never",
+        "tooltip": {
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "max": "120",
+          "min": "0",
+          "reverse": false,
+          "unit": "ms"
+        }
+      },
+      "pluginVersion": "10.1.4",
       "reverseYBuckets": false,
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
           "exemplar": true,
           "expr": "sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__rate_interval])) by (le)",
           "format": "heatmap",
@@ -864,24 +842,23 @@
       "xAxis": {
         "show": true
       },
-      "xBucketNumber": null,
       "xBucketSize": "",
       "yAxis": {
-        "decimals": null,
         "format": "ms",
         "logBase": 1,
         "max": "120",
         "min": "0",
-        "show": true,
-        "splitFactor": null,
-        "width": null
+        "show": true
       },
       "yBucketBound": "auto",
       "yBucketNumber": 10,
       "yBucketSize": 10
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -915,7 +892,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 32
+        "y": 34
       },
       "id": 61,
       "options": {
@@ -933,9 +910,13 @@
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
           "exemplar": true,
           "expr": "histogram_quantile(.90, sum(rate(kubewarden_policy_evaluation_latency_milliseconds_bucket[$__interval])) by (le))",
           "format": "heatmap",
@@ -948,7 +929,313 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "id": 53,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "Policies overview",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "id": 50,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\",request_origin=\"validate\"})*100/sum(kubewarden_policy_evaluations_total{})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Request accepted with no mutation percentage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "id": 48,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\"})*100/sum(kubewarden_policy_evaluations_total{})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Request rejection percentage ",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "id": 51,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\",request_origin=\"validate\"})*100/sum(kubewarden_policy_evaluations_total{})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Request mutation percentage ",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 51
+      },
+      "id": 37,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\",request_origin=\"validate\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total accepted requests with no mutation",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -971,11 +1258,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 40
+        "w": 6,
+        "x": 6,
+        "y": 51
       },
-      "id": 42,
+      "id": 39,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -985,27 +1272,36 @@
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
+          "fields": "/^sum\\(kubewarden_policy_evaluations_total\\{accepted=\"true\",mutated=\"true\"\\}\\)$/",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\", mutated=\"true\",resource_request_operation=\"CREATE\",resource_kind=\"Pod\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"true\", request_origin=\"validate\"})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Pod creation mutations",
+      "title": "Total mutated requests",
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1028,11 +1324,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 6,
         "x": 12,
-        "y": 40
+        "y": 51
       },
-      "id": 8,
+      "id": 40,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1048,25 +1344,100 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",resource_request_operation=\"CREATE\",resource_kind=\"Pod\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\"})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Pod creation rejections",
+      "title": "Total rejected requests",
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 51
+      },
+      "id": 41,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{request_origin=\"validate\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Request count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
             "mode": "fixed"
           },
           "mappings": [],
@@ -1085,11 +1456,11 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 6,
         "x": 0,
-        "y": 48
+        "y": 59
       },
-      "id": 63,
+      "id": 42,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1105,22 +1476,96 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "builder",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_total{policy_status=\"active\"})",
-          "format": "time_series",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\", mutated=\"true\",request_origin=\"validate\",resource_request_operation=\"CREATE\",resource_kind=\"Pod\"})",
           "interval": "",
-          "legendFormat": "{{policy_status}}",
+          "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Policy activations",
+      "title": "Pod creation mutations",
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 59
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\",resource_request_operation=\"CREATE\",resource_kind=\"Pod\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Pod creation rejections",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Number of policies that evaluated some request",
       "fieldConfig": {
         "defaults": {
@@ -1147,9 +1592,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 6,
         "x": 12,
-        "y": 48
+        "y": 59
       },
       "id": 46,
       "options": {
@@ -1167,14 +1612,20 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "kubewarden_policy_evaluations_total{}",
+          "expr": "kubewarden_policy_evaluations_total",
           "format": "table",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1183,20 +1634,22 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 67
       },
-      "id": 30,
+      "id": 82,
       "panels": [],
-      "title": "$policy_name policy metrics",
+      "title": "Audit overview",
       "type": "row"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1224,12 +1677,12 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 57
+        "y": 68
       },
-      "id": 54,
+      "id": 84,
       "options": {
         "colorMode": "value",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -1242,21 +1695,30 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\",request_origin=\"audit\"})*100/sum(kubewarden_policy_evaluations_total{})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": " $policy_name policy accepted request percentage",
+      "title": "Audit request accepted with no mutation percentage",
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1284,7 +1746,711 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 57
+        "y": 68
+      },
+      "id": 85,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"audit\"})*100/sum(kubewarden_policy_evaluations_total{})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Audit request rejection percentage ",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 50
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 68
+      },
+      "id": 86,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\",request_origin=\"audit\"})*100/sum(kubewarden_policy_evaluations_total{})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Audit request mutation percentage ",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 76
+      },
+      "id": 87,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\",request_origin=\"audit\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total accepted audit requests with no mutation",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 76
+      },
+      "id": 88,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^sum\\(kubewarden_policy_evaluations_total\\{accepted=\"true\",mutated=\"true\"\\}\\)$/",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"true\",request_origin=\"audit\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total audit mutated requests",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 76
+      },
+      "id": 89,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"audit\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total audit rejected requests",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 76
+      },
+      "id": 90,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{request_origin=\"audit\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Audit request count",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 84
+      },
+      "id": 91,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\", mutated=\"true\",request_origin=\"audit\",resource_request_operation=\"CREATE\",resource_kind=\"Pod\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Pod creation mutations from audit requests",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 84
+      },
+      "id": 92,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"audit\",resource_request_operation=\"CREATE\",resource_kind=\"Pod\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Pod creation rejections from audit requests",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Number of policies that audited some request",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 84
+      },
+      "id": 73,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "distinctCount"
+          ],
+          "fields": "/^policy_name$/",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "kubewarden_policy_evaluations_total{request_origin=\"audit\"}",
+          "format": "table",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Policies evaluated via audit scanner",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "id": 30,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "refId": "A"
+        }
+      ],
+      "title": "$policy_name policy metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 93
+      },
+      "id": 54,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",request_origin=\"validate\",mutated=\"false\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": " $policy_name policy accepted request percentage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 93
       },
       "id": 56,
       "options": {
@@ -1302,13 +2468,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1316,7 +2488,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1344,9 +2519,9 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 57
+        "y": 93
       },
-      "id": 57,
+      "id": 76,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -1362,13 +2537,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\", accepted=\"true\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\",request_origin=\"validate\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\", accepted=\"true\"})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1376,7 +2557,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1401,7 +2585,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 65
+        "y": 101
       },
       "id": 31,
       "options": {
@@ -1419,13 +2603,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",mutated=\"false\",policy_name=\"$policy_name\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",request_origin=\"validate\",mutated=\"false\",policy_name=\"$policy_name\"})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1433,7 +2623,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1459,7 +2652,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 65
+        "y": 101
       },
       "id": 32,
       "options": {
@@ -1477,13 +2670,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",policy_name=\"$policy_name\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\",policy_name=\"$policy_name\"})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1491,7 +2690,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1516,7 +2718,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 65
+        "y": 101
       },
       "id": 33,
       "options": {
@@ -1534,13 +2736,19 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.2.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\",policy_name=\"$policy_name\"})",
+          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\",request_origin=\"validate\",policy_name=\"$policy_name\"})",
           "interval": "",
           "legendFormat": "",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1548,7 +2756,10 @@
       "type": "stat"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1556,6 +2767,8 @@
             "mode": "fixed"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1567,6 +2780,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1604,34 +2818,562 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 72
+        "y": 108
       },
       "id": 34,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
           "exemplar": true,
-          "expr": "sum  (\n  rate(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"}[$__rate_interval])\n)",
+          "expr": "sum  (\n  rate(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\",request_origin=\"validate\"}[$__rate_interval])\n)",
           "interval": "",
           "legendFormat": "Policy request rate",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Rate of requests to $policy_name policy",
+      "title": "Rate of validate requests to $policy_name policy",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 117
+      },
+      "id": 80,
+      "panels": [],
+      "title": "$policy_name audit policy metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Percentage of request accepts when run via the audit scanner",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 118
+      },
+      "id": 74,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",request_origin=\"audit\",mutated=\"false\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": " $policy_name policy accepted audit percentage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Percentage of request rejections when run via the audit scanner",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 118
+      },
+      "id": 75,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"audit\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "$policy_name policy audit rejection percentage ",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Percentage of request mutations when run via the audit scanner",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "noValue": "0%",
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 118
+      },
+      "id": 57,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\",request_origin=\"audit\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\", accepted=\"true\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "$policy_name policy mutation audit  percentage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Total of request accepts when run via the audit scanner",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 126
+      },
+      "id": 77,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"true\",request_origin=\"audit\",mutated=\"false\",policy_name=\"$policy_name\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total accepted audits by $policy_name policy",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Total of request rejects when run via the audit scanner",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 126
+      },
+      "id": 78,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"audit\",policy_name=\"$policy_name\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total rejected audits by  $policy_name policy",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Total of request mutations when run via the audit scanner",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 126
+      },
+      "id": 79,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.1.4",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(kubewarden_policy_evaluations_total{mutated=\"true\",request_origin=\"audit\",policy_name=\"$policy_name\"})",
+          "interval": "",
+          "legendFormat": "",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total mutated audits by  $policy_name policy",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 133
+      },
+      "id": 70,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum  (\n  rate(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\",request_origin=\"audit\"}[$__rate_interval])\n)",
+          "interval": "",
+          "legendFormat": "Policy request rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Rate of audit requests to $policy_name policy",
       "type": "timeseries"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 31,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -1639,22 +3381,20 @@
       {
         "current": {
           "selected": false,
-          "text": "",
-          "value": ""
+          "text": "clusterwide-no-privilege-escalation",
+          "value": "clusterwide-no-privilege-escalation"
         },
         "description": "Define the policy which you want to see the metrics",
-        "error": null,
         "hide": 0,
-        "label": null,
         "name": "policy_name",
         "options": [
           {
             "selected": true,
-            "text": "",
-            "value": ""
+            "text": "clusterwide-no-privilege-escalation",
+            "value": "clusterwide-no-privilege-escalation"
           }
         ],
-        "query": "",
+        "query": "clusterwide-no-privilege-escalation",
         "skipUrlSync": false,
         "type": "textbox"
       }
@@ -1668,5 +3408,6 @@
   "timezone": "",
   "title": "Kubewarden",
   "uid": "r3Pw-1O7z",
-  "version": 3
+  "version": 6,
+  "weekStart": ""
 }
