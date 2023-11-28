@@ -164,8 +164,13 @@ impl<'a> Runtime<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtimes::wapc::callback::host_callback;
-    use std::{sync, thread, time};
+    use crate::{
+        evaluation_context::EvaluationContext, runtimes::wapc::callback::new_host_callback,
+    };
+    use std::{
+        sync::{self, Arc, Mutex},
+        thread, time,
+    };
 
     #[test]
     fn wapc_epoch_interrutpion_error_msg() {
@@ -195,11 +200,22 @@ mod tests {
             .module(module)
             .enable_epoch_interruptions(10, 10);
 
+        let eval_ctx = EvaluationContext {
+            policy_id: "wapc_endless_loop".to_string(),
+            callback_channel: None,
+            ctx_aware_resources_allow_list: Default::default(),
+        };
+
+        let eval_ctx = Arc::new(Mutex::new(eval_ctx));
+
         let wapc_engine = wapc_engine_builder
             .build()
             .expect("error creating wasmtime engine provider");
-        let host = wapc::WapcHost::new(Box::new(wapc_engine), Some(Box::new(host_callback)))
-            .expect("cannot create waPC host");
+        let host = wapc::WapcHost::new(
+            Box::new(wapc_engine),
+            Some(Box::new(new_host_callback(eval_ctx))),
+        )
+        .expect("cannot create waPC host");
 
         // Create a lock to break the endless loop of the ticker thread
         let timer_lock = sync::Arc::new(sync::RwLock::new(false));

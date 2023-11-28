@@ -1,7 +1,8 @@
-use crate::policy_evaluator_builder::EpochDeadlines;
 use anyhow::Result;
 use wasi_common::WasiCtx;
 use wasmtime::{Engine, InstancePre, Linker, Module};
+
+use crate::policy_evaluator_builder::EpochDeadlines;
 
 pub(crate) struct Context {
     pub(crate) wasi_ctx: WasiCtx,

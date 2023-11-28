@@ -1,33 +1,44 @@
 use anyhow::Result;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 use wasmtime_provider::wasmtime;
 
-use crate::runtimes::wapc::{
-    callback::host_callback, evaluation_context_registry::unregister_policy,
-};
-
-use super::evaluation_context_registry::{get_eval_ctx, get_worker_id, register_policy};
+use crate::evaluation_context::EvaluationContext;
+use crate::policy_evaluator_builder::EpochDeadlines;
+use crate::runtimes::wapc::callback::new_host_callback;
 
 pub(crate) struct WapcStack {
     engine: wasmtime::Engine,
     module: wasmtime::Module,
-    epoch_deadlines: Option<crate::policy_evaluator_builder::EpochDeadlines>,
+    epoch_deadlines: Option<EpochDeadlines>,
     wapc_host: wapc::WapcHost,
+    eval_ctx: Arc<Mutex<EvaluationContext>>,
 }
 
 impl WapcStack {
     pub(crate) fn new(
         engine: wasmtime::Engine,
         module: wasmtime::Module,
-        epoch_deadlines: Option<crate::policy_evaluator_builder::EpochDeadlines>,
+        epoch_deadlines: Option<EpochDeadlines>,
+        eval_ctx: EvaluationContext,
     ) -> Result<Self> {
-        let wapc_host = Self::setup_wapc_host(engine.clone(), module.clone(), epoch_deadlines)?;
+        let eval_ctx = Arc::new(Mutex::new(eval_ctx));
+
+        let wapc_host = Self::setup_wapc_host(
+            // Using `clone` on an `Engine` is a cheap operation
+            engine.clone(),
+            // Using `clone` on a `Module` is a cheap operation
+            module.clone(),
+            epoch_deadlines,
+            // Using `clone` on an `Arc` is a cheap operation
+            eval_ctx.clone(),
+        )?;
 
         Ok(Self {
             engine,
             module,
             epoch_deadlines,
             wapc_host,
+            eval_ctx,
         })
     }
 
@@ -43,17 +54,8 @@ impl WapcStack {
             self.engine.clone(),
             self.module.clone(),
             self.epoch_deadlines,
+            self.eval_ctx.clone(),
         )?;
-        let old_wapc_host_id = self.wapc_host.id();
-        let worker_id = get_worker_id(old_wapc_host_id)?;
-
-        let eval_ctx = get_eval_ctx(old_wapc_host_id);
-        unregister_policy(old_wapc_host_id);
-        register_policy(
-            new_wapc_host.id(),
-            worker_id,
-            Arc::new(RwLock::new(eval_ctx)),
-        );
 
         self.wapc_host = new_wapc_host;
 
@@ -69,10 +71,16 @@ impl WapcStack {
         self.wapc_host.call(op, payload)
     }
 
+    pub(crate) fn set_eval_ctx(&mut self, eval_ctx: &EvaluationContext) {
+        let mut eval_ctx_orig = self.eval_ctx.lock().unwrap();
+        eval_ctx_orig.copy_from(eval_ctx);
+    }
+
     fn setup_wapc_host(
         engine: wasmtime::Engine,
         module: wasmtime::Module,
-        epoch_deadlines: Option<crate::policy_evaluator_builder::EpochDeadlines>,
+        epoch_deadlines: Option<EpochDeadlines>,
+        eval_ctx: Arc<Mutex<EvaluationContext>>,
     ) -> Result<wapc::WapcHost> {
         let mut builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
             .engine(engine)
@@ -83,18 +91,7 @@ impl WapcStack {
 
         let engine_provider = builder.build()?;
         let wapc_host =
-            wapc::WapcHost::new(Box::new(engine_provider), Some(Box::new(host_callback)))?;
+            wapc::WapcHost::new(Box::new(engine_provider), Some(new_host_callback(eval_ctx)))?;
         Ok(wapc_host)
-    }
-
-    pub fn wapc_host_id(&self) -> u64 {
-        self.wapc_host.id()
-    }
-}
-
-impl Drop for WapcStack {
-    fn drop(&mut self) {
-        // ensure we clean this entry from the WAPC_POLICY_MAPPING mapping
-        unregister_policy(self.wapc_host.id());
     }
 }

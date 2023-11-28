@@ -1,5 +1,4 @@
 mod callback;
-pub(crate) mod evaluation_context_registry;
 mod runtime;
 mod stack;
 

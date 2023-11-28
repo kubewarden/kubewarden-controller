@@ -1,8 +1,6 @@
 use anyhow::{anyhow, Result};
 use std::collections::BTreeSet;
-use std::convert::TryInto;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
 use wasmtime_provider::wasmtime;
 
@@ -10,7 +8,6 @@ use crate::callback_requests::CallbackRequest;
 use crate::evaluation_context::EvaluationContext;
 use crate::policy_evaluator::{PolicyEvaluator, PolicyExecutionMode};
 use crate::policy_metadata::ContextAwareResource;
-use crate::runtimes::wapc::evaluation_context_registry::register_policy;
 use crate::runtimes::{rego::BurregoStack, wapc::WapcStack, wasi_cli, Runtime};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
@@ -20,7 +17,7 @@ use crate::runtimes::{rego::BurregoStack, wapc::WapcStack, wasi_cli, Runtime};
 /// * waPC initialization code: this is the code defined by the module inside
 ///   of the `wapc_init` or the `_start` functions
 /// * user function: the actual waPC guest function written by an user
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct EpochDeadlines {
     /// Deadline for waPC initialization code. Expressed in number of epoch ticks
     pub wapc_init: u64,
@@ -245,7 +242,6 @@ impl PolicyEvaluatorBuilder {
         let runtime = match execution_mode {
             PolicyExecutionMode::KubewardenWapc => create_wapc_runtime(
                 &self.policy_id,
-                self.worker_id,
                 engine,
                 module,
                 self.epoch_deadlines,
@@ -285,20 +281,19 @@ impl PolicyEvaluatorBuilder {
 
 fn create_wapc_runtime(
     policy_id: &str,
-    worker_id: u64,
     engine: wasmtime::Engine,
     module: wasmtime::Module,
     epoch_deadlines: Option<EpochDeadlines>,
     callback_channel: Option<mpsc::Sender<CallbackRequest>>,
     ctx_aware_resources_allow_list: &BTreeSet<ContextAwareResource>,
 ) -> Result<Runtime> {
-    let wapc_stack = WapcStack::new(engine, module, epoch_deadlines)?;
-    let eval_ctx = Arc::new(RwLock::new(EvaluationContext {
+    let eval_ctx = EvaluationContext {
         policy_id: policy_id.to_owned(),
         callback_channel,
-        ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
-    }));
-    register_policy(wapc_stack.wapc_host_id(), worker_id, eval_ctx);
+        ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.to_owned(),
+    };
+
+    let wapc_stack = WapcStack::new(engine, module, epoch_deadlines, eval_ctx)?;
 
     Ok(Runtime::Wapc(wapc_stack))
 }
@@ -306,71 +301,28 @@ fn create_wapc_runtime(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtimes::wapc::evaluation_context_registry::{
-        get_eval_ctx, get_worker_id, tests::is_wapc_instance_registered,
-    };
 
     #[test]
-    fn wapc_policy_is_registered() {
-        let policy_id = "a-policy";
-        let worker_id = 0;
-
-        // we need a real waPC policy, we don't care about the contents yet
+    fn build_test() {
         let engine = wasmtime::Engine::default();
-        let wat = include_bytes!("../test_data/endless_wasm/wapc_endless_loop.wat");
+        let wat = include_bytes!("../../test_data/endless_wasm/wapc_endless_loop.wat");
         let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
 
-        let epoch_deadlines = None;
-        let callback_channel = None;
-        let ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource> = BTreeSet::new();
-
-        let runtime = create_wapc_runtime(
-            policy_id,
-            worker_id,
-            engine,
-            module,
-            epoch_deadlines,
-            callback_channel,
-            &ctx_aware_resources_allow_list,
-        )
-        .expect("cannot create wapc runtime");
-        let wapc_stack = match runtime {
-            Runtime::Wapc(stack) => stack,
-            _ => panic!("not the runtime I was expecting"),
-        };
-
-        assert_eq!(
-            worker_id,
-            get_worker_id(wapc_stack.wapc_host_id()).expect("didn't find policy")
-        );
-
-        // this will panic if the evaluation context has not been registered
-        let eval_ctx = get_eval_ctx(wapc_stack.wapc_host_id());
-        assert_eq!(eval_ctx.policy_id, policy_id);
-    }
-
-    #[test]
-    fn wapc_policy_is_removed_from_registry_when_the_evaluator_is_dropped() {
-        // we need a real waPC policy, we don't care about the contents yet
-
-        let worker_id = 0;
-        let engine = wasmtime::Engine::default();
-        let wat = include_bytes!("../test_data/endless_wasm/wapc_endless_loop.wat");
-        let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
-
-        let builder = PolicyEvaluatorBuilder::new("test".to_string(), worker_id)
+        let policy_evaluator_builder = PolicyEvaluatorBuilder::new("test".to_string(), 1)
             .execution_mode(PolicyExecutionMode::KubewardenWapc)
+            .policy_module(module)
             .engine(engine)
-            .policy_module(module);
+            .enable_wasmtime_cache()
+            .enable_epoch_interruptions(1, 2)
+            .callback_channel(mpsc::channel(1).0)
+            .context_aware_resources_allowed(BTreeSet::new());
 
-        let evaluator = builder.build().expect("cannot create evaluator");
-        let wapc_stack = match evaluator.runtime() {
-            Runtime::Wapc(ref stack) => stack,
-            _ => panic!("not the runtime I was expecting"),
-        };
-        let wapc_id = wapc_stack.wapc_host_id();
+        let policy_evaluator = policy_evaluator_builder
+            .build()
+            .expect("cannot build policy");
 
-        drop(evaluator);
-        assert!(!is_wapc_instance_registered(wapc_id));
+        assert_eq!(policy_evaluator.policy_id(), "test");
+        assert_eq!(policy_evaluator.worker_id, 1);
+        assert!(matches!(policy_evaluator.runtime, Runtime::Wapc(_)));
     }
 }
