@@ -70,6 +70,9 @@ jobs:
             }
             core.setFailed(`Draft release not found`)
 
+      - name: Checkout code for kubewarden-dashboard.json
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
       - name: Download SBOM artifact
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
@@ -92,7 +95,8 @@ jobs:
               'policy-server-sbom-amd64.spdx.sig',
               'policy-server-sbom-arm64.spdx',
               'policy-server-sbom-arm64.spdx.cert',
-              'policy-server-sbom-arm64.spdx.sig']
+              'policy-server-sbom-arm64.spdx.sig',
+              'kubewarden-dashboard.json']
             const {RELEASE_ID} = process.env
 
             for (const file of files) {
