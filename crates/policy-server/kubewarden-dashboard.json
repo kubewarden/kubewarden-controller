@@ -20,8 +20,7 @@
     {
       "type": "panel",
       "id": "heatmap",
-      "name": "Heatmap",
-      "version": ""
+      "name": "Heatmap"
     },
     {
       "type": "datasource",
@@ -32,14 +31,12 @@
     {
       "type": "panel",
       "id": "stat",
-      "name": "Stat",
-      "version": ""
+      "name": "Stat"
     },
     {
       "type": "panel",
       "id": "timeseries",
-      "name": "Time series",
-      "version": ""
+      "name": "Time series"
     }
   ],
   "annotations": {
