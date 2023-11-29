@@ -77,14 +77,18 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		It("should create the ValidatingWebhookConfiguration", func() {
 			Eventually(func(g Gomega) {
 				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
-
 				Expect(err).ToNot(HaveOccurred())
+
 				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
 				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("namespace"))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+
+				caSecret, err := getTestCASecret()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
 			}, timeout, pollInterval).Should(Succeed())
 		})
 
@@ -100,6 +104,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				delete(validatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 				validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 				validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
+				validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle = []byte("invalid")
 				Expect(
 					k8sClient.Update(ctx, validatingWebhookConfiguration),
 				).To(Succeed())
@@ -151,14 +156,18 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		It("should create the MutatingWebhookConfiguration", func() {
 			Eventually(func(g Gomega) {
 				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
-
 				Expect(err).ToNot(HaveOccurred())
+
 				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
 				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("namespace"))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
 				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+
+				caSecret, err := getTestCASecret()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
 			}, timeout, pollInterval).Should(Succeed())
 		})
 
@@ -174,6 +183,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				delete(mutatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 				mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 				mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
+				mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle = []byte("invalid")
 				Expect(
 					k8sClient.Update(ctx, mutatingWebhookConfiguration),
 				).To(Succeed())
