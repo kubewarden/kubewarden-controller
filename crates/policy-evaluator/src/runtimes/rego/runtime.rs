@@ -7,10 +7,10 @@ use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
 use crate::policy_evaluator::RegoPolicyExecutionMode;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::runtimes::rego::{
-    context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError, BurregoStack,
+    context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError, Stack,
 };
 
-pub(crate) struct Runtime<'a>(pub(crate) &'a mut BurregoStack);
+pub(crate) struct Runtime<'a>(pub(crate) &'a mut Stack);
 
 impl<'a> Runtime<'a> {
     pub fn validate(

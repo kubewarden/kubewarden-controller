@@ -1,17 +1,17 @@
 use anyhow::Result;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use wasmtime_provider::wasmtime;
 
 use crate::evaluation_context::EvaluationContext;
 use crate::policy_evaluator_builder::EpochDeadlines;
 use crate::runtimes::wapc::callback::new_host_callback;
 
+use super::StackPre;
+
 pub(crate) struct WapcStack {
-    engine: wasmtime::Engine,
-    module: wasmtime::Module,
-    epoch_deadlines: Option<EpochDeadlines>,
     wapc_host: wapc::WapcHost,
-    eval_ctx: Arc<Mutex<EvaluationContext>>,
+    stack_pre: StackPre,
+    eval_ctx: Arc<EvaluationContext>,
 }
 
 impl WapcStack {
@@ -21,24 +21,26 @@ impl WapcStack {
         epoch_deadlines: Option<EpochDeadlines>,
         eval_ctx: EvaluationContext,
     ) -> Result<Self> {
-        let eval_ctx = Arc::new(Mutex::new(eval_ctx));
+        let eval_ctx = Arc::new(eval_ctx);
 
-        let wapc_host = Self::setup_wapc_host(
-            // Using `clone` on an `Engine` is a cheap operation
-            engine.clone(),
-            // Using `clone` on a `Module` is a cheap operation
-            module.clone(),
-            epoch_deadlines,
-            // Using `clone` on an `Arc` is a cheap operation
-            eval_ctx.clone(),
-        )?;
+        let stack_pre = StackPre::new(engine, module, epoch_deadlines)?;
+        let wapc_host = Self::wapc_host_from_pre(&stack_pre, eval_ctx.clone())?;
 
         Ok(Self {
-            engine,
-            module,
-            epoch_deadlines,
             wapc_host,
+            stack_pre,
             eval_ctx,
+        })
+    }
+
+    pub(crate) fn new_from_pre(stack_pre: &StackPre, eval_ctx: &EvaluationContext) -> Result<Self> {
+        let eval_ctx = Arc::new(eval_ctx.to_owned());
+        let wapc_host = Self::wapc_host_from_pre(stack_pre, eval_ctx.clone())?;
+
+        Ok(Self {
+            wapc_host,
+            stack_pre: stack_pre.to_owned(),
+            eval_ctx: eval_ctx.to_owned(),
         })
     }
 
@@ -50,12 +52,7 @@ impl WapcStack {
     /// variable.
     pub(crate) fn reset(&mut self) -> Result<()> {
         // Create a new wapc_host
-        let new_wapc_host = Self::setup_wapc_host(
-            self.engine.clone(),
-            self.module.clone(),
-            self.epoch_deadlines,
-            self.eval_ctx.clone(),
-        )?;
+        let new_wapc_host = Self::wapc_host_from_pre(&self.stack_pre, self.eval_ctx.clone())?;
 
         self.wapc_host = new_wapc_host;
 
@@ -71,25 +68,13 @@ impl WapcStack {
         self.wapc_host.call(op, payload)
     }
 
-    pub(crate) fn set_eval_ctx(&mut self, eval_ctx: &EvaluationContext) {
-        let mut eval_ctx_orig = self.eval_ctx.lock().unwrap();
-        eval_ctx_orig.copy_from(eval_ctx);
-    }
-
-    fn setup_wapc_host(
-        engine: wasmtime::Engine,
-        module: wasmtime::Module,
-        epoch_deadlines: Option<EpochDeadlines>,
-        eval_ctx: Arc<Mutex<EvaluationContext>>,
+    /// Create a new `WapcHost` by rehydrating the `StackPre`. This is faster than creating the
+    /// `WasmtimeEngineProvider` from scratch
+    fn wapc_host_from_pre(
+        pre: &StackPre,
+        eval_ctx: Arc<EvaluationContext>,
     ) -> Result<wapc::WapcHost> {
-        let mut builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
-            .engine(engine)
-            .module(module);
-        if let Some(deadlines) = epoch_deadlines {
-            builder = builder.enable_epoch_interruptions(deadlines.wapc_init, deadlines.wapc_func);
-        }
-
-        let engine_provider = builder.build()?;
+        let engine_provider = pre.rehydrate()?;
         let wapc_host =
             wapc::WapcHost::new(Box::new(engine_provider), Some(new_host_callback(eval_ctx)))?;
         Ok(wapc_host)

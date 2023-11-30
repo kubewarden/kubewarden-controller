@@ -1,14 +1,12 @@
 use anyhow::{anyhow, Result};
-use std::collections::BTreeSet;
 use std::path::Path;
-use tokio::sync::mpsc;
 use wasmtime_provider::wasmtime;
 
-use crate::callback_requests::CallbackRequest;
 use crate::evaluation_context::EvaluationContext;
-use crate::policy_evaluator::{PolicyEvaluator, PolicyExecutionMode};
-use crate::policy_metadata::ContextAwareResource;
-use crate::runtimes::{rego::BurregoStack, wapc::WapcStack, wasi_cli, Runtime};
+use crate::policy_evaluator::{
+    policy_evaluator_pre::StackPre, PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode,
+};
+use crate::runtimes::{rego, wapc, wasi_cli, Runtime};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
 ///
@@ -30,31 +28,19 @@ pub(crate) struct EpochDeadlines {
 #[derive(Default)]
 pub struct PolicyEvaluatorBuilder {
     engine: Option<wasmtime::Engine>,
-    policy_id: String,
-    worker_id: u64,
     policy_file: Option<String>,
     policy_contents: Option<Vec<u8>>,
     policy_module: Option<wasmtime::Module>,
     execution_mode: Option<PolicyExecutionMode>,
-    callback_channel: Option<mpsc::Sender<CallbackRequest>>,
     wasmtime_cache: bool,
     epoch_deadlines: Option<EpochDeadlines>,
-    ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource>,
+    eval_ctx: Option<EvaluationContext>,
 }
 
 impl PolicyEvaluatorBuilder {
     /// Create a new PolicyEvaluatorBuilder object.
-    /// * `policy_id`: unique identifier of the policy. This is mostly relevant for PolicyServer.
-    ///    In this case, this is the value used to identify the policy inside of the `policies.yml`
-    ///    file
-    /// * `worker_id`: unique identifier of the worker that is going to evaluate the policy. This
-    ///    is mostly relevant for PolicyServer
-    pub fn new(policy_id: String, worker_id: u64) -> PolicyEvaluatorBuilder {
-        PolicyEvaluatorBuilder {
-            policy_id,
-            worker_id,
-            ..Default::default()
-        }
+    pub fn new() -> PolicyEvaluatorBuilder {
+        PolicyEvaluatorBuilder::default()
     }
 
     /// [`wasmtime::Engine`] instance to be used when creating the
@@ -63,6 +49,7 @@ impl PolicyEvaluatorBuilder {
     /// **Warning:** when used, all the [`wasmtime::Engine`] specific settings
     /// must be set by the caller when creating the engine.
     /// This includes options like: cache, epoch counter
+    #[must_use]
     pub fn engine(mut self, engine: wasmtime::Engine) -> Self {
         self.engine = Some(engine);
         self
@@ -81,6 +68,7 @@ impl PolicyEvaluatorBuilder {
 
     /// Build the policy by using the Wasm object given via the `data` array.
     /// Cannot be used at the same time as `policy_file`
+    #[must_use]
     pub fn policy_contents(mut self, data: &[u8]) -> PolicyEvaluatorBuilder {
         self.policy_contents = Some(data.to_owned());
         self
@@ -89,29 +77,30 @@ impl PolicyEvaluatorBuilder {
     /// Use a pre-built [`wasmtime::Module`] instance.
     /// **Warning:** you must provide also the [`wasmtime::Engine`] used
     /// to allocate the `Module`, otherwise the code will panic at runtime
+    #[must_use]
     pub fn policy_module(mut self, module: wasmtime::Module) -> Self {
         self.policy_module = Some(module);
         self
     }
 
     /// Sets the policy execution mode
+    #[must_use]
     pub fn execution_mode(mut self, mode: PolicyExecutionMode) -> PolicyEvaluatorBuilder {
         self.execution_mode = Some(mode);
         self
     }
 
     /// Enable Wasmtime cache feature
+    #[must_use]
     pub fn enable_wasmtime_cache(mut self) -> PolicyEvaluatorBuilder {
         self.wasmtime_cache = true;
         self
     }
 
-    /// Set the list of Kubernetes resources the policy can have access to
-    pub fn context_aware_resources_allowed(
-        mut self,
-        allowed_resources: BTreeSet<ContextAwareResource>,
-    ) -> PolicyEvaluatorBuilder {
-        self.ctx_aware_resources_allow_list = allowed_resources;
+    /// Set the `EvaluationContext` to be used
+    #[must_use]
+    pub fn eval_ctx(mut self, ctx: EvaluationContext) -> PolicyEvaluatorBuilder {
+        self.eval_ctx = Some(ctx);
         self
     }
 
@@ -147,24 +136,8 @@ impl PolicyEvaluatorBuilder {
         self
     }
 
-    /// Specify the channel that is used by the synchronous world (the waPC `host_callback`
-    /// function) to obtain information that can be computed only from within a
-    /// tokio runtime.
-    ///
-    /// Note well: if no channel is given, the policy will still be created, but
-    /// some waPC functions exposed by the host will not be available at runtime.
-    /// The policy evaluation will not fail because of that, but the guest will
-    /// get an error instead of the expected result.
-    pub fn callback_channel(
-        mut self,
-        channel: mpsc::Sender<CallbackRequest>,
-    ) -> PolicyEvaluatorBuilder {
-        self.callback_channel = Some(channel);
-        self
-    }
-
     /// Ensure the configuration provided to the build is correct
-    fn validate_user_input(&self) -> Result<()> {
+    fn validate_user_input_build_evaluator_pre(&self) -> Result<()> {
         if self.policy_file.is_some() && self.policy_contents.is_some() {
             return Err(anyhow!(
                 "Cannot specify 'policy_file' and 'policy_contents' at the same time"
@@ -203,12 +176,88 @@ impl PolicyEvaluatorBuilder {
         Ok(())
     }
 
-    /// Create the instance of `PolicyEvaluator` to be used
-    pub fn build(&self) -> Result<PolicyEvaluator> {
-        self.validate_user_input()?;
+    fn validate_user_input_build_evaluator(&self) -> Result<()> {
+        self.validate_user_input_build_evaluator_pre()?;
 
-        let engine = self
-            .engine
+        if self.eval_ctx.is_none() {
+            return Err(anyhow!("Must provide an evaluation context"));
+        }
+
+        Ok(())
+    }
+
+    /// Create the instance of `PolicyEvaluatorPre` to be used
+    pub fn build_pre(&self) -> Result<PolicyEvaluatorPre> {
+        self.validate_user_input_build_evaluator_pre()?;
+
+        let engine = self.build_engine()?;
+        let module = self.build_module(&engine)?;
+
+        let execution_mode = self.execution_mode.unwrap();
+
+        let stack_pre = match execution_mode {
+            PolicyExecutionMode::KubewardenWapc => {
+                let wapc_stack_pre = wapc::StackPre::new(engine, module, self.epoch_deadlines)?;
+                StackPre::from(wapc_stack_pre)
+            }
+            PolicyExecutionMode::Wasi => {
+                let wasi_stack_pre = wasi_cli::StackPre::new(engine, module, self.epoch_deadlines)?;
+                StackPre::from(wasi_stack_pre)
+            }
+            PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
+                let rego_stack_pre = rego::StackPre::new(
+                    engine,
+                    module,
+                    self.epoch_deadlines,
+                    0, // currently the entrypoint is hard coded to this value
+                    execution_mode.try_into()?,
+                );
+                StackPre::from(rego_stack_pre)
+            }
+        };
+
+        Ok(PolicyEvaluatorPre { stack_pre })
+    }
+
+    /// Create the instance of `PolicyEvaluator` to be used
+    // TODO: later on we can drop this method and force also kwctl to use `build_pre`
+    pub fn build(&self) -> Result<PolicyEvaluator> {
+        self.validate_user_input_build_evaluator()?;
+
+        let engine = self.build_engine()?;
+        let module = self.build_module(&engine)?;
+
+        let execution_mode = self.execution_mode.unwrap();
+
+        let runtime = match execution_mode {
+            PolicyExecutionMode::KubewardenWapc => create_wapc_runtime(
+                engine,
+                module,
+                self.epoch_deadlines,
+                self.eval_ctx.as_ref().unwrap(),
+            )?,
+            PolicyExecutionMode::Wasi => {
+                let cli_stack = wasi_cli::Stack::new(engine, module, self.epoch_deadlines)?;
+                Runtime::Cli(cli_stack)
+            }
+            PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
+                let stack = rego::Stack::new(
+                    engine,
+                    module,
+                    self.epoch_deadlines,
+                    0, // currently the entrypoint is hard coded to this value
+                    execution_mode.try_into()?,
+                )?;
+
+                Runtime::Rego(stack)
+            }
+        };
+
+        Ok(PolicyEvaluator::new(runtime))
+    }
+
+    fn build_engine(&self) -> Result<wasmtime::Engine> {
+        self.engine
             .as_ref()
             .map_or_else(
                 || {
@@ -224,76 +273,30 @@ impl PolicyEvaluatorBuilder {
                 },
                 |e| Ok(e.clone()),
             )
-            .map_err(|e| anyhow!("cannot create wasmtime engine: {:?}", e))?;
+            .map_err(|e| anyhow!("cannot create wasmtime engine: {:?}", e))
+    }
 
-        let module: wasmtime::Module = if let Some(m) = &self.policy_module {
+    fn build_module(&self, engine: &wasmtime::Engine) -> Result<wasmtime::Module> {
+        if let Some(m) = &self.policy_module {
             // it's fine to clone a Module, this is a cheap operation that just
             // copies its internal reference. See wasmtime docs
-            m.clone()
+            Ok(m.clone())
         } else {
             match &self.policy_file {
-                Some(file) => wasmtime::Module::from_file(&engine, file),
-                None => wasmtime::Module::new(&engine, self.policy_contents.as_ref().unwrap()),
-            }?
-        };
-
-        let execution_mode = self.execution_mode.unwrap();
-
-        let runtime = match execution_mode {
-            PolicyExecutionMode::KubewardenWapc => create_wapc_runtime(
-                &self.policy_id,
-                engine,
-                module,
-                self.epoch_deadlines,
-                self.callback_channel.clone(),
-                &self.ctx_aware_resources_allow_list,
-            )?,
-            PolicyExecutionMode::Wasi => {
-                let cli_stack = wasi_cli::Stack::new(engine, module, self.epoch_deadlines)?;
-                Runtime::Cli(cli_stack)
+                Some(file) => wasmtime::Module::from_file(engine, file),
+                None => wasmtime::Module::new(engine, self.policy_contents.as_ref().unwrap()),
             }
-            PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
-                let mut builder = burrego::EvaluatorBuilder::default()
-                    .engine(&engine)
-                    .module(module)
-                    .host_callbacks(crate::runtimes::rego::new_host_callbacks());
-
-                if let Some(deadlines) = self.epoch_deadlines {
-                    builder = builder.enable_epoch_interruptions(deadlines.wapc_func);
-                }
-                let evaluator = builder.build()?;
-
-                Runtime::Burrego(BurregoStack {
-                    evaluator,
-                    entrypoint_id: 0, // currently hardcoded to this value
-                    policy_execution_mode: execution_mode.try_into()?,
-                })
-            }
-        };
-
-        Ok(PolicyEvaluator::new(
-            &self.policy_id,
-            self.worker_id,
-            runtime,
-        ))
+        }
     }
 }
 
 fn create_wapc_runtime(
-    policy_id: &str,
     engine: wasmtime::Engine,
     module: wasmtime::Module,
     epoch_deadlines: Option<EpochDeadlines>,
-    callback_channel: Option<mpsc::Sender<CallbackRequest>>,
-    ctx_aware_resources_allow_list: &BTreeSet<ContextAwareResource>,
+    eval_ctx: &EvaluationContext,
 ) -> Result<Runtime> {
-    let eval_ctx = EvaluationContext {
-        policy_id: policy_id.to_owned(),
-        callback_channel,
-        ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.to_owned(),
-    };
-
-    let wapc_stack = WapcStack::new(engine, module, epoch_deadlines, eval_ctx)?;
+    let wapc_stack = wapc::WapcStack::new(engine, module, epoch_deadlines, eval_ctx.to_owned())?;
 
     Ok(Runtime::Wapc(wapc_stack))
 }
@@ -302,27 +305,47 @@ fn create_wapc_runtime(
 mod tests {
     use super::*;
 
+    use std::collections::BTreeSet;
+    use tokio::sync::mpsc;
+
     #[test]
-    fn build_test() {
+    fn build_policy_evaluator() {
         let engine = wasmtime::Engine::default();
         let wat = include_bytes!("../../test_data/endless_wasm/wapc_endless_loop.wat");
         let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
 
-        let policy_evaluator_builder = PolicyEvaluatorBuilder::new("test".to_string(), 1)
+        let ctx = EvaluationContext {
+            policy_id: "test".to_string(),
+            callback_channel: Some(mpsc::channel(1).0),
+            ctx_aware_resources_allow_list: BTreeSet::new(),
+        };
+
+        let policy_evaluator_builder = PolicyEvaluatorBuilder::new()
             .execution_mode(PolicyExecutionMode::KubewardenWapc)
             .policy_module(module)
             .engine(engine)
             .enable_wasmtime_cache()
             .enable_epoch_interruptions(1, 2)
-            .callback_channel(mpsc::channel(1).0)
-            .context_aware_resources_allowed(BTreeSet::new());
+            .eval_ctx(ctx);
 
-        let policy_evaluator = policy_evaluator_builder
-            .build()
-            .expect("cannot build policy");
+        let policy_evaluator = policy_evaluator_builder.build().unwrap();
 
-        assert_eq!(policy_evaluator.policy_id(), "test");
-        assert_eq!(policy_evaluator.worker_id, 1);
         assert!(matches!(policy_evaluator.runtime, Runtime::Wapc(_)));
+    }
+
+    #[test]
+    fn build_policy_evaluator_pre() {
+        let engine = wasmtime::Engine::default();
+        let wat = include_bytes!("../../test_data/endless_wasm/wapc_endless_loop.wat");
+        let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
+
+        let policy_evaluator_builder = PolicyEvaluatorBuilder::new()
+            .execution_mode(PolicyExecutionMode::KubewardenWapc)
+            .policy_module(module)
+            .engine(engine)
+            .enable_wasmtime_cache()
+            .enable_epoch_interruptions(1, 2);
+
+        _ = policy_evaluator_builder.build_pre().unwrap();
     }
 }

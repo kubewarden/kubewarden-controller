@@ -36,18 +36,6 @@ impl EvaluationContext {
         self.ctx_aware_resources_allow_list
             .contains(&wanted_resource)
     }
-
-    /// Copy data from another `EvaluationContext` instance
-    pub(crate) fn copy_from(&mut self, other: &EvaluationContext) {
-        if self.policy_id == other.policy_id {
-            // The current evaluation context is about the very same policy
-            // There's nothing to be done
-            return;
-        }
-        self.policy_id = other.policy_id.clone();
-        self.callback_channel = other.callback_channel.clone();
-        self.ctx_aware_resources_allow_list = other.ctx_aware_resources_allow_list.clone();
-    }
 }
 
 impl fmt::Debug for EvaluationContext {

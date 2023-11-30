@@ -4,22 +4,53 @@ use tokio::sync::mpsc;
 use crate::{
     callback_requests::CallbackRequest,
     policy_evaluator::RegoPolicyExecutionMode,
+    policy_evaluator_builder::EpochDeadlines,
     policy_metadata::ContextAwareResource,
     runtimes::rego::{
         context_aware,
         errors::{RegoRuntimeError, Result},
         gatekeeper_inventory::GatekeeperInventory,
         opa_inventory::OpaInventory,
+        stack_pre::StackPre,
     },
 };
 
-pub(crate) struct BurregoStack {
+pub(crate) struct Stack {
     pub evaluator: burrego::Evaluator,
     pub entrypoint_id: i32,
     pub policy_execution_mode: RegoPolicyExecutionMode,
 }
 
-impl BurregoStack {
+impl Stack {
+    pub(crate) fn new(
+        engine: wasmtime::Engine,
+        module: wasmtime::Module,
+        epoch_deadlines: Option<EpochDeadlines>,
+        entrypoint_id: i32,
+        policy_execution_mode: RegoPolicyExecutionMode,
+    ) -> Result<Self> {
+        let stack_pre = StackPre::new(
+            engine,
+            module,
+            epoch_deadlines,
+            entrypoint_id,
+            policy_execution_mode,
+        );
+        Self::new_from_pre(&stack_pre)
+    }
+
+    /// Create a new `Stack` using a `StackPre` object
+    pub fn new_from_pre(stack_pre: &StackPre) -> Result<Self> {
+        let evaluator = stack_pre
+            .rehydrate()
+            .map_err(|e| RegoRuntimeError::EvaluatorError(e.to_string()))?;
+        Ok(Self {
+            evaluator,
+            entrypoint_id: stack_pre.entrypoint_id,
+            policy_execution_mode: stack_pre.policy_execution_mode.clone(),
+        })
+    }
+
     pub fn build_kubernetes_context(
         &self,
         callback_channel: Option<&mpsc::Sender<CallbackRequest>>,

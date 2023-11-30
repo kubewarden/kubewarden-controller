@@ -8,7 +8,7 @@ pub(crate) mod wasi_cli;
 
 pub(crate) enum Runtime {
     Wapc(wapc::WapcStack),
-    Burrego(rego::BurregoStack),
+    Rego(rego::Stack),
     Cli(wasi_cli::Stack),
 }
 
@@ -17,7 +17,7 @@ impl Display for Runtime {
         match self {
             Runtime::Cli(_) => write!(f, "wasi"),
             Runtime::Wapc(_) => write!(f, "wapc"),
-            Runtime::Burrego(stack) => match stack.policy_execution_mode {
+            Runtime::Rego(stack) => match stack.policy_execution_mode {
                 RegoPolicyExecutionMode::Opa => {
                     write!(f, "OPA")
                 }

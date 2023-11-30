@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::{
@@ -27,284 +27,69 @@ type HostCallback = Box<
 
 /// Returns a host callback function that can be used by the waPC runtime.
 /// The callback function will be able to access the `EvaluationContext` instance.
-pub(crate) fn new_host_callback(eval_ctx: Arc<Mutex<EvaluationContext>>) -> HostCallback {
+pub(crate) fn new_host_callback(eval_ctx: Arc<EvaluationContext>) -> HostCallback {
     Box::new({
-        move |wapc_id, binding, namespace, operation, payload| {
-            let eval_ctx = eval_ctx.lock().unwrap();
-            match binding {
-                "kubewarden" => match namespace {
-                    "tracing" => match operation {
-                        "log" => {
-                            if let Err(e) = eval_ctx.log(payload) {
-                                let p = String::from_utf8(payload.to_vec())
-                                    .unwrap_or_else(|e| e.to_string());
-                                error!(
-                                    payload = p.as_str(),
-                                    error = e.to_string().as_str(),
-                                    "Cannot log event"
-                                );
-                            }
-                            Ok(Vec::new())
-                        }
-                        _ => {
-                            error!(namespace, operation, "unknown operation");
-                            Err(format!("unknown operation: {operation}").into())
-                        }
-                    },
-                    "oci" => match operation {
-                        "v1/verify" => {
-                            let req: SigstoreVerificationInputV1 =
-                                serde_json::from_slice(payload.to_vec().as_ref())?;
-                            let req_type: CallbackRequestType = req.into();
-                            let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                            let req = CallbackRequest {
-                                request: req_type,
-                                response_channel: tx,
-                            };
-
-                            send_request_and_wait_for_response(
-                                wapc_id, binding, operation, req, rx, &eval_ctx,
-                            )
-                        }
-                        "v2/verify" => {
-                            let req: SigstoreVerificationInputV2 =
-                                serde_json::from_slice(payload.to_vec().as_ref())?;
-                            let req_type: CallbackRequestType = req.into();
-                            let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                            let req = CallbackRequest {
-                                request: req_type,
-                                response_channel: tx,
-                            };
-
-                            send_request_and_wait_for_response(
-                                wapc_id, binding, operation, req, rx, &eval_ctx,
-                            )
-                        }
-                        "v1/manifest_digest" => {
-                            let image: String = serde_json::from_slice(payload.to_vec().as_ref())?;
-                            debug!(
-                                wapc_id,
-                                binding,
-                                operation,
-                                image = image.as_str(),
-                                "Sending request via callback channel"
+        move |wapc_id, binding, namespace, operation, payload| match binding {
+            "kubewarden" => match namespace {
+                "tracing" => match operation {
+                    "log" => {
+                        if let Err(e) = eval_ctx.log(payload) {
+                            let p = String::from_utf8(payload.to_vec())
+                                .unwrap_or_else(|e| e.to_string());
+                            error!(
+                                payload = p.as_str(),
+                                error = e.to_string().as_str(),
+                                "Cannot log event"
                             );
-                            let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                            let req = CallbackRequest {
-                                request: CallbackRequestType::OciManifestDigest { image },
-                                response_channel: tx,
-                            };
-                            send_request_and_wait_for_response(
-                                wapc_id, binding, operation, req, rx, &eval_ctx,
-                            )
                         }
-                        _ => {
-                            error!("unknown operation: {}", operation);
-                            Err(format!("unknown operation: {operation}").into())
-                        }
-                    },
-                    "net" => match operation {
-                        "v1/dns_lookup_host" => {
-                            let host: String = serde_json::from_slice(payload.to_vec().as_ref())?;
-                            debug!(
-                                wapc_id,
-                                binding,
-                                operation,
-                                ?host,
-                                "Sending request via callback channel"
-                            );
-                            let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                            let req = CallbackRequest {
-                                request: CallbackRequestType::DNSLookupHost { host },
-                                response_channel: tx,
-                            };
-                            send_request_and_wait_for_response(
-                                wapc_id, binding, operation, req, rx, &eval_ctx,
-                            )
-                        }
-                        _ => {
-                            error!("unknown operation: {}", operation);
-                            Err(format!("unknown operation: {operation}").into())
-                        }
-                    },
-                    "crypto" => match operation {
-                        "v1/is_certificate_trusted" => {
-                            let req: CertificateVerificationRequest =
-                                serde_json::from_slice(payload.to_vec().as_ref())?;
-                            let response: CertificateVerificationResponse =
-                                match verify_certificate(req) {
-                                    Ok(b) => b.into(),
-                                    Err(e) => {
-                                        return Err(format!(
-                                            "Error when verifying certificate: {e}"
-                                        )
-                                        .into())
-                                    }
-                                };
-                            Ok(serde_json::to_vec(&response)?)
-                        }
-                        _ => {
-                            error!(namespace, operation, "unknown operation");
-                            Err(format!("unknown operation: {operation}").into())
-                        }
-                    },
-                    "kubernetes" => match operation {
-                        "list_resources_by_namespace" => {
-                            let req: ListResourcesByNamespaceRequest =
-                                serde_json::from_slice(payload.to_vec().as_ref())?;
-
-                            if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind)
-                            {
-                                error!(
-                            policy = eval_ctx.policy_id,
-                            resource_requested = format!("{}/{}", req.api_version, req.kind),
-                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
-                            "Policy tried to access a Kubernetes resource it doesn't have access to");
-                                return Err(format!(
-                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
-                                req.api_version,
-                                req.kind).into());
-                            }
-
-                            debug!(
-                                wapc_id,
-                                binding,
-                                operation,
-                                ?req,
-                                "Sending request via callback channel"
-                            );
-                            let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                            let req = CallbackRequest {
-                                request: CallbackRequestType::from(req),
-                                response_channel: tx,
-                            };
-                            send_request_and_wait_for_response(
-                                wapc_id, binding, operation, req, rx, &eval_ctx,
-                            )
-                        }
-                        "list_resources_all" => {
-                            let req: ListAllResourcesRequest =
-                                serde_json::from_slice(payload.to_vec().as_ref())?;
-                            if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind)
-                            {
-                                error!(
-                            policy = eval_ctx.policy_id,
-                            resource_requested = format!("{}/{}", req.api_version, req.kind),
-                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
-                            "Policy tried to access a Kubernetes resource it doesn't have access to");
-                                return Err(format!(
-                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
-                                req.api_version,
-                                req.kind).into());
-                            }
-
-                            debug!(
-                                wapc_id,
-                                binding,
-                                operation,
-                                ?req,
-                                "Sending request via callback channel"
-                            );
-                            let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                            let req = CallbackRequest {
-                                request: CallbackRequestType::from(req),
-                                response_channel: tx,
-                            };
-                            send_request_and_wait_for_response(
-                                wapc_id, binding, operation, req, rx, &eval_ctx,
-                            )
-                        }
-                        "get_resource" => {
-                            let req: GetResourceRequest =
-                                serde_json::from_slice(payload.to_vec().as_ref())?;
-                            if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind)
-                            {
-                                error!(
-                            policy = eval_ctx.policy_id,
-                            resource_requested = format!("{}/{}", req.api_version, req.kind),
-                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
-                            "Policy tried to access a Kubernetes resource it doesn't have access to");
-                                return Err(format!(
-                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
-                                req.api_version,
-                                req.kind).into());
-                            }
-
-                            debug!(
-                                wapc_id,
-                                binding,
-                                operation,
-                                ?req,
-                                "Sending request via callback channel"
-                            );
-                            let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                            let req = CallbackRequest {
-                                request: CallbackRequestType::from(req),
-                                response_channel: tx,
-                            };
-                            send_request_and_wait_for_response(
-                                wapc_id, binding, operation, req, rx, &eval_ctx,
-                            )
-                        }
-                        _ => {
-                            error!(namespace, operation, "unknown operation");
-                            Err(format!("unknown operation: {operation}").into())
-                        }
-                    },
+                        Ok(Vec::new())
+                    }
                     _ => {
-                        error!("unknown namespace: {}", namespace);
-                        Err(format!("unknown namespace: {namespace}").into())
+                        error!(namespace, operation, "unknown operation");
+                        Err(format!("unknown operation: {operation}").into())
                     }
                 },
-                "kubernetes" => match namespace {
-                    "ingresses" => {
-                        let req = CallbackRequestType::KubernetesListResourceAll {
-                            api_version: "networking.k8s.io/v1".to_string(),
-                            kind: "Ingress".to_string(),
-                            label_selector: None,
-                            field_selector: None,
-                        };
-
-                        warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
+                "oci" => match operation {
+                    "v1/verify" => {
+                        let req: SigstoreVerificationInputV1 =
+                            serde_json::from_slice(payload.to_vec().as_ref())?;
+                        let req_type: CallbackRequestType = req.into();
                         let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                         let req = CallbackRequest {
-                            request: req,
+                            request: req_type,
                             response_channel: tx,
                         };
+
                         send_request_and_wait_for_response(
                             wapc_id, binding, operation, req, rx, &eval_ctx,
                         )
                     }
-                    "namespaces" => {
-                        let req = CallbackRequestType::KubernetesListResourceAll {
-                            api_version: "v1".to_string(),
-                            kind: "Namespace".to_string(),
-                            label_selector: None,
-                            field_selector: None,
-                        };
-
-                        warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
+                    "v2/verify" => {
+                        let req: SigstoreVerificationInputV2 =
+                            serde_json::from_slice(payload.to_vec().as_ref())?;
+                        let req_type: CallbackRequestType = req.into();
                         let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                         let req = CallbackRequest {
-                            request: req,
+                            request: req_type,
                             response_channel: tx,
                         };
+
                         send_request_and_wait_for_response(
                             wapc_id, binding, operation, req, rx, &eval_ctx,
                         )
                     }
-                    "services" => {
-                        let req = CallbackRequestType::KubernetesListResourceAll {
-                            api_version: "v1".to_string(),
-                            kind: "Service".to_string(),
-                            label_selector: None,
-                            field_selector: None,
-                        };
-
-                        warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
+                    "v1/manifest_digest" => {
+                        let image: String = serde_json::from_slice(payload.to_vec().as_ref())?;
+                        debug!(
+                            wapc_id,
+                            binding,
+                            operation,
+                            image = image.as_str(),
+                            "Sending request via callback channel"
+                        );
                         let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
                         let req = CallbackRequest {
-                            request: req,
+                            request: CallbackRequestType::OciManifestDigest { image },
                             response_channel: tx,
                         };
                         send_request_and_wait_for_response(
@@ -312,14 +97,222 @@ pub(crate) fn new_host_callback(eval_ctx: Arc<Mutex<EvaluationContext>>) -> Host
                         )
                     }
                     _ => {
-                        error!("unknown namespace: {}", namespace);
-                        Err(format!("unknown namespace: {namespace}").into())
+                        error!("unknown operation: {}", operation);
+                        Err(format!("unknown operation: {operation}").into())
+                    }
+                },
+                "net" => match operation {
+                    "v1/dns_lookup_host" => {
+                        let host: String = serde_json::from_slice(payload.to_vec().as_ref())?;
+                        debug!(
+                            wapc_id,
+                            binding,
+                            operation,
+                            ?host,
+                            "Sending request via callback channel"
+                        );
+                        let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                        let req = CallbackRequest {
+                            request: CallbackRequestType::DNSLookupHost { host },
+                            response_channel: tx,
+                        };
+                        send_request_and_wait_for_response(
+                            wapc_id, binding, operation, req, rx, &eval_ctx,
+                        )
+                    }
+                    _ => {
+                        error!("unknown operation: {}", operation);
+                        Err(format!("unknown operation: {operation}").into())
+                    }
+                },
+                "crypto" => match operation {
+                    "v1/is_certificate_trusted" => {
+                        let req: CertificateVerificationRequest =
+                            serde_json::from_slice(payload.to_vec().as_ref())?;
+                        let response: CertificateVerificationResponse =
+                            match verify_certificate(req) {
+                                Ok(b) => b.into(),
+                                Err(e) => {
+                                    return Err(
+                                        format!("Error when verifying certificate: {e}").into()
+                                    )
+                                }
+                            };
+                        Ok(serde_json::to_vec(&response)?)
+                    }
+                    _ => {
+                        error!(namespace, operation, "unknown operation");
+                        Err(format!("unknown operation: {operation}").into())
+                    }
+                },
+                "kubernetes" => match operation {
+                    "list_resources_by_namespace" => {
+                        let req: ListResourcesByNamespaceRequest =
+                            serde_json::from_slice(payload.to_vec().as_ref())?;
+
+                        if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                            error!(
+                            policy = eval_ctx.policy_id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                            return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                        }
+
+                        debug!(
+                            wapc_id,
+                            binding,
+                            operation,
+                            ?req,
+                            "Sending request via callback channel"
+                        );
+                        let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                        let req = CallbackRequest {
+                            request: CallbackRequestType::from(req),
+                            response_channel: tx,
+                        };
+                        send_request_and_wait_for_response(
+                            wapc_id, binding, operation, req, rx, &eval_ctx,
+                        )
+                    }
+                    "list_resources_all" => {
+                        let req: ListAllResourcesRequest =
+                            serde_json::from_slice(payload.to_vec().as_ref())?;
+                        if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                            error!(
+                            policy = eval_ctx.policy_id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                            return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                        }
+
+                        debug!(
+                            wapc_id,
+                            binding,
+                            operation,
+                            ?req,
+                            "Sending request via callback channel"
+                        );
+                        let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                        let req = CallbackRequest {
+                            request: CallbackRequestType::from(req),
+                            response_channel: tx,
+                        };
+                        send_request_and_wait_for_response(
+                            wapc_id, binding, operation, req, rx, &eval_ctx,
+                        )
+                    }
+                    "get_resource" => {
+                        let req: GetResourceRequest =
+                            serde_json::from_slice(payload.to_vec().as_ref())?;
+                        if !eval_ctx.can_access_kubernetes_resource(&req.api_version, &req.kind) {
+                            error!(
+                            policy = eval_ctx.policy_id,
+                            resource_requested = format!("{}/{}", req.api_version, req.kind),
+                            resources_allowed = ?eval_ctx.ctx_aware_resources_allow_list,
+                            "Policy tried to access a Kubernetes resource it doesn't have access to");
+                            return Err(format!(
+                                "Policy has not been granted access to Kubernetes {}/{} resources. The violation has been reported.",
+                                req.api_version,
+                                req.kind).into());
+                        }
+
+                        debug!(
+                            wapc_id,
+                            binding,
+                            operation,
+                            ?req,
+                            "Sending request via callback channel"
+                        );
+                        let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                        let req = CallbackRequest {
+                            request: CallbackRequestType::from(req),
+                            response_channel: tx,
+                        };
+                        send_request_and_wait_for_response(
+                            wapc_id, binding, operation, req, rx, &eval_ctx,
+                        )
+                    }
+                    _ => {
+                        error!(namespace, operation, "unknown operation");
+                        Err(format!("unknown operation: {operation}").into())
                     }
                 },
                 _ => {
-                    error!("unknown binding: {}", binding);
-                    Err(format!("unknown binding: {binding}").into())
+                    error!("unknown namespace: {}", namespace);
+                    Err(format!("unknown namespace: {namespace}").into())
                 }
+            },
+            "kubernetes" => match namespace {
+                "ingresses" => {
+                    let req = CallbackRequestType::KubernetesListResourceAll {
+                        api_version: "networking.k8s.io/v1".to_string(),
+                        kind: "Ingress".to_string(),
+                        label_selector: None,
+                        field_selector: None,
+                    };
+
+                    warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: req,
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(
+                        wapc_id, binding, operation, req, rx, &eval_ctx,
+                    )
+                }
+                "namespaces" => {
+                    let req = CallbackRequestType::KubernetesListResourceAll {
+                        api_version: "v1".to_string(),
+                        kind: "Namespace".to_string(),
+                        label_selector: None,
+                        field_selector: None,
+                    };
+
+                    warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: req,
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(
+                        wapc_id, binding, operation, req, rx, &eval_ctx,
+                    )
+                }
+                "services" => {
+                    let req = CallbackRequestType::KubernetesListResourceAll {
+                        api_version: "v1".to_string(),
+                        kind: "Service".to_string(),
+                        label_selector: None,
+                        field_selector: None,
+                    };
+
+                    warn!(wapc_id, ?req, "Usage of deprecated `ClusterContext`");
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: req,
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(
+                        wapc_id, binding, operation, req, rx, &eval_ctx,
+                    )
+                }
+                _ => {
+                    error!("unknown namespace: {}", namespace);
+                    Err(format!("unknown namespace: {namespace}").into())
+                }
+            },
+            _ => {
+                error!("unknown binding: {}", binding);
+                Err(format!("unknown binding: {binding}").into())
             }
         }
     })
