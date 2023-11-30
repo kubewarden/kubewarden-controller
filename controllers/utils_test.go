@@ -23,12 +23,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 
 	. "github.com/onsi/gomega" //nolint:revive
 	"github.com/onsi/gomega/types"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -146,6 +148,15 @@ func getTestMutatingWebhookConfiguration(name string) (*admissionregistrationv1.
 		return nil, errors.Join(errors.New("could not find ValidatingWebhookConfiguration"), err)
 	}
 	return &mutatingWebhookConfiguration, nil
+}
+
+func getTestCASecret() (*corev1.Secret, error) {
+	secret := corev1.Secret{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: constants.PolicyServerCARootSecretName, Namespace: DeploymentsNamespace}, &secret); err != nil {
+		return nil, errors.Join(errors.New("could not find CA secret"), err)
+	}
+
+	return &secret, nil
 }
 
 func alreadyExists() types.GomegaMatcher { //nolint:ireturn
