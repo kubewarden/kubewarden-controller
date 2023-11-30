@@ -1,35 +1,20 @@
 use anyhow::Result;
-use itertools::Itertools;
-use policy_evaluator::callback_requests::CallbackRequest;
-use policy_evaluator::wasmtime;
 use policy_evaluator::{
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
     policy_evaluator::ValidateRequest,
 };
-use std::{collections::HashMap, fmt, time::Instant};
-use tokio::sync::mpsc::{Receiver, Sender};
+use std::{sync::Arc, time::Instant};
+use tokio::sync::mpsc::Receiver;
 use tracing::{error, info, info_span};
 
 use crate::communication::{EvalRequest, RequestOrigin};
-use crate::config::{Policy, PolicyMode};
+use crate::config::PolicyMode;
 use crate::metrics::{self};
-use crate::workers::{precompiled_policy::PrecompiledPolicies, EvaluationEnvironment};
+use crate::workers::EvaluationEnvironment;
 
 pub(crate) struct Worker {
-    evaluation_environment: EvaluationEnvironment,
+    evaluation_environment: Arc<EvaluationEnvironment>,
     channel_rx: Receiver<EvalRequest>,
-}
-
-pub struct PolicyErrors(HashMap<String, String>);
-
-impl fmt::Display for PolicyErrors {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut errors = self
-            .0
-            .iter()
-            .map(|(policy, error)| format!("[{policy}: {error}]"));
-        write!(f, "{}", errors.join(", "))
-    }
 }
 
 impl Worker {
@@ -45,45 +30,13 @@ impl Worker {
         skip_all,
     )]
     pub(crate) fn new(
-        worker_id: u64,
         rx: Receiver<EvalRequest>,
-        policies: &HashMap<String, Policy>,
-        precompiled_policies: &PrecompiledPolicies,
-        engine: wasmtime::Engine,
-        callback_handler_tx: Sender<CallbackRequest>,
-        always_accept_admission_reviews_on_namespace: Option<String>,
-        policy_evaluation_limit_seconds: Option<u64>,
-    ) -> Result<Worker, PolicyErrors> {
-        let mut evs_errors = HashMap::new();
-        let mut evaluation_environment =
-            EvaluationEnvironment::new(worker_id, always_accept_admission_reviews_on_namespace);
-
-        for (id, policy) in policies.iter() {
-            // It's safe to clone the outer engine. This creates a shallow copy
-            let inner_engine = engine.clone();
-            if let Err(e) = evaluation_environment.register(
-                id,
-                policy,
-                &inner_engine,
-                precompiled_policies,
-                callback_handler_tx.clone(),
-                policy_evaluation_limit_seconds,
-            ) {
-                evs_errors.insert(
-                    id.clone(),
-                    format!("[{id}] could not create PolicyEvaluator: {e:?}"),
-                );
-            }
-        }
-
-        if !evs_errors.is_empty() {
-            return Err(PolicyErrors(evs_errors));
-        }
-
-        Ok(Worker {
+        evaluation_environment: Arc<EvaluationEnvironment>,
+    ) -> Self {
+        Worker {
             evaluation_environment,
             channel_rx: rx,
-        })
+        }
     }
 
     // Returns a validation response with policy-server specific
@@ -265,7 +218,7 @@ mod tests {
 
     fn create_evaluation_environment_that_accepts_request(
         policy_mode: PolicyMode,
-    ) -> EvaluationEnvironment {
+    ) -> Arc<EvaluationEnvironment> {
         let mut mock_evaluation_environment = EvaluationEnvironment::default();
         mock_evaluation_environment
             .expect_validate()
@@ -285,7 +238,7 @@ mod tests {
         mock_evaluation_environment
             .expect_should_always_accept_requests_made_inside_of_namespace()
             .returning(|_namespace| false);
-        mock_evaluation_environment
+        Arc::new(mock_evaluation_environment)
     }
 
     #[derive(Clone)]
@@ -298,7 +251,7 @@ mod tests {
         policy_mode: PolicyMode,
         rejection_details: EvaluationEnvironmentRejectionDetails,
         allowed_namespace: String,
-    ) -> EvaluationEnvironment {
+    ) -> Arc<EvaluationEnvironment> {
         let mut mock_evaluation_environment = EvaluationEnvironment::default();
         mock_evaluation_environment
             .expect_validate()
@@ -319,7 +272,7 @@ mod tests {
             .expect_should_always_accept_requests_made_inside_of_namespace()
             .returning(move |namespace| namespace == allowed_namespace);
 
-        mock_evaluation_environment
+        Arc::new(mock_evaluation_environment)
     }
 
     #[test]

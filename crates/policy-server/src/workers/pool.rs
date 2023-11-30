@@ -1,10 +1,7 @@
 use anyhow::{anyhow, Result};
 use core::time;
 use lazy_static::lazy_static;
-use policy_evaluator::{
-    callback_requests::CallbackRequest, evaluation_context::EvaluationContext,
-    policy_evaluator::PolicyEvaluator, policy_evaluator_builder::PolicyEvaluatorBuilder, wasmtime,
-};
+use policy_evaluator::{callback_requests::CallbackRequest, wasmtime};
 use rayon::prelude::*;
 use std::{
     collections::HashMap,
@@ -22,15 +19,11 @@ use tracing::{debug, error, info, warn};
 use crate::communication::{EvalRequest, WorkerPoolBootRequest};
 use crate::config;
 use crate::policy_downloader::FetchedPolicies;
+use crate::workers::EvaluationEnvironment;
 use crate::workers::{
     precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy},
     worker::Worker,
 };
-
-lazy_static! {
-    /// Used to create unique worker IDs
-    static ref WORKER_ID: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
-}
 
 /// Coordinates a set of workers.
 /// Each worker takes care of performing the evaluation of the requests received by Policy Server
@@ -87,10 +80,6 @@ impl WorkerPool {
         // This vector holds all the sender ends of these channels.
         let mut worker_tx_chans = Vec::<mpsc::Sender<EvalRequest>>::new();
 
-        // Each worker has its own `wasmtime::Engine`, we have to keep track of them here because
-        // we have to increase their epoch tick to implement the policy timeout protection feature
-        let mut worker_engines = Vec::<wasmtime::Engine>::new();
-
         // All the join handles of the spawned worker threads
         let mut join_handles = Vec::<JoinHandle<Result<()>>>::new();
 
@@ -106,13 +95,12 @@ impl WorkerPool {
             }
         };
 
-        // To reduce bootstrap time, we will precompile all the WebAssembly
-        // modules we are going to use.
         let mut wasmtime_config = wasmtime::Config::new();
         if self.policy_evaluation_limit_seconds.is_some() {
             wasmtime_config.epoch_interruption(true);
         }
 
+        // We are going to share the same engine across all the workers
         let engine = match wasmtime::Engine::new(&wasmtime_config) {
             Ok(e) => e,
             Err(e) => {
@@ -121,16 +109,31 @@ impl WorkerPool {
             }
         };
 
-        // Use a reference counter to share access to precompiled policies
-        // between workers. This reduces memory usage
-        let precompiled_policies: Arc<PrecompiledPolicies> =
+        let precompiled_policies =
             match precompile_policies(&engine, &bootstrap_data.fetched_policies) {
-                Ok(pp) => Arc::new(pp),
+                Ok(pp) => pp,
                 Err(e) => {
                     eprintln!("{e}");
                     std::process::exit(1);
                 }
             };
+
+        // EvaluationEnvironment instance that is going to be shared across all
+        // the worker threads
+        let evaluation_environment = match EvaluationEnvironment::new(
+            &engine,
+            &bootstrap_data.policies,
+            &precompiled_policies,
+            self.always_accept_admission_reviews_on_namespace,
+            self.policy_evaluation_limit_seconds,
+            self.callback_handler_tx.clone(),
+        ) {
+            Ok(ee) => Arc::new(ee),
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(1);
+            }
+        };
 
         // For each policy defined by the user, ensure the given settings are valid
         // We exit with an error if one or more policies do not have valid
@@ -138,8 +141,7 @@ impl WorkerPool {
         if let Err(error) = verify_policy_settings(
             &engine,
             &bootstrap_data.policies,
-            &precompiled_policies,
-            self.callback_handler_tx.clone(),
+            evaluation_environment.clone(),
             self.policy_evaluation_limit_seconds,
         ) {
             error!(?error, "cannot validate policy settings");
@@ -165,73 +167,17 @@ impl WorkerPool {
             warn!("policy timeout protection is disabled");
         }
 
-        // Use a reference counter to share access to policies
-        // between workers. This reduces memory usage
-        let policies = Arc::new(bootstrap_data.policies);
-
         for n in 1..=pool_size {
             let (tx, rx) = mpsc::channel::<EvalRequest>(32);
             worker_tx_chans.push(tx);
 
-            // Each worker has its own `wasmtime::Engine`, sharing the
-            // same engine across all the workers leads to bad performance
-            // TODO: revisit this statement, it seems this issue has been solved by latest wasmtime
-            // releases
-            let engine = match wasmtime::Engine::new(&wasmtime_config) {
-                Ok(e) => e,
-                Err(e) => {
-                    if bootstrap_data
-                        .resp_chan
-                        .send(Err(anyhow!(
-                            "cannot create wasmtime engine for one of the workers: {}",
-                            e
-                        )))
-                        .is_err()
-                    {
-                        eprint!("cannot create wasmtime engine for one of the workers: {e}");
-                        std::process::exit(1);
-                    };
-                    return;
-                }
-            };
-            // Note well: it's fast and cheap to clone a `wasmtime::Engine` as stated by the
-            // official docs. It's just a reference counter under the hood
-            worker_engines.push(engine.clone());
-
-            let modules = precompiled_policies.clone();
             let b = barrier.clone();
-            let canary = boot_canary.clone();
-            let callback_handler_tx = self.callback_handler_tx.clone();
-            let always_accept_admission_reviews_on_namespace =
-                self.always_accept_admission_reviews_on_namespace.clone();
-            let policies = policies.clone();
+            let inner_evaluation_environment = evaluation_environment.clone();
 
             let join = thread::spawn(move || -> Result<()> {
                 info!(spawned = n, total = pool_size, "spawning worker");
 
-                let worker_id = WORKER_ID.fetch_add(1, Ordering::Relaxed);
-                let mut worker = match Worker::new(
-                    worker_id,
-                    rx,
-                    &policies,
-                    &modules,
-                    engine,
-                    callback_handler_tx,
-                    always_accept_admission_reviews_on_namespace,
-                    self.policy_evaluation_limit_seconds,
-                ) {
-                    Ok(w) => w,
-                    Err(e) => {
-                        error!(error = e.to_string().as_str(), "cannot spawn worker");
-                        canary.store(false, Ordering::SeqCst);
-                        b.wait();
-                        return Err(anyhow!("Worker {} couldn't start: {}", n, e));
-                    }
-                };
-                // Drop the Arc references ASAP, they are no longer needed
-                // at this point
-                drop(policies);
-                drop(modules);
+                let mut worker = Worker::new(rx, inner_evaluation_environment);
                 b.wait();
 
                 debug!(id = n, "worker loop start");
@@ -249,7 +195,6 @@ impl WorkerPool {
         // meaning a lot of memory would have been consumed without a valid reason
         // during the whole execution time
         drop(precompiled_policies);
-        drop(policies);
         barrier.wait();
 
         if !boot_canary.load(Ordering::SeqCst) {
@@ -279,13 +224,12 @@ impl WorkerPool {
             // start a dedicated thread that send tick events to all
             // the workers. This is used by the wasmtime's epoch_interruption
             // to keep track of the execution time of each wasm module
+            let engine_timer_thread = engine.clone();
             thread::spawn(move || {
                 let one_second = time::Duration::from_secs(1);
                 loop {
                     thread::sleep(one_second);
-                    for engine in &worker_engines {
-                        engine.increment_epoch();
-                    }
+                    engine_timer_thread.increment_epoch();
                 }
             });
         }
@@ -302,52 +246,6 @@ impl WorkerPool {
             handle.join().unwrap().unwrap();
         }
     }
-}
-
-pub(crate) fn build_policy_evaluator(
-    policy_id: &str,
-    worker_id: u64,
-    policy: &config::Policy,
-    engine: &wasmtime::Engine,
-    policy_modules: &PrecompiledPolicies,
-    callback_handler_tx: mpsc::Sender<CallbackRequest>,
-    policy_evaluation_limit_seconds: Option<u64>,
-) -> Result<PolicyEvaluator> {
-    let policy_module = policy_modules.get(policy.url.as_str()).ok_or_else(|| {
-        anyhow!(
-            "could not find preoptimized module for policy: {:?}",
-            policy.url
-        )
-    })?;
-
-    // See `wasmtime::Module::deserialize` to know why this method is `unsafe`.
-    // However, in our context, nothing bad will happen because we have
-    // full control of the precompiled module. This is generated by the
-    // WorkerPool thread
-    let module =
-        unsafe { wasmtime::Module::deserialize(engine, &policy_module.precompiled_module) }
-            .map_err(|e| {
-                anyhow!(
-                    "could not rehydrate wasmtime::Module {}: {:?}",
-                    policy.url,
-                    e
-                )
-            })?;
-
-    let mut policy_evaluator_builder =
-        PolicyEvaluatorBuilder::new(policy_id.to_string(), worker_id)
-            .engine(engine.clone())
-            .policy_module(module)
-            .context_aware_resources_allowed(policy.context_aware_resources.clone())
-            .callback_channel(callback_handler_tx)
-            .execution_mode(policy_module.execution_mode);
-
-    if let Some(limit) = policy_evaluation_limit_seconds {
-        policy_evaluator_builder =
-            policy_evaluator_builder.enable_epoch_interruptions(limit, limit);
-    }
-
-    policy_evaluator_builder.build()
 }
 
 fn precompile_policies(
@@ -397,8 +295,7 @@ fn precompile_policies(
 fn verify_policy_settings(
     engine: &wasmtime::Engine,
     policies: &HashMap<String, config::Policy>,
-    policy_modules: &HashMap<String, PrecompiledPolicy>,
-    callback_handler_tx: mpsc::Sender<CallbackRequest>,
+    evaluation_environment: Arc<EvaluationEnvironment>,
     policy_evaluation_limit_seconds: Option<u64>,
 ) -> Result<()> {
     let tick_thread_lock = Arc::new(RwLock::new(true));
@@ -424,39 +321,13 @@ fn verify_policy_settings(
         });
     }
 
-    // We have to create a worker_id because this is what the `PolicyEvaluator` constructor needs.
-    // In this case there's no actual `Worker`, we're going to run all the setting validation Wasm
-    // invocations inside of the thread of `WorkerPool`
-    let worker_id = WORKER_ID.fetch_add(1, Ordering::Relaxed);
     let mut errors = vec![];
-    for (id, policy) in policies.iter() {
-        let mut policy_evaluator = match build_policy_evaluator(
-            id,
-            worker_id,
-            policy,
-            engine,
-            policy_modules,
-            callback_handler_tx.clone(),
-            policy_evaluation_limit_seconds,
-        ) {
-            Ok(pe) => pe,
-            Err(e) => {
-                errors.push(format!("[{id}] cannot create PolicyEvaluator: {e:?}"));
-                continue;
-            }
-        };
-        let eval_ctx = EvaluationContext {
-            policy_id: id.to_owned(),
-            callback_channel: Some(callback_handler_tx.clone()),
-            ctx_aware_resources_allow_list: policy.context_aware_resources.clone(),
-        };
-
-        let set_val_rep = policy_evaluator
-            .validate_settings(&policy.settings_to_json()?.unwrap_or_default(), &eval_ctx);
+    for (policy_id, _policy) in policies.iter() {
+        let set_val_rep = evaluation_environment.validate_settings(policy_id)?;
         if !set_val_rep.valid {
             errors.push(format!(
                 "[{}] settings are not valid: {:?}",
-                id, set_val_rep.message
+                policy_id, set_val_rep.message
             ));
             continue;
         }

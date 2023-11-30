@@ -1,11 +1,16 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::{
-    admission_response::AdmissionResponse, callback_requests::CallbackRequest,
-    evaluation_context::EvaluationContext, policy_evaluator::PolicyEvaluator,
-    policy_evaluator_builder::PolicyEvaluatorBuilder, wasmtime,
+    admission_response::AdmissionResponse,
+    callback_requests::CallbackRequest,
+    evaluation_context::EvaluationContext,
+    kubewarden_policy_sdk::settings::SettingsValidationResponse,
+    policy_evaluator::{PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode},
+    policy_evaluator_builder::PolicyEvaluatorBuilder,
+    wasmtime,
 };
 use std::collections::HashMap;
 use tokio::sync::mpsc;
+use tracing::debug;
 
 use crate::communication::EvalRequest;
 use crate::config::PolicyMode;
@@ -21,32 +26,30 @@ use mockall::automock;
 /// It also provides helper methods to perform the validation of a request and the validation
 /// of the settings provided by the user.
 ///
-/// Each worker has its own dedicated instance of this structure.
-/// At the worker level, the ultimate goal is to avoid duplicated instances of `PolicyEvaluator`.
-/// That means that, given two or more identical Wasm modules, only one `PolicyEvaluator`
-/// should be created. This is required to avoid a waste of memory by the Policy Server
-/// process.
+/// This is an immutable structure that can be safely shared across different threads once wrapped
+/// inside of a `Arc`.
 ///
-/// Note: the `PolicyEvaluator` instances will still be duplicated across each worker. This is
-/// something we have to deal with.
+/// When performing a `validate` or `validate_settings` operation, a new WebAssembly environment is
+/// created and used to perform the operation. The environment is then discarded once the
+/// evaluation is over.
+/// This ensures:
+/// - no memory leaks caused by bogus policies affect the Policy Server long running process
+/// - no data is shared between evaluations of the same module
+///
+/// To reduce the creation time, this code makes use of `PolicyEvaluatorPre` which are created
+/// only once, during the bootstrap phase.
 #[derive(Default)]
 #[cfg_attr(test, allow(dead_code))]
 pub(crate) struct EvaluationEnvironment {
-    /// Unique ID of the worker
-    worker_id: u64,
-
     /// The name of the Namespace where Policy Server doesn't operate. All the requests
     /// involving this Namespace are going to be accepted. This is usually done to prevent user
     /// policies from messing with the components of the Kubewarden stack (which are all
     /// deployed inside of the same Namespace).
     always_accept_admission_reviews_on_namespace: Option<String>,
 
-    /// A map with the unique ID of a Wasm module as key, and the associated `PolicyEvaluator`
-    /// instance as value.
-    /// Currently we the `module_id` is obtained by computing the sha255 digest of the
-    /// optimized Wasm module.
-    /// This dictionary allows us to reduce by amount of memory consumed by Policy Server.
-    module_id_to_evaluator: HashMap<String, PolicyEvaluator>,
+    /// A map with the module digest as key, and the associated `PolicyEvaluatorPre`
+    /// as value
+    module_digest_to_policy_evaluator_pre: HashMap<String, PolicyEvaluatorPre>,
 
     /// A map with the ID of the policy as value, and the associated `EvaluationContext` as
     /// value.
@@ -55,8 +58,8 @@ pub(crate) struct EvaluationEnvironment {
     policy_id_to_eval_ctx: HashMap<String, EvaluationContext>,
 
     /// Map a `policy_id` (the name given by the user inside of `policies.yml`) to the
-    /// `module_id`. This allows us to deduplicate the Wasm modules defined by the user.
-    policy_id_to_module_id: HashMap<String, String>,
+    /// module's digest. This allows us to deduplicate the Wasm modules defined by the user.
+    policy_id_to_module_digest: HashMap<String, String>,
 
     /// Map a `policy_id` to the `PolicyEvaluationSettings` instance. This allows us to obtain
     /// the list of settings to be used when evaluating a given policy.
@@ -68,14 +71,34 @@ pub(crate) struct EvaluationEnvironment {
 impl EvaluationEnvironment {
     /// Creates a new `EvaluationEnvironment`
     pub(crate) fn new(
-        worker_id: u64,
+        engine: &wasmtime::Engine,
+        policies: &HashMap<String, crate::config::Policy>,
+        precompiled_policies: &PrecompiledPolicies,
         always_accept_admission_reviews_on_namespace: Option<String>,
-    ) -> Self {
-        Self {
-            worker_id,
+        policy_evaluation_limit_seconds: Option<u64>,
+        callback_handler_tx: mpsc::Sender<CallbackRequest>,
+    ) -> Result<Self> {
+        let mut eval_env = Self {
             always_accept_admission_reviews_on_namespace,
             ..Default::default()
+        };
+
+        for (policy_id, policy) in policies {
+            let precompiled_policy = precompiled_policies
+                .get(&policy.url)
+                .ok_or_else(|| anyhow!("cannot find policy settings of {}", policy_id))?;
+
+            eval_env.register(
+                engine,
+                policy_id,
+                precompiled_policy,
+                policy,
+                callback_handler_tx.clone(),
+                policy_evaluation_limit_seconds,
+            )?;
         }
+
+        Ok(eval_env)
     }
 
     /// Returns `true` if the given `namespace` is the special Namespace that is ignored by all
@@ -90,49 +113,47 @@ impl EvaluationEnvironment {
     /// Register a new policy. It takes care of creating a new `PolicyEvaluator` (when needed).
     ///
     /// Params:
+    /// - `engine`: the `wasmtime::Engine` to be used when creating the `PolicyEvaluator`
     /// - `policy_id`: the ID of the policy, as specified inside of the `policies.yml` by the
     ///    user
+    /// - `precompiled_policy`: the `PrecompiledPolicy` associated with the Wasm module referenced
+    ///    by the policy
     /// - `policy`: a data structure that maps all the information defined inside of
     ///    `policies.yml` for the given policy
-    /// - `engine`: the `wasmtime::Engine` to be used when creating the `PolicyEvaluator`
-    /// - `policy_modules`: all the `wasmtime::Module` precompiled for the current
-    ///    OS/architecture
     /// - `callback_handler_tx`: the transmission end of a channel that connects the worker
     ///   with the asynchronous world
     /// - `policy_evaluation_limit_seconds`: when set, defines after how many seconds the
     ///   policy evaluation is interrupted
-    pub(crate) fn register(
+    fn register(
         &mut self,
-        policy_id: &str,
-        policy: &crate::config::Policy,
         engine: &wasmtime::Engine,
-        policy_modules: &PrecompiledPolicies,
+        policy_id: &str,
+        precompiled_policy: &PrecompiledPolicy,
+        policy: &crate::config::Policy,
         callback_handler_tx: mpsc::Sender<CallbackRequest>,
         policy_evaluation_limit_seconds: Option<u64>,
     ) -> Result<()> {
-        let precompiled_policy = policy_modules.get(policy.url.as_str()).ok_or_else(|| {
-            anyhow!(
-                "could not find preoptimized module for policy: {:?}",
-                policy.url
-            )
-        })?;
-        let module_id = precompiled_policy.digest.clone();
+        let module_digest = &precompiled_policy.digest;
 
-        if !self.module_id_to_evaluator.contains_key(&module_id) {
-            let evaluator = create_policy_evaluator(
-                policy_id,
-                self.worker_id,
-                policy,
+        if !self
+            .module_digest_to_policy_evaluator_pre
+            .contains_key(module_digest)
+        {
+            debug!(policy_id = policy.url, "create wasmtime::Module");
+            let module = create_wasmtime_module(&policy.url, engine, precompiled_policy)?;
+            debug!(policy_id = policy.url, "create PolicyEvaluatorPre");
+            let pol_eval_pre = create_policy_evaluator_pre(
                 engine,
-                precompiled_policy,
-                callback_handler_tx.clone(),
+                &module,
+                precompiled_policy.execution_mode,
                 policy_evaluation_limit_seconds,
             )?;
-            self.module_id_to_evaluator
-                .insert(module_id.clone(), evaluator);
+
+            self.module_digest_to_policy_evaluator_pre
+                .insert(module_digest.to_owned(), pol_eval_pre);
         }
-        self.policy_id_to_module_id
-            .insert(policy_id.to_owned(), module_id);
+        self.policy_id_to_module_digest
+            .insert(policy_id.to_owned(), module_digest.to_owned());
 
         let policy_eval_settings = PolicyEvaluationSettings {
             policy_mode: policy.policy_mode.clone(),
@@ -169,22 +190,13 @@ impl EvaluationEnvironment {
             .ok_or(anyhow!("cannot find policy with ID {policy_id}"))
     }
 
-    /// Given a policy ID and a request to be processed, uses the `PolicyEvaluator` to perform
-    /// a validation operation.
-    pub fn validate(&mut self, policy_id: &str, req: &EvalRequest) -> Result<AdmissionResponse> {
+    /// Perform a request validation
+    pub fn validate(&self, policy_id: &str, req: &EvalRequest) -> Result<AdmissionResponse> {
         let settings = self.policy_id_to_settings.get(policy_id).ok_or(anyhow!(
             "cannot find settings for policy with ID {policy_id}"
         ))?;
 
-        let module_id = self.policy_id_to_module_id.get(policy_id).ok_or(anyhow!(
-            "cannot find module_id for policy with ID {policy_id}"
-        ))?;
-        let evaluator = self
-            .module_id_to_evaluator
-            .get_mut(module_id)
-            .ok_or(anyhow!(
-                "cannot find evaluator for policy with ID {policy_id}"
-            ))?;
+        let mut evaluator = self.rehydrate(policy_id)?;
 
         let eval_ctx = self.policy_id_to_eval_ctx.get(policy_id).ok_or(anyhow!(
             "cannot find evaluation context for policy with ID {policy_id}"
@@ -192,46 +204,72 @@ impl EvaluationEnvironment {
 
         Ok(evaluator.validate(req.req.clone(), &settings.settings, eval_ctx))
     }
+
+    /// Validate the settings the user provided for the given policy
+    pub fn validate_settings(&self, policy_id: &str) -> Result<SettingsValidationResponse> {
+        let settings = self.policy_id_to_settings.get(policy_id).ok_or(anyhow!(
+            "cannot find settings for policy with ID {policy_id}"
+        ))?;
+
+        let mut evaluator = self.rehydrate(policy_id)?;
+
+        Ok(evaluator.validate_settings(&settings.settings))
+    }
+
+    /// Internal method, create a `PolicyEvaluator` by using a pre-initialized instance
+    fn rehydrate(&self, policy_id: &str) -> Result<PolicyEvaluator> {
+        let module_digest = self
+            .policy_id_to_module_digest
+            .get(policy_id)
+            .ok_or(anyhow!(
+                "cannot find module_digest for policy with ID {policy_id}"
+            ))?;
+        let policy_evaluator_pre = self
+            .module_digest_to_policy_evaluator_pre
+            .get(module_digest)
+            .ok_or(anyhow!(
+                "cannot find PolicyEvaluatorPre for policy with ID {policy_id}"
+            ))?;
+
+        let eval_ctx = self.policy_id_to_eval_ctx.get(policy_id).ok_or(anyhow!(
+            "cannot find evaluation context for policy with ID {policy_id}"
+        ))?;
+
+        policy_evaluator_pre.rehydrate(eval_ctx)
+    }
 }
 
-/// Internal function, takes care of creating the `PolicyEvaluator` instance for the given policy
-fn create_policy_evaluator(
-    policy_id: &str,
-    worker_id: u64,
-    policy: &crate::config::Policy,
+fn create_wasmtime_module(
+    policy_url: &str,
     engine: &wasmtime::Engine,
     precompiled_policy: &PrecompiledPolicy,
-    callback_handler_tx: mpsc::Sender<CallbackRequest>,
-    policy_evaluation_limit_seconds: Option<u64>,
-) -> Result<PolicyEvaluator> {
+) -> Result<wasmtime::Module> {
     // See `wasmtime::Module::deserialize` to know why this method is `unsafe`.
     // However, in our context, nothing bad will happen because we have
     // full control of the precompiled module. This is generated by the
     // WorkerPool thread
-    let module =
-        unsafe { wasmtime::Module::deserialize(engine, &precompiled_policy.precompiled_module) }
-            .map_err(|e| {
-                anyhow!(
-                    "could not rehydrate wasmtime::Module {}: {:?}",
-                    policy.url,
-                    e
-                )
-            })?;
+    unsafe { wasmtime::Module::deserialize(engine, &precompiled_policy.precompiled_module) }
+        .map_err(|e| anyhow!("could not rehydrate wasmtime::Module {policy_url}: {e:?}"))
+}
 
-    let mut policy_evaluator_builder =
-        PolicyEvaluatorBuilder::new(policy_id.to_string(), worker_id)
-            .engine(engine.clone())
-            .policy_module(module)
-            .context_aware_resources_allowed(policy.context_aware_resources.clone())
-            .callback_channel(callback_handler_tx)
-            .execution_mode(precompiled_policy.execution_mode);
+/// Internal function, takes care of creating the `PolicyEvaluator` instance for the given policy
+fn create_policy_evaluator_pre(
+    engine: &wasmtime::Engine,
+    module: &wasmtime::Module,
+    mode: PolicyExecutionMode,
+    policy_evaluation_limit_seconds: Option<u64>,
+) -> Result<PolicyEvaluatorPre> {
+    let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new()
+        .engine(engine.to_owned())
+        .policy_module(module.to_owned())
+        .execution_mode(mode);
 
     if let Some(limit) = policy_evaluation_limit_seconds {
         policy_evaluator_builder =
             policy_evaluator_builder.enable_epoch_interruptions(limit, limit);
     }
 
-    policy_evaluator_builder.build()
+    policy_evaluator_builder.build_pre()
 }
 
 #[cfg(test)]
@@ -257,37 +295,39 @@ mod tests {
             digest: "unique-digest".to_string(),
         };
 
-        let mut policies = HashMap::new();
-        let mut policy_modules = HashMap::new();
+        let mut policies: HashMap<String, crate::config::Policy> = HashMap::new();
+        let mut precompiled_policies: PrecompiledPolicies = PrecompiledPolicies::new();
 
         for policy_id in &policy_ids {
+            let policy_url = format!("file:///tmp/{policy_id}.wasm");
             policies.insert(
-                policy_id.to_owned(),
+                policy_id.to_string(),
                 Policy {
-                    url: policy_id.to_string(),
+                    url: policy_url.clone(),
                     policy_mode: PolicyMode::Protect,
                     allowed_to_mutate: None,
                     settings: None,
                     context_aware_resources: BTreeSet::new(),
                 },
             );
-            policy_modules.insert(policy_id.to_string(), precompiled_policy.clone());
+            precompiled_policies.insert(policy_url, precompiled_policy.clone());
         }
 
-        let mut evaluation_environment = EvaluationEnvironment::new(0, None);
-        for policy_id in policy_ids {
+        let evaluation_environment = EvaluationEnvironment::new(
+            &engine,
+            &policies,
+            &precompiled_policies,
+            None,
+            None,
+            callback_handler_tx,
+        )
+        .unwrap();
+
+        assert_eq!(
             evaluation_environment
-                .register(
-                    policy_id,
-                    &policies[policy_id],
-                    &engine,
-                    &policy_modules,
-                    callback_handler_tx.clone(),
-                    None,
-                )
-                .unwrap();
-        }
-
-        assert_eq!(evaluation_environment.module_id_to_evaluator.len(), 1);
+                .module_digest_to_policy_evaluator_pre
+                .len(),
+            1
+        );
     }
 }
