@@ -45,35 +45,35 @@ type ClusterAdmissionPolicySpec struct {
 	// associated with "runlevel" of "0" or "1";  you will set the selector as
 	// follows:
 	// <pre>
-	// "namespaceSelector": {<br/>
+	// "namespaceSelector": \{<br/>
 	// &nbsp;&nbsp;"matchExpressions": [<br/>
-	// &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+	// &nbsp;&nbsp;&nbsp;&nbsp;\{<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key": "runlevel",<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator": "NotIn",<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"0",<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"1"<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/>
-	// &nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+	// &nbsp;&nbsp;&nbsp;&nbsp;\}<br/>
 	// &nbsp;&nbsp;]<br/>
-	// }
+	// \}
 	// </pre>
 	// If instead you want to only run the webhook on any objects whose
 	// namespace is associated with the "environment" of "prod" or "staging";
 	// you will set the selector as follows:
 	// <pre>
-	// "namespaceSelector": {<br/>
+	// "namespaceSelector": \{<br/>
 	// &nbsp;&nbsp;"matchExpressions": [<br/>
-	// &nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+	// &nbsp;&nbsp;&nbsp;&nbsp;\{<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key": "environment",<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator": "In",<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"prod",<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"staging"<br/>
 	// &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/>
-	// &nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+	// &nbsp;&nbsp;&nbsp;&nbsp;\}<br/>
 	// &nbsp;&nbsp;]<br/>
-	// }
+	// \}
 	// </pre>
 	// See
 	// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
