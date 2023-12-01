@@ -7,5 +7,5 @@ Being able to assess the kind of organizations who adopt Kubewarden is important
 
 # Organization
 
-* [Suse](http://www.suse.com/)
+* [SUSE](http://www.suse.com/)
 * [Foresight Mining software Corporation](https://www.foresightmining.com/)
