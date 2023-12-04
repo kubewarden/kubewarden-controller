@@ -1,12 +1,204 @@
 use anyhow::{anyhow, Result};
 
+use clap::ArgMatches;
+use lazy_static::lazy_static;
+use policy_evaluator::policy_fetcher::sources::{read_sources_file, Sources};
+use policy_evaluator::policy_fetcher::verify::config::{
+    read_verification_file, LatestVerificationConfig, VerificationConfigV1,
+};
 use policy_evaluator::policy_metadata::ContextAwareResource;
 use serde::Deserialize;
 use serde_yaml::Value;
 use std::collections::{BTreeSet, HashMap};
+use std::env;
 use std::fs::File;
 use std::iter::FromIterator;
-use std::path::Path;
+use std::net::SocketAddr;
+use std::path::{Path, PathBuf};
+
+pub static SERVICE_NAME: &str = "kubewarden-policy-server";
+const DOCKER_CONFIG_ENV_VAR: &str = "DOCKER_CONFIG";
+
+lazy_static! {
+    pub(crate) static ref HOSTNAME: String =
+        std::env::var("HOSTNAME").unwrap_or_else(|_| String::from("unknown"));
+}
+
+pub struct Config {
+    pub addr: SocketAddr,
+    pub sources: Option<Sources>,
+    pub policies: HashMap<String, Policy>,
+    pub policies_download_dir: PathBuf,
+    pub ignore_kubernetes_connection_failure: bool,
+    pub always_accept_admission_reviews_on_namespace: Option<String>,
+    pub policy_evaluation_limit: Option<u64>,
+    pub tls_config: Option<TlsConfig>,
+    pub pool_size: usize,
+    pub metrics_enabled: bool,
+    pub sigstore_cache_dir: PathBuf,
+    pub verification_config: Option<VerificationConfigV1>,
+    pub log_level: String,
+    pub log_fmt: String,
+    pub log_no_color: bool,
+    pub daemon: bool,
+    pub daemon_pid_file: String,
+    pub daemon_stdout_file: Option<String>,
+    pub daemon_stderr_file: Option<String>,
+}
+
+pub struct TlsConfig {
+    pub cert_file: String,
+    pub key_file: String,
+}
+
+impl Config {
+    pub fn from_args(matches: &ArgMatches) -> Result<Self> {
+        // init some variables based on the cli parameters
+        let addr = api_bind_address(matches)?;
+
+        let policies = policies(matches)?;
+        let policies_download_dir = matches
+            .get_one::<String>("policies-download-dir")
+            .map(PathBuf::from)
+            .expect("This should not happen, there's a default value for policies-download-dir");
+        let policy_evaluation_limit = if matches.contains_id("disable-timeout-protection") {
+            None
+        } else {
+            Some(
+                matches
+                    .get_one::<String>("policy-timeout")
+                    .expect("policy-timeout should always be set")
+                    .parse::<u64>()?,
+            )
+        };
+        let sources = remote_server_options(matches)?;
+        let pool_size = matches
+            .get_one::<String>("workers")
+            .map_or_else(num_cpus::get, |v| {
+                v.parse::<usize>()
+                    .expect("error parsing the number of workers")
+            });
+        let always_accept_admission_reviews_on_namespace = matches
+            .get_one::<String>("always-accept-admission-reviews-on-namespace")
+            .map(|s| s.to_owned());
+
+        let metrics_enabled = matches.contains_id("enable-metrics");
+        let ignore_kubernetes_connection_failure =
+            matches.contains_id("ignore-kubernetes-connection-failure");
+        let verification_config = verification_config(matches)?;
+        let sigstore_cache_dir = matches
+            .get_one::<String>("sigstore-cache-dir")
+            .map(PathBuf::from)
+            .expect("This should not happen, there's a default value for sigstore-cache-dir");
+
+        let daemon = matches.contains_id("daemon");
+        let daemon_pid_file = matches
+            .get_one::<String>("daemon-pid-file")
+            .expect("This should not happen, there's a default value for daemon-pid-file")
+            .to_owned();
+        let daemon_stdout_file = matches.get_one::<String>("daemon-stdout-file").cloned();
+        let daemon_stderr_file = matches.get_one::<String>("daemon-stderr-file").cloned();
+
+        let log_level = matches
+            .get_one::<String>("log-level")
+            .expect("This should not happen, there's a default value for log-level")
+            .to_owned();
+        let log_fmt = matches
+            .get_one::<String>("log-fmt")
+            .expect("This should not happen, there's a default value for log-fmt")
+            .to_owned();
+        let log_no_color = matches.contains_id("log-no-color");
+        let (cert_file, key_file) = tls_files(matches)?;
+        let tls_config = if cert_file.is_empty() {
+            None
+        } else {
+            Some(TlsConfig {
+                cert_file,
+                key_file,
+            })
+        };
+
+        Ok(Self {
+            addr,
+            sources,
+            policies,
+            policies_download_dir,
+            ignore_kubernetes_connection_failure,
+            tls_config,
+            always_accept_admission_reviews_on_namespace,
+            policy_evaluation_limit,
+            pool_size,
+            metrics_enabled,
+            sigstore_cache_dir,
+            verification_config,
+            log_level,
+            log_fmt,
+            log_no_color,
+            daemon,
+            daemon_pid_file,
+            daemon_stdout_file,
+            daemon_stderr_file,
+        })
+    }
+}
+
+fn api_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr> {
+    format!(
+        "{}:{}",
+        matches.get_one::<String>("address").unwrap(),
+        matches.get_one::<String>("port").unwrap()
+    )
+    .parse()
+    .map_err(|e| anyhow!("error parsing arguments: {}", e))
+}
+
+fn tls_files(matches: &clap::ArgMatches) -> Result<(String, String)> {
+    let cert_file = matches.get_one::<String>("cert-file").unwrap().to_owned();
+    let key_file = matches.get_one::<String>("key-file").unwrap().to_owned();
+    if cert_file.is_empty() != key_file.is_empty() {
+        Err(anyhow!("error parsing arguments: either both --cert-file and --key-file must be provided, or neither"))
+    } else {
+        Ok((cert_file, key_file))
+    }
+}
+
+fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Policy>> {
+    let policies_file = Path::new(matches.get_one::<String>("policies").unwrap());
+    read_policies_file(policies_file).map_err(|e| {
+        anyhow!(
+            "error while loading policies from {:?}: {}",
+            policies_file,
+            e
+        )
+    })
+}
+
+fn verification_config(matches: &clap::ArgMatches) -> Result<Option<LatestVerificationConfig>> {
+    match matches.get_one::<String>("verification-path") {
+        None => Ok(None),
+        Some(path) => {
+            let verification_file = Path::new(path);
+            Ok(Some(read_verification_file(verification_file)?))
+        }
+    }
+}
+
+fn remote_server_options(matches: &clap::ArgMatches) -> Result<Option<Sources>> {
+    let sources = match matches.get_one::<String>("sources-path") {
+        Some(sources_file) => Some(
+            read_sources_file(Path::new(sources_file))
+                .map_err(|e| anyhow!("error while loading sources from {}: {}", sources_file, e))?,
+        ),
+        None => None,
+    };
+
+    if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
+        // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility
+        env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
+    }
+
+    Ok(sources)
+}
 
 #[derive(Deserialize, Debug, Clone, Default)]
 pub enum PolicyMode {
@@ -87,7 +279,7 @@ fn convert_yaml_map_to_json(
 /// and Policy as values. The key is the name of the policy as provided by the user
 /// inside of the configuration file. This name is used to build the API path
 /// exposing the policy.
-pub fn read_policies_file(path: &Path) -> Result<HashMap<String, Policy>> {
+fn read_policies_file(path: &Path) -> Result<HashMap<String, Policy>> {
     let settings_file = File::open(path)?;
     let ps: HashMap<String, Policy> = serde_yaml::from_reader(&settings_file)?;
     Ok(ps)

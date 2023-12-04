@@ -25,9 +25,12 @@ use std::{
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info, warn};
 
-use crate::communication::{EvalRequest, WorkerPoolBootRequest};
 use crate::policy_downloader::FetchedPolicies;
 use crate::worker::Worker;
+use crate::{
+    communication::{EvalRequest, WorkerPoolBootRequest},
+    config,
+};
 
 lazy_static! {
     static ref KUBEWARDEN_VERSION: Version = {
@@ -338,7 +341,7 @@ impl WorkerPool {
 
 pub(crate) fn build_policy_evaluator(
     policy_id: &str,
-    policy: &crate::settings::Policy,
+    policy: &config::Policy,
     engine: &wasmtime::Engine,
     policy_modules: &PrecompiledPolicies,
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
@@ -426,7 +429,7 @@ fn precompile_policies(
 
 fn verify_policy_settings(
     engine: &wasmtime::Engine,
-    policies: &HashMap<String, crate::settings::Policy>,
+    policies: &HashMap<String, config::Policy>,
     policy_modules: &HashMap<String, PrecompiledPolicy>,
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
     policy_evaluation_limit_seconds: Option<u64>,

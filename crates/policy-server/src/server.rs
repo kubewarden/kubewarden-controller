@@ -1,12 +1,7 @@
 use std::net::SocketAddr;
 use tokio::sync::mpsc::Sender;
 
-use crate::communication::EvalRequest;
-
-pub(crate) struct TlsConfig {
-    pub cert_file: String,
-    pub key_file: String,
-}
+use crate::{communication::EvalRequest, config::TlsConfig};
 
 pub(crate) async fn run_server(
     addr: &SocketAddr,
