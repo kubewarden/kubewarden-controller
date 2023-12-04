@@ -28,7 +28,7 @@ kube = { version = "0.87.1", default-features = false, features = [
 ] }
 kubewarden-policy-sdk = "0.9.8"
 lazy_static = "1.4"
-mail-parser = { version = "0.9.1", features = ["serde"] }
+mail-parser = { version = "0.9.2", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
   "x509",
