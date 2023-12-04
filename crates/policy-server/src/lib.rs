@@ -1,8 +1,15 @@
-extern crate k8s_openapi;
-extern crate policy_evaluator;
+mod admission_review;
+mod api;
+mod communication;
+pub mod config;
+mod metrics;
+mod policy_downloader;
+mod raw_review;
+mod server;
+mod worker;
+mod worker_pool;
 
 use anyhow::{anyhow, Result};
-use config::Config;
 use lazy_static::lazy_static;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::policy_fetcher::sigstore;
@@ -15,22 +22,10 @@ use tracing::{debug, error, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
-mod admission_review;
-mod api;
-pub mod config;
-mod metrics;
-mod raw_review;
-mod server;
-mod worker;
-
-mod policy_downloader;
-use policy_downloader::Downloader;
-
-mod worker_pool;
-use worker_pool::WorkerPool;
-
-mod communication;
 use communication::{EvalRequest, WorkerPoolBootRequest};
+use config::Config;
+use policy_downloader::Downloader;
+use worker_pool::WorkerPool;
 
 lazy_static! {
     static ref TRACE_SYSTEM_INITIALIZED: RwLock<bool> = RwLock::new(false);
