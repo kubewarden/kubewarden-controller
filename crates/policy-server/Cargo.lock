@@ -3393,6 +3393,7 @@ dependencies = [
  "policy-evaluator",
  "procfs",
  "rayon",
+ "reqwest",
  "rstest",
  "semver",
  "serde",
