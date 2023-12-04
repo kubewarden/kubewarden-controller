@@ -71,3 +71,4 @@ k8s-openapi = { version = "0.20.0", default-features = false, features = [
 ] }
 rstest = "0.18"
 test-context = "0.1"
+tempfile = "3.8.1"
