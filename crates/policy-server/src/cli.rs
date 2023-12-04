@@ -1,20 +1,8 @@
-use crate::settings::{read_policies_file, Policy};
-use anyhow::{anyhow, Result};
 use clap::builder::PossibleValue;
 use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego;
-use policy_evaluator::policy_fetcher::{
-    sources::{read_sources_file, Sources},
-    verify::config::{read_verification_file, LatestVerificationConfig},
-};
-use std::{collections::HashMap, env, net::SocketAddr, path::Path};
-use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt, EnvFilter};
-
-static SERVICE_NAME: &str = "kubewarden-policy-server";
-const DOCKER_CONFIG_ENV_VAR: &str = "DOCKER_CONFIG";
 
 lazy_static! {
     static ref VERSION_AND_BUILTINS: String = {
@@ -30,8 +18,6 @@ lazy_static! {
             builtins,
         )
     };
-    pub(crate) static ref HOSTNAME: String =
-        std::env::var("HOSTNAME").unwrap_or_else(|_| String::from("unknown"));
 }
 
 pub(crate) fn build_cli() -> Command {
@@ -231,125 +217,4 @@ pub(crate) fn build_cli() -> Command {
                 .help("Do not exit with an error if the Kubernetes connection fails. This will cause context aware policies to break when there's no connection with Kubernetes."),
         )
         .long_version(VERSION_AND_BUILTINS.as_str())
-}
-
-pub(crate) fn api_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr> {
-    format!(
-        "{}:{}",
-        matches.get_one::<String>("address").unwrap(),
-        matches.get_one::<String>("port").unwrap()
-    )
-    .parse()
-    .map_err(|e| anyhow!("error parsing arguments: {}", e))
-}
-
-pub(crate) fn tls_files(matches: &clap::ArgMatches) -> Result<(String, String)> {
-    let cert_file = matches.get_one::<String>("cert-file").unwrap().to_owned();
-    let key_file = matches.get_one::<String>("key-file").unwrap().to_owned();
-    if cert_file.is_empty() != key_file.is_empty() {
-        Err(anyhow!("error parsing arguments: either both --cert-file and --key-file must be provided, or neither"))
-    } else {
-        Ok((cert_file, key_file))
-    }
-}
-
-pub(crate) fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, Policy>> {
-    let policies_file = Path::new(matches.get_one::<String>("policies").unwrap());
-    read_policies_file(policies_file).map_err(|e| {
-        anyhow!(
-            "error while loading policies from {:?}: {}",
-            policies_file,
-            e
-        )
-    })
-}
-
-pub(crate) fn verification_config(
-    matches: &clap::ArgMatches,
-) -> Result<Option<LatestVerificationConfig>> {
-    match matches.get_one::<String>("verification-path") {
-        None => Ok(None),
-        Some(path) => {
-            let verification_file = Path::new(path);
-            Ok(Some(read_verification_file(verification_file)?))
-        }
-    }
-}
-
-// Setup the tracing system. This MUST be done inside of a tokio Runtime
-// because some collectors rely on it and would panic otherwise.
-pub(crate) fn setup_tracing(matches: &clap::ArgMatches) -> Result<()> {
-    // setup logging
-    let filter_layer = EnvFilter::new(matches.get_one::<String>("log-level").unwrap())
-        // some of our dependencies generate trace events too, but we don't care about them ->
-        // let's filter them
-        .add_directive("cranelift_codegen=off".parse().unwrap())
-        .add_directive("cranelift_wasm=off".parse().unwrap())
-        .add_directive("h2=off".parse().unwrap())
-        .add_directive("hyper=off".parse().unwrap())
-        .add_directive("regalloc=off".parse().unwrap())
-        .add_directive("tower=off".parse().unwrap())
-        .add_directive("wasmtime_cranelift=off".parse().unwrap())
-        .add_directive("wasmtime_jit=off".parse().unwrap());
-
-    match matches.get_one::<String>("log-fmt").unwrap().as_str() {
-        "json" => tracing_subscriber::registry()
-            .with(filter_layer)
-            .with(fmt::layer().json())
-            .init(),
-        "text" => {
-            let enable_color = !matches.contains_id("log-no-color");
-            let layer = fmt::layer().with_ansi(enable_color);
-
-            tracing_subscriber::registry()
-                .with(filter_layer)
-                .with(layer)
-                .init()
-        }
-        "otlp" => {
-            // Create a new OpenTelemetry pipeline sending events to a
-            // OpenTelemetry collector using the OTLP format.
-            // The collector must run on localhost (eg: use a sidecar inside of k8s)
-            // using GRPC
-            let tracer = opentelemetry_otlp::new_pipeline()
-                .tracing()
-                .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-                .with_trace_config(opentelemetry_sdk::trace::config().with_resource(
-                    opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
-                        "service.name",
-                        SERVICE_NAME,
-                    )]),
-                ))
-                .install_batch(opentelemetry_sdk::runtime::Tokio)?;
-
-            // Create a tracing layer with the configured tracer
-            let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-            tracing_subscriber::registry()
-                .with(filter_layer)
-                .with(telemetry)
-                .with(fmt::layer())
-                .init()
-        }
-
-        _ => return Err(anyhow!("Unknown log message format")),
-    };
-
-    Ok(())
-}
-
-pub(crate) fn remote_server_options(matches: &clap::ArgMatches) -> Result<Option<Sources>> {
-    let sources = match matches.get_one::<String>("sources-path") {
-        Some(sources_file) => Some(
-            read_sources_file(Path::new(sources_file))
-                .map_err(|e| anyhow!("error while loading sources from {}: {}", sources_file, e))?,
-        ),
-        None => None,
-    };
-
-    if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
-        // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility
-        env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
-    }
-
-    Ok(sources)
 }
