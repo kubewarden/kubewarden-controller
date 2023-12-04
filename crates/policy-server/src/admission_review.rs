@@ -3,7 +3,7 @@ use policy_evaluator::admission_response::AdmissionResponse;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct AdmissionReview {
+pub struct AdmissionReview {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
 

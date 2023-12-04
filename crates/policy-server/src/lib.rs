@@ -1,13 +1,14 @@
-mod admission_review;
 mod api;
 mod communication;
-pub mod config;
 mod metrics;
 mod policy_downloader;
-mod raw_review;
 mod server;
 mod worker;
 mod worker_pool;
+
+pub mod admission_review;
+pub mod config;
+pub mod raw_review;
 
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
