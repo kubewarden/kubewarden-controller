@@ -5,8 +5,8 @@ use policy_evaluator::policy_evaluator::ValidateRequest;
 use std::collections::HashMap;
 use tokio::sync::oneshot;
 
+use crate::config::Policy;
 use crate::policy_downloader::FetchedPolicies;
-use crate::settings::Policy;
 
 #[derive(Debug, Clone)]
 pub(crate) enum RequestOrigin {

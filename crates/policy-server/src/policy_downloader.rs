@@ -8,6 +8,7 @@ use policy_evaluator::{
         verify::{config::LatestVerificationConfig, FulcioAndRekorData, Verifier},
     },
 };
+use std::path::Path;
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -16,7 +17,7 @@ use std::{
 use tokio::task::spawn_blocking;
 use tracing::{debug, info};
 
-use crate::settings::Policy;
+use crate::config::Policy;
 
 /// A Map with the `policy.url` as key,
 /// and a `PathBuf` as value. The `PathBuf` points to the location where
@@ -59,12 +60,15 @@ impl Downloader {
     pub async fn download_policies(
         &mut self,
         policies: &HashMap<String, Policy>,
-        destination: &str,
+        destination: impl AsRef<Path>,
         verification_config: Option<&LatestVerificationConfig>,
     ) -> Result<FetchedPolicies> {
         let policies_total = policies.len();
         info!(
-            download_dir = destination,
+            download_dir = destination
+                .as_ref()
+                .to_str()
+                .expect("cannot convert path to string"),
             policies_count = policies_total,
             status = "init",
             "policies download",
@@ -128,7 +132,7 @@ impl Downloader {
 
             let fetched_policy = policy_fetcher::fetch_policy(
                 &policy.url,
-                policy_fetcher::PullDestination::Store(PathBuf::from(destination)),
+                policy_fetcher::PullDestination::Store(destination.as_ref().to_path_buf()),
                 self.sources.as_ref(),
             )
             .await

@@ -11,8 +11,8 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use tracing::{error, info, info_span};
 
 use crate::communication::{EvalRequest, RequestOrigin};
+use crate::config::{Policy, PolicyMode};
 use crate::metrics::{self};
-use crate::settings::{Policy, PolicyMode};
 use crate::worker_pool::PrecompiledPolicies;
 
 struct PolicyEvaluatorWithSettings {
@@ -42,7 +42,7 @@ impl fmt::Display for PolicyErrors {
 impl Worker {
     #[tracing::instrument(
         name = "worker_new",
-        fields(host=crate::cli::HOSTNAME.as_str()),
+        fields(host=crate::config::HOSTNAME.as_str()),
         skip_all,
     )]
     pub(crate) fn new(

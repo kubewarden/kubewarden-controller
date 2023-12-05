@@ -24,7 +24,7 @@ use crate::{
     name = "audit",
     fields(
         request_uid=tracing::field::Empty,
-        host=crate::cli::HOSTNAME.as_str(),
+        host=crate::config::HOSTNAME.as_str(),
         policy_id=policy_id.as_str(),
         name=tracing::field::Empty,
         namespace=tracing::field::Empty,
@@ -60,7 +60,7 @@ pub(crate) async fn audit(
     name = "validation",
     fields(
         request_uid=tracing::field::Empty,
-        host=crate::cli::HOSTNAME.as_str(),
+        host=crate::config::HOSTNAME.as_str(),
         policy_id=policy_id.as_str(),
         name=tracing::field::Empty,
         namespace=tracing::field::Empty,
@@ -91,7 +91,7 @@ pub(crate) async fn validation(
     name = "validation_raw",
     fields(
         request_uid=tracing::field::Empty,
-        host=crate::cli::HOSTNAME.as_str(),
+        host=crate::config::HOSTNAME.as_str(),
         policy_id=policy_id.as_str(),
         allowed=tracing::field::Empty,
         mutated=tracing::field::Empty,
