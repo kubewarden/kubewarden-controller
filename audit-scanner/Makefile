@@ -29,4 +29,4 @@ build: fmt vet lint ## Build audit-scanner binary.
 
 .PHONY: docker-build
 docker-build: unit-tests
-	docker build -t ${IMG} .
+	DOCKER_BUILDKIT=1 docker build -t ${IMG} .
