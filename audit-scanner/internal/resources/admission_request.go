@@ -22,6 +22,11 @@ func GenerateAdmissionRequest(resource unstructured.Unstructured) *admv1.Admissi
 			Version:  groupVersionKind.Version,
 			Resource: groupVersionKind.Kind,
 		},
+		RequestKind: &metav1.GroupVersionKind{
+			Group:   groupVersionKind.Group,
+			Version: groupVersionKind.Version,
+			Kind:    groupVersionKind.Kind,
+		},
 		Operation: admv1.Create,
 		Namespace: resource.GetNamespace(),
 		Object: runtime.RawExtension{
