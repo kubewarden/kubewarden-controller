@@ -17,11 +17,14 @@ COPY internal/ internal/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -o audit-scanner .
 
-# Use distroless as minimal base image to package the audit-scanner binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
-WORKDIR /
-COPY --from=builder /workspace/audit-scanner .
-USER 65532:65532
+FROM alpine AS cfg
+RUN echo "audit-scanner:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd
+RUN echo "audit-scanner:x:65533:audit-scanner" >> /etc/group
 
+# Copy the statically-linked binary into a scratch container.
+FROM scratch
+COPY --from=cfg /etc/passwd /etc/passwd
+COPY --from=cfg /etc/group /etc/group
+COPY --from=builder --chmod=0755 /workspace/audit-scanner /audit-scanner
+USER 65532:65532
 ENTRYPOINT ["/audit-scanner"]
