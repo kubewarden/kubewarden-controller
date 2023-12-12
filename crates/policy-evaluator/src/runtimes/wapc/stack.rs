@@ -1,9 +1,7 @@
 use anyhow::Result;
 use std::sync::Arc;
-use wasmtime_provider::wasmtime;
 
 use crate::evaluation_context::EvaluationContext;
-use crate::policy_evaluator_builder::EpochDeadlines;
 use crate::runtimes::wapc::callback::new_host_callback;
 
 use super::StackPre;
@@ -15,24 +13,6 @@ pub(crate) struct WapcStack {
 }
 
 impl WapcStack {
-    pub(crate) fn new(
-        engine: wasmtime::Engine,
-        module: wasmtime::Module,
-        epoch_deadlines: Option<EpochDeadlines>,
-        eval_ctx: EvaluationContext,
-    ) -> Result<Self> {
-        let eval_ctx = Arc::new(eval_ctx);
-
-        let stack_pre = StackPre::new(engine, module, epoch_deadlines)?;
-        let wapc_host = Self::wapc_host_from_pre(&stack_pre, eval_ctx.clone())?;
-
-        Ok(Self {
-            wapc_host,
-            stack_pre,
-            eval_ctx,
-        })
-    }
-
     pub(crate) fn new_from_pre(stack_pre: &StackPre, eval_ctx: &EvaluationContext) -> Result<Self> {
         let eval_ctx = Arc::new(eval_ctx.to_owned());
         let wapc_host = Self::wapc_host_from_pre(stack_pre, eval_ctx.clone())?;

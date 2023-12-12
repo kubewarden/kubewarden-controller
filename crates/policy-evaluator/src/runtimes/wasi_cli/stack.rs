@@ -1,11 +1,8 @@
-use anyhow::Result;
 use std::io::Cursor;
 use wasi_common::pipe::{ReadPipe, WritePipe};
 use wasi_common::WasiCtx;
-use wasmtime::{Engine, Module};
 use wasmtime_wasi::sync::WasiCtxBuilder;
 
-use crate::policy_evaluator_builder::EpochDeadlines;
 use crate::runtimes::wasi_cli::{errors::WasiRuntimeError, stack_pre::StackPre};
 
 const EXIT_SUCCESS: i32 = 0;
@@ -24,15 +21,6 @@ pub(crate) struct RunResult {
 }
 
 impl Stack {
-    pub(crate) fn new(
-        engine: Engine,
-        module: Module,
-        epoch_deadlines: Option<EpochDeadlines>,
-    ) -> Result<Self> {
-        let stack_pre = StackPre::new(engine, module, epoch_deadlines)?;
-        Ok(Self { stack_pre })
-    }
-
     pub(crate) fn new_from_pre(stack_pre: &StackPre) -> Self {
         Self {
             stack_pre: stack_pre.to_owned(),

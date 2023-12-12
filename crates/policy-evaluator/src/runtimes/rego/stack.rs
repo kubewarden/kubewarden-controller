@@ -4,7 +4,6 @@ use tokio::sync::mpsc;
 use crate::{
     callback_requests::CallbackRequest,
     policy_evaluator::RegoPolicyExecutionMode,
-    policy_evaluator_builder::EpochDeadlines,
     policy_metadata::ContextAwareResource,
     runtimes::rego::{
         context_aware,
@@ -22,23 +21,6 @@ pub(crate) struct Stack {
 }
 
 impl Stack {
-    pub(crate) fn new(
-        engine: wasmtime::Engine,
-        module: wasmtime::Module,
-        epoch_deadlines: Option<EpochDeadlines>,
-        entrypoint_id: i32,
-        policy_execution_mode: RegoPolicyExecutionMode,
-    ) -> Result<Self> {
-        let stack_pre = StackPre::new(
-            engine,
-            module,
-            epoch_deadlines,
-            entrypoint_id,
-            policy_execution_mode,
-        );
-        Self::new_from_pre(&stack_pre)
-    }
-
     /// Create a new `Stack` using a `StackPre` object
     pub fn new_from_pre(stack_pre: &StackPre) -> Result<Self> {
         let evaluator = stack_pre
