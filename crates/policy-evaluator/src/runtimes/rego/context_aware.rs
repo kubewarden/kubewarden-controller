@@ -123,7 +123,7 @@ pub(crate) mod tests {
         namespace: Option<&str>,
         name: &str,
     ) -> Result<kube::core::DynamicObject> {
-        let path = Path::new("test_data/fixtures/kube_context")
+        let path = Path::new("tests/data/fixtures/kube_context")
             .join(resource_type)
             .join(namespace.unwrap_or_default())
             .join(format!("{name}.json"));

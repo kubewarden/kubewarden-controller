@@ -190,7 +190,7 @@ mod tests {
         engine_conf.epoch_interruption(true);
         let engine = wasmtime::Engine::new(&engine_conf).expect("cannot create wasmtime engine");
 
-        let wat = include_bytes!("../../../test_data/endless_wasm/wapc_endless_loop.wat");
+        let wat = include_bytes!("../../../tests/data/endless_wasm/wapc_endless_loop.wat");
         let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
 
         // Create the wapc engine, the code will be interrupted after 10 ticks
