@@ -66,6 +66,6 @@ impl PolicyEvaluatorPre {
             }
         };
 
-        Ok(PolicyEvaluator::new(runtime))
+        Ok(PolicyEvaluator::new(runtime, eval_ctx))
     }
 }

@@ -84,19 +84,22 @@ pub type PolicySettings = serde_json::Map<String, serde_json::Value>;
 
 pub struct PolicyEvaluator {
     runtime: Runtime,
+    eval_ctx: EvaluationContext,
 }
 
 impl PolicyEvaluator {
-    pub(crate) fn new(runtime: Runtime) -> Self {
-        Self { runtime }
+    pub(crate) fn new(runtime: Runtime, eval_ctx: &EvaluationContext) -> Self {
+        Self {
+            runtime,
+            eval_ctx: eval_ctx.to_owned(),
+        }
     }
 
-    #[tracing::instrument(skip(request, eval_ctx))]
+    #[tracing::instrument(skip(request))]
     pub fn validate(
         &mut self,
         request: ValidateRequest,
         settings: &PolicySettings,
-        eval_ctx: &EvaluationContext,
     ) -> AdmissionResponse {
         match self.runtime {
             Runtime::Wapc(ref mut wapc_stack) => {
@@ -104,8 +107,8 @@ impl PolicyEvaluator {
             }
             Runtime::Rego(ref mut burrego_evaluator) => {
                 let kube_ctx = burrego_evaluator.build_kubernetes_context(
-                    eval_ctx.callback_channel.as_ref(),
-                    &eval_ctx.ctx_aware_resources_allow_list,
+                    self.eval_ctx.callback_channel.as_ref(),
+                    &self.eval_ctx.ctx_aware_resources_allow_list,
                 );
                 match kube_ctx {
                     Ok(ctx) => BurregoRuntime(burrego_evaluator).validate(settings, &request, &ctx),
