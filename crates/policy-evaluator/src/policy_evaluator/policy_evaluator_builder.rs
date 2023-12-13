@@ -2,9 +2,7 @@ use anyhow::{anyhow, Result};
 use std::path::Path;
 use wasmtime_provider::wasmtime;
 
-use crate::policy_evaluator::{
-    policy_evaluator_pre::StackPre, PolicyEvaluatorPre, PolicyExecutionMode,
-};
+use crate::policy_evaluator::{stack_pre::StackPre, PolicyEvaluatorPre, PolicyExecutionMode};
 use crate::runtimes::{rego, wapc, wasi_cli};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)
@@ -197,7 +195,7 @@ impl PolicyEvaluatorBuilder {
             }
         };
 
-        Ok(PolicyEvaluatorPre { stack_pre })
+        Ok(PolicyEvaluatorPre::new(stack_pre))
     }
 
     fn build_engine(&self) -> Result<wasmtime::Engine> {
