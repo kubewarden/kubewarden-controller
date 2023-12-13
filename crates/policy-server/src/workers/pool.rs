@@ -1,12 +1,11 @@
 use anyhow::{anyhow, Result};
 use core::time;
-use lazy_static::lazy_static;
 use policy_evaluator::{callback_requests::CallbackRequest, wasmtime};
 use rayon::prelude::*;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, Ordering},
         Arc, Barrier, RwLock,
     },
     thread,

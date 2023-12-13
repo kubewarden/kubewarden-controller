@@ -5,6 +5,7 @@ use crate::config::PolicyMode;
 /// Holds the evaluation settings of loaded Policy. These settings are taken straight from the
 /// `policies.yml` file provided by the user
 #[cfg_attr(test, allow(dead_code))]
+#[derive(Clone)]
 pub(crate) struct PolicyEvaluationSettings {
     /// Whether the policy is operating in `protect` or `monitor` mode
     pub(crate) policy_mode: PolicyMode,

@@ -198,34 +198,28 @@ impl EvaluationEnvironment {
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))
     }
 
-    /// Perform a request validation
-    pub fn validate(&self, policy_id: &str, req: &EvalRequest) -> Result<AdmissionResponse> {
+    /// Given a policy ID, returns the settings provided by the user inside of `policies.yml`
+    fn get_policy_settings(&self, policy_id: &str) -> Result<PolicyEvaluationSettings> {
         let settings = self
             .policy_id_to_settings
             .get(policy_id)
-            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?
+            .clone();
 
+        Ok(settings)
+    }
+
+    /// Perform a request validation
+    pub fn validate(&self, policy_id: &str, req: &EvalRequest) -> Result<AdmissionResponse> {
+        let settings = self.get_policy_settings(policy_id)?;
         let mut evaluator = self.rehydrate(policy_id)?;
 
-        let eval_ctx =
-            self.policy_id_to_eval_ctx
-                .get(policy_id)
-                .ok_or(EvaluationError::InternalError(format!(
-                    "cannot find evaluation context for policy with ID {policy_id}"
-                )))?;
-
-        Ok(evaluator.validate(req.req.clone(), &settings.settings, eval_ctx))
+        Ok(evaluator.validate(req.req.clone(), &settings.settings))
     }
 
     /// Validate the settings the user provided for the given policy
     pub fn validate_settings(&self, policy_id: &str) -> Result<SettingsValidationResponse> {
-        let settings =
-            self.policy_id_to_settings
-                .get(policy_id)
-                .ok_or(EvaluationError::InternalError(format!(
-                    "cannot find settings for policy with ID {policy_id}"
-                )))?;
-
+        let settings = self.get_policy_settings(policy_id)?;
         let mut evaluator = self.rehydrate(policy_id)?;
 
         Ok(evaluator.validate_settings(&settings.settings))
@@ -294,15 +288,17 @@ fn create_policy_evaluator_pre(
 
 #[cfg(test)]
 mod tests {
+    use policy_evaluator::{
+        admission_response::AdmissionResponse, policy_evaluator::ValidateRequest,
+    };
+    use rstest::*;
     use std::collections::BTreeSet;
 
     use super::*;
+    use crate::admission_review::tests::build_admission_review;
     use crate::config::Policy;
 
-    /// Given to identical wasm modules, only one instance of PolicyEvaluator is going to be
-    /// created
-    #[test]
-    fn avoid_duplicated_instaces_of_policy_evaluator() {
+    fn build_evaluation_environment() -> Result<EvaluationEnvironment> {
         let engine = wasmtime::Engine::default();
         let policy_ids = vec!["policy_1", "policy_2"];
         let module = wasmtime::Module::new(&engine, "(module (func))")
@@ -333,7 +329,7 @@ mod tests {
             precompiled_policies.insert(policy_url, precompiled_policy.clone());
         }
 
-        let evaluation_environment = EvaluationEnvironment::new(
+        EvaluationEnvironment::new(
             &engine,
             &policies,
             &precompiled_policies,
@@ -341,7 +337,58 @@ mod tests {
             None,
             callback_handler_tx,
         )
-        .unwrap();
+    }
+
+    #[rstest]
+    #[case("policy_not_defined", true)]
+    #[case("policy_1", false)]
+    fn return_policy_not_found_error(#[case] policy_id: &str, #[case] expect_error: bool) {
+        let eval_env = build_evaluation_environment().unwrap();
+        let req = ValidateRequest::AdmissionRequest(
+            build_admission_review().request.expect("no request"),
+        );
+
+        let (tx, _) = tokio::sync::oneshot::channel::<Option<AdmissionResponse>>();
+        let eval_req = EvalRequest {
+            policy_id: policy_id.to_string(),
+            req,
+            resp_chan: tx,
+            parent_span: tracing::Span::none(),
+            request_origin: crate::communication::RequestOrigin::Validate,
+        };
+
+        if expect_error {
+            assert!(matches!(
+                eval_env.get_policy_mode(policy_id),
+                Err(EvaluationError::PolicyNotFound(_))
+            ));
+            assert!(matches!(
+                eval_env.get_policy_allowed_to_mutate(policy_id),
+                Err(EvaluationError::PolicyNotFound(_))
+            ));
+            assert!(matches!(
+                eval_env.get_policy_settings(policy_id),
+                Err(EvaluationError::PolicyNotFound(_))
+            ));
+            assert!(matches!(
+                eval_env.validate(policy_id, &eval_req),
+                Err(EvaluationError::PolicyNotFound(_))
+            ));
+        } else {
+            assert!(eval_env.get_policy_mode(policy_id).is_ok());
+            assert!(eval_env.get_policy_allowed_to_mutate(policy_id).is_ok());
+            assert!(eval_env.get_policy_settings(policy_id).is_ok());
+            // note: we do not test `validate` with a known policy because this would
+            // cause another error. The test policy we're using is just an empty Wasm
+            // module
+        }
+    }
+
+    /// Given to identical wasm modules, only one instance of PolicyEvaluator is going to be
+    /// created
+    #[test]
+    fn avoid_duplicated_instaces_of_policy_evaluator() {
+        let evaluation_environment = build_evaluation_environment().unwrap();
 
         assert_eq!(
             evaluation_environment
