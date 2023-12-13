@@ -168,7 +168,7 @@ mod tests {
         evaluation_context::EvaluationContext, runtimes::wapc::callback::new_host_callback,
     };
     use std::{
-        sync::{self, Arc, Mutex},
+        sync::{self, Arc},
         thread, time,
     };
 
@@ -206,7 +206,7 @@ mod tests {
             ctx_aware_resources_allow_list: Default::default(),
         };
 
-        let eval_ctx = Arc::new(Mutex::new(eval_ctx));
+        let eval_ctx = Arc::new(eval_ctx);
 
         let wapc_engine = wapc_engine_builder
             .build()

@@ -1,90 +1,17 @@
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use serde_json::json;
-use std::io::Cursor;
 use tracing::{error, warn};
-use wasi_common::pipe::{ReadPipe, WritePipe};
-use wasmtime_wasi::sync::WasiCtxBuilder;
 
-use super::{errors::WasiRuntimeError, stack};
 use crate::admission_response::AdmissionResponse;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
+use crate::runtimes::wasi_cli::stack::{RunResult, Stack};
 
-const EXIT_SUCCESS: i32 = 0;
-
-pub(crate) struct Runtime<'a>(pub(crate) &'a mut stack::Stack);
-
-struct ExcutionResult {
-    stdout: String,
-    stderr: String,
-}
+pub(crate) struct Runtime<'a>(pub(crate) &'a Stack);
 
 impl<'a> Runtime<'a> {
-    /// executes the wasi cli program
-    fn execute(
-        &mut self,
-        input: Vec<u8>,
-        args: &[String],
-    ) -> std::result::Result<ExcutionResult, WasiRuntimeError> {
-        let stdout_pipe = WritePipe::new_in_memory();
-        let stderr_pipe = WritePipe::new_in_memory();
-        let stdin_pipe = ReadPipe::new(Cursor::new(input));
-
-        let wasi_ctx = WasiCtxBuilder::new()
-            .args(args)?
-            .stdin(Box::new(stdin_pipe))
-            .stdout(Box::new(stdout_pipe.clone()))
-            .stderr(Box::new(stderr_pipe.clone()))
-            .build();
-        let ctx = stack::Context { wasi_ctx };
-
-        let mut store = wasmtime::Store::new(&self.0.engine, ctx);
-        if let Some(deadline) = self.0.epoch_deadlines {
-            store.set_epoch_deadline(deadline.wapc_func);
-        }
-
-        let instance = self
-            .0
-            .instance_pre
-            .instantiate(&mut store)
-            .map_err(WasiRuntimeError::WasmInstantiate)?;
-        let start_fn = instance
-            .get_typed_func::<(), ()>(&mut store, "_start")
-            .map_err(WasiRuntimeError::WasmMissingStartFn)?;
-        let evaluation_result = start_fn.call(&mut store, ());
-
-        // Dropping the store, this is no longer needed, plus it's keeping
-        // references to the WritePipe(s) that we need exclusive access to.
-        drop(store);
-
-        let stderr = pipe_to_string("stderr", stderr_pipe)?;
-
-        if let Err(err) = evaluation_result {
-            if let Some(exit_error) = err.downcast_ref::<wasmtime_wasi::I32Exit>() {
-                if exit_error.0 == EXIT_SUCCESS {
-                    let stdout = pipe_to_string("stdout", stdout_pipe)?;
-                    return Ok(ExcutionResult { stdout, stderr });
-                } else {
-                    return Err(WasiRuntimeError::WasiEvaluation {
-                        code: Some(exit_error.0),
-                        stderr,
-                        error: err,
-                    });
-                }
-            }
-            return Err(WasiRuntimeError::WasiEvaluation {
-                code: None,
-                stderr,
-                error: err,
-            });
-        }
-
-        let stdout = pipe_to_string("stdout", stdout_pipe)?;
-        Ok(ExcutionResult { stdout, stderr })
-    }
-
     pub fn validate(
-        &mut self,
+        &self,
         settings: &PolicySettings,
         request: &ValidateRequest,
     ) -> AdmissionResponse {
@@ -106,10 +33,10 @@ impl<'a> Runtime<'a> {
                 );
             }
         };
-        let args = vec!["policy.wasm".to_string(), "validate".to_string()];
+        let args = ["policy.wasm", "validate"];
 
-        match self.execute(input, &args) {
-            Ok(ExcutionResult { stdout, stderr }) => {
+        match self.0.run(&input, &args) {
+            Ok(RunResult { stdout, stderr }) => {
                 if !stderr.is_empty() {
                     warn!(
                         request = request.uid().to_string(),
@@ -152,11 +79,11 @@ impl<'a> Runtime<'a> {
         }
     }
 
-    pub fn validate_settings(&mut self, settings: String) -> SettingsValidationResponse {
-        let args = vec!["policy.wasm".to_string(), "validate-settings".to_string()];
+    pub fn validate_settings(&self, settings: String) -> SettingsValidationResponse {
+        let args = ["policy.wasm", "validate-settings"];
 
-        match self.execute(settings.as_bytes().to_owned(), &args) {
-            Ok(ExcutionResult { stdout, stderr }) => {
+        match self.0.run(settings.as_bytes(), &args) {
+            Ok(RunResult { stdout, stderr }) => {
                 if !stderr.is_empty() {
                     warn!(operation = "validate-settings", "stderr: {:?}", stderr)
                 }
@@ -173,24 +100,5 @@ impl<'a> Runtime<'a> {
                 message: Some(e.to_string()),
             },
         }
-    }
-}
-
-fn pipe_to_string(
-    name: &str,
-    pipe: WritePipe<Cursor<Vec<u8>>>,
-) -> std::result::Result<String, WasiRuntimeError> {
-    match pipe.try_into_inner() {
-        Ok(cursor) => {
-            let buf = cursor.into_inner();
-            String::from_utf8(buf).map_err(|e| WasiRuntimeError::PipeConversion {
-                name: name.to_string(),
-                error: format!("Cannot convert buffer to UTF8 string: {e}"),
-            })
-        }
-        Err(_) => Err(WasiRuntimeError::PipeConversion {
-            name: name.to_string(),
-            error: "cannot convert pipe into inner".to_string(),
-        }),
     }
 }

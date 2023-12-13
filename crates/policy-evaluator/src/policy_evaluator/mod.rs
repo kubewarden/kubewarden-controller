@@ -1,4 +1,5 @@
 pub mod policy_evaluator_builder;
+pub mod policy_evaluator_pre;
 
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
@@ -14,6 +15,8 @@ use crate::runtimes::rego::Runtime as BurregoRuntime;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
 use crate::runtimes::wasi_cli::Runtime as WasiRuntime;
 use crate::runtimes::Runtime;
+
+pub use policy_evaluator_pre::PolicyEvaluatorPre;
 
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum PolicyExecutionMode {
@@ -81,21 +84,11 @@ pub type PolicySettings = serde_json::Map<String, serde_json::Value>;
 
 pub struct PolicyEvaluator {
     runtime: Runtime,
-    worker_id: u64,
-    policy_id: String,
 }
 
 impl PolicyEvaluator {
-    pub(crate) fn new(policy_id: &str, worker_id: u64, runtime: Runtime) -> Self {
-        Self {
-            runtime,
-            worker_id,
-            policy_id: policy_id.to_owned(),
-        }
-    }
-
-    pub fn policy_id(&self) -> String {
-        self.policy_id.clone()
+    pub(crate) fn new(runtime: Runtime) -> Self {
+        Self { runtime }
     }
 
     #[tracing::instrument(skip(request, eval_ctx))]
@@ -107,10 +100,9 @@ impl PolicyEvaluator {
     ) -> AdmissionResponse {
         match self.runtime {
             Runtime::Wapc(ref mut wapc_stack) => {
-                wapc_stack.set_eval_ctx(eval_ctx);
                 WapcRuntime(wapc_stack).validate(settings, &request)
             }
-            Runtime::Burrego(ref mut burrego_evaluator) => {
+            Runtime::Rego(ref mut burrego_evaluator) => {
                 let kube_ctx = burrego_evaluator.build_kubernetes_context(
                     eval_ctx.callback_channel.as_ref(),
                     &eval_ctx.ctx_aware_resources_allow_list,
@@ -126,12 +118,8 @@ impl PolicyEvaluator {
         }
     }
 
-    #[tracing::instrument(skip(eval_ctx))]
-    pub fn validate_settings(
-        &mut self,
-        settings: &PolicySettings,
-        eval_ctx: &EvaluationContext,
-    ) -> SettingsValidationResponse {
+    #[tracing::instrument]
+    pub fn validate_settings(&mut self, settings: &PolicySettings) -> SettingsValidationResponse {
         let settings_str = match serde_json::to_string(settings) {
             Ok(settings) => settings,
             Err(err) => {
@@ -144,10 +132,9 @@ impl PolicyEvaluator {
 
         match self.runtime {
             Runtime::Wapc(ref mut wapc_stack) => {
-                wapc_stack.set_eval_ctx(eval_ctx);
                 WapcRuntime(wapc_stack).validate_settings(settings_str)
             }
-            Runtime::Burrego(ref mut burrego_evaluator) => {
+            Runtime::Rego(ref mut burrego_evaluator) => {
                 BurregoRuntime(burrego_evaluator).validate_settings(settings_str)
             }
             Runtime::Cli(ref mut cli_stack) => {
@@ -171,8 +158,6 @@ impl fmt::Debug for PolicyEvaluator {
         let runtime = self.runtime.to_string();
 
         f.debug_struct("PolicyEvaluator")
-            .field("policy_id", &self.policy_id)
-            .field("worker_id", &self.worker_id)
             .field("runtime", &runtime)
             .finish()
     }

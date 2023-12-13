@@ -48,4 +48,7 @@ pub enum RegoRuntimeError {
 
     #[error("invalid response from policy: {0}")]
     InvalidResponseWithError(#[source] serde_json::Error),
+
+    #[error("cannot allocate Rego evaluator: {0}")]
+    EvaluatorError(String),
 }
