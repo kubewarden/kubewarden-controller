@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use policy_evaluator::{
     admission_response::AdmissionResponse,
     callback_requests::CallbackRequest,
@@ -14,6 +13,7 @@ use tracing::debug;
 
 use crate::communication::EvalRequest;
 use crate::config::PolicyMode;
+use crate::workers::error::{EvaluationError, Result};
 use crate::workers::{
     policy_evaluation_settings::PolicyEvaluationSettings,
     precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy},
@@ -84,18 +84,23 @@ impl EvaluationEnvironment {
         };
 
         for (policy_id, policy) in policies {
-            let precompiled_policy = precompiled_policies
-                .get(&policy.url)
-                .ok_or_else(|| anyhow!("cannot find policy settings of {}", policy_id))?;
+            let precompiled_policy = precompiled_policies.get(&policy.url).ok_or_else(|| {
+                EvaluationError::BootstrapFailure(format!(
+                    "cannot find policy settings of {}",
+                    policy_id
+                ))
+            })?;
 
-            eval_env.register(
-                engine,
-                policy_id,
-                precompiled_policy,
-                policy,
-                callback_handler_tx.clone(),
-                policy_evaluation_limit_seconds,
-            )?;
+            eval_env
+                .register(
+                    engine,
+                    policy_id,
+                    precompiled_policy,
+                    policy,
+                    callback_handler_tx.clone(),
+                    policy_evaluation_limit_seconds,
+                )
+                .map_err(|e| EvaluationError::BootstrapFailure(e.to_string()))?;
         }
 
         Ok(eval_env)
@@ -158,7 +163,10 @@ impl EvaluationEnvironment {
         let policy_eval_settings = PolicyEvaluationSettings {
             policy_mode: policy.policy_mode.clone(),
             allowed_to_mutate: policy.allowed_to_mutate.unwrap_or(false),
-            settings: policy.settings_to_json()?.unwrap_or_default(),
+            settings: policy
+                .settings_to_json()
+                .map_err(|e| EvaluationError::InternalError(e.to_string()))?
+                .unwrap_or_default(),
         };
         self.policy_id_to_settings
             .insert(policy_id.to_owned(), policy_eval_settings);
@@ -179,7 +187,7 @@ impl EvaluationEnvironment {
         self.policy_id_to_settings
             .get(policy_id)
             .map(|settings| settings.policy_mode.clone())
-            .ok_or(anyhow!("cannot find policy with ID {policy_id}"))
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))
     }
 
     /// Given a policy ID, returns true if the policy is allowed to mutate
@@ -187,29 +195,36 @@ impl EvaluationEnvironment {
         self.policy_id_to_settings
             .get(policy_id)
             .map(|settings| settings.allowed_to_mutate)
-            .ok_or(anyhow!("cannot find policy with ID {policy_id}"))
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))
     }
 
     /// Perform a request validation
     pub fn validate(&self, policy_id: &str, req: &EvalRequest) -> Result<AdmissionResponse> {
-        let settings = self.policy_id_to_settings.get(policy_id).ok_or(anyhow!(
-            "cannot find settings for policy with ID {policy_id}"
-        ))?;
+        let settings = self
+            .policy_id_to_settings
+            .get(policy_id)
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
         let mut evaluator = self.rehydrate(policy_id)?;
 
-        let eval_ctx = self.policy_id_to_eval_ctx.get(policy_id).ok_or(anyhow!(
-            "cannot find evaluation context for policy with ID {policy_id}"
-        ))?;
+        let eval_ctx =
+            self.policy_id_to_eval_ctx
+                .get(policy_id)
+                .ok_or(EvaluationError::InternalError(format!(
+                    "cannot find evaluation context for policy with ID {policy_id}"
+                )))?;
 
         Ok(evaluator.validate(req.req.clone(), &settings.settings, eval_ctx))
     }
 
     /// Validate the settings the user provided for the given policy
     pub fn validate_settings(&self, policy_id: &str) -> Result<SettingsValidationResponse> {
-        let settings = self.policy_id_to_settings.get(policy_id).ok_or(anyhow!(
-            "cannot find settings for policy with ID {policy_id}"
-        ))?;
+        let settings =
+            self.policy_id_to_settings
+                .get(policy_id)
+                .ok_or(EvaluationError::InternalError(format!(
+                    "cannot find settings for policy with ID {policy_id}"
+                )))?;
 
         let mut evaluator = self.rehydrate(policy_id)?;
 
@@ -221,21 +236,20 @@ impl EvaluationEnvironment {
         let module_digest = self
             .policy_id_to_module_digest
             .get(policy_id)
-            .ok_or(anyhow!(
-                "cannot find module_digest for policy with ID {policy_id}"
-            ))?;
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
         let policy_evaluator_pre = self
             .module_digest_to_policy_evaluator_pre
             .get(module_digest)
-            .ok_or(anyhow!(
-                "cannot find PolicyEvaluatorPre for policy with ID {policy_id}"
-            ))?;
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-        let eval_ctx = self.policy_id_to_eval_ctx.get(policy_id).ok_or(anyhow!(
-            "cannot find evaluation context for policy with ID {policy_id}"
-        ))?;
+        let eval_ctx = self
+            .policy_id_to_eval_ctx
+            .get(policy_id)
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-        policy_evaluator_pre.rehydrate(eval_ctx)
+        policy_evaluator_pre.rehydrate(eval_ctx).map_err(|e| {
+            EvaluationError::WebAssemblyError(format!("cannot rehydrate PolicyEvaluatorPre: {e}"))
+        })
     }
 }
 
@@ -249,7 +263,11 @@ fn create_wasmtime_module(
     // full control of the precompiled module. This is generated by the
     // WorkerPool thread
     unsafe { wasmtime::Module::deserialize(engine, &precompiled_policy.precompiled_module) }
-        .map_err(|e| anyhow!("could not rehydrate wasmtime::Module {policy_url}: {e:?}"))
+        .map_err(|e| {
+            EvaluationError::WebAssemblyError(format!(
+                "could not rehydrate wasmtime::Module {policy_url}: {e:?}"
+            ))
+        })
 }
 
 /// Internal function, takes care of creating the `PolicyEvaluator` instance for the given policy
@@ -269,7 +287,9 @@ fn create_policy_evaluator_pre(
             policy_evaluator_builder.enable_epoch_interruptions(limit, limit);
     }
 
-    policy_evaluator_builder.build_pre()
+    policy_evaluator_builder.build_pre().map_err(|e| {
+        EvaluationError::WebAssemblyError(format!("cannot build PolicyEvaluatorPre {e}"))
+    })
 }
 
 #[cfg(test)]

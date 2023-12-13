@@ -1,3 +1,4 @@
+pub(crate) mod error;
 mod evaluation_environment;
 mod policy_evaluation_settings;
 pub(crate) mod pool;

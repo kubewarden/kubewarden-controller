@@ -1,4 +1,3 @@
-use anyhow::Result;
 use policy_evaluator::{
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
     policy_evaluator::ValidateRequest,
@@ -10,7 +9,10 @@ use tracing::{error, info, info_span};
 use crate::communication::{EvalRequest, RequestOrigin};
 use crate::config::PolicyMode;
 use crate::metrics::{self};
-use crate::workers::EvaluationEnvironment;
+use crate::workers::{
+    error::{EvaluationError, Result},
+    EvaluationEnvironment,
+};
 
 pub(crate) struct Worker {
     evaluation_environment: Arc<EvaluationEnvironment>,
@@ -101,13 +103,16 @@ impl Worker {
             let span = info_span!(parent: &req.parent_span, "policy_eval");
             let _enter = span.enter();
 
-            let admission_response = self.evaluate(&req).unwrap_or_else(|e| {
-                AdmissionResponse::reject_internal_server_error(
+            let admission_response = match self.evaluate(&req) {
+                Ok(ar) => Some(ar),
+                Err(EvaluationError::PolicyNotFound(_)) => None,
+                Err(e) => Some(AdmissionResponse::reject_internal_server_error(
                     req.req.uid().to_owned(),
                     e.to_string(),
-                )
-            });
-            if let Err(e) = req.resp_chan.send(Some(admission_response)) {
+                )),
+            };
+
+            if let Err(e) = req.resp_chan.send(admission_response) {
                 error!("cannot send response back: {e:?}");
             }
         }
