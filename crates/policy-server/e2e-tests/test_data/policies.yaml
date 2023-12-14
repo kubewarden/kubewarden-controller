@@ -77,3 +77,26 @@ raw-mutation-wasi:
       - "banana"
       - "carrot"
     defaultResource: "hay"
+
+apparmor:
+  url: ghcr.io/kubewarden/tests/apparmor-psp:v0.1.13
+  allowedToMutate: false
+  settings:
+    allowed_profiles:
+      - runtime/default
+
+psp-user-group:
+  url: ghcr.io/kubewarden/tests/user-group-psp:v0.4.9
+  allowedToMutate: true
+  settings:
+    run_as_user:
+      rule: MustRunAs
+      ranges:
+        - min: 1000
+          max: 2000
+    run_as_group:
+      rule: RunAsAny
+      overwrite: false
+    supplemental_groups:
+      rule: RunAsAny
+      overwrite: false

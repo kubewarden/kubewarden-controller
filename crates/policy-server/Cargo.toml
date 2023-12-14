@@ -28,11 +28,13 @@ opentelemetry = { version = "0.21", default-features = false, features = [
 ] }
 opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
 procfs = "0.16"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.12.2" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.13.0" }
 rayon = "1.8"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.27"
+sha2 = "0.10"
+thiserror = "1.0"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
@@ -43,8 +45,10 @@ warp = { version = "0.3.6", default_features = false, features = [
   "tls",
 ] }
 semver = { version = "1.0.20", features = ["serde"] }
+mockall_double = "0.3"
 
 [dev-dependencies]
+mockall = "0.12"
 rstest = "0.18"
 tempfile = "3.8.1"
 reqwest = { version = "0.11", default_features = false, features = [
