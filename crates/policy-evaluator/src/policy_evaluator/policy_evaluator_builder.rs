@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn build_policy_evaluator_pre() {
         let engine = wasmtime::Engine::default();
-        let wat = include_bytes!("../../test_data/endless_wasm/wapc_endless_loop.wat");
+        let wat = include_bytes!("../../tests/data/endless_wasm/wapc_endless_loop.wat");
         let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
 
         let policy_evaluator_builder = PolicyEvaluatorBuilder::new()
