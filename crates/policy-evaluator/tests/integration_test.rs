@@ -1,16 +1,27 @@
 #![allow(clippy::too_many_arguments)]
+mod common;
+mod k8s_mock;
 
+use hyper::{Body, Request, Response};
+use kube::Client;
 use rstest::*;
 use serde_json::json;
+use std::collections::BTreeSet;
+use std::future::Future;
+use tokio::sync::oneshot;
+use tower_test::mock::Handle;
 
 use policy_evaluator::{
     admission_request::AdmissionRequest,
     admission_response::AdmissionResponseStatus,
     evaluation_context::EvaluationContext,
+    policy_evaluator::PolicySettings,
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
-    policy_evaluator_builder::PolicyEvaluatorBuilder,
+    policy_metadata::ContextAwareResource,
 };
-use policy_fetcher::PullDestination;
+
+use crate::common::{build_policy_evaluator, fetch_policy, load_request_data};
+use crate::k8s_mock::{rego_scenario, wapc_scenario};
 
 #[rstest]
 #[case::wapc(
@@ -147,38 +158,17 @@ async fn test_policy_evaluator(
     #[case] mutating: bool,
 ) {
     let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
-    let policy = policy_evaluator::policy_fetcher::fetch_policy(
-        policy_uri,
-        PullDestination::LocalFile(tempdir.into_path()),
-        None,
-    )
-    .await
-    .expect("cannot fetch policy");
+    let policy = fetch_policy(policy_uri, tempdir).await;
 
     let eval_ctx = EvaluationContext {
-        policy_id: "test".to_string(),
+        policy_id: "test".to_owned(),
         callback_channel: None,
         ctx_aware_resources_allow_list: Default::default(),
     };
 
-    let policy_evaluator_builder = PolicyEvaluatorBuilder::new()
-        .execution_mode(execution_mode)
-        .policy_file(&policy.local_path)
-        .expect("cannot read policy file")
-        .enable_wasmtime_cache()
-        .enable_epoch_interruptions(1, 2);
+    let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
 
-    let policy_evaluator_pre = policy_evaluator_builder
-        .build_pre()
-        .expect("cannot build policy evaluator pre");
-    let mut policy_evaluator = policy_evaluator_pre
-        .rehydrate(&eval_ctx)
-        .expect("cannot rehydrate policy evaluator");
-
-    let request_file_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/data")
-        .join(request_file_path);
-    let request_data = std::fs::read(request_file_path).expect("cannot read request file");
+    let request_data = load_request_data(request_file_path);
     let request_json = serde_json::from_slice(&request_data).expect("cannot deserialize request");
 
     let validation_request = if raw {
@@ -213,4 +203,92 @@ async fn test_policy_evaluator(
     } else {
         assert!(admission_response.patch.is_none());
     }
+}
+
+#[rstest]
+#[case::wapc(
+    PolicyExecutionMode::KubewardenWapc,
+    "ghcr.io/kubewarden/tests/context-aware-test-policy:v0.1.0",
+    "app_deployment.json",
+    wapc_scenario
+)]
+#[case::opa(
+    PolicyExecutionMode::Opa,
+    "ghcr.io/kubewarden/tests/context-aware-test-opa-policy:v0.1.0",
+    "app_deployment.json",
+    rego_scenario
+)]
+#[case::gatekeeper(
+    PolicyExecutionMode::OpaGatekeeper,
+    "ghcr.io/kubewarden/tests/context-aware-test-gatekeeper-policy:v0.1.0",
+    "app_deployment.json",
+    rego_scenario
+)]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_wapc_runtime_context_aware<F, Fut>(
+    #[case] execution_mode: PolicyExecutionMode,
+    #[case] policy_uri: &str,
+    #[case] request_file_path: &str,
+    #[case] scenario: F,
+) where
+    F: FnOnce(Handle<Request<Body>, Response<Body>>) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
+    let policy = fetch_policy(policy_uri, tempdir).await;
+
+    let (mocksvc, handle) = tower_test::mock::pair::<Request<Body>, Response<Body>>();
+    let client = Client::new(mocksvc, "default");
+    scenario(handle).await;
+
+    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
+        oneshot::channel();
+    let callback_builder = policy_evaluator::callback_handler::CallbackHandlerBuilder::new(
+        callback_handler_shutdown_channel_rx,
+    );
+    let mut callback_handler = callback_builder
+        .kube_client(client)
+        .build()
+        .expect("cannot build callback handler");
+    let callback_handler_channel = callback_handler.sender_channel();
+
+    tokio::spawn(async move {
+        callback_handler.loop_eval().await;
+    });
+
+    let eval_ctx = EvaluationContext {
+        policy_id: "test".to_owned(),
+        callback_channel: Some(callback_handler_channel),
+        ctx_aware_resources_allow_list: BTreeSet::from([
+            ContextAwareResource {
+                api_version: "v1".to_owned(),
+                kind: "Namespace".to_owned(),
+            },
+            ContextAwareResource {
+                api_version: "apps/v1".to_owned(),
+                kind: "Deployment".to_owned(),
+            },
+            ContextAwareResource {
+                api_version: "v1".to_owned(),
+                kind: "Service".to_owned(),
+            },
+        ]),
+    };
+
+    let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
+
+    let request_data = load_request_data(request_file_path);
+    let request: AdmissionRequest =
+        serde_json::from_slice(&request_data).expect("cannot deserialize request");
+
+    let admission_response = policy_evaluator.validate(
+        ValidateRequest::AdmissionRequest(request),
+        &PolicySettings::default(),
+    );
+
+    assert!(admission_response.allowed);
+
+    callback_handler_shutdown_channel_tx
+        .send(())
+        .expect("cannot send shutdown signal");
 }
