@@ -1,8 +1,9 @@
 ## Audit scanner
 
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-controller)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller)
-<!-- [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6626/badge)](https://bestpractices.coreinfrastructure.org/projects/6626) -->
-<!-- [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Faudit-scanner.svg?type=shield)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Faudit-scanner?ref=badge_shield) -->
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/7439/badge)](https://www.bestpractices.dev/projects/7439)
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Faudit-scanner.svg?type=shield&issueType=license)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Faudit-scanner?ref=badge_shield&issueType=license)
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller.svg?type=shield&issueType=security)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller?ref=badge_shield&issueType=security)
 
 > **Note well:** don't forget to checkout [Kubewarden's documentation](https://docs.kubewarden.io)
 > for more information
