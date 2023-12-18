@@ -28,14 +28,15 @@ import (
 
 var policy1 = policiesv1.AdmissionPolicy{
 	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Operations: nil,
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{""},
-				APIVersions: []string{"v1"},
-				Resources:   []string{"pods"},
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods"},
+				},
 			},
-		},
 		},
 	}},
 }
@@ -43,28 +44,30 @@ var policy1 = policiesv1.AdmissionPolicy{
 // used to test incorrect or unknown GVKs
 var policy2 = policiesv1.ClusterAdmissionPolicy{
 	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Operations: nil,
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{"", "apps"},
-				APIVersions: []string{"v1", "alphav1"},
-				Resources:   []string{"pods", "deployments"},
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"", "apps"},
+					APIVersions: []string{"v1", "alphav1"},
+					Resources:   []string{"pods", "deployments"},
+				},
 			},
-		},
 		},
 	}},
 }
 
 var policy3 = policiesv1.AdmissionPolicy{
 	Spec: policiesv1.AdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Operations: nil,
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{"", "apps"},
-				APIVersions: []string{"v1"},
-				Resources:   []string{"pods", "deployments"},
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"", "apps"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods", "deployments"},
+				},
 			},
-		},
 		},
 	}},
 }
@@ -88,14 +91,15 @@ var policy4 = policiesv1.AdmissionPolicy{
 // used to test incorrect or unknown GVKs
 var policyIncorrectRules = policiesv1.ClusterAdmissionPolicy{
 	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Operations: nil,
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{""},
-				APIVersions: []string{"v1"},
-				Resources:   []string{"pods", "Unexistent"},
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods", "Unexistent"},
+				},
 			},
-		},
 		},
 	}},
 }
@@ -103,14 +107,15 @@ var policyIncorrectRules = policiesv1.ClusterAdmissionPolicy{
 // used to test skipping of clusterwide resources
 var policyPodsNamespaces = policiesv1.ClusterAdmissionPolicy{
 	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
-		Rules: []admissionregistrationv1.RuleWithOperations{{
-			Operations: nil,
-			Rule: admissionregistrationv1.Rule{
-				APIGroups:   []string{""},
-				APIVersions: []string{"v1"},
-				Resources:   []string{"pods", "namespaces"},
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods", "namespaces"},
+				},
 			},
-		},
 		},
 	}},
 }
@@ -481,14 +486,15 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"pods", "namespaces"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods", "namespaces"},
+						},
 					},
-				},
 				},
 			},
 		},
@@ -512,14 +518,15 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"pods", "namespaces"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods", "namespaces"},
+						},
 					},
-				},
 				},
 				ObjectSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"testing": "label"},
@@ -555,7 +562,8 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 			"name":              "testingns-with-label",
 			"creationTimestamp": nil,
 			"labels": map[string]interface{}{
-				"testing": "label"},
+				"testing": "label",
+			},
 		},
 		"spec":   map[string]interface{}{},
 		"status": map[string]interface{}{},
@@ -622,74 +630,83 @@ func TestIsNamespacedResource(t *testing.T) {
 		expectedIsNamespaced bool
 		expectedErr          error
 	}{
-		{"pods", metav1.APIResourceList{
-			GroupVersion: "v1",
-			APIResources: []metav1.APIResource{
-				{
-					Name:         "namespaces",
-					SingularName: "namespace",
-					Kind:         "Namespace",
-					Namespaced:   false,
-				},
-				{
-					Name:         "pods",
-					SingularName: "pod",
-					Kind:         "Pod",
-					Namespaced:   true,
+		{
+			"pods",
+			metav1.APIResourceList{
+				GroupVersion: "v1",
+				APIResources: []metav1.APIResource{
+					{
+						Name:         "namespaces",
+						SingularName: "namespace",
+						Kind:         "Namespace",
+						Namespaced:   false,
+					},
+					{
+						Name:         "pods",
+						SingularName: "pod",
+						Kind:         "Pod",
+						Namespaced:   true,
+					},
 				},
 			},
-		},
 			schema.GroupVersionResource{
 				Group:    "",
 				Version:  "v1",
 				Resource: "pods",
-			}, true, nil,
+			},
+			true, nil,
 		},
-		{"namespaces", metav1.APIResourceList{
-			GroupVersion: "v1",
-			APIResources: []metav1.APIResource{
-				{
-					Name:         "namespaces",
-					SingularName: "namespace",
-					Kind:         "Namespace",
-					Namespaced:   false,
-				},
-				{
-					Name:         "pods",
-					SingularName: "pod",
-					Kind:         "Pod",
-					Namespaced:   true,
+		{
+			"namespaces",
+			metav1.APIResourceList{
+				GroupVersion: "v1",
+				APIResources: []metav1.APIResource{
+					{
+						Name:         "namespaces",
+						SingularName: "namespace",
+						Kind:         "Namespace",
+						Namespaced:   false,
+					},
+					{
+						Name:         "pods",
+						SingularName: "pod",
+						Kind:         "Pod",
+						Namespaced:   true,
+					},
 				},
 			},
-		},
 			schema.GroupVersionResource{
 				Group:    "",
 				Version:  "v1",
 				Resource: "namespaces",
-			}, false, nil,
+			},
+			false, nil,
 		},
-		{"resource not found", metav1.APIResourceList{
-			GroupVersion: "v1",
-			APIResources: []metav1.APIResource{
-				{
-					Name:         "namespaces",
-					SingularName: "namespace",
-					Kind:         "Namespace",
-					Namespaced:   false,
-				},
-				{
-					Name:         "pods",
-					SingularName: "pod",
-					Kind:         "Pod",
-					Namespaced:   true,
+		{
+			"resource not found",
+			metav1.APIResourceList{
+				GroupVersion: "v1",
+				APIResources: []metav1.APIResource{
+					{
+						Name:         "namespaces",
+						SingularName: "namespace",
+						Kind:         "Namespace",
+						Namespaced:   false,
+					},
+					{
+						Name:         "pods",
+						SingularName: "pod",
+						Kind:         "Pod",
+						Namespaced:   true,
+					},
 				},
 			},
-		},
 			schema.GroupVersionResource{
 				Group:    "",
 				Version:  "v1",
 				Resource: "foos",
-			}, false, constants.ErrResourceNotFound,
+			},
+			false, constants.ErrResourceNotFound,
 		},
 	}
 

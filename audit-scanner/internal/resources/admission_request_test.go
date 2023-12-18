@@ -10,8 +10,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const resourceName = "testing-name"
-const resourceNamespace = "testing-namespace"
+const (
+	resourceName      = "testing-name"
+	resourceNamespace = "testing-namespace"
+)
 
 func generateUnstructuredPodObject() unstructured.Unstructured {
 	groupVersionKind := schema.GroupVersionKind{

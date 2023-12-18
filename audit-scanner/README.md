@@ -11,9 +11,12 @@
 The Audit scanner inspects the resources defined in the cluster and
 identifies the ones that are violating Kubewarden policies.
 
-The results of the scan are made available via `PolicyReport` objects. Each Namespace
+The results of the scan can be made available via `PolicyReport` objects. Each Namespace
 has its own dedicated `PolicyReport`. Cluster-wide resources compliance is available via
 the `ClusterPolicyReport` resource. 
+
+Instead of relying on `PolicyReport` objects, one can also configure Audit scanner to
+save all this information in-memory only, by specifying `--store memory`.
 
 # Deployment
 

@@ -51,20 +51,24 @@ type Scanner struct {
 	reportStore      report.PolicyReportStore
 	// http client used to make requests against the Policy Server
 	httpClient http.Client
-	printJSON  bool
+	outputScan bool
 }
 
 // NewScanner creates a new scanner with the PoliciesFetcher provided. If
 // insecureClient is false, it will read the caCertFile and add it to the in-app
-// cert trust store. This gets used by the httpCLient when connection to
+// cert trust store. This gets used by the httpClient when connection to
 // PolicyServers endpoints.
-func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetcher,
-	printJSON bool,
-	insecureClient bool, caCertFile string,
+func NewScanner(
+	storeType string,
+	policiesFetcher PoliciesFetcher,
+	resourcesFetcher ResourcesFetcher,
+	outputScan bool,
+	insecureClient bool,
+	caCertFile string,
 ) (*Scanner, error) {
-	report, err := report.NewPolicyReportStore()
+	store, err := getPolicyReportStore(storeType)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create PolicyReportStore: %w", err)
 	}
 
 	// Get the SystemCertPool to build an in-app cert pool from it
@@ -104,7 +108,24 @@ func NewScanner(policiesFetcher PoliciesFetcher, resourcesFetcher ResourcesFetch
 		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
 	}
 
-	return &Scanner{policiesFetcher, resourcesFetcher, *report, httpClient, printJSON}, nil
+	return &Scanner{
+		policiesFetcher:  policiesFetcher,
+		resourcesFetcher: resourcesFetcher,
+		reportStore:      store,
+		httpClient:       httpClient,
+		outputScan:       outputScan,
+	}, nil
+}
+
+func getPolicyReportStore(storeType string) (report.PolicyReportStore, error) { //nolint:ireturn // returning a generic type is ok here
+	switch storeType {
+	case report.KUBERNETES:
+		return report.NewKubernetesPolicyReportStore()
+	case report.MEMORY:
+		return report.NewMemoryPolicyReportStore(), nil
+	default:
+		return nil, fmt.Errorf("invalid policyReport store type: %s", storeType)
+	}
 }
 
 // ScanNamespace scans resources for a given namespace.
@@ -158,13 +179,14 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	}
 	log.Info().Str("namespace", nsName).Msg("namespace scan finished")
 
-	if s.printJSON {
+	if s.outputScan {
 		str, err := s.reportStore.ToJSON()
 		if err != nil {
 			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 		}
 		fmt.Println(str) //nolint:forbidigo
 	}
+
 	return nil
 }
 
@@ -228,13 +250,14 @@ func (s *Scanner) ScanClusterWideResources() error {
 	}
 	log.Info().Msg("clusterwide resources scan finished")
 
-	if s.printJSON {
+	if s.outputScan {
 		str, err := s.reportStore.ToJSON()
 		if err != nil {
 			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
 		}
 		fmt.Println(str) //nolint:forbidigo
 	}
+
 	return nil
 }
 

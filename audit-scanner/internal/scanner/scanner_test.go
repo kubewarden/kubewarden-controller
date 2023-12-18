@@ -121,16 +121,17 @@ func TestEvaluationClusterReportCache(t *testing.T) {
 		Kind:    constants.KubewardenKindClusterAdmissionPolicy,
 	})
 	policy.SetResourceVersion("1")
-	resource := unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "v1",
-		"kind":       "Namespace",
-		"metadata": map[string]interface{}{
-			"name":            "testingns",
-			"resourceVersion": "2",
+	resource := unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Namespace",
+			"metadata": map[string]interface{}{
+				"name":            "testingns",
+				"resourceVersion": "2",
+			},
+			"spec":   map[string]interface{}{},
+			"status": map[string]interface{}{},
 		},
-		"spec":   map[string]interface{}{},
-		"status": map[string]interface{}{},
-	},
 	}
 
 	auditableResource := resources.AuditableResources{
@@ -183,16 +184,17 @@ func TestEvaluationNamespaceReportCache(t *testing.T) {
 		Kind:    constants.KubewardenKindAdmissionPolicy,
 	})
 	policy.SetResourceVersion("1")
-	resource := unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "v1",
-		"kind":       "Pod",
-		"metadata": map[string]interface{}{
-			"name":            "testingpod",
-			"resourceVersion": "2",
+	resource := unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Pod",
+			"metadata": map[string]interface{}{
+				"name":            "testingpod",
+				"resourceVersion": "2",
+			},
+			"spec":   map[string]interface{}{},
+			"status": map[string]interface{}{},
 		},
-		"spec":   map[string]interface{}{},
-		"status": map[string]interface{}{},
-	},
 	}
 
 	auditableResource := resources.AuditableResources{

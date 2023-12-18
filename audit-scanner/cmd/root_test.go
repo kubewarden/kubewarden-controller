@@ -9,7 +9,6 @@ func TestStartScannerForANamespace(t *testing.T) {
 	mockScanner := mockScanner{}
 
 	err := startScanner(namespace, false, &mockScanner)
-
 	if err != nil {
 		t.Errorf("err should be nil, but got %s", err.Error())
 	}
@@ -29,7 +28,6 @@ func TestStartScannerForAllNamespaces(t *testing.T) {
 
 	// analogous to passing no flags
 	err := startScanner("", false, &mockScanner)
-
 	if err != nil {
 		t.Errorf("err should be nil, but got %s", err.Error())
 	}
@@ -48,7 +46,6 @@ func TestScanClusterResources(t *testing.T) {
 	mockScanner := mockScanner{}
 
 	err := startScanner("", true, &mockScanner)
-
 	if err != nil {
 		t.Errorf("err should be nil, but got %s", err.Error())
 	}

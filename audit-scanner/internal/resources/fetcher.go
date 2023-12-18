@@ -55,7 +55,7 @@ func NewFetcher(kubewardenNamespace string, policyServerURL string) (*Fetcher, e
 	dynamicClient := dynamic.NewForConfigOrDie(config)
 	clientset := kubernetes.NewForConfigOrDie(config)
 	if policyServerURL != "" {
-		log.Info().Msg(fmt.Sprintf("querying PolicyServers at %s for debugging purposes. Don't forget to start `kwctl port-forward` if needed", policyServerURL))
+		log.Info().Msg(fmt.Sprintf("querying PolicyServers at %s for debugging purposes. Don't forget to start `kubectl port-forward` if needed", policyServerURL))
 	}
 	return &Fetcher{dynamicClient, kubewardenNamespace, policyServerURL, clientset}, nil
 }
@@ -197,7 +197,8 @@ func (f *Fetcher) GetClusterWideResourcesForPolicies(ctx context.Context, polici
 func (f *Fetcher) getResourcesDynamically(ctx context.Context,
 	resourceFilter *resourceFilter,
 	namespace string) (
-	*unstructured.UnstructuredList, error) {
+	*unstructured.UnstructuredList, error,
+) {
 	resourceID := schema.GroupVersionResource{
 		Group:    resourceFilter.groupVersionResource.Group,
 		Version:  resourceFilter.groupVersionResource.Version,
@@ -220,7 +221,8 @@ func (f *Fetcher) getResourcesDynamically(ctx context.Context,
 }
 
 func (f *Fetcher) getClusterWideResourcesDynamically(ctx context.Context, resourceFilter *resourceFilter) (
-	*unstructured.UnstructuredList, error) {
+	*unstructured.UnstructuredList, error,
+) {
 	resourceID := schema.GroupVersionResource{
 		Group:    resourceFilter.groupVersionResource.Group,
 		Version:  resourceFilter.groupVersionResource.Version,

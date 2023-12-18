@@ -73,14 +73,15 @@ func TestFindClusterPolicyReportResult(t *testing.T) {
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"namespaces"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"namespaces"},
+						},
 					},
-				},
 				},
 			},
 		},
@@ -92,17 +93,18 @@ func TestFindClusterPolicyReportResult(t *testing.T) {
 	})
 
 	var expectedResource unstructured.Unstructured
-	for i := 0; i < 5; i++ {
-		namespaceResource := unstructured.Unstructured{Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Namespace",
-			"metadata": map[string]interface{}{
-				"name":              "testingns" + fmt.Sprint(i),
-				"creationTimestamp": nil,
+	for idx := 0; idx < 5; idx++ {
+		namespaceResource := unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Namespace",
+				"metadata": map[string]interface{}{
+					"name":              "testingns" + fmt.Sprint(idx),
+					"creationTimestamp": nil,
+				},
+				"spec":   map[string]interface{}{},
+				"status": map[string]interface{}{},
 			},
-			"spec":   map[string]interface{}{},
-			"status": map[string]interface{}{},
-		},
 		}
 		report.AddResult(report.CreateResult(&policy, namespaceResource, &admReviewPass, nil))
 		expectedResource = namespaceResource
@@ -147,14 +149,15 @@ func TestFindPolicyReportResult(t *testing.T) {
 		Spec: policiesv1.AdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"pods"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
 					},
-				},
 				},
 			},
 		},
@@ -166,17 +169,18 @@ func TestFindPolicyReportResult(t *testing.T) {
 	})
 
 	var expectedResource unstructured.Unstructured
-	for i := 0; i < 5; i++ {
-		namespaceResource := unstructured.Unstructured{Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Pod",
-			"metadata": map[string]interface{}{
-				"name":              "testingns" + fmt.Sprint(i),
-				"creationTimestamp": nil,
+	for idx := 0; idx < 5; idx++ {
+		namespaceResource := unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Pod",
+				"metadata": map[string]interface{}{
+					"name":              "testingns" + fmt.Sprint(idx),
+					"creationTimestamp": nil,
+				},
+				"spec":   map[string]interface{}{},
+				"status": map[string]interface{}{},
 			},
-			"spec":   map[string]interface{}{},
-			"status": map[string]interface{}{},
-		},
 		}
 		report.AddResult(report.CreateResult(&policy, namespaceResource, &admReviewPass, nil))
 		expectedResource = namespaceResource

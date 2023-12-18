@@ -40,7 +40,8 @@ func TestFindNamespacesForAllClusterAdmissionPolicies(t *testing.T) {
 			NamespaceSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"env": "test"},
 			},
-		}}
+		},
+	}
 
 	tests := []struct {
 		name     string
@@ -239,14 +240,15 @@ func TestGetClusterAdmissionPolicies(t *testing.T) {
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{"", "apps"},
-						APIVersions: []string{"v1", "alphav1"},
-						Resources:   []string{"pods", "deployments"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"", "apps"},
+							APIVersions: []string{"v1", "alphav1"},
+							Resources:   []string{"pods", "deployments"},
+						},
 					},
-				},
 				},
 			},
 		},
@@ -271,14 +273,15 @@ func TestGetClusterAdmissionPolicies(t *testing.T) {
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{"", "apps"},
-						APIVersions: []string{"v1", "alphav1"},
-						Resources:   []string{"pods", "deployments"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"", "apps"},
+							APIVersions: []string{"v1", "alphav1"},
+							Resources:   []string{"pods", "deployments"},
+						},
 					},
-				},
 				},
 			},
 		},
@@ -302,14 +305,15 @@ func TestGetClusterAdmissionPolicies(t *testing.T) {
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				BackgroundAudit: false,
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{"", "apps"},
-						APIVersions: []string{"v1", "alphav1"},
-						Resources:   []string{"pods", "deployments"},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"", "apps"},
+							APIVersions: []string{"v1", "alphav1"},
+							Resources:   []string{"pods", "deployments"},
+						},
 					},
-				},
 				},
 			},
 		},
@@ -357,12 +361,14 @@ var nsDefault = v1.Namespace{
 		Labels: map[string]string{"kubernetes.io/metadata.name": "default"},
 	},
 }
+
 var nsTest = v1.Namespace{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:   "test",
 		Labels: map[string]string{"kubernetes.io/metadata.name": "test", "env": "test"},
 	},
 }
+
 var nsKubewarden = v1.Namespace{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:   "kubewarden",
