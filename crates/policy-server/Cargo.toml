@@ -12,7 +12,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "4.2", features = ["cargo", "env"] }
+clap = { version = "4.4", features = ["cargo", "env"] }
 daemonize = "0.5"
 humansize = "2.1"
 itertools = "0.12.0"
@@ -35,7 +35,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.27"
 sha2 = "0.10"
 thiserror = "1.0"
-tokio = { version = "^1", features = ["full"] }
+tokio = { version = "^1.35.0", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 tracing-opentelemetry = "0.22.0"
