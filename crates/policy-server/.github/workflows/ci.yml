@@ -23,8 +23,8 @@ jobs:
         with:
           command: check
 
-  test:
-    name: Test Suite
+  unit-tests:
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -36,10 +36,10 @@ jobs:
       - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
           command: test
-          args: --workspace
+          args: --workspace --lib
 
-  e2e-tests:
-    name: End to end tests
+  integration-tests:
+    name: Integration tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -50,37 +50,8 @@ jobs:
           override: true
       - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
-          command: build
-          args: --release
-      - name: Install venom cli tool
-        run: |
-          INSTALL_DIR=$HOME/.venom
-          mkdir -p $INSTALL_DIR
-          curl https://github.com/ovh/venom/releases/download/v1.1.0/venom.linux-amd64 -L -o $INSTALL_DIR/venom
-          chmod +x $INSTALL_DIR/venom
-          echo $INSTALL_DIR >> $GITHUB_PATH
-      - name: run e2e tests
-        run: |
-          make e2e-tests
-      # upload e2e logs - simplifies debugging
-      - name: upload venom.lom
-        if: success() || failure()
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
-        with:
-          name: venom.log
-          path: e2e-tests/venom.log
-      - name: upload policy-server stdout
-        if: success() || failure()
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
-        with:
-          name: policy-server.stdout.log
-          path: e2e-tests/policy-server.out
-      - name: upload policy-server stderr
-        if: success() || failure()
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
-        with:
-          name: policy-server.stderr.log
-          path: e2e-tests/policy-server.err
+          command: test
+          args: --test '*'
 
   fmt:
     name: Rustfmt
