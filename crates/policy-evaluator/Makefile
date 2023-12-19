@@ -21,7 +21,7 @@ test: fmt lint
 	cargo test --workspace
 
 .PHONY: unit-tests
-unit-test: fmt lint
+unit-tests: fmt lint
 	cargo test --workspace --lib
 
 .PHONY: integration-tests
