@@ -122,6 +122,7 @@ func shouldUpdatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, o
 	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
 		containerImageChanged ||
 		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
+		originalDeployment.Spec.Template.Spec.SecurityContext != newDeployment.Spec.Template.Spec.SecurityContext ||
 		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
 		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment), nil
