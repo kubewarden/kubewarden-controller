@@ -176,8 +176,9 @@ spec:
               securityContexts:
                 description: Security configuration to be used in the Policy Server
                   workload. The field allows different configurations for the pod
-                  and containers. This configuration will not be used in containers
-                  added by other controllers (e.g. telemetry sidecars)
+                  and containers. If set for the containers, this configuration will
+                  not be used in containers added by other controllers (e.g. telemetry
+                  sidecars)
                 properties:
                   container:
                     description: securityContext definition to be used in the policy

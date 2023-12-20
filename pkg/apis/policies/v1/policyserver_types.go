@@ -78,8 +78,8 @@ type PolicyServerSpec struct {
 
 	// Security configuration to be used in the Policy Server workload.
 	// The field allows different configurations for the pod and containers.
-	// This configuration will not be used in containers added by other
-	// controllers (e.g. telemetry sidecars)
+	// If set for the containers, this configuration will not be used in
+	// containers added by other controllers (e.g. telemetry sidecars)
 	// +optional
 	SecurityContexts PolicyServerSecurity `json:"securityContexts,omitempty"`
 }
