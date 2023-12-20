@@ -2,7 +2,6 @@ package report
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	errorMachinery "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
@@ -207,42 +205,4 @@ func (s *KubernetesPolicyReportStore) SaveClusterPolicyReport(report *ClusterPol
 		return fmt.Errorf("update failed: %w", retryErr)
 	}
 	return nil
-}
-
-func (s *KubernetesPolicyReportStore) listPolicyReports() ([]PolicyReport, error) {
-	reportList := polReport.PolicyReportList{}
-	err := s.client.List(context.Background(), &reportList, &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(labels.Set{LabelAppManagedBy: LabelApp}),
-	})
-	if err != nil {
-		if errorMachinery.IsNotFound(err) {
-			return []PolicyReport{}, constants.ErrResourceNotFound
-		}
-		return []PolicyReport{}, err
-	}
-	results := make([]PolicyReport, 0, len(reportList.Items))
-	for _, item := range reportList.Items {
-		results = append(results, PolicyReport{item})
-	}
-	return results, nil
-}
-
-func (s *KubernetesPolicyReportStore) ToJSON() (string, error) {
-	recapJSON := make(map[string]interface{})
-	clusterReport, err := s.GetClusterPolicyReport(constants.DefaultClusterwideReportName)
-	if err != nil {
-		log.Error().Err(err).Msg("error fetching ClusterPolicyReport. Ignoring this error to allow user to read the namespaced reports")
-	}
-	recapJSON["cluster"] = clusterReport
-	nsReports, err := s.listPolicyReports()
-	if err != nil {
-		return "", err
-	}
-	recapJSON["namespaces"] = nsReports
-
-	marshaled, err := json.Marshal(recapJSON)
-	if err != nil {
-		return "", err
-	}
-	return string(marshaled), nil
 }

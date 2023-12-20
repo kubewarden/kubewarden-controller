@@ -1,12 +1,9 @@
 package report
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
-
-	"golang.org/x/exp/maps"
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/rs/zerolog"
@@ -133,28 +130,4 @@ func (s *MemoryPolicyReportStore) SaveClusterPolicyReport(report *ClusterPolicyR
 	latestReport.Summary = report.Summary
 	latestReport.Results = report.Results
 	return s.updateClusterPolicyReport(&latestReport)
-}
-
-func (s *MemoryPolicyReportStore) listPolicyReports() ([]PolicyReport, error) { //nolint:unparam // respect the interface
-	return maps.Values(s.prCache), nil
-}
-
-func (s *MemoryPolicyReportStore) ToJSON() (string, error) {
-	recapJSON := make(map[string]interface{})
-	clusterReport, err := s.GetClusterPolicyReport(constants.DefaultClusterwideReportName)
-	if err != nil {
-		log.Error().Err(err).Msg("error fetching ClusterPolicyReport. Ignoring this error to allow user to read the namespaced reports")
-	}
-	recapJSON["cluster"] = clusterReport
-	nsReports, err := s.listPolicyReports()
-	if err != nil {
-		return "", err
-	}
-	recapJSON["namespaces"] = nsReports
-
-	marshaled, err := json.Marshal(recapJSON)
-	if err != nil {
-		return "", err
-	}
-	return string(marshaled), nil
 }
