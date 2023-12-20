@@ -23,9 +23,13 @@ lint:
 test: fmt lint
 	cargo test --workspace
 
-.PHONY: e2e-tests
-e2e-tests: target/release/policy-server
-	make -C ./e2e-tests test
+.PHONY: unit-tests
+unit-tests: fmt lint
+	cargo test --workspace --lib
+
+.PHONY: integration-test
+integration-tests: fmt lint
+	cargo test --test '*'
 
 .PHONY: clean
 clean:
