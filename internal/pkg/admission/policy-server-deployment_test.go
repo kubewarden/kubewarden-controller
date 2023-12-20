@@ -19,25 +19,25 @@ const (
 )
 
 func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
-	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{})
+	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{})
 	tests := []struct {
 		name     string
 		original *appsv1.Deployment
 		new      *appsv1.Deployment
 		expect   bool
 	}{
-		{"equal deployments", deployment, createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{}), false},
-		{"different replicas", deployment, createDeployment(2, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{}), true},
-		{"different image", deployment, createDeployment(1, "sa", "", "test", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{}), true},
-		{"different serviceAccount", deployment, createDeployment(1, "serviceAccount", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{}), true},
-		{"new imagePullSecret", deployment, createDeployment(1, "sa", "regcred", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{}), true},
-		{"different imagePullSecret", createDeployment(1, "sa", "regcred", "image", nil, nil, map[string]string{}), createDeployment(1, "sa", "regcred2", "image", nil, nil, map[string]string{}), false},
-		{"new insecureSources", deployment, createDeployment(1, "sa", "regcred", "image", []string{"localhost:5000"}, []corev1.EnvVar{{Name: "env1"}}, map[string]string{}), true},
-		{"different insecureSources", createDeployment(1, "sa", "regcred", "image", []string{"localhost:4000"}, nil, map[string]string{}), createDeployment(1, "sa", "regcred2", "image", []string{"localhost:9999"}, nil, map[string]string{}), false},
-		{"different env", deployment, createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}, {Name: "env2"}}, map[string]string{}), true},
-		{"different annotation", deployment, createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, map[string]string{"key": "val"}), true},
-		{"same nil env", createDeployment(1, "sa", "", "image", nil, nil, map[string]string{}), createDeployment(1, "sa", "", "image", nil, nil, map[string]string{}), false},
-		{"same nil annotation", createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil), createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil), false},
+		{"equal deployments", deployment, createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), false},
+		{"different replicas", deployment, createDeployment(2, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
+		{"different image", deployment, createDeployment(1, "sa", "", "test", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
+		{"different serviceAccount", deployment, createDeployment(1, "serviceAccount", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
+		{"new imagePullSecret", deployment, createDeployment(1, "sa", "regcred", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
+		{"different imagePullSecret", createDeployment(1, "sa", "regcred", "image", nil, nil, nil, map[string]string{}), createDeployment(1, "sa", "regcred2", "image", nil, nil, nil, map[string]string{}), false},
+		{"new insecureSources", deployment, createDeployment(1, "sa", "regcred", "image", []string{"localhost:5000"}, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
+		{"different insecureSources", createDeployment(1, "sa", "regcred", "image", []string{"localhost:4000"}, nil, nil, map[string]string{}), createDeployment(1, "sa", "regcred2", "image", []string{"localhost:9999"}, nil, nil, map[string]string{}), false},
+		{"different env", deployment, createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}, {Name: "env2"}}, nil, map[string]string{}), true},
+		{"different annotation", deployment, createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{"key": "val"}), true},
+		{"same nil env", createDeployment(1, "sa", "", "image", nil, nil, nil, map[string]string{}), createDeployment(1, "sa", "", "image", nil, nil, nil, map[string]string{}), false},
+		{"same nil annotation", createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, nil), createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, nil), false},
 	}
 
 	policyServer := &policiesv1.PolicyServer{
@@ -59,7 +59,9 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 
 func createDeployment(replicasInt int, serviceAccount, imagePullSecret, image string,
 	insecureSources []string,
-	env []corev1.EnvVar, annotations map[string]string,
+	env []corev1.EnvVar,
+	podSecurityContext *corev1.PodSecurityContext,
+	annotations map[string]string,
 ) *appsv1.Deployment {
 	replicas := int32(replicasInt)
 	const (
@@ -114,6 +116,7 @@ func createDeployment(replicasInt int, serviceAccount, imagePullSecret, image st
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{Annotations: annotations},
 				Spec: corev1.PodSpec{
+					SecurityContext:    podSecurityContext,
 					Containers:         []corev1.Container{container},
 					ServiceAccountName: serviceAccount,
 				},
@@ -160,7 +163,7 @@ func TestGetPolicyServeImageFromDeployment(t *testing.T) {
 		},
 	}
 	policyServer.Name = policyServerName
-	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, map[string]string{})
+	deployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, nil, map[string]string{})
 	image, err := getPolicyServerImageFromDeployment(&policyServer, deployment)
 	if err != nil || image != "image" {
 		t.Errorf("The function cannot find the right container image for the policy server container. Expected: 'image', Got: %s", image)
@@ -179,8 +182,8 @@ func TestIfPolicyServerImageChanged(t *testing.T) {
 		},
 	}
 	policyServer.Name = policyServerName
-	oldDeployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, map[string]string{})
-	newDeployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, map[string]string{})
+	oldDeployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, nil, map[string]string{})
+	newDeployment := createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{}, nil, map[string]string{})
 	oldDeployment.Spec.Template.Spec.Containers[0].Name = policyServerContainerName
 	newDeployment.Spec.Template.Spec.Containers[0].Name = policyServerContainerName
 
