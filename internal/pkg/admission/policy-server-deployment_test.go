@@ -30,6 +30,10 @@ func TestShouldUpdatePolicyServerDeployment(t *testing.T) {
 		{"different replicas", deployment, createDeployment(2, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
 		{"different image", deployment, createDeployment(1, "sa", "", "test", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
 		{"different serviceAccount", deployment, createDeployment(1, "serviceAccount", "", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
+		{"different podSecurityContext", deployment, createDeployment(1, "sa", "", "image", nil, []corev1.EnvVar{{Name: "env1"}},
+			&corev1.PodSecurityContext{
+				RunAsNonRoot: &[]bool{true}[0],
+			}, map[string]string{}), true},
 		{"new imagePullSecret", deployment, createDeployment(1, "sa", "regcred", "image", nil, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
 		{"different imagePullSecret", createDeployment(1, "sa", "regcred", "image", nil, nil, nil, map[string]string{}), createDeployment(1, "sa", "regcred2", "image", nil, nil, nil, map[string]string{}), false},
 		{"new insecureSources", deployment, createDeployment(1, "sa", "regcred", "image", []string{"localhost:5000"}, []corev1.EnvVar{{Name: "env1"}}, nil, map[string]string{}), true},
