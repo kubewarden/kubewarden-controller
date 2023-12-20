@@ -315,6 +315,11 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		)
 	}
+
+	podSecurityContext := &corev1.PodSecurityContext{}
+	if policyServer.Spec.SecurityContexts.Pod != nil {
+		podSecurityContext = policyServer.Spec.SecurityContexts.Pod
+	}
 	if policyServer.Spec.SecurityContexts.Container != nil {
 		admissionContainer.SecurityContext = policyServer.Spec.SecurityContexts.Container
 	} else {
@@ -380,6 +385,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 					Annotations: templateAnnotations,
 				},
 				Spec: corev1.PodSpec{
+					SecurityContext:    podSecurityContext,
 					Containers:         []corev1.Container{admissionContainer},
 					ServiceAccountName: policyServer.Spec.ServiceAccountName,
 					Volumes: []corev1.Volume{
@@ -417,9 +423,6 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				},
 			},
 		},
-	}
-	if policyServer.Spec.SecurityContexts.Pod != nil {
-		policyServerDeployment.Spec.Template.Spec.SecurityContext = policyServer.Spec.SecurityContexts.Pod
 	}
 
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
