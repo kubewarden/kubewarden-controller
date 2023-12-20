@@ -1,0 +1,22 @@
+apiVersion: policies.kubewarden.io/v1
+kind: ClusterAdmissionPolicy
+metadata:
+  annotations:
+    io.kubewarden.policy.category: Service
+    io.kubewarden.policy.severity: high
+  name: disallow-service-loadbalancer
+spec:
+  module: registry://ghcr.io/kubewarden/policies/disallow-service-loadbalancer:v0.1.8
+  mode: monitor
+  settings: {}
+  rules:
+    - apiGroups:
+        - ""
+      apiVersions:
+        - v1
+      resources:
+        - services
+      operations:
+        - CREATE
+        - UPDATE
+  mutating: false

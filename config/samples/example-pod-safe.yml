@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-normal
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      imagePullPolicy: IfNotPresent
+    - name: sleeping-sidecar
+      image: alpine
+      command: ["sleep", "1h"]

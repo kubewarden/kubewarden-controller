@@ -1,0 +1,26 @@
+apiVersion: policies.kubewarden.io/v1
+kind: ClusterAdmissionPolicy
+metadata:
+  annotations:
+    io.kubewarden.policy.category: Secure supply chain
+    io.kubewarden.policy.severity: medium
+  name: verify-image-signatures
+spec:
+  module: registry://ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+  mode: monitor
+  settings:
+    signatures:
+      - image: ghcr.io/kyverno/test-verify-image*
+        pubKeys:
+          - "-----BEGIN PUBLIC KEY-----MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==-----END PUBLIC KEY-----"
+  rules:
+    - apiGroups:
+        - ""
+      apiVersions:
+        - v1
+      resources:
+        - pods
+      operations:
+        - CREATE
+        - UPDATE
+  mutating: true

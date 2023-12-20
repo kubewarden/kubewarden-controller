@@ -1,0 +1,21 @@
+apiVersion: policies.kubewarden.io/v1
+kind: ClusterAdmissionPolicy
+metadata:
+  annotations:
+    io.kubewarden.policy.category: Resource validation
+    io.kubewarden.policy.severity: low
+  name: safe-labels
+spec:
+  module: registry://ghcr.io/kubewarden/tests/safe-labels:v0.1.13
+  settings:
+    denied_labels:
+      - cost-center
+  mode: protect
+  rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["namespaces"]
+      operations:
+        - CREATE
+  mutating: false
+  # backgroundAudit: true

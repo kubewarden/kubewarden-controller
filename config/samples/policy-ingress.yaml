@@ -1,0 +1,23 @@
+apiVersion: policies.kubewarden.io/v1
+kind: ClusterAdmissionPolicy
+metadata:
+  annotations:
+    io.kubewarden.policy.category: Ingress
+    io.kubewarden.policy.severity: high
+  name: ingress-policy
+spec:
+  module: registry://ghcr.io/kubewarden/policies/ingress:v0.1.15
+  mode: monitor
+  settings:
+    requireTLS: true
+  rules:
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    resources:
+    - ingresses
+    operations:
+    - CREATE
+    - UPDATE
+  mutating: false

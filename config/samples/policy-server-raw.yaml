@@ -1,0 +1,71 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-server-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: policy-server
+  template:
+    metadata:
+      labels:
+        app: policy-server
+    spec:
+      containers:
+        - name: policy-server
+          image: ghcr.io/kubewarden/policy-server:v1.9.0-rc3
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: policy-store
+              mountPath: /registry
+            - name: policies-config
+              mountPath: /policies.yml
+              subPath: policies.yml
+      volumes:
+        - name: policy-store
+          emptyDir: {}
+        - name: policies-config
+          configMap:
+            name: policies-configmap
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: policy-server-service
+spec:
+  selector:
+    app: policy-server
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: policies-configmap
+data:
+  policies.yml: |
+    raw-validation:
+      url: ghcr.io/kubewarden/tests/raw-validation-policy:v0.1.0
+      settings: 
+        validUsers:
+          - alice
+          - bob
+        validActions:
+          - read
+          - write
+        validResources:
+          - orders
+          - products
+    raw-mutation:
+      url: ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0
+      allowedToMutate: true
+      settings:
+        forbiddenResources:
+          - privateResource
+          - secretResource
+        defaultResource: publicResource
