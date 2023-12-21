@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"os"
 
+	reportLogger "github.com/kubewarden/audit-scanner/internal/log"
+
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/report"
 	"github.com/kubewarden/audit-scanner/internal/resources"
@@ -49,6 +51,7 @@ type Scanner struct {
 	policiesFetcher  PoliciesFetcher
 	resourcesFetcher ResourcesFetcher
 	reportStore      report.PolicyReportStore
+	reportLogger     reportLogger.PolicyReportLogger
 	// http client used to make requests against the Policy Server
 	httpClient http.Client
 	outputScan bool
@@ -112,6 +115,7 @@ func NewScanner(
 		policiesFetcher:  policiesFetcher,
 		resourcesFetcher: resourcesFetcher,
 		reportStore:      store,
+		reportLogger:     reportLogger.PolicyReportLogger{},
 		httpClient:       httpClient,
 		outputScan:       outputScan,
 	}, nil
@@ -180,11 +184,7 @@ func (s *Scanner) ScanNamespace(nsName string) error {
 	log.Info().Str("namespace", nsName).Msg("namespace scan finished")
 
 	if s.outputScan {
-		str, err := s.reportStore.ToJSON()
-		if err != nil {
-			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
-		}
-		fmt.Println(str) //nolint:forbidigo
+		s.reportLogger.LogPolicyReport(&namespacedsReport)
 	}
 
 	return nil
@@ -251,11 +251,7 @@ func (s *Scanner) ScanClusterWideResources() error {
 	log.Info().Msg("clusterwide resources scan finished")
 
 	if s.outputScan {
-		str, err := s.reportStore.ToJSON()
-		if err != nil {
-			log.Error().Err(err).Msg("error marshaling reportStore to JSON")
-		}
-		fmt.Println(str) //nolint:forbidigo
+		s.reportLogger.LogClusterPolicyReport(&clusterReport)
 	}
 
 	return nil

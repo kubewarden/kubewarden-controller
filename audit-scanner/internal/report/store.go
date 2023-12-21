@@ -25,7 +25,4 @@ type PolicyReportStore interface {
 	// SaveClusterPolicyReport instantiates the ClusterPolicyReport if it doesn't exist, or
 	// updates it one is found
 	SaveClusterPolicyReport(report *ClusterPolicyReport) error
-
-	// ToJSON marshals the contents of the store into a JSON string
-	ToJSON() (string, error)
 }
