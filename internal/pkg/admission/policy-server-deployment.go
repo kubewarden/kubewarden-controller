@@ -122,6 +122,7 @@ func shouldUpdatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, o
 	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
 		containerImageChanged ||
 		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
+		originalDeployment.Spec.Template.Spec.SecurityContext != newDeployment.Spec.Template.Spec.SecurityContext ||
 		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
 		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment), nil
@@ -314,6 +315,11 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			},
 		)
 	}
+
+	podSecurityContext := &corev1.PodSecurityContext{}
+	if policyServer.Spec.SecurityContexts.Pod != nil {
+		podSecurityContext = policyServer.Spec.SecurityContexts.Pod
+	}
 	if policyServer.Spec.SecurityContexts.Container != nil {
 		admissionContainer.SecurityContext = policyServer.Spec.SecurityContexts.Container
 	} else {
@@ -379,6 +385,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 					Annotations: templateAnnotations,
 				},
 				Spec: corev1.PodSpec{
+					SecurityContext:    podSecurityContext,
 					Containers:         []corev1.Container{admissionContainer},
 					ServiceAccountName: policyServer.Spec.ServiceAccountName,
 					Volumes: []corev1.Volume{
@@ -416,9 +423,6 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 				},
 			},
 		},
-	}
-	if policyServer.Spec.SecurityContexts.Pod != nil {
-		policyServerDeployment.Spec.Template.Spec.SecurityContext = policyServer.Spec.SecurityContexts.Pod
 	}
 
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
