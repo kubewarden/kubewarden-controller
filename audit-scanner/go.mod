@@ -8,7 +8,7 @@ require (
 	github.com/kubewarden/kubewarden-controller v1.9.0
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/cobra v1.8.0
-	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
+	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b
 	k8s.io/api v0.29.0
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
