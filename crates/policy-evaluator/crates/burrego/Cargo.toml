@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 base64 = "0.21.5"
 chrono = { version = "0.4.31", default-features = false, features = ["clock"] }
-chrono-tz = "0.8.4"
+chrono-tz = "0.8.5"
 gtmpl = "0.7.1"
 gtmpl_value = "0.5.1"
 itertools = "0.12.0"
@@ -18,8 +18,8 @@ lazy_static = "1.4.0"
 regex = "1.5.6"
 semver = "1.0.20"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0.108"
-serde_yaml = "0.9.27"
+serde_json = "1.0.110"
+serde_yaml = "0.9.29"
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
