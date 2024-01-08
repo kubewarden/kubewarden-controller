@@ -45,6 +45,23 @@ func TestFilterAuditablePolicies(t *testing.T) {
 		},
 		Status: policiesv1.PolicyStatus{PolicyStatus: policiesv1.PolicyStatusActive},
 	}
+	hasAllResourcesOperations := policiesv1.AdmissionPolicy{
+		Spec: policiesv1.AdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
+				BackgroundAudit: true,
+				Rules: []admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{"*"},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{"*"},
+						Resources:   []string{"*"},
+						Scope:       nil,
+					},
+				}},
+			},
+		},
+		Status: policiesv1.PolicyStatus{PolicyStatus: policiesv1.PolicyStatusActive},
+	}
 	auditable := policiesv1.AdmissionPolicy{
 		Spec: policiesv1.AdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
@@ -72,6 +89,7 @@ func TestFilterAuditablePolicies(t *testing.T) {
 		{"policy not active", []policiesv1.Policy{&pending}, []policiesv1.Policy{}},
 		{"policy without create operation", []policiesv1.Policy{&noCreate}, []policiesv1.Policy{}},
 		{"policy with all resources (*)", []policiesv1.Policy{&hasAllResources}, []policiesv1.Policy{}},
+		{"policy with all resources and operations (*)", []policiesv1.Policy{&hasAllResourcesOperations}, []policiesv1.Policy{}},
 		{"auditable policy", []policiesv1.Policy{&auditable}, []policiesv1.Policy{&auditable}},
 		{"auditable policy with all the others policies", []policiesv1.Policy{&auditable, &noBackgroundAudit, &noCreate, &pending, &hasAllResources}, []policiesv1.Policy{&auditable}},
 		{"empty array", []policiesv1.Policy{}, []policiesv1.Policy{}},
