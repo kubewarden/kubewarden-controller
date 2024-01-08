@@ -46,16 +46,12 @@ tracing = "0.1"
 tracing-futures = "0.2"
 url = { version = "2.2", features = ["serde"] }
 validator = { version = "0.16", features = ["derive"] }
-#wapc = "1.1"
-wapc = { git = "https://github.com/flavio/wapc-rs/", branch = "expose-wasmtime-provider-pre" }
+wapc = "1.1"
 wasi-cap-std-sync = { workspace = true }
 wasi-common = { workspace = true }
 wasmparser = "0.118"
 wasmtime = { workspace = true }
-#wasmtime-provider = { version = "1.12", features = ["cache"] }
-wasmtime-provider = { git = "https://github.com/flavio/wapc-rs/", branch = "expose-wasmtime-provider-pre", features = [
-  "cache",
-] }
+wasmtime-provider = { version = "1.12.1", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
