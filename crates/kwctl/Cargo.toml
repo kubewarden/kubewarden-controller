@@ -43,7 +43,7 @@ url = "2.5.0"
 walrus = "0.20.3"
 wasmparser = "0.118"
 time = "0.3.31"
-semver = { version = "1.0.20", features = ["serde"] }
+semver = { version = "1.0.21", features = ["serde"] }
 
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of kwctl
