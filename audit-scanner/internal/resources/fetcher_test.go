@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -767,7 +766,12 @@ func TestIsNamespacedResource(t *testing.T) {
 				Version:  "v1",
 				Resource: "foos",
 			},
-			false, constants.ErrResourceNotFound,
+			false,
+			apimachineryerrors.NewNotFound(
+				schema.GroupResource{
+					Group:    "",
+					Resource: "foos",
+				}, "foos"),
 		},
 	}
 
@@ -782,7 +786,7 @@ func TestIsNamespacedResource(t *testing.T) {
 			fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
 
 			isNamespaced, err := fetcher.isNamespacedResource(ttest.gvr)
-			if (err != nil && ttest.expectedErr != nil && !errors.Is(err, ttest.expectedErr)) || (err != nil && ttest.expectedErr == nil) {
+			if (err != nil && ttest.expectedErr != nil && err.Error() != ttest.expectedErr.Error()) || (err != nil && ttest.expectedErr == nil) {
 				t.Errorf("unexpected error: " + err.Error())
 			}
 			if isNamespaced != ttest.expectedIsNamespaced {
