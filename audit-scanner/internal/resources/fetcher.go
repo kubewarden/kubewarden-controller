@@ -2,11 +2,9 @@ package resources
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 
-	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -73,7 +71,7 @@ func (f *Fetcher) GetResourcesForPolicies(ctx context.Context, policies []polici
 	for resourceFilter, policies := range gvrMap {
 		isNamespaced, err := f.isNamespacedResource(resourceFilter.groupVersionResource)
 		if err != nil {
-			if errors.Is(err, constants.ErrResourceNotFound) {
+			if apimachineryerrors.IsNotFound(err) {
 				log.Warn().
 					Str("resource GVK", resourceFilter.groupVersionResource.String()).
 					Msg("API resource not found")
@@ -133,7 +131,7 @@ func (f *Fetcher) isNamespacedResource(gvr schema.GroupVersionResource) (bool, e
 			return apiResource.Namespaced, nil
 		}
 	}
-	return false, constants.ErrResourceNotFound
+	return false, apimachineryerrors.NewNotFound(gvr.GroupResource(), gvr.Resource)
 }
 
 // GetClusterWideResourcesForPolicies fetches all cluster wide resources that must be
@@ -150,7 +148,7 @@ func (f *Fetcher) GetClusterWideResourcesForPolicies(ctx context.Context, polici
 	for resourceFilter, policies := range gvrMap {
 		isNamespaced, err := f.isNamespacedResource(resourceFilter.groupVersionResource)
 		if err != nil {
-			if errors.Is(err, constants.ErrResourceNotFound) {
+			if apimachineryerrors.IsNotFound(err) {
 				log.Warn().
 					Str("resource GVK", resourceFilter.groupVersionResource.String()).
 					Msg("API resource not found")

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -114,6 +113,22 @@ var policyPodsNamespaces = policiesv1.ClusterAdmissionPolicy{
 					APIGroups:   []string{""},
 					APIVersions: []string{"v1"},
 					Resources:   []string{"pods", "namespaces"},
+				},
+			},
+		},
+	}},
+}
+
+// used to test incorrect resources, when using *
+var policyAsteriskRules = policiesv1.ClusterAdmissionPolicy{
+	Spec: policiesv1.ClusterAdmissionPolicySpec{PolicySpec: policiesv1.PolicySpec{
+		Rules: []admissionregistrationv1.RuleWithOperations{
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods"},
 				},
 			},
 		},
@@ -247,6 +262,7 @@ func TestGetResourcesForPolicies(t *testing.T) {
 		{"policy with label filter", []policiesv1.Policy{&policy4}, expectedP4, "kubewarden"},
 		{"we skip incorrect GVKs", []policiesv1.Policy{&policyIncorrectRules}, expectedPIncorrectRules, "default"},
 		{"we skip clusterwide resources", []policiesv1.Policy{&policyPodsNamespaces}, expectedPPodsNamespaces, "default"}, // namespaces get filtered
+		{"we skip asterisk rules, they get expanded by clientgo", []policiesv1.Policy{&policyAsteriskRules}, []AuditableResources{}, "default"},
 	}
 
 	for _, test := range tests {
@@ -537,6 +553,46 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 			PolicyStatus: policiesv1.PolicyStatusActive,
 		},
 	}
+	policyWithAsteriskRules := policiesv1.ClusterAdmissionPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cap",
+			// It's necessary to define ResourceVersion and Generation
+			// because the fake client can set values for these fields.
+			// See more at docs:
+			// ObjectMeta's `Generation` and `ResourceVersion` don't
+			// behave properly, Patch or Update operations that rely
+			// on these fields will fail, or give false positives.
+			// https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client/fake
+			ResourceVersion: "123",
+			Generation:      1,
+		},
+		Spec: policiesv1.ClusterAdmissionPolicySpec{
+			PolicySpec: policiesv1.PolicySpec{
+				BackgroundAudit: true,
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"*"},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods", "namespaces"},
+						},
+					},
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods", "namespaces"},
+						},
+					},
+				},
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: policiesv1.PolicyStatusActive,
+		},
+	}
 
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(policiesv1.GroupVersion, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
@@ -604,6 +660,10 @@ func TestGetClusterWideResourcesForPolicies(t *testing.T) {
 		{"Filter cluster wide resource with label filter", []policiesv1.Policy{&policyWithLabelFilter}, []AuditableResources{{
 			Policies:  []policiesv1.Policy{&policyWithLabelFilter},
 			Resources: []unstructured.Unstructured{{Object: unstructuredNamespace2}},
+		}}},
+		{"Filter cluster wide resource with policies with asterisk rules", []policiesv1.Policy{&policyWithAsteriskRules}, []AuditableResources{{
+			Policies:  []policiesv1.Policy{&policyWithAsteriskRules},
+			Resources: []unstructured.Unstructured{{Object: unstructuredNamespace}, {Object: unstructuredNamespace2}},
 		}}},
 	}
 
@@ -706,7 +766,12 @@ func TestIsNamespacedResource(t *testing.T) {
 				Version:  "v1",
 				Resource: "foos",
 			},
-			false, constants.ErrResourceNotFound,
+			false,
+			apimachineryerrors.NewNotFound(
+				schema.GroupResource{
+					Group:    "",
+					Resource: "foos",
+				}, "foos"),
 		},
 	}
 
@@ -721,7 +786,7 @@ func TestIsNamespacedResource(t *testing.T) {
 			fetcher := Fetcher{dynamicClient, "", "", fakeClientSet}
 
 			isNamespaced, err := fetcher.isNamespacedResource(ttest.gvr)
-			if (err != nil && ttest.expectedErr != nil && !errors.Is(err, ttest.expectedErr)) || (err != nil && ttest.expectedErr == nil) {
+			if (err != nil && ttest.expectedErr != nil && err.Error() != ttest.expectedErr.Error()) || (err != nil && ttest.expectedErr == nil) {
 				t.Errorf("unexpected error: " + err.Error())
 			}
 			if isNamespaced != ttest.expectedIsNamespaced {
