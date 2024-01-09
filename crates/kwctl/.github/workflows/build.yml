@@ -82,6 +82,7 @@ jobs:
 
       - name: Upload kwctl air gap scripts
         uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+        if: matrix.targetarch == 'x86_64' # only upload the scripts once
         with:
           name: kwctl-airgap-scripts
           path: |
