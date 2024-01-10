@@ -164,7 +164,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_
 
 	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
 	if !found {
-		r.Log.Error(nil, "Found a webhook configuration without a scope label", "name", webhookConfiguration.GetName())
+		r.Log.Info("Found a webhook configuration without a scope label, reconciling it", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 
@@ -175,13 +175,13 @@ func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_
 
 	policyNamespace, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]
 	if !found {
-		r.Log.Error(nil, "Found a webhook configuration without a namespace annotation", "name", webhookConfiguration.GetName())
+		r.Log.Info("Found a webhook configuration without a namespace annotation, reconciling it", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 
 	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
 	if !found {
-		r.Log.Error(nil, "Found webhook configuration without a policy name annotation", "name", webhookConfiguration.GetName())
+		r.Log.Info("Found a webhook configuration without a policy name annotation, reconciling it", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 

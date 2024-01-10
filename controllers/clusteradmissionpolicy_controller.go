@@ -161,7 +161,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 
 	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
 	if !found {
-		r.Log.Error(nil, "Found a webhook configuration without a scope label", "name", webhookConfiguration.GetName())
+		r.Log.Info("Found a webhook configuration without a scope label, reconciling it", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 
@@ -172,7 +172,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 
 	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
 	if !found {
-		r.Log.Error(nil, "Found webhook configuration without a policy name annotation", "name", webhookConfiguration.GetName())
+		r.Log.Info("Found a webhook configuration without a policy name annotation, reconciling it", "name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 
