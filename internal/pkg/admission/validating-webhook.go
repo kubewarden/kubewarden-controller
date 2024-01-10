@@ -51,8 +51,15 @@ func (r *Reconciler) updateValidatingWebhook(ctx context.Context,
 
 	patch := originalWebhook.DeepCopy()
 
+	if patch.ObjectMeta.Labels == nil {
+		patch.ObjectMeta.Labels = make(map[string]string)
+	}
 	for key, value := range newWebhook.ObjectMeta.Labels {
 		patch.ObjectMeta.Labels[key] = value
+	}
+
+	if patch.ObjectMeta.Annotations == nil {
+		patch.ObjectMeta.Annotations = make(map[string]string)
 	}
 	for key, value := range newWebhook.ObjectMeta.Annotations {
 		patch.ObjectMeta.Annotations[key] = value
