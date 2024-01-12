@@ -55,6 +55,8 @@ impl PolicyServer {
         let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
             oneshot::channel();
 
+        // TODO: remove the spawn blocking once the Sigstore client is async
+        // see: https://github.com/sigstore/sigstore-rs/pull/320
         let fulcio_and_rekor_data = match tokio::task::spawn_blocking(|| {
             sigstore::tuf::SigstoreRepository::fetch(None)
         })
