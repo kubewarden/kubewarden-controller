@@ -195,8 +195,8 @@ pub(crate) mod tests {
         });
 
         let actual = get_all_resources_by_type(&callback_tx, &resource).unwrap();
-        let actual_json = serde_json::to_value(&actual).unwrap();
-        let expected_json = serde_json::to_value(&services_list).unwrap();
+        let actual_json = serde_json::to_value(actual).unwrap();
+        let expected_json = serde_json::to_value(services_list).unwrap();
         assert_json_eq!(actual_json, expected_json);
     }
 

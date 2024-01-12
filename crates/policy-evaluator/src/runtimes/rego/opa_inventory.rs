@@ -272,7 +272,7 @@ mod tests {
         });
 
         let inventory = OpaInventory::new(&kube_resources, &plural_names).unwrap();
-        let inventory_json = serde_json::to_value(&inventory).unwrap();
+        let inventory_json = serde_json::to_value(inventory).unwrap();
         assert_json_eq!(inventory_json, expected);
     }
 }

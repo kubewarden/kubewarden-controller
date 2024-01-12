@@ -277,7 +277,7 @@ mod tests {
         });
 
         let inventory = GatekeeperInventory::new(&kube_resources).unwrap();
-        let inventory_json = serde_json::to_value(&inventory).unwrap();
+        let inventory_json = serde_json::to_value(inventory).unwrap();
         assert_json_eq!(inventory_json, expected);
     }
 }
