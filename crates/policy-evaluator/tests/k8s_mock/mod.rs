@@ -4,7 +4,7 @@ use hyper::{http, Body, Request, Response};
 use serde::Serialize;
 use tower_test::mock::{Handle, SendResponse};
 
-pub(crate) async fn wapc_scenario(handle: Handle<Request<Body>, Response<Body>>) {
+pub(crate) async fn wapc_and_wasi_scenario(handle: Handle<Request<Body>, Response<Body>>) {
     tokio::spawn(async move {
         let mut handle = handle;
 
