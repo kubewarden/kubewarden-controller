@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-
 use clap::ArgMatches;
 use lazy_static::lazy_static;
 use policy_evaluator::policy_evaluator::PolicySettings;
@@ -32,7 +31,7 @@ pub struct Config {
     pub policies_download_dir: PathBuf,
     pub ignore_kubernetes_connection_failure: bool,
     pub always_accept_admission_reviews_on_namespace: Option<String>,
-    pub policy_evaluation_limit: Option<u64>,
+    pub policy_evaluation_limit_seconds: Option<u64>,
     pub tls_config: Option<TlsConfig>,
     pub pool_size: usize,
     pub metrics_enabled: bool,
@@ -62,7 +61,7 @@ impl Config {
             .get_one::<String>("policies-download-dir")
             .map(PathBuf::from)
             .expect("This should not happen, there's a default value for policies-download-dir");
-        let policy_evaluation_limit = if matches.contains_id("disable-timeout-protection") {
+        let policy_evaluation_limit_seconds = if matches.contains_id("disable-timeout-protection") {
             None
         } else {
             Some(
@@ -127,7 +126,7 @@ impl Config {
             ignore_kubernetes_connection_failure,
             tls_config,
             always_accept_admission_reviews_on_namespace,
-            policy_evaluation_limit,
+            policy_evaluation_limit_seconds,
             pool_size,
             metrics_enabled,
             sigstore_cache_dir,
