@@ -3,7 +3,7 @@ use opentelemetry::{metrics::Histogram, KeyValue};
 use std::convert::TryFrom;
 use std::time::Duration;
 
-use super::PolicyEvaluationMetric;
+use crate::metrics::PolicyEvaluationMetric;
 
 lazy_static! {
     static ref POLICY_EVALUATION_LATENCY: Histogram<u64> =
