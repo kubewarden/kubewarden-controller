@@ -7,7 +7,7 @@ use crate::policy_metadata::ContextAwareResource;
 
 /// A struct that holds metadata and other data that are needed when a policy
 /// is being evaluated
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct EvaluationContext {
     /// The policy identifier. This is mostly relevant for Policy Server,
     /// which uses the identifier provided by the user inside of the `policy.yml`
