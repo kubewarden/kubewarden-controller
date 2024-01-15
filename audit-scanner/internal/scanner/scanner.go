@@ -360,6 +360,8 @@ func sendAdmissionReviewToPolicyServer(url *url.URL, admissionRequest *admv1.Adm
 	}
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, url.String(), bytes.NewBuffer(payload))
+	req.Header.Add("Content-Type", "application/json")
+
 	res, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -369,9 +371,10 @@ func sendAdmissionReviewToPolicyServer(url *url.URL, admissionRequest *admv1.Adm
 	if err != nil {
 		return nil, fmt.Errorf("cannot read body of response: %w", err)
 	}
-	if res.StatusCode > 299 {
-		return nil, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, body)
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d body: %s", res.StatusCode, body)
 	}
+
 	admissionReview := admv1.AdmissionReview{}
 	err = json.Unmarshal(body, &admissionReview)
 	if err != nil {
