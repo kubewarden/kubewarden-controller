@@ -31,7 +31,7 @@ impl PolicyEvaluatorPre {
                 Runtime::Wapc(wapc_stack)
             }
             StackPre::Wasi(stack_pre) => {
-                let wasi_stack = wasi_cli::Stack::new_from_pre(stack_pre);
+                let wasi_stack = wasi_cli::Stack::new_from_pre(stack_pre, eval_ctx);
                 Runtime::Cli(wasi_stack)
             }
             StackPre::Rego(stack_pre) => {

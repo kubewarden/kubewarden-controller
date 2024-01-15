@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::policy_evaluator::RegoPolicyExecutionMode;
 
+pub(crate) mod callback;
 pub(crate) mod rego;
 pub(crate) mod wapc;
 pub(crate) mod wasi_cli;

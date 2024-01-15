@@ -71,3 +71,11 @@ tempfile = "3.8.1"
 tower-test = "0.4"
 # kube-rs mocking requires tower-test v0.14.x
 hyper = { version = "^0.14.28" }
+# This is required to have reqwest built using the `rustls-tls-native-roots`
+# feature across all the transitive dependencies of policy-fetcher
+# This is required to have the integration tests use the system certificates instead of the
+# ones bundled inside of rustls. This allows to pull the test policies also from
+# self hosted registries (which is great at development time)
+reqwest = { version = "0", default-features = false, features = [
+  "rustls-tls-native-roots",
+] }

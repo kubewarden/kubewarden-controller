@@ -1,18 +1,25 @@
 use std::io::Cursor;
+use std::sync::{Arc, RwLock};
 use wasi_common::pipe::{ReadPipe, WritePipe};
 use wasi_common::WasiCtx;
 use wasmtime_wasi::sync::WasiCtxBuilder;
 
-use crate::runtimes::wasi_cli::{errors::WasiRuntimeError, stack_pre::StackPre};
+use crate::evaluation_context::EvaluationContext;
+use crate::runtimes::wasi_cli::{
+    errors::WasiRuntimeError, stack_pre::StackPre, wasi_pipe::WasiPipe,
+};
 
 const EXIT_SUCCESS: i32 = 0;
 
 pub(crate) struct Context {
     pub(crate) wasi_ctx: WasiCtx,
+    pub(crate) stdin_pipe: Arc<RwLock<WasiPipe>>,
+    pub(crate) eval_ctx: Arc<EvaluationContext>,
 }
 
 pub(crate) struct Stack {
     stack_pre: StackPre,
+    eval_ctx: Arc<EvaluationContext>,
 }
 
 pub(crate) struct RunResult {
@@ -21,9 +28,10 @@ pub(crate) struct RunResult {
 }
 
 impl Stack {
-    pub(crate) fn new_from_pre(stack_pre: &StackPre) -> Self {
+    pub(crate) fn new_from_pre(stack_pre: &StackPre, eval_ctx: &EvaluationContext) -> Self {
         Self {
             stack_pre: stack_pre.to_owned(),
+            eval_ctx: Arc::new(eval_ctx.to_owned()),
         }
     }
 
@@ -35,17 +43,21 @@ impl Stack {
     ) -> std::result::Result<RunResult, WasiRuntimeError> {
         let stdout_pipe = WritePipe::new_in_memory();
         let stderr_pipe = WritePipe::new_in_memory();
-        let stdin_pipe = ReadPipe::new(Cursor::new(input.to_owned()));
+        let stdin_pipe: Arc<RwLock<WasiPipe>> = Arc::new(RwLock::new(WasiPipe::new(input)));
 
         let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
         let wasi_ctx = WasiCtxBuilder::new()
             .args(&args)?
-            .stdin(Box::new(stdin_pipe))
+            .stdin(Box::new(ReadPipe::from_shared(stdin_pipe.clone())))
             .stdout(Box::new(stdout_pipe.clone()))
             .stderr(Box::new(stderr_pipe.clone()))
             .build();
-        let ctx = Context { wasi_ctx };
+        let ctx = Context {
+            wasi_ctx,
+            stdin_pipe,
+            eval_ctx: self.eval_ctx.clone(),
+        };
 
         let mut store = self.stack_pre.build_store(ctx);
         let instance = self
