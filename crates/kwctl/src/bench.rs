@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_evaluator::Evaluator;
 use tiny_bench::{bench_with_configuration_labeled, BenchmarkConfig};
 use tracing::error;
 
@@ -18,7 +17,7 @@ pub(crate) async fn pull_and_bench(cfg: &PullAndBenchSettings) -> Result<()> {
     let request = run_env.request;
 
     // validate the settings given by the user
-    let settings_validation_response = policy_evaluator.validate_settings();
+    let settings_validation_response = policy_evaluator.validate_settings(&run_env.policy_settings);
     if !settings_validation_response.valid {
         println!("{}", serde_json::to_string(&settings_validation_response)?);
         return Err(anyhow!(
@@ -33,7 +32,7 @@ pub(crate) async fn pull_and_bench(cfg: &PullAndBenchSettings) -> Result<()> {
     });
 
     // validate the settings given by the user
-    let settings_validation_response = policy_evaluator.validate_settings();
+    let settings_validation_response = policy_evaluator.validate_settings(&run_env.policy_settings);
     if !settings_validation_response.valid {
         println!("{}", serde_json::to_string(&settings_validation_response)?);
         return Err(anyhow!(
@@ -42,11 +41,12 @@ pub(crate) async fn pull_and_bench(cfg: &PullAndBenchSettings) -> Result<()> {
         ));
     }
     bench_with_configuration_labeled("validate_settings", &cfg.benchmark_cfg, || {
-        let _settings_validation_response = policy_evaluator.validate_settings();
+        let _settings_validation_response =
+            policy_evaluator.validate_settings(&run_env.policy_settings);
     });
 
     bench_with_configuration_labeled("validate", &cfg.benchmark_cfg, || {
-        let _response = policy_evaluator.validate(request.clone());
+        let _response = policy_evaluator.validate(request.clone(), &run_env.policy_settings);
     });
 
     // The evaluation is done, we can shutdown the tokio task that is running

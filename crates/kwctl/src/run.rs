@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::admission_request::AdmissionRequest;
-use policy_evaluator::kube;
 use policy_evaluator::{
+    admission_request::AdmissionRequest,
     constants::*,
-    policy_evaluator::{Evaluator, PolicyEvaluator},
-    policy_evaluator::{PolicyExecutionMode, ValidateRequest},
+    evaluation_context::EvaluationContext,
+    kube,
+    policy_evaluator::{PolicyEvaluator, PolicyExecutionMode, PolicySettings, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
     policy_metadata::{ContextAwareResource, Metadata, PolicyType},
@@ -48,6 +48,7 @@ pub(crate) struct PullAndRunSettings {
 
 pub(crate) struct RunEnv {
     pub policy_evaluator: PolicyEvaluator,
+    pub policy_settings: PolicySettings,
     pub request: ValidateRequest,
     pub callback_handler: CallbackHandler,
     pub callback_handler_shutdown_channel_tx: oneshot::Sender<()>,
@@ -91,13 +92,16 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
         }
     };
 
-    let policy_settings = cfg.settings.as_ref().map_or(Ok(None), |settings| {
-        if settings.is_empty() {
-            Ok(None)
-        } else {
-            serde_yaml::from_str(settings)
+    let policy_settings: PolicySettings = match cfg.settings.as_ref() {
+        None => Ok(PolicySettings::default()),
+        Some(settings) => {
+            if settings.is_empty() {
+                Ok(PolicySettings::default())
+            } else {
+                serde_yaml::from_str(settings)
+            }
         }
-    })?;
+    }?;
 
     // This is a channel used to stop the tokio task that is run
     // inside of the CallbackHandler
@@ -109,16 +113,19 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
 
     let callback_sender_channel = callback_handler.sender_channel();
 
-    let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new(policy_id)
+    let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new()
         .policy_file(&policy.local_path)?
-        .execution_mode(execution_mode)
-        .settings(policy_settings)
-        .callback_channel(callback_sender_channel)
-        .context_aware_resources_allowed(context_aware_allowed_resources);
+        .execution_mode(execution_mode);
     if cfg.enable_wasmtime_cache {
         policy_evaluator_builder = policy_evaluator_builder.enable_wasmtime_cache();
     }
-    let policy_evaluator = policy_evaluator_builder.build()?;
+
+    let eval_ctx = EvaluationContext {
+        policy_id: policy_id.to_owned(),
+        callback_channel: Some(callback_sender_channel.clone()),
+        ctx_aware_resources_allow_list: context_aware_allowed_resources.clone(),
+    };
+    let policy_evaluator = policy_evaluator_builder.build_pre()?.rehydrate(&eval_ctx)?;
 
     let request = if cfg.raw || has_raw_policy_type(metadata.as_ref()) {
         ValidateRequest::Raw(req_obj)
@@ -144,6 +151,7 @@ pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> 
 
     Ok(RunEnv {
         policy_evaluator,
+        policy_settings,
         request,
         callback_handler,
         callback_handler_shutdown_channel_tx,
@@ -157,7 +165,7 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
     let callback_handler_shutdown_channel_tx = run_env.callback_handler_shutdown_channel_tx;
 
     // validate the settings given by the user
-    let settings_validation_response = policy_evaluator.validate_settings();
+    let settings_validation_response = policy_evaluator.validate_settings(&run_env.policy_settings);
     if !settings_validation_response.valid {
         println!("{}", serde_json::to_string(&settings_validation_response)?);
         return Err(anyhow!(
@@ -172,7 +180,7 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
     });
 
     // evaluate request
-    let response = policy_evaluator.validate(run_env.request);
+    let response = policy_evaluator.validate(run_env.request, &run_env.policy_settings);
     println!("{}", serde_json::to_string(&response)?);
 
     // The evaluation is done, we can shutdown the tokio task that is running

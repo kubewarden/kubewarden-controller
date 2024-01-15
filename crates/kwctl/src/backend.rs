@@ -1,13 +1,12 @@
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use policy_evaluator::{
-    policy_evaluator::{Evaluator, PolicyExecutionMode},
-    policy_evaluator_builder::PolicyEvaluatorBuilder,
-    policy_metadata::Metadata,
-    ProtocolVersion,
+    evaluation_context::EvaluationContext, policy_evaluator::PolicyExecutionMode,
+    policy_evaluator_builder::PolicyEvaluatorBuilder, policy_metadata::Metadata, ProtocolVersion,
 };
 use semver::{BuildMetadata, Prerelease, Version};
 use std::path::{Path, PathBuf};
+
 lazy_static! {
     static ref KUBEWARDEN_VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
 }
@@ -51,10 +50,12 @@ fn rego_policy_detector(wasm_path: PathBuf) -> Result<bool> {
 }
 
 fn kubewarden_protocol_detector(wasm_path: PathBuf) -> Result<ProtocolVersion> {
-    PolicyEvaluatorBuilder::new("".to_string())
+    let eval_ctx = EvaluationContext::default();
+    PolicyEvaluatorBuilder::new()
         .policy_file(&wasm_path)?
         .execution_mode(PolicyExecutionMode::KubewardenWapc)
-        .build()?
+        .build_pre()?
+        .rehydrate(&eval_ctx)?
         .protocol_version()
         .map_err(|e| anyhow!("Cannot compute ProtocolVersion used by the policy: {:?}", e))
 }
