@@ -502,7 +502,7 @@ checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.13.2#ab5ba58f5ee6d091a0de459b51a220dca3674ea0"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.14.0#8b0e3874d9297537818d05c2504182e7b054bb96"
 dependencies = [
  "base64 0.21.7",
  "chrono",
@@ -3404,8 +3404,8 @@ checksum = "626dec3cac7cc0e1577a2ec3fc496277ec2baa084bebad95bb6fdbfae235f84c"
 
 [[package]]
 name = "policy-evaluator"
-version = "0.13.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.13.2#ab5ba58f5ee6d091a0de459b51a220dca3674ea0"
+version = "0.14.0"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.14.0#8b0e3874d9297537818d05c2504182e7b054bb96"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -3438,7 +3438,7 @@ dependencies = [
  "wapc",
  "wasi-cap-std-sync",
  "wasi-common",
- "wasmparser 0.118.1",
+ "wasmparser 0.119.0",
  "wasmtime",
  "wasmtime-provider",
  "wasmtime-wasi",
