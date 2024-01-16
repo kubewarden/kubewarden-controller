@@ -36,7 +36,7 @@ jobs:
           make generate-crds
           tar -czf CRDS.tar.gz -C generated-crds $(ls generated-crds)
       - name: Upload CRDs as artifacts
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
           name: CRDS
           path: CRDS.tar.gz
@@ -94,13 +94,13 @@ jobs:
             core.setFailed(`Draft release not found`)
 
       - name: Download SBOM artifact
-        uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110 # v4.1.0
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
           pattern: sbom-*
           merge-multiple: true
 
       - name: Download CRDs artifact
-        uses: actions/download-artifact@f44cd7b40bfd40b6aa1cc1b9b5b7bf03d3c67110 # v4.1.0
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
           name: CRDS
 
