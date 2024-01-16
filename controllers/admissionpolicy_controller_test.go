@@ -120,6 +120,30 @@ var _ = Describe("AdmissionPolicy controller", func() {
 					),
 				)
 			})
+
+			It("should reconcile unitialized label and annotation maps (behavior of Kubewarden <= 1.9.0))", func() {
+				By("changing the ValidatingWebhookConfiguration")
+				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				Expect(err).ToNot(HaveOccurred())
+				originalValidatingWebhookConfiguration := validatingWebhookConfiguration.DeepCopy()
+				// simulate unitialized labels and annotation maps (behaviour of Kubewarden <= 1.9.0), or user change
+				validatingWebhookConfiguration.Labels = nil
+				validatingWebhookConfiguration.Annotations = nil
+				Expect(
+					k8sClient.Update(ctx, validatingWebhookConfiguration),
+				).To(Succeed())
+
+				By("reconciling the ValidatingWebhookConfiguration to its original state")
+				Eventually(func(g Gomega) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+					return getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				}, timeout, pollInterval).Should(
+					And(
+						HaveField("Labels", Equal(originalValidatingWebhookConfiguration.Labels)),
+						HaveField("Annotations", Equal(originalValidatingWebhookConfiguration.Annotations)),
+						HaveField("Webhooks", Equal(originalValidatingWebhookConfiguration.Webhooks)),
+					),
+				)
+			})
 		})
 	})
 
@@ -184,6 +208,30 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 				mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
 				mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle = []byte("invalid")
+				Expect(
+					k8sClient.Update(ctx, mutatingWebhookConfiguration),
+				).To(Succeed())
+
+				By("reconciling the MutatingWebhookConfiguration to its original state")
+				Eventually(func(g Gomega) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+					return getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				}, timeout, pollInterval).Should(
+					And(
+						HaveField("Labels", Equal(originalMutatingWebhookConfiguration.Labels)),
+						HaveField("Annotations", Equal(originalMutatingWebhookConfiguration.Annotations)),
+						HaveField("Webhooks", Equal(originalMutatingWebhookConfiguration.Webhooks)),
+					),
+				)
+			})
+
+			It("should reconcile unitialized label and annotation maps (behavior of Kubewarden <= 1.9.0))", func() {
+				By("changing the MutatingWebhookConfiguration")
+				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				Expect(err).ToNot(HaveOccurred())
+				originalMutatingWebhookConfiguration := mutatingWebhookConfiguration.DeepCopy()
+				// simulate unitialized labels and annotation maps (behaviour of Kubewarden <= 1.9.0), or user change
+				mutatingWebhookConfiguration.Labels = nil
+				mutatingWebhookConfiguration.Annotations = nil
 				Expect(
 					k8sClient.Update(ctx, mutatingWebhookConfiguration),
 				).To(Succeed())
