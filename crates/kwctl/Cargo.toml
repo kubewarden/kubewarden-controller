@@ -57,5 +57,5 @@ reqwest = { version = "0", default-features = false, features = [
 rstest = "0.18.2"
 tempfile = "3.9.0"
 assert_cmd = "2.0.13"
-predicates = "3.0.4"
+predicates = "3.1.0"
 testcontainers = "0.15"
