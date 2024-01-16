@@ -48,9 +48,6 @@ pub(crate) async fn inspect(
     match signatures {
         Ok(signatures) => {
             if let Some(signatures) = signatures {
-                println!();
-                println!("Sigstore signatures");
-                println!();
                 let sigstore_printer = SignaturesPrinter::from(&output);
                 sigstore_printer.print(&signatures);
             }
@@ -309,6 +306,10 @@ impl SignaturesPrinter {
                 }
             }
             SignaturesPrinter::Pretty => {
+                println!();
+                println!("Sigstore signatures");
+                println!();
+
                 for layer in &signatures.layers {
                     let mut table = Table::new();
                     table.set_format(FormatBuilder::new().padding(0, 1).build());
