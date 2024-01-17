@@ -1,11 +1,12 @@
 use anyhow::{anyhow, Result};
-use policy_server::config;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
+use crate::config;
+
 // Setup the tracing system. This MUST be done inside of a tokio Runtime
 // because some collectors rely on it and would panic otherwise.
-pub(crate) fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Result<()> {
+pub fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Result<()> {
     // setup logging
     let filter_layer = EnvFilter::new(log_level)
         // some of our dependencies generate trace events too, but we don't care about them ->

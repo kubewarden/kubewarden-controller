@@ -1,5 +1,4 @@
 mod cli;
-mod tracing;
 
 use std::fs;
 
@@ -7,9 +6,9 @@ use ::tracing::info;
 use anyhow::anyhow;
 use anyhow::Result;
 use opentelemetry::global::shutdown_tracer_provider;
+use policy_server::metrics::setup_metrics;
+use policy_server::tracing::setup_tracing;
 use policy_server::PolicyServer;
-
-use crate::tracing::setup_tracing;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,6 +16,10 @@ async fn main() -> Result<()> {
     let config = policy_server::config::Config::from_args(&matches)?;
 
     setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color)?;
+
+    if config.metrics_enabled {
+        setup_metrics()?;
+    };
 
     if config.daemon {
         info!("Running instance as a daemon");

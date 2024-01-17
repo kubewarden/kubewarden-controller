@@ -1,5 +1,4 @@
 mod evaluation;
-mod metrics;
 mod policy_downloader;
 
 #[cfg(test)]
@@ -7,12 +6,14 @@ mod test_utils;
 
 pub mod api;
 pub mod config;
+pub mod metrics;
+pub mod tracing;
 
+use ::tracing::{debug, info, Level};
 use anyhow::{anyhow, Result};
 use axum::routing::{get, post};
 use axum::Router;
 use axum_server::tls_rustls::RustlsConfig;
-use opentelemetry::global::shutdown_tracer_provider;
 use policy_evaluator::callback_handler::CallbackHandler;
 use policy_evaluator::policy_fetcher::sigstore;
 use policy_evaluator::policy_fetcher::verify::FulcioAndRekorData;
@@ -26,7 +27,6 @@ use tokio::sync::oneshot;
 use tokio::sync::Semaphore;
 use tokio::time;
 use tower_http::trace::{self, TraceLayer};
-use tracing::{debug, info, Level};
 
 use crate::api::handlers::{
     audit_handler, readiness_handler, validate_handler, validate_raw_handler,
@@ -36,7 +36,6 @@ use crate::evaluation::{
     precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy},
     EvaluationEnvironment,
 };
-use crate::metrics::init_meter;
 use crate::policy_downloader::{Downloader, FetchedPolicies};
 use config::{Config, Policy};
 
@@ -114,14 +113,6 @@ impl PolicyServer {
 
         let callback_handler = callback_handler_builder.build()?;
         let callback_sender_channel = callback_handler.sender_channel();
-
-        // The unused variable is required so the meter is not dropped early and
-        // lives for the whole block lifetime, exporting metrics
-        let _meter = if config.metrics_enabled {
-            Some(init_meter())
-        } else {
-            None
-        };
 
         // Download policies
         let mut downloader = Downloader::new(
@@ -237,8 +228,6 @@ impl PolicyServer {
         callback_handler
             .await
             .expect("Cannot wait for CallbackHandler to exit");
-
-        shutdown_tracer_provider();
 
         Ok(())
     }
