@@ -340,7 +340,7 @@ fn test_push() {
 
     let sources_yaml = format!(
         r#"
-        insecure_sources: 
+        insecure_sources:
             - "localhost:{}"
         "#,
         port
@@ -402,7 +402,7 @@ fn test_scaffold_manifest() {
 #[rstest]
 #[case::correct("rego-annotate/metadata-correct.yml", true, is_empty())]
 #[case::wrong(
-    "rego-annotate/metadata-wrong.yml", 
+    "rego-annotate/metadata-wrong.yml",
     false,
     contains("Error: Wrong value inside of policy's metatada for 'executionMode'. This policy has been created using Rego")
 )]
@@ -428,4 +428,31 @@ fn test_annotate_rego(
         cmd.assert().failure();
         cmd.assert().stderr(predicate);
     }
+}
+
+#[rstest]
+#[case::show_signatures(true)]
+#[case::hide_signatures(false)]
+fn test_inspect_policy_yml_output(#[case] show_signatures: bool) {
+    let uri = "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5";
+
+    let tempdir = tempdir().unwrap();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("pull").arg(uri);
+
+    cmd.assert().success();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("inspect").arg("-o").arg("yaml");
+
+    if show_signatures {
+        cmd.arg("--show-signatures");
+    }
+    cmd.arg(uri);
+
+    cmd.assert().success();
+    let report: serde_yaml::Mapping = serde_yaml::from_slice(&cmd.assert().get_output().stdout)
+        .expect("a valid yaml document was expected");
+    assert_eq!(show_signatures, report.contains_key("signatures"))
 }

@@ -319,8 +319,12 @@ async fn main() -> Result<()> {
                     matches.get_one::<String>("output").map(|s| s.as_str()),
                 )?;
                 let sources = remote_server_options(matches)?;
-
-                inspect::inspect(uri_or_sha_prefix, output, sources, no_color).await?;
+                let no_signatures = !matches
+                    .get_one::<bool>("show-signatures")
+                    .unwrap_or(&false)
+                    .to_owned();
+                inspect::inspect(uri_or_sha_prefix, output, sources, no_color, no_signatures)
+                    .await?;
             };
             Ok(())
         }
