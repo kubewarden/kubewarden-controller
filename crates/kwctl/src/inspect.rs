@@ -1,25 +1,28 @@
 use crate::{Registry, Sources};
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_fetcher::oci_distribution::secrets::RegistryAuth;
-use policy_evaluator::policy_fetcher::{
-    oci_distribution::manifest::{OciImageManifest, OciManifest},
-    sigstore::{
-        cosign::{ClientBuilder, CosignCapabilities},
-        registry::{Auth, ClientConfig},
-    },
-};
 use policy_evaluator::{
-    constants::*, policy_evaluator::PolicyExecutionMode,
-    policy_fetcher::sigstore::registry::oci_reference::OciReference, policy_metadata::Metadata,
+    constants::*,
+    policy_evaluator::PolicyExecutionMode,
+    policy_fetcher::{
+        oci_distribution::{
+            manifest::{OciImageManifest, OciManifest},
+            secrets::RegistryAuth,
+        },
+        sigstore::{
+            cosign::{ClientBuilder, CosignCapabilities},
+            registry::{oci_reference::OciReference, Auth, ClientConfig},
+        },
+    },
+    policy_metadata::Metadata,
 };
 use prettytable::{format::FormatBuilder, Table};
 use pulldown_cmark::{Options, Parser};
-use pulldown_cmark_mdcat::TerminalCapabilities;
 use pulldown_cmark_mdcat::{
     resources::NoopResourceHandler,
     terminal::{TerminalProgram, TerminalSize},
+    TerminalCapabilities,
 };
-use std::{convert::TryFrom, str::FromStr};
+use std::{collections::HashMap, convert::TryFrom, str::FromStr};
 use syntect::parsing::SyntaxSet;
 
 pub(crate) async fn inspect(
@@ -27,6 +30,7 @@ pub(crate) async fn inspect(
     output: OutputType,
     sources: Option<Sources>,
     no_color: bool,
+    no_signatures: bool,
 ) -> Result<()> {
     let uri = crate::utils::map_path_to_uri(uri_or_sha_prefix)?;
     let wasm_path = crate::utils::wasm_path(&uri)?;
@@ -34,8 +38,6 @@ pub(crate) async fn inspect(
 
     let metadata = Metadata::from_path(&wasm_path)
         .map_err(|e| anyhow!("Error parsing policy metadata: {}", e))?;
-
-    let signatures = fetch_signatures_manifest(&uri, sources).await;
 
     match metadata {
         Some(metadata) => metadata_printer.print(&metadata, no_color)?,
@@ -45,6 +47,11 @@ pub(crate) async fn inspect(
         )),
     };
 
+    if no_signatures {
+        return Ok(());
+    }
+
+    let signatures = fetch_signatures_manifest(&uri, sources).await;
     match signatures {
         Ok(signatures) => {
             if let Some(signatures) = signatures {
@@ -105,7 +112,7 @@ impl MetadataPrinter {
         match self {
             MetadataPrinter::Yaml => {
                 let metadata_yaml = serde_yaml::to_string(metadata)?;
-                println!("{metadata_yaml}");
+                print!("{metadata_yaml}");
                 Ok(())
             }
             MetadataPrinter::Pretty => {
@@ -300,9 +307,12 @@ impl SignaturesPrinter {
     fn print(&self, signatures: &OciImageManifest) {
         match self {
             SignaturesPrinter::Yaml => {
-                let signatures_yaml = serde_yaml::to_string(signatures);
+                let mut doc_entry: HashMap<String, &OciImageManifest> = HashMap::new();
+                doc_entry.insert("signatures".to_string(), signatures);
+
+                let signatures_yaml = serde_yaml::to_string(&doc_entry);
                 if let Ok(signatures_yaml) = signatures_yaml {
-                    println!("{signatures_yaml}")
+                    print!("{signatures_yaml}")
                 }
             }
             SignaturesPrinter::Pretty => {

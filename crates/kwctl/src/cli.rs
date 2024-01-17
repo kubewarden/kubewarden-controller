@@ -384,6 +384,10 @@ fn subcommand_inspect() -> Command {
             .long("docker-config-json-path")
             .value_name("PATH")
             .help("Path to a directory containing the Docker 'config.json' file. Can be used to indicate registry authentication details"),
+        Arg::new("show-signatures")
+            .long("show-signatures")
+            .num_args(0)
+            .help("Show sigstore signatures"),
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
