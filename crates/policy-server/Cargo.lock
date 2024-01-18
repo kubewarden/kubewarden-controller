@@ -3622,7 +3622,7 @@ dependencies = [
 
 [[package]]
 name = "policy-server"
-version = "1.10.0-rc1"
+version = "1.10.0-rc2"
 dependencies = [
  "anyhow",
  "axum 0.7.4",
@@ -4013,7 +4013,6 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "rustls",
- "rustls-native-certs",
  "rustls-pemfile 1.0.4",
  "serde",
  "serde_json",
