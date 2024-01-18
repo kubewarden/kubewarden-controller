@@ -11,7 +11,7 @@ use policy_evaluator::{
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::task;
-use tracing::{error, Span};
+use tracing::{debug, error, Span};
 
 use crate::api::{
     admission_review::{AdmissionReviewRequest, AdmissionReviewResponse},
@@ -67,6 +67,8 @@ pub(crate) async fn audit_handler(
     extract::Path(policy_id): extract::Path<String>,
     extract::Json(admission_review): extract::Json<AdmissionReviewRequest>,
 ) -> Result<Json<AdmissionReviewResponse>, (StatusCode, ApiError)> {
+    debug!(admission_review = %serde_json::to_string(&admission_review).unwrap().as_str());
+
     populate_span_with_admission_request_data(&admission_review.request);
 
     let response = acquire_semaphore_and_evaluate(
@@ -116,6 +118,8 @@ pub(crate) async fn validate_handler(
     extract::Path(policy_id): extract::Path<String>,
     JsonExtractor(admission_review): JsonExtractor<AdmissionReviewRequest>,
 ) -> Result<Json<AdmissionReviewResponse>, (StatusCode, ApiError)> {
+    debug!(admission_review = %serde_json::to_string(&admission_review).unwrap().as_str());
+
     populate_span_with_admission_request_data(&admission_review.request);
 
     let response = acquire_semaphore_and_evaluate(
@@ -149,6 +153,8 @@ pub(crate) async fn validate_raw_handler(
     extract::Path(policy_id): extract::Path<String>,
     extract::Json(raw_review): extract::Json<RawReviewRequest>,
 ) -> Result<Json<RawReviewResponse>, (StatusCode, ApiError)> {
+    debug!(raw_review = %serde_json::to_string(&raw_review).unwrap().as_str());
+
     let response = acquire_semaphore_and_evaluate(
         state,
         policy_id,
@@ -180,7 +186,9 @@ async fn acquire_semaphore_and_evaluate(
         .expect("semaphore acquire failed");
 
     let state = state.clone();
+    let span = Span::current();
     let response = task::spawn_blocking(move || {
+        let _enter = span.enter();
         let evaluation_environment = &state.evaluation_environment;
 
         evaluate(
@@ -192,6 +200,8 @@ async fn acquire_semaphore_and_evaluate(
     })
     .await
     .expect("task::spawn_blocking failed")?;
+
+    debug!(response =? &response, "policy evaluated");
 
     Ok(response)
 }
