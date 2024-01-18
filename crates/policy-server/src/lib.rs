@@ -9,7 +9,7 @@ pub mod config;
 pub mod metrics;
 pub mod tracing;
 
-use ::tracing::{debug, info, Level};
+use ::tracing::{debug, error, info, Level};
 use anyhow::{anyhow, Result};
 use axum::routing::{get, post};
 use axum::Router;
@@ -64,15 +64,12 @@ impl PolicyServer {
         {
             Ok(repo) => Some(FulcioAndRekorData::FromTufRepository { repo }),
             Err(e) => {
-                // We cannot rely on `tracing` yet, because the tracing system has not
-                // been initialized, this has to be done inside of an async block, which
-                // we cannot use yet
-                eprintln!("Cannot fetch TUF repository: {e:?}");
-                eprintln!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
-                eprintln!(
+                error!("Cannot fetch TUF repository: {e:?}");
+                error!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
+                error!(
                 "Sigstore Verifier created without Rekor data: transparency log data won't be used"
             );
-                eprintln!("Sigstore capabilities are going to be limited");
+                error!("Sigstore capabilities are going to be limited");
                 None
             }
         };
