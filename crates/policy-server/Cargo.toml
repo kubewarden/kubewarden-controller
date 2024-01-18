@@ -40,19 +40,15 @@ tracing = "0.1"
 tracing-futures = "0.2"
 tracing-opentelemetry = "0.22.0"
 tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
-warp = { version = "0.3.6", default_features = false, features = [
-  "multipart",
-  "tls",
-] }
 semver = { version = "1.0.21", features = ["serde"] }
 mockall_double = "0.3"
+axum = { version = "0.7.3", features = ["macros"] }
+axum-server = { version = "0.6", features = ["tls-rustls"] }
+tower-http = { version = "0.5.0", features = ["trace"] }
 
 [dev-dependencies]
 mockall = "0.12"
 rstest = "0.18"
 tempfile = "3.9.0"
-reqwest = { version = "0.11", default_features = false, features = [
-  "blocking",
-  "json",
-  "rustls-tls-native-roots",
-] }
+tower = { version = "0.4", features = ["util"] }
+http-body-util = "0.1.0"

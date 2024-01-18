@@ -1,9 +1,7 @@
-pub(crate) mod error;
+pub(crate) mod errors;
 mod evaluation_environment;
 mod policy_evaluation_settings;
-pub(crate) mod pool;
 pub(crate) mod precompiled_policy;
-pub(crate) mod worker;
 
 // This is required to mock the `EvaluationEnvironment` inside of our tests
 #[mockall_double::double]

@@ -3,7 +3,7 @@ use policy_evaluator::{
     callback_requests::CallbackRequest,
     evaluation_context::EvaluationContext,
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
-    policy_evaluator::{PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode},
+    policy_evaluator::{PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
     wasmtime,
 };
@@ -11,13 +11,10 @@ use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tracing::debug;
 
-use crate::communication::EvalRequest;
 use crate::config::PolicyMode;
-use crate::workers::error::{EvaluationError, Result};
-use crate::workers::{
-    policy_evaluation_settings::PolicyEvaluationSettings,
-    precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy},
-};
+use crate::evaluation::errors::{EvaluationError, Result};
+use crate::evaluation::policy_evaluation_settings::PolicyEvaluationSettings;
+use crate::evaluation::precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy};
 
 #[cfg(test)]
 use mockall::automock;
@@ -210,11 +207,11 @@ impl EvaluationEnvironment {
     }
 
     /// Perform a request validation
-    pub fn validate(&self, policy_id: &str, req: &EvalRequest) -> Result<AdmissionResponse> {
+    pub fn validate(&self, policy_id: &str, req: &ValidateRequest) -> Result<AdmissionResponse> {
         let settings = self.get_policy_settings(policy_id)?;
         let mut evaluator = self.rehydrate(policy_id)?;
 
-        Ok(evaluator.validate(req.req.clone(), &settings.settings))
+        Ok(evaluator.validate(req.clone(), &settings.settings))
     }
 
     /// Validate the settings the user provided for the given policy
@@ -288,15 +285,13 @@ fn create_policy_evaluator_pre(
 
 #[cfg(test)]
 mod tests {
-    use policy_evaluator::{
-        admission_response::AdmissionResponse, policy_evaluator::ValidateRequest,
-    };
+    use policy_evaluator::policy_evaluator::ValidateRequest;
     use rstest::*;
     use std::collections::BTreeSet;
 
     use super::*;
-    use crate::admission_review::tests::build_admission_review;
     use crate::config::Policy;
+    use crate::test_utils::build_admission_review_request;
 
     fn build_evaluation_environment() -> Result<EvaluationEnvironment> {
         let engine = wasmtime::Engine::default();
@@ -343,41 +338,35 @@ mod tests {
     #[case("policy_not_defined", true)]
     #[case("policy_1", false)]
     fn return_policy_not_found_error(#[case] policy_id: &str, #[case] expect_error: bool) {
-        let eval_env = build_evaluation_environment().unwrap();
-        let req = ValidateRequest::AdmissionRequest(
-            build_admission_review().request.expect("no request"),
-        );
-
-        let (tx, _) = tokio::sync::oneshot::channel::<Option<AdmissionResponse>>();
-        let eval_req = EvalRequest {
-            policy_id: policy_id.to_string(),
-            req,
-            resp_chan: tx,
-            parent_span: tracing::Span::none(),
-            request_origin: crate::communication::RequestOrigin::Validate,
-        };
+        let evaluation_environment = build_evaluation_environment().unwrap();
+        let validate_request =
+            ValidateRequest::AdmissionRequest(build_admission_review_request().request);
 
         if expect_error {
             assert!(matches!(
-                eval_env.get_policy_mode(policy_id),
+                evaluation_environment.get_policy_mode(policy_id),
                 Err(EvaluationError::PolicyNotFound(_))
             ));
             assert!(matches!(
-                eval_env.get_policy_allowed_to_mutate(policy_id),
+                evaluation_environment.get_policy_allowed_to_mutate(policy_id),
                 Err(EvaluationError::PolicyNotFound(_))
             ));
             assert!(matches!(
-                eval_env.get_policy_settings(policy_id),
+                evaluation_environment.get_policy_settings(policy_id),
                 Err(EvaluationError::PolicyNotFound(_))
             ));
             assert!(matches!(
-                eval_env.validate(policy_id, &eval_req),
+                evaluation_environment.validate(policy_id, &validate_request),
                 Err(EvaluationError::PolicyNotFound(_))
             ));
         } else {
-            assert!(eval_env.get_policy_mode(policy_id).is_ok());
-            assert!(eval_env.get_policy_allowed_to_mutate(policy_id).is_ok());
-            assert!(eval_env.get_policy_settings(policy_id).is_ok());
+            assert!(evaluation_environment.get_policy_mode(policy_id).is_ok());
+            assert!(evaluation_environment
+                .get_policy_allowed_to_mutate(policy_id)
+                .is_ok());
+            assert!(evaluation_environment
+                .get_policy_settings(policy_id)
+                .is_ok());
             // note: we do not test `validate` with a known policy because this would
             // cause another error. The test policy we're using is just an empty Wasm
             // module

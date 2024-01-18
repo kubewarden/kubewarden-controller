@@ -10,7 +10,7 @@ pub use policy_evaluations_latency::record_policy_latency;
 
 const METER_NAME: &str = "kubewarden";
 
-pub(crate) fn init_meter() -> metrics::Result<MeterProvider> {
+pub fn setup_metrics() -> metrics::Result<MeterProvider> {
     opentelemetry_otlp::new_pipeline()
         .metrics(runtime::Tokio)
         .with_exporter(
@@ -24,7 +24,7 @@ pub(crate) fn init_meter() -> metrics::Result<MeterProvider> {
 pub trait PolicyEvaluationMetric: Into<Vec<KeyValue>> {}
 
 #[derive(Clone)]
-pub struct PolicyEvaluation {
+pub(crate) struct PolicyEvaluation {
     pub(crate) policy_name: String,
     pub(crate) policy_mode: String,
     pub(crate) resource_kind: String,
@@ -67,7 +67,7 @@ impl Into<Vec<KeyValue>> for &PolicyEvaluation {
 }
 
 #[derive(Clone)]
-pub struct RawPolicyEvaluation {
+pub(crate) struct RawPolicyEvaluation {
     pub(crate) policy_name: String,
     pub(crate) policy_mode: String,
     pub(crate) accepted: bool,
