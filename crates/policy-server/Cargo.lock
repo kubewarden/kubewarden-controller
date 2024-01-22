@@ -2087,7 +2087,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.4.10",
+ "socket2 0.5.5",
  "tokio",
  "tower-service",
  "tracing",
@@ -2433,6 +2433,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "k8s-openapi"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "301f367a36090b7dfdaac248ee3ed4f14a6a8292e7bec0f1c5e6e2e1f181cd33"
+dependencies = [
+ "base64 0.21.7",
+ "chrono",
+ "serde",
+ "serde-value",
+ "serde_json",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2447,7 +2460,7 @@ version = "0.87.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3499c8d60c763246c7a213f51caac1e9033f46026904cb89bc8951ae8601f26e"
 dependencies = [
- "k8s-openapi",
+ "k8s-openapi 0.20.0",
  "kube-client",
  "kube-core",
 ]
@@ -2470,7 +2483,7 @@ dependencies = [
  "hyper-rustls",
  "hyper-timeout",
  "jsonpath-rust",
- "k8s-openapi",
+ "k8s-openapi 0.20.0",
  "kube-core",
  "pem 3.0.3",
  "pin-project",
@@ -2497,7 +2510,7 @@ dependencies = [
  "chrono",
  "form_urlencoded",
  "http 0.2.11",
- "k8s-openapi",
+ "k8s-openapi 0.20.0",
  "once_cell",
  "serde",
  "serde_json",
@@ -2513,7 +2526,7 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "chrono",
- "k8s-openapi",
+ "k8s-openapi 0.20.0",
  "num",
  "num-derive",
  "num-traits",
@@ -3552,7 +3565,7 @@ dependencies = [
  "email_address",
  "itertools 0.12.0",
  "json-patch",
- "k8s-openapi",
+ "k8s-openapi 0.20.0",
  "kube",
  "kubewarden-policy-sdk",
  "lazy_static",
@@ -3623,7 +3636,7 @@ dependencies = [
  "http-body-util",
  "humansize",
  "itertools 0.12.0",
- "k8s-openapi",
+ "k8s-openapi 0.21.0",
  "lazy_static",
  "mockall",
  "mockall_double",
