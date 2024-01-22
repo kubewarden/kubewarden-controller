@@ -19,7 +19,7 @@ k8s-openapi = { version = "0.20.0", default-features = false, features = [
   "v1_28",
 ] }
 lazy_static = "1.4.0"
-pulldown-cmark-mdcat = { version = "2.1.0", default-features = false, features = [
+pulldown-cmark-mdcat = { version = "2.1.1", default-features = false, features = [
   "regex-fancy",
 ] }
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.14.0" }
