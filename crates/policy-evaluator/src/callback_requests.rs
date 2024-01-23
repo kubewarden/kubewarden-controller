@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use tokio::sync::oneshot;
 
 /// Holds the response to a waPC evaluation request
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallbackResponse {
     /// The data to be given back to the waPC guest
     pub payload: Vec<u8>,

@@ -27,6 +27,9 @@ pub(crate) struct Client {
 /// `cached::Return<>`
 #[derive(Clone, Serialize)]
 pub(crate) struct ObjectList {
+    /// The type fields, not always present
+    #[serde(flatten, default)]
+    pub types: kube::core::TypeMeta,
     pub metadata: kube::core::ListMeta,
     pub items: Vec<kube::core::DynamicObject>,
 }
@@ -125,6 +128,7 @@ impl Client {
 
         let resource_list = api.list(list_params).await?;
         Ok(ObjectList {
+            types: resource_list.types,
             metadata: resource_list.metadata,
             items: resource_list.items,
         })
@@ -145,6 +149,7 @@ impl Client {
 
         let resource_list = api.list(list_params).await?;
         Ok(ObjectList {
+            types: resource_list.types,
             metadata: resource_list.metadata,
             items: resource_list.items,
         })
