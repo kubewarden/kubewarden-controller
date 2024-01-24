@@ -5,7 +5,7 @@ use k8s_openapi::{
     },
     apimachinery::pkg::apis::meta::v1::{APIResource, APIResourceList},
 };
-use kube::core::{ObjectList, ObjectMeta};
+use kube::core::{ObjectList, ObjectMeta, TypeMeta};
 use std::collections::BTreeMap;
 
 pub(crate) fn v1_resource_list() -> APIResourceList {
@@ -45,6 +45,7 @@ pub(crate) fn apps_v1_resource_list() -> APIResourceList {
 
 pub(crate) fn namespaces() -> ObjectList<Namespace> {
     ObjectList {
+        types: TypeMeta::list::<Namespace>(),
         metadata: Default::default(),
         items: vec![Namespace {
             metadata: ObjectMeta {
@@ -60,6 +61,7 @@ pub(crate) fn namespaces() -> ObjectList<Namespace> {
 pub(crate) fn deployments() -> ObjectList<Deployment> {
     ObjectList {
         metadata: Default::default(),
+        types: TypeMeta::list::<Deployment>(),
         items: vec![
             Deployment {
                 metadata: ObjectMeta {
@@ -92,6 +94,7 @@ pub(crate) fn deployments() -> ObjectList<Deployment> {
 pub(crate) fn services() -> ObjectList<Service> {
     ObjectList {
         metadata: Default::default(),
+        types: TypeMeta::list::<Service>(),
         items: vec![api_auth_service()],
     }
 }

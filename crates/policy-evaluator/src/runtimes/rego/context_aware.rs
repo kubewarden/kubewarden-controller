@@ -115,7 +115,6 @@ pub(crate) mod tests {
     use super::*;
     use anyhow::{anyhow, Result};
     use assert_json_diff::assert_json_eq;
-    use serde_json::json;
     use std::path::Path;
 
     pub fn dynamic_object_from_fixture(
@@ -136,18 +135,12 @@ pub(crate) mod tests {
     pub fn object_list_from_dynamic_objects(
         objs: &[kube::core::DynamicObject],
     ) -> Result<ObjectList<kube::core::DynamicObject>> {
-        let raw_json = json!(
-            {
-                "items": objs,
-                "metadata": {
-                    "resourceVersion": ""
-                }
-            }
-        );
-
-        let res: ObjectList<kube::core::DynamicObject> = serde_json::from_value(raw_json)
-            .map_err(|e| anyhow!("cannot create ObjectList because of json error: {e}"))?;
-        Ok(res)
+        let obj_type = objs[0].types.clone().expect("object types should be set");
+        Ok(ObjectList {
+            items: objs.to_owned(),
+            types: obj_type,
+            metadata: Default::default(),
+        })
     }
 
     #[tokio::test(flavor = "multi_thread")]
