@@ -9,6 +9,8 @@
     type: Success
     payload: |
       {
+        "apiVersion": "v1",
+        "kind": "List",
         "metadata": {"resourceVersion":"450657254"},
         "items":[
           {
