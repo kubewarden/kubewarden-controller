@@ -1,8 +1,10 @@
-use anyhow::Result;
 use std::sync::Arc;
 
 use crate::evaluation_context::EvaluationContext;
-use crate::runtimes::wapc::callback::new_host_callback;
+use crate::runtimes::wapc::{
+    callback::new_host_callback,
+    errors::{Result, WapcRuntimeError},
+};
 
 use super::StackPre;
 
@@ -56,7 +58,8 @@ impl WapcStack {
     ) -> Result<wapc::WapcHost> {
         let engine_provider = pre.rehydrate()?;
         let wapc_host =
-            wapc::WapcHost::new(Box::new(engine_provider), Some(new_host_callback(eval_ctx)))?;
+            wapc::WapcHost::new(Box::new(engine_provider), Some(new_host_callback(eval_ctx)))
+                .map_err(WapcRuntimeError::WapcHostBuilder)?;
         Ok(wapc_host)
     }
 }

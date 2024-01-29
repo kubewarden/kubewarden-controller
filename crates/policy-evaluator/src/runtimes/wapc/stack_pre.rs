@@ -1,7 +1,7 @@
-use anyhow::Result;
 use wasmtime_provider::wasmtime;
 
 use crate::policy_evaluator_builder::EpochDeadlines;
+use crate::runtimes::wapc::errors::{Result, WapcRuntimeError};
 
 /// Reduce allocation time of new `WasmtimeProviderEngine`, see the `rehydrate` method
 #[derive(Clone)]
@@ -22,7 +22,9 @@ impl StackPre {
             builder = builder.enable_epoch_interruptions(deadlines.wapc_init, deadlines.wapc_func);
         }
 
-        let engine_provider_pre = builder.build_pre()?;
+        let engine_provider_pre = builder
+            .build_pre()
+            .map_err(WapcRuntimeError::WasmtimeEngineBuilder)?;
         Ok(Self {
             engine_provider_pre,
         })
@@ -30,7 +32,10 @@ impl StackPre {
 
     /// Allocate a new `WasmtimeEngineProvider` instance by using a pre-allocated instance
     pub(crate) fn rehydrate(&self) -> Result<wasmtime_provider::WasmtimeEngineProvider> {
-        let engine = self.engine_provider_pre.rehydrate()?;
+        let engine = self
+            .engine_provider_pre
+            .rehydrate()
+            .map_err(WapcRuntimeError::WasmtimeEngineBuilder)?;
         Ok(engine)
     }
 }
