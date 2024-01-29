@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use std::fmt;
 
 use crate::admission_response::AdmissionResponse;
+use crate::errors::PolicyEvaluatorError;
 use crate::evaluation_context::EvaluationContext;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::runtimes::rego::Runtime as BurregoRuntime;
@@ -75,12 +75,12 @@ impl PolicyEvaluator {
         }
     }
 
-    pub fn protocol_version(&mut self) -> Result<ProtocolVersion> {
+    pub fn protocol_version(&mut self) -> Result<ProtocolVersion, PolicyEvaluatorError> {
         match &mut self.runtime {
-            Runtime::Wapc(ref mut wapc_stack) => Ok(WapcRuntime(wapc_stack).protocol_version()?),
-            _ => Err(anyhow!(
-                "protocol_version is only applicable to a Kubewarden policy"
-            )),
+            Runtime::Wapc(ref mut wapc_stack) => Ok(WapcRuntime(wapc_stack)
+                .protocol_version()
+                .map_err(PolicyEvaluatorError::InvokeWapcProtocolVersion)?),
+            _ => Err(PolicyEvaluatorError::InvalidProtocolVersion()),
         }
     }
 }

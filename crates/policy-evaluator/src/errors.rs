@@ -29,3 +29,12 @@ pub enum ArtifactHubError {
     #[error("annotation \"{0}\" in policy metadata is malformed, must be a string \"true\" or \"false\"")]
     MalformedBoolString(String),
 }
+
+#[derive(Error, Debug)]
+pub enum PolicyEvaluatorError {
+    #[error("protocol_version is only applicable to a Kubewarden policy")]
+    InvalidProtocolVersion(),
+
+    #[error("protocol_version is only applicable to a Kubewarden policy")]
+    InvokeWapcProtocolVersion(#[source] crate::runtimes::wapc::errors::WapcRuntimeError),
+}
