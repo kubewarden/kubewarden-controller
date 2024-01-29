@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use crate::runtimes::wapc::errors::{Result, WapcRuntimeError};
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
@@ -58,7 +58,7 @@ impl<'a> Runtime<'a> {
         match self.0.call("validate", validate_str.as_bytes()) {
             Ok(res) => {
                 let pol_val_resp: Result<PolicyValidationResponse> = serde_json::from_slice(&res)
-                    .map_err(|e| anyhow!("cannot deserialize policy validation response: {:?}", e));
+                    .map_err(WapcRuntimeError::InvalidResponseWithError);
                 pol_val_resp
                     .and_then(|pol_val_resp| {
                         AdmissionResponse::from_policy_validation_response(
@@ -66,6 +66,9 @@ impl<'a> Runtime<'a> {
                             req_obj,
                             &pol_val_resp,
                         )
+                        .map_err(|e| -> WapcRuntimeError {
+                            WapcRuntimeError::InvalidResponseFormat(e)
+                        })
                     })
                     .unwrap_or_else(|e| {
                         error!(
@@ -129,7 +132,7 @@ impl<'a> Runtime<'a> {
         match self.0.call("validate_settings", settings.as_bytes()) {
             Ok(res) => {
                 let vr: Result<SettingsValidationResponse> = serde_json::from_slice(&res)
-                    .map_err(|e| anyhow!("cannot convert response: {:?}", e));
+                    .map_err(WapcRuntimeError::InvalidResponseWithError);
                 vr.unwrap_or_else(|e| SettingsValidationResponse {
                     valid: false,
                     message: Some(format!("error: {e:?}")),
@@ -146,17 +149,9 @@ impl<'a> Runtime<'a> {
 
     pub fn protocol_version(&self) -> Result<ProtocolVersion> {
         match self.0.call("protocol_version", &[0; 0]) {
-            Ok(res) => ProtocolVersion::try_from(res.clone()).map_err(|e| {
-                anyhow!(
-                    "Cannot create ProtocolVersion object from '{:?}': {:?}",
-                    res,
-                    e
-                )
-            }),
-            Err(err) => Err(anyhow!(
-                "Cannot invoke 'protocol_version' waPC function: {:?}",
-                err
-            )),
+            Ok(res) => ProtocolVersion::try_from(res.clone())
+                .map_err(|e| WapcRuntimeError::CreateProtocolVersion { res, error: e }),
+            Err(e) => Err(WapcRuntimeError::InvokeProtocolVersion(e)),
         }
     }
 }
