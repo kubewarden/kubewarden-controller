@@ -51,4 +51,7 @@ pub enum RegoRuntimeError {
 
     #[error("cannot allocate Rego evaluator: {0}")]
     EvaluatorError(String),
+
+    #[error("cannot build Rego engine: {0}")]
+    RegoEngineBuilder(#[source] burrego::errors::BurregoError),
 }

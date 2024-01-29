@@ -1,7 +1,6 @@
-use anyhow::Result;
-
 use crate::policy_evaluator::RegoPolicyExecutionMode;
 use crate::policy_evaluator_builder::EpochDeadlines;
+use crate::runtimes::rego::errors::{RegoRuntimeError, Result};
 
 /// This struct allows to follow the `StackPre -> Stack`
 /// "pattern" also for Rego policies.
@@ -50,7 +49,9 @@ impl StackPre {
         if let Some(deadlines) = self.epoch_deadlines {
             builder = builder.enable_epoch_interruptions(deadlines.wapc_func);
         }
-        let evaluator = builder.build()?;
+        let evaluator = builder
+            .build()
+            .map_err(RegoRuntimeError::RegoEngineBuilder)?;
         Ok(evaluator)
     }
 }
