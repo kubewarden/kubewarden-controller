@@ -11,6 +11,13 @@ pub enum WapcRuntimeError {
     #[error("invalid response from policy: {0}")]
     InvalidResponseWithError(#[source] serde_json::Error),
 
+    #[error("cannot create ProtocolVersion object from {res:?}: {error}")]
+    CreateProtocolVersion {
+        res: std::vec::Vec<u8>,
+        #[source]
+        error: wasmtime::Error,
+    },
+
     #[error("cannot invoke 'protocol_version' waPC function : {0}")]
     InvokeProtocolVersion(#[source] wapc::errors::Error),
 }

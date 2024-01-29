@@ -77,7 +77,7 @@ impl PolicyEvaluator {
 
     pub fn protocol_version(&mut self) -> Result<ProtocolVersion> {
         match &mut self.runtime {
-            Runtime::Wapc(ref mut wapc_stack) => WapcRuntime(wapc_stack).protocol_version(),
+            Runtime::Wapc(ref mut wapc_stack) => Ok(WapcRuntime(wapc_stack).protocol_version()?),
             _ => Err(anyhow!(
                 "protocol_version is only applicable to a Kubewarden policy"
             )),
