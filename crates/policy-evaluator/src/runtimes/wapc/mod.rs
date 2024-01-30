@@ -1,4 +1,5 @@
 mod callback;
+pub mod errors;
 mod runtime;
 mod stack;
 mod stack_pre;
