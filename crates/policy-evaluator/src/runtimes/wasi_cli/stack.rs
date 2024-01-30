@@ -48,7 +48,8 @@ impl Stack {
         let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
         let wasi_ctx = WasiCtxBuilder::new()
-            .args(&args)?
+            .args(&args)
+            .map_err(WasiRuntimeError::WasiCtxBuilder)?
             .stdin(Box::new(ReadPipe::from_shared(stdin_pipe.clone())))
             .stdout(Box::new(stdout_pipe.clone()))
             .stderr(Box::new(stderr_pipe.clone()))
@@ -60,10 +61,7 @@ impl Stack {
         };
 
         let mut store = self.stack_pre.build_store(ctx);
-        let instance = self
-            .stack_pre
-            .rehydrate(&mut store)
-            .map_err(WasiRuntimeError::WasmInstantiate)?;
+        let instance = self.stack_pre.rehydrate(&mut store)?;
         let start_fn = instance
             .get_typed_func::<(), ()>(&mut store, "_start")
             .map_err(WasiRuntimeError::WasmMissingStartFn)?;
