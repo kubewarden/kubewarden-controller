@@ -28,10 +28,10 @@ pub enum WasiRuntimeError {
     WasmInstantiate(#[source] wasmtime::Error),
 
     #[error("cannot find 'mem' export")]
-    WasiMemExport(),
+    WasiMemExport,
 
     #[error("'mem' export cannot be converted into a Memory instance")]
-    WasiMemExportCannotConvert(),
+    WasiMemExportCannotConvert,
 
     #[error("cannot build WasiCtxBuilder: {0}")]
     WasiCtxBuilder(#[source] wasi_common::StringArrayError),
@@ -53,3 +53,19 @@ impl From<std::convert::Infallible> for WasiRuntimeError {
         unreachable!()
     }
 }
+
+// impl From<std::result::Result<std::convert::Infallible, wasmtime::Error>>
+//     for std::result::Result<(), WasiRuntimeError>
+// {
+//     fn from(_: std::convert::Infallible) -> Self {
+//         unreachable!()
+//     }
+// }
+
+// impl Into<std::result::Result<(), WasiRuntimeError>>
+//     for std::result::Result<std::convert::Infallible, wasmtime::Error>
+// {
+//     fn into(_: std::result::Result<(), WasiRuntimeError>) -> Self {
+//         unreachable!()
+//     }
+// }

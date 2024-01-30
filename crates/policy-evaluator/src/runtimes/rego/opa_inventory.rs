@@ -82,7 +82,7 @@ impl ResourcesByName {
             .metadata
             .name
             .clone()
-            .ok_or(RegoRuntimeError::OpaInventoryMissingName())?;
+            .ok_or(RegoRuntimeError::OpaInventoryMissingName)?;
         self.0.insert(name, obj.to_owned());
         Ok(())
     }
@@ -99,7 +99,7 @@ impl ResourcesByNamespace {
             .metadata
             .namespace
             .clone()
-            .ok_or(RegoRuntimeError::OpaInventoryMissingNamespace())?;
+            .ok_or(RegoRuntimeError::OpaInventoryMissingNamespace)?;
         self.0.entry(namespace).or_default().register(obj)
     }
 }
@@ -135,12 +135,12 @@ impl ResourcesByPluralName {
                 match resources_by_scope {
                     ResourcesByScope::Cluster(_) => {
                         if obj_namespaced {
-                            return Err(RegoRuntimeError::OpaInventoryAddNamespacedRes());
+                            return Err(RegoRuntimeError::OpaInventoryAddNamespacedRes);
                         }
                     }
                     ResourcesByScope::Namespace(_) => {
                         if !obj_namespaced {
-                            return Err(RegoRuntimeError::OpaInventoryAddClusterwideRes());
+                            return Err(RegoRuntimeError::OpaInventoryAddClusterwideRes);
                         }
                     }
                 }

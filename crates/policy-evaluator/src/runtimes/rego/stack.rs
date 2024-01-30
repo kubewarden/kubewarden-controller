@@ -43,7 +43,7 @@ impl Stack {
         }
 
         match callback_channel {
-            None => Err(RegoRuntimeError::CallbackChannelNotSet()),
+            None => Err(RegoRuntimeError::CallbackChannelNotSet),
             Some(chan) => {
                 let cluster_resources =
                     context_aware::get_allowed_resources(chan, ctx_aware_resources_allow_list)?;

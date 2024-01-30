@@ -74,10 +74,10 @@ fn add_host_call_to_linker(linker: &mut wasmtime::Linker<Context>) -> Result<()>
          len: i32| {
             let memory_export = caller
                 .get_export("memory")
-                .ok_or_else(|| WasiRuntimeError::WasiMemExport())?;
+                .ok_or_else(|| WasiRuntimeError::WasiMemExport)?;
             let memory = memory_export
                 .into_memory()
-                .ok_or_else(|| WasiRuntimeError::WasiMemExportCannotConvert())?;
+                .ok_or_else(|| WasiRuntimeError::WasiMemExportCannotConvert)?;
 
             let stdin = caller.data().stdin_pipe.as_ref();
 

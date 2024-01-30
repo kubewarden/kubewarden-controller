@@ -5,7 +5,7 @@ pub type Result<T> = std::result::Result<T, RegoRuntimeError>;
 #[derive(Error, Debug)]
 pub enum RegoRuntimeError {
     #[error("cannot build Rego context aware data: callback channel is not set")]
-    CallbackChannelNotSet(),
+    CallbackChannelNotSet,
 
     #[error("cannot convert callback response into a list of kubernetes objects: {0}")]
     CallbackConvertList(#[source] serde_json::Error),
@@ -23,28 +23,28 @@ pub enum RegoRuntimeError {
     CallbackGetPluralName(#[source] serde_json::Error),
 
     #[error("DynamicObject does not have a name")]
-    GatekeeperInventoryMissingName(),
+    GatekeeperInventoryMissingName,
 
     #[error("DynamicObject does not have a namespace")]
-    GatekeeperInventoryMissingNamespace(),
+    GatekeeperInventoryMissingNamespace,
 
     #[error("DynamicObject does not have a name")]
-    OpaInventoryMissingName(),
+    OpaInventoryMissingName,
 
     #[error("DynamicObject does not have a namespace")]
-    OpaInventoryMissingNamespace(),
+    OpaInventoryMissingNamespace,
 
     #[error("trying to add a namespaced resource to a list of clusterwide resources")]
-    OpaInventoryAddNamespacedRes(),
+    OpaInventoryAddNamespacedRes,
 
     #[error("trying to add a clusterwide resource to a list of namespaced resources")]
-    OpaInventoryAddClusterwideRes(),
+    OpaInventoryAddClusterwideRes,
 
     #[error("cannot find plural name for resource {0}")]
     OpaInventoryMissingPluralName(String),
 
     #[error("invalid response from policy")]
-    InvalidResponse(),
+    InvalidResponse,
 
     #[error("invalid response from policy: {0}")]
     InvalidResponseWithError(#[source] serde_json::Error),
