@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
-use kube::api::ListParams;
+use kube::{api::ListParams, core::ObjectList};
 use serde::Serialize;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
@@ -20,18 +20,6 @@ struct KubeResource {
 pub(crate) struct Client {
     kube_client: kube::Client,
     kube_resources: RwLock<HashMap<ApiVersionKind, KubeResource>>,
-}
-
-/// This is a specialized `kube::api::ObjectList` object which
-/// implements the `Clone` trait. This trait is required by
-/// `cached::Return<>`
-#[derive(Clone, Serialize)]
-pub(crate) struct ObjectList {
-    /// The type fields, not always present
-    #[serde(flatten, default)]
-    pub types: kube::core::TypeMeta,
-    pub metadata: kube::core::ListMeta,
-    pub items: Vec<kube::core::DynamicObject>,
 }
 
 impl Client {
@@ -113,7 +101,7 @@ impl Client {
         kind: &str,
         namespace: &str,
         list_params: &ListParams,
-    ) -> Result<ObjectList> {
+    ) -> Result<ObjectList<kube::core::DynamicObject>> {
         let resource = self.build_kube_resource(api_version, kind).await?;
 
         if !resource.namespaced {
@@ -139,7 +127,7 @@ impl Client {
         api_version: &str,
         kind: &str,
         list_params: &ListParams,
-    ) -> Result<ObjectList> {
+    ) -> Result<ObjectList<kube::core::DynamicObject>> {
         let resource = self.build_kube_resource(api_version, kind).await?;
 
         let api = kube::api::Api::<kube::core::DynamicObject>::all_with(
@@ -209,7 +197,7 @@ pub(crate) async fn list_resources_by_namespace(
     namespace: &str,
     label_selector: Option<String>,
     field_selector: Option<String>,
-) -> Result<cached::Return<ObjectList>> {
+) -> Result<cached::Return<ObjectList<kube::core::DynamicObject>>> {
     if client.is_none() {
         return Err(anyhow!("kube::Client was not initialized properly")).map(cached::Return::new);
     }
@@ -241,7 +229,7 @@ pub(crate) async fn list_resources_all(
     kind: &str,
     label_selector: Option<String>,
     field_selector: Option<String>,
-) -> Result<cached::Return<ObjectList>> {
+) -> Result<cached::Return<ObjectList<kube::core::DynamicObject>>> {
     if client.is_none() {
         return Err(anyhow!("kube::Client was not initialized properly")).map(cached::Return::new);
     }
