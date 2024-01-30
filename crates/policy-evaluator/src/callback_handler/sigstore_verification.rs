@@ -113,7 +113,7 @@ impl Client {
                 digest,
                 is_trusted: true,
             }),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -148,7 +148,7 @@ impl Client {
                 digest,
                 is_trusted: true,
             }),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -184,7 +184,7 @@ impl Client {
                 digest,
                 is_trusted: true,
             }),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -218,7 +218,7 @@ impl Client {
                 digest,
                 is_trusted: true,
             }),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 

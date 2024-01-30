@@ -97,6 +97,21 @@ impl CallbackHandler {
                                     }
                                 );
                             },
+                            CallbackRequestType::OciManifest {
+                                image,
+                            } => {
+                                handle_callback!(
+                                    req,
+                                    image,
+                                    "Image manifest computed",
+                                    {
+                                        oci::get_oci_manifest_cached(
+                                            &self.oci_client,
+                                            &image,
+                                        )
+                                    }
+                                );
+                            },
                             CallbackRequestType::SigstorePubKeyVerify {
                                 image,
                                 pub_keys,

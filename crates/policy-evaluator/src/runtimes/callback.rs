@@ -102,6 +102,29 @@ pub(crate) fn host_callback(
                         eval_ctx,
                     )
                 }
+                "v1/oci_manifest" => {
+                    let image: String = serde_json::from_slice(payload.to_vec().as_ref())?;
+                    debug!(
+                        eval_ctx.policy_id,
+                        binding,
+                        operation,
+                        image = image.as_str(),
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::OciManifest { image },
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(
+                        &eval_ctx.policy_id,
+                        binding,
+                        operation,
+                        req,
+                        rx,
+                        eval_ctx,
+                    )
+                }
                 _ => {
                     error!("unknown operation: {}", operation);
                     Err(format!("unknown operation: {operation}").into())
