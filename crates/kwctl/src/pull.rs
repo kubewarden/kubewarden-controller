@@ -8,5 +8,7 @@ pub(crate) async fn pull(
     sources: Option<&Sources>,
     destination: PullDestination,
 ) -> Result<Policy> {
-    fetch_policy(uri, destination, sources).await
+    fetch_policy(uri, destination, sources)
+        .await
+        .map_err(anyhow::Error::new)
 }

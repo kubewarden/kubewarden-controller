@@ -58,5 +58,5 @@ pub(crate) fn list() -> Result<()> {
 }
 
 fn policy_list() -> Result<Vec<Policy>> {
-    Store::default().list()
+    Store::default().list().map_err(anyhow::Error::new)
 }
