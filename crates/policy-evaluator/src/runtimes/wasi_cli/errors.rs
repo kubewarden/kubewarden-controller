@@ -4,9 +4,6 @@ pub type Result<T> = std::result::Result<T, WasiRuntimeError>;
 
 #[derive(Error, Debug)]
 pub enum WasiRuntimeError {
-    #[error("cannot set wasi args")]
-    WasiStringArray(#[source] wasi_common::StringArrayError),
-
     #[error("program exited with code {code:?}; stderr set to '{stderr}', error: '{error}'")]
     WasiEvaluation {
         code: Option<i32>,
@@ -14,6 +11,9 @@ pub enum WasiRuntimeError {
         #[source]
         error: wasmtime::Error,
     },
+
+    #[error("cannot define host function '{name}': {error}")]
+    WasmHostFuncDefinitionError { name: String, error: String },
 
     #[error("cannot find `_start` function inside of module: {0}")]
     WasmMissingStartFn(#[source] wasmtime::Error),
@@ -47,25 +47,3 @@ pub enum WasiRuntimeError {
     #[error("host_call: cannot get write access to STDIN")]
     WasiWriteAccessStdin(),
 }
-
-impl From<std::convert::Infallible> for WasiRuntimeError {
-    fn from(_: std::convert::Infallible) -> Self {
-        unreachable!()
-    }
-}
-
-// impl From<std::result::Result<std::convert::Infallible, wasmtime::Error>>
-//     for std::result::Result<(), WasiRuntimeError>
-// {
-//     fn from(_: std::convert::Infallible) -> Self {
-//         unreachable!()
-//     }
-// }
-
-// impl Into<std::result::Result<(), WasiRuntimeError>>
-//     for std::result::Result<std::convert::Infallible, wasmtime::Error>
-// {
-//     fn into(_: std::result::Result<(), WasiRuntimeError>) -> Self {
-//         unreachable!()
-//     }
-// }
