@@ -129,7 +129,7 @@ impl<'a> Runtime<'a> {
 
                         let violations: Violations = evaluation_result
                             .get(0)
-                            .ok_or_else(RegoRuntimeError::InvalidResponse)
+                            .ok_or_else(|| RegoRuntimeError::InvalidResponse)
                             .and_then(|response| {
                                 serde_json::from_value(response.clone())
                                     .map_err(RegoRuntimeError::InvalidResponseWithError)

@@ -73,7 +73,7 @@ impl ResourcesByName {
             .metadata
             .name
             .clone()
-            .ok_or(RegoRuntimeError::GatekeeperInventoryMissingName())?;
+            .ok_or(RegoRuntimeError::GatekeeperInventoryMissingName)?;
         self.0.insert(name, obj.to_owned());
         Ok(())
     }
@@ -131,7 +131,7 @@ impl ResourcesByNamespace {
             .metadata
             .namespace
             .clone()
-            .ok_or(RegoRuntimeError::GatekeeperInventoryMissingNamespace())?;
+            .ok_or(RegoRuntimeError::GatekeeperInventoryMissingNamespace)?;
         self.0.entry(namespace).or_default().register(obj, resource)
     }
 }
