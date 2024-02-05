@@ -1,8 +1,11 @@
-use anyhow::{anyhow, Result};
+use std::collections::HashMap;
+use std::result::Result;
+
 use base64::{engine::general_purpose, Engine as _};
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::errors::ResponseError;
 
 /// This models the admission/v1/AdmissionResponse object of Kubernetes
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Clone)]
@@ -71,7 +74,7 @@ impl AdmissionResponse {
         uid: String,
         req_obj: Option<&serde_json::Value>,
         pol_val_resp: &PolicyValidationResponse,
-    ) -> Result<AdmissionResponse> {
+    ) -> Result<AdmissionResponse, ResponseError> {
         if pol_val_resp.mutated_object.is_some() && req_obj.is_none() {
             let message = "Incoming object is null, which happens only with DELETE operations, but the policy is attempting a mutation. This is not allowed";
 
@@ -98,7 +101,7 @@ impl AdmissionResponse {
                 } else {
                     let diff_str = serde_json::to_string(&diff)
                         .map(|s| general_purpose::STANDARD.encode(s))
-                        .map_err(|e| anyhow!("cannot serialize JSONPatch: {:?}", e))?;
+                        .map_err(ResponseError::Deserialize)?;
                     Some(diff_str)
                 }
             }

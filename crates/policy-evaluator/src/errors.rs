@@ -54,3 +54,9 @@ pub enum MetadataError {
         error: serde_json::Error,
     },
 }
+
+#[derive(Error, Debug)]
+pub enum ResponseError {
+    #[error("cannot deserialize JSONPatch: {0}")]
+    Deserialize(#[source] serde_json::Error),
+}
