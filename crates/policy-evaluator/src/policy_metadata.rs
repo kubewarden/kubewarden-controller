@@ -1,4 +1,3 @@
-use anyhow::Result;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -8,6 +7,7 @@ use std::path::Path;
 use validator::{Validate, ValidationError};
 use wasmparser::{Parser, Payload};
 
+use crate::errors::MetadataError;
 use crate::policy_evaluator::PolicyExecutionMode;
 
 #[derive(Deserialize, Serialize, Debug, Clone, Hash, Eq, PartialEq)]
@@ -190,15 +190,20 @@ impl Default for Metadata {
 }
 
 impl Metadata {
-    pub fn from_path(path: &Path) -> Result<Option<Metadata>> {
-        Metadata::from_contents(&std::fs::read(path)?)
+    pub fn from_path(path: &Path) -> std::result::Result<Option<Metadata>, MetadataError> {
+        Metadata::from_contents(&std::fs::read(path).map_err(MetadataError::Path)?)
     }
 
-    pub fn from_contents(policy: &[u8]) -> Result<Option<Metadata>> {
+    pub fn from_contents(policy: &[u8]) -> std::result::Result<Option<Metadata>, MetadataError> {
         for payload in Parser::new(0).parse_all(policy) {
-            if let Payload::CustomSection(reader) = payload? {
+            if let Payload::CustomSection(reader) = payload.map_err(MetadataError::WasmPayload)? {
                 if reader.name() == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
-                    return Ok(Some(serde_json::from_slice(reader.data())?));
+                    return Ok(Some(serde_json::from_slice(reader.data()).map_err(
+                        |e| MetadataError::Deserialize {
+                            section: reader.name().to_string(),
+                            error: e,
+                        },
+                    )?));
                 }
             }
         }

@@ -38,3 +38,19 @@ pub enum PolicyEvaluatorError {
     #[error("protocol_version is only applicable to a Kubewarden policy")]
     InvokeWapcProtocolVersion(#[source] crate::runtimes::wapc::errors::WapcRuntimeError),
 }
+
+#[derive(Error, Debug)]
+pub enum MetadataError {
+    #[error("cannot read metadata from path: {0}")]
+    Path(#[source] std::io::Error),
+
+    #[error("cannot parse custom section of wasm module: {0}")]
+    WasmPayload(#[source] wasmparser::BinaryReaderError),
+
+    #[error("cannot deserialize custom section `{section}` of wasm module: {error}")]
+    Deserialize {
+        section: String,
+        #[source]
+        error: serde_json::Error,
+    },
+}
