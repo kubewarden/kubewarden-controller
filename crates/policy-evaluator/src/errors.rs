@@ -40,7 +40,32 @@ pub enum PolicyEvaluatorError {
 }
 
 #[derive(Error, Debug)]
-pub enum PolicyEvaluatorBuilderPreError {
+pub enum PolicyEvaluatorBuilderError {
+    #[error("cannot convert given path to String")]
+    ConvertPath,
+
+    #[error("protocol_version is only applicable to a Kubewarden policy")]
+    InvokeWapcProtocolVersion(#[source] crate::runtimes::wapc::errors::WapcRuntimeError),
+
+    #[error("configuration of wasmtime is incorrect: {0}")]
+    InvalidUserInput(#[source] anyhow::Error),
+
+    #[error("error when creating wasmtime engine: {0}")]
+    WasmtimeEngineBuild(#[source] wasmtime::Error),
+
+    #[error("error when building wasm module: {0}")]
+    WasmModuleBuild(#[source] wasmtime::Error),
+
+    #[error("error when building wapc precompiled stack: {0}")]
+    NewWapcStackPre(#[source] crate::runtimes::wapc::errors::WapcRuntimeError),
+
+    #[error("error when building wasi precompiled stack: {0}")]
+    NewWasiStackPre(#[source] crate::runtimes::wasi_cli::errors::WasiRuntimeError),
+
+    #[error("error when building rego precompiled stack")]
+    NewRegoStackPre(#[source] wasmtime::Error),
+}
+
 #[derive(Error, Debug)]
 pub enum PolicyEvaluatorPreError {
     #[error("unable to rehydrate wapc module: {0}")]
