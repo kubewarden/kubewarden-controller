@@ -40,6 +40,17 @@ pub enum PolicyEvaluatorError {
 }
 
 #[derive(Error, Debug)]
+pub enum PolicyEvaluatorBuilderPreError {
+#[derive(Error, Debug)]
+pub enum PolicyEvaluatorPreError {
+    #[error("unable to rehydrate wapc module: {0}")]
+    RehydrateWapc(#[source] crate::runtimes::wapc::errors::WapcRuntimeError),
+
+    #[error("unable to rehydrate rego module: {0}")]
+    RehydrateRego(#[source] crate::runtimes::rego::errors::RegoRuntimeError),
+}
+
+#[derive(Error, Debug)]
 pub enum MetadataError {
     #[error("cannot read metadata from path: {0}")]
     Path(#[source] std::io::Error),

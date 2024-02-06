@@ -1,5 +1,5 @@
 mod context_aware;
-mod errors;
+pub mod errors;
 mod gatekeeper_inventory;
 mod opa_inventory;
 mod runtime;
