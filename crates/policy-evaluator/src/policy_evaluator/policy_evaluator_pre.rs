@@ -24,7 +24,7 @@ impl PolicyEvaluatorPre {
     ///
     /// Warning: the Rego stack cannot make use of these low level primitives, but its
     /// instantiation times are negligible. More details inside of the
-    /// documentation of [`rego::StackPre`](crate::rego::stack_pre::StackPre).
+    /// documentation of [`rego::StackPre`](crate::runtimes::rego::StackPre).
     pub fn rehydrate(
         &self,
         eval_ctx: &EvaluationContext,
