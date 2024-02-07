@@ -28,6 +28,24 @@ unit-tests: fmt lint
 integration-tests: fmt lint
 	cargo test --test '*'
 
+
+.PHONY: coverage
+coverage: coverage-unit-tests coverage-integration-tests
+	
+.PHONY: coverage-unit-tests
+coverage-unit-tests:
+	# integration-tests with llvm need +nightly. Hence, enable +nightly on
+	# unit-tests, and use --skip-clean to not recompile on CI if not needed
+	cargo +nightly tarpaulin --verbose --skip-clean --engine=llvm \
+		--all-features --lib --bin --follow-exec \
+		--out xml --out html --output-dir coverage/unit-tests
+	
+.PHONY: coverage-integration-tests
+coverage-integration-tests:
+	cargo +nightly tarpaulin --verbose --skip-clean --engine=llvm \
+		--all-features --test integration_test --examples --doc --benches --follow-exec \
+		--out xml --out html --output-dir coverage/integration-tests
+
 .PHONY: clean
 clean:
 	cargo clean
