@@ -1,10 +1,10 @@
 use std::path::Path;
 use std::result::Result;
 
-use anyhow::anyhow;
 use wasmtime_provider::wasmtime;
 
 use crate::errors::PolicyEvaluatorBuilderError;
+use crate::policy_evaluator::errors::InvalidUserInputError;
 use crate::policy_evaluator::{stack_pre::StackPre, PolicyEvaluatorPre, PolicyExecutionMode};
 use crate::runtimes::{rego, wapc, wasi_cli};
 
@@ -132,40 +132,30 @@ impl PolicyEvaluatorBuilder {
     }
 
     /// Ensure the configuration provided to the build is correct
-    fn validate_user_input(&self) -> anyhow::Result<()> {
+    fn validate_user_input(&self) -> Result<(), InvalidUserInputError> {
         if self.policy_file.is_some() && self.policy_contents.is_some() {
-            return Err(anyhow!(
-                "cannot specify 'policy_file' and 'policy_contents' at the same time"
-            ));
+            return Err(InvalidUserInputError::FileAndContents);
         }
         if self.policy_file.is_some() && self.policy_module.is_some() {
-            return Err(anyhow!(
-                "cannot specify 'policy_file' and 'policy_module' at the same time"
-            ));
+            return Err(InvalidUserInputError::FileAndModule);
         }
         if self.policy_contents.is_some() && self.policy_module.is_some() {
-            return Err(anyhow!(
-                "cannot specify 'policy_contents' and 'policy_module' at the same time"
-            ));
+            return Err(InvalidUserInputError::ContentsAndModule);
         }
 
         if self.policy_file.is_none()
             && self.policy_contents.is_none()
             && self.policy_module.is_none()
         {
-            return Err(anyhow!(
-                "must specify one among: `policy_file`, `policy_contents` and `policy_module`"
-            ));
+            return Err(InvalidUserInputError::OneOfFileContentsModule);
         }
 
         if self.engine.is_none() && self.policy_module.is_some() {
-            return Err(anyhow!(
-                "you must provide the `engine` that was used to instantiate the given `policy_module`"
-            ));
+            return Err(InvalidUserInputError::EngineForModule);
         }
 
         if self.execution_mode.is_none() {
-            return Err(anyhow!("must specify execution mode"));
+            return Err(InvalidUserInputError::ExecutionMode);
         }
 
         Ok(())

@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::policy_evaluator::errors::InvalidUserInputError;
+
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum ArtifactHubError {
     #[error("no annotations in policy metadata. policy metadata must specify annotations")]
@@ -47,8 +49,8 @@ pub enum PolicyEvaluatorBuilderError {
     #[error("protocol_version is only applicable to a Kubewarden policy")]
     InvokeWapcProtocolVersion(#[source] crate::runtimes::wapc::errors::WapcRuntimeError),
 
-    #[error("configuration of wasmtime is incorrect: {0}")]
-    InvalidUserInput(#[source] anyhow::Error),
+    #[error(transparent)]
+    InvalidUserInput(#[from] InvalidUserInputError),
 
     #[error("error when creating wasmtime engine: {0}")]
     WasmtimeEngineBuild(#[source] wasmtime::Error),

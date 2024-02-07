@@ -1,3 +1,4 @@
+pub mod errors;
 mod evaluator;
 pub mod policy_evaluator_builder;
 mod policy_evaluator_pre;
