@@ -28,7 +28,10 @@ pub(crate) async fn push(
     };
 
     let policy = fs::read(&wasm_path).map_err(|e| anyhow!("Cannot open policy file: {:?}", e))?;
-    Registry::new().push(&policy, uri, sources).await
+    Registry::new()
+        .push(&policy, uri, sources)
+        .await
+        .map_err(anyhow::Error::new)
 }
 
 fn can_be_force_pushed_without_metadata(
