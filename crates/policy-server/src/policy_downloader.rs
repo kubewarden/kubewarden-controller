@@ -257,7 +257,7 @@ async fn create_verifier(
             None
         }
     };
-    Verifier::new(sources, fulcio_and_rekor_data.as_ref())
+    Ok(Verifier::new(sources, fulcio_and_rekor_data.as_ref())?)
 }
 
 #[cfg(test)]
