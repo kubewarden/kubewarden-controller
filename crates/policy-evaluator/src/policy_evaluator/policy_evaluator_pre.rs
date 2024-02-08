@@ -1,5 +1,6 @@
-use anyhow::Result;
+use std::result::Result;
 
+use crate::errors::PolicyEvaluatorPreError;
 use crate::evaluation_context::EvaluationContext;
 use crate::policy_evaluator::{stack_pre::StackPre, PolicyEvaluator};
 use crate::runtimes::{rego, wapc, wasi_cli, Runtime};
@@ -23,11 +24,15 @@ impl PolicyEvaluatorPre {
     ///
     /// Warning: the Rego stack cannot make use of these low level primitives, but its
     /// instantiation times are negligible. More details inside of the
-    /// documentation of [`rego::StackPre`](crate::rego::stack_pre::StackPre).
-    pub fn rehydrate(&self, eval_ctx: &EvaluationContext) -> Result<PolicyEvaluator> {
+    /// documentation of [`rego::StackPre`](crate::runtimes::rego::StackPre).
+    pub fn rehydrate(
+        &self,
+        eval_ctx: &EvaluationContext,
+    ) -> Result<PolicyEvaluator, PolicyEvaluatorPreError> {
         let runtime = match &self.stack_pre {
             StackPre::Wapc(stack_pre) => {
-                let wapc_stack = wapc::WapcStack::new_from_pre(stack_pre, eval_ctx)?;
+                let wapc_stack = wapc::WapcStack::new_from_pre(stack_pre, eval_ctx)
+                    .map_err(PolicyEvaluatorPreError::RehydrateWapc)?;
                 Runtime::Wapc(wapc_stack)
             }
             StackPre::Wasi(stack_pre) => {
@@ -35,7 +40,8 @@ impl PolicyEvaluatorPre {
                 Runtime::Cli(wasi_stack)
             }
             StackPre::Rego(stack_pre) => {
-                let rego_stack = rego::Stack::new_from_pre(stack_pre)?;
+                let rego_stack = rego::Stack::new_from_pre(stack_pre)
+                    .map_err(PolicyEvaluatorPreError::RehydrateRego)?;
                 Runtime::Rego(rego_stack)
             }
         };

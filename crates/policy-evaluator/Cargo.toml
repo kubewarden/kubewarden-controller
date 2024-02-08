@@ -27,7 +27,6 @@ kube = { version = "0.88.1", default-features = false, features = [
   "rustls-tls",
 ] }
 kubewarden-policy-sdk = "0.9.10"
-lazy_static = "1.4"
 mail-parser = { version = "0.9.2", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
@@ -43,7 +42,6 @@ thiserror = "1.0"
 time = { version = "0.3.34", features = ["serde-human-readable"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
-tracing-futures = "0.2"
 url = { version = "2.2", features = ["serde"] }
 validator = { version = "0.16", features = ["derive"] }
 wapc = "1.1"

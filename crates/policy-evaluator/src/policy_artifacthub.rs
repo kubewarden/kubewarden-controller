@@ -26,9 +26,9 @@ pub type Result<T> = std::result::Result<T, ArtifactHubError>;
 
 /// Partial implementation of the format of artifacthub-pkg.yml file as defined
 /// in
-/// https://github.com/artifacthub/hub/blob/master/docs/metadata/artifacthub-pkg.yml
+/// <https://github.com/artifacthub/hub/blob/master/docs/metadata/artifacthub-pkg.yml>
 /// and
-/// https://artifacthub.io/docs/topics/repositories/kubewarden-policies
+/// <https://artifacthub.io/docs/topics/repositories/kubewarden-policies>
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ArtifactHubPkg {
@@ -47,7 +47,7 @@ pub struct ArtifactHubPkg {
     #[serde(skip_serializing_if = "Option::is_none")]
     license: Option<String>,
     /// Home URL of policy (source repository)
-    /// E.g:  https://github.com/kubewarden/verify-image-signatures
+    /// E.g:  <https://github.com/kubewarden/verify-image-signatures>
     #[serde(rename = "homeURL", skip_serializing_if = "Option::is_none")]
     home_url: Option<Url>,
     /// List of images of the ArtifactHub package

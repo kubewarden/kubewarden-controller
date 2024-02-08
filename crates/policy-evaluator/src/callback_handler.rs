@@ -12,7 +12,7 @@ mod oci;
 mod sigstore_verification;
 
 pub use builder::CallbackHandlerBuilder;
-pub use crypto::verify_certificate;
+pub(crate) use crypto::verify_certificate;
 
 use sigstore_verification::{
     get_sigstore_certificate_verification_cached, get_sigstore_github_actions_verification_cached,

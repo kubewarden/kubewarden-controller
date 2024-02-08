@@ -67,7 +67,7 @@ impl<'a> Runtime<'a> {
                             &pol_val_resp,
                         )
                         .map_err(|e| -> WapcRuntimeError {
-                            WapcRuntimeError::InvalidResponseFormat(e)
+                            WapcRuntimeError::InvalidResponseFormat(e.into())
                         })
                     })
                     .unwrap_or_else(|e| {

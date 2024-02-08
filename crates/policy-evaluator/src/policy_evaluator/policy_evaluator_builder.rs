@@ -1,7 +1,10 @@
-use anyhow::{anyhow, Result};
 use std::path::Path;
+use std::result::Result;
+
 use wasmtime_provider::wasmtime;
 
+use crate::errors::PolicyEvaluatorBuilderError;
+use crate::policy_evaluator::errors::InvalidUserInputError;
 use crate::policy_evaluator::{stack_pre::StackPre, PolicyEvaluatorPre, PolicyExecutionMode};
 use crate::runtimes::{rego, wapc, wasi_cli};
 
@@ -53,11 +56,14 @@ impl PolicyEvaluatorBuilder {
 
     /// Build the policy by reading the Wasm file from disk.
     /// Cannot be used at the same time as `policy_contents`
-    pub fn policy_file(mut self, path: &Path) -> Result<PolicyEvaluatorBuilder> {
+    pub fn policy_file(
+        mut self,
+        path: &Path,
+    ) -> Result<PolicyEvaluatorBuilder, PolicyEvaluatorBuilderError> {
         let filename = path
             .to_str()
             .map(|s| s.to_string())
-            .ok_or_else(|| anyhow!("Cannot convert given path to String"))?;
+            .ok_or_else(|| PolicyEvaluatorBuilderError::ConvertPath)?;
         self.policy_file = Some(filename);
         Ok(self)
     }
@@ -126,48 +132,39 @@ impl PolicyEvaluatorBuilder {
     }
 
     /// Ensure the configuration provided to the build is correct
-    fn validate_user_input(&self) -> Result<()> {
+    fn validate_user_input(&self) -> Result<(), InvalidUserInputError> {
         if self.policy_file.is_some() && self.policy_contents.is_some() {
-            return Err(anyhow!(
-                "Cannot specify 'policy_file' and 'policy_contents' at the same time"
-            ));
+            return Err(InvalidUserInputError::FileAndContents);
         }
         if self.policy_file.is_some() && self.policy_module.is_some() {
-            return Err(anyhow!(
-                "Cannot specify 'policy_file' and 'policy_module' at the same time"
-            ));
+            return Err(InvalidUserInputError::FileAndModule);
         }
         if self.policy_contents.is_some() && self.policy_module.is_some() {
-            return Err(anyhow!(
-                "Cannot specify 'policy_contents' and 'policy_module' at the same time"
-            ));
+            return Err(InvalidUserInputError::ContentsAndModule);
         }
 
         if self.policy_file.is_none()
             && self.policy_contents.is_none()
             && self.policy_module.is_none()
         {
-            return Err(anyhow!(
-                "Must specify one among: `policy_file`, `policy_contents` and `policy_module`"
-            ));
+            return Err(InvalidUserInputError::OneOfFileContentsModule);
         }
 
         if self.engine.is_none() && self.policy_module.is_some() {
-            return Err(anyhow!(
-                "You must provide the `engine` that was used to instantiate the given `policy_module`"
-            ));
+            return Err(InvalidUserInputError::EngineForModule);
         }
 
         if self.execution_mode.is_none() {
-            return Err(anyhow!("Must specify execution mode"));
+            return Err(InvalidUserInputError::ExecutionMode);
         }
 
         Ok(())
     }
 
     /// Create the instance of `PolicyEvaluatorPre` to be used
-    pub fn build_pre(&self) -> Result<PolicyEvaluatorPre> {
-        self.validate_user_input()?;
+    pub fn build_pre(&self) -> Result<PolicyEvaluatorPre, PolicyEvaluatorBuilderError> {
+        self.validate_user_input()
+            .map_err(PolicyEvaluatorBuilderError::InvalidUserInput)?;
 
         let engine = self.build_engine()?;
         let module = self.build_module(&engine)?;
@@ -176,11 +173,13 @@ impl PolicyEvaluatorBuilder {
 
         let stack_pre = match execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
-                let wapc_stack_pre = wapc::StackPre::new(engine, module, self.epoch_deadlines)?;
+                let wapc_stack_pre = wapc::StackPre::new(engine, module, self.epoch_deadlines)
+                    .map_err(PolicyEvaluatorBuilderError::NewWapcStackPre)?;
                 StackPre::from(wapc_stack_pre)
             }
             PolicyExecutionMode::Wasi => {
-                let wasi_stack_pre = wasi_cli::StackPre::new(engine, module, self.epoch_deadlines)?;
+                let wasi_stack_pre = wasi_cli::StackPre::new(engine, module, self.epoch_deadlines)
+                    .map_err(PolicyEvaluatorBuilderError::NewWasiStackPre)?;
                 StackPre::from(wasi_stack_pre)
             }
             PolicyExecutionMode::Opa | PolicyExecutionMode::OpaGatekeeper => {
@@ -189,7 +188,9 @@ impl PolicyEvaluatorBuilder {
                     module,
                     self.epoch_deadlines,
                     0, // currently the entrypoint is hard coded to this value
-                    execution_mode.try_into()?,
+                    execution_mode
+                        .try_into()
+                        .map_err(PolicyEvaluatorBuilderError::NewRegoStackPre)?,
                 );
                 StackPre::from(rego_stack_pre)
             }
@@ -198,7 +199,7 @@ impl PolicyEvaluatorBuilder {
         Ok(PolicyEvaluatorPre::new(stack_pre))
     }
 
-    fn build_engine(&self) -> Result<wasmtime::Engine> {
+    fn build_engine(&self) -> Result<wasmtime::Engine, PolicyEvaluatorBuilderError> {
         self.engine
             .as_ref()
             .map_or_else(
@@ -215,18 +216,23 @@ impl PolicyEvaluatorBuilder {
                 },
                 |e| Ok(e.clone()),
             )
-            .map_err(|e| anyhow!("cannot create wasmtime engine: {:?}", e))
+            .map_err(PolicyEvaluatorBuilderError::WasmtimeEngineBuild)
     }
 
-    fn build_module(&self, engine: &wasmtime::Engine) -> Result<wasmtime::Module> {
+    fn build_module(
+        &self,
+        engine: &wasmtime::Engine,
+    ) -> Result<wasmtime::Module, PolicyEvaluatorBuilderError> {
         if let Some(m) = &self.policy_module {
             // it's fine to clone a Module, this is a cheap operation that just
             // copies its internal reference. See wasmtime docs
             Ok(m.clone())
         } else {
             match &self.policy_file {
-                Some(file) => wasmtime::Module::from_file(engine, file),
-                None => wasmtime::Module::new(engine, self.policy_contents.as_ref().unwrap()),
+                Some(file) => wasmtime::Module::from_file(engine, file)
+                    .map_err(PolicyEvaluatorBuilderError::WasmModuleBuild),
+                None => wasmtime::Module::new(engine, self.policy_contents.as_ref().unwrap())
+                    .map_err(PolicyEvaluatorBuilderError::WasmModuleBuild),
             }
         }
     }
