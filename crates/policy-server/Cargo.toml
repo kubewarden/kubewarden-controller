@@ -12,7 +12,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-clap = { version = "4.4", features = ["cargo", "env"] }
+clap = { version = "4.5", features = ["cargo", "env"] }
 daemonize = "0.5"
 humansize = "2.1"
 itertools = "0.12.1"
