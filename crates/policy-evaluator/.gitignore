@@ -1,2 +1,5 @@
 /target
 Cargo.lock
+
+# coverage instrumentation:
+*.profraw
