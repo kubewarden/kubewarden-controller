@@ -9,7 +9,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-clap_complete = "4.4"
+clap_complete = "4.5"
 clap = { version = "4.5", features = ["cargo", "env"] }
 directories = "5.0.1"
 flate2 = "1.0.28"
