@@ -35,7 +35,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9.31"
 sha2 = "0.10"
 thiserror = "1.0"
-tokio = { version = "^1.35.1", features = ["full"] }
+tokio = { version = "^1.36.0", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
 tracing-opentelemetry = "0.22.0"
