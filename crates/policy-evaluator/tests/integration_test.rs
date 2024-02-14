@@ -212,7 +212,7 @@ async fn test_policy_evaluator(
     }
 }
 
-#[rstest]
+#[test_log::test(rstest)]
 #[case::wasi(
     PolicyExecutionMode::Wasi,
     "ghcr.io/kubewarden/tests/go-wasi-context-aware-test-policy:latest",

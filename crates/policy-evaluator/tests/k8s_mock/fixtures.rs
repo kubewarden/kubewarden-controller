@@ -5,7 +5,10 @@ use k8s_openapi::{
     },
     apimachinery::pkg::apis::meta::v1::{APIResource, APIResourceList},
 };
-use kube::core::{ObjectList, ObjectMeta, TypeMeta};
+use kube::core::{
+    watch::{Bookmark, BookmarkMeta},
+    ListMeta, ObjectList, ObjectMeta, TypeMeta, WatchEvent,
+};
 use std::collections::BTreeMap;
 
 pub(crate) fn v1_resource_list() -> APIResourceList {
@@ -46,11 +49,15 @@ pub(crate) fn apps_v1_resource_list() -> APIResourceList {
 pub(crate) fn namespaces() -> ObjectList<Namespace> {
     ObjectList {
         types: TypeMeta::list::<Namespace>(),
-        metadata: Default::default(),
+        metadata: ListMeta {
+            resource_version: Some("1".to_owned()),
+            ..Default::default()
+        },
         items: vec![Namespace {
             metadata: ObjectMeta {
                 name: Some("customer-1".to_owned()),
                 labels: Some(BTreeMap::from([("customer-id".to_owned(), "1".to_owned())])),
+                resource_version: Some("1".to_owned()),
                 ..Default::default()
             },
             ..Default::default()
@@ -58,9 +65,22 @@ pub(crate) fn namespaces() -> ObjectList<Namespace> {
     }
 }
 
+pub(crate) fn namespaces_watch_bookmark(resource_version: &str) -> WatchEvent<Namespace> {
+    WatchEvent::Bookmark(Bookmark {
+        types: TypeMeta::list::<Namespace>(),
+        metadata: BookmarkMeta {
+            annotations: BTreeMap::new(),
+            resource_version: resource_version.to_owned(),
+        },
+    })
+}
+
 pub(crate) fn deployments() -> ObjectList<Deployment> {
     ObjectList {
-        metadata: Default::default(),
+        metadata: ListMeta {
+            resource_version: Some("1".to_owned()),
+            ..Default::default()
+        },
         types: TypeMeta::list::<Deployment>(),
         items: vec![
             Deployment {
@@ -71,6 +91,7 @@ pub(crate) fn deployments() -> ObjectList<Deployment> {
                         "app.kubernetes.io/component".to_owned(),
                         "database".to_owned(),
                     )])),
+                    resource_version: Some("1".to_owned()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -83,6 +104,7 @@ pub(crate) fn deployments() -> ObjectList<Deployment> {
                         "app.kubernetes.io/component".to_owned(),
                         "frontend".to_owned(),
                     )])),
+                    resource_version: Some("1".to_owned()),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -91,12 +113,35 @@ pub(crate) fn deployments() -> ObjectList<Deployment> {
     }
 }
 
+pub(crate) fn deployments_watch_bookmark(resource_version: &str) -> WatchEvent<Deployment> {
+    WatchEvent::Bookmark(Bookmark {
+        types: TypeMeta::list::<Deployment>(),
+        metadata: BookmarkMeta {
+            annotations: BTreeMap::new(),
+            resource_version: resource_version.to_owned(),
+        },
+    })
+}
+
 pub(crate) fn services() -> ObjectList<Service> {
     ObjectList {
-        metadata: Default::default(),
+        metadata: ListMeta {
+            resource_version: Some("1".to_owned()),
+            ..Default::default()
+        },
         types: TypeMeta::list::<Service>(),
         items: vec![api_auth_service()],
     }
+}
+
+pub(crate) fn services_watch_bookmark(resource_version: &str) -> WatchEvent<Service> {
+    WatchEvent::Bookmark(Bookmark {
+        types: TypeMeta::list::<Service>(),
+        metadata: BookmarkMeta {
+            annotations: BTreeMap::new(),
+            resource_version: resource_version.to_owned(),
+        },
+    })
 }
 
 pub(crate) fn api_auth_service() -> Service {
@@ -108,6 +153,7 @@ pub(crate) fn api_auth_service() -> Service {
                 "app.kubernetes.io/part-of".to_owned(),
                 "api".to_owned(),
             )])),
+            resource_version: Some("1".to_owned()),
             ..Default::default()
         },
         ..Default::default()
