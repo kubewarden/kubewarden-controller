@@ -25,8 +25,8 @@ impl Client {
     /// the Kubernetes API Server
     async fn build_kube_resource(&mut self, api_version: &str, kind: &str) -> Result<KubeResource> {
         let avk = ApiVersionKind {
-            api_version: api_version.to_string(),
-            kind: kind.to_string(),
+            api_version: api_version.to_owned(),
+            kind: kind.to_owned(),
         };
 
         // take a reader lock and search for the resource inside of the
@@ -69,10 +69,10 @@ impl Client {
 
         let kube_resource = KubeResource {
             resource: kube::api::ApiResource {
-                group: group.to_string(),
-                version: version.to_string(),
-                api_version: api_version.to_string(),
-                kind: kind.to_string(),
+                group: group.to_owned(),
+                version: version.to_owned(),
+                api_version: api_version.to_owned(),
+                kind: kind.to_owned(),
                 plural: resource.name,
             },
             namespaced: resource.namespaced,
