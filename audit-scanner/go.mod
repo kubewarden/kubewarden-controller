@@ -8,9 +8,9 @@ require (
 	github.com/kubewarden/kubewarden-controller v1.10.1
 	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.8.0
-	k8s.io/api v0.29.1
-	k8s.io/apimachinery v0.29.1
-	k8s.io/client-go v0.29.1
+	k8s.io/api v0.29.2
+	k8s.io/apimachinery v0.29.2
+	k8s.io/client-go v0.29.2
 	sigs.k8s.io/controller-runtime v0.17.1
 	sigs.k8s.io/wg-policy-prototypes v0.0.0-20230505033312-51c21979086a
 )
