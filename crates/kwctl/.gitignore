@@ -1,3 +1,6 @@
 /target
 /bin
 bom-cargo.json
+
+# coverage instrumentation:
+*.profraw

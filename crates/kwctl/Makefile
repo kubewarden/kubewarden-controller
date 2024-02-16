@@ -17,6 +17,21 @@ test: fmt lint
 .PHONY: e2e-tests
 e2e-tests:
 	cargo test --test '*'
+	
+.PHONY: coverage
+coverage: coverage-unit-tests coverage-e2e-tests
+	
+.PHONY: coverage-unit-tests
+coverage-unit-tests:
+	cargo tarpaulin --verbose --skip-clean --engine=llvm \
+		--all-features --bins --follow-exec \
+		--out xml --out html --output-dir coverage/unit-tests
+	
+.PHONY: coverage-e2e-tests
+coverage-e2e-tests:
+	cargo tarpaulin --verbose --skip-clean --engine=llvm \
+		--all-features --test e2e --follow-exec \
+		--out xml --out html --output-dir coverage/e2e-tests
 
 .PHONY: clean
 clean:
