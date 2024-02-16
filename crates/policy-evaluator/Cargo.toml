@@ -47,7 +47,7 @@ validator = { version = "0.16", features = ["derive"] }
 wapc = "1.1"
 wasi-cap-std-sync = { workspace = true }
 wasi-common = { workspace = true }
-wasmparser = "0.121"
+wasmparser = "0.200"
 wasmtime = { workspace = true }
 wasmtime-provider = { version = "1.14", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
