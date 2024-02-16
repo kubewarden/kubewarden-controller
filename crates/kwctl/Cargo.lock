@@ -2536,7 +2536,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "walrus",
- "wasmparser 0.121.1",
+ "wasmparser 0.200.0",
 ]
 
 [[package]]
@@ -3506,7 +3506,7 @@ dependencies = [
  "wapc",
  "wasi-cap-std-sync",
  "wasi-common",
- "wasmparser 0.121.1",
+ "wasmparser 0.121.2",
  "wasmtime",
  "wasmtime-provider",
  "wasmtime-wasi",
@@ -5600,9 +5600,20 @@ dependencies = [
 
 [[package]]
 name = "wasmparser"
-version = "0.121.1"
+version = "0.121.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99ffe16b4aa1ebab8724f61c9ee38cd5481c89caf10bf1a5af9eab8f0c2e6c05"
+checksum = "9dbe55c8f9d0dbd25d9447a5a889ff90c0cc3feaa7395310d3d826b2c703eaab"
+dependencies = [
+ "bitflags 2.4.2",
+ "indexmap 2.2.3",
+ "semver",
+]
+
+[[package]]
+name = "wasmparser"
+version = "0.200.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a03f65ac876612140c57ff6c3b8fe4990067cce97c2cfdb07368a3cc3354b062"
 dependencies = [
  "bitflags 2.4.2",
  "indexmap 2.2.3",
@@ -5616,7 +5627,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4a76a9228f2e6653f0b3d912b2f3a9b6ac79c690e5642c9ee2dfd914c545cf0"
 dependencies = [
  "anyhow",
- "wasmparser 0.121.1",
+ "wasmparser 0.121.2",
 ]
 
 [[package]]
