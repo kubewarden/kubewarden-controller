@@ -66,3 +66,39 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1e31de5234b9f8995739874a8ce0492dc87873e2 # v4.0.0
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: taiki-e/install-action@5794068c211bc8f5f4514b7c3f03d6adbe66f1b7 # v2.26.18
+        with:
+          tool: cargo-tarpaulin
+      - name: Generate unit-tests coverage
+        run: make coverage-unit-tests
+      - name: Upload unit-tests coverage to Codecov
+        uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: unit-tests
+          directory: coverage/unit-tests
+          flags: unit-tests
+          verbose: true
+      - name: Generate integration-tests coverage
+        run: make coverage-integration-tests
+      - name: Upload unit-tests coverage to Codecov
+        uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: integration-tests
+          directory: coverage/integration-tests
+          flags: integration-tests
+          verbose: true
