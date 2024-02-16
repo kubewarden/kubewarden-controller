@@ -26,7 +26,7 @@ coverage-unit-tests:
 .PHONY: coverage-integration-tests
 coverage-integration-tests:
 	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--all-features --test store --test sources --doc --follow-exec \
+		--all-features --test store --test sources --follow-exec \
 		--out xml --out html --output-dir coverage/integration-tests
 
 .PHONY: clean
