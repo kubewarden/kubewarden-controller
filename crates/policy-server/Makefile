@@ -36,8 +36,6 @@ coverage: coverage-unit-tests coverage-integration-tests
 	
 .PHONY: coverage-unit-tests
 coverage-unit-tests:
-	# integration-tests with llvm need +nightly. Hence, enable +nightly on
-	# unit-tests, and use --skip-clean to not recompile on CI if not needed
 	cargo tarpaulin --verbose --skip-clean --engine=llvm \
 		--all-features --lib --bin --follow-exec \
 		--out xml --out html --output-dir coverage/unit-tests
