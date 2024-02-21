@@ -5,6 +5,8 @@
 run:
   tests: true
   timeout: 10m
+  build-tags:
+    - testing
 
 issues:
   exclude-rules:
@@ -53,6 +55,7 @@ linters:
     - wastedassign
     # disabled because of replacement
     - gomoddirectives
+    - ireturn
 
 linters-settings:
   cyclop:
