@@ -15,17 +15,20 @@ fmt: ## Run go fmt against code.
 	go fmt ./...
 
 vet: ## Run go vet against code.
-	go vet ./...
+	go vet -tags=testing ./... 
 
 lint: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT) run
+	$(GOLANGCI_LINT) run 
 
 .PHONY: unit-tests
 unit-tests: fmt vet ## Run unit tests.
-	go test ./cmd/... ./internal/... -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic
+	go test ./... -tags=testing -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic 
 
 build: fmt vet lint ## Build audit-scanner binary.
 	go build -o bin/audit-scanner .
+
+generate: ## Generate code.
+	go generate ./...
 
 .PHONY: docker-build
 docker-build: unit-tests
