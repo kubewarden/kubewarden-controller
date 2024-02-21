@@ -6,11 +6,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type PolicyReportLogger struct {
-}
-
-// LogClusterPolicyReport will create a log line per each cluster-wide scanned resource
-func (l *PolicyReportLogger) LogClusterPolicyReport(report *report.ClusterPolicyReport) {
+// ClusterPolicyReport will create a log line per each cluster-wide scanned resource
+func ClusterPolicyReport(report *report.ClusterPolicyReport) {
 	log.Info().
 		Dict("dict", zerolog.Dict().
 			Int("pass", report.Summary.Pass).
@@ -37,8 +34,8 @@ func (l *PolicyReportLogger) LogClusterPolicyReport(report *report.ClusterPolicy
 	}
 }
 
-// LogPolicyReport will create a log line per each namespace scanned resource.
-func (l *PolicyReportLogger) LogPolicyReport(report *report.PolicyReport) {
+// PolicyReport will create a log line per each namespace scanned resource.
+func PolicyReport(report *report.PolicyReport) {
 	log.Info().
 		Dict("dict", zerolog.Dict().
 			Str("name", report.GetName()).
