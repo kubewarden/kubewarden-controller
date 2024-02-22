@@ -19,3 +19,4 @@ is the most meaningful contribution you can make. A healthy adopter list aids in
 - [SUSE](http://www.suse.com/)
 - [Foresight Mining software Corporation](https://www.foresightmining.com/)
 - [CLAAS](https://www.claas.com/)
+- [CANCOM](https://www.cancom.de/)
