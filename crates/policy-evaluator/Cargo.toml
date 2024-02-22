@@ -28,7 +28,7 @@ kube = { version = "0.88.1", default-features = false, features = [
   "rustls-tls",
   "runtime",
 ] }
-kubewarden-policy-sdk = "0.9.11"
+kubewarden-policy-sdk = "0.10.0"
 mail-parser = { version = "0.9.2", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
