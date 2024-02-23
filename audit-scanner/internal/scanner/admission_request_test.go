@@ -1,4 +1,4 @@
-package resources
+package scanner
 
 import (
 	"testing"
@@ -32,7 +32,7 @@ func generateUnstructuredPodObject() unstructured.Unstructured {
 
 func TestObjectInAdmissionRequest(t *testing.T) {
 	obj := generateUnstructuredPodObject()
-	admissionRequest := GenerateAdmissionRequest(obj)
+	admissionRequest := newAdmissionRequest(obj)
 
 	admReqObj := admissionRequest.Object.Object
 	if admReqObj.GetObjectKind().GroupVersionKind().Group != obj.GroupVersionKind().Group {
@@ -48,7 +48,7 @@ func TestObjectInAdmissionRequest(t *testing.T) {
 
 func TestBasicInfoInAdmissionRequest(t *testing.T) {
 	obj := generateUnstructuredPodObject()
-	admissionRequest := GenerateAdmissionRequest(obj)
+	admissionRequest := newAdmissionRequest(obj)
 
 	if admissionRequest.Kind.Group != obj.GroupVersionKind().Group {
 		t.Errorf("Group diverge")
@@ -82,9 +82,9 @@ func TestBasicInfoInAdmissionRequest(t *testing.T) {
 	}
 }
 
-func TestGetAdmissinReview(t *testing.T) {
+func TestGetAdmissionReview(t *testing.T) {
 	obj := generateUnstructuredPodObject()
-	admissionReview := GenerateAdmissionReview(obj)
+	admissionReview := newAdmissionReview(obj)
 
 	if admissionReview.Response != nil {
 		t.Fatalf("Response should not be set")

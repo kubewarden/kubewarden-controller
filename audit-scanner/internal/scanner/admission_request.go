@@ -1,4 +1,4 @@
-package resources
+package scanner
 
 import (
 	admv1 "k8s.io/api/admission/v1"
@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func GenerateAdmissionRequest(resource unstructured.Unstructured) *admv1.AdmissionRequest {
+func newAdmissionRequest(resource unstructured.Unstructured) *admv1.AdmissionRequest {
 	groupVersionKind := resource.GroupVersionKind()
 	request := admv1.AdmissionRequest{
 		UID:  resource.GetUID(),
@@ -37,8 +37,8 @@ func GenerateAdmissionRequest(resource unstructured.Unstructured) *admv1.Admissi
 	return &request
 }
 
-func GenerateAdmissionReview(resource unstructured.Unstructured) *admv1.AdmissionReview {
-	admissionRequest := GenerateAdmissionRequest(resource)
+func newAdmissionReview(resource unstructured.Unstructured) *admv1.AdmissionReview {
+	admissionRequest := newAdmissionRequest(resource)
 	return &admv1.AdmissionReview{
 		Request:  admissionRequest,
 		Response: nil,

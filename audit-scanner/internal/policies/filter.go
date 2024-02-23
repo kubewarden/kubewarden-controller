@@ -3,7 +3,7 @@ package policies
 import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog/log"
-	typesv1 "k8s.io/api/admissionregistration/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 )
 
 // returns all policies that should be audited. For a policy to be auditable it must have background-audit enabled,
@@ -31,7 +31,7 @@ func filterAuditablePolicies(policies []policiesv1.Policy) []policiesv1.Policy {
 func isCreateActionPresentWithoutAllResources(policy policiesv1.Policy) bool {
 	for _, rule := range policy.GetRules() {
 		for _, operation := range rule.Operations {
-			if operation == typesv1.Create &&
+			if operation == admissionregistrationv1.Create &&
 				!contains(rule.Resources, "*") &&
 				!contains(rule.APIGroups, "*") &&
 				!contains(rule.APIVersions, "*") {

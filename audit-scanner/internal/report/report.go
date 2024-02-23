@@ -269,7 +269,7 @@ func getPolicyName(policy policiesv1.Policy) (string, error) {
 	}:
 		return "ap-" + policy.GetName(), nil
 	default:
-		// this should never happens
+		// this should never happen
 		log.Fatal().Msg("cannot generate policy name")
 		return "", fmt.Errorf("cannot generate policy name")
 	}
