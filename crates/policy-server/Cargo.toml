@@ -44,7 +44,7 @@ semver = { version = "1.0.22", features = ["serde"] }
 mockall_double = "0.3"
 axum = { version = "0.7.4", features = ["macros"] }
 axum-server = { version = "0.6", features = ["tls-rustls"] }
-tower-http = { version = "0.5.1", features = ["trace"] }
+tower-http = { version = "0.5.2", features = ["trace"] }
 
 [dev-dependencies]
 mockall = "0.12"

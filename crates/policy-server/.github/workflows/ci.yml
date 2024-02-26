@@ -95,13 +95,13 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: taiki-e/install-action@6943331e01261cdff7420bbc2508cb463574e404 # v2.27.2
+      - uses: taiki-e/install-action@b7add58e53e52e624966da65007ce24524f3dcf3 # v2.27.9
         with:
           tool: cargo-tarpaulin
       - name: Generate unit-tests coverage
         run: make coverage-unit-tests
       - name: Upload unit-tests coverage to Codecov
-        uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
+        uses: codecov/codecov-action@0cfda1dd0a4ad9efc75517f399d859cd1ea4ced1 # v4.0.2
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
         with:
@@ -112,7 +112,7 @@ jobs:
       - name: Generate integration-tests coverage
         run: make coverage-integration-tests
       - name: Upload integration-tests coverage to Codecov
-        uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
+        uses: codecov/codecov-action@0cfda1dd0a4ad9efc75517f399d859cd1ea4ced1 # v4.0.2
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
         with:
