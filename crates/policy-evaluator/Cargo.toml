@@ -15,7 +15,7 @@ members = ["crates/burrego"]
 anyhow = "1.0"
 base64 = "0.21"
 burrego = { path = "crates/burrego" }
-cached = { version = "0.48", features = ["async_tokio_rt_multi_thread"] }
+cached = { version = "0.49", features = ["async_tokio_rt_multi_thread"] }
 chrono = { version = "0.4.34", default-features = false }
 dns-lookup = "2.0"
 futures = "0.3"
