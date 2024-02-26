@@ -115,7 +115,6 @@ unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
-	ACK_GINKGO_DEPRECATIONS=2.12.0 KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... -ginkgo.v -ginkgo.progress -race -test.v -coverprofile=coverage/integration-tests/coverage-pkg.txt -covermode=atomic
 	ACK_GINKGO_DEPRECATIONS=2.12.0 K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" POLICY_SERVER_VERSION="$(POLICY_SERVER_VERSION)" go test ./controllers/... -ginkgo.v -ginkgo.progress -race -test.v -coverprofile=coverage/integration-tests/coverage-controllers.txt -covermode=atomic
 
 .PHONY: generate-crds
