@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog/log"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,9 +28,10 @@ type Client struct {
 	policyServerURL string
 }
 
+// Policies represents a collection of auditable policies
 type Policies struct {
-	// PoliciesByGVRAndLabelSelector represents a map of policies by GVR and LabelSelector
-	PoliciesByGVRAndLabelSelector map[schema.GroupVersionResource]map[string][]*Policy
+	// PoliciesByGVR a map of policies grouped by GVR
+	PoliciesByGVR map[schema.GroupVersionResource][]*Policy
 	// PolicyNum represents the number of policies
 	PolicyNum int
 	// SkippedNum represents the number of skipped policies
@@ -69,21 +72,7 @@ func (f *Client) GetPoliciesForANamespace(ctx context.Context, namespace string)
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
 	}
 
-	filteredPolicies := filterAuditablePolicies(namespacePolicies[namespace])
-	skippedNum := len(namespacePolicies[namespace]) - len(filteredPolicies)
-
-	groupedPolicies, err := f.groupPoliciesByGVRAndLabelSelector(ctx, filteredPolicies, true)
-	if err != nil {
-		return nil, err
-	}
-
-	policies := &Policies{
-		PoliciesByGVRAndLabelSelector: groupedPolicies,
-		PolicyNum:                     len(filteredPolicies),
-		SkippedNum:                    skippedNum,
-	}
-
-	return policies, nil
+	return f.groupPoliciesByGVR(ctx, namespacePolicies[namespace], true)
 }
 
 func (f *Client) getClusterAdmissionPolicies(ctx context.Context) ([]policiesv1.ClusterAdmissionPolicy, error) {
@@ -106,21 +95,8 @@ func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) 
 		policy := policy
 		policies = append(policies, &policy)
 	}
-	filteredPolicies := filterAuditablePolicies(policies)
-	skippedNum := len(policies) - len(filteredPolicies)
 
-	groupedPolicies, err := f.groupPoliciesByGVRAndLabelSelector(ctx, filteredPolicies, false)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &Policies{
-		PoliciesByGVRAndLabelSelector: groupedPolicies,
-		PolicyNum:                     len(filteredPolicies),
-		SkippedNum:                    skippedNum,
-	}
-
-	return result, nil
+	return f.groupPoliciesByGVR(ctx, policies, false)
 }
 
 // initializes map with an entry for all namespaces with an empty policies array as value
@@ -193,10 +169,13 @@ func (f *Client) getAdmissionPolicies(ctx context.Context, namespace string) ([]
 	return policies.Items, nil
 }
 
-// groupPoliciesByGVRAndLabelSelectorg groups policies by GVR and LabelSelector.
+// groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
 // If namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
-func (f *Client) groupPoliciesByGVRAndLabelSelector(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (map[schema.GroupVersionResource]map[string][]*Policy, error) {
-	resources := make(map[schema.GroupVersionResource]map[string][]*Policy)
+func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) { //nolint:funlen
+	policiesByGVR := make(map[schema.GroupVersionResource][]*Policy)
+	auditablePolicies := map[string]struct{}{}
+	skippedPolicies := map[string]struct{}{}
+
 	for _, policy := range policies {
 		url, err := f.getPolicyServerURLRunningPolicy(ctx, policy)
 		if err != nil {
@@ -224,39 +203,45 @@ func (f *Client) groupPoliciesByGVRAndLabelSelector(ctx context.Context, policie
 							// continue if resource is namespaced
 							continue
 						}
-						selector, err := metav1.LabelSelectorAsSelector(policy.GetObjectSelector())
-						if err != nil {
-							return nil, err
-						}
-						labelSelector := selector.String()
 
-						policy := Policy{
+						if !isAuditable(policy) {
+							skippedPolicies[policy.GetUniqueName()] = struct{}{}
+
+							log.Debug().Str("policy", policy.GetUniqueName()).
+								Bool("backgroundAudit", policy.GetBackgroundAudit()).
+								Bool("active", policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive).
+								Bool("create", isCreateActionPresentWithoutAllResources(policy)).
+								Msg("not auditable policy, skipping!")
+
+							continue
+						}
+						auditablePolicies[policy.GetUniqueName()] = struct{}{}
+
+						policy := &Policy{
 							Policy:       policy,
 							PolicyServer: url,
 						}
 
-						addPolicyToMap(resources, gvr, labelSelector, &policy)
+						addPolicyToMap(policiesByGVR, gvr, policy)
 					}
 				}
 			}
 		}
 	}
 
-	return resources, nil
+	return &Policies{
+		PoliciesByGVR: policiesByGVR,
+		PolicyNum:     len(auditablePolicies),
+		SkippedNum:    len(skippedPolicies),
+	}, nil
 }
 
-func addPolicyToMap(resources map[schema.GroupVersionResource]map[string][]*Policy, gvr schema.GroupVersionResource, labelSelector string, policy *Policy) {
-	if _, found := resources[gvr]; !found {
-		resources[gvr] = map[string][]*Policy{
-			labelSelector: {policy},
-		}
-		return
-	}
-
-	if _, ok := resources[gvr][labelSelector]; !ok {
-		resources[gvr][labelSelector] = []*Policy{policy}
+func addPolicyToMap(policiesByGVR map[schema.GroupVersionResource][]*Policy, gvr schema.GroupVersionResource, policy *Policy) {
+	value, found := policiesByGVR[gvr]
+	if !found {
+		policiesByGVR[gvr] = []*Policy{policy}
 	} else {
-		resources[gvr][labelSelector] = append(resources[gvr][labelSelector], policy)
+		policiesByGVR[gvr] = append(value, policy)
 	}
 }
 
@@ -327,4 +312,27 @@ func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, name
 	}
 
 	return &serviceList.Items[0], nil
+}
+
+// isAuditable returns true if a policy has backgroundAudit enabled, is active, and contains the CREATE operation.
+// Also, the policy must not target all resources.
+func isAuditable(policy policiesv1.Policy) bool {
+	return policy.GetBackgroundAudit() &&
+		policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive &&
+		isCreateActionPresentWithoutAllResources(policy)
+}
+
+func isCreateActionPresentWithoutAllResources(policy policiesv1.Policy) bool {
+	for _, rule := range policy.GetRules() {
+		for _, operation := range rule.Operations {
+			if operation == admissionregistrationv1.Create &&
+				!slices.Contains(rule.Resources, "*") &&
+				!slices.Contains(rule.APIGroups, "*") &&
+				!slices.Contains(rule.APIVersions, "*") {
+				return true
+			}
+		}
+	}
+
+	return false
 }

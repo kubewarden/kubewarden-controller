@@ -19,11 +19,13 @@ import (
 	reportLogger "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/report"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -132,25 +134,23 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error { //no
 			Msg("error when obtaining PolicyReport")
 	}
 
-	for gvr, objectFilters := range policies.PoliciesByGVRAndLabelSelector {
-		for labelSelector, policies := range objectFilters {
-			pager, err := s.k8sClient.GetResources(gvr, nsName, labelSelector)
-			if err != nil {
-				return err
-			}
+	for gvr, policies := range policies.PoliciesByGVR {
+		pager, err := s.k8sClient.GetResources(gvr, nsName)
+		if err != nil {
+			return err
+		}
 
-			err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
-				resource, ok := obj.(*unstructured.Unstructured)
-				if !ok {
-					return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
-				}
-				s.auditResource(ctx, policies, *resource, &namespacedsReport, &previousNamespacedReport)
-
-				return nil
-			})
-			if err != nil {
-				return err
+		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
+			resource, ok := obj.(*unstructured.Unstructured)
+			if !ok {
+				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
+			s.auditResource(ctx, policies, *resource, &namespacedsReport, &previousNamespacedReport)
+
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 	}
 
@@ -214,26 +214,24 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 		log.Info().Err(err).Msg("no-prexisting ClusterPolicyReport, will create one at the end of the scan")
 	}
 
-	for gvr, objectFilters := range policies.PoliciesByGVRAndLabelSelector {
-		for labelSelector, policies := range objectFilters {
-			pager, err := s.k8sClient.GetResources(gvr, "", labelSelector)
-			if err != nil {
-				return err
+	for gvr, policies := range policies.PoliciesByGVR {
+		pager, err := s.k8sClient.GetResources(gvr, "")
+		if err != nil {
+			return err
+		}
+
+		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
+			resource, ok := obj.(*unstructured.Unstructured)
+			if !ok {
+				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
 
-			err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
-				resource, ok := obj.(*unstructured.Unstructured)
-				if !ok {
-					return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
-				}
+			s.auditClusterResource(ctx, policies, *resource, &clusterReport, &previousClusterReport)
 
-				s.auditClusterResource(ctx, policies, *resource, &clusterReport, &previousClusterReport)
-
-				return nil
-			})
-			if err != nil {
-				return err
-			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 	}
 	if err := s.policyReportStore.SaveClusterPolicyReport(&clusterReport); err != nil {
@@ -253,6 +251,15 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 	for _, p := range policies {
 		url := p.PolicyServer
 		policy := p.Policy
+
+		matches, err := policyMatches(policy, resource)
+		if err != nil {
+			log.Error().Err(err).Msg("error matching policy to resource")
+		}
+
+		if !matches {
+			continue
+		}
 
 		if result := previousClusterReport.GetReusablePolicyReportResult(policy, resource); result != nil {
 			// We have a result from the same policy version for the same resource instance.
@@ -296,6 +303,15 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 		url := p.PolicyServer
 		policy := p.Policy
 
+		matches, err := policyMatches(policy, resource)
+		if err != nil {
+			log.Error().Err(err).Msg("error matching policy to resource")
+		}
+
+		if !matches {
+			continue
+		}
+
 		if result := previousNsReport.GetReusablePolicyReportResult(policy, resource); result != nil {
 			// We have a result from the same policy version for the same resource instance.
 			// Skip the evaluation
@@ -332,6 +348,26 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			nsReport.AddResult(result)
 		}
 	}
+}
+
+func policyMatches(policy policiesv1.Policy, resource unstructured.Unstructured) (bool, error) {
+	if policy.GetObjectSelector() == nil {
+		return true, nil
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(policy.GetObjectSelector())
+	if err != nil {
+		log.Error().Err(err).Msg("error creating label selector from policy")
+
+		return false, err
+	}
+
+	labels := labels.Set(resource.GetLabels())
+	if !selector.Matches(labels) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (s *Scanner) sendAdmissionReviewToPolicyServer(ctx context.Context, url *url.URL, admissionRequest *admissionv1.AdmissionReview) (*admissionv1.AdmissionReview, error) {

@@ -29,15 +29,19 @@ func NewFakeClient(objects ...runtime.Object) client.Client {
 }
 
 type AdmissionPolicyFactory struct {
-	name           string
-	namespace      string
-	objectSelector *metav1.LabelSelector
-	rules          []admissionregistrationv1.RuleWithOperations
-	status         policiesv1.PolicyStatusEnum
+	name            string
+	namespace       string
+	objectSelector  *metav1.LabelSelector
+	rules           []admissionregistrationv1.RuleWithOperations
+	backgroundAudit bool
+	status          policiesv1.PolicyStatusEnum
 }
 
 func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
-	return &AdmissionPolicyFactory{}
+	return &AdmissionPolicyFactory{
+		backgroundAudit: true,
+		status:          policiesv1.PolicyStatusActive,
+	}
 }
 
 func (factory *AdmissionPolicyFactory) Name(name string) *AdmissionPolicyFactory {
@@ -66,6 +70,12 @@ func (factory *AdmissionPolicyFactory) Rule(rule admissionregistrationv1.Rule) *
 	return factory
 }
 
+func (factory *AdmissionPolicyFactory) BackgroundAudit(backgroundAudit bool) *AdmissionPolicyFactory {
+	factory.backgroundAudit = backgroundAudit
+
+	return factory
+}
+
 func (factory *AdmissionPolicyFactory) Status(status policiesv1.PolicyStatusEnum) *AdmissionPolicyFactory {
 	factory.status = status
 
@@ -83,7 +93,7 @@ func (factory *AdmissionPolicyFactory) Build() *policiesv1.AdmissionPolicy {
 				ObjectSelector:  factory.objectSelector,
 				PolicyServer:    "default",
 				Rules:           factory.rules,
-				BackgroundAudit: true,
+				BackgroundAudit: factory.backgroundAudit,
 			},
 		},
 		Status: policiesv1.PolicyStatus{
@@ -104,11 +114,15 @@ type ClusterAdmissionPolicyFactory struct {
 	namespaceSelector *metav1.LabelSelector
 	objectSelector    *metav1.LabelSelector
 	rules             []admissionregistrationv1.RuleWithOperations
+	backgroundAudit   bool
 	status            policiesv1.PolicyStatusEnum
 }
 
 func NewClusterAdmissionPolicyFactory() *ClusterAdmissionPolicyFactory {
-	return &ClusterAdmissionPolicyFactory{}
+	return &ClusterAdmissionPolicyFactory{
+		backgroundAudit: true,
+		status:          policiesv1.PolicyStatusActive,
+	}
 }
 
 func (factory *ClusterAdmissionPolicyFactory) Name(name string) *ClusterAdmissionPolicyFactory {
@@ -137,6 +151,12 @@ func (factory *ClusterAdmissionPolicyFactory) Rule(rule admissionregistrationv1.
 	return factory
 }
 
+func (factory *ClusterAdmissionPolicyFactory) BackgroundAudit(backgroundAudit bool) *ClusterAdmissionPolicyFactory {
+	factory.backgroundAudit = backgroundAudit
+
+	return factory
+}
+
 func (factory *ClusterAdmissionPolicyFactory) Status(status policiesv1.PolicyStatusEnum) *ClusterAdmissionPolicyFactory {
 	factory.status = status
 
@@ -158,7 +178,7 @@ func (factory *ClusterAdmissionPolicyFactory) Build() *policiesv1.ClusterAdmissi
 				ObjectSelector:  factory.objectSelector,
 				PolicyServer:    "default",
 				Rules:           factory.rules,
-				BackgroundAudit: true,
+				BackgroundAudit: factory.backgroundAudit,
 			},
 		},
 		Status: policiesv1.PolicyStatus{

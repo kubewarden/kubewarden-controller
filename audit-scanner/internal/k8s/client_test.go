@@ -33,7 +33,7 @@ func TestGetResources(t *testing.T) {
 		Group:    "",
 		Version:  "v1",
 		Resource: "pods",
-	}, "default", "")
+	}, "default")
 	require.NoError(t, err)
 
 	list, _, err := pager.List(context.Background(), metav1.ListOptions{})

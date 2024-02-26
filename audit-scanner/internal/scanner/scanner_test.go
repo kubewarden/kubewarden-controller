@@ -105,6 +105,9 @@ func TestScanAllNamespaces(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment1",
 			Namespace: "namespace1",
+			Labels: map[string]string{
+				"env": "test",
+			},
 		},
 	}
 
@@ -112,6 +115,9 @@ func TestScanAllNamespaces(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment2",
 			Namespace: "namespace2",
+			Labels: map[string]string{
+				"env": "test",
+			},
 		},
 	}
 
@@ -141,10 +147,42 @@ func TestScanAllNamespaces(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 
+	// an AdmissionPolicy with an object selector that matches deployment1 in namespace1
+	admissionPolicy3 := testutils.
+		NewAdmissionPolicyFactory().
+		Name("policy3").
+		Namespace("namespace1").
+		ObjectSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{"env": "test"},
+		}).
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"deployments"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	// an AdmissionPolicy with an object selector that does not match any deployment in namespace2
+	admissionPolicy4 := testutils.
+		NewAdmissionPolicyFactory().
+		Name("policy4").
+		Namespace("namespace2").
+		ObjectSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{"env": "prod"},
+		}).
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"deployments"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
 	// a ClusterAdmissionPolicy targeting pods and deployments in all namespaces
 	clusterAdmissionPolicy := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy3").
+		Name("policy5").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -175,6 +213,8 @@ func TestScanAllNamespaces(t *testing.T) {
 		policyServerService,
 		admissionPolicy1,
 		admissionPolicy2,
+		admissionPolicy3,
+		admissionPolicy4,
 		clusterAdmissionPolicy,
 	)
 
@@ -190,7 +230,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	mockPolicyReportStore.On("SavePolicyReport", mock.AnythingOfType("*report.PolicyReport")).
 		Return(func(policyReport *report.PolicyReport) error {
 			assert.Equal(t, "namespace1", policyReport.Namespace)
-			assert.Equal(t, 3, policyReport.Summary.Pass)
+			assert.Equal(t, 4, policyReport.Summary.Pass)
 
 			return nil
 		}).Once()
@@ -266,12 +306,27 @@ func TestScanClusterWideResources(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 
-	// another ClusterAdmissionPolicy targeting namespaces with an object selector
+	// a ClusterAdmissionPolicy targeting namespaces with an object selector that matches namespace2
 	clusterAdmissionPolicy2 := testutils.
 		NewClusterAdmissionPolicyFactory().
 		Name("policy2").
 		ObjectSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{"env": "test"},
+		}).
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"namespaces"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	// a ClusterAdmissionPolicy targeting namespaces with an object selector that does not match any namespace
+	clusterAdmissionPolicy3 := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("policy3").
+		ObjectSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{"env": "prod"},
 		}).
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -297,6 +352,7 @@ func TestScanClusterWideResources(t *testing.T) {
 		policyServerService,
 		clusterAdmissionPolicy1,
 		clusterAdmissionPolicy2,
+		clusterAdmissionPolicy3,
 	)
 
 	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil)
