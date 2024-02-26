@@ -314,6 +314,8 @@ func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, name
 	return &serviceList.Items[0], nil
 }
 
+// isAuditable returns true if a policy has backgroundAudit enabled, is active, and contains the CREATE operation.
+// Also, the policy must not target all resources.
 func isAuditable(policy policiesv1.Policy) bool {
 	return policy.GetBackgroundAudit() &&
 		policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive &&
