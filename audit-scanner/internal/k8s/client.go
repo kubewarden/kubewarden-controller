@@ -41,14 +41,14 @@ func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, 
 	}, nil
 }
 
-func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string, labelSelector string) (*pager.ListPager, error) {
+func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*pager.ListPager, error) {
 	page := 0
 
 	listPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
 		var resources *unstructured.UnstructuredList
 		page++
 
-		resources, err := f.listResources(ctx, gvr, nsName, labelSelector, opts)
+		resources, err := f.listResources(ctx, gvr, nsName, opts)
 		if apimachineryerrors.IsNotFound(err) {
 			log.Warn().
 				Dict("dict", zerolog.Dict().
@@ -79,7 +79,6 @@ func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string, la
 func (f *Client) listResources(ctx context.Context,
 	gvr schema.GroupVersionResource,
 	nsName string,
-	labelSelector string,
 	opts metav1.ListOptions,
 ) (
 	*unstructured.UnstructuredList, error,
@@ -89,8 +88,6 @@ func (f *Client) listResources(ctx context.Context,
 		Version:  gvr.Version,
 		Resource: gvr.Resource,
 	}
-
-	opts.LabelSelector = labelSelector
 
 	return f.dynamicClient.Resource(resourceID).Namespace(nsName).List(ctx, opts)
 }
