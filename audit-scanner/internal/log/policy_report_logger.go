@@ -1,13 +1,13 @@
 package log
 
 import (
-	"github.com/kubewarden/audit-scanner/internal/report"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
 // ClusterPolicyReport will create a log line per each cluster-wide scanned resource
-func ClusterPolicyReport(report *report.ClusterPolicyReport) {
+func ClusterPolicyReport(report *wgpolicy.ClusterPolicyReport) {
 	log.Info().
 		Dict("dict", zerolog.Dict().
 			Int("pass", report.Summary.Pass).
@@ -24,18 +24,17 @@ func ClusterPolicyReport(report *report.ClusterPolicyReport) {
 				Str("rule", result.Rule).
 				Str("result", string(result.Result)).
 				Str("message", result.Description).
-				// although subjects is a list, there's only 1 element
-				Str("resource_api_version", result.Subjects[0].APIVersion).
-				Str("resource_kind", result.Subjects[0].Kind).
-				Str("resource_namespace", result.Subjects[0].Namespace).
-				Str("resource_name", result.Subjects[0].Name).
-				Str("resource_version", result.Subjects[0].ResourceVersion)).
+				Str("resource_api_version", report.Scope.APIVersion).
+				Str("resource_kind", report.Scope.Kind).
+				Str("resource_namespace", report.Scope.Namespace).
+				Str("resource_name", report.Scope.Name).
+				Str("resource_version", report.Scope.ResourceVersion)).
 			Send()
 	}
 }
 
 // PolicyReport will create a log line per each namespace scanned resource.
-func PolicyReport(report *report.PolicyReport) {
+func PolicyReport(report *wgpolicy.PolicyReport) {
 	log.Info().
 		Dict("dict", zerolog.Dict().
 			Str("name", report.GetName()).
@@ -53,12 +52,11 @@ func PolicyReport(report *report.PolicyReport) {
 				Str("rule", result.Rule).
 				Str("result", string(result.Result)).
 				Str("message", result.Description).
-				// although subjects is a list, there's only 1 element
-				Str("resource_api_version", result.Subjects[0].APIVersion).
-				Str("resource_kind", result.Subjects[0].Kind).
-				Str("resource_namespace", result.Subjects[0].Namespace).
-				Str("resource_name", result.Subjects[0].Name).
-				Str("resource_version", result.Subjects[0].ResourceVersion)).
+				Str("resource_api_version", report.Scope.APIVersion).
+				Str("resource_kind", report.Scope.Kind).
+				Str("resource_namespace", report.Scope.Namespace).
+				Str("resource_name", report.Scope.Name).
+				Str("resource_version", report.Scope.ResourceVersion)).
 			Send()
 	}
 }
