@@ -9,21 +9,21 @@ import (
 
 	"github.com/kubewarden/audit-scanner/internal/k8s"
 	"github.com/kubewarden/audit-scanner/internal/policies"
-	"github.com/kubewarden/audit-scanner/internal/report"
-	reportMocks "github.com/kubewarden/audit-scanner/internal/report/mocks"
+	report "github.com/kubewarden/audit-scanner/internal/report"
 	"github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	dynamicFake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
 func newMockPolicyServer() *httptest.Server {
@@ -33,6 +33,9 @@ func newMockPolicyServer() *httptest.Server {
 		admissionReview := admissionv1.AdmissionReview{
 			Response: &admissionv1.AdmissionResponse{
 				Allowed: true,
+				Result: &metav1.Status{
+					Message: "The request was allowed",
+				},
 			},
 		}
 		response, err := json.Marshal(admissionReview)
@@ -91,6 +94,7 @@ func TestScanAllNamespaces(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod1",
 			Namespace: "namespace1",
+			UID:       "pod1-uid",
 		},
 	}
 
@@ -98,6 +102,7 @@ func TestScanAllNamespaces(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod2",
 			Namespace: "namespace2",
+			UID:       "pod2-uid",
 		},
 	}
 
@@ -105,6 +110,7 @@ func TestScanAllNamespaces(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment1",
 			Namespace: "namespace1",
+			UID:       "deployment1-uid",
 			Labels: map[string]string{
 				"env": "test",
 			},
@@ -115,6 +121,7 @@ func TestScanAllNamespaces(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment2",
 			Namespace: "namespace2",
+			UID:       "deployment2-uid",
 			Labels: map[string]string{
 				"env": "test",
 			},
@@ -224,31 +231,34 @@ func TestScanAllNamespaces(t *testing.T) {
 	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL)
 	require.NoError(t, err)
 
-	mockPolicyReportStore := reportMocks.NewPolicyReportStore(t)
+	policyReportStore := report.NewPolicyReportStore(client)
 
-	mockPolicyReportStore.EXPECT().GetPolicyReport("namespace1").Return(report.PolicyReport{}, nil).Once()
-	mockPolicyReportStore.On("SavePolicyReport", mock.AnythingOfType("*report.PolicyReport")).
-		Return(func(policyReport *report.PolicyReport) error {
-			assert.Equal(t, "namespace1", policyReport.Namespace)
-			assert.Equal(t, 4, policyReport.Summary.Pass)
-
-			return nil
-		}).Once()
-
-	mockPolicyReportStore.EXPECT().GetPolicyReport("namespace2").Return(report.PolicyReport{}, nil).Once()
-	mockPolicyReportStore.On("SavePolicyReport", mock.AnythingOfType("*report.PolicyReport")).
-		Return(func(policyReport *report.PolicyReport) error {
-			assert.Equal(t, "namespace2", policyReport.Namespace)
-			assert.Equal(t, 3, policyReport.Summary.Pass)
-
-			return nil
-		}).Once()
-
-	scanner, err := NewScanner(policiesClient, k8sClient, mockPolicyReportStore, false, true, "")
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, true, "")
 	require.NoError(t, err)
-
 	err = scanner.ScanAllNamespaces(context.Background())
 	require.NoError(t, err)
+
+	policyReport := wgpolicy.PolicyReport{}
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod1.GetUID()), Namespace: "namespace1"}, &policyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 2, policyReport.Summary.Pass)
+	assert.Len(t, policyReport.Results, 2)
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod2.GetUID()), Namespace: "namespace2"}, &policyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 1, policyReport.Summary.Pass)
+	assert.Len(t, policyReport.Results, 1)
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment1.GetUID()), Namespace: "namespace1"}, &policyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 2, policyReport.Summary.Pass)
+	assert.Len(t, policyReport.Results, 2)
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment2.GetUID()), Namespace: "namespace2"}, &policyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 2, policyReport.Summary.Pass)
+	assert.Len(t, policyReport.Results, 2)
 }
 
 func TestScanClusterWideResources(t *testing.T) {
@@ -282,12 +292,14 @@ func TestScanClusterWideResources(t *testing.T) {
 	namespace1 := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace1",
+			UID:  "namespace1-uid",
 		},
 	}
 
 	namespace2 := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "namespace2",
+			UID:  "namespace2-uid",
 			Labels: map[string]string{
 				"env": "test",
 			},
@@ -361,18 +373,22 @@ func TestScanClusterWideResources(t *testing.T) {
 	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL)
 	require.NoError(t, err)
 
-	mockPolicyReportStore := reportMocks.NewPolicyReportStore(t)
-	mockPolicyReportStore.EXPECT().GetClusterPolicyReport("clusterwide").Return(report.ClusterPolicyReport{}, nil).Once()
-	mockPolicyReportStore.On("SaveClusterPolicyReport", mock.AnythingOfType("*report.ClusterPolicyReport")).
-		Return(func(policyReport *report.ClusterPolicyReport) error {
-			assert.Equal(t, 3, policyReport.Summary.Pass)
+	policyReportStore := report.NewPolicyReportStore(client)
 
-			return nil
-		}).Once()
-
-	scanner, err := NewScanner(policiesClient, k8sClient, mockPolicyReportStore, false, true, "")
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, true, "")
 	require.NoError(t, err)
-
 	err = scanner.ScanClusterWideResources(context.Background())
 	require.NoError(t, err)
+
+	clusterPolicyReport := wgpolicy.ClusterPolicyReport{}
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace1.GetUID())}, &clusterPolicyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Pass)
+	assert.Len(t, clusterPolicyReport.Results, 1)
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace2.GetUID())}, &clusterPolicyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 2, clusterPolicyReport.Summary.Pass)
+	assert.Len(t, clusterPolicyReport.Results, 2)
 }
