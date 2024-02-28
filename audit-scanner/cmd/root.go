@@ -32,6 +32,9 @@ var skippedNs []string
 // skip SSL cert validation when connecting to PolicyServers endpoints
 var insecureSSL bool
 
+// disable storing the results in the k8s cluster
+var disableStore bool
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "audit-scanner",
@@ -81,7 +84,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		}
 		policyReportStore := report.NewPolicyReportStore(client)
 
-		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, insecureSSL, caCertFile)
+		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL, caCertFile)
 		if err != nil {
 			return err
 		}
@@ -135,4 +138,5 @@ func init() {
 	rootCmd.Flags().StringSliceVarP(&skippedNs, "ignore-namespaces", "i", nil, "comma separated list of namespace names to be skipped from scan. This flag can be repeated")
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
+	rootCmd.Flags().BoolVar(&disableStore, "disable-store", false, "disable storing the results in the k8s cluster")
 }

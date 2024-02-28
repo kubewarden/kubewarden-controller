@@ -16,6 +16,7 @@ import (
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/k8s"
+	reportLog "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	report "github.com/kubewarden/audit-scanner/internal/report"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -34,8 +35,9 @@ type Scanner struct {
 	k8sClient         *k8s.Client
 	policyReportStore *report.PolicyReportStore
 	// http client used to make requests against the Policy Server
-	httpClient http.Client
-	outputScan bool
+	httpClient   http.Client
+	outputScan   bool
+	disableStore bool
 }
 
 // NewScanner creates a new scanner
@@ -47,6 +49,7 @@ func NewScanner(
 	k8sClient *k8s.Client,
 	policyReportStore *report.PolicyReportStore,
 	outputScan bool,
+	disableStore bool,
 	insecureClient bool,
 	caCertFile string,
 ) (*Scanner, error) {
@@ -93,6 +96,7 @@ func NewScanner(
 		policyReportStore: policyReportStore,
 		httpClient:        httpClient,
 		outputScan:        outputScan,
+		disableStore:      disableStore,
 	}, nil
 }
 
@@ -215,53 +219,6 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 	return nil
 }
 
-func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured) {
-	clusterPolicyReport := report.NewClusterPolicyReport(resource)
-	for _, p := range policies {
-		url := p.PolicyServer
-		policy := p.Policy
-
-		matches, err := policyMatches(policy, resource)
-		if err != nil {
-			log.Error().Err(err).Msg("error matching policy to resource")
-		}
-
-		if !matches {
-			continue
-		}
-
-		admissionRequest := newAdmissionReview(resource)
-		auditResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionRequest)
-
-		var errored bool
-		if responseErr != nil {
-			// log error, will end in ClusterPolicyReportResult too
-			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
-				Str("admissionRequest name", admissionRequest.Request.Name).
-				Str("policy", policy.GetName()).
-				Str("resource", resource.GetName()),
-			).
-				Msg("error sending AdmissionReview to PolicyServer")
-			errored = true
-		} else {
-			log.Debug().Dict("response", zerolog.Dict().
-				Str("uid", string(auditResponse.Response.UID)).
-				Bool("allowed", auditResponse.Response.Allowed).
-				Str("policy", policy.GetName()).
-				Str("resource", resource.GetName()),
-			).
-				Msg("audit review response")
-		}
-
-		report.AddResultToClusterPolicyReport(clusterPolicyReport, policy, auditResponse.Response, errored)
-	}
-
-	err := s.policyReportStore.CreateOrPatchClusterPolicyReport(ctx, clusterPolicyReport)
-	if err != nil {
-		log.Error().Err(err).Msg("error adding ClusterPolicyReport to store")
-	}
-}
-
 func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured) {
 	policyreport := report.NewPolicyReport(resource)
 
@@ -305,9 +262,68 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 		report.AddResultToPolicyReport(policyreport, policy, auditResponse.Response, errored)
 	}
 
-	err := s.policyReportStore.CreateOrPatchPolicyReport(ctx, policyreport)
-	if err != nil {
-		log.Error().Err(err).Msg("error adding PolicyReport to store")
+	if s.outputScan {
+		reportLog.PolicyReport(policyreport)
+	}
+
+	if !s.disableStore {
+		err := s.policyReportStore.CreateOrPatchPolicyReport(ctx, policyreport)
+		if err != nil {
+			log.Error().Err(err).Msg("error adding PolicyReport to store")
+		}
+	}
+}
+
+func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured) {
+	clusterPolicyReport := report.NewClusterPolicyReport(resource)
+	for _, p := range policies {
+		url := p.PolicyServer
+		policy := p.Policy
+
+		matches, err := policyMatches(policy, resource)
+		if err != nil {
+			log.Error().Err(err).Msg("error matching policy to resource")
+		}
+
+		if !matches {
+			continue
+		}
+
+		admissionRequest := newAdmissionReview(resource)
+		auditResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionRequest)
+
+		var errored bool
+		if responseErr != nil {
+			// log error, will end in ClusterPolicyReportResult too
+			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
+				Str("admissionRequest name", admissionRequest.Request.Name).
+				Str("policy", policy.GetName()).
+				Str("resource", resource.GetName()),
+			).
+				Msg("error sending AdmissionReview to PolicyServer")
+			errored = true
+		} else {
+			log.Debug().Dict("response", zerolog.Dict().
+				Str("uid", string(auditResponse.Response.UID)).
+				Bool("allowed", auditResponse.Response.Allowed).
+				Str("policy", policy.GetName()).
+				Str("resource", resource.GetName()),
+			).
+				Msg("audit review response")
+		}
+
+		report.AddResultToClusterPolicyReport(clusterPolicyReport, policy, auditResponse.Response, errored)
+	}
+
+	if s.outputScan {
+		reportLog.ClusterPolicyReport(clusterPolicyReport)
+	}
+
+	if !s.disableStore {
+		err := s.policyReportStore.CreateOrPatchClusterPolicyReport(ctx, clusterPolicyReport)
+		if err != nil {
+			log.Error().Err(err).Msg("error adding ClusterPolicyReport to store")
+		}
 	}
 }
 
