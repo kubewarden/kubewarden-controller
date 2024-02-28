@@ -7,7 +7,7 @@ import (
 	testutils "github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/admission/v1"
+	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -69,11 +69,13 @@ func TestPatchPolicyReport(t *testing.T) {
 			Namespace:       "test-namespace",
 		},
 	}
-	admissionResponse := &v1.AdmissionResponse{
-		Allowed: true,
-		Result:  &metav1.Status{Message: "The request was allowed"},
+	admissionReview := &admissionv1.AdmissionReview{
+		Response: &admissionv1.AdmissionResponse{
+			Allowed: true,
+			Result:  &metav1.Status{Message: "The request was allowed"},
+		},
 	}
-	AddResultToPolicyReport(newPolicyReport, policy, admissionResponse, false)
+	AddResultToPolicyReport(newPolicyReport, policy, admissionReview, false)
 	err = store.CreateOrPatchPolicyReport(context.TODO(), newPolicyReport)
 	require.NoError(t, err)
 
@@ -140,11 +142,13 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 			Name:            "policy-name",
 		},
 	}
-	admissionResponse := &v1.AdmissionResponse{
-		Allowed: true,
-		Result:  &metav1.Status{Message: "The request was allowed"},
+	admissionReview := &admissionv1.AdmissionReview{
+		Response: &admissionv1.AdmissionResponse{
+			Allowed: true,
+			Result:  &metav1.Status{Message: "The request was allowed"},
+		},
 	}
-	AddResultToClusterPolicyReport(newClusterPolicyReport, policy, admissionResponse, false)
+	AddResultToClusterPolicyReport(newClusterPolicyReport, policy, admissionReview, false)
 	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), newClusterPolicyReport)
 	require.NoError(t, err)
 

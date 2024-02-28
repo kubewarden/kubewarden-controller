@@ -44,13 +44,15 @@ func TestNewPolicyReport(t *testing.T) {
 
 func TestAddResultToPolicyReport(t *testing.T) {
 	policy := &policiesv1.AdmissionPolicy{}
-	admissionResponse := &admissionv1.AdmissionResponse{
-		Allowed: true,
-		Result:  &metav1.Status{Message: "The request was allowed"},
+	admissionReview := &admissionv1.AdmissionReview{
+		Response: &admissionv1.AdmissionResponse{
+			Allowed: true,
+			Result:  &metav1.Status{Message: "The request was allowed"},
+		},
 	}
 
 	policyReport := NewPolicyReport(unstructured.Unstructured{})
-	AddResultToPolicyReport(policyReport, policy, admissionResponse, false)
+	AddResultToPolicyReport(policyReport, policy, admissionReview, false)
 
 	assert.Len(t, policyReport.Results, 1)
 	assert.Equal(t, 1, policyReport.Summary.Pass)
@@ -88,13 +90,15 @@ func TestNewClusterPolicyReport(t *testing.T) {
 
 func TestAddResultToClusterPolicyReport(t *testing.T) {
 	policy := &policiesv1.AdmissionPolicy{}
-	admissionResponse := &admissionv1.AdmissionResponse{
-		Allowed: false,
-		Result:  &metav1.Status{Message: "The request was rejected"},
+	admissionReview := &admissionv1.AdmissionReview{
+		Response: &admissionv1.AdmissionResponse{
+			Allowed: false,
+			Result:  &metav1.Status{Message: "The request was rejected"},
+		},
 	}
 
 	clusterPolicyReport := NewClusterPolicyReport(unstructured.Unstructured{})
-	AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionResponse, false)
+	AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionReview, false)
 
 	assert.Len(t, clusterPolicyReport.Results, 1)
 	assert.Equal(t, 0, clusterPolicyReport.Summary.Pass)
@@ -109,7 +113,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 	tests := []struct {
 		name           string
 		policy         policiesv1.Policy
-		amissionResp   *admissionv1.AdmissionResponse
+		amissionReview *admissionv1.AdmissionReview
 		errored        bool
 		expectedResult *wgpolicy.PolicyReportResult
 	}{
@@ -130,9 +134,11 @@ func TestNewPolicyReportResult(t *testing.T) {
 					},
 				},
 			},
-			amissionResp: &admissionv1.AdmissionResponse{
-				Allowed: true,
-				Result:  &metav1.Status{Message: "The request was allowed"},
+			amissionReview: &admissionv1.AdmissionReview{
+				Response: &admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result:  &metav1.Status{Message: "The request was allowed"},
+				},
 			},
 			errored: false,
 			expectedResult: &wgpolicy.PolicyReportResult{
@@ -169,9 +175,11 @@ func TestNewPolicyReportResult(t *testing.T) {
 					},
 				},
 			},
-			amissionResp: &admissionv1.AdmissionResponse{
-				Allowed: false,
-				Result:  &metav1.Status{Message: "The request was rejected"},
+			amissionReview: &admissionv1.AdmissionReview{
+				Response: &admissionv1.AdmissionResponse{
+					Allowed: false,
+					Result:  &metav1.Status{Message: "The request was rejected"},
+				},
 			},
 			errored: false,
 			expectedResult: &wgpolicy.PolicyReportResult{
@@ -209,11 +217,8 @@ func TestNewPolicyReportResult(t *testing.T) {
 					},
 				},
 			},
-			amissionResp: &admissionv1.AdmissionResponse{
-				Allowed: false,
-				Result:  &metav1.Status{Message: "The request was rejected"},
-			},
-			errored: true,
+			amissionReview: nil,
+			errored:        true,
 			expectedResult: &wgpolicy.PolicyReportResult{
 				Source:          policyReportSource,
 				Policy:          "namespaced-policy-namespace-policy-name",
@@ -222,7 +227,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 				Timestamp:       now,
 				Scored:          true,
 				SubjectSelector: &metav1.LabelSelector{},
-				Description:     "The request was rejected",
+				Description:     "",
 				Properties: map[string]string{
 					PropertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
@@ -234,7 +239,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := newPolicyReportResult(test.policy, test.amissionResp, test.errored, now)
+			result := newPolicyReportResult(test.policy, test.amissionReview, test.errored, now)
 			assert.Equal(t, test.expectedResult, result)
 		})
 	}

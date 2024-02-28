@@ -51,11 +51,11 @@ func NewPolicyReport(resource unstructured.Unstructured) *wgpolicy.PolicyReport 
 func AddResultToPolicyReport(
 	policyReport *wgpolicy.PolicyReport,
 	policy policiesv1.Policy,
-	admissionResponse *admissionv1.AdmissionResponse,
+	admissionReview *admissionv1.AdmissionReview,
 	errored bool,
 ) *wgpolicy.PolicyReportResult {
 	now := metav1.Timestamp{Seconds: time.Now().Unix()}
-	result := newPolicyReportResult(policy, admissionResponse, errored, now)
+	result := newPolicyReportResult(policy, admissionReview, errored, now)
 	switch result.Result {
 	case statusFail:
 		policyReport.Summary.Fail++
@@ -107,11 +107,11 @@ func NewClusterPolicyReport(resource unstructured.Unstructured) *wgpolicy.Cluste
 func AddResultToClusterPolicyReport(
 	policyReport *wgpolicy.ClusterPolicyReport,
 	policy policiesv1.Policy,
-	admissionResponse *admissionv1.AdmissionResponse,
+	admissionReview *admissionv1.AdmissionReview,
 	errored bool,
 ) *wgpolicy.PolicyReportResult {
 	now := metav1.Timestamp{Seconds: time.Now().Unix()}
-	result := newPolicyReportResult(policy, admissionResponse, errored, now)
+	result := newPolicyReportResult(policy, admissionReview, errored, now)
 	switch result.Result {
 	case statusFail:
 		policyReport.Summary.Fail++
@@ -125,31 +125,37 @@ func AddResultToClusterPolicyReport(
 	return result
 }
 
-func newPolicyReportResult(policy policiesv1.Policy, admissionResponse *admissionv1.AdmissionResponse, errored bool, timestamp metav1.Timestamp) *wgpolicy.PolicyReportResult {
+func newPolicyReportResult(policy policiesv1.Policy, admissionReview *admissionv1.AdmissionReview, errored bool, timestamp metav1.Timestamp) *wgpolicy.PolicyReportResult {
 	var category string
 	if c, present := policy.GetCategory(); present {
 		category = c
+	}
+
+	var message string
+	if !errored {
+		message = admissionReview.Response.Result.Message
 	}
 
 	return &wgpolicy.PolicyReportResult{
 		Source:          policyReportSource,
 		Policy:          policy.GetUniqueName(),
 		Category:        category,
-		Severity:        computePolicyResultSeverity(policy),                     // either info for monitor or empty
-		Timestamp:       timestamp,                                               // time the result was computed
-		Result:          computePolicyResult(errored, admissionResponse.Allowed), // pass, fail, error
+		Severity:        computePolicyResultSeverity(policy),           // either info for monitor or empty
+		Timestamp:       timestamp,                                     // time the result was computed
+		Result:          computePolicyResult(errored, admissionReview), // pass, fail, error
 		Scored:          true,
 		SubjectSelector: &metav1.LabelSelector{},
-		Description:     admissionResponse.Result.Message, // output message of the policy
-		Properties:      computeProperties(policy),
+		// This field is marshalled to `message`
+		Description: message,
+		Properties:  computeProperties(policy),
 	}
 }
 
-func computePolicyResult(errored bool, allowed bool) wgpolicy.PolicyResult {
+func computePolicyResult(errored bool, admissionReview *admissionv1.AdmissionReview) wgpolicy.PolicyResult {
 	if errored {
 		return statusError
 	}
-	if allowed {
+	if admissionReview.Response.Allowed {
 		return statusPass
 	}
 

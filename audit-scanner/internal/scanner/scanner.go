@@ -235,14 +235,14 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			continue
 		}
 
-		admissionRequest := newAdmissionReview(resource)
-		auditResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionRequest)
+		admissionReviewRequest := newAdmissionReview(resource)
+		admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
 
 		var errored bool
 		if responseErr != nil {
 			// log responseErr, will end in PolicyReportResult too
 			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
-				Str("admissionRequest name", admissionRequest.Request.Name).
+				Str("admissionRequest name", admissionReviewRequest.Request.Name).
 				Str("policy", policy.GetName()).
 				Str("resource", resource.GetName()),
 			).
@@ -251,15 +251,15 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			errored = true
 		} else {
 			log.Debug().Dict("response", zerolog.Dict().
-				Str("uid", string(auditResponse.Response.UID)).
+				Str("uid", string(admissionReviewResponse.Response.UID)).
 				Str("policy", policy.GetName()).
 				Str("resource", resource.GetName()).
-				Bool("allowed", auditResponse.Response.Allowed),
+				Bool("allowed", admissionReviewResponse.Response.Allowed),
 			).
 				Msg("audit review response")
 		}
 
-		report.AddResultToPolicyReport(policyreport, policy, auditResponse.Response, errored)
+		report.AddResultToPolicyReport(policyreport, policy, admissionReviewResponse, errored)
 	}
 
 	if s.outputScan {
@@ -289,14 +289,14 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 			continue
 		}
 
-		admissionRequest := newAdmissionReview(resource)
-		auditResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionRequest)
+		admissionReviewRequest := newAdmissionReview(resource)
+		admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
 
 		var errored bool
 		if responseErr != nil {
 			// log error, will end in ClusterPolicyReportResult too
 			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
-				Str("admissionRequest name", admissionRequest.Request.Name).
+				Str("admissionRequest name", admissionReviewRequest.Request.Name).
 				Str("policy", policy.GetName()).
 				Str("resource", resource.GetName()),
 			).
@@ -304,15 +304,15 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 			errored = true
 		} else {
 			log.Debug().Dict("response", zerolog.Dict().
-				Str("uid", string(auditResponse.Response.UID)).
-				Bool("allowed", auditResponse.Response.Allowed).
+				Str("uid", string(admissionReviewResponse.Response.UID)).
+				Bool("allowed", admissionReviewResponse.Response.Allowed).
 				Str("policy", policy.GetName()).
 				Str("resource", resource.GetName()),
 			).
 				Msg("audit review response")
 		}
 
-		report.AddResultToClusterPolicyReport(clusterPolicyReport, policy, auditResponse.Response, errored)
+		report.AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionReviewResponse, errored)
 	}
 
 	if s.outputScan {
