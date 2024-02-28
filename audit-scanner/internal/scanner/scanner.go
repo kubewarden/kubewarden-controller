@@ -16,7 +16,6 @@ import (
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/k8s"
-	reportLog "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	report "github.com/kubewarden/audit-scanner/internal/report"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -220,7 +219,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 }
 
 func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured) {
-	policyreport := report.NewPolicyReport(resource)
+	policyReport := report.NewPolicyReport(resource)
 
 	for _, p := range policies {
 		url := p.PolicyServer
@@ -259,17 +258,24 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 				Msg("audit review response")
 		}
 
-		report.AddResultToPolicyReport(policyreport, policy, admissionReviewResponse, errored)
+		report.AddResultToPolicyReport(policyReport, policy, admissionReviewResponse, errored)
 	}
 
 	if s.outputScan {
-		reportLog.PolicyReport(policyreport)
+		json, err := json.Marshal(policyReport)
+		if err != nil {
+			log.Error().Err(err).Msg("error while marshalling PolicyReport to JSON, skipping output scan")
+		}
+
+		log.Info().
+			RawJSON("report", json).
+			Msg("PolicyReport summary")
 	}
 
 	if !s.disableStore {
-		err := s.policyReportStore.CreateOrPatchPolicyReport(ctx, policyreport)
+		err := s.policyReportStore.CreateOrPatchPolicyReport(ctx, policyReport)
 		if err != nil {
-			log.Error().Err(err).Msg("error adding PolicyReport to store")
+			log.Error().Err(err).Msg("error adding PolicyReport to store.")
 		}
 	}
 }
@@ -316,7 +322,14 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 	}
 
 	if s.outputScan {
-		reportLog.ClusterPolicyReport(clusterPolicyReport)
+		json, err := json.Marshal(clusterPolicyReport)
+		if err != nil {
+			log.Error().Err(err).Msg("error while marshalling ClusterPolicyReport to JSON, skipping output scan")
+		}
+
+		log.Info().
+			RawJSON("report", json).
+			Msg("ClusterPolicyReport summary")
 	}
 
 	if !s.disableStore {
