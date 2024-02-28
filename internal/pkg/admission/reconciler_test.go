@@ -78,7 +78,7 @@ func TestGetPolicies(t *testing.T) {
 			reconciler := newReconciler(ttest.policies, false)
 			policies, err := reconciler.GetPolicies(context.Background(), &policiesv1.PolicyServer{
 				ObjectMeta: metav1.ObjectMeta{Name: policyServer},
-			}, IncludeDeleted)
+			})
 			if err != nil {
 				t.Errorf("received unexpected error %s", err.Error())
 			}

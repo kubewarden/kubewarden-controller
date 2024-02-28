@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -33,23 +34,45 @@ var _ = Describe("PolicyServer controller", func() {
 		Expect(
 			k8sClient.Create(ctx, policyServerFactory(policyServerName)),
 		).To(haveSucceededOrAlreadyExisted())
+		// Wait for the Service associated with the PolicyServer to be created
+		Eventually(func(g Gomega) error {
+			_, err := getTestPolicyServerService(policyServerName)
+			return err
+		}, timeout, pollInterval).Should(Succeed())
 	})
 
-	Context("it has no assigned policies", func() {
+	Context("with no assigned policies", func() {
 		It("should get its finalizer removed", func() {
 			By("deleting the policy server")
 			Expect(
 				k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
 			).To(Succeed())
 
-			policyServer, err := getTestPolicyServer(policyServerName)
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(policyServer.Finalizers).ToNot(ContainElement(constants.KubewardenFinalizer))
+			Eventually(func(g Gomega) (*policiesv1.PolicyServer, error) {
+				return getTestPolicyServer(policyServerName)
+			}, timeout, pollInterval).ShouldNot(
+				HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
+			)
 		})
+
+		AfterEach(func() {
+			// It's necessary remove the test finalizer to make the
+			// BeforeEach work as extected. Otherwise, the policy service
+			// creation will not work as expected
+			policyServer, err := getTestPolicyServer(policyServerName)
+			Expect(err).Should(Succeed())
+			controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
+			err = reconciler.Client.Update(ctx, policyServer)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func(g Gomega) error {
+				_, err := getTestPolicyServer(policyServerName)
+				return err
+			}, timeout, pollInterval).ShouldNot(Succeed())
+		})
+
 	})
 
-	Context("it has assigned policies", func() {
+	Context("it has assigned policies", Serial, func() {
 		policyName := newName("policy")
 
 		It("should delete assigned policies", func() {
@@ -57,6 +80,12 @@ var _ = Describe("PolicyServer controller", func() {
 			Expect(
 				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, false)),
 			).To(haveSucceededOrAlreadyExisted())
+
+			Expect(
+				getTestPolicyServerService(policyServerName),
+			).To(
+				HaveField("DeletionTimestamp", BeNil()),
+			)
 
 			By("deleting the policy server")
 			Expect(
@@ -70,7 +99,44 @@ var _ = Describe("PolicyServer controller", func() {
 			)
 		})
 
+		It("should not delete its managed resources until all the scheduled policies are gone", func() {
+			By("having still policies pending deletion")
+			Expect(
+				getTestClusterAdmissionPolicy(policyName),
+			).To(
+				And(
+					HaveField("DeletionTimestamp", Not(BeNil())),
+					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
+					HaveField("Finalizers", ContainElement(IntegrationTestsFinalizer)),
+				),
+			)
+
+			Eventually(func(g Gomega) error {
+				_, err := getTestPolicyServerService(policyServerName)
+				return err
+			}).Should(Succeed())
+		})
+
 		It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
+			By("not having policies assigned")
+			policy, err := getTestClusterAdmissionPolicy(policyName)
+			Expect(err).ToNot(HaveOccurred())
+
+			controllerutil.RemoveFinalizer(policy, IntegrationTestsFinalizer)
+			err = reconciler.Client.Update(ctx, policy)
+			Expect(err).ToNot(HaveOccurred())
+
+			// wait for the reconciliation loop of the ClusterAdmissionPolicy to remove the resource
+			Eventually(func(g Gomega) error {
+				_, err := getTestClusterAdmissionPolicy(policyName)
+				return err
+			}, timeout, pollInterval).ShouldNot(Succeed())
+
+			Eventually(func(g Gomega) error {
+				_, err := getTestPolicyServerService(policyServerName)
+				return err
+			}, timeout, pollInterval).ShouldNot(Succeed())
+
 			Eventually(func(g Gomega) (*policiesv1.PolicyServer, error) {
 				return getTestPolicyServer(policyServerName)
 			}, timeout, pollInterval).ShouldNot(

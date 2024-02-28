@@ -67,7 +67,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, fmt.Errorf("cannot retrieve policy server: %w", err)
 	}
 
-	policies, err := r.Reconciler.GetPolicies(ctx, &policyServer, admission.SkipDeleted)
+	policies, err := r.Reconciler.GetPolicies(ctx, &policyServer)
 	if err != nil {
 		return ctrl.Result{}, errors.Join(errors.New("could not get policies"), err)
 	}
@@ -100,29 +100,45 @@ func (r *PolicyServerReconciler) reconcile(ctx context.Context, policyServer *po
 }
 
 func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) (ctrl.Result, error) {
-	someDeletionFailed := false
+	if len(policies) != 0 {
+		// There are still policies scheduled on the PolicyServer, we have to
+		// wait for them to be completely removed before going further with the cleanup
+		return r.deletePoliciesAndRequeue(ctx, policyServer, policies)
+	}
+
+	if err := r.Reconciler.ReconcileDeletion(ctx, policyServer); err != nil {
+		return ctrl.Result{}, errors.Join(errors.New("could not reconcile policy server deletion"), err)
+	}
+
+	controllerutil.RemoveFinalizer(policyServer, constants.KubewardenFinalizer)
+	if err := r.Update(ctx, policyServer); err != nil {
+		// return if PolicyServer was previously deleted
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("cannot update policy server: %w", err)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *PolicyServerReconciler) deletePoliciesAndRequeue(ctx context.Context, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) (ctrl.Result, error) {
+	deleteError := make([]error, 0)
 	for _, policy := range policies {
+		if policy.GetDeletionTimestamp() != nil {
+			// the policy is already pending deletion
+			continue
+		}
 		if err := r.Delete(ctx, policy); err != nil && !apierrors.IsNotFound(err) {
-			someDeletionFailed = true
+			deleteError = append(deleteError, err)
 		}
 	}
-	if someDeletionFailed {
+
+	if len(deleteError) != 0 {
+		r.Log.Error(errors.Join(deleteError...), "could not remove all policies bound to policy server", "policy-server", policyServer.Name)
 		return ctrl.Result{}, fmt.Errorf("could not remove all policies bound to policy server %s", policyServer.Name)
 	}
-	if len(policies) == 0 {
-		if err := r.Reconciler.ReconcileDeletion(ctx, policyServer); err != nil {
-			return ctrl.Result{}, errors.Join(errors.New("could not reconcile policy server deletion"), err)
-		}
-		controllerutil.RemoveFinalizer(policyServer, constants.KubewardenFinalizer)
-		if err := r.Update(ctx, policyServer); err != nil {
-			// return if PolicyServer was previously deleted
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("cannot update policy server: %w", err)
-		}
-		return ctrl.Result{}, nil
-	}
+
 	return ctrl.Result{Requeue: true}, nil
 }
 

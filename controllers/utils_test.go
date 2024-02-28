@@ -32,6 +32,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -147,6 +148,21 @@ func getTestPolicyServer(name string) (*policiesv1.PolicyServer, error) {
 		return nil, errors.Join(errors.New("could not find PolicyServer"), err)
 	}
 	return &policyServer, nil
+}
+
+func getTestPolicyServerService(policyServerName string) (*corev1.Service, error) {
+	policyServer := policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: policyServerName,
+		},
+	}
+	serviceName := policyServer.NameWithPrefix()
+
+	service := corev1.Service{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: DeploymentsNamespace}, &service); err != nil {
+		return nil, errors.Join(errors.New("could not find Service owned by PolicyServer"), err)
+	}
+	return &service, nil
 }
 
 func getTestValidatingWebhookConfiguration(name string) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
