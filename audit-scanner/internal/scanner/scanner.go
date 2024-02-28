@@ -16,9 +16,8 @@ import (
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/k8s"
-	reportLogger "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
-	"github.com/kubewarden/audit-scanner/internal/report"
+	report "github.com/kubewarden/audit-scanner/internal/report"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -33,7 +32,7 @@ import (
 type Scanner struct {
 	policiesClient    *policies.Client
 	k8sClient         *k8s.Client
-	policyReportStore report.PolicyReportStore
+	policyReportStore *report.PolicyReportStore
 	// http client used to make requests against the Policy Server
 	httpClient http.Client
 	outputScan bool
@@ -46,7 +45,7 @@ type Scanner struct {
 func NewScanner(
 	policiesClient *policies.Client,
 	k8sClient *k8s.Client,
-	policyReportStore report.PolicyReportStore,
+	policyReportStore *report.PolicyReportStore,
 	outputScan bool,
 	insecureClient bool,
 	caCertFile string,
@@ -101,10 +100,10 @@ func NewScanner(
 // Returns errors if there's any when fetching policies or resources, but only
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
-func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error { //nolint:funlen
+func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error {
 	log.Info().Str("namespace", nsName).Msg("namespace scan started")
 
-	namespace, err := s.k8sClient.GetNamespace(ctx, nsName)
+	_, err := s.k8sClient.GetNamespace(ctx, nsName)
 	if err != nil {
 		return err
 	}
@@ -120,12 +119,6 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error { //no
 			Int("policies skipped", policies.SkippedNum),
 		).Msg("policy count")
 
-	// create PolicyReport
-	namespacedsReport := report.NewPolicyReport(namespace)
-	namespacedsReport.Summary.Skip = policies.SkippedNum
-
-	// old policy report to be used as cache
-	previousNamespacedReport, err := s.policyReportStore.GetPolicyReport(nsName)
 	if errors.Is(err, constants.ErrResourceNotFound) {
 		log.Info().Str("namespace", nsName).
 			Msg("no pre-existing PolicyReport, will create one at end of the scan if needed")
@@ -145,21 +138,13 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error { //no
 			if !ok {
 				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
-			s.auditResource(ctx, policies, *resource, &namespacedsReport, &previousNamespacedReport)
+			s.auditResource(ctx, policies, *resource)
 
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-	}
-
-	if err := s.policyReportStore.SavePolicyReport(&namespacedsReport); err != nil {
-		log.Error().Err(err).Msg("error adding PolicyReport to store")
-	}
-	log.Info().Str("namespace", nsName).Msg("namespace scan finished")
-	if s.outputScan {
-		reportLogger.PolicyReport(&namespacedsReport)
 	}
 
 	return nil
@@ -204,16 +189,6 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 			Int("policies skipped", policies.SkippedNum),
 		).Msg("cluster admission policies count")
 
-	// create PolicyReport
-	clusterReport := report.NewClusterPolicyReport(constants.DefaultClusterwideReportName)
-	clusterReport.Summary.Skip = policies.SkippedNum
-
-	// old policy report to be used as cache
-	previousClusterReport, err := s.policyReportStore.GetClusterPolicyReport(constants.DefaultClusterwideReportName)
-	if err != nil {
-		log.Info().Err(err).Msg("no-prexisting ClusterPolicyReport, will create one at the end of the scan")
-	}
-
 	for gvr, policies := range policies.PoliciesByGVR {
 		pager, err := s.k8sClient.GetResources(gvr, "")
 		if err != nil {
@@ -226,7 +201,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
 
-			s.auditClusterResource(ctx, policies, *resource, &clusterReport, &previousClusterReport)
+			s.auditClusterResource(ctx, policies, *resource)
 
 			return nil
 		})
@@ -234,20 +209,14 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := s.policyReportStore.SaveClusterPolicyReport(&clusterReport); err != nil {
-		log.Error().Err(err).Msg("error adding PolicyReport to store")
-	}
 
 	log.Info().Msg("clusterwide resources scan finished")
-
-	if s.outputScan {
-		reportLogger.ClusterPolicyReport(&clusterReport)
-	}
 
 	return nil
 }
 
-func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, clusterReport, previousClusterReport *report.ClusterPolicyReport) {
+func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured) {
+	clusterPolicyReport := report.NewClusterPolicyReport(resource)
 	for _, p := range policies {
 		url := p.PolicyServer
 		policy := p.Policy
@@ -261,21 +230,10 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 			continue
 		}
 
-		if result := previousClusterReport.GetReusablePolicyReportResult(policy, resource); result != nil {
-			// We have a result from the same policy version for the same resource instance.
-			// Skip the evaluation
-			clusterReport.AddResult(result)
-			log.Debug().Dict("skip-evaluation", zerolog.Dict().
-				Str("policy", policy.GetName()).
-				Str("policyResourceVersion", policy.GetResourceVersion()).
-				Str("policyUID", string(policy.GetUID())).
-				Str("resource", resource.GetName()).
-				Str("resourceResourceVersion", resource.GetResourceVersion()),
-			).Msg("Previous result found. Reusing result")
-			continue
-		}
 		admissionRequest := newAdmissionReview(resource)
 		auditResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionRequest)
+
+		var errored bool
 		if responseErr != nil {
 			// log error, will end in ClusterPolicyReportResult too
 			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
@@ -284,6 +242,7 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 				Str("resource", resource.GetName()),
 			).
 				Msg("error sending AdmissionReview to PolicyServer")
+			errored = true
 		} else {
 			log.Debug().Dict("response", zerolog.Dict().
 				Str("uid", string(auditResponse.Response.UID)).
@@ -292,13 +251,20 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 				Str("resource", resource.GetName()),
 			).
 				Msg("audit review response")
-			result := clusterReport.CreateResult(policy, resource, auditResponse, responseErr)
-			clusterReport.AddResult(result)
 		}
+
+		report.AddResultToClusterPolicyReport(clusterPolicyReport, policy, auditResponse.Response, errored)
+	}
+
+	err := s.policyReportStore.CreateOrPatchClusterPolicyReport(ctx, clusterPolicyReport)
+	if err != nil {
+		log.Error().Err(err).Msg("error adding ClusterPolicyReport to store")
 	}
 }
 
-func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, nsReport, previousNsReport *report.PolicyReport) {
+func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured) {
+	policyreport := report.NewPolicyReport(resource)
+
 	for _, p := range policies {
 		url := p.PolicyServer
 		policy := p.Policy
@@ -312,22 +278,10 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			continue
 		}
 
-		if result := previousNsReport.GetReusablePolicyReportResult(policy, resource); result != nil {
-			// We have a result from the same policy version for the same resource instance.
-			// Skip the evaluation
-			nsReport.AddResult(result)
-			log.Debug().Dict("skip-evaluation", zerolog.Dict().
-				Str("policy", policy.GetName()).
-				Str("policyResourceVersion", policy.GetResourceVersion()).
-				Str("policyUID", string(policy.GetUID())).
-				Str("resource", resource.GetName()).
-				Str("resourceResourceVersion", resource.GetResourceVersion()),
-			).Msg("Previous result found. Reusing result")
-			continue
-		}
-
 		admissionRequest := newAdmissionReview(resource)
 		auditResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionRequest)
+
+		var errored bool
 		if responseErr != nil {
 			// log responseErr, will end in PolicyReportResult too
 			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
@@ -336,6 +290,8 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 				Str("resource", resource.GetName()),
 			).
 				Msg("error sending AdmissionReview to PolicyServer")
+
+			errored = true
 		} else {
 			log.Debug().Dict("response", zerolog.Dict().
 				Str("uid", string(auditResponse.Response.UID)).
@@ -344,9 +300,14 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 				Bool("allowed", auditResponse.Response.Allowed),
 			).
 				Msg("audit review response")
-			result := nsReport.CreateResult(policy, resource, auditResponse, responseErr)
-			nsReport.AddResult(result)
 		}
+
+		report.AddResultToPolicyReport(policyreport, policy, auditResponse.Response, errored)
+	}
+
+	err := s.policyReportStore.CreateOrPatchPolicyReport(ctx, policyreport)
+	if err != nil {
+		log.Error().Err(err).Msg("error adding PolicyReport to store")
 	}
 }
 
