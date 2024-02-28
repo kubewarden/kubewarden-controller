@@ -1,305 +1,241 @@
 package report
 
 import (
-	"errors"
-	"fmt"
 	"testing"
+	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	admv1 "k8s.io/api/admission/v1"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	v1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/assert"
+	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
+	"k8s.io/apimachinery/pkg/types"
+	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
-func TestCreateResult(t *testing.T) {
-	report := NewClusterPolicyReport("")
-	admReviewPass := admv1.AdmissionReview{
-		Request: &admv1.AdmissionRequest{},
-		Response: &admv1.AdmissionResponse{
-			UID:     "4264aa6a-2d4a-49e6-aed8-156d74678dde",
-			Allowed: true,
-		},
-	}
-	admReviewFail := admv1.AdmissionReview{
-		Request: &admv1.AdmissionRequest{},
-		Response: &admv1.AdmissionResponse{
-			UID:     "4264aa6a-2d4a-49e6-aed8-156d74678dde",
-			Allowed: false,
-			Result: &metav1.Status{
-				Message: "failed, policy-server did boom",
-			},
-		},
-	}
-	policy := policiesv1.ClusterAdmissionPolicy{}
-	policy.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   constants.KubewardenPoliciesGroup,
-		Version: constants.KubewardenPoliciesVersion,
-		Kind:    constants.KubewardenKindClusterAdmissionPolicy,
-	})
+func TestNewPolicyReport(t *testing.T) {
+	resource := unstructured.Unstructured{}
+	resource.SetUID("uid")
+	resource.SetNamespace("namespace")
+	resource.SetAPIVersion("v1")
+	resource.SetKind("Pod")
+	resource.SetName("test-pod")
+	resource.SetResourceVersion("12345")
 
-	report.AddResult(report.CreateResult(&policy, unstructured.Unstructured{}, &admReviewPass, nil))
-	if report.Summary.Pass != 1 {
-		t.Errorf("expected Summary.Pass == 1. Got %d", report.Summary.Pass)
-	}
-	report.AddResult(report.CreateResult(&policy, unstructured.Unstructured{}, &admReviewFail, nil))
-	if report.Summary.Fail != 1 {
-		t.Errorf("expected Summary.Fail == 1. Got %d", report.Summary.Fail)
-	}
-	report.AddResult(report.CreateResult(&policy, unstructured.Unstructured{}, &admReviewFail, errors.New("boom")))
-	if report.Summary.Error != 1 {
-		t.Errorf("expected Summary.Error == 1. Got %d", report.Summary.Error)
-	}
+	policyReport := NewPolicyReport(resource)
+
+	assert.Equal(t, "uid", policyReport.ObjectMeta.Name)
+	assert.Equal(t, "namespace", policyReport.ObjectMeta.Namespace)
+	assert.Equal(t, "kubewarden", policyReport.ObjectMeta.Labels["app.kubernetes.io/managed-by"])
+
+	assert.Equal(t, "v1", policyReport.ObjectMeta.OwnerReferences[0].APIVersion)
+	assert.Equal(t, "Pod", policyReport.ObjectMeta.OwnerReferences[0].Kind)
+	assert.Equal(t, "test-pod", policyReport.ObjectMeta.OwnerReferences[0].Name)
+	assert.Equal(t, types.UID("uid"), policyReport.ObjectMeta.OwnerReferences[0].UID)
+
+	assert.Equal(t, "v1", policyReport.Scope.APIVersion)
+	assert.Equal(t, "Pod", policyReport.Scope.Kind)
+	assert.Equal(t, "test-pod", policyReport.Scope.Name)
+	assert.Equal(t, types.UID("uid"), policyReport.Scope.UID)
+	assert.Equal(t, "12345", policyReport.Scope.ResourceVersion)
+
+	assert.Empty(t, policyReport.Results)
 }
 
-func TestFindClusterPolicyReportResult(t *testing.T) {
-	report := NewClusterPolicyReport("")
-	admReviewPass := admv1.AdmissionReview{
-		Request: &admv1.AdmissionRequest{},
-		Response: &admv1.AdmissionResponse{
-			UID:     "4264aa6a-2d4a-49e6-aed8-156d74678dde",
-			Allowed: true,
-		},
-	}
-	policy := policiesv1.ClusterAdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cluster-policy",
-		},
-		Spec: policiesv1.ClusterAdmissionPolicySpec{
-			PolicySpec: policiesv1.PolicySpec{
-				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{""},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"namespaces"},
-						},
-					},
-				},
-			},
-		},
-	}
-	policy.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   constants.KubewardenPoliciesGroup,
-		Version: constants.KubewardenPoliciesVersion,
-		Kind:    constants.KubewardenKindClusterAdmissionPolicy,
-	})
-
-	var expectedResource unstructured.Unstructured
-	for idx := 0; idx < 5; idx++ {
-		namespaceResource := unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Namespace",
-				"metadata": map[string]interface{}{
-					"name":              "testingns" + fmt.Sprint(idx),
-					"creationTimestamp": nil,
-				},
-				"spec":   map[string]interface{}{},
-				"status": map[string]interface{}{},
-			},
-		}
-		report.AddResult(report.CreateResult(&policy, namespaceResource, &admReviewPass, nil))
-		expectedResource = namespaceResource
+func TestAddResultToPolicyReport(t *testing.T) {
+	policy := &policiesv1.AdmissionPolicy{}
+	admissionResponse := &admissionv1.AdmissionResponse{
+		Allowed: true,
+		Result:  &metav1.Status{Message: "The request was allowed"},
 	}
 
-	result := report.GetReusablePolicyReportResult(&policy, expectedResource)
-	if result == nil {
-		t.Fatal("Result cannot be nil")
-	}
-	expectedPolicy := "cap-" + policy.GetName()
-	if result.Policy != expectedPolicy {
-		t.Errorf("Wrong policy. Expected %s, got %s", expectedPolicy, result.Policy)
-	}
-	expectedObjectReference := &v1.ObjectReference{
-		Kind:            expectedResource.GetKind(),
-		Namespace:       expectedResource.GetNamespace(),
-		Name:            expectedResource.GetName(),
-		UID:             expectedResource.GetUID(),
-		APIVersion:      expectedResource.GetAPIVersion(),
-		ResourceVersion: expectedResource.GetResourceVersion(),
-	}
-	if !cmp.Equal(result.Subjects[0], expectedObjectReference) {
-		diff := cmp.Diff(expectedObjectReference, result.Subjects[0])
-		t.Errorf("Result ObjectReference differs from the expected value: %s", diff)
-	}
+	policyReport := NewPolicyReport(unstructured.Unstructured{})
+	AddResultToPolicyReport(policyReport, policy, admissionResponse, false)
+
+	assert.Len(t, policyReport.Results, 1)
+	assert.Equal(t, 1, policyReport.Summary.Pass)
+	assert.Equal(t, 0, policyReport.Summary.Fail)
+	assert.Equal(t, 0, policyReport.Summary.Warn)
+	assert.Equal(t, 0, policyReport.Summary.Error)
 }
 
-func TestFindPolicyReportResult(t *testing.T) {
-	namespace := &v1.Namespace{}
-	report := NewPolicyReport(namespace)
-	admReviewPass := admv1.AdmissionReview{
-		Request: &admv1.AdmissionRequest{},
-		Response: &admv1.AdmissionResponse{
-			UID:     "4264aa6a-2d4a-49e6-aed8-156d74678dde",
-			Allowed: true,
-		},
-	}
-	policy := policiesv1.AdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "namespace-policy",
-		},
-		Spec: policiesv1.AdmissionPolicySpec{
-			PolicySpec: policiesv1.PolicySpec{
-				BackgroundAudit: true,
-				Rules: []admissionregistrationv1.RuleWithOperations{
-					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{""},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"pods"},
-						},
-					},
-				},
-			},
-		},
-	}
-	policy.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   constants.KubewardenPoliciesGroup,
-		Version: constants.KubewardenPoliciesVersion,
-		Kind:    constants.KubewardenKindClusterAdmissionPolicy,
-	})
+func TestNewClusterPolicyReport(t *testing.T) {
+	resource := unstructured.Unstructured{}
+	resource.SetUID("uid")
+	resource.SetName("test-namespace")
+	resource.SetAPIVersion("v1")
+	resource.SetKind("Namespace")
+	resource.SetResourceVersion("12345")
 
-	var expectedResource unstructured.Unstructured
-	for idx := 0; idx < 5; idx++ {
-		namespaceResource := unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"name":              "testingns" + fmt.Sprint(idx),
-					"creationTimestamp": nil,
-				},
-				"spec":   map[string]interface{}{},
-				"status": map[string]interface{}{},
-			},
-		}
-		report.AddResult(report.CreateResult(&policy, namespaceResource, &admReviewPass, nil))
-		expectedResource = namespaceResource
-	}
+	clusterPolicyReport := NewClusterPolicyReport(resource)
 
-	result := report.GetReusablePolicyReportResult(&policy, expectedResource)
-	if result == nil {
-		t.Fatal("Result cannot be nil")
-	}
-	expectedPolicy := "cap-" + policy.GetName()
-	if result.Policy != expectedPolicy {
-		t.Errorf("Wrong policy. Expected %s, got %s", expectedPolicy, result.Policy)
-	}
-	expectedObjectReference := &v1.ObjectReference{
-		Kind:            expectedResource.GetKind(),
-		Namespace:       expectedResource.GetNamespace(),
-		Name:            expectedResource.GetName(),
-		UID:             expectedResource.GetUID(),
-		APIVersion:      expectedResource.GetAPIVersion(),
-		ResourceVersion: expectedResource.GetResourceVersion(),
-	}
-	if !cmp.Equal(result.Subjects[0], expectedObjectReference) {
-		diff := cmp.Diff(expectedObjectReference, result.Subjects[0])
-		t.Errorf("Result ObjectReference differs from the expected value: %s", diff)
-	}
+	assert.Equal(t, "uid", clusterPolicyReport.ObjectMeta.Name)
+	assert.Equal(t, "kubewarden", clusterPolicyReport.ObjectMeta.Labels[labelAppManagedBy])
+
+	assert.Equal(t, "v1", clusterPolicyReport.ObjectMeta.OwnerReferences[0].APIVersion)
+	assert.Equal(t, "Namespace", clusterPolicyReport.ObjectMeta.OwnerReferences[0].Kind)
+	assert.Equal(t, "test-namespace", clusterPolicyReport.ObjectMeta.OwnerReferences[0].Name)
+	assert.Equal(t, types.UID("uid"), clusterPolicyReport.ObjectMeta.OwnerReferences[0].UID)
+
+	assert.Equal(t, "v1", clusterPolicyReport.Scope.APIVersion)
+	assert.Equal(t, "Namespace", clusterPolicyReport.Scope.Kind)
+	assert.Equal(t, "test-namespace", clusterPolicyReport.Scope.Name)
+	assert.Equal(t, types.UID("uid"), clusterPolicyReport.Scope.UID)
+	assert.Equal(t, "12345", clusterPolicyReport.Scope.ResourceVersion)
+
+	assert.Empty(t, clusterPolicyReport.Results)
 }
 
-func TestAddPolicyReportResults(t *testing.T) {
-	time := metav1.Now()
-	timestamp := *time.ProtoTime()
+func TestAddResultToClusterPolicyReport(t *testing.T) {
+	policy := &policiesv1.AdmissionPolicy{}
+	admissionResponse := &admissionv1.AdmissionResponse{
+		Allowed: false,
+		Result:  &metav1.Status{Message: "The request was rejected"},
+	}
+
+	clusterPolicyReport := NewClusterPolicyReport(unstructured.Unstructured{})
+	AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionResponse, false)
+
+	assert.Len(t, clusterPolicyReport.Results, 1)
+	assert.Equal(t, 0, clusterPolicyReport.Summary.Pass)
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Fail)
+	assert.Equal(t, 0, clusterPolicyReport.Summary.Warn)
+	assert.Equal(t, 0, clusterPolicyReport.Summary.Error)
+}
+
+func TestNewPolicyReportResult(t *testing.T) {
+	now := metav1.Timestamp{Seconds: time.Now().Unix()}
+
 	tests := []struct {
-		name          string
-		result        *v1alpha2.PolicyReportResult
-		expectedPass  int
-		expectedFail  int
-		expectedError int
+		name           string
+		policy         policiesv1.Policy
+		amissionResp   *admissionv1.AdmissionResponse
+		errored        bool
+		expectedResult *wgpolicy.PolicyReportResult
 	}{
-		{"pass", &v1alpha2.PolicyReportResult{
-			Source:   PolicyReportSource,
-			Policy:   "",           // either cap-policy_name or ap-policy_name
-			Rule:     "",           // policy name
-			Category: "validating", // either validating, or mutating and validating
-			Severity: "info",       // either info for monitor or empty
-			// Timestamp shouldn't be used in go structs, and only gives seconds
-			// https://github.com/kubernetes/apimachinery/blob/v0.27.2/pkg/apis/meta/v1/time_proto.go#LL48C9-L48C9
-			Timestamp:       timestamp,  // time the result was computed
-			Result:          StatusPass, // pass, fail, error
-			Scored:          false,
-			Subjects:        []*v1.ObjectReference{}, // reference to object evaluated
-			SubjectSelector: &metav1.LabelSelector{},
-			Description:     "", // output message of the policy
-			// The policy resource version is used to check if the same result can used
-			// in the next scan
-			Properties: map[string]string{PropertyPolicyResourceVersion: "", PropertyPolicyUID: ""},
-		}, 1, 0, 0},
-		{"fail", &v1alpha2.PolicyReportResult{
-			Source:   PolicyReportSource,
-			Policy:   "",           // either cap-policy_name or ap-policy_name
-			Rule:     "",           // policy name
-			Category: "validating", // either validating, or mutating and validating
-			Severity: "info",       // either info for monitor or empty
-			// Timestamp shouldn't be used in go structs, and only gives seconds
-			// https://github.com/kubernetes/apimachinery/blob/v0.27.2/pkg/apis/meta/v1/time_proto.go#LL48C9-L48C9
-			Timestamp:       timestamp,  // time the result was computed
-			Result:          StatusFail, // pass, fail, error
-			Scored:          false,
-			Subjects:        []*v1.ObjectReference{}, // reference to object evaluated
-			SubjectSelector: &metav1.LabelSelector{},
-			Description:     "", // output message of the policy
-			// The policy resource version is used to check if the same result can used
-			// in the next scan
-			Properties: map[string]string{PropertyPolicyResourceVersion: "", PropertyPolicyUID: ""},
-		}, 0, 1, 0},
-		{"error", &v1alpha2.PolicyReportResult{
-			Source:   PolicyReportSource,
-			Policy:   "",           // either cap-policy_name or ap-policy_name
-			Rule:     "",           // policy name
-			Category: "validating", // either validating, or mutating and validating
-			Severity: "info",       // either info for monitor or empty
-			// Timestamp shouldn't be used in go structs, and only gives seconds
-			// https://github.com/kubernetes/apimachinery/blob/v0.27.2/pkg/apis/meta/v1/time_proto.go#LL48C9-L48C9
-			Timestamp:       timestamp,   // time the result was computed
-			Result:          StatusError, // pass, fail, error
-			Scored:          false,
-			Subjects:        []*v1.ObjectReference{}, // reference to object evaluated
-			SubjectSelector: &metav1.LabelSelector{},
-			Description:     "", // output message of the policy
-			// The policy resource version is used to check if the same result can used
-			// in the next scan
-			Properties: map[string]string{PropertyPolicyResourceVersion: "", PropertyPolicyUID: ""},
-		}, 0, 0, 1},
+		{
+			name: "Validating policy, allowed response",
+			policy: &policiesv1.ClusterAdmissionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:             "policy-uid",
+					ResourceVersion: "1",
+					Name:            "policy-name",
+					Annotations: map[string]string{
+						policiesv1.AnnotationSeverity: severityLow,
+					},
+				},
+				Spec: policiesv1.ClusterAdmissionPolicySpec{
+					PolicySpec: policiesv1.PolicySpec{
+						Mutating: false,
+					},
+				},
+			},
+			amissionResp: &admissionv1.AdmissionResponse{
+				Allowed: true,
+				Result:  &metav1.Status{Message: "The request was allowed"},
+			},
+			errored: false,
+			expectedResult: &wgpolicy.PolicyReportResult{
+				Source:          policyReportSource,
+				Policy:          "clusterwide-policy-name",
+				Severity:        severityLow,
+				Result:          statusPass,
+				Timestamp:       now,
+				Scored:          true,
+				SubjectSelector: &metav1.LabelSelector{},
+				Description:     "The request was allowed",
+				Properties: map[string]string{
+					PropertyPolicyUID:             "policy-uid",
+					propertyPolicyResourceVersion: "1",
+					typeValidating:                valueTypeTrue,
+				},
+			},
+		},
+		{
+			name: "Mutating policy, rejected response",
+			policy: &policiesv1.AdmissionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:             "policy-uid",
+					ResourceVersion: "1",
+					Name:            "policy-name",
+					Namespace:       "policy-namespace",
+					Annotations: map[string]string{
+						policiesv1.AnnotationSeverity: severityCritical,
+					},
+				},
+				Spec: policiesv1.AdmissionPolicySpec{
+					PolicySpec: policiesv1.PolicySpec{
+						Mutating: true,
+					},
+				},
+			},
+			amissionResp: &admissionv1.AdmissionResponse{
+				Allowed: false,
+				Result:  &metav1.Status{Message: "The request was rejected"},
+			},
+			errored: false,
+			expectedResult: &wgpolicy.PolicyReportResult{
+				Source:          policyReportSource,
+				Policy:          "namespaced-policy-namespace-policy-name",
+				Severity:        severityCritical,
+				Result:          statusFail,
+				Timestamp:       now,
+				Scored:          true,
+				SubjectSelector: &metav1.LabelSelector{},
+				Description:     "The request was rejected",
+				Properties: map[string]string{
+					PropertyPolicyUID:             "policy-uid",
+					propertyPolicyResourceVersion: "1",
+					typeMutating:                  valueTypeTrue,
+				},
+			},
+		},
+		{
+			name: "Validating policy in monitor mode, response error",
+			policy: &policiesv1.AdmissionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:             "policy-uid",
+					ResourceVersion: "1",
+					Name:            "policy-name",
+					Namespace:       "policy-namespace",
+					Annotations: map[string]string{
+						policiesv1.AnnotationSeverity: severityInfo,
+					},
+				},
+				Spec: policiesv1.AdmissionPolicySpec{
+					PolicySpec: policiesv1.PolicySpec{
+						Mutating: false,
+						Mode:     policiesv1.PolicyMode(policiesv1.PolicyModeStatusMonitor),
+					},
+				},
+			},
+			amissionResp: &admissionv1.AdmissionResponse{
+				Allowed: false,
+				Result:  &metav1.Status{Message: "The request was rejected"},
+			},
+			errored: true,
+			expectedResult: &wgpolicy.PolicyReportResult{
+				Source:          policyReportSource,
+				Policy:          "namespaced-policy-namespace-policy-name",
+				Severity:        severityInfo,
+				Result:          statusError,
+				Timestamp:       now,
+				Scored:          true,
+				SubjectSelector: &metav1.LabelSelector{},
+				Description:     "The request was rejected",
+				Properties: map[string]string{
+					PropertyPolicyUID:             "policy-uid",
+					propertyPolicyResourceVersion: "1",
+					typeValidating:                valueTypeTrue,
+				},
+			},
+		},
 	}
-	for _, ttest := range tests {
-		t.Run(ttest.name, func(t *testing.T) {
-			clusterReport := NewClusterPolicyReport("")
-			namespace := &v1.Namespace{}
-			nsReport := NewPolicyReport(namespace)
 
-			clusterReport.AddResult(ttest.result)
-			nsReport.AddResult(ttest.result)
-
-			if clusterReport.Summary.Pass != ttest.expectedPass {
-				t.Errorf("Invalid cluster report summary. Expected pass evaluations count to be %d. But got %d", ttest.expectedPass, clusterReport.Summary.Pass)
-			}
-			if clusterReport.Summary.Fail != ttest.expectedFail {
-				t.Errorf("Invalid cluster report summary. Expected fail evaluations count to be %d. But got %d", ttest.expectedFail, clusterReport.Summary.Fail)
-			}
-			if clusterReport.Summary.Error != ttest.expectedError {
-				t.Errorf("Invalid cluster report summary. Expected error evaluations count to be %d. But got %d", ttest.expectedError, clusterReport.Summary.Error)
-			}
-			if nsReport.Summary.Pass != ttest.expectedPass {
-				t.Errorf("Invalid namespaced report summary. Expected pass evaluations count to be %d. But got %d", ttest.expectedPass, nsReport.Summary.Pass)
-			}
-			if nsReport.Summary.Fail != ttest.expectedFail {
-				t.Errorf("Invalid namespaced report summary. Expected fail evaluations count to be %d. But got %d", ttest.expectedFail, nsReport.Summary.Fail)
-			}
-			if nsReport.Summary.Error != ttest.expectedError {
-				t.Errorf("Invalid namespaced report summary. Expected error evaluations count to be %d. But got %d", ttest.expectedError, nsReport.Summary.Error)
-			}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := newPolicyReportResult(test.policy, test.amissionResp, test.errored, now)
+			assert.Equal(t, test.expectedResult, result)
 		})
 	}
 }

@@ -62,13 +62,8 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
-		storeType, err := cmd.Flags().GetString("store")
-		if err != nil {
-			return err
-		}
 
 		config := ctrl.GetConfigOrDie()
-
 		dynamicClient := dynamic.NewForConfigOrDie(config)
 		clientset := kubernetes.NewForConfigOrDie(config)
 
@@ -84,11 +79,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
-
-		policyReportStore, err := report.NewPolicyReportStoreFromType(storeType)
-		if err != nil {
-			return err
-		}
+		policyReportStore := report.NewPolicyReportStore(client)
 
 		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, insecureSSL, caCertFile)
 		if err != nil {
@@ -144,5 +135,4 @@ func init() {
 	rootCmd.Flags().StringSliceVarP(&skippedNs, "ignore-namespaces", "i", nil, "comma separated list of namespace names to be skipped from scan. This flag can be repeated")
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
-	rootCmd.Flags().StringP("store", "s", report.KUBERNETES, fmt.Sprintf("PolicyReport store type. Supported values are: %v", report.SupportedTypes))
 }
