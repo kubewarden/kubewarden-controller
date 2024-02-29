@@ -13,10 +13,9 @@ identifies the ones that are violating Kubewarden policies.
 
 The results of the scan can be made available via `PolicyReport` objects. Each Namespace
 has its own dedicated `PolicyReport`. Cluster-wide resources compliance is available via
-the `ClusterPolicyReport` resource. 
+the `ClusterPolicyReport` resource.
 
-Instead of relying on `PolicyReport` objects, one can also configure Audit scanner to
-save all this information in-memory only, by specifying `--store memory`.
+Storing `PolicyReport` and `ClusterPolicyReport` to etcd can be disabled by specifying `--disable-store`.
 
 # Deployment
 
@@ -37,9 +36,8 @@ $ make build
 
 Have a look at CONTRIBUTING.md for more developer information.
 
-For implementation details, see [RFC-11](https://github.com/kubewarden/rfc/blob/main/rfc/0011-audit-checks.md), 
+For implementation details, see [RFC-11](https://github.com/kubewarden/rfc/blob/main/rfc/0011-audit-checks.md),
 [RFC-12](https://github.com/kubewarden/rfc/blob/main/rfc/0012-policy-report.md).
-
 
 # Software bill of materials
 
@@ -47,7 +45,6 @@ Audit scanner has its software bill of materials (SBOM) published every release.
 It follows the [SPDX](https://spdx.dev/) version 2.2 format and it can be found
 together with the signature and certificate used to signed it in the
 [release assets](https://github.com/kubewarden/audit-scanner/releases)
-
 
 # Security
 
