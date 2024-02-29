@@ -9,7 +9,7 @@ import (
 
 	"github.com/kubewarden/audit-scanner/internal/k8s"
 	"github.com/kubewarden/audit-scanner/internal/policies"
-	report "github.com/kubewarden/audit-scanner/internal/report"
+	"github.com/kubewarden/audit-scanner/internal/report"
 	"github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/stretchr/testify/assert"

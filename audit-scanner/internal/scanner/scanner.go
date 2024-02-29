@@ -14,10 +14,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/k8s"
 	"github.com/kubewarden/audit-scanner/internal/policies"
-	report "github.com/kubewarden/audit-scanner/internal/report"
+	"github.com/kubewarden/audit-scanner/internal/report"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -121,14 +120,6 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error {
 			Int("policies to evaluate", policies.PolicyNum).
 			Int("policies skipped", policies.SkippedNum),
 		).Msg("policy count")
-
-	if errors.Is(err, constants.ErrResourceNotFound) {
-		log.Info().Str("namespace", nsName).
-			Msg("no pre-existing PolicyReport, will create one at end of the scan if needed")
-	} else if err != nil {
-		log.Err(err).Str("namespace", nsName).
-			Msg("error when obtaining PolicyReport")
-	}
 
 	for gvr, policies := range policies.PoliciesByGVR {
 		pager, err := s.k8sClient.GetResources(gvr, nsName)
@@ -237,8 +228,8 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 		admissionReviewRequest := newAdmissionReview(resource)
 		admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
 
-		var errored bool
-		if responseErr != nil {
+		errored := responseErr != nil
+		if errored {
 			// log responseErr, will end in PolicyReportResult too
 			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
 				Str("admissionRequest name", admissionReviewRequest.Request.Name).
@@ -246,8 +237,6 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 				Str("resource", resource.GetName()),
 			).
 				Msg("error sending AdmissionReview to PolicyServer")
-
-			errored = true
 		} else {
 			log.Debug().Dict("response", zerolog.Dict().
 				Str("uid", string(admissionReviewResponse.Response.UID)).
@@ -262,13 +251,13 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	}
 
 	if s.outputScan {
-		json, err := json.Marshal(policyReport)
+		policyReportJSON, err := json.Marshal(policyReport)
 		if err != nil {
 			log.Error().Err(err).Msg("error while marshalling PolicyReport to JSON, skipping output scan")
 		}
 
 		log.Info().
-			RawJSON("report", json).
+			RawJSON("report", policyReportJSON).
 			Msg("PolicyReport summary")
 	}
 
@@ -298,8 +287,8 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 		admissionReviewRequest := newAdmissionReview(resource)
 		admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
 
-		var errored bool
-		if responseErr != nil {
+		errored := responseErr != nil
+		if errored {
 			// log error, will end in ClusterPolicyReportResult too
 			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
 				Str("admissionRequest name", admissionReviewRequest.Request.Name).
@@ -307,7 +296,6 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 				Str("resource", resource.GetName()),
 			).
 				Msg("error sending AdmissionReview to PolicyServer")
-			errored = true
 		} else {
 			log.Debug().Dict("response", zerolog.Dict().
 				Str("uid", string(admissionReviewResponse.Response.UID)).
@@ -322,13 +310,13 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 	}
 
 	if s.outputScan {
-		json, err := json.Marshal(clusterPolicyReport)
+		clusterPolicyReportJSON, err := json.Marshal(clusterPolicyReport)
 		if err != nil {
 			log.Error().Err(err).Msg("error while marshalling ClusterPolicyReport to JSON, skipping output scan")
 		}
 
 		log.Info().
-			RawJSON("report", json).
+			RawJSON("report", clusterPolicyReportJSON).
 			Msg("ClusterPolicyReport summary")
 	}
 
