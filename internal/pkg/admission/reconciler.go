@@ -248,16 +248,9 @@ func (r *Reconciler) Reconcile(
 	return nil
 }
 
-type GetPoliciesBehavior int
-
-const (
-	SkipDeleted GetPoliciesBehavior = iota
-	IncludeDeleted
-)
-
 // GetPolicies returns all admission policies and cluster admission
 // policies bound to the given policyServer
-func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1.PolicyServer, getPoliciesBehavior GetPoliciesBehavior) ([]policiesv1.Policy, error) {
+func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1.PolicyServer) ([]policiesv1.Policy, error) {
 	var clusterAdmissionPolicies policiesv1.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
@@ -274,16 +267,10 @@ func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1.P
 	policies := make([]policiesv1.Policy, 0)
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
 		clusterAdmissionPolicy := clusterAdmissionPolicy
-		if getPoliciesBehavior == SkipDeleted && clusterAdmissionPolicy.DeletionTimestamp != nil {
-			continue
-		}
 		policies = append(policies, &clusterAdmissionPolicy)
 	}
 	for _, admissionPolicy := range admissionPolicies.Items {
 		admissionPolicy := admissionPolicy
-		if getPoliciesBehavior == SkipDeleted && admissionPolicy.DeletionTimestamp != nil {
-			continue
-		}
 		policies = append(policies, &admissionPolicy)
 	}
 

@@ -32,12 +32,14 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	timeout      = 120 * time.Second
-	pollInterval = 250 * time.Millisecond
+	timeout                   = 120 * time.Second
+	pollInterval              = 250 * time.Millisecond
+	IntegrationTestsFinalizer = "integration-tests-safety-net-finalizer"
 )
 
 var (
@@ -77,11 +79,15 @@ func policyServerVersion() string {
 func policyServerFactory(name string) *policiesv1.PolicyServer {
 	policyServer := templatePolicyServer.DeepCopy()
 	policyServer.Name = name
-
-	// By adding this finalizer automatically, we ensure that when
-	// testing removal of finalizers on deleted objects, that they will
-	// exist at all times
-	policyServer.Finalizers = []string{"integration-tests-safety-net-finalizer"}
+	policyServer.Finalizers = []string{
+		// On a real cluster the Kubewarden finalizer is added by our mutating
+		// webhook. This is not running now, hence we have to manually add the finalizer
+		constants.KubewardenFinalizer,
+		// By adding this finalizer automatically, we ensure that when
+		// testing removal of finalizers on deleted objects, that they will
+		// exist at all times
+		IntegrationTestsFinalizer,
+	}
 	return policyServer
 }
 
@@ -91,10 +97,15 @@ func admissionPolicyFactory(name, policyNamespace, policyServerName string, muta
 	admissionPolicy.Namespace = policyNamespace
 	admissionPolicy.Spec.PolicyServer = policyServerName
 	admissionPolicy.Spec.PolicySpec.Mutating = mutating
-	// By adding this finalizer automatically, we ensure that when
-	// testing removal of finalizers on deleted objects, that they will
-	// exist at all times
-	admissionPolicy.Finalizers = []string{"integration-tests-safety-net-finalizer"}
+	admissionPolicy.Finalizers = []string{
+		// On a real cluster the Kubewarden finalizer is added by our mutating
+		// webhook. This is not running now, hence we have to manually add the finalizer
+		constants.KubewardenFinalizer,
+		// By adding this finalizer automatically, we ensure that when
+		// testing removal of finalizers on deleted objects, that they will
+		// exist at all times
+		IntegrationTestsFinalizer,
+	}
 	return admissionPolicy
 }
 
@@ -103,10 +114,15 @@ func clusterAdmissionPolicyFactory(name, policyServerName string, mutating bool)
 	clusterAdmissionPolicy.Name = name
 	clusterAdmissionPolicy.Spec.PolicyServer = policyServerName
 	clusterAdmissionPolicy.Spec.PolicySpec.Mutating = mutating
-	// By adding this finalizer automatically, we ensure that when
-	// testing removal of finalizers on deleted objects, that they will
-	// exist at all times
-	clusterAdmissionPolicy.Finalizers = []string{"integration-tests-safety-net-finalizer"}
+	clusterAdmissionPolicy.Finalizers = []string{
+		// On a real cluster the Kubewarden finalizer is added by our mutating
+		// webhook. This is not running now, hence we have to manually add the finalizer
+		constants.KubewardenFinalizer,
+		// By adding this finalizer automatically, we ensure that when
+		// testing removal of finalizers on deleted objects, that they will
+		// exist at all times
+		IntegrationTestsFinalizer,
+	}
 	return clusterAdmissionPolicy
 }
 
@@ -132,6 +148,21 @@ func getTestPolicyServer(name string) (*policiesv1.PolicyServer, error) {
 		return nil, errors.Join(errors.New("could not find PolicyServer"), err)
 	}
 	return &policyServer, nil
+}
+
+func getTestPolicyServerService(policyServerName string) (*corev1.Service, error) {
+	policyServer := policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: policyServerName,
+		},
+	}
+	serviceName := policyServer.NameWithPrefix()
+
+	service := corev1.Service{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: DeploymentsNamespace}, &service); err != nil {
+		return nil, errors.Join(errors.New("could not find Service owned by PolicyServer"), err)
+	}
+	return &service, nil
 }
 
 func getTestValidatingWebhookConfiguration(name string) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
