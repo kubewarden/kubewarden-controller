@@ -26,7 +26,7 @@ regex = "1.5"
 reqwest = { version = "0.11", default-features = false, features = [
   "rustls-tls",
 ] }
-rustls = "0.22"
+rustls = "0.23"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
