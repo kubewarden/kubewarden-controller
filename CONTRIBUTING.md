@@ -103,3 +103,23 @@ Now that the controller has a new tag released, the automation will bump the
 [`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-controller).
 
 ### Consider announcing the new release in channels!
+
+## Kubewarden release template
+
+If you are releasing the Kubewarden stack there are some steps that we can follow to ensure that everything goes fine:
+
+- [ ] Update controller code
+- [ ] Run controller tests or check if the CI is green in the main branch
+- [ ] Update audit scanner code
+- [ ] Run audit scanner tests or check if the CI is green in the main branch
+- [ ] Bump policy server version in the `Cargo.toml` and update the `Cargo.lock` file.  This will require an PR in the repository to update the files in the main branch. Update the local code after merging the PR
+- [ ] Run policy server tests or check if the CI is green in the main branch
+- [ ] Bump kwctl version in the `Cargo.toml` and update the `Cargo.lock` file.  This will require an PR in the repository to update the files in the main branch. Update the local code after merging the PR
+- [ ] Run kwctl tests  or check if the CI is green in the main branch
+- [ ] Tag audit scanner
+- [ ] Tag policy server
+- [ ] Tag controller
+- [ ] Tag kwctl
+- [ ] Wait for all CI running in all the major components (audit scanner, controller, policy server and kwctl) to finish
+- [ ] Check if the Helm chart repository CI open a PR updating the Helm charts with the correct changes.
+- [ ] Check if CI in the Helm chart PR is green. If so, merge it
