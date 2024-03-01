@@ -132,7 +132,11 @@ func newPolicyReportResult(policy policiesv1.Policy, admissionReview *admissionv
 	}
 
 	var message string
-	if !errored {
+	// We need to check if Result is not nil because this field is
+	// optional. If the policy returns "allowed" to the admissionReview,
+	// the Result field is not checked by Kubernetes.
+	// https://pkg.go.dev/k8s.io/api@v0.29.2/admission/v1#AdmissionResponse
+	if !errored && admissionReview.Response.Result != nil {
 		message = admissionReview.Response.Result.Message
 	}
 

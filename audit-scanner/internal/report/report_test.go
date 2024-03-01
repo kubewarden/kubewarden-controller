@@ -235,6 +235,46 @@ func TestNewPolicyReportResult(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Validating policy, allowed response with no message",
+			policy: &policiesv1.ClusterAdmissionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					UID:             "policy-uid",
+					ResourceVersion: "1",
+					Name:            "policy-name",
+					Annotations: map[string]string{
+						policiesv1.AnnotationSeverity: severityLow,
+					},
+				},
+				Spec: policiesv1.ClusterAdmissionPolicySpec{
+					PolicySpec: policiesv1.PolicySpec{
+						Mutating: false,
+					},
+				},
+			},
+			amissionReview: &admissionv1.AdmissionReview{
+				Response: &admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result:  nil,
+				},
+			},
+			errored: false,
+			expectedResult: &wgpolicy.PolicyReportResult{
+				Source:          policyReportSource,
+				Policy:          "clusterwide-policy-name",
+				Severity:        severityLow,
+				Result:          statusPass,
+				Timestamp:       now,
+				Scored:          true,
+				SubjectSelector: &metav1.LabelSelector{},
+				Description:     "",
+				Properties: map[string]string{
+					PropertyPolicyUID:             "policy-uid",
+					propertyPolicyResourceVersion: "1",
+					typeValidating:                valueTypeTrue,
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
