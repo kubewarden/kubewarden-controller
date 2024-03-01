@@ -11,4 +11,7 @@ ignore = [
   "RUSTSEC-2023-0071", # "Classic" RSA timing sidechannel attack from non-constant-time implementation.
   # Okay for local use.
   # https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+  "RUSTSEC-2023-0081", # This is about `safemem` being unmaintained.
+  # This is a transitive dependency of syntect. This bug is tracked upstream inside of
+  # https://github.com/trishume/syntect/issues/521
 ]
