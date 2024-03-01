@@ -74,7 +74,7 @@ impl Stack {
         let stderr = pipe_to_string("stderr", stderr_pipe)?;
 
         if let Err(err) = evaluation_result {
-            if let Some(exit_error) = err.downcast_ref::<wasmtime_wasi::I32Exit>() {
+            if let Some(exit_error) = err.downcast_ref::<wasi_common::I32Exit>() {
                 if exit_error.0 == EXIT_SUCCESS {
                     let stdout = pipe_to_string("stdout", stdout_pipe)?;
                     return Ok(RunResult { stdout, stderr });
