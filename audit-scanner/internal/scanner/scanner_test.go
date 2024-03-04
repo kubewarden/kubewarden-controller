@@ -33,9 +33,7 @@ func newMockPolicyServer() *httptest.Server {
 		admissionReview := admissionv1.AdmissionReview{
 			Response: &admissionv1.AdmissionResponse{
 				Allowed: true,
-				Result: &metav1.Status{
-					Message: "The request was allowed",
-				},
+				Result:  nil,
 			},
 		}
 		response, err := json.Marshal(admissionReview)
