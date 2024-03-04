@@ -15,7 +15,7 @@ edition = "2021"
 async-std = "1.9"
 async-stream = "0.3"
 async-trait = "0.1"
-base64 = "0.21"
+base64 = "0.22"
 directories = "5.0"
 lazy_static = "1.4"
 oci-distribution = { version = "0.10.0", default-features = false, features = [
