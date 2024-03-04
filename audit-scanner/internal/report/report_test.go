@@ -137,7 +137,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 			amissionReview: &admissionv1.AdmissionReview{
 				Response: &admissionv1.AdmissionResponse{
 					Allowed: true,
-					Result:  &metav1.Status{Message: "The request was allowed"},
+					Result:  nil,
 				},
 			},
 			errored: false,
@@ -149,7 +149,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 				Timestamp:       now,
 				Scored:          true,
 				SubjectSelector: &metav1.LabelSelector{},
-				Description:     "The request was allowed",
+				Description:     "",
 				Properties: map[string]string{
 					PropertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
