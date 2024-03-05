@@ -1,5 +1,5 @@
 use clap::builder::PossibleValue;
-use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, Command};
+use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, ArgAction, Command};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego;
@@ -49,7 +49,7 @@ pub(crate) fn build_cli() -> Command {
             Arg::new("log-no-color")
                 .long("log-no-color")
                 .env("NO_COLOR")
-                .required(false)
+                .action(ArgAction::SetTrue)
                 .help("Disable colored output for logs"),
             Arg::new("address")
                 .long("addr")
@@ -116,13 +116,8 @@ pub(crate) fn build_cli() -> Command {
             Arg::new("enable-metrics")
                 .long("enable-metrics")
                 .env("KUBEWARDEN_ENABLE_METRICS")
-                .required(false)
+                .action(ArgAction::SetTrue)
                 .help("Enable metrics"),
-            Arg::new("enable-verification")
-                .long("enable-verification")
-                .env("KUBEWARDEN_ENABLE_VERIFICATION")
-                .required(false)
-                .help("Enable Sigstore verification"),
             Arg::new("always-accept-admission-reviews-on-namespace")
                 .long("always-accept-admission-reviews-on-namespace")
                 .value_name("NAMESPACE")
@@ -131,8 +126,8 @@ pub(crate) fn build_cli() -> Command {
                 .help("Always accept AdmissionReviews that target the given namespace"),
             Arg::new("disable-timeout-protection")
                 .long("disable-timeout-protection")
+                .action(ArgAction::SetTrue)
                 .env("KUBEWARDEN_DISABLE_TIMEOUT_PROTECTION")
-                .required(false)
                 .help("Disable policy timeout protection"),
             Arg::new("policy-timeout")
                 .long("policy-timeout")
@@ -143,7 +138,7 @@ pub(crate) fn build_cli() -> Command {
             Arg::new("daemon")
                 .long("daemon")
                 .env("KUBEWARDEN_DAEMON")
-                .required(false)
+                .action(ArgAction::SetTrue)
                 .help("If set, runs policy-server in detached mode as a daemon"),
             Arg::new("daemon-pid-file")
                 .long("daemon-pid-file")
@@ -163,7 +158,7 @@ pub(crate) fn build_cli() -> Command {
             Arg::new("ignore-kubernetes-connection-failure")
                 .long("ignore-kubernetes-connection-failure")
                 .env("KUBEWARDEN_IGNORE_KUBERNETES_CONNECTION_FAILURE")
-                .required(false)
+                .action(ArgAction::SetTrue)
                 .help("Do not exit with an error if the Kubernetes connection fails. This will cause context aware policies to break when there's no connection with Kubernetes."),
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
