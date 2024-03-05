@@ -18,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::warn;
 
+#[derive(Clone)]
 pub(crate) struct Client {
     cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
     verifier: Verifier,
