@@ -24,6 +24,7 @@ use self::errors::VerifyResult;
 
 /// This structure simplifies the process of policy verification
 /// using Sigstore
+#[derive(Clone)]
 pub struct Verifier {
     cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
     sources: Option<Sources>,
