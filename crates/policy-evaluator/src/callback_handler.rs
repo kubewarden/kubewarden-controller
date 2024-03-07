@@ -83,265 +83,220 @@ impl CallbackHandler {
                 },
                 req = self.rx.recv() => {
                     if let Some(req) = req {
-
-                        let oci_client = self.oci_client.clone();
-                        let mut sigstore_client = self.sigstore_client.clone();
-                        let mut kubernetes_client = self.kubernetes_client.clone();
-
-                        tokio::spawn(async move {
-                            match req.request {
-                                CallbackRequestType::OciManifestDigest {
-                                    image,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        image,
-                                        "Image digest computed",
-                                        {
-                                            oci::get_oci_digest_cached(
-                                                &oci_client,
-                                                &image,
-                                            )
-                                        }
-                                    );
-                                }
-                                CallbackRequestType::OciManifest {
-                                    image,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        image,
-                                        "Image manifest computed",
-                                        {
-                                            oci::get_oci_manifest_cached(
-                                                &oci_client,
-                                                &image,
-                                            )
-                                        }
-                                    );
-                                }
-                                CallbackRequestType::SigstorePubKeyVerify {
-                                    image,
-                                    pub_keys,
-                                    annotations,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        image,
-                                        "Sigstore pub key verification done",
-                                        {
-                                            get_sigstore_pub_key_verification_cached(
-                                                &mut sigstore_client,
-                                                image.clone(),
-                                                pub_keys,
-                                                annotations,
-                                            )
-                                        }
-                                    );
-                                }
-                                CallbackRequestType::SigstoreKeylessVerify {
-                                    image,
-                                    keyless,
-                                    annotations,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        image,
-                                        "Sigstore keyless verification done",
-                                        {
-                                            get_sigstore_keyless_verification_cached(
-                                                &mut sigstore_client,
-                                                image.clone(),
-                                                keyless,
-                                                annotations,
-                                            )
-                                        }
-                                    );
-                                }
-                                CallbackRequestType::SigstoreKeylessPrefixVerify {
-                                    image,
-                                    keyless_prefix,
-                                    annotations,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        image,
-                                        "Sigstore keyless prefix verification done",
-                                        {
-                                            get_sigstore_keyless_prefix_verification_cached(
-                                                &mut sigstore_client,
-                                                image.clone(),
-                                                keyless_prefix,
-                                                annotations,
-                                            )
-                                        }
-                                    );
-                                }
-                                CallbackRequestType::SigstoreGithubActionsVerify {
-                                    image,
-                                    owner,
-                                    repo,
-                                    annotations,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        image,
-                                        "Sigstore GitHub Action verification done",
-                                        {
-                                            get_sigstore_github_actions_verification_cached(
-                                                &mut sigstore_client,
-                                                image.clone(),
-                                                owner,
-                                                repo,
-                                                annotations,
-                                            )
-                                        }
-                                    );
-                                }
-                                CallbackRequestType::SigstoreCertificateVerify {
-                                    image,
-                                    certificate,
-                                    certificate_chain,
-                                    require_rekor_bundle,
-                                    annotations
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        image,
-                                        "Sigstore GitHub Action verification done",
-                                        {
-                                            get_sigstore_certificate_verification_cached(
-                                                &mut sigstore_client,
-                                                &image,
-                                                &certificate,
-                                                certificate_chain.as_deref(),
-                                                require_rekor_bundle, annotations
-                                            )
-                                        }
-                                    )
-                                }
-                                CallbackRequestType::DNSLookupHost {
-                                    host,
-                                } => {
-                                    let response = dns_lookup::lookup_host(&host).map(|ips| {
-                                            let res = LookupResponse {
-                                                ips: ips
-                                                    .iter()
-                                                    .map(|ip| ip.to_string())
-                                                    .collect(),
-                                            };
-                                            CallbackResponse {
-                                                payload: serde_json::to_vec(&res).unwrap()
-                                            }
-                                        }
-                                    ).map_err(anyhow::Error::new);
-
-                                    if let Err(e) = req.response_channel.send(response) {
-                                        warn!("callback handler: cannot send response back: {:?}", e);
-                                    }
-                                }
-                                CallbackRequestType::KubernetesListResourceNamespace {
-                                    api_version,
-                                    kind,
-                                    namespace,
-                                    label_selector,
-                                    field_selector,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        format!("[{namespace}] {api_version}/{kind}"),
-                                        "List namespaced Kubernetes resource",
-                                        {
-                                            kubernetes::list_resources_by_namespace(
-                                                kubernetes_client.as_mut(),
-                                                &api_version,
-                                                &kind,
-                                                &namespace,
-                                                label_selector,
-                                                field_selector,
-                                            )
-                                        }
-                                    )
-                                }
-                                CallbackRequestType::KubernetesListResourceAll {
-                                    api_version,
-                                    kind,
-                                    label_selector,
-                                    field_selector,
-                                } => {
-                                    handle_callback!(
-                                        req,
-                                        format!("{api_version}/{kind}"),
-                                        "List Kubernetes resource",
-                                        {
-                                            kubernetes::list_resources_all(
-                                                kubernetes_client.as_mut(),
-                                                &api_version,
-                                                &kind,
-                                                label_selector,
-                                                field_selector,
-                                            )
-                                        }
-                                    )
-                                }
-                                CallbackRequestType::KubernetesGetResource {
-                                    api_version,
-                                    kind,
-                                    name,
-                                    namespace,
-                                    disable_cache,
-                                } => {
-                                    if disable_cache {
-                                        handle_callback!(
-                                            req,
-                                            format!("{api_version}/{kind}"),
-                                            "Get Kubernetes resource - no cache",
-                                            {
-                                                kubernetes::get_resource(
-                                                    kubernetes_client.as_mut(),
-                                                    &api_version,
-                                                    &kind,
-                                                    &name,
-                                                    namespace.as_deref(),
-                                                )
-                                            }
-                                        )
-                                    } else {
-                                        handle_callback!(
-                                            req,
-                                            format!("{api_version}/{kind}"),
-                                            "Get Kubernetes resource",
-                                            {
-                                                kubernetes::get_resource_cached(
-                                                    kubernetes_client.as_mut(),
-                                                    &api_version,
-                                                    &kind,
-                                                    &name,
-                                                    namespace.as_deref(),
-                                                )
-                                            }
-                                        )
-                                    }
-                                }
-                                CallbackRequestType::KubernetesGetResourcePluralName { api_version, kind } => {
-                                    handle_callback!(
-                                        req,
-                                        format!("{api_version}/{kind}"),
-                                        "Get Kubernetes resource plural name",
-                                        {
-                                            kubernetes::get_resource_plural_name(
-                                                kubernetes_client.as_mut(),
-                                                &api_version,
-                                                &kind,
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                        });
-                    }
+                        self.handle_request(req).await;
+                   }
                 }
             }
         }
+    }
+
+    async fn handle_request(&mut self, req: CallbackRequest) {
+        let oci_client = self.oci_client.clone();
+        let mut sigstore_client = self.sigstore_client.clone();
+        let mut kubernetes_client = self.kubernetes_client.clone();
+
+        tokio::spawn(async move {
+            match req.request {
+                CallbackRequestType::OciManifestDigest { image } => {
+                    handle_callback!(req, image, "Image digest computed", {
+                        oci::get_oci_digest_cached(&oci_client, &image)
+                    });
+                }
+                CallbackRequestType::OciManifest { image } => {
+                    handle_callback!(req, image, "Image manifest computed", {
+                        oci::get_oci_manifest_cached(&oci_client, &image)
+                    });
+                }
+                CallbackRequestType::SigstorePubKeyVerify {
+                    image,
+                    pub_keys,
+                    annotations,
+                } => {
+                    handle_callback!(req, image, "Sigstore pub key verification done", {
+                        get_sigstore_pub_key_verification_cached(
+                            &mut sigstore_client,
+                            image.clone(),
+                            pub_keys,
+                            annotations,
+                        )
+                    });
+                }
+                CallbackRequestType::SigstoreKeylessVerify {
+                    image,
+                    keyless,
+                    annotations,
+                } => {
+                    handle_callback!(req, image, "Sigstore keyless verification done", {
+                        get_sigstore_keyless_verification_cached(
+                            &mut sigstore_client,
+                            image.clone(),
+                            keyless,
+                            annotations,
+                        )
+                    });
+                }
+                CallbackRequestType::SigstoreKeylessPrefixVerify {
+                    image,
+                    keyless_prefix,
+                    annotations,
+                } => {
+                    handle_callback!(req, image, "Sigstore keyless prefix verification done", {
+                        get_sigstore_keyless_prefix_verification_cached(
+                            &mut sigstore_client,
+                            image.clone(),
+                            keyless_prefix,
+                            annotations,
+                        )
+                    });
+                }
+                CallbackRequestType::SigstoreGithubActionsVerify {
+                    image,
+                    owner,
+                    repo,
+                    annotations,
+                } => {
+                    handle_callback!(req, image, "Sigstore GitHub Action verification done", {
+                        get_sigstore_github_actions_verification_cached(
+                            &mut sigstore_client,
+                            image.clone(),
+                            owner,
+                            repo,
+                            annotations,
+                        )
+                    });
+                }
+                CallbackRequestType::SigstoreCertificateVerify {
+                    image,
+                    certificate,
+                    certificate_chain,
+                    require_rekor_bundle,
+                    annotations,
+                } => {
+                    handle_callback!(req, image, "Sigstore GitHub Action verification done", {
+                        get_sigstore_certificate_verification_cached(
+                            &mut sigstore_client,
+                            &image,
+                            &certificate,
+                            certificate_chain.as_deref(),
+                            require_rekor_bundle,
+                            annotations,
+                        )
+                    })
+                }
+                CallbackRequestType::DNSLookupHost { host } => {
+                    let response = dns_lookup::lookup_host(&host)
+                        .map(|ips| {
+                            let res = LookupResponse {
+                                ips: ips.iter().map(|ip| ip.to_string()).collect(),
+                            };
+                            CallbackResponse {
+                                payload: serde_json::to_vec(&res).unwrap(),
+                            }
+                        })
+                        .map_err(anyhow::Error::new);
+
+                    if let Err(e) = req.response_channel.send(response) {
+                        warn!("callback handler: cannot send response back: {:?}", e);
+                    }
+                }
+                CallbackRequestType::KubernetesListResourceNamespace {
+                    api_version,
+                    kind,
+                    namespace,
+                    label_selector,
+                    field_selector,
+                } => {
+                    handle_callback!(
+                        req,
+                        format!("[{namespace}] {api_version}/{kind}"),
+                        "List namespaced Kubernetes resource",
+                        {
+                            kubernetes::list_resources_by_namespace(
+                                kubernetes_client.as_mut(),
+                                &api_version,
+                                &kind,
+                                &namespace,
+                                label_selector,
+                                field_selector,
+                            )
+                        }
+                    )
+                }
+                CallbackRequestType::KubernetesListResourceAll {
+                    api_version,
+                    kind,
+                    label_selector,
+                    field_selector,
+                } => {
+                    handle_callback!(
+                        req,
+                        format!("{api_version}/{kind}"),
+                        "List Kubernetes resource",
+                        {
+                            kubernetes::list_resources_all(
+                                kubernetes_client.as_mut(),
+                                &api_version,
+                                &kind,
+                                label_selector,
+                                field_selector,
+                            )
+                        }
+                    )
+                }
+                CallbackRequestType::KubernetesGetResource {
+                    api_version,
+                    kind,
+                    name,
+                    namespace,
+                    disable_cache,
+                } => {
+                    if disable_cache {
+                        handle_callback!(
+                            req,
+                            format!("{api_version}/{kind}"),
+                            "Get Kubernetes resource - no cache",
+                            {
+                                kubernetes::get_resource(
+                                    kubernetes_client.as_mut(),
+                                    &api_version,
+                                    &kind,
+                                    &name,
+                                    namespace.as_deref(),
+                                )
+                            }
+                        )
+                    } else {
+                        handle_callback!(
+                            req,
+                            format!("{api_version}/{kind}"),
+                            "Get Kubernetes resource",
+                            {
+                                kubernetes::get_resource_cached(
+                                    kubernetes_client.as_mut(),
+                                    &api_version,
+                                    &kind,
+                                    &name,
+                                    namespace.as_deref(),
+                                )
+                            }
+                        )
+                    }
+                }
+                CallbackRequestType::KubernetesGetResourcePluralName { api_version, kind } => {
+                    handle_callback!(
+                        req,
+                        format!("{api_version}/{kind}"),
+                        "Get Kubernetes resource plural name",
+                        {
+                            kubernetes::get_resource_plural_name(
+                                kubernetes_client.as_mut(),
+                                &api_version,
+                                &kind,
+                            )
+                        }
+                    )
+                }
+            }
+        });
     }
 }
