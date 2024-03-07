@@ -1,22 +1,23 @@
 use anyhow::{anyhow, Result};
 use kube::core::{DynamicObject, ObjectList};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 
 use crate::callback_handler::kubernetes::{reflector::Reflector, ApiVersionKind, KubeResource};
 
+#[derive(Clone)]
 pub(crate) struct Client {
     kube_client: kube::Client,
-    kube_resources: RwLock<HashMap<ApiVersionKind, KubeResource>>,
-    reflectors: RwLock<HashMap<String, Reflector>>,
+    kube_resources: Arc<RwLock<HashMap<ApiVersionKind, KubeResource>>>,
+    reflectors: Arc<RwLock<HashMap<String, Reflector>>>,
 }
 
 impl Client {
     pub fn new(client: kube::Client) -> Self {
         Self {
             kube_client: client,
-            kube_resources: RwLock::new(HashMap::new()),
-            reflectors: RwLock::new(HashMap::new()),
+            kube_resources: Arc::new(RwLock::new(HashMap::new())),
+            reflectors: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 

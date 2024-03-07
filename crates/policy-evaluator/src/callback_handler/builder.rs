@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::FulcioAndRekorData;
@@ -61,7 +63,7 @@ impl<'a> CallbackHandlerBuilder<'a> {
     /// Create a CallbackHandler object
     pub fn build(self) -> Result<CallbackHandler> {
         let (tx, rx) = mpsc::channel::<CallbackRequest>(self.channel_buffer_size);
-        let oci_client = oci::Client::new(self.oci_sources.clone());
+        let oci_client = Arc::new(oci::Client::new(self.oci_sources.clone()));
         let sigstore_client = sigstore_verification::Client::new(
             self.oci_sources.clone(),
             self.fulcio_and_rekor_data,

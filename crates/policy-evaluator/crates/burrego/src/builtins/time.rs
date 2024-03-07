@@ -91,16 +91,7 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
         }
     };
 
-    let unix_epoch = DateTime::<chrono::Utc>::from_naive_utc_and_offset(
-        chrono::NaiveDateTime::from_timestamp_opt(0, 0).ok_or_else(|| {
-            BurregoError::BuiltinError {
-                name: "time.date".to_string(),
-                message: "cannot create timestamp".to_string(),
-            }
-        })?,
-        chrono::Utc,
-    );
-    let dt = unix_epoch
+    let dt = DateTime::UNIX_EPOCH
         .checked_add_signed(Duration::nanoseconds(nanoseconds))
         .ok_or_else(|| BurregoError::BuiltinError {
             name: "time.date".to_string(),
@@ -112,16 +103,7 @@ pub fn date(args: &[serde_json::Value]) -> Result<serde_json::Value> {
 }
 
 pub fn date_local(ns: i64) -> Result<serde_json::Value> {
-    let unix_epoch = DateTime::<chrono::Utc>::from_naive_utc_and_offset(
-        chrono::NaiveDateTime::from_timestamp_opt(0, 0).ok_or_else(|| {
-            BurregoError::BuiltinError {
-                name: "time.date".to_string(),
-                message: "cannot create timestamp".to_string(),
-            }
-        })?,
-        chrono::Utc,
-    );
-    let dt = unix_epoch
+    let dt = DateTime::UNIX_EPOCH
         .checked_add_signed(Duration::nanoseconds(ns))
         .ok_or_else(|| BurregoError::BuiltinError {
             name: "time.date".to_string(),
@@ -152,7 +134,7 @@ mod test {
     fn date_with_no_tz() {
         let input_dt = Local::now().naive_utc();
 
-        let args: Vec<serde_json::Value> = vec![json!(input_dt.timestamp_nanos_opt())];
+        let args: Vec<serde_json::Value> = vec![json!(input_dt.and_utc().timestamp_nanos_opt())];
 
         let actual = date(&args);
         assert!(actual.is_ok());
@@ -184,7 +166,8 @@ mod test {
     fn date_with_local_tz() {
         let input_dt = Local::now().naive_utc();
 
-        let args: Vec<serde_json::Value> = vec![json!([input_dt.timestamp_nanos_opt(), "Local"])];
+        let args: Vec<serde_json::Value> =
+            vec![json!([input_dt.and_utc().timestamp_nanos_opt(), "Local"])];
 
         let actual = date(&args);
         assert!(actual.is_ok());
