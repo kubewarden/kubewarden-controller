@@ -395,7 +395,7 @@ fn send_request_and_wait_for_response(
     binding: &str,
     operation: &str,
     req: CallbackRequest,
-    mut rx: Receiver<Result<CallbackResponse>>,
+    rx: Receiver<Result<CallbackResponse>>,
     eval_ctx: &EvaluationContext,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     let cb_channel: mpsc::Sender<CallbackRequest> = if let Some(c) =
@@ -418,36 +418,29 @@ fn send_request_and_wait_for_response(
     }
 
     // wait for the response
-    loop {
-        match rx.try_recv() {
-            Ok(msg) => {
-                return match msg {
-                    Ok(resp) => Ok(resp.payload),
-                    Err(e) => {
-                        error!(
-                            policy_id,
-                            binding,
-                            operation,
-                            error = e.to_string().as_str(),
-                            "callback evaluation failed"
-                        );
-                        Err(format!("Callback evaluation failure: {e:?}").into())
-                    }
-                }
-            }
-            Err(oneshot::error::TryRecvError::Empty) => {
-                //  do nothing, keep waiting for a reply
-            }
+    match rx.blocking_recv() {
+        Ok(msg) => match msg {
+            Ok(resp) => Ok(resp.payload),
             Err(e) => {
                 error!(
                     policy_id,
                     binding,
                     operation,
                     error = e.to_string().as_str(),
-                    "Cannot process Wasm guest request: error obtaining response over callback channel"
+                    "callback evaluation failed"
                 );
-                return Err("Error obtaining response over callback channel".into());
+                Err(format!("Callback evaluation failure: {e:?}").into())
             }
+        },
+        Err(e) => {
+            error!(
+                policy_id,
+                binding,
+                operation,
+                error = e.to_string().as_str(),
+                "Cannot process Wasm guest request: error obtaining response over callback channel"
+            );
+            Err("Error obtaining response over callback channel".into())
         }
     }
 }
