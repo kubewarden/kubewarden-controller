@@ -41,6 +41,7 @@ pub struct Config {
     pub log_fmt: String,
     pub log_no_color: bool,
     pub daemon: bool,
+    pub enable_pprof: bool,
     pub daemon_pid_file: String,
     pub daemon_stdout_file: Option<String>,
     pub daemon_stderr_file: Option<String>,
@@ -131,6 +132,10 @@ impl Config {
                 key_file,
             })
         };
+        let enable_pprof = matches
+            .get_one::<bool>("enable-pprof")
+            .expect("clap should have assigned a default value")
+            .to_owned();
 
         Ok(Self {
             addr,
@@ -152,6 +157,7 @@ impl Config {
             daemon_pid_file,
             daemon_stdout_file,
             daemon_stderr_file,
+            enable_pprof,
         })
     }
 }

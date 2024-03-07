@@ -160,6 +160,11 @@ pub(crate) fn build_cli() -> Command {
                 .env("KUBEWARDEN_IGNORE_KUBERNETES_CONNECTION_FAILURE")
                 .action(ArgAction::SetTrue)
                 .help("Do not exit with an error if the Kubernetes connection fails. This will cause context aware policies to break when there's no connection with Kubernetes."),
+            Arg::new("enable-pprof")
+                .long("enable-pprof")
+                .env("KUBEWARDEN_ENABLE_PPROF")
+                .action(ArgAction::SetTrue)
+                .help("Enable pprof profiling"),
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 
