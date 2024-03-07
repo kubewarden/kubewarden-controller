@@ -288,18 +288,19 @@ async fn test_runtime_context_aware<F, Fut>(
         ]),
     };
 
-    let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
-
     let request_data = load_request_data(request_file_path);
     let request: AdmissionRequest =
         serde_json::from_slice(&request_data).expect("cannot deserialize request");
 
-    let admission_response = policy_evaluator.validate(
-        ValidateRequest::AdmissionRequest(request),
-        &PolicySettings::default(),
-    );
+    tokio::task::spawn_blocking(move || {
+        let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
+        let admission_response = policy_evaluator.validate(
+            ValidateRequest::AdmissionRequest(request),
+            &PolicySettings::default(),
+        );
 
-    assert!(admission_response.allowed, "the admission request should have been accepted, it has been rejected with this details: {:?}", admission_response);
+        assert!(admission_response.allowed, "the admission request should have been accepted, it has been rejected with this details: {:?}", admission_response);
+    }).await.unwrap();
 
     callback_handler_shutdown_channel_tx
         .send(())

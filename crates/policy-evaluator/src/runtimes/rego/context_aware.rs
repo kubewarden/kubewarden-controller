@@ -87,7 +87,7 @@ fn make_request_via_callback_channel(
     request_type: CallbackRequestType,
     callback_channel: &mpsc::Sender<CallbackRequest>,
 ) -> Result<CallbackResponse> {
-    let (tx, mut rx) = oneshot::channel::<std::result::Result<CallbackResponse, wasmtime::Error>>();
+    let (tx, rx) = oneshot::channel::<std::result::Result<CallbackResponse, wasmtime::Error>>();
     let req = CallbackRequest {
         request: request_type,
         response_channel: tx,
@@ -96,17 +96,9 @@ fn make_request_via_callback_channel(
         .try_send(req)
         .map_err(|e| RegoRuntimeError::CallbackSend(e.to_string()))?;
 
-    loop {
-        // Note: we cannot use `rx.blocking_recv`. The code would compile, but at runtime we would
-        // have a panic because this function is used inside of an async block. The `blocking_recv`
-        // method causes the tokio reactor to stop, which leads to a panic
-        match rx.try_recv() {
-            Ok(msg) => return msg.map_err(RegoRuntimeError::CallbackRequest),
-            Err(oneshot::error::TryRecvError::Empty) => {
-                //  do nothing, keep waiting for a reply
-            }
-            Err(e) => return Err(RegoRuntimeError::CallbackResponse(e.to_string())),
-        }
+    match rx.blocking_recv() {
+        Ok(msg) => msg.map_err(RegoRuntimeError::CallbackRequest),
+        Err(e) => Err(RegoRuntimeError::CallbackResponse(e.to_string())),
     }
 }
 
@@ -187,10 +179,14 @@ pub(crate) mod tests {
             req.response_channel.send(Ok(callback_response)).unwrap();
         });
 
-        let actual = get_all_resources_by_type(&callback_tx, &resource).unwrap();
-        let actual_json = serde_json::to_value(actual).unwrap();
-        let expected_json = serde_json::to_value(services_list).unwrap();
-        assert_json_eq!(actual_json, expected_json);
+        tokio::task::spawn_blocking(move || {
+            let actual = get_all_resources_by_type(&callback_tx, &resource).unwrap();
+            let actual_json = serde_json::to_value(actual).unwrap();
+            let expected_json = serde_json::to_value(services_list).unwrap();
+            assert_json_eq!(actual_json, expected_json);
+        })
+        .await
+        .unwrap();
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -232,7 +228,11 @@ pub(crate) mod tests {
             req.response_channel.send(Ok(callback_response)).unwrap();
         });
 
-        let actual = get_plural_names(&callback_tx, &resources).unwrap();
-        assert_eq!(actual, expected_names);
+        tokio::task::spawn_blocking(move || {
+            let actual = get_plural_names(&callback_tx, &resources).unwrap();
+            assert_eq!(actual, expected_names);
+        })
+        .await
+        .unwrap();
     }
 }
