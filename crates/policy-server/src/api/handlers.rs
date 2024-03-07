@@ -1,6 +1,6 @@
 use axum::{
-    extract::{self, FromRequest},
-    http::StatusCode,
+    extract::{self, FromRequest, Query},
+    http::{header, StatusCode},
     response::IntoResponse,
     Json,
 };
@@ -8,19 +8,23 @@ use policy_evaluator::{
     admission_request::AdmissionRequest, admission_response::AdmissionResponse,
     policy_evaluator::ValidateRequest,
 };
-use serde::Serialize;
+
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::task;
 use tracing::{debug, error, Span};
 
-use crate::api::{
-    admission_review::{AdmissionReviewRequest, AdmissionReviewResponse},
-    api_error::ApiError,
-    raw_review::{RawReviewRequest, RawReviewResponse},
-    service::{evaluate, RequestOrigin},
-    state::ApiServerState,
+use crate::{
+    api::{
+        admission_review::{AdmissionReviewRequest, AdmissionReviewResponse},
+        api_error::ApiError,
+        raw_review::{RawReviewRequest, RawReviewResponse},
+        service::{evaluate, RequestOrigin},
+        state::ApiServerState,
+    },
+    profiling,
 };
-use crate::evaluation::errors::EvaluationError;
+use crate::{evaluation::errors::EvaluationError, profiling::ReportGenerationError};
 
 // create an extractor that internally uses `axum::Json` but has a custom rejection
 #[derive(FromRequest)]
@@ -169,6 +173,50 @@ pub(crate) async fn validate_raw_handler(
     Ok(Json(RawReviewResponse::new(response)))
 }
 
+#[derive(Deserialize)]
+pub(crate) struct ProfileParams {
+    /// profiling frequency (Hz)
+    #[serde(default = "profiling::default_profiling_frequency")]
+    pub frequency: i32,
+
+    /// profiling time interval (seconds)
+    #[serde(default = "profiling::default_profiling_interval")]
+    pub interval: u64,
+}
+
+// Generate a pprof CPU profile using google's pprof format
+// The report is generated and sent to the user as binary data
+pub(crate) async fn pprof_get_cpu(
+    profiling_params: Query<ProfileParams>,
+) -> Result<impl axum::response::IntoResponse, (StatusCode, ApiError)> {
+    let frequency = profiling_params.frequency;
+    let interval = profiling_params.interval;
+
+    let end = async move {
+        tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
+        Ok(())
+    };
+
+    let body = profiling::start_one_cpu_profile(end, frequency)
+        .await
+        .map_err(handle_pprof_error)?;
+
+    let mut headers = header::HeaderMap::new();
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        r#"attachment; filename="cpu_profile"#.parse().unwrap(),
+    );
+    headers.insert(
+        header::CONTENT_LENGTH,
+        body.len().to_string().parse().unwrap(),
+    );
+    headers.insert(
+        header::CONTENT_TYPE,
+        mime::APPLICATION_OCTET_STREAM.to_string().parse().unwrap(),
+    );
+
+    Ok((headers, body))
+}
 pub(crate) async fn readiness_handler() -> StatusCode {
     StatusCode::OK
 }
@@ -260,4 +308,16 @@ fn handle_evaluation_error(error: EvaluationError) -> (StatusCode, ApiError) {
             )
         }
     }
+}
+
+fn handle_pprof_error(error: ReportGenerationError) -> (StatusCode, ApiError) {
+    error!("pprof error: {}", error);
+
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        ApiError {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: "Something went wrong".to_owned(),
+        },
+    )
 }

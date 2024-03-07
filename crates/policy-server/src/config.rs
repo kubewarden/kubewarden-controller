@@ -41,6 +41,7 @@ pub struct Config {
     pub log_fmt: String,
     pub log_no_color: bool,
     pub daemon: bool,
+    pub enable_pprof: bool,
     pub daemon_pid_file: String,
     pub daemon_stdout_file: Option<String>,
     pub daemon_stderr_file: Option<String>,
@@ -61,7 +62,10 @@ impl Config {
             .get_one::<String>("policies-download-dir")
             .map(PathBuf::from)
             .expect("This should not happen, there's a default value for policies-download-dir");
-        let policy_evaluation_limit_seconds = if matches.contains_id("disable-timeout-protection") {
+        let policy_evaluation_limit_seconds = if *matches
+            .get_one::<bool>("disable-timeout-protection")
+            .expect("clap should have set a default value")
+        {
             None
         } else {
             Some(
@@ -82,16 +86,24 @@ impl Config {
             .get_one::<String>("always-accept-admission-reviews-on-namespace")
             .map(|s| s.to_owned());
 
-        let metrics_enabled = matches.contains_id("enable-metrics");
-        let ignore_kubernetes_connection_failure =
-            matches.contains_id("ignore-kubernetes-connection-failure");
+        let metrics_enabled = matches
+            .get_one::<bool>("enable-metrics")
+            .expect("clap should have set a default value")
+            .to_owned();
+        let ignore_kubernetes_connection_failure = matches
+            .get_one::<bool>("ignore-kubernetes-connection-failure")
+            .expect("clap should have set a default value")
+            .to_owned();
         let verification_config = verification_config(matches)?;
         let sigstore_cache_dir = matches
             .get_one::<String>("sigstore-cache-dir")
             .map(PathBuf::from)
             .expect("This should not happen, there's a default value for sigstore-cache-dir");
 
-        let daemon = matches.contains_id("daemon");
+        let daemon = matches
+            .get_one::<bool>("daemon")
+            .expect("clap should have set a default value")
+            .to_owned();
         let daemon_pid_file = matches
             .get_one::<String>("daemon-pid-file")
             .expect("This should not happen, there's a default value for daemon-pid-file")
@@ -107,7 +119,10 @@ impl Config {
             .get_one::<String>("log-fmt")
             .expect("This should not happen, there's a default value for log-fmt")
             .to_owned();
-        let log_no_color = matches.contains_id("log-no-color");
+        let log_no_color = matches
+            .get_one::<bool>("log-no-color")
+            .expect("clap should have assigned a default value")
+            .to_owned();
         let (cert_file, key_file) = tls_files(matches)?;
         let tls_config = if cert_file.is_empty() {
             None
@@ -117,6 +132,10 @@ impl Config {
                 key_file,
             })
         };
+        let enable_pprof = matches
+            .get_one::<bool>("enable-pprof")
+            .expect("clap should have assigned a default value")
+            .to_owned();
 
         Ok(Self {
             addr,
@@ -138,6 +157,7 @@ impl Config {
             daemon_pid_file,
             daemon_stdout_file,
             daemon_stderr_file,
+            enable_pprof,
         })
     }
 }
@@ -288,6 +308,9 @@ fn read_policies_file(path: &Path) -> Result<HashMap<String, Policy>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cli;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn get_settings_when_data_is_provided() {
@@ -439,5 +462,42 @@ example:
 
         let settings = json_data.unwrap();
         assert!(settings.is_empty());
+    }
+
+    #[test]
+    fn boolean_flags() {
+        let policies_yaml = r#"
+---
+example:
+  url: file:///tmp/namespace-validate-policy.wasm
+  settings: {}
+"#;
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(policies_yaml.as_bytes()).unwrap();
+        let file_path = temp_file.into_temp_path();
+        let policies_flag = format!("--policies={}", file_path.to_str().unwrap());
+
+        let boolean_flags = [
+            "--enable-pprof",
+            "--log-no-color",
+            "--daemon",
+            "--enable-metrics",
+        ];
+
+        for provide_flag in [true, false] {
+            let cli = cli::build_cli();
+
+            let mut flags = vec!["policy-server", &policies_flag];
+            if provide_flag {
+                flags.extend(boolean_flags);
+            }
+
+            let matches = cli.clone().try_get_matches_from(flags).unwrap();
+            let config = Config::from_args(&matches).unwrap();
+            assert_eq!(provide_flag, config.enable_pprof);
+            assert_eq!(provide_flag, config.log_no_color);
+            assert_eq!(provide_flag, config.daemon);
+            assert_eq!(provide_flag, config.metrics_enabled);
+        }
     }
 }

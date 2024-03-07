@@ -69,6 +69,7 @@ pub(crate) async fn app() -> Router {
         daemon_pid_file: "policy_server.pid".to_owned(),
         daemon_stdout_file: None,
         daemon_stderr_file: None,
+        enable_pprof: true,
     };
 
     let server = PolicyServer::new_from_config(config).await.unwrap();

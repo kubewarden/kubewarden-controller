@@ -4,9 +4,13 @@ mod policy_downloader;
 #[cfg(test)]
 mod test_utils;
 
+#[cfg(test)]
+mod cli;
+
 pub mod api;
 pub mod config;
 pub mod metrics;
+pub mod profiling;
 pub mod tracing;
 
 use ::tracing::{debug, error, info, Level};
@@ -29,7 +33,7 @@ use tokio::time;
 use tower_http::trace::{self, TraceLayer};
 
 use crate::api::handlers::{
-    audit_handler, readiness_handler, validate_handler, validate_raw_handler,
+    audit_handler, pprof_get_cpu, readiness_handler, validate_handler, validate_raw_handler,
 };
 use crate::api::state::ApiServerState;
 use crate::evaluation::{
@@ -176,7 +180,7 @@ impl PolicyServer {
             None
         };
 
-        let router = Router::new()
+        let mut router = Router::new()
             .route("/audit/:policy_id", post(audit_handler))
             .route("/validate/:policy_id", post(validate_handler))
             .route("/validate_raw/:policy_id", post(validate_raw_handler))
@@ -187,6 +191,10 @@ impl PolicyServer {
                     .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
                     .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
             );
+        if config.enable_pprof {
+            let pprof_router = Router::new().route("/debug/pprof/cpu", get(pprof_get_cpu));
+            router = Router::new().merge(router).merge(pprof_router);
+        }
 
         Ok(Self {
             router,
