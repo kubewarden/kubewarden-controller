@@ -4,6 +4,9 @@ mod policy_downloader;
 #[cfg(test)]
 mod test_utils;
 
+#[cfg(test)]
+mod cli;
+
 pub mod api;
 pub mod config;
 pub mod metrics;

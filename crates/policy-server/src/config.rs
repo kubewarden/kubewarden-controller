@@ -308,6 +308,9 @@ fn read_policies_file(path: &Path) -> Result<HashMap<String, Policy>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cli;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn get_settings_when_data_is_provided() {
@@ -459,5 +462,42 @@ example:
 
         let settings = json_data.unwrap();
         assert!(settings.is_empty());
+    }
+
+    #[test]
+    fn boolean_flags() {
+        let policies_yaml = r#"
+---
+example:
+  url: file:///tmp/namespace-validate-policy.wasm
+  settings: {}
+"#;
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(policies_yaml.as_bytes()).unwrap();
+        let file_path = temp_file.into_temp_path();
+        let policies_flag = format!("--policies={}", file_path.to_str().unwrap());
+
+        let boolean_flags = [
+            "--enable-pprof",
+            "--log-no-color",
+            "--daemon",
+            "--enable-metrics",
+        ];
+
+        for provide_flag in [true, false] {
+            let cli = cli::build_cli();
+
+            let mut flags = vec!["policy-server", &policies_flag];
+            if provide_flag {
+                flags.extend(boolean_flags);
+            }
+
+            let matches = cli.clone().try_get_matches_from(flags).unwrap();
+            let config = Config::from_args(&matches).unwrap();
+            assert_eq!(provide_flag, config.enable_pprof);
+            assert_eq!(provide_flag, config.log_no_color);
+            assert_eq!(provide_flag, config.daemon);
+            assert_eq!(provide_flag, config.metrics_enabled);
+        }
     }
 }
