@@ -40,13 +40,16 @@ pub(crate) async fn pull_and_bench(cfg: &PullAndBenchSettings) -> Result<()> {
             settings_validation_response.message
         ));
     }
+
     bench_with_configuration_labeled("validate_settings", &cfg.benchmark_cfg, || {
         let _settings_validation_response =
             policy_evaluator.validate_settings(&run_env.policy_settings);
     });
 
-    bench_with_configuration_labeled("validate", &cfg.benchmark_cfg, || {
-        let _response = policy_evaluator.validate(request.clone(), &run_env.policy_settings);
+    tokio::task::block_in_place(|| {
+        bench_with_configuration_labeled("validate", &cfg.benchmark_cfg, || {
+            let _response = policy_evaluator.validate(request.clone(), &run_env.policy_settings);
+        });
     });
 
     // The evaluation is done, we can shutdown the tokio task that is running

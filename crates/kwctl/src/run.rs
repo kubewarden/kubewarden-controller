@@ -180,7 +180,10 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
     });
 
     // evaluate request
-    let response = policy_evaluator.validate(run_env.request, &run_env.policy_settings);
+    let response = tokio::task::block_in_place(move || {
+        policy_evaluator.validate(run_env.request, &run_env.policy_settings)
+    });
+
     println!("{}", serde_json::to_string(&response)?);
 
     // The evaluation is done, we can shutdown the tokio task that is running
