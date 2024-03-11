@@ -8,7 +8,7 @@ edition = "2021"
 
 [dependencies]
 base64 = "0.22.0"
-chrono = { version = "0.4.34", default-features = false, features = ["clock"] }
+chrono = { version = "0.4.35", default-features = false, features = ["clock"] }
 chrono-tz = "0.8.6"
 gtmpl = "0.7.1"
 gtmpl_value = "0.5.1"
