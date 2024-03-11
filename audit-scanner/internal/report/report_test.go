@@ -151,7 +151,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 				SubjectSelector: &metav1.LabelSelector{},
 				Description:     "",
 				Properties: map[string]string{
-					PropertyPolicyUID:             "policy-uid",
+					propertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
 					typeValidating:                valueTypeTrue,
 				},
@@ -192,7 +192,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 				SubjectSelector: &metav1.LabelSelector{},
 				Description:     "The request was rejected",
 				Properties: map[string]string{
-					PropertyPolicyUID:             "policy-uid",
+					propertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
 					typeMutating:                  valueTypeTrue,
 				},
@@ -229,7 +229,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 				SubjectSelector: &metav1.LabelSelector{},
 				Description:     "",
 				Properties: map[string]string{
-					PropertyPolicyUID:             "policy-uid",
+					propertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
 					typeValidating:                valueTypeTrue,
 				},

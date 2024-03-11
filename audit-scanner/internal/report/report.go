@@ -18,7 +18,7 @@ func NewPolicyReport(resource unstructured.Unstructured) *wgpolicy.PolicyReport 
 			Name:      string(resource.GetUID()),
 			Namespace: resource.GetNamespace(),
 			Labels: map[string]string{
-				labelAppManagedBy: LabelApp,
+				labelAppManagedBy: labelApp,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -75,7 +75,7 @@ func NewClusterPolicyReport(resource unstructured.Unstructured) *wgpolicy.Cluste
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(resource.GetUID()),
 			Labels: map[string]string{
-				labelAppManagedBy: LabelApp,
+				labelAppManagedBy: labelApp,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -194,7 +194,7 @@ func computeProperties(policy policiesv1.Policy) map[string]string {
 	// same result can be reused in the next scan
 	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 	properties[propertyPolicyResourceVersion] = policy.GetResourceVersion()
-	properties[PropertyPolicyUID] = string(policy.GetUID())
+	properties[propertyPolicyUID] = string(policy.GetUID())
 
 	return properties
 }

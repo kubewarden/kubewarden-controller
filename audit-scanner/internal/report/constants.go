@@ -3,7 +3,7 @@ package report
 const (
 	policyReportSource            = "kubewarden"
 	propertyPolicyResourceVersion = "policy-resource-version"
-	PropertyPolicyUID             = "policy-uid"
+	propertyPolicyUID             = "policy-uid"
 )
 
 const (
@@ -34,5 +34,5 @@ const (
 
 const (
 	labelAppManagedBy = "app.kubernetes.io/managed-by"
-	LabelApp          = "kubewarden"
+	labelApp          = "kubewarden"
 )
