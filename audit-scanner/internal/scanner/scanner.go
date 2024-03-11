@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/kubewarden/audit-scanner/internal/k8s"
@@ -20,12 +21,15 @@ import (
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/semaphore"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+const parallelAuditRequests = int64(100)
 
 // Scanner verifies that existing resources don't violate any of the policies
 type Scanner struct {
@@ -105,6 +109,9 @@ func NewScanner(
 func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error {
 	log.Info().Str("namespace", nsName).Msg("namespace scan started")
 
+	semaphore := semaphore.NewWeighted(parallelAuditRequests)
+	var workers sync.WaitGroup
+
 	_, err := s.k8sClient.GetNamespace(ctx, nsName)
 	if err != nil {
 		return err
@@ -132,7 +139,20 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error {
 			if !ok {
 				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
-			s.auditResource(ctx, policies, *resource)
+
+			err := semaphore.Acquire(ctx, 1)
+			if err != nil {
+				return err
+			}
+			workers.Add(1)
+			policiesToAudit := policies
+
+			go func() {
+				defer semaphore.Release(1)
+				defer workers.Done()
+
+				s.auditResource(ctx, policiesToAudit, *resource)
+			}()
 
 			return nil
 		})
@@ -140,6 +160,9 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName string) error {
 			return err
 		}
 	}
+
+	workers.Wait()
+	log.Info().Msg("Namespaced resources scan finished")
 
 	return nil
 }
@@ -161,7 +184,9 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context) error {
 			err = errors.Join(err, e)
 		}
 	}
+
 	log.Info().Msg("all-namespaces scan finished")
+
 	return err
 }
 
@@ -171,6 +196,9 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context) error {
 // Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 	log.Info().Msg("clusterwide resources scan started")
+
+	semaphore := semaphore.NewWeighted(parallelAuditRequests)
+	var workers sync.WaitGroup
 
 	policies, err := s.policiesClient.GetClusterWidePolicies(ctx)
 	if err != nil {
@@ -195,7 +223,19 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
 
-			s.auditClusterResource(ctx, policies, *resource)
+			workers.Add(1)
+			err := semaphore.Acquire(ctx, 1)
+			if err != nil {
+				return err
+			}
+			policiesToAudit := policies
+
+			go func() {
+				defer semaphore.Release(1)
+				defer workers.Done()
+
+				s.auditClusterResource(ctx, policiesToAudit, *resource)
+			}()
 
 			return nil
 		})
@@ -204,7 +244,8 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context) error {
 		}
 	}
 
-	log.Info().Msg("clusterwide resources scan finished")
+	workers.Wait()
+	log.Info().Msg("Cluster-wide resources scan finished")
 
 	return nil
 }
