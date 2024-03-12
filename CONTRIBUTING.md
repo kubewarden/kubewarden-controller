@@ -122,4 +122,8 @@ If you are releasing the Kubewarden stack there are some steps that we can follo
 - [ ] Tag kwctl
 - [ ] Wait for all CI running in all the major components (audit scanner, controller, policy server and kwctl) to finish
 - [ ] Check if the Helm chart repository CI open a PR updating the Helm charts with the correct changes.
+    - [ ] Check if the `kubewarden-controller` chart versions are properly bumped
+    - [ ] Check if the `kubewarden-defaults` chart versions are properly bumped
+    - [ ] Check if the `kubewarden-crds` chart versions are properly bumped
+    - [ ] Check if kubewarden-controller, kubewarden-defaults and kubewarden-crds charts have the same `appVersion`
 - [ ] Check if CI in the Helm chart PR is green. If so, merge it
