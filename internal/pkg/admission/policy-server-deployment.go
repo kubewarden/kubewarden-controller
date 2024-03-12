@@ -334,7 +334,7 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 	if r.MetricsEnabled {
 		templateAnnotations[constants.OptelInjectAnnotation] = "true" //nolint:goconst
 
-		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "1"}
+		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
 			admissionContainer.Env[index] = envvar
 		} else {
