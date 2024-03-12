@@ -469,7 +469,7 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 	policyServer := &policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
 			Image: "image",
-			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "0"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
+			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "false"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
 		},
 	}
 	deployment := reconciler.deployment("v1", policyServer)
@@ -477,7 +477,7 @@ func TestPolicyServerDeploymentMetricConfigurationWithValueDefinedByUser(t *test
 	for _, envvar := range deployment.Spec.Template.Spec.Containers[0].Env {
 		if envvar.Name == constants.PolicyServerEnableMetricsEnvVar {
 			hasMetricEnvvar = true
-			if envvar.Value != "1" {
+			if envvar.Value != "true" {
 				t.Error("Present but not reconciled {} value", constants.PolicyServerEnableMetricsEnvVar)
 			}
 		}
@@ -504,7 +504,7 @@ func TestPolicyServerDeploymentTracingConfigurationWithValueDefinedByUser(t *tes
 	policyServer := &policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
 			Image: "image",
-			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "0"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
+			Env:   []corev1.EnvVar{{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "false"}, {Name: constants.PolicyServerLogFmtEnvVar, Value: "invalid"}},
 		},
 	}
 	deployment := reconciler.deployment("v1", policyServer)
