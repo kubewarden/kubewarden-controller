@@ -95,9 +95,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: taiki-e/install-action@dabb9c1ee51c21c545764a0d517f069ff52e6477 # v2.28.1
-        with:
-          tool: cargo-tarpaulin
+      - uses: kubewarden/github-actions/tarpaulin-install@971e9a094d010900399dafc13fd4787bffce6d81 #v3.1.18
       - name: Generate unit-tests coverage
         run: make coverage-unit-tests
       - name: Upload unit-tests coverage to Codecov
