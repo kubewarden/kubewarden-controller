@@ -110,8 +110,8 @@ setup-envtest: $(SETUP_ENVTEST) # Build setup-envtest
 
 .PHONY: unit-tests
 unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
-	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./internal/... -race -test.v -coverprofile=coverage/unit-tests/coverage-internal.txt -covermode=atomic
-	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... -race -test.v -coverprofile=coverage/unit-tests/coverage-pkg.txt -covermode=atomic
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./internal/... -race -test.v -coverprofile=coverage/unit-tests/coverage-internal.txt -covermode=atomic -coverpkg=all
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... -race -test.v -coverprofile=coverage/unit-tests/coverage-pkg.txt -covermode=atomic -coverpkg=all
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
