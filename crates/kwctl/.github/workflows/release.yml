@@ -132,6 +132,7 @@ jobs:
           script: |
             const {RELEASE_ID} = process.env
             const {TAG_NAME} = process.env
+            isPreRelease = ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
             github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -139,7 +140,8 @@ jobs:
               draft: false,
               tag_name: `${TAG_NAME}`,
               name: `${TAG_NAME}`,
-              prerelease: `${{ contains(github.event.workflow_run.head_branch, '-alpha') || contains(github.event.workflow_run.head_branch, '-beta') || contains(github.event.workflow_run.head_branch, '-rc') }}`
+              prerelease: isPreRelease,
+              make_latest: !isPreRelease
             });
 
       - name: Trigger chart update
