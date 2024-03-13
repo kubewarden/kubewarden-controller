@@ -2591,7 +2591,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.11.0-rc3"
+version = "1.11.0-rc4"
 dependencies = [
  "anyhow",
  "assert_cmd",
