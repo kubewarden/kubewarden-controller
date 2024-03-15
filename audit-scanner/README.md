@@ -116,6 +116,7 @@ results:
     properties:
       policy-resource-version: "2684810"
       policy-uid: 826dd4ef-9db5-408e-9482-455f278bf9bf
+      policy-name: safe-labels
       validating: "true"
     resourceSelector: {}
     result: fail
