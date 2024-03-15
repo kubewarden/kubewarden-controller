@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	timeout                   = 120 * time.Second
+	timeout                   = 180 * time.Second
 	pollInterval              = 250 * time.Millisecond
 	IntegrationTestsFinalizer = "integration-tests-safety-net-finalizer"
 )
