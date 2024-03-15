@@ -153,6 +153,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 				Properties: map[string]string{
 					propertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
+					propertyPolicyName:            "policy-name",
 					typeValidating:                valueTypeTrue,
 				},
 			},
@@ -194,6 +195,8 @@ func TestNewPolicyReportResult(t *testing.T) {
 				Properties: map[string]string{
 					propertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
+					propertyPolicyName:            "policy-name",
+					propertyPolicyNamespace:       "policy-namespace",
 					typeMutating:                  valueTypeTrue,
 				},
 			},
@@ -231,6 +234,8 @@ func TestNewPolicyReportResult(t *testing.T) {
 				Properties: map[string]string{
 					propertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
+					propertyPolicyName:            "policy-name",
+					propertyPolicyNamespace:       "policy-namespace",
 					typeValidating:                valueTypeTrue,
 				},
 			},

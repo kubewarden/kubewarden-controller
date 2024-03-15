@@ -4,6 +4,8 @@ const (
 	policyReportSource            = "kubewarden"
 	propertyPolicyResourceVersion = "policy-resource-version"
 	propertyPolicyUID             = "policy-uid"
+	propertyPolicyName            = "policy-name"
+	propertyPolicyNamespace       = "policy-namespace"
 )
 
 const (
