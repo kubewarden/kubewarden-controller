@@ -195,6 +195,10 @@ func computeProperties(policy policiesv1.Policy) map[string]string {
 	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 	properties[propertyPolicyResourceVersion] = policy.GetResourceVersion()
 	properties[propertyPolicyUID] = string(policy.GetUID())
+	properties[propertyPolicyName] = policy.GetName()
+	if policy.GetNamespace() != "" {
+		properties[propertyPolicyNamespace] = policy.GetNamespace()
+	}
 
 	return properties
 }
