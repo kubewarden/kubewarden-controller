@@ -27,8 +27,8 @@ cargo run --release -- \
   --workers 2 \
   --log-fmt otlp \
   --log-level debug \
-  --enable-metrics true \
-  --ignore-kubernetes-connection-failure true
+  --enable-metrics \
+  --ignore-kubernetes-connection-failure
 ```
 
 Some notes about this command:
