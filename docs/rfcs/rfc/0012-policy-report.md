@@ -98,7 +98,7 @@ security scanning tools as Falco or Kubebench).
 
 Kubewarden tailors its audit reports to the scope of the resources it
 evaluates. Depending on the resource's scope, it generates two types of
-reports: `PolicyReport` or  `ClusterPolicyReport`.
+reports: `PolicyReport` or `ClusterPolicyReport`.
 
 Both the `ClusterPolicyReport` and `PolicyReport` serve similar purposes and
 are similar in structure. The primary distinction between them lies in their
@@ -124,7 +124,6 @@ The `PolicyReport` provides these information:
 - Comprehensive details regarding all evaluations performed, including the
   policy utilized, the evaluated resource, the final outcome (acceptance,
   rejection, or failure), and any accompanying messages returned by the policy.
-
 
 The `PolicyReport` is kept updated during the lifetime of the audited resource,
 meaning:
@@ -172,10 +171,10 @@ The `PolicyReport` resource has the following fields:
 - `apiVersion` and `kind`: these are defined by the CRDs
 - `metadata`: this is the usual `meta/v1.ObjectMeta` resource. The `metadata` fields
   in use include:
-    - `name`: set with the audited resource UID.
-    - `ownerReference`: owner reference object pointing to the audited
-      resource. Hence, when the resource is deleted the Kubernetes garbage
-      collector will also remove the report.
+  - `name`: set with the audited resource UID.
+  - `ownerReference`: owner reference object pointing to the audited
+    resource. Hence, when the resource is deleted the Kubernetes garbage
+    collector will also remove the report.
 - `scope`: this is a `core/v1.ObjectReference` resource. We will use that to
   reference the audited resource that has been analyzed
 - `scopeSelector`: we will not use that, because we are using the `scope` field
@@ -217,19 +216,15 @@ to use its fields:
 - `subjectsSelector`: as we use policy report for single resource, we keep this field empty
 - `description`: this is used when the policy result is `fail` or `error`. It will hold
   the output message provided by the policy
-- `properties`: this dictionary will contains some additional information about 
-the policy like:
-    - `mutating`: boolean flag to show if is mutating policy 
-    - `validating`: boolean flag to show if is validating policy
-    - `context-aware`: boolean flat to signalize if the policy is policy context aware
-    - `policy-resource-version`: policy resource version
-    - `policy-uid`: policy UID
+- `properties`: this dictionary will contains some additional information about
+  the policy like: - `mutating`: boolean flag to show if is mutating policy - `validating`: boolean flag to show if is validating policy - `context-aware`: boolean flat to signalize if the policy is policy context aware - `policy-resource-version`: policy resource version - `policy-uid`: policy UID - `policy-name`: the policy metadata.name - `policy-namespace`: the policy namespace, when it is an AdmissionPolicy
 
 Let's see a concrete example about the contents of the `results` list.
 
 Assume the following scenario:
 
 - The Namespace being inspected contains:
+
   - 2 Pods: one privileged and another unprivileged
   - 1 AdmissionPolicy: `allow-privilege-escalation-psp` interested about Pods objects
 
@@ -250,53 +245,53 @@ metadata:
   name: 129958d1-c329-4248-a048-3c6ad85786bd
   namespace: default
   ownerReferences:
-  - apiVersion: v1
-    kind: Pod
-    name: nginx-unprivileged
-    uid: 129958d1-c329-4248-a048-3c6ad85786bd
+    - apiVersion: v1
+      kind: Pod
+      name: nginx-unprivileged
+      uid: 129958d1-c329-4248-a048-3c6ad85786bd
   resourceVersion: "2860"
   uid: 4cb64fa4-d89b-4d58-b778-5db0190111bf
 results:
-- policy: clusterwide-privileged-pods
-  properties:
-    policy-resource-version: "1724"
-    policy-uid: 4152741c-d0b2-4886-8897-15832e52079c
-    validating: "true"
-  resourceSelector: {}
-  result: pass
-  scored: true
-  source: kubewarden
-  timestamp:
-    nanos: 0
-    seconds: 1709753700
-- category: Resource validation
-  policy: clusterwide-safe-labels
-  properties:
-    policy-resource-version: "2725"
-    policy-uid: e57022c3-146f-4470-991f-cc0287a29eab
-    validating: "true"
-  resourceSelector: {}
-  result: pass
-  scored: true
-  severity: low
-  source: kubewarden
-  timestamp:
-    nanos: 0
-    seconds: 1709753700
-- category: PSP
-  policy: namespaced-default-allow-privilege-escalation-psp
-  properties:
-    mutating: "true"
-    policy-resource-version: "1723"
-    policy-uid: 9e3efc5c-e02f-4694-90c7-8157903ec0bc
-  resourceSelector: {}
-  result: pass
-  scored: true
-  severity: medium
-  source: kubewarden
-  timestamp:
-    nanos: 0
-    seconds: 1709753700
+  - policy: clusterwide-privileged-pods
+    properties:
+      policy-resource-version: "1724"
+      policy-uid: 4152741c-d0b2-4886-8897-15832e52079c
+      validating: "true"
+    resourceSelector: {}
+    result: pass
+    scored: true
+    source: kubewarden
+    timestamp:
+      nanos: 0
+      seconds: 1709753700
+  - category: Resource validation
+    policy: clusterwide-safe-labels
+    properties:
+      policy-resource-version: "2725"
+      policy-uid: e57022c3-146f-4470-991f-cc0287a29eab
+      validating: "true"
+    resourceSelector: {}
+    result: pass
+    scored: true
+    severity: low
+    source: kubewarden
+    timestamp:
+      nanos: 0
+      seconds: 1709753700
+  - category: PSP
+    policy: namespaced-default-allow-privilege-escalation-psp
+    properties:
+      mutating: "true"
+      policy-resource-version: "1723"
+      policy-uid: 9e3efc5c-e02f-4694-90c7-8157903ec0bc
+    resourceSelector: {}
+    result: pass
+    scored: true
+    severity: medium
+    source: kubewarden
+    timestamp:
+      nanos: 0
+      seconds: 1709753700
 scope:
   apiVersion: v1
   kind: Pod
@@ -321,54 +316,54 @@ metadata:
   name: feaad3c9-8534-496b-a04b-0707f6876133
   namespace: default
   ownerReferences:
-  - apiVersion: v1
-    kind: Pod
-    name: nginx-privileged
-    uid: feaad3c9-8534-496b-a04b-0707f6876133
+    - apiVersion: v1
+      kind: Pod
+      name: nginx-privileged
+      uid: feaad3c9-8534-496b-a04b-0707f6876133
   resourceVersion: "2782"
   uid: 83041dab-6bbb-4839-ab8d-66e97ebfe4b3
 results:
-- message: Privileged container is not allowed
-  policy: clusterwide-privileged-pods
-  properties:
-    policy-resource-version: "1724"
-    policy-uid: 4152741c-d0b2-4886-8897-15832e52079c
-    validating: "true"
-  resourceSelector: {}
-  result: fail
-  scored: true
-  source: kubewarden
-  timestamp:
-    nanos: 0
-    seconds: 1709753640
-- category: Resource validation
-  policy: clusterwide-safe-labels
-  properties:
-    policy-resource-version: "2725"
-    policy-uid: e57022c3-146f-4470-991f-cc0287a29eab
-    validating: "true"
-  resourceSelector: {}
-  result: pass
-  scored: true
-  severity: low
-  source: kubewarden
-  timestamp:
-    nanos: 0
-    seconds: 1709753640
-- category: PSP
-  policy: namespaced-default-allow-privilege-escalation-psp
-  properties:
-    mutating: "true"
-    policy-resource-version: "1723"
-    policy-uid: 9e3efc5c-e02f-4694-90c7-8157903ec0bc
-  resourceSelector: {}
-  result: pass
-  scored: true
-  severity: medium
-  source: kubewarden
-  timestamp:
-    nanos: 0
-    seconds: 1709753640
+  - message: Privileged container is not allowed
+    policy: clusterwide-privileged-pods
+    properties:
+      policy-resource-version: "1724"
+      policy-uid: 4152741c-d0b2-4886-8897-15832e52079c
+      validating: "true"
+    resourceSelector: {}
+    result: fail
+    scored: true
+    source: kubewarden
+    timestamp:
+      nanos: 0
+      seconds: 1709753640
+  - category: Resource validation
+    policy: clusterwide-safe-labels
+    properties:
+      policy-resource-version: "2725"
+      policy-uid: e57022c3-146f-4470-991f-cc0287a29eab
+      validating: "true"
+    resourceSelector: {}
+    result: pass
+    scored: true
+    severity: low
+    source: kubewarden
+    timestamp:
+      nanos: 0
+      seconds: 1709753640
+  - category: PSP
+    policy: namespaced-default-allow-privilege-escalation-psp
+    properties:
+      mutating: "true"
+      policy-resource-version: "1723"
+      policy-uid: 9e3efc5c-e02f-4694-90c7-8157903ec0bc
+    resourceSelector: {}
+    result: pass
+    scored: true
+    severity: medium
+    source: kubewarden
+    timestamp:
+      nanos: 0
+      seconds: 1709753640
 scope:
   apiVersion: v1
   kind: Pod
@@ -788,6 +783,3 @@ tool that is going to be built around the `PolicyReport` CRDs.
 
 How to keep the `PolicyReport`s and `ClusterPolicyReport` up to date. This is
 going to be covered by another RFC.
-
-
-
