@@ -52,7 +52,7 @@ type PolicyServerSpec struct {
 
 	// List of insecure URIs to policy repositories. The `InsecureSources`
 	// content format corresponds with the contents of the `insecure_sources`
-	// key in `source.yaml`. Reference for `sources.yaml` is found in the
+	// key in `sources.yaml`. Reference for `sources.yaml` is found in the
 	// Kubewarden documentation in the reference section.
 	// +optional
 	InsecureSources []string `json:"insecureSources,omitempty"`
@@ -61,7 +61,7 @@ type PolicyServerSpec struct {
 	// PEM encoded certificate authorities that have to be used to verify the
 	// certificate used by the endpoint. The `SourceAuthorities` content format
 	// corresponds with the contents of the `source_authorities` key in
-	// `source.yaml`. Reference for `sources.yaml` is found in the Kubewarden
+	// `sources.yaml`. Reference for `sources.yaml` is found in the Kubewarden
 	// documentation in the reference section.
 	// +optional
 	SourceAuthorities map[string][]string `json:"sourceAuthorities,omitempty"`
