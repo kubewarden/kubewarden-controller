@@ -50,7 +50,7 @@ type PolicyServerSpec struct {
 	// +optional
 	ImagePullSecret string `json:"imagePullSecret,omitempty"`
 
-	// List of insecure URIs to policy repositories. The `InsecureSources`
+	// List of insecure URIs to policy repositories. The `insecureSources`
 	// content format corresponds with the contents of the `insecure_sources`
 	// key in `sources.yaml`. Reference for `sources.yaml` is found in the
 	// Kubewarden documentation in the reference section.
@@ -59,7 +59,7 @@ type PolicyServerSpec struct {
 
 	// Key value map of registry URIs endpoints to a list of their associated
 	// PEM encoded certificate authorities that have to be used to verify the
-	// certificate used by the endpoint. The `SourceAuthorities` content format
+	// certificate used by the endpoint. The `sourceAuthorities` content format
 	// corresponds with the contents of the `source_authorities` key in
 	// `sources.yaml`. Reference for `sources.yaml` is found in the Kubewarden
 	// documentation in the reference section.
