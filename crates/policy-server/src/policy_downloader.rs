@@ -162,24 +162,6 @@ impl Downloader {
             };
 
             if let Some(ver) = self.verifier.as_mut() {
-                if verified_manifest_digest.is_none() {
-                    // when deserializing keys we check that have keys to
-                    // verify. We will always have a digest manifest
-                    error!(
-                        policy = name.as_str(),
-                        "cannot verify policy, missing verified manifest digest"
-                    );
-                    fetched_policies.insert(
-                        policy.url.clone(),
-                        Err(anyhow!(
-                            "Policy {} cannot be verified, missing verified manifest digest",
-                            name
-                        )),
-                    );
-
-                    continue;
-                }
-
                 if let Err(e) = ver
                     .verify_local_file_checksum(
                         &fetched_policy,
