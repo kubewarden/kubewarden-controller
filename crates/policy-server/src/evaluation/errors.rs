@@ -4,6 +4,9 @@ pub type Result<T> = std::result::Result<T, EvaluationError>;
 
 #[derive(Debug, Error)]
 pub enum EvaluationError {
+    #[error("{0}")]
+    PolicyInitialization(String),
+
     #[error("unknown policy: {0}")]
     PolicyNotFound(String),
 
