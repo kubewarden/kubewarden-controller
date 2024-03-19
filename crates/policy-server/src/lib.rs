@@ -24,7 +24,6 @@ use policy_evaluator::policy_fetcher::verify::FulcioAndRekorData;
 use policy_evaluator::wasmtime;
 use policy_evaluator::{callback_handler::CallbackHandlerBuilder, kube};
 use rayon::prelude::*;
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::oneshot;
@@ -41,7 +40,7 @@ use crate::evaluation::{
     EvaluationEnvironment,
 };
 use crate::policy_downloader::{Downloader, FetchedPolicies};
-use config::{Config, Policy};
+use config::Config;
 
 pub struct PolicyServer {
     router: Router,
@@ -129,14 +128,14 @@ impl PolicyServer {
                 &config.policies_download_dir,
                 config.verification_config.as_ref(),
             )
-            .await?;
+            .await;
 
         let mut wasmtime_config = wasmtime::Config::new();
         if config.policy_evaluation_limit_seconds.is_some() {
             wasmtime_config.epoch_interruption(true);
         }
         let engine = wasmtime::Engine::new(&wasmtime_config)?;
-        let precompiled_policies = precompile_policies(&engine, &fetched_policies)?;
+        let precompiled_policies = precompile_policies(&engine, &fetched_policies);
 
         let evaluation_environment = EvaluationEnvironment::new(
             &engine,
@@ -164,8 +163,6 @@ impl PolicyServer {
         } else {
             info!("policy timeout protection is disabled");
         }
-
-        verify_policy_settings(&config.policies, &evaluation_environment).await?;
 
         let state = Arc::new(ApiServerState {
             semaphore: Semaphore::new(config.pool_size),
@@ -245,66 +242,21 @@ impl PolicyServer {
 fn precompile_policies(
     engine: &wasmtime::Engine,
     fetched_policies: &FetchedPolicies,
-) -> Result<PrecompiledPolicies> {
+) -> PrecompiledPolicies {
     debug!(
         wasm_modules_count = fetched_policies.len(),
         "instantiating wasmtime::Module objects"
     );
 
-    let precompiled_policies: HashMap<String, Result<PrecompiledPolicy>> = fetched_policies
+    fetched_policies
         .par_iter()
-        .map(|(policy_url, wasm_module_path)| {
-            let precompiled_policy = PrecompiledPolicy::new(engine, wasm_module_path);
-            debug!(?policy_url, "module compiled");
-            (policy_url.clone(), precompiled_policy)
+        .map(|(policy_url, fetched_policy)| match fetched_policy {
+            Ok(policy) => {
+                let precompiled_policy = PrecompiledPolicy::new(engine, policy);
+                debug!(?policy_url, "module compiled");
+                (policy_url.clone(), precompiled_policy)
+            }
+            Err(error) => (policy_url.clone(), Err(anyhow!(error.to_string()))),
         })
-        .collect();
-
-    let errors: Vec<String> = precompiled_policies
-        .iter()
-        .filter_map(|(url, result)| match result {
-            Ok(_) => None,
-            Err(e) => Some(format!(
-                "[{url}] policy cannot be compiled to WebAssembly module: {e:?}"
-            )),
-        })
-        .collect();
-    if !errors.is_empty() {
-        return Err(anyhow!(
-            "workers pool bootstrap: cannot instantiate `wasmtime::Module` objects: {:?}",
-            errors.join(", ")
-        ));
-    }
-
-    Ok(precompiled_policies
-        .iter()
-        .filter_map(|(url, result)| match result {
-            Ok(p) => Some((url.clone(), p.clone())),
-            Err(_) => None,
-        })
-        .collect())
-}
-
-/// Ensure the user provided valid settings for all the policies
-async fn verify_policy_settings(
-    policies: &HashMap<String, Policy>,
-    evaluation_environment: &EvaluationEnvironment,
-) -> Result<()> {
-    let mut errors = vec![];
-    for (policy_id, _policy) in policies.iter() {
-        let set_val_rep = evaluation_environment.validate_settings(policy_id)?;
-        if !set_val_rep.valid {
-            errors.push(format!(
-                "[{}] settings are not valid: {:?}",
-                policy_id, set_val_rep.message
-            ));
-            continue;
-        }
-    }
-
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(anyhow!("{}", errors.join(", ")))
-    }
+        .collect()
 }
