@@ -18,7 +18,8 @@ func NewPolicyReport(resource unstructured.Unstructured) *wgpolicy.PolicyReport 
 			Name:      string(resource.GetUID()),
 			Namespace: resource.GetNamespace(),
 			Labels: map[string]string{
-				labelAppManagedBy: labelApp,
+				labelAppManagedBy:        labelApp,
+				labelPolicyReportVersion: labelPolicyReportVersionValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -75,7 +76,8 @@ func NewClusterPolicyReport(resource unstructured.Unstructured) *wgpolicy.Cluste
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(resource.GetUID()),
 			Labels: map[string]string{
-				labelAppManagedBy: labelApp,
+				labelAppManagedBy:        labelApp,
+				labelPolicyReportVersion: labelPolicyReportVersionValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{

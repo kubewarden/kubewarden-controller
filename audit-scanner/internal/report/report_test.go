@@ -27,6 +27,7 @@ func TestNewPolicyReport(t *testing.T) {
 	assert.Equal(t, "uid", policyReport.ObjectMeta.Name)
 	assert.Equal(t, "namespace", policyReport.ObjectMeta.Namespace)
 	assert.Equal(t, "kubewarden", policyReport.ObjectMeta.Labels["app.kubernetes.io/managed-by"])
+	assert.Equal(t, "v2", policyReport.ObjectMeta.Labels["kubewarden.io/policyreport-version"])
 
 	assert.Equal(t, "v1", policyReport.ObjectMeta.OwnerReferences[0].APIVersion)
 	assert.Equal(t, "Pod", policyReport.ObjectMeta.OwnerReferences[0].Kind)
@@ -73,6 +74,7 @@ func TestNewClusterPolicyReport(t *testing.T) {
 
 	assert.Equal(t, "uid", clusterPolicyReport.ObjectMeta.Name)
 	assert.Equal(t, "kubewarden", clusterPolicyReport.ObjectMeta.Labels[labelAppManagedBy])
+	assert.Equal(t, "v2", clusterPolicyReport.ObjectMeta.Labels["kubewarden.io/policyreport-version"])
 
 	assert.Equal(t, "v1", clusterPolicyReport.ObjectMeta.OwnerReferences[0].APIVersion)
 	assert.Equal(t, "Namespace", clusterPolicyReport.ObjectMeta.OwnerReferences[0].Kind)
