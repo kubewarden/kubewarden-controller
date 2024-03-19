@@ -36,11 +36,22 @@ pub(crate) fn evaluate(
     let start_time = Instant::now();
 
     let policy_name = policy_id.to_owned();
+    let vanilla_validation_response =
+        match evaluation_environment.validate(policy_id, validate_request) {
+            Ok(validation_response) => validation_response,
+            Err(EvaluationError::PolicyInitialization(error)) => {
+                return Ok(AdmissionResponse::reject(
+                    validate_request.uid().to_owned(),
+                    error.to_string(),
+                    500,
+                ))
+            }
+
+            Err(error) => return Err(error),
+        };
+
     let policy_mode = evaluation_environment.get_policy_mode(policy_id)?;
     let allowed_to_mutate = evaluation_environment.get_policy_allowed_to_mutate(policy_id)?;
-
-    let vanilla_validation_response =
-        evaluation_environment.validate(policy_id, validate_request)?;
 
     let policy_evaluation_duration = start_time.elapsed();
     let accepted = vanilla_validation_response.allowed;
