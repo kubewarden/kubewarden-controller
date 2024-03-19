@@ -35,6 +35,8 @@ const (
 )
 
 const (
-	labelAppManagedBy = "app.kubernetes.io/managed-by"
-	labelApp          = "kubewarden"
+	labelAppManagedBy             = "app.kubernetes.io/managed-by"
+	labelApp                      = "kubewarden"
+	labelPolicyReportVersion      = "kubewarden.io/policyreport-version"
+	labelPolicyReportVersionValue = "v2"
 )
