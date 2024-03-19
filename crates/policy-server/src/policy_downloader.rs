@@ -22,7 +22,7 @@ use crate::config::Policy;
 /// A Map with the `policy.url` as key,
 /// and a `PathBuf` as value. The `PathBuf` points to the location where
 /// the WebAssembly module has been downloaded.
-pub(crate) type FetchedPolicies = HashMap<String, PathBuf>;
+pub(crate) type FetchedPolicies = HashMap<String, Result<PathBuf>>;
 
 /// Handles download and verification of policies
 pub(crate) struct Downloader {
@@ -62,7 +62,7 @@ impl Downloader {
         policies: &HashMap<String, Policy>,
         destination: impl AsRef<Path>,
         verification_config: Option<&LatestVerificationConfig>,
-    ) -> Result<FetchedPolicies> {
+    ) -> FetchedPolicies {
         let policies_total = policies.len();
         info!(
             download_dir = destination
@@ -74,7 +74,6 @@ impl Downloader {
             "policies download",
         );
 
-        let mut policy_verification_errors = vec![];
         let verification_config = verification_config.unwrap_or(&LatestVerificationConfig {
             all_of: None,
             any_of: None,
@@ -99,6 +98,7 @@ impl Downloader {
                     policy = name.as_str(),
                     "skipping, wasm module alredy processed"
                 );
+
                 continue;
             }
 
@@ -113,9 +113,12 @@ impl Downloader {
                 {
                     Ok(d) => Some(d),
                     Err(e) => {
-                        info!(policy = name.as_str(), error =?e, "policy cannot be verified");
-                        policy_verification_errors
-                            .push(format!("Policy '{name}' cannot be verified: {e:?}"));
+                        error!(policy = name.as_str(), error =?e, "policy cannot be verified");
+                        fetched_policies.insert(
+                            policy.url.clone(),
+                            Err(anyhow!("Policy '{}' cannot be verified: {}", name, e)),
+                        );
+
                         continue;
                     }
                 };
@@ -130,31 +133,50 @@ impl Downloader {
                 );
             }
 
-            let fetched_policy = policy_fetcher::fetch_policy(
+            let fetched_policy = match policy_fetcher::fetch_policy(
                 &policy.url,
                 policy_fetcher::PullDestination::Store(destination.as_ref().to_path_buf()),
                 self.sources.as_ref(),
             )
             .await
-            .map_err(|e| {
-                anyhow!(
-                    "error while downloading policy {} from {}: {}",
-                    name,
-                    policy.url,
-                    e
-                )
-            })?;
+            {
+                Ok(fetched_policy) => fetched_policy,
+                Err(e) => {
+                    error!(
+                        policy = name.as_str(),
+                        error =? e,
+                        "policy download failed"
+                    );
+                    fetched_policies.insert(
+                        policy.url.clone(),
+                        Err(anyhow!(
+                            "Error while downloading policy '{}' from {}: {}",
+                            name,
+                            policy.url,
+                            e
+                        )),
+                    );
+
+                    continue;
+                }
+            };
 
             if let Some(ver) = self.verifier.as_mut() {
                 if verified_manifest_digest.is_none() {
                     // when deserializing keys we check that have keys to
                     // verify. We will always have a digest manifest
-                    info!(
+                    error!(
                         policy = name.as_str(),
                         "cannot verify policy, missing verified manifest digest"
                     );
-                    policy_verification_errors
-                            .push(format!("verification of policy {name} cannot be done, missing verified manifest digest"));
+                    fetched_policies.insert(
+                        policy.url.clone(),
+                        Err(anyhow!(
+                            "Policy {} cannot be verified, missing verified manifest digest",
+                            name
+                        )),
+                    );
+
                     continue;
                 }
 
@@ -165,14 +187,16 @@ impl Downloader {
                     )
                     .await
                 {
-                    info!(
+                    error!(
                         policy = name.as_str(),
                         error =? e,
                         "verification failed"
                     );
-                    policy_verification_errors
-                        .push(format!("verification of policy {name} failed: {e}"));
 
+                    fetched_policies.insert(
+                        policy.url.clone(),
+                        Err(anyhow!("Verification of policy {} failed: {}", name, e)),
+                    );
                     continue;
                 }
 
@@ -210,18 +234,10 @@ impl Downloader {
                 );
             }
 
-            fetched_policies.insert(policy.url.clone(), fetched_policy.local_path);
+            fetched_policies.insert(policy.url.clone(), Ok(fetched_policy.local_path));
         }
 
-        if policy_verification_errors.is_empty() {
-            info!(status = "done", "policies download");
-            Ok(fetched_policies)
-        } else {
-            Err(anyhow!(
-                "Failed to verify the following policies: {}",
-                policy_verification_errors.join(", ")
-            ))
-        }
+        fetched_policies
     }
 }
 
@@ -333,13 +349,17 @@ mod tests {
                     Some(&verification_config),
                 )
                 .await
-                .expect("Cannot download policy")
         });
 
         // There are 2 policies defined, but they both reference the same
         // WebAssembly module. Hence, just one `.wasm` file is going to be
         // be downloaded
         assert_eq!(fetched_policies.len(), 1);
+
+        assert!(fetched_policies
+            .get("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")
+            .unwrap()
+            .is_ok());
     }
 
     #[test]
@@ -370,7 +390,7 @@ mod tests {
         drop(downloader);
 
         let rt = Runtime::new().unwrap();
-        let err = rt.block_on(async {
+        let fetched_policies = rt.block_on(async {
             DOWNLOADER
                 .lock()
                 .await
@@ -380,10 +400,16 @@ mod tests {
                     Some(&verification_config),
                 )
                 .await
-                .expect_err("an error was expected")
         });
-        assert!(err
-            .to_string()
-            .contains("Image verification failed: missing signatures"));
+
+        // There are 2 policies defined, but they both reference the same
+        // WebAssembly module. Hence, just one `.wasm` file is going to be
+        // be downloaded
+        assert_eq!(fetched_policies.len(), 1);
+
+        assert!(fetched_policies
+            .get("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")
+            .unwrap()
+            .is_err());
     }
 }
