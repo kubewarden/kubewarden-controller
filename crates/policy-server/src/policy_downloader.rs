@@ -293,7 +293,7 @@ mod tests {
     }
 
     #[test]
-    fn download_and_verify_success() {
+    fn verify_success() {
         let verification_cfg_yml = r#"---
     allOf:
       - kind: pubKey
@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn download_and_verify_error() {
+    fn verify_error() {
         let verification_cfg_yml = r#"---
     allOf:
       - kind: githubAction
@@ -407,9 +407,11 @@ mod tests {
         // be downloaded
         assert_eq!(fetched_policies.len(), 1);
 
-        assert!(fetched_policies
-            .get("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")
-            .unwrap()
-            .is_err());
+        assert!(matches!(
+            fetched_policies
+                .get("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")
+                .unwrap(),
+            Err(error) if error.to_string().contains("Policy 'pod-privileged' cannot be verified: Image verification failed: missing signatures")
+        ));
     }
 }

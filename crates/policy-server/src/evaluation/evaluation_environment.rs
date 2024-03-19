@@ -438,7 +438,7 @@ mod tests {
         let validate_request =
             ValidateRequest::AdmissionRequest(build_admission_review_request().request);
         assert!(matches!(
-            evaluation_environment.validate(policy_id, &validate_request).err().unwrap(),
+            evaluation_environment.validate(policy_id, &validate_request).unwrap_err(),
             EvaluationError::PolicyInitialization(error) if error == "error"
         ));
     }
