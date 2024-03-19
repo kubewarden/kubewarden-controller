@@ -13,8 +13,11 @@ pub enum BurregoError {
     #[error("Rego wasm error: {0}")]
     RegoWasmError(String),
 
-    #[error("JSON error: {0}")]
-    JSONError(String),
+    #[error("{msg}: {source}")]
+    JSONError {
+        msg: String,
+        source: serde_json::Error,
+    },
 
     #[error("Evaluator builder error: {0}")]
     EvaluatorBuilderError(String),

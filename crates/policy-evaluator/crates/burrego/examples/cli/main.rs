@@ -104,8 +104,6 @@ fn main() -> Result<()> {
                 json!({})
             };
 
-            let data_value: serde_json::Value =
-                serde_json::from_str(data).map_err(|e| anyhow!("Cannot parse data: {:?}", e))?;
             let mut evaluator = burrego::EvaluatorBuilder::default()
                 .policy_path(&PathBuf::from(policy))
                 .host_callbacks(burrego::HostCallbacks::default())
@@ -131,7 +129,8 @@ fn main() -> Result<()> {
                 _ => evaluator.entrypoint_id(&String::from(entrypoint))?,
             };
 
-            let evaluation_res = evaluator.evaluate(entrypoint_id, &input_value, &data_value)?;
+            let evaluation_res =
+                evaluator.evaluate(entrypoint_id, &input_value, data.as_bytes())?;
             println!("{}", serde_json::to_string_pretty(&evaluation_res)?);
             Ok(())
         }
