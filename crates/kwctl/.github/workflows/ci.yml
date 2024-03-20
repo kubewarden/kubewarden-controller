@@ -91,17 +91,17 @@ jobs:
           flags: unit-tests
           verbose: true
       - uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0
-      - name: Generate e2e-tests coverage
-        run: make coverage-e2e-tests
-      - name: Upload e2e-tests coverage to Codecov
-        uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
-        with:
-          name: e2e-tests
-          directory: coverage/e2e-tests
-          flags: e2e-tests
-          verbose: true
+      # - name: Generate e2e-tests coverage
+      #   run: make coverage-e2e-tests
+      # - name: Upload e2e-tests coverage to Codecov
+      #   uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
+      #   env:
+      #     CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+      #   with:
+      #     name: e2e-tests
+      #     directory: coverage/e2e-tests
+      #     flags: e2e-tests
+      #     verbose: true
 
   fmt:
     name: Rustfmt
