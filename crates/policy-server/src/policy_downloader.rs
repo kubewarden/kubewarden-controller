@@ -261,21 +261,10 @@ async fn create_verifier(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lazy_static::lazy_static;
     use tempfile::TempDir;
-    use tokio::{runtime::Runtime, sync::Mutex};
 
-    lazy_static! {
-        // Allocate the DOWNLOADER once, this is needed to reduce the execution time
-        // of the unit tests
-        static ref DOWNLOADER: Mutex<Downloader> = Mutex::new({
-            let rt = Runtime::new().unwrap();
-            rt.block_on(async { Downloader::new(None, true, None).await.unwrap() })
-        });
-    }
-
-    #[test]
-    fn verify_success() {
+    #[tokio::test]
+    async fn verify_success() {
         let verification_cfg_yml = r#"---
     allOf:
       - kind: pubKey
@@ -314,24 +303,15 @@ mod tests {
 
         let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
 
-        // This is required to have lazy_static create the object right now,
-        // outside of the tokio runtime. Creating the object inside of the tokio
-        // rutime causes a panic because sigstore-rs' code invokes a `block_on` too
-        let downloader = DOWNLOADER.lock();
-        drop(downloader);
+        let mut downloader = Downloader::new(None, true, None).await.unwrap();
 
-        let rt = Runtime::new().unwrap();
-        let fetched_policies = rt.block_on(async {
-            DOWNLOADER
-                .lock()
-                .await
-                .download_policies(
-                    &policies,
-                    policy_download_dir.path().to_str().unwrap(),
-                    Some(&verification_config),
-                )
-                .await
-        });
+        let fetched_policies = downloader
+            .download_policies(
+                &policies,
+                policy_download_dir.path().to_str().unwrap(),
+                Some(&verification_config),
+            )
+            .await;
 
         // There are 2 policies defined, but they both reference the same
         // WebAssembly module. Hence, just one `.wasm` file is going to be
@@ -344,8 +324,8 @@ mod tests {
             .is_ok());
     }
 
-    #[test]
-    fn verify_error() {
+    #[tokio::test]
+    async fn verify_error() {
         let verification_cfg_yml = r#"---
     allOf:
       - kind: githubAction
@@ -365,24 +345,15 @@ mod tests {
 
         let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
 
-        // This is required to have lazy_static create the object right now,
-        // outside of the tokio runtime. Creating the object inside of the tokio
-        // rutime causes a panic because sigstore-rs' code invokes a `block_on` too
-        let downloader = DOWNLOADER.lock();
-        drop(downloader);
+        let mut downloader = Downloader::new(None, true, None).await.unwrap();
 
-        let rt = Runtime::new().unwrap();
-        let fetched_policies = rt.block_on(async {
-            DOWNLOADER
-                .lock()
-                .await
-                .download_policies(
-                    &policies,
-                    policy_download_dir.path().to_str().unwrap(),
-                    Some(&verification_config),
-                )
-                .await
-        });
+        let fetched_policies = downloader
+            .download_policies(
+                &policies,
+                policy_download_dir.path().to_str().unwrap(),
+                Some(&verification_config),
+            )
+            .await;
 
         // There are 2 policies defined, but they both reference the same
         // WebAssembly module. Hence, just one `.wasm` file is going to be
