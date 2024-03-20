@@ -1,8 +1,8 @@
 |              |                                           |
 | :----------- | :---------------------------------------- |
 | Feature Name | Policy Report format audit checks         |
-| Start Date   | 08/05/2022                                |
-| Update Date  | 03/06/2024                                |
+| Start Date   | 2022/08/05                                |
+| Update Date  | 2024/03/20                                |
 | Category     | enhancement,feature                       |
 | RFC PR       | https://github.com/kubewarden/rfc/pull/13 |
 | State        | **ACCEPTED**                              |
@@ -115,7 +115,7 @@ events occurring within it. Additionally, the same Kubernetes resource might
 undergo evaluation by multiple policies, resulting in several policy
 evaluations being conducted
 
-The `PolicyReport` provides these information:
+The `PolicyReport` provides this information:
 
 - The number of policy evaluations conducted during the audit run.
 - The count of policy evaluations resulting in resource acceptance, rejection,
@@ -175,6 +175,11 @@ The `PolicyReport` resource has the following fields:
   - `ownerReference`: owner reference object pointing to the audited
     resource. Hence, when the resource is deleted the Kubernetes garbage
     collector will also remove the report.
+  - `labels`: 2 entries:
+    - `app.kubernetes.io/managed-by` set to `kubewarden`.
+    - `kubewarden.io/policyreport-version` set to `v2`. PolicyReports created by Kubewarden
+      versions preceding 1.11 don't feature this label. Kubewarden 1.11 introduced it, with
+      value `v2`.
 - `scope`: this is a `core/v1.ObjectReference` resource. We will use that to
   reference the audited resource that has been analyzed
 - `scopeSelector`: we will not use that, because we are using the `scope` field
@@ -242,6 +247,7 @@ metadata:
   generation: 5
   labels:
     app.kubernetes.io/managed-by: kubewarden
+    kubewarden.io/policyreport-version: v2
   name: 129958d1-c329-4248-a048-3c6ad85786bd
   namespace: default
   ownerReferences:
