@@ -6,7 +6,7 @@ ENVTEST_K8S_VERSION = 1.29
 # K3S_TESTCONTAINER_VERSION refers to the version of k3s testcontainer to be used by envtest to run integration tests.
 K3S_TESTCONTAINER_VERSION = v1.29.1-k3s2
 # POLICY_SERVER_VERSION refers to the version of the policy server to be used by integration tests.
-POLICY_SERVER_VERSION = v1.10.0
+POLICY_SERVER_VERSION = v1.11.0
 # Binary directory
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 BIN_DIR := $(abspath $(ROOT_DIR)/bin)
