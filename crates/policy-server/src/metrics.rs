@@ -93,3 +93,21 @@ impl Into<Vec<KeyValue>> for &RawPolicyEvaluation {
         baggage
     }
 }
+
+#[derive(Clone)]
+pub(crate) struct PolicyInitializationError {
+    pub(crate) policy_name: String,
+    pub(crate) initialization_error: String,
+}
+
+impl PolicyEvaluationMetric for &PolicyInitializationError {}
+
+#[allow(clippy::from_over_into)]
+impl Into<Vec<KeyValue>> for &PolicyInitializationError {
+    fn into(self) -> Vec<KeyValue> {
+        vec![
+            KeyValue::new("policy_name", self.policy_name.clone()),
+            KeyValue::new("initialization_error", self.initialization_error.clone()),
+        ]
+    }
+}
