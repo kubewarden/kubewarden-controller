@@ -1,8 +1,8 @@
 |              |                                           |
 | :----------- | :---------------------------------------- |
 | Feature Name | Policy Report format audit checks         |
-| Start Date   | 08/05/2022                                |
-| Update Date  | 03/06/2024                                |
+| Start Date   | 2022/08/05                                |
+| Update Date  | 2024/03/20                                |
 | Category     | enhancement,feature                       |
 | RFC PR       | https://github.com/kubewarden/rfc/pull/13 |
 | State        | **ACCEPTED**                              |
