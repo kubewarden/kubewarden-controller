@@ -23,12 +23,12 @@ k8s-openapi = { version = "0.21.1", default-features = false, features = [
 lazy_static = "1.4.0"
 mime = "0.3"
 num_cpus = "1.16.0"
-opentelemetry-otlp = { version = "0.14.0", features = ["metrics", "tonic"] }
-opentelemetry = { version = "0.21", default-features = false, features = [
+opentelemetry-otlp = { version = "0.15.0", features = ["metrics", "tonic"] }
+opentelemetry = { version = "0.22.0", default-features = false, features = [
   "metrics",
   "trace",
 ] }
-opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
+opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"] }
 procfs = "0.16"
 pprof = { version = "0.13", features = ["prost-codec"] }
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.16.2" }
@@ -42,7 +42,7 @@ thiserror = "1.0"
 tokio = { version = "^1.36.0", features = ["full"] }
 tracing = "0.1"
 tracing-futures = "0.2"
-tracing-opentelemetry = "0.22.0"
+tracing-opentelemetry = "0.23.0"
 tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 semver = { version = "1.0.22", features = ["serde"] }
 mockall_double = "0.3"

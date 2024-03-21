@@ -1,6 +1,6 @@
 use opentelemetry::{metrics, KeyValue};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
-use opentelemetry_sdk::metrics::MeterProvider;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::runtime;
 
 mod policy_evaluations_total;
@@ -10,7 +10,7 @@ pub use policy_evaluations_latency::record_policy_latency;
 
 const METER_NAME: &str = "kubewarden";
 
-pub fn setup_metrics() -> metrics::Result<MeterProvider> {
+pub fn setup_metrics() -> metrics::Result<SdkMeterProvider> {
     opentelemetry_otlp::new_pipeline()
         .metrics(runtime::Tokio)
         .with_exporter(
