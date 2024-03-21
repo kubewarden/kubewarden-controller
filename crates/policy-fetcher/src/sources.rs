@@ -218,7 +218,7 @@ impl Sources {
     }
 
     pub fn source_authority(&self, host: &str) -> Option<Vec<Certificate>> {
-        self.source_authorities.0.get(host).map(Clone::clone)
+        self.source_authorities.0.get(host).cloned()
     }
 }
 
