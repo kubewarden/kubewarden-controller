@@ -203,9 +203,7 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
 fn read_policy_title_from_metadata(metadata: Option<&Metadata>) -> Option<String> {
     match metadata {
         Some(metadata) => match metadata.annotations {
-            Some(ref annotations) => annotations
-                .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
-                .map(Clone::clone),
+            Some(ref annotations) => annotations.get(KUBEWARDEN_ANNOTATION_POLICY_TITLE).cloned(),
             None => None,
         },
         None => None,
