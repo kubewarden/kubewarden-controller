@@ -66,8 +66,9 @@ impl PrecompiledPolicy {
 
 /// A dictionary with:
 /// * Key: the URL of the WebAssembly module
-/// * value: the PrecompiledPolicy
-pub(crate) type PrecompiledPolicies = HashMap<String, PrecompiledPolicy>;
+/// * Value: a Result containing the precompiled policy or an error.
+/// Errors are stored and will be reported to the user in the API response.
+pub(crate) type PrecompiledPolicies = HashMap<String, Result<PrecompiledPolicy>>;
 
 /// Check if policy server version is compatible with  minimum kubewarden
 /// version required by the policy

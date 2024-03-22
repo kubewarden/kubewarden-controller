@@ -9,6 +9,7 @@ use axum::{
 use http_body_util::BodyExt;
 use policy_evaluator::admission_response::AdmissionResponseStatus;
 use policy_server::api::admission_review::AdmissionReviewResponse;
+use regex::Regex;
 use tower::ServiceExt;
 
 #[tokio::test]
@@ -251,4 +252,64 @@ async fn test_timeout_protection_reject() {
             }
         )
     );
+}
+
+#[tokio::test]
+async fn test_policy_with_invalid_settings() {
+    let app = app().await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/invalid_settings")
+        .body(Body::from(include_str!("data/pod_sleep_100ms.json")))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+
+    let pattern =
+        Regex::new(r"Policy settings are invalid:.*Error decoding validation payload.*invalid type: string.*expected u64.*")
+            .unwrap();
+
+    let status = admission_review_response.response.status.unwrap();
+
+    assert_eq!(status.code, Some(500));
+    assert!(pattern.is_match(&status.message.unwrap()));
+}
+
+#[tokio::test]
+async fn test_policy_with_wrong_url() {
+    let app = app().await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/audit/wrong_url")
+        .body(Body::from(include_str!("data/pod_sleep_100ms.json")))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+
+    let pattern =
+        Regex::new(r"Error while downloading policy 'wrong_url' from ghcr.io/kubewarden/tests/not_existing:v0.1.0.*")
+            .unwrap();
+
+    let status = admission_review_response.response.status.unwrap();
+
+    assert_eq!(status.code, Some(500));
+    assert!(pattern.is_match(&status.message.unwrap()));
 }

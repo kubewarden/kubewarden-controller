@@ -61,6 +61,11 @@ pub(crate) struct EvaluationEnvironment {
     /// Map a `policy_id` to the `PolicyEvaluationSettings` instance. This allows us to obtain
     /// the list of settings to be used when evaluating a given policy.
     policy_id_to_settings: HashMap<String, PolicyEvaluationSettings>,
+
+    /// A map with the policy ID as key, and the error message as value.
+    /// This is used to store the errors that occurred during policies initialization.
+    /// The errors can occur in the fetching of the policy, or in the validation of the settings.
+    policy_initialization_errors: HashMap<String, String>,
 }
 
 #[cfg_attr(test, automock)]
@@ -88,6 +93,16 @@ impl EvaluationEnvironment {
                 ))
             })?;
 
+            let precompiled_policy = match precompiled_policy.as_ref() {
+                Ok(precompiled_policy) => precompiled_policy,
+                Err(e) => {
+                    eval_env
+                        .policy_initialization_errors
+                        .insert(policy_id.clone(), e.to_string());
+                    continue;
+                }
+            };
+
             eval_env
                 .register(
                     engine,
@@ -98,6 +113,8 @@ impl EvaluationEnvironment {
                     policy_evaluation_limit_seconds,
                 )
                 .map_err(|e| EvaluationError::BootstrapFailure(e.to_string()))?;
+
+            eval_env.validate_settings(policy_id)?;
         }
 
         Ok(eval_env)
@@ -208,6 +225,10 @@ impl EvaluationEnvironment {
 
     /// Perform a request validation
     pub fn validate(&self, policy_id: &str, req: &ValidateRequest) -> Result<AdmissionResponse> {
+        if let Some(error) = self.policy_initialization_errors.get(policy_id) {
+            return Err(EvaluationError::PolicyInitialization(error.to_string()));
+        }
+
         let settings = self.get_policy_settings(policy_id)?;
         let mut evaluator = self.rehydrate(policy_id)?;
 
@@ -215,11 +236,30 @@ impl EvaluationEnvironment {
     }
 
     /// Validate the settings the user provided for the given policy
-    pub fn validate_settings(&self, policy_id: &str) -> Result<SettingsValidationResponse> {
+    fn validate_settings(&mut self, policy_id: &str) -> Result<()> {
         let settings = self.get_policy_settings(policy_id)?;
         let mut evaluator = self.rehydrate(policy_id)?;
 
-        Ok(evaluator.validate_settings(&settings.settings))
+        match evaluator.validate_settings(&settings.settings) {
+            SettingsValidationResponse {
+                valid: true,
+                message: _,
+            } => return Ok(()),
+            SettingsValidationResponse {
+                valid: false,
+                message,
+            } => {
+                self.policy_initialization_errors.insert(
+                    policy_id.to_string(),
+                    format!(
+                        "Policy settings are invalid: {}",
+                        message.unwrap_or("no message".to_owned())
+                    ),
+                );
+            }
+        };
+
+        Ok(())
     }
 
     /// Internal method, create a `PolicyEvaluator` by using a pre-initialized instance
@@ -321,7 +361,7 @@ mod tests {
                     context_aware_resources: BTreeSet::new(),
                 },
             );
-            precompiled_policies.insert(policy_url, precompiled_policy.clone());
+            precompiled_policies.insert(policy_url, Ok(precompiled_policy.clone()));
         }
 
         EvaluationEnvironment::new(
@@ -385,5 +425,21 @@ mod tests {
                 .len(),
             1
         );
+    }
+
+    #[test]
+    fn validate_policy_with_initialization_error() {
+        let mut evaluation_environment = build_evaluation_environment().unwrap();
+        let policy_id = "policy_3";
+        evaluation_environment
+            .policy_initialization_errors
+            .insert(policy_id.to_string(), "error".to_string());
+
+        let validate_request =
+            ValidateRequest::AdmissionRequest(build_admission_review_request().request);
+        assert!(matches!(
+            evaluation_environment.validate(policy_id, &validate_request).unwrap_err(),
+            EvaluationError::PolicyInitialization(error) if error == "error"
+        ));
     }
 }

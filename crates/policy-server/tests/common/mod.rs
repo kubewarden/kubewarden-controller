@@ -47,6 +47,29 @@ pub(crate) async fn app() -> Router {
                 context_aware_resources: BTreeSet::new(),
             },
         ),
+        (
+            "invalid_settings".to_owned(),
+            Policy {
+                url: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
+                policy_mode: PolicyMode::Protect,
+                allowed_to_mutate: None,
+                settings: Some(HashMap::from([(
+                    "sleepMilliseconds".to_owned(),
+                    "abc".into(),
+                )])),
+                context_aware_resources: BTreeSet::new(),
+            },
+        ),
+        (
+            "wrong_url".to_owned(),
+            Policy {
+                url: "ghcr.io/kubewarden/tests/not_existing:v0.1.0".to_owned(),
+                policy_mode: PolicyMode::Protect,
+                allowed_to_mutate: None,
+                settings: None,
+                context_aware_resources: BTreeSet::new(),
+            },
+        ),
     ]);
 
     let config = Config {
