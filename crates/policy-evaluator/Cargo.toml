@@ -29,6 +29,7 @@ kube = { version = "0.88.1", default-features = false, features = [
   "runtime",
 ] }
 kubewarden-policy-sdk = "0.10.0"
+lazy_static = "1.4"
 mail-parser = { version = "0.9.2", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
@@ -65,6 +66,7 @@ k8s-openapi = { version = "0.21.1", default-features = false, features = [
   "v1_28",
 ] }
 rstest = "0.18"
+serial_test = "3.0"
 test-context = "0.3"
 tempfile = "3.8.1"
 tower-test = "0.4"

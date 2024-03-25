@@ -7,7 +7,6 @@ use crate::{
     policy_metadata::ContextAwareResource,
     runtimes::rego::{
         errors::{RegoRuntimeError, Result},
-        gatekeeper_inventory::GatekeeperInventory,
         opa_inventory::OpaInventory,
     },
 };
@@ -17,7 +16,7 @@ use crate::{
 pub(crate) enum KubernetesContext {
     Empty,
     Opa(OpaInventory),
-    Gatekeeper(GatekeeperInventory),
+    Gatekeeper(Vec<u8>),
 }
 
 /// Uses the callback channel to get all the Kubernetes resources defined inside of
@@ -54,6 +53,41 @@ fn get_all_resources_by_type(
     let response = make_request_via_callback_channel(req_type, callback_channel)?;
     serde_json::from_slice::<ObjectList<kube::core::DynamicObject>>(&response.payload)
         .map_err(RegoRuntimeError::CallbackConvertList)
+}
+
+/// For each allowed resource, check if the "list all resources" result changed since the given instant
+pub(crate) fn have_allowed_resources_changed_since_instant(
+    callback_channel: &mpsc::Sender<CallbackRequest>,
+    allowed_resources: &BTreeSet<ContextAwareResource>,
+    since: tokio::time::Instant,
+) -> Result<bool> {
+    for resource in allowed_resources {
+        if has_resource_changed_since(callback_channel, resource, since)? {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+/// Check if the "list all resources" result changed since the given instant
+/// Note: this function doesn't take label_selector and field_selector into account because
+/// it's used only by gatekeeper policies, which don't use these selectors.
+fn has_resource_changed_since(
+    callback_channel: &mpsc::Sender<CallbackRequest>,
+    resource_type: &ContextAwareResource,
+    since: tokio::time::Instant,
+) -> Result<bool> {
+    let req_type = CallbackRequestType::HasKubernetesListResourceAllResultChangedSinceInstant {
+        api_version: resource_type.api_version.to_owned(),
+        kind: resource_type.kind.to_owned(),
+        label_selector: None,
+        field_selector: None,
+        since,
+    };
+
+    let response = make_request_via_callback_channel(req_type, callback_channel)?;
+    serde_json::from_slice::<bool>(&response.payload).map_err(RegoRuntimeError::CallbackConvertBool)
 }
 
 /// Creates a map that has ContextAwareResource as key, and its plural name as value.
@@ -107,6 +141,8 @@ pub(crate) mod tests {
     use super::*;
     use anyhow::{anyhow, Result};
     use assert_json_diff::assert_json_eq;
+    use rstest::rstest;
+    use std::collections::HashMap;
     use std::path::Path;
 
     pub fn dynamic_object_from_fixture(
@@ -231,6 +267,86 @@ pub(crate) mod tests {
         tokio::task::spawn_blocking(move || {
             let actual = get_plural_names(&callback_tx, &resources).unwrap();
             assert_eq!(actual, expected_names);
+        })
+        .await
+        .unwrap();
+    }
+    #[rstest]
+    #[case(
+        HashMap::<ContextAwareResource, bool>::from([(ContextAwareResource{api_version: "v1".to_string(), kind: "Service".to_string()}, true)]),
+        true,
+    )]
+    #[case(
+        HashMap::<ContextAwareResource, bool>::from([(ContextAwareResource{api_version: "v1".to_string(), kind: "Service".to_string()}, false)]),
+        false,
+    )]
+    #[case(
+        HashMap::<ContextAwareResource, bool>::from([
+            (ContextAwareResource{api_version: "v1".to_string(), kind: "Service".to_string()}, true),
+            (ContextAwareResource{api_version: "v1".to_string(), kind: "Pod".to_string()}, false),
+        ]),
+        true,
+    )]
+    #[case(
+        HashMap::<ContextAwareResource, bool>::from([
+            (ContextAwareResource{api_version: "v1".to_string(), kind: "Service".to_string()}, false),
+            (ContextAwareResource{api_version: "v1".to_string(), kind: "Pod".to_string()}, false),
+        ]),
+        false,
+    )]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn have_resources_changed_since_when_reflector_does_not_exist_yet(
+        #[case] resources_with_change_status: HashMap<ContextAwareResource, bool>,
+        #[case] expected: bool,
+    ) {
+        let (callback_tx, mut callback_rx) = mpsc::channel::<CallbackRequest>(10);
+        let since = tokio::time::Instant::now();
+        let expected_resources_with_change_status = resources_with_change_status.clone();
+
+        tokio::spawn(async move {
+            loop {
+                let req = match callback_rx.recv().await {
+                    Some(r) => r,
+                    None => return,
+                };
+                let changed = match req.request {
+                CallbackRequestType::HasKubernetesListResourceAllResultChangedSinceInstant {
+                    api_version,
+                    kind,
+                    label_selector,
+                    field_selector,
+                    since: _,
+                } => {
+                    let resource = ContextAwareResource {
+                        api_version: api_version.clone(),
+                        kind: kind.clone(),
+                    };
+                    assert!(label_selector.is_none());
+                    assert!(field_selector.is_none());
+
+                    expected_resources_with_change_status
+                        .get(&resource)
+                        .expect("cannot find resource")
+                }
+                _ => {
+                    panic!("not the expected request type");
+                }
+            };
+
+                let callback_response = CallbackResponse {
+                    payload: serde_json::to_vec(&changed).unwrap(),
+                };
+
+                req.response_channel.send(Ok(callback_response)).unwrap();
+            }
+        });
+
+        tokio::task::spawn_blocking(move || {
+            let resources = resources_with_change_status.keys().cloned().collect();
+            let actual =
+                have_allowed_resources_changed_since_instant(&callback_tx, &resources, since)
+                    .unwrap();
+            assert_json_eq!(expected, actual);
         })
         .await
         .unwrap();

@@ -1,6 +1,7 @@
 mod context_aware;
 pub mod errors;
 mod gatekeeper_inventory;
+mod gatekeeper_inventory_cache;
 mod opa_inventory;
 mod runtime;
 mod stack;

@@ -296,6 +296,29 @@ impl CallbackHandler {
                         }
                     )
                 }
+                CallbackRequestType::HasKubernetesListResourceAllResultChangedSinceInstant {
+                    api_version,
+                    kind,
+                    label_selector,
+                    field_selector,
+                    since,
+                } => {
+                    handle_callback!(
+                        req,
+                        format!("{api_version}/{kind}"),
+                        "Has the result of 'Kubernetes list all resources' changed since a given instant",
+                        {
+                            kubernetes::has_list_resources_all_result_changed_since_instant(
+                                kubernetes_client.as_mut(),
+                                &api_version,
+                                &kind,
+                                label_selector,
+                                field_selector,
+                                since,
+                            )
+                        }
+                    )
+                }
             }
         });
     }

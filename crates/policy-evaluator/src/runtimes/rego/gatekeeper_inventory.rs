@@ -56,7 +56,7 @@
 /// ```
 ///
 use kube::api::ObjectList;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use crate::policy_metadata::ContextAwareResource;
@@ -64,7 +64,7 @@ use crate::runtimes::rego::errors::{RegoRuntimeError, Result};
 
 /// A wrapper around a dictionary that has the resource Name as key,
 /// and a DynamicObject as value
-#[derive(Serialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub(crate) struct ResourcesByName(BTreeMap<String, kube::core::DynamicObject>);
 
 impl ResourcesByName {
@@ -81,7 +81,7 @@ impl ResourcesByName {
 
 /// A wrapper around a dictionary that has a Kubernetes Kind (e.g. `Pod`)
 /// as key, and a ResourcesByName as value
-#[derive(Serialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub(crate) struct ResourcesByKind(BTreeMap<String, ResourcesByName>);
 
 impl ResourcesByKind {
@@ -99,7 +99,7 @@ impl ResourcesByKind {
 
 /// A wrapper around a dictionary that has a Kubernetes GroupVersion (e.g. `apps/v1`)
 /// as key, and a ResourcesByKind as value
-#[derive(Serialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub(crate) struct ResourcesByGroupVersion(BTreeMap<String, ResourcesByKind>);
 
 impl ResourcesByGroupVersion {
@@ -118,7 +118,7 @@ impl ResourcesByGroupVersion {
 /// A wrapper around a dictionary that has
 /// the name of a Kubernetes Namespace (e.g. `kube-system`) as key,
 /// and a ResourcesByGroupVersion as value
-#[derive(Serialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub(crate) struct ResourcesByNamespace(BTreeMap<String, ResourcesByGroupVersion>);
 
 impl ResourcesByNamespace {
@@ -138,7 +138,7 @@ impl ResourcesByNamespace {
 
 /// A struct holding the Kubernetes context aware data in a format that is compabible with what
 /// Gatekeeper expects
-#[derive(Serialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq)]
 pub(crate) struct GatekeeperInventory {
     #[serde(rename = "cluster")]
     cluster_resources: ResourcesByGroupVersion,

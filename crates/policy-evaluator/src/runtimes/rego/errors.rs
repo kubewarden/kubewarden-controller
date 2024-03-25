@@ -10,6 +10,9 @@ pub enum RegoRuntimeError {
     #[error("cannot convert callback response into a list of kubernetes objects: {0}")]
     CallbackConvertList(#[source] serde_json::Error),
 
+    #[error("cannot convert callback response into a boolean: {0}")]
+    CallbackConvertBool(#[source] serde_json::Error),
+
     #[error("error sending request over callback channel: {0}")]
     CallbackSend(String), // TODO same as CallbackRequest?
 
@@ -27,6 +30,9 @@ pub enum RegoRuntimeError {
 
     #[error("DynamicObject does not have a namespace")]
     GatekeeperInventoryMissingNamespace,
+
+    #[error("cannot convert Gatekeeper inventory to JSON: {0}")]
+    GatekeeperInventorySerializationError(#[source] serde_json::Error),
 
     #[error("DynamicObject does not have a name")]
     OpaInventoryMissingName,

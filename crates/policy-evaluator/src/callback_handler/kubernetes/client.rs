@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use kube::core::{DynamicObject, ObjectList};
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::RwLock;
+use tokio::{sync::RwLock, time::Instant};
 
 use crate::callback_handler::kubernetes::{reflector::Reflector, ApiVersionKind, KubeResource};
 
@@ -157,6 +157,27 @@ impl Client {
             .await
     }
 
+    pub async fn has_list_resources_all_result_changed_since_instant(
+        &mut self,
+        api_version: &str,
+        kind: &str,
+        label_selector: Option<String>,
+        field_selector: Option<String>,
+        since: Instant,
+    ) -> Result<bool> {
+        let resource = self.build_kube_resource(api_version, kind).await?;
+
+        Ok(self
+            .have_reflector_resources_changed_since(
+                &resource,
+                None,
+                label_selector,
+                field_selector,
+                since,
+            )
+            .await)
+    }
+
     async fn list_resources_from_reflector(
         &mut self,
         resource: KubeResource,
@@ -196,6 +217,33 @@ impl Client {
                 .map(|v| DynamicObject::clone(v))
                 .collect(),
         })
+    }
+
+    /// Check if the resources cached by the reflector have changed since the provided instant
+    async fn have_reflector_resources_changed_since(
+        &mut self,
+        resource: &KubeResource,
+        namespace: Option<String>,
+        label_selector: Option<String>,
+        field_selector: Option<String>,
+        since: Instant,
+    ) -> bool {
+        let reflector_id = Reflector::compute_id(
+            resource,
+            namespace.as_deref(),
+            label_selector.as_deref(),
+            field_selector.as_deref(),
+        );
+
+        let last_change_seen_at = {
+            let reflectors = self.reflectors.read().await;
+            match reflectors.get(&reflector_id) {
+                Some(reflector) => reflector.last_change_seen_at().await,
+                None => return true,
+            }
+        };
+
+        last_change_seen_at > since
     }
 
     pub async fn get_resource(
