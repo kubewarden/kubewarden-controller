@@ -8,7 +8,7 @@ use crate::{
     runtimes::rego::{
         context_aware,
         errors::{RegoRuntimeError, Result},
-        gatekeeper_inventory::GatekeeperInventory,
+        gatekeeper_inventory_cache::GATEKEEPER_INVENTORY_CACHE,
         opa_inventory::OpaInventory,
         stack_pre::StackPre,
     },
@@ -44,24 +44,24 @@ impl Stack {
 
         match callback_channel {
             None => Err(RegoRuntimeError::CallbackChannelNotSet),
-            Some(chan) => {
-                let cluster_resources =
-                    context_aware::get_allowed_resources(chan, ctx_aware_resources_allow_list)?;
-
-                match self.policy_execution_mode {
-                    RegoPolicyExecutionMode::Opa => {
-                        let plural_names_by_resource =
-                            context_aware::get_plural_names(chan, ctx_aware_resources_allow_list)?;
-                        let inventory =
-                            OpaInventory::new(&cluster_resources, &plural_names_by_resource)?;
-                        Ok(context_aware::KubernetesContext::Opa(inventory))
-                    }
-                    RegoPolicyExecutionMode::Gatekeeper => {
-                        let inventory = GatekeeperInventory::new(&cluster_resources)?;
-                        Ok(context_aware::KubernetesContext::Gatekeeper(inventory))
-                    }
+            Some(chan) => match self.policy_execution_mode {
+                RegoPolicyExecutionMode::Opa => {
+                    let cluster_resources =
+                        context_aware::get_allowed_resources(chan, ctx_aware_resources_allow_list)?;
+                    let plural_names_by_resource =
+                        context_aware::get_plural_names(chan, ctx_aware_resources_allow_list)?;
+                    let inventory =
+                        OpaInventory::new(&cluster_resources, &plural_names_by_resource)?;
+                    Ok(context_aware::KubernetesContext::Opa(inventory))
                 }
-            }
+                RegoPolicyExecutionMode::Gatekeeper => {
+                    let cached_inventory = GATEKEEPER_INVENTORY_CACHE
+                        .get_inventory(chan, ctx_aware_resources_allow_list)?;
+                    Ok(context_aware::KubernetesContext::Gatekeeper(
+                        cached_inventory,
+                    ))
+                }
+            },
         }
     }
 }

@@ -116,3 +116,30 @@ pub(crate) async fn get_resource_plural_name(
             value,
         })
 }
+
+/// Check if the results of the "list all resources" query have changed since the provided instant
+/// This is done by querying the reflector that keeps track of this query
+pub(crate) async fn has_list_resources_all_result_changed_since_instant(
+    client: Option<&mut Client>,
+    api_version: &str,
+    kind: &str,
+    label_selector: Option<String>,
+    field_selector: Option<String>,
+    since: tokio::time::Instant,
+) -> Result<cached::Return<bool>> {
+    if client.is_none() {
+        return Err(anyhow!("kube::Client was not initialized properly")).map(cached::Return::new);
+    }
+
+    client
+        .unwrap()
+        .has_list_resources_all_result_changed_since_instant(
+            api_version,
+            kind,
+            label_selector,
+            field_selector,
+            since,
+        )
+        .await
+        .map(cached::Return::new)
+}

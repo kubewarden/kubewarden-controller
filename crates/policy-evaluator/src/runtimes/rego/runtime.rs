@@ -1,13 +1,16 @@
+use burrego::errors::BurregoError;
 use kubewarden_policy_sdk::settings::SettingsValidationResponse;
 use serde::Deserialize;
 use serde_json::json;
 use tracing::{error, warn};
 
-use crate::admission_response::{AdmissionResponse, AdmissionResponseStatus};
-use crate::policy_evaluator::RegoPolicyExecutionMode;
-use crate::policy_evaluator::{PolicySettings, ValidateRequest};
 use crate::runtimes::rego::{
     context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError, Stack,
+};
+use crate::{
+    admission_request,
+    admission_response::{AdmissionResponse, AdmissionResponseStatus},
+    policy_evaluator::{PolicySettings, RegoPolicyExecutionMode, ValidateRequest},
 };
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut Stack);
@@ -21,32 +24,9 @@ impl<'a> Runtime<'a> {
     ) -> AdmissionResponse {
         let uid = request.uid();
 
-        // OPA and Gatekeeper expect arguments in different ways. Provide the ones that each expect.
-        let (document_to_evaluate, data) = match self.0.policy_execution_mode {
-            RegoPolicyExecutionMode::Opa => {
-                let input = json!({
-                    "request": &request,
-                });
-
-                // OPA data seems to be free-form, except for the
-                // Kubernetes context aware data that must be under the
-                // `kubernetes` key
-                // We don't know the data that is provided by the users via
-                // their settings, hence set the context aware data, to
-                // ensure we overwrite what a user might have set.
-                let data = match ctx_data {
-                    KubernetesContext::Opa(ctx) => {
-                        let mut data = settings.clone();
-                        if data.insert("kubernetes".to_string(), json!(ctx)).is_some() {
-                            warn!("OPA policy had user provided setting with key `kubernetes`. This value has been overwritten with the actual kubernetes context data");
-                        }
-                        json!(data)
-                    }
-                    _ => json!(settings),
-                };
-
-                (input, data)
-            }
+        // OPA and Gatekeeper expect arguments in different ways
+        let burrego_evaluation = match self.0.policy_execution_mode {
+            RegoPolicyExecutionMode::Opa => self.evaluate_opa(settings, request, ctx_data),
             RegoPolicyExecutionMode::Gatekeeper => {
                 // Gatekeeper policies expect the `AdmissionRequest` variant only.
                 let request = match request {
@@ -58,26 +38,9 @@ impl<'a> Runtime<'a> {
                         );
                     }
                 };
-
-                // Gatekeeper policies include a toplevel `review`
-                // object that contains the AdmissionRequest to be
-                // evaluated in an `object` attribute, and the
-                // parameters -- defined in their `ConstraintTemplate`
-                // and configured when the Policy is created.
-                (
-                    json!({
-                        "parameters": settings,
-                        "review": &request,
-                    }),
-                    json!({"inventory": ctx_data}),
-                )
+                self.evaluate_gatekeeper(settings, request, ctx_data)
             }
         };
-
-        let burrego_evaluation =
-            self.0
-                .evaluator
-                .evaluate(self.0.entrypoint_id, &document_to_evaluate, &data);
 
         match burrego_evaluation {
             Ok(evaluation_result) => {
@@ -179,6 +142,70 @@ impl<'a> Runtime<'a> {
                 AdmissionResponse::reject_internal_server_error(uid.to_string(), err.to_string())
             }
         }
+    }
+
+    fn evaluate_opa(
+        &mut self,
+        settings: &PolicySettings,
+        request: &ValidateRequest,
+        ctx_data: &context_aware::KubernetesContext,
+    ) -> Result<serde_json::Value, BurregoError> {
+        let input = json!({
+            "request": &request,
+        });
+
+        // OPA data seems to be free-form, except for the
+        // Kubernetes context aware data that must be under the
+        // `kubernetes` key
+        // We don't know the data that is provided by the users via
+        // their settings, hence set the context aware data, to
+        // ensure we overwrite what a user might have set.
+        let data = match ctx_data {
+            KubernetesContext::Opa(ctx) => {
+                let mut data = settings.clone();
+                if data.insert("kubernetes".to_string(), json!(ctx)).is_some() {
+                    warn!("OPA policy had user provided setting with key `kubernetes`. This value has been overwritten with the actual kubernetes context data");
+                }
+                json!(data)
+            }
+            _ => json!(settings),
+        };
+
+        let data_raw = serde_json::to_vec(&data).map_err(|e| BurregoError::JSONError {
+            msg: "cannot convert OPA data to JSON".to_string(),
+            source: e,
+        })?;
+
+        self.0
+            .evaluator
+            .evaluate(self.0.entrypoint_id, &input, &data_raw)
+    }
+
+    fn evaluate_gatekeeper(
+        &mut self,
+        settings: &PolicySettings,
+        request: &admission_request::AdmissionRequest,
+        ctx_data: &context_aware::KubernetesContext,
+    ) -> Result<serde_json::Value, BurregoError> {
+        // Gatekeeper policies include a toplevel `review`
+        // object that contains the AdmissionRequest to be
+        // evaluated in an `object` attribute, and the
+        // parameters -- defined in their `ConstraintTemplate`
+        // and configured when the Policy is created.
+        let input = json!({
+            "parameters": settings,
+            "review": request,
+        });
+
+        let data_raw = match ctx_data {
+            KubernetesContext::Gatekeeper(ctx) => ctx,
+            KubernetesContext::Empty => "{}".as_bytes(),
+            KubernetesContext::Opa(_) => unreachable!(),
+        };
+
+        self.0
+            .evaluator
+            .evaluate(self.0.entrypoint_id, &input, data_raw)
     }
 
     pub fn validate_settings(&mut self, _settings: String) -> SettingsValidationResponse {

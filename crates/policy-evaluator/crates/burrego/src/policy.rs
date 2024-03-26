@@ -216,12 +216,12 @@ impl Policy {
         &mut self,
         mut store: impl AsContextMut,
         memory: &Memory,
-        data: &serde_json::Value,
+        data: &[u8],
     ) -> Result<()> {
         self.opa_heap_ptr_set_fn
             .call(store.as_context_mut(), self.base_heap_ptr)
             .map_err(|e| map_call_error!(e, "error invoking opa_heap_ptr_set function"))?;
-        self.data_addr = StackHelper::push_json(
+        self.data_addr = StackHelper::push_json_raw(
             store.as_context_mut(),
             memory,
             self.opa_malloc_fn,

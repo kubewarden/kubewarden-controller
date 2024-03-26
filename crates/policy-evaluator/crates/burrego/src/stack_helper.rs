@@ -128,10 +128,9 @@ impl StackHelper {
             })?;
         let data = StackHelper::read_string(store, memory, raw_addr)?;
 
-        serde_json::from_slice(&data).map_err(|e| {
-            BurregoError::JSONError(format!(
-                "cannot convert data read from memory into utf8 String: {e:?}"
-            ))
+        serde_json::from_slice(&data).map_err(|e| BurregoError::JSONError {
+            msg: "cannot convert data read from memory into utf8 String".to_string(),
+            source: e,
         })
     }
 
@@ -151,12 +150,38 @@ impl StackHelper {
         opa_json_parse_fn: TypedFunc<(i32, i32), i32>,
         value: &serde_json::Value,
     ) -> Result<i32> {
-        let data = serde_json::to_vec(&value).map_err(|e| {
-            BurregoError::JSONError(format!("push_json: cannot convert value to json: {e:?}"))
+        let data = serde_json::to_vec(&value).map_err(|e| BurregoError::JSONError {
+            msg: "push_json".to_string(),
+            source: e,
         })?;
 
-        let data_size: i32 = data.len().try_into().map_err(|e| {
-            BurregoError::JSONError(format!("push_json: cannot convert size to json: {e:?}"))
+        StackHelper::push_json_raw(
+            store.as_context_mut(),
+            memory,
+            opa_malloc_fn,
+            opa_json_parse_fn,
+            &data,
+        )
+    }
+
+    /// Push a JSON data from the host into the Wasm guest
+    /// # Arguments
+    /// * `store` - the Store associated with the Wasm instance
+    /// * `memory` - the Wasm linear memory used by the Wasm Instance
+    /// * `opa_malloc_fn` - the `opa_malloc` function exported by the wasm guest
+    /// * `opa_json_parse_fn` - the `opa_json_parse` function exported by the wasm guest
+    /// * `value` - the JSON data to push into the Wasm guest
+    /// # Returns
+    /// * Address inside of the Wasm linear memory where the value has been stored
+    pub fn push_json_raw(
+        mut store: impl AsContextMut,
+        memory: &Memory,
+        opa_malloc_fn: TypedFunc<i32, i32>,
+        opa_json_parse_fn: TypedFunc<(i32, i32), i32>,
+        data: &[u8],
+    ) -> Result<i32> {
+        let data_size: i32 = data.len().try_into().map_err(|_| {
+            BurregoError::RegoWasmError("push_json: cannot convert size to json".to_string())
         })?;
 
         // allocate memory to fit the value
@@ -168,7 +193,7 @@ impl StackHelper {
                 ))
             })?;
         memory
-            .write(store.as_context_mut(), raw_addr.try_into().unwrap(), &data)
+            .write(store.as_context_mut(), raw_addr.try_into().unwrap(), data)
             .map_err(|e| {
                 BurregoError::WasmEngineError(format!("push_json: cannot write to memory: {e:?}"))
             })?;

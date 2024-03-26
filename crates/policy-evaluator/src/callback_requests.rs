@@ -1,11 +1,10 @@
 use anyhow::Result;
-use kubewarden_policy_sdk::host_capabilities::verification::{KeylessInfo, KeylessPrefixInfo};
 use kubewarden_policy_sdk::host_capabilities::{
+    verification::{KeylessInfo, KeylessPrefixInfo},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tokio::sync::oneshot;
+use tokio::{sync::oneshot, time::Instant};
 
 /// Holds the response to a waPC evaluation request
 #[derive(Debug, Clone)]
@@ -26,7 +25,7 @@ pub struct CallbackRequest {
 
 /// Describes the different kinds of request a waPC guest can make to
 /// our host.
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum CallbackRequestType {
     /// Require the computation of the manifest digest of an OCI object (be
     /// it an image or anything else that can be stored into an OCI registry)
@@ -176,6 +175,22 @@ pub enum CallbackRequestType {
         api_version: String,
         /// Singular PascalCase name of the resource
         kind: String,
+    },
+
+    /// Checks if the data of the reflector tracking this query changed since the given instant
+    HasKubernetesListResourceAllResultChangedSinceInstant {
+        /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
+        api_version: String,
+        /// Singular PascalCase name of the resource
+        kind: String,
+        /// A selector to restrict the list of returned objects by their labels.
+        /// Defaults to everything if `None`
+        label_selector: Option<String>,
+        /// A selector to restrict the list of returned objects by their fields.
+        /// Defaults to everything if `None`
+        field_selector: Option<String>,
+        /// The instant in time to compare the last change of the resources
+        since: Instant,
     },
 }
 

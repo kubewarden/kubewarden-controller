@@ -1,12 +1,35 @@
 use anyhow::Result;
-use futures::{future::ready, StreamExt, TryStreamExt};
+use futures::{future::ready, Stream, StreamExt, TryStreamExt};
+use kube::{runtime::reflector::store, Resource};
 use kube::{
     runtime::{reflector::store::Writer, watcher, WatchStreamExt},
     ResourceExt,
 };
+use std::hash::Hash;
+use tokio::{sync::watch, time::Instant};
 use tracing::{debug, info, warn};
 
 use crate::callback_handler::kubernetes::KubeResource;
+
+/// Like `kube::runtime::reflector::reflector`, but also sends the time of the last change to a
+/// watch channel
+pub fn reflector_tracking_changes_instant<K, W>(
+    mut writer: store::Writer<K>,
+    stream: W,
+    last_change_seen_at: watch::Sender<Instant>,
+) -> impl Stream<Item = W::Item>
+where
+    K: Resource + Clone,
+    K::DynamicType: Eq + Hash + Clone,
+    W: Stream<Item = watcher::Result<watcher::Event<K>>>,
+{
+    stream.inspect_ok(move |event| {
+        if let Err(err) = last_change_seen_at.send(Instant::now()) {
+            warn!(error = ?err, "failed to set last_change_seen_at");
+        }
+        writer.apply_watcher_event(event)
+    })
+}
 
 /// A reflector fetches kubernetes objects based on filtering criteria.
 /// When created, the list is populated slowly, to prevent hammering the Kubernetes API server.
@@ -28,6 +51,7 @@ use crate::callback_handler::kubernetes::KubeResource;
 pub(crate) struct Reflector {
     /// Read-only access to the data cached by the Reflector
     pub reader: kube::runtime::reflector::Store<kube::core::DynamicObject>,
+    last_change_seen_at: watch::Receiver<Instant>,
 }
 
 impl Reflector {
@@ -95,7 +119,10 @@ impl Reflector {
             })
         });
 
-        let rf = kube::runtime::reflector(writer, stream);
+        // this is a watch channel that tracks the last time the reflector saw a change
+        let (updated_at_watch_tx, updated_at_watch_rx) = watch::channel(Instant::now());
+
+        let rf = reflector_tracking_changes_instant(writer, stream, updated_at_watch_tx);
 
         tokio::spawn(async move {
             let infinite_watch = rf.default_backoff().touched_objects().for_each(|obj| {
@@ -128,6 +155,14 @@ impl Reflector {
 
         reader.wait_until_ready().await?;
 
-        Ok(Reflector { reader })
+        Ok(Reflector {
+            reader,
+            last_change_seen_at: updated_at_watch_rx,
+        })
+    }
+
+    /// Get the last time a change was seen by the reflector
+    pub async fn last_change_seen_at(&self) -> Instant {
+        *self.last_change_seen_at.borrow()
     }
 }

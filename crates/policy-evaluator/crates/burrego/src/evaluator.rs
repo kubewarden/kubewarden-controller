@@ -231,7 +231,7 @@ impl Evaluator {
         &mut self,
         entrypoint_id: i32,
         input: &serde_json::Value,
-        data: &serde_json::Value,
+        data: &[u8],
     ) -> Result<serde_json::Value> {
         set_epoch_deadline_and_call_guest!(self.epoch_deadline, self.store, {
             if !self.has_entrypoint(entrypoint_id) {
