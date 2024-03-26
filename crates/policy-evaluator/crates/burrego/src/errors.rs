@@ -16,6 +16,7 @@ pub enum BurregoError {
     #[error("{msg}: {source}")]
     JSONError {
         msg: String,
+        #[source]
         source: serde_json::Error,
     },
 
