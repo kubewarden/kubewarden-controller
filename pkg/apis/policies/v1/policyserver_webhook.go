@@ -84,6 +84,11 @@ func (v *policyServerValidator) validate(ctx context.Context, obj runtime.Object
 		}
 	}
 
+	// Kubernetes does not allow to set both MinAvailable and MaxUnavailable at the same time
+	if policyServer.Spec.MinAvailable != nil && policyServer.Spec.MaxUnavailable != nil {
+		return fmt.Errorf("spec.MinAvailable and spec.MaxUnavailable cannot be set at the same time")
+	}
+
 	return nil
 }
 
