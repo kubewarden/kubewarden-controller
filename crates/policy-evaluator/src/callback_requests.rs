@@ -177,7 +177,7 @@ pub enum CallbackRequestType {
         kind: String,
     },
 
-    /// Is the data of the reflector tracking this query changed since the given instant?
+    /// Checks if the data of the reflector tracking this query changed since the given instant
     HasKubernetesListResourceAllResultChangedSinceInstant {
         /// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
         api_version: String,
