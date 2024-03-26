@@ -30,6 +30,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8spoliciesv1 "k8s.io/api/policy/v1"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"k8s.io/apimachinery/pkg/fields"
@@ -161,10 +162,11 @@ func main() {
 		// cache must not be namespaced.
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
-				&appsv1.ReplicaSet{}: namespaceSelector,
-				&corev1.Secret{}:     namespaceSelector,
-				&corev1.Pod{}:        namespaceSelector,
-				&corev1.Service{}:    namespaceSelector,
+				&appsv1.ReplicaSet{}:                 namespaceSelector,
+				&corev1.Secret{}:                     namespaceSelector,
+				&corev1.Pod{}:                        namespaceSelector,
+				&corev1.Service{}:                    namespaceSelector,
+				&k8spoliciesv1.PodDisruptionBudget{}: namespaceSelector,
 			},
 		},
 		// These types of resources should never be cached because we need fresh
