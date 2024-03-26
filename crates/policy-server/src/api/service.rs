@@ -40,11 +40,18 @@ pub(crate) fn evaluate(
         match evaluation_environment.validate(policy_id, validate_request) {
             Ok(validation_response) => validation_response,
             Err(EvaluationError::PolicyInitialization(error)) => {
+                let policy_initialization_error_metric = metrics::PolicyInitializationError {
+                    policy_name: policy_id.to_string(),
+                    initialization_error: error.to_string(),
+                };
+
+                metrics::add_policy_evaluation(&policy_initialization_error_metric);
+
                 return Ok(AdmissionResponse::reject(
                     validate_request.uid().to_owned(),
                     error.to_string(),
                     500,
-                ))
+                ));
             }
 
             Err(error) => return Err(error),
@@ -97,7 +104,7 @@ pub(crate) fn evaluate(
                     };
                 }
             }
-            let policy_evaluation = metrics::PolicyEvaluation {
+            let policy_evaluation_metric = metrics::PolicyEvaluation {
                 policy_name,
                 policy_mode: policy_mode.into(),
                 resource_namespace: adm_req.clone().namespace,
@@ -108,21 +115,24 @@ pub(crate) fn evaluate(
                 request_origin: request_origin.to_string(),
                 error_code,
             };
-            metrics::record_policy_latency(policy_evaluation_duration, &policy_evaluation);
-            metrics::add_policy_evaluation(&policy_evaluation);
+            metrics::record_policy_latency(policy_evaluation_duration, &policy_evaluation_metric);
+            metrics::add_policy_evaluation(&policy_evaluation_metric);
         }
         ValidateRequest::Raw(_) => {
             let accepted = vanilla_validation_response.allowed;
             let mutated = vanilla_validation_response.patch.is_some();
-            let policy_evaluation = metrics::RawPolicyEvaluation {
+            let raw_policy_evaluation_metric = metrics::RawPolicyEvaluation {
                 policy_name,
                 policy_mode: policy_mode.into(),
                 accepted,
                 mutated,
                 error_code,
             };
-            metrics::record_policy_latency(policy_evaluation_duration, &policy_evaluation);
-            metrics::add_policy_evaluation(&policy_evaluation);
+            metrics::record_policy_latency(
+                policy_evaluation_duration,
+                &raw_policy_evaluation_metric,
+            );
+            metrics::add_policy_evaluation(&raw_policy_evaluation_metric);
         }
     };
     Ok(validation_response)
