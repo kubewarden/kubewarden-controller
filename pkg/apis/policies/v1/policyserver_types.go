@@ -88,6 +88,10 @@ type PolicyServerSpec struct {
 	// containers added by other controllers (e.g. telemetry sidecars)
 	// +optional
 	SecurityContexts PolicyServerSecurity `json:"securityContexts,omitempty"`
+
+	// Affinity rules for the associated Policy Server pods.
+	// +optional
+	Affinity corev1.Affinity `json:"affinity,omitempty"`
 }
 
 type ReconciliationTransitionReason string
