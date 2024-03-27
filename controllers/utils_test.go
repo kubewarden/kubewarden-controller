@@ -31,6 +31,7 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8spoliciesv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -219,4 +220,13 @@ func randStringRunes(n int) string {
 
 func newName(prefix string) string {
 	return fmt.Sprintf("%s-%s", prefix, randStringRunes(8))
+}
+
+func policyServerPodDisruptionBudgetExists(policyServerName string) error {
+	podDisruptionBudgetName := fmt.Sprintf("policy-server-%s-%s", policyServerName, "pdb")
+	pdb := k8spoliciesv1.PodDisruptionBudget{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: podDisruptionBudgetName, Namespace: DeploymentsNamespace}, &pdb); err != nil {
+		return errors.Join(errors.New("could not find PodDisruptionBudget"), err)
+	}
+	return nil
 }

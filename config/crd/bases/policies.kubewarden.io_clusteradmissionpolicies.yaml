@@ -108,20 +108,20 @@ spec:
                   the API request to be rejected. The default behaviour is "Fail"
                 type: string
               matchPolicy:
-                description: "matchPolicy defines how the \"rules\" list is used to
-                  match incoming requests. Allowed values are \"Exact\" or \"Equivalent\".
-                  \n - Exact: match a request only if it exactly matches a specified
+                description: 'matchPolicy defines how the "rules" list is used to
+                  match incoming requests. Allowed values are "Exact" or "Equivalent".
+                  <ul> <li> Exact: match a request only if it exactly matches a specified
                   rule. For example, if deployments can be modified via apps/v1, apps/v1beta1,
-                  and extensions/v1beta1, but \"rules\" only included `apiGroups:[\"apps\"],
-                  apiVersions:[\"v1\"], resources: [\"deployments\"]`, a request to
-                  apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook.
-                  \n - Equivalent: match a request if modifies a resource listed in
-                  rules, even via another API group or version. For example, if deployments
+                  and extensions/v1beta1, but "rules" only included `apiGroups:["apps"],
+                  apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1
+                  or extensions/v1beta1 would not be sent to the webhook. </li> <li>
+                  Equivalent: match a request if modifies a resource listed in rules,
+                  even via another API group or version. For example, if deployments
                   can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,
-                  and \"rules\" only included `apiGroups:[\"apps\"], apiVersions:[\"v1\"],
-                  resources: [\"deployments\"]`, a request to apps/v1beta1 or extensions/v1beta1
-                  would be converted to apps/v1 and sent to the webhook. \n Defaults
-                  to \"Equivalent\""
+                  and "rules" only included `apiGroups:["apps"], apiVersions:["v1"],
+                  resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1
+                  would be converted to apps/v1 and sent to the webhook. </li> </ul>
+                  Defaults to "Equivalent"'
                 type: string
               mode:
                 default: protect
@@ -147,22 +147,31 @@ spec:
                   mutate incoming requests or not.
                 type: boolean
               namespaceSelector:
-                description: "NamespaceSelector decides whether to run the webhook
+                description: 'NamespaceSelector decides whether to run the webhook
                   on an object based on whether the namespace for that object matches
                   the selector. If the object itself is a namespace, the matching
                   is performed on object.metadata.labels. If the object is another
-                  cluster scoped resource, it never skips the webhook. \n For example,
-                  to run the webhook on any objects whose namespace is not associated
-                  with \"runlevel\" of \"0\" or \"1\";  you will set the selector
-                  as follows: \"namespaceSelector\": { \"matchExpressions\": [ { \"key\":
-                  \"runlevel\", \"operator\": \"NotIn\", \"values\": [ \"0\", \"1\"
-                  ] } ] } \n If instead you want to only run the webhook on any objects
-                  whose namespace is associated with the \"environment\" of \"prod\"
-                  or \"staging\"; you will set the selector as follows: \"namespaceSelector\":
-                  { \"matchExpressions\": [ { \"key\": \"environment\", \"operator\":
-                  \"In\", \"values\": [ \"prod\", \"staging\" ] } ] } \n See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
-                  for more examples of label selectors. \n Default to the empty LabelSelector,
-                  which matches everything."
+                  cluster scoped resource, it never skips the webhook. <br/><br/>
+                  For example, to run the webhook on any objects whose namespace is
+                  not associated with "runlevel" of "0" or "1";  you will set the
+                  selector as follows: <pre> "namespaceSelector": \{<br/> &nbsp;&nbsp;"matchExpressions":
+                  [<br/> &nbsp;&nbsp;&nbsp;&nbsp;\{<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key":
+                  "runlevel",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator":
+                  "NotIn",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"0",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"1"<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/> &nbsp;&nbsp;&nbsp;&nbsp;\}<br/>
+                  &nbsp;&nbsp;]<br/> \} </pre> If instead you want to only run the
+                  webhook on any objects whose namespace is associated with the "environment"
+                  of "prod" or "staging"; you will set the selector as follows: <pre>
+                  "namespaceSelector": \{<br/> &nbsp;&nbsp;"matchExpressions": [<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;\{<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key":
+                  "environment",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator":
+                  "In",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"prod",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"staging"<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/> &nbsp;&nbsp;&nbsp;&nbsp;\}<br/>
+                  &nbsp;&nbsp;]<br/> \} </pre> See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
+                  for more examples of label selectors. <br/><br/> Default to the
+                  empty LabelSelector, which matches everything.'
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -506,20 +515,20 @@ spec:
                   the API request to be rejected. The default behaviour is "Fail"
                 type: string
               matchPolicy:
-                description: "matchPolicy defines how the \"rules\" list is used to
-                  match incoming requests. Allowed values are \"Exact\" or \"Equivalent\".
-                  \n - Exact: match a request only if it exactly matches a specified
+                description: 'matchPolicy defines how the "rules" list is used to
+                  match incoming requests. Allowed values are "Exact" or "Equivalent".
+                  <ul> <li> Exact: match a request only if it exactly matches a specified
                   rule. For example, if deployments can be modified via apps/v1, apps/v1beta1,
-                  and extensions/v1beta1, but \"rules\" only included `apiGroups:[\"apps\"],
-                  apiVersions:[\"v1\"], resources: [\"deployments\"]`, a request to
-                  apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook.
-                  \n - Equivalent: match a request if modifies a resource listed in
-                  rules, even via another API group or version. For example, if deployments
+                  and extensions/v1beta1, but "rules" only included `apiGroups:["apps"],
+                  apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1
+                  or extensions/v1beta1 would not be sent to the webhook. </li> <li>
+                  Equivalent: match a request if modifies a resource listed in rules,
+                  even via another API group or version. For example, if deployments
                   can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,
-                  and \"rules\" only included `apiGroups:[\"apps\"], apiVersions:[\"v1\"],
-                  resources: [\"deployments\"]`, a request to apps/v1beta1 or extensions/v1beta1
-                  would be converted to apps/v1 and sent to the webhook. \n Defaults
-                  to \"Equivalent\""
+                  and "rules" only included `apiGroups:["apps"], apiVersions:["v1"],
+                  resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1
+                  would be converted to apps/v1 and sent to the webhook. </li> </ul>
+                  Defaults to "Equivalent"'
                 type: string
               mode:
                 default: protect
@@ -544,22 +553,31 @@ spec:
                   mutate incoming requests or not.
                 type: boolean
               namespaceSelector:
-                description: "NamespaceSelector decides whether to run the webhook
+                description: 'NamespaceSelector decides whether to run the webhook
                   on an object based on whether the namespace for that object matches
                   the selector. If the object itself is a namespace, the matching
                   is performed on object.metadata.labels. If the object is another
-                  cluster scoped resource, it never skips the webhook. \n For example,
-                  to run the webhook on any objects whose namespace is not associated
-                  with \"runlevel\" of \"0\" or \"1\";  you will set the selector
-                  as follows: \"namespaceSelector\": { \"matchExpressions\": [ { \"key\":
-                  \"runlevel\", \"operator\": \"NotIn\", \"values\": [ \"0\", \"1\"
-                  ] } ] } \n If instead you want to only run the webhook on any objects
-                  whose namespace is associated with the \"environment\" of \"prod\"
-                  or \"staging\"; you will set the selector as follows: \"namespaceSelector\":
-                  { \"matchExpressions\": [ { \"key\": \"environment\", \"operator\":
-                  \"In\", \"values\": [ \"prod\", \"staging\" ] } ] } \n See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
-                  for more examples of label selectors. \n Default to the empty LabelSelector,
-                  which matches everything."
+                  cluster scoped resource, it never skips the webhook. <br/><br/>
+                  For example, to run the webhook on any objects whose namespace is
+                  not associated with "runlevel" of "0" or "1";  you will set the
+                  selector as follows: <pre> "namespaceSelector": \{<br/> &nbsp;&nbsp;"matchExpressions":
+                  [<br/> &nbsp;&nbsp;&nbsp;&nbsp;\{<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key":
+                  "runlevel",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator":
+                  "NotIn",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"0",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"1"<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/> &nbsp;&nbsp;&nbsp;&nbsp;\}<br/>
+                  &nbsp;&nbsp;]<br/> \} </pre> If instead you want to only run the
+                  webhook on any objects whose namespace is associated with the "environment"
+                  of "prod" or "staging"; you will set the selector as follows: <pre>
+                  "namespaceSelector": \{<br/> &nbsp;&nbsp;"matchExpressions": [<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;\{<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key":
+                  "environment",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator":
+                  "In",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"prod",<br/> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"staging"<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/> &nbsp;&nbsp;&nbsp;&nbsp;\}<br/>
+                  &nbsp;&nbsp;]<br/> \} </pre> See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
+                  for more examples of label selectors. <br/><br/> Default to the
+                  empty LabelSelector, which matches everything.'
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.

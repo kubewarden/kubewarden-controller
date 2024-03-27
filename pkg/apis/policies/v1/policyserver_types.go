@@ -19,6 +19,7 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // PolicyServerSecurity defines securityContext configuration to be used in the Policy Server workload
@@ -38,6 +39,12 @@ type PolicyServerSpec struct {
 
 	// Replicas is the number of desired replicas.
 	Replicas int32 `json:"replicas"`
+
+	// Number of policy server replicas that must be still available after the eviction
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+
+	// Number of policy server replicas that can be unavailable after the eviction
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 
 	// Annotations is an unstructured key value map stored with a resource that may be
 	// set by external tools to store and retrieve arbitrary metadata. They are not
@@ -121,6 +128,9 @@ const (
 	// PolicyServerServiceReconciled represents the condition of the
 	// Policy Server Service reconciliation
 	PolicyServerServiceReconciled PolicyServerConditionType = "ServiceReconciled"
+	// PolicyServerPodDisruptionBudgetReconciled represents the condition of the
+	// Policy Server PodDisruptionBudget reconciliation
+	PolicyServerPodDisruptionBudgetReconciled PolicyServerConditionType = "PodDisruptionBudgetReconciled"
 )
 
 // PolicyServerStatus defines the observed state of PolicyServer
