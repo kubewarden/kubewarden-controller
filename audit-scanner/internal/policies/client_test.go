@@ -161,6 +161,18 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		}).
 		Build()
 
+	// an AdmissionPolicy in targeting wildcard resources, it should be skipped
+	admissionPolicy4 := testutils.
+		NewAdmissionPolicyFactory().
+		Name("policy8").
+		Namespace("test").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"*"},
+			APIVersions: []string{"*"},
+			Resources:   []string{"*"},
+		}).
+		Build()
+
 	client := testutils.NewFakeClient(
 		namespace,
 		policyServer,
@@ -172,6 +184,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		admissionPolicy1,
 		admissionPolicy2,
 		admissionPolicy3,
+		admissionPolicy4,
 	)
 
 	policiesClient, err := NewClient(client, "kubewarden", "")
@@ -212,7 +225,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 			},
 		},
 		PolicyNum:  2,
-		SkippedNum: 2,
+		SkippedNum: 3,
 	}
 
 	assert.Equal(t, expectedPolicies, policies)
@@ -307,10 +320,21 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		}).
 		Build()
 
+	// a ClusterAdmissionPolicy with no CREATE operation, it should be skipped
+	clusterAdmissionPolicy6 := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("policy6").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"namespaces"},
+		}, admissionregistrationv1.Update, admissionregistrationv1.Delete).
+		Build()
+
 	// an AdmissionPolicy, it should not be considered
 	admissionPolicy1 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy6").
+		Name("policy7").
 		Namespace("test").
 		Build()
 
@@ -323,6 +347,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		clusterAdmissionPolicy3,
 		clusterAdmissionPolicy4,
 		clusterAdmissionPolicy5,
+		clusterAdmissionPolicy6,
 		admissionPolicy1,
 	)
 
@@ -354,63 +379,8 @@ func TestGetClusterWidePolicies(t *testing.T) {
 			},
 		},
 		PolicyNum:  3,
-		SkippedNum: 1,
+		SkippedNum: 2,
 	}
 
 	assert.Equal(t, expectedPolicies, policies)
-}
-
-func TestIsAuditable(t *testing.T) {
-	tests := []struct {
-		name     string
-		policy   policiesv1.Policy
-		expected bool
-	}{
-		{
-			name: "policy with status active",
-			policy: testutils.
-				NewAdmissionPolicyFactory().
-				Rule(
-					admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"pods"},
-					},
-				).Build(),
-			expected: true,
-		},
-		{
-			name: "policy targeting *all* resources",
-			policy: testutils.NewClusterAdmissionPolicyFactory().Rule(
-				admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{"*"},
-					Resources:   []string{"*"},
-				},
-			).Build(),
-			expected: false,
-		},
-		{
-			name: "policy with background audit set to false",
-			policy: testutils.
-				NewClusterAdmissionPolicyFactory().
-				BackgroundAudit(false).
-				Build(),
-			expected: false,
-		},
-		{
-			name: "policy with status pending",
-			policy: testutils.
-				NewClusterAdmissionPolicyFactory().
-				Status(policiesv1.PolicyStatusPending).
-				Build(),
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, isAuditable(tt.policy))
-		})
-	}
 }
