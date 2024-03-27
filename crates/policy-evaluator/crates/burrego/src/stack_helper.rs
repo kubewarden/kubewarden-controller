@@ -53,7 +53,7 @@ impl StackHelper {
         })?;
 
         let builtins: HashMap<i32, String> =
-            StackHelper::pull_json(store, memory, opa_json_dump_fn, addr)?
+            StackHelper::pull_json(store, memory, &opa_json_dump_fn, addr)?
                 .as_object()
                 .ok_or_else(|| {
                     BurregoError::RegoWasmError(
@@ -116,7 +116,7 @@ impl StackHelper {
     pub fn pull_json(
         mut store: impl AsContextMut,
         memory: &Memory,
-        opa_json_dump_fn: TypedFunc<i32, i32>,
+        opa_json_dump_fn: &TypedFunc<i32, i32>,
         addr: i32,
     ) -> Result<serde_json::Value> {
         let raw_addr = opa_json_dump_fn
@@ -146,8 +146,8 @@ impl StackHelper {
     pub fn push_json(
         mut store: impl AsContextMut,
         memory: &Memory,
-        opa_malloc_fn: TypedFunc<i32, i32>,
-        opa_json_parse_fn: TypedFunc<(i32, i32), i32>,
+        opa_malloc_fn: &TypedFunc<i32, i32>,
+        opa_json_parse_fn: &TypedFunc<(i32, i32), i32>,
         value: &serde_json::Value,
     ) -> Result<i32> {
         let data = serde_json::to_vec(&value).map_err(|e| BurregoError::JSONError {
@@ -176,8 +176,8 @@ impl StackHelper {
     pub fn push_json_raw(
         mut store: impl AsContextMut,
         memory: &Memory,
-        opa_malloc_fn: TypedFunc<i32, i32>,
-        opa_json_parse_fn: TypedFunc<(i32, i32), i32>,
+        opa_malloc_fn: &TypedFunc<i32, i32>,
+        opa_json_parse_fn: &TypedFunc<(i32, i32), i32>,
         data: &[u8],
     ) -> Result<i32> {
         let data_size: i32 = data.len().try_into().map_err(|_| {

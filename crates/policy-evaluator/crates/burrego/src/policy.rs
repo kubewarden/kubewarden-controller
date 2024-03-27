@@ -143,8 +143,8 @@ impl Policy {
         policy.data_addr = StackHelper::push_json(
             store.as_context_mut(),
             memory,
-            policy.opa_malloc_fn,
-            policy.opa_json_parse_fn,
+            &policy.opa_malloc_fn,
+            &policy.opa_json_parse_fn,
             &initial_data,
         )?;
 
@@ -168,7 +168,7 @@ impl Policy {
             .map_err(|e| map_call_error!(e, "error invoking builtins function"))?;
 
         let builtins: HashMap<String, i32> =
-            StackHelper::pull_json(store, memory, self.opa_json_dump_fn, addr)?
+            StackHelper::pull_json(store, memory, &self.opa_json_dump_fn, addr)?
                 .as_object()
                 .ok_or_else(|| {
                     BurregoError::RegoWasmError(
@@ -195,7 +195,7 @@ impl Policy {
             .call(store.as_context_mut(), ())
             .map_err(|e| map_call_error!(e, "error invoking entrypoints function"))?;
         let res =
-            StackHelper::pull_json(store.as_context_mut(), memory, self.opa_json_dump_fn, addr)?
+            StackHelper::pull_json(store.as_context_mut(), memory, &self.opa_json_dump_fn, addr)?
                 .as_object()
                 .ok_or_else(|| {
                     BurregoError::RegoWasmError(
@@ -224,8 +224,8 @@ impl Policy {
         self.data_addr = StackHelper::push_json_raw(
             store.as_context_mut(),
             memory,
-            self.opa_malloc_fn,
-            self.opa_json_parse_fn,
+            &self.opa_malloc_fn,
+            &self.opa_json_parse_fn,
             data,
         )?;
         self.data_heap_ptr = self
@@ -252,8 +252,8 @@ impl Policy {
         let input_addr = StackHelper::push_json(
             store.as_context_mut(),
             memory,
-            self.opa_malloc_fn,
-            self.opa_json_parse_fn,
+            &self.opa_malloc_fn,
+            &self.opa_json_parse_fn,
             input,
         )?;
 
@@ -288,7 +288,7 @@ impl Policy {
         StackHelper::pull_json(
             store.as_context_mut(),
             memory,
-            self.opa_json_dump_fn,
+            &self.opa_json_dump_fn,
             res_addr,
         )
     }

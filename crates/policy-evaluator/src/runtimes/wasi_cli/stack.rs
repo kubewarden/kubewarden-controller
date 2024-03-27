@@ -1,8 +1,8 @@
 use std::io::Cursor;
 use std::sync::{Arc, RwLock};
 use wasi_common::pipe::{ReadPipe, WritePipe};
+use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::WasiCtx;
-use wasmtime_wasi::sync::WasiCtxBuilder;
 
 use crate::evaluation_context::EvaluationContext;
 use crate::runtimes::wasi_cli::{

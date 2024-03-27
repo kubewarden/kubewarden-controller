@@ -22,7 +22,7 @@ impl StackPre {
         epoch_deadlines: Option<EpochDeadlines>,
     ) -> Result<Self> {
         let mut linker = Linker::<Context>::new(&engine);
-        wasmtime_wasi::add_to_linker(&mut linker, |c: &mut Context| &mut c.wasi_ctx)
+        wasi_common::sync::add_to_linker(&mut linker, |c: &mut Context| &mut c.wasi_ctx)
             .map_err(WasiRuntimeError::WasmLinkerError)?;
         add_host_call_to_linker(&mut linker)?;
 

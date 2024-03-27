@@ -51,13 +51,13 @@ wapc = "1.1"
 wasi-common = { workspace = true }
 wasmparser = "0.201"
 wasmtime = { workspace = true }
-wasmtime-provider = { version = "1.15", features = ["cache"] }
+wasmtime-provider = { version = "1.16", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
-wasi-common = "18.0"
-wasmtime = "18.0"
-wasmtime-wasi = "18.0"
+wasi-common = "19.0"
+wasmtime = "19.0"
+wasmtime-wasi = "19.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
