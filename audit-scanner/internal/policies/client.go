@@ -171,15 +171,58 @@ func (f *Client) getAdmissionPolicies(ctx context.Context, namespace string) ([]
 
 // groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
 // If namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
-func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) { //nolint:funlen,cyclop
+func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) { //nolint:funlen
 	policiesByGVR := make(map[schema.GroupVersionResource][]*Policy)
 	auditablePolicies := map[string]struct{}{}
 	skippedPolicies := map[string]struct{}{}
 
 	for _, policy := range policies {
-		if !isCreateActionPresentWithoutAllResources(policy) {
+		rules := filterWildcardRules(policy.GetRules())
+		if len(rules) == 0 {
 			skippedPolicies[policy.GetUniqueName()] = struct{}{}
-			log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy does not have at least one create operation that targets non-wildcard resources, skipping!")
+			log.
+				Debug().
+				Str("policy", policy.GetUniqueName()).
+				Msg("the policy targets only wildcard resources, skipping...")
+
+			continue
+		}
+
+		rules = filterNonCreateOperations(rules)
+		if len(rules) == 0 {
+			skippedPolicies[policy.GetUniqueName()] = struct{}{}
+			log.
+				Debug().
+				Str("policy", policy.GetUniqueName()).
+				Msg("the policy does not have rules with a CREATE operation, skipping...")
+
+			continue
+		}
+
+		groupVersionResources, err := f.getGroupVersionResources(rules, namespaced)
+		if err != nil {
+			return nil, err
+		}
+		if len(groupVersionResources) == 0 {
+			log.
+				Debug().
+				Str("policy", policy.GetUniqueName()).
+				Bool("namespaced", namespaced).
+				Msg("the policy does not target resources with the selected scope")
+
+			continue
+		}
+
+		if !policy.GetBackgroundAudit() {
+			skippedPolicies[policy.GetUniqueName()] = struct{}{}
+			log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy has backgroundAudit set to false, skipping...")
+
+			continue
+		}
+
+		if policy.GetStatus().PolicyStatus != policiesv1.PolicyStatusActive {
+			skippedPolicies[policy.GetUniqueName()] = struct{}{}
+			log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy is not active, skipping...")
 
 			continue
 		}
@@ -189,53 +232,15 @@ func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.P
 			return nil, err
 		}
 
-		for _, rules := range policy.GetRules() {
-			for _, resource := range rules.Resources {
-				for _, version := range rules.APIVersions {
-					for _, group := range rules.APIGroups {
-						gvr := schema.GroupVersionResource{
-							Group:    group,
-							Version:  version,
-							Resource: resource,
-						}
-						isNamespaced, err := f.isNamespacedResource(gvr)
-						if err != nil {
-							return nil, err
-						}
-						if namespaced && !isNamespaced {
-							// continue if resource is clusterwide
-							continue
-						}
-						if !namespaced && isNamespaced {
-							// continue if resource is namespaced
-							continue
-						}
+		auditablePolicies[policy.GetUniqueName()] = struct{}{}
 
-						if !policy.GetBackgroundAudit() {
-							skippedPolicies[policy.GetUniqueName()] = struct{}{}
-							log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy has backgroundAudit set to false, skipping!")
+		policy := &Policy{
+			Policy:       policy,
+			PolicyServer: url,
+		}
 
-							continue
-						}
-
-						if policy.GetStatus().PolicyStatus != policiesv1.PolicyStatusActive {
-							skippedPolicies[policy.GetUniqueName()] = struct{}{}
-							log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy is not active, skipping!")
-
-							continue
-						}
-
-						auditablePolicies[policy.GetUniqueName()] = struct{}{}
-
-						policy := &Policy{
-							Policy:       policy,
-							PolicyServer: url,
-						}
-
-						addPolicyToMap(policiesByGVR, gvr, policy)
-					}
-				}
-			}
+		for _, gvr := range groupVersionResources {
+			addPolicyToMap(policiesByGVR, gvr, policy)
 		}
 	}
 
@@ -255,7 +260,43 @@ func addPolicyToMap(policiesByGVR map[schema.GroupVersionResource][]*Policy, gvr
 	}
 }
 
-// Method to check if the given resource is namespaced or not.
+// getGroupVersionResources returns a list of GroupVersionResource from a list of policies.
+// if namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
+func (f *Client) getGroupVersionResources(rules []admissionregistrationv1.RuleWithOperations, namespaced bool) ([]schema.GroupVersionResource, error) {
+	var groupVersionResources []schema.GroupVersionResource
+
+	for _, rule := range rules {
+		for _, resource := range rule.Resources {
+			for _, version := range rule.APIVersions {
+				for _, group := range rule.APIGroups {
+					gvr := schema.GroupVersionResource{
+						Group:    group,
+						Version:  version,
+						Resource: resource,
+					}
+					isNamespaced, err := f.isNamespacedResource(gvr)
+					if err != nil {
+						return nil, err
+					}
+					if namespaced && !isNamespaced {
+						// continue if resource is clusterwide
+						continue
+					}
+					if !namespaced && isNamespaced {
+						// continue if resource is namespaced
+						continue
+					}
+
+					groupVersionResources = append(groupVersionResources, gvr)
+				}
+			}
+		}
+	}
+
+	return groupVersionResources, nil
+}
+
+// isNamespacedResource checks if the given resource is namespaced or not.
 func (f *Client) isNamespacedResource(gvr schema.GroupVersionResource) (bool, error) {
 	gvk, err := f.client.RESTMapper().KindFor(gvr)
 	if err != nil {
@@ -324,17 +365,31 @@ func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, name
 	return &serviceList.Items[0], nil
 }
 
-func isCreateActionPresentWithoutAllResources(policy policiesv1.Policy) bool {
-	for _, rule := range policy.GetRules() {
+// filterWildcardRules filters out rules that contain a wildcard in the APIGroups, APIVersions or Resources fields
+func filterWildcardRules(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
+	filteredRules := []admissionregistrationv1.RuleWithOperations{}
+	for _, rule := range rules {
+		if slices.Contains(rule.APIGroups, "*") ||
+			slices.Contains(rule.APIVersions, "*") ||
+			slices.Contains(rule.Resources, "*") {
+			continue
+		}
+		filteredRules = append(filteredRules, rule)
+	}
+
+	return filteredRules
+}
+
+// filterNonCreateOperations filters out rules that do not contain a CREATE operation
+func filterNonCreateOperations(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
+	filteredRules := []admissionregistrationv1.RuleWithOperations{}
+	for _, rule := range rules {
 		for _, operation := range rule.Operations {
-			if operation == admissionregistrationv1.Create &&
-				!slices.Contains(rule.Resources, "*") &&
-				!slices.Contains(rule.APIGroups, "*") &&
-				!slices.Contains(rule.APIVersions, "*") {
-				return true
+			if operation == admissionregistrationv1.Create {
+				filteredRules = append(filteredRules, rule)
 			}
 		}
 	}
 
-	return false
+	return filteredRules
 }
