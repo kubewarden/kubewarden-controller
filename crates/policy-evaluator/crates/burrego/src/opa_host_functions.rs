@@ -89,8 +89,8 @@ fn register_opa_builtin0_func(
             debug!(builtin_id, "opa_builtin0");
 
             let stack_helper = caller.data().as_ref().unwrap();
-            let opa_malloc_fn = stack_helper.opa_malloc_fn;
-            let opa_json_parse_fn = stack_helper.opa_json_parse_fn;
+            let opa_malloc_fn = stack_helper.opa_malloc_fn.clone();
+            let opa_json_parse_fn = stack_helper.opa_json_parse_fn.clone();
             let builtin_name = stack_helper
                 .builtins
                 .get(&builtin_id)
@@ -113,8 +113,8 @@ fn register_opa_builtin0_func(
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
                 &memory,
-                opa_malloc_fn,
-                opa_json_parse_fn,
+                &opa_malloc_fn,
+                &opa_json_parse_fn,
                 &builtin_result,
             )?;
 
@@ -140,9 +140,9 @@ fn register_opa_builtin1_func(
             debug!(builtin_id, p1, "opa_builtin1");
 
             let stack_helper = caller.data().as_ref().unwrap();
-            let opa_malloc_fn = stack_helper.opa_malloc_fn;
-            let opa_json_parse_fn = stack_helper.opa_json_parse_fn;
-            let opa_json_dump_fn = stack_helper.opa_json_dump_fn;
+            let opa_malloc_fn = stack_helper.opa_malloc_fn.clone();
+            let opa_json_parse_fn = stack_helper.opa_json_parse_fn.clone();
+            let opa_json_dump_fn = stack_helper.opa_json_dump_fn.clone();
             let builtin_name = stack_helper
                 .builtins
                 .get(&builtin_id)
@@ -157,7 +157,7 @@ fn register_opa_builtin1_func(
 
 
             let p1 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p1)?;
             let args = vec![p1];
 
             let builtin_helper = BUILTINS_HELPER
@@ -170,8 +170,8 @@ fn register_opa_builtin1_func(
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
                 &memory,
-                opa_malloc_fn,
-                opa_json_parse_fn,
+                &opa_malloc_fn,
+                &opa_json_parse_fn,
                 &builtin_result,
             )?;
 
@@ -199,9 +199,9 @@ fn register_opa_builtin2_func(
             debug!(builtin_id, p1, p2, "opa_builtin2");
 
             let stack_helper = caller.data().as_ref().unwrap();
-            let opa_malloc_fn = stack_helper.opa_malloc_fn;
-            let opa_json_parse_fn = stack_helper.opa_json_parse_fn;
-            let opa_json_dump_fn = stack_helper.opa_json_dump_fn;
+            let opa_malloc_fn = stack_helper.opa_malloc_fn.clone();
+            let opa_json_parse_fn = stack_helper.opa_json_parse_fn.clone();
+            let opa_json_dump_fn = stack_helper.opa_json_dump_fn.clone();
             let builtin_name = stack_helper
                 .builtins
                 .get(&builtin_id)
@@ -214,9 +214,9 @@ fn register_opa_builtin2_func(
             let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let p1 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p1)?;
             let p2 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p2)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p2)?;
 
             let args = vec![p1, p2];
 
@@ -229,8 +229,8 @@ fn register_opa_builtin2_func(
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
                 &memory,
-                opa_malloc_fn,
-                opa_json_parse_fn,
+                &opa_malloc_fn,
+                &opa_json_parse_fn,
                 &builtin_result,
             )?;
 
@@ -259,9 +259,9 @@ fn register_opa_builtin3_func(
             debug!(builtin_id, p1, p2, p3, "opa_builtin3");
 
             let stack_helper = caller.data().as_ref().unwrap();
-            let opa_malloc_fn = stack_helper.opa_malloc_fn;
-            let opa_json_parse_fn = stack_helper.opa_json_parse_fn;
-            let opa_json_dump_fn = stack_helper.opa_json_dump_fn;
+            let opa_malloc_fn = stack_helper.opa_malloc_fn.clone();
+            let opa_json_parse_fn = stack_helper.opa_json_parse_fn.clone();
+            let opa_json_dump_fn = stack_helper.opa_json_dump_fn.clone();
             let builtin_name = stack_helper
                 .builtins
                 .get(&builtin_id)
@@ -274,11 +274,11 @@ fn register_opa_builtin3_func(
             let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let p1 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p1)?;
             let p2 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p2)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p2)?;
             let p3 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p3)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p3)?;
 
             let args = vec![p1, p2, p3];
 
@@ -291,8 +291,8 @@ fn register_opa_builtin3_func(
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
                 &memory,
-                opa_malloc_fn,
-                opa_json_parse_fn,
+                &opa_malloc_fn,
+                &opa_json_parse_fn,
                 &builtin_result,
             )?;
 
@@ -322,9 +322,9 @@ fn register_opa_builtin4_func(
             debug!(builtin_id, p1, p2, p3, p4, "opa_builtin4");
 
             let stack_helper = caller.data().as_ref().unwrap();
-            let opa_malloc_fn = stack_helper.opa_malloc_fn;
-            let opa_json_parse_fn = stack_helper.opa_json_parse_fn;
-            let opa_json_dump_fn = stack_helper.opa_json_dump_fn;
+            let opa_malloc_fn = stack_helper.opa_malloc_fn.clone();
+            let opa_json_parse_fn = stack_helper.opa_json_parse_fn.clone();
+            let opa_json_dump_fn = stack_helper.opa_json_dump_fn.clone();
             let builtin_name = stack_helper
                 .builtins
                 .get(&builtin_id)
@@ -337,13 +337,13 @@ fn register_opa_builtin4_func(
             let memory = memory_export.into_memory().ok_or_else(|| BurregoError::RegoWasmError("'memory' export cannot be converted into a memory object".to_string()))?;
 
             let p1 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p1)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p1)?;
             let p2 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p2)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p2)?;
             let p3 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p3)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p3)?;
             let p4 =
-                    StackHelper::pull_json(caller.as_context_mut(), &memory, opa_json_dump_fn, p4)?;
+                    StackHelper::pull_json(caller.as_context_mut(), &memory, &opa_json_dump_fn, p4)?;
 
             let args = vec![p1, p2, p3, p4];
 
@@ -356,8 +356,8 @@ fn register_opa_builtin4_func(
             let addr = StackHelper::push_json(
                 caller.as_context_mut(),
                 &memory,
-                opa_malloc_fn,
-                opa_json_parse_fn,
+                &opa_malloc_fn,
+                &opa_json_parse_fn,
                 &builtin_result,
             )?;
 
