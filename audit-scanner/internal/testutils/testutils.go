@@ -62,9 +62,13 @@ func (factory *AdmissionPolicyFactory) ObjectSelector(selector *metav1.LabelSele
 	return factory
 }
 
-func (factory *AdmissionPolicyFactory) Rule(rule admissionregistrationv1.Rule) *AdmissionPolicyFactory {
+func (factory *AdmissionPolicyFactory) Rule(rule admissionregistrationv1.Rule, operations ...admissionregistrationv1.OperationType) *AdmissionPolicyFactory {
+	if len(operations) == 0 {
+		operations = []admissionregistrationv1.OperationType{admissionregistrationv1.Create}
+	}
+
 	factory.rules = append(factory.rules, admissionregistrationv1.RuleWithOperations{
-		Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create}, Rule: rule,
+		Operations: operations, Rule: rule,
 	})
 
 	return factory
@@ -143,9 +147,13 @@ func (factory *ClusterAdmissionPolicyFactory) ObjectSelector(selector *metav1.La
 	return factory
 }
 
-func (factory *ClusterAdmissionPolicyFactory) Rule(rule admissionregistrationv1.Rule) *ClusterAdmissionPolicyFactory {
+func (factory *ClusterAdmissionPolicyFactory) Rule(rule admissionregistrationv1.Rule, operations ...admissionregistrationv1.OperationType) *ClusterAdmissionPolicyFactory {
+	if len(operations) == 0 {
+		operations = []admissionregistrationv1.OperationType{admissionregistrationv1.Create}
+	}
+
 	factory.rules = append(factory.rules, admissionregistrationv1.RuleWithOperations{
-		Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create}, Rule: rule,
+		Operations: operations, Rule: rule,
 	})
 
 	return factory

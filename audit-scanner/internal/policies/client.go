@@ -171,12 +171,19 @@ func (f *Client) getAdmissionPolicies(ctx context.Context, namespace string) ([]
 
 // groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
 // If namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
-func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) { //nolint:funlen
+func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) { //nolint:funlen,cyclop
 	policiesByGVR := make(map[schema.GroupVersionResource][]*Policy)
 	auditablePolicies := map[string]struct{}{}
 	skippedPolicies := map[string]struct{}{}
 
 	for _, policy := range policies {
+		if !isCreateActionPresentWithoutAllResources(policy) {
+			skippedPolicies[policy.GetUniqueName()] = struct{}{}
+			log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy does not have at least one create operation that targets non-wildcard resources, skipping!")
+
+			continue
+		}
+
 		url, err := f.getPolicyServerURLRunningPolicy(ctx, policy)
 		if err != nil {
 			return nil, err
@@ -204,17 +211,20 @@ func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.P
 							continue
 						}
 
-						if !isAuditable(policy) {
+						if !policy.GetBackgroundAudit() {
 							skippedPolicies[policy.GetUniqueName()] = struct{}{}
-
-							log.Debug().Str("policy", policy.GetUniqueName()).
-								Bool("backgroundAudit", policy.GetBackgroundAudit()).
-								Bool("active", policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive).
-								Bool("create", isCreateActionPresentWithoutAllResources(policy)).
-								Msg("not auditable policy, skipping!")
+							log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy has backgroundAudit set to false, skipping!")
 
 							continue
 						}
+
+						if policy.GetStatus().PolicyStatus != policiesv1.PolicyStatusActive {
+							skippedPolicies[policy.GetUniqueName()] = struct{}{}
+							log.Debug().Str("policy", policy.GetUniqueName()).Msg("the policy is not active, skipping!")
+
+							continue
+						}
+
 						auditablePolicies[policy.GetUniqueName()] = struct{}{}
 
 						policy := &Policy{
@@ -312,14 +322,6 @@ func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, name
 	}
 
 	return &serviceList.Items[0], nil
-}
-
-// isAuditable returns true if a policy has backgroundAudit enabled, is active, and contains the CREATE operation.
-// Also, the policy must not target all resources.
-func isAuditable(policy policiesv1.Policy) bool {
-	return policy.GetBackgroundAudit() &&
-		policy.GetStatus().PolicyStatus == policiesv1.PolicyStatusActive &&
-		isCreateActionPresentWithoutAllResources(policy)
 }
 
 func isCreateActionPresentWithoutAllResources(policy policiesv1.Policy) bool {
