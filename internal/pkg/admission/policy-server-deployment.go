@@ -125,7 +125,6 @@ func shouldUpdatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, o
 		originalDeployment.Spec.Template.Spec.SecurityContext != newDeployment.Spec.Template.Spec.SecurityContext ||
 		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
-		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Affinity, newDeployment.Spec.Template.Spec.Affinity) ||
 		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment), nil
 }
 
@@ -197,9 +196,6 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 				},
 			},
 		)
-	}
-	if emptyAffinity := (corev1.Affinity{}); policyServer.Spec.Affinity != emptyAffinity {
-		policyServerDeployment.Spec.Template.Spec.Affinity = &policyServer.Spec.Affinity
 	}
 }
 
