@@ -154,7 +154,7 @@ jobs:
           export CONTAINER_ID=$(docker run -d -p 5000:5000 --name registry registry:2)
           echo "CONTAINER_ID=${CONTAINER_ID}" >> $GITHUB_ENV
       - name: Install kwctl
-        run: cargo install --path .
+        run: cargo install --locked --path .
       - name: Save policies
         run: ./scripts/kubewarden-save-policies.sh --policies-list tests/data/airgap/policies.txt --policies policies.tar.gz
       - name: Remove policies from store
