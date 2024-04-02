@@ -4,7 +4,8 @@ mod k8s_mock;
 
 use anyhow::Result;
 use core::panic;
-use hyper::{Body, Request, Response};
+use hyper::{Request, Response};
+use kube::client::Body;
 use kube::Client;
 use rstest::*;
 use serde_json::json;
@@ -247,6 +248,8 @@ async fn test_runtime_context_aware<F, Fut>(
     F: FnOnce(Handle<Request<Body>, Response<Body>>) -> Fut,
     Fut: Future<Output = ()>,
 {
+    use kube::client::Body;
+
     let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
     let policy = fetch_policy(policy_uri, tempdir).await;
 
