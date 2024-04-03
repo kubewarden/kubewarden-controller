@@ -46,11 +46,8 @@ import (
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/finalizers,verbs=update
 //
-// We need access to these resources only inside of the namespace where the
-// controller is deployed. Here we assume it's being deployed inside of the
-// `kubewarden` namespace, this has to be parametrized in the helm chart
-//+kubebuilder:rbac:namespace=kubewarden,groups=core,resources=pods,verbs=get;list;watch
-//+kubebuilder:rbac:namespace=kubewarden,groups=apps,resources=replicasets;deployments,verbs=get;list;watch
+// Some RBAC rules needed to access some resources used here are defined in the
+// policyserver_controller.go file.
 
 // AdmissionPolicyReconciler reconciles an AdmissionPolicy object
 type AdmissionPolicyReconciler struct {

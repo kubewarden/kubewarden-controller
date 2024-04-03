@@ -122,15 +122,6 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - deployments
-  - replicasets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps
-  resources:
   - replicasets
   verbs:
   - get

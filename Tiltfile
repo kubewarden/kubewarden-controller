@@ -21,6 +21,23 @@ namespace_create('kubewarden')
 # Install CRDs
 crd = kustomize('config/crd')
 k8s_yaml(crd)
+roles = decode_yaml_stream(kustomize('config/rbac'))
+cluster_rules = []
+namespace_rules = []
+roles_rules_mapping = {
+	"ClusterRole": {},
+	"Role": {},
+}
+
+for role in roles:
+    if role.get('kind') == 'ClusterRole':
+	roles_rules_mapping["ClusterRole"][role.get('metadata').get('name')] = role.get('rules')
+    elif role.get('kind') == 'Role':
+        roles_rules_mapping["Role"][role.get('metadata').get('name')] = role.get('rules')
+
+if len(roles_rules_mapping["ClusterRole"]) == 0 or len(roles_rules_mapping["Role"]) == 0:
+    fail("Failed to load cluster and namespace roles")
+
 
 # Install kubewarden-controller helm chart
 install = helm(
@@ -38,7 +55,16 @@ for o in objects:
         o['spec']['template']['spec']['securityContext']['runAsNonRoot'] = False
         # Disable the leader election to speed up the startup time.
         o['spec']['template']['spec']['containers'][0]['args'].remove('--leader-elect')
-        break
+
+    # Update the cluster and namespace roles used by the controller. This ensures
+    # that always we have the latest roles applied to the cluster.
+    if o.get('kind') == 'ClusterRole' and o.get('metadata').get('name') == 'kubewarden-controller-manager-cluster-role':
+	o['rules'] = roles_rules_mapping["ClusterRole"]["manager-role"]
+    if o.get('kind') == 'Role' and o.get('metadata').get('name') == 'kubewarden-controller-manager-namespaced-role':
+	o['rules'] = roles_rules_mapping["Role"]["manager-role"]
+    if o.get('kind') == 'Role' and o.get('metadata').get('name') == 'kubewarden-controller-leader-election-role':
+	o['rules'] = roles_rules_mapping["Role"]["leader-election-role"]
+
 updated_install = encode_yaml_stream(objects)
 k8s_yaml(updated_install)
 
