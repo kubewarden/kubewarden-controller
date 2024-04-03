@@ -2,6 +2,7 @@ use std::path::Path;
 
 use assert_cmd::Command;
 
+#[allow(dead_code)]
 pub fn setup_command(path: &Path) -> Command {
     let mut cmd = Command::cargo_bin("kwctl").unwrap();
 
@@ -13,6 +14,7 @@ pub fn setup_command(path: &Path) -> Command {
     cmd
 }
 
+#[allow(dead_code)]
 pub fn test_data(path: &str) -> String {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
