@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
+kwctl="${KWCTL_CMD:-kwctl}"
 policies="kubewarden-policies.tar.gz"
 list="kubewarden-policies.txt"
 
@@ -41,7 +42,7 @@ fi
 pulled=()
 while IFS= read -r i; do
     [ -z "${i}" ] && continue
-    if kwctl pull "${i}" > /dev/null 2>&1; then
+    if $kwctl pull "${i}" > /dev/null 2>&1; then
         echo "Policy pull success: ${i}"
         pulled+=("${i}")
     else
@@ -50,5 +51,5 @@ while IFS= read -r i; do
 done < "${list}"
 
 echo "Creating ${policies} with ${#pulled[@]} policies"
-kwctl save "${pulled[@]}" --output "${policies}"
+$kwctl save "${pulled[@]}" --output "${policies}"
 

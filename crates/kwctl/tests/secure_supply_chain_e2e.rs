@@ -5,7 +5,7 @@ use rstest::rstest;
 use std::{fs, path::Path};
 use tempfile::tempdir;
 
-pub mod common;
+mod common;
 
 fn cosign_initialize(path: &Path) {
     let mut cmd = Command::new("cosign");

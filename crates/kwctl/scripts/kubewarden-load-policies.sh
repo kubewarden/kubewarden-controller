@@ -1,6 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
+kwctl="${KWCTL_CMD:-kwctl}"
 policies="kubewarden-policies.tar.gz"
 list="kubewarden-policies.txt"
 
@@ -16,9 +17,9 @@ usage () {
 pushPolicy() {
     newPolicyUrl=$1
     if [[ -n $sourcesPath ]]; then
-        kwctl push "$policy" "$newPolicyUrl" --sources-path "$sourcesPath"
+        $kwctl push "$policy" "$newPolicyUrl" --sources-path "$sourcesPath"
     else
-        kwctl push "$policy" "$newPolicyUrl"
+        $kwctl push "$policy" "$newPolicyUrl"
     fi
 }
 
@@ -60,7 +61,7 @@ if [[ -z ${registry:-} ]]; then
     exit 1
 fi
 
-kwctl load --input "${policies}"
+$kwctl load --input "${policies}"
 
 policies=()
 while read -r policy; do
