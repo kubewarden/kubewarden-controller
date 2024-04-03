@@ -2,7 +2,8 @@ mod fixtures;
 
 use std::collections::HashMap;
 
-use hyper::{http, Body, Request, Response};
+use hyper::{http, Request, Response};
+use kube::client::Body;
 use serde::Serialize;
 use tower_test::mock::{Handle, SendResponse};
 
