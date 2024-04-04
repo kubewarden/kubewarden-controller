@@ -50,11 +50,11 @@ type PolicyServerReconciler struct {
 // We need access to these resources only inside of the namespace where the
 // controller is deployed. Here we assume it's being deployed inside of the
 // `kubewarden` namespace, this has to be parametrized in the helm chart
-//+kubebuilder:rbac:namespace=kubewarden,groups=policies.kubewarden.io,resources=policyservers,verbs=get;list;watch;delete
-//+kubebuilder:rbac:namespace=kubewarden,groups=policies.kubewarden.io,resources=policyservers/status,verbs=get;update;patch
-//+kubebuilder:rbac:namespace=kubewarden,groups=policies.kubewarden.io,resources=policyservers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=policyservers,verbs=get;list;watch;delete;create;update;patch
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=policyservers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=policyservers/finalizers,verbs=update
 //+kubebuilder:rbac:namespace=kubewarden,groups=core,resources=secrets;services;configmaps,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:namespace=kubewarden,groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:namespace=kubewarden,groups=apps,resources=deployments,verbs=create;update;patch;delete;get;list;watch
 //+kubebuilder:rbac:namespace=kubewarden,groups=apps,resources=replicasets,verbs=get;list;watch
 //+kubebuilder:rbac:namespace=kubewarden,groups=core,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:namespace=kubewarden,groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
