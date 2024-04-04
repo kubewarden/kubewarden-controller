@@ -91,7 +91,7 @@ func TestGetPolicies(t *testing.T) {
 
 func newReconciler(policies []client.Object, metricsEnabled bool) Reconciler {
 	customScheme := scheme.Scheme
-	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{})
+	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{}, &policiesv1.PolicyServer{}, &policiesv1.PolicyServerList{})
 	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(policies...).Build()
 
 	return Reconciler{

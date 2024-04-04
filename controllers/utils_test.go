@@ -26,13 +26,16 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 
-	. "github.com/onsi/gomega" //nolint:revive
+	. "github.com/onsi/gomega"         //nolint:revive
+	. "github.com/onsi/gomega/gstruct" //nolint:revive
 	"github.com/onsi/gomega/types"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8spoliciesv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -219,4 +222,51 @@ func randStringRunes(n int) string {
 
 func newName(prefix string) string {
 	return fmt.Sprintf("%s-%s", prefix, randStringRunes(8))
+}
+
+func getPolicyServerPodDisruptionBudget(policyServerName string) (*k8spoliciesv1.PodDisruptionBudget, error) {
+	policyServer := policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: policyServerName,
+		},
+	}
+	podDisruptionBudgetName := policyServer.NameWithPrefix()
+	pdb := &k8spoliciesv1.PodDisruptionBudget{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: podDisruptionBudgetName, Namespace: DeploymentsNamespace}, pdb); err != nil {
+		return nil, errors.Join(errors.New("could not find PodDisruptionBudget"), err)
+	}
+	return pdb, nil
+}
+
+func policyServerPodDisruptionBudgetMatcher(policyServer *policiesv1.PolicyServer, minAvailable *intstr.IntOrString, maxUnavailable *intstr.IntOrString) types.GomegaMatcher { //nolint:ireturn
+	maxUnavailableMatcher := BeNil()
+	minAvailableMatcher := BeNil()
+	if minAvailable != nil {
+		minAvailableMatcher = PointTo(Equal(*minAvailable))
+	}
+	if maxUnavailable != nil {
+		maxUnavailableMatcher = PointTo(Equal(*maxUnavailable))
+	}
+	return SatisfyAll(
+		Not(BeNil()),
+		PointTo(MatchFields(IgnoreExtras, Fields{
+			"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+				"OwnerReferences": ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Name": Equal(policyServer.GetName()),
+					"Kind": Equal("PolicyServer"),
+				})),
+			}),
+			"Spec": MatchFields(IgnoreExtras, Fields{
+				"MaxUnavailable": maxUnavailableMatcher,
+				"MinAvailable":   minAvailableMatcher,
+				"Selector": PointTo(MatchAllFields(Fields{
+					"MatchLabels": MatchAllKeys(Keys{
+						constants.AppLabelKey:          Equal(policyServer.AppLabel()),
+						constants.PolicyServerLabelKey: Equal(policyServer.GetName()),
+					}),
+					"MatchExpressions": Ignore(),
+				})),
+			})}),
+		),
+	)
 }

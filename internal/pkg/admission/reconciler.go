@@ -217,6 +217,20 @@ func (r *Reconciler) Reconcile(
 		string(policiesv1.PolicyServerConfigMapReconciled),
 	)
 
+	if err := r.reconcilePolicyServerPodDisruptionBudget(ctx, policyServer); err != nil {
+		setFalseConditionType(
+			&policyServer.Status.Conditions,
+			string(policiesv1.PolicyServerPodDisruptionBudgetReconciled),
+			fmt.Sprintf("error reconciling policy server PodDisruptionBudget: %v", err),
+		)
+		return err
+	}
+
+	setTrueConditionType(
+		&policyServer.Status.Conditions,
+		string(policiesv1.PolicyServerPodDisruptionBudgetReconciled),
+	)
+
 	if err := r.reconcilePolicyServerDeployment(ctx, policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,

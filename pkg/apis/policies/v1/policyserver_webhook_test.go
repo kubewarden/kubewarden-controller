@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestValidatePolicyServerName(t *testing.T) {
@@ -44,4 +45,26 @@ func TestValidatePolicyServerName(t *testing.T) {
 	}
 	err := policyServerValidator.validate(context.Background(), policyServer)
 	require.ErrorContains(t, err, "the PolicyServer name cannot be longer than 63 characters")
+}
+
+func TestValidateMinAvailable(t *testing.T) {
+	intStrValue := intstr.FromInt(2)
+	policyServer := &PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "policy-server",
+			Namespace: "default",
+		},
+		Spec: PolicyServerSpec{
+			Image:          "image",
+			Replicas:       1,
+			MinAvailable:   &intStrValue,
+			MaxUnavailable: &intStrValue,
+		},
+	}
+	policyServerValidator := policyServerValidator{
+		k8sClient:            nil,
+		deploymentsNamespace: "default",
+	}
+	err := policyServerValidator.validate(context.Background(), policyServer)
+	require.ErrorContains(t, err, "minAvailable and maxUnavailable cannot be both set")
 }

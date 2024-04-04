@@ -57,6 +57,7 @@ type PolicyServerReconciler struct {
 //+kubebuilder:rbac:namespace=kubewarden,groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:namespace=kubewarden,groups=apps,resources=replicasets,verbs=get;list;watch
 //+kubebuilder:rbac:namespace=kubewarden,groups=core,resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:namespace=kubewarden,groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var policyServer policiesv1.PolicyServer
