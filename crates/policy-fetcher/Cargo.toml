@@ -12,8 +12,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-std = "1.9"
-async-stream = "0.3"
 async-trait = "0.1"
 base64 = "0.22"
 directories = "5.0"
