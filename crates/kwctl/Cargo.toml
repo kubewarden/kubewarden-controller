@@ -37,7 +37,6 @@ tar = "0.4.40"
 tiny-bench = "0.3"
 tokio = { version = "^1.37.0", features = ["full"] }
 tracing = "0.1"
-tracing-futures = "0.2"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.5.0"
 walrus = "0.20.3"
