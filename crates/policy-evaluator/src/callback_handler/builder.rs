@@ -1,8 +1,7 @@
-use std::sync::Arc;
-
 use anyhow::Result;
+use policy_fetcher::sigstore::trust::ManualTrustRoot;
 use policy_fetcher::sources::Sources;
-use policy_fetcher::verify::FulcioAndRekorData;
+use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
 use super::CallbackHandler;
@@ -12,21 +11,21 @@ use crate::callback_requests::CallbackRequest;
 const DEFAULT_CHANNEL_BUFF_SIZE: usize = 100;
 
 /// Helper struct that creates CallbackHandler objects
-pub struct CallbackHandlerBuilder<'a> {
+pub struct CallbackHandlerBuilder {
     oci_sources: Option<Sources>,
     channel_buffer_size: usize,
     shutdown_channel: oneshot::Receiver<()>,
-    fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
+    trust_root: Option<Arc<ManualTrustRoot<'static>>>,
     kube_client: Option<kube::Client>,
 }
 
-impl<'a> CallbackHandlerBuilder<'a> {
+impl CallbackHandlerBuilder {
     pub fn new(shutdown_channel: oneshot::Receiver<()>) -> Self {
         CallbackHandlerBuilder {
             oci_sources: None,
             shutdown_channel,
             channel_buffer_size: DEFAULT_CHANNEL_BUFF_SIZE,
-            fulcio_and_rekor_data: None,
+            trust_root: None,
             kube_client: None,
         }
     }
@@ -37,11 +36,8 @@ impl<'a> CallbackHandlerBuilder<'a> {
         self
     }
 
-    pub fn fulcio_and_rekor_data(
-        mut self,
-        fulcio_and_rekor_data: Option<&'a FulcioAndRekorData>,
-    ) -> Self {
-        self.fulcio_and_rekor_data = fulcio_and_rekor_data;
+    pub fn trust_root(mut self, trust_root: Option<Arc<ManualTrustRoot<'static>>>) -> Self {
+        self.trust_root = trust_root;
         self
     }
 
@@ -61,13 +57,13 @@ impl<'a> CallbackHandlerBuilder<'a> {
     }
 
     /// Create a CallbackHandler object
-    pub fn build(self) -> Result<CallbackHandler> {
+    pub async fn build(self) -> Result<CallbackHandler> {
         let (tx, rx) = mpsc::channel::<CallbackRequest>(self.channel_buffer_size);
         let oci_client = Arc::new(oci::Client::new(self.oci_sources.clone()));
-        let sigstore_client = sigstore_verification::Client::new(
-            self.oci_sources.clone(),
-            self.fulcio_and_rekor_data,
-        )?;
+        let sigstore_client =
+            sigstore_verification::Client::new(self.oci_sources.clone(), self.trust_root.clone())
+                .await?
+                .to_owned();
 
         let kubernetes_client = self.kube_client.map(super::kubernetes::Client::new);
 

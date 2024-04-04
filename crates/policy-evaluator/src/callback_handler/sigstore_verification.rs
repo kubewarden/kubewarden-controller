@@ -5,9 +5,10 @@ use kubewarden_policy_sdk::host_capabilities::verification::{
     KeylessInfo, KeylessPrefixInfo, VerificationResponse,
 };
 use policy_fetcher::sigstore;
+use policy_fetcher::sigstore::trust::ManualTrustRoot;
 use policy_fetcher::sources::Sources;
 use policy_fetcher::verify::config::{LatestVerificationConfig, Signature, Subject};
-use policy_fetcher::verify::{fetch_sigstore_remote_data, FulcioAndRekorData, Verifier};
+use policy_fetcher::verify::{fetch_sigstore_remote_data, Verifier};
 use sha2::{Digest, Sha256};
 use sigstore::cosign::verification_constraint::{
     AnnotationVerifier, CertificateVerifier, VerificationConstraintVec,
@@ -20,19 +21,20 @@ use tracing::warn;
 
 #[derive(Clone)]
 pub(crate) struct Client {
-    cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
-    verifier: Verifier,
+    cosign_client: Arc<Mutex<sigstore::cosign::Client<'static>>>,
+    verifier: Verifier<'static>,
 }
 
 impl Client {
-    pub fn new(
+    pub async fn new(
         sources: Option<Sources>,
-        fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
+        trust_root: Option<Arc<ManualTrustRoot<'static>>>,
     ) -> Result<Self> {
-        let cosign_client = Arc::new(Mutex::new(Self::build_cosign_client(
-            sources.clone(),
-            fulcio_and_rekor_data,
-        )?));
+        let cosign_client = Arc::new(Mutex::new(
+            Self::build_cosign_client(sources.clone(), trust_root)
+                .await?
+                .to_owned(),
+        ));
         let verifier = Verifier::new_from_cosign_client(cosign_client.clone(), sources);
 
         Ok(Client {
@@ -41,48 +43,32 @@ impl Client {
         })
     }
 
-    fn build_cosign_client(
+    async fn build_cosign_client(
         sources: Option<Sources>,
-        fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
+        trust_root: Option<Arc<ManualTrustRoot<'static>>>,
     ) -> Result<sigstore::cosign::Client> {
         let client_config: sigstore::registry::ClientConfig = sources.unwrap_or_default().into();
-        let mut cosign_client_builder =
-            sigstore::cosign::ClientBuilder::default().with_oci_client_config(client_config);
-        match fulcio_and_rekor_data {
-            Some(FulcioAndRekorData::FromTufRepository { repo }) => {
-                cosign_client_builder = cosign_client_builder
-                    .with_rekor_pub_key(repo.rekor_pub_key())
-                    .with_fulcio_certs(repo.fulcio_certs());
-            }
-            Some(FulcioAndRekorData::FromCustomData {
-                rekor_public_key,
-                fulcio_certs,
-            }) => {
-                if let Some(pk) = rekor_public_key {
-                    cosign_client_builder = cosign_client_builder.with_rekor_pub_key(pk);
-                }
-                if !fulcio_certs.is_empty() {
-                    let certs: Vec<sigstore::registry::Certificate> = fulcio_certs
-                        .iter()
-                        .map(|c| {
-                            let sc: sigstore::registry::Certificate = c.into();
-                            sc
-                        })
-                        .collect();
-                    cosign_client_builder = cosign_client_builder.with_fulcio_certs(&certs);
-                }
+
+        let mut cosign_client_builder = sigstore::cosign::ClientBuilder::default()
+            .with_oci_client_config(client_config)
+            .enable_registry_caching();
+        let cosign_client = match trust_root {
+            Some(trust_root) => {
+                cosign_client_builder =
+                    cosign_client_builder.with_trust_repository(trust_root.as_ref())?;
+                let cosign_client = cosign_client_builder.build()?;
+                cosign_client.to_owned()
             }
             None => {
                 warn!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
                 warn!("Sigstore Verifier created without Rekor data: transparency log data won't be used");
                 warn!("Sigstore capabilities are going to be limited");
-            }
-        }
 
-        cosign_client_builder = cosign_client_builder.enable_registry_caching();
-        cosign_client_builder
-            .build()
-            .map_err(|e| anyhow!("could not build a cosign client: {}", e))
+                let cosign_client = cosign_client_builder.build()?;
+                cosign_client.to_owned()
+            }
+        };
+        Ok(cosign_client)
     }
 
     pub async fn verify_public_key(
