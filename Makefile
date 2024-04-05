@@ -119,7 +119,7 @@ integration-tests: manifests generate fmt vet setup-envtest ## Run integration t
 
 .PHONY: generate-crds
 generate-crds: $(KUSTOMIZE) manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
-	mkdir -p generated-crds; rm generated-crds/*
+	mkdir -p generated-crds
 	$(KUSTOMIZE) build config/crd -o generated-crds # If -o points to a folder, kustomize saves them as several files instead of 1
 
 ##@ Build
