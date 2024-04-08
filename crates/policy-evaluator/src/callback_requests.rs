@@ -3,6 +3,7 @@ use kubewarden_policy_sdk::host_capabilities::{
     verification::{KeylessInfo, KeylessPrefixInfo},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::{sync::oneshot, time::Instant};
 
@@ -25,7 +26,7 @@ pub struct CallbackRequest {
 
 /// Describes the different kinds of request a waPC guest can make to
 /// our host.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum CallbackRequestType {
     /// Require the computation of the manifest digest of an OCI object (be
     /// it an image or anything else that can be stored into an OCI registry)
@@ -190,8 +191,36 @@ pub enum CallbackRequestType {
         /// Defaults to everything if `None`
         field_selector: Option<String>,
         /// The instant in time to compare the last change of the resources
+        #[serde(with = "tokio_instant_serializer")]
         since: Instant,
     },
+}
+
+mod tokio_instant_serializer {
+    use serde::de::Error;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::time::Duration;
+    use tokio::time::Instant;
+
+    pub fn serialize<S>(instant: &Instant, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let duration = instant.elapsed();
+        duration.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Instant, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let duration = Duration::deserialize(deserializer)?;
+        let now = Instant::now();
+        let instant = now
+            .checked_sub(duration)
+            .ok_or_else(|| Error::custom("Error checked_sub"))?;
+        Ok(instant)
+    }
 }
 
 impl From<SigstoreVerificationInputV2> for CallbackRequestType {
