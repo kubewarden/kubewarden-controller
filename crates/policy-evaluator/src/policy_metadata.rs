@@ -27,15 +27,15 @@ pub enum Operation {
 #[derive(Deserialize, Serialize, Debug, Clone, Validate)]
 #[serde(rename_all = "camelCase")]
 pub struct Rule {
-    #[validate(length(min = 1), custom = "validate_asterisk_usage")]
+    #[validate(length(min = 1), custom(function = "validate_asterisk_usage"))]
     pub api_groups: Vec<String>,
-    #[validate(length(min = 1), custom = "validate_asterisk_usage")]
+    #[validate(length(min = 1), custom(function = "validate_asterisk_usage"))]
     pub api_versions: Vec<String>,
-    #[validate(length(min = 1), custom = "validate_resources")]
+    #[validate(length(min = 1), custom(function = "validate_resources"))]
     pub resources: Vec<String>,
     #[validate(
         length(min = 1),
-        custom = "validate_asterisk_usage_inside_of_operations"
+        custom(function = "validate_asterisk_usage_inside_of_operations")
     )]
     pub operations: Vec<Operation>,
 }
@@ -151,7 +151,7 @@ impl Display for PolicyType {
 pub struct Metadata {
     #[validate(required)]
     pub protocol_version: Option<ProtocolVersion>,
-    #[validate]
+    #[validate(nested)]
     pub rules: Vec<Rule>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<HashMap<String, String>>,
@@ -163,7 +163,7 @@ pub struct Metadata {
     #[serde(default)]
     pub policy_type: PolicyType,
     #[serde(default)]
-    #[validate]
+    #[validate(nested)]
     pub context_aware_resources: BTreeSet<ContextAwareResource>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minimum_kubewarden_version: Option<Version>,

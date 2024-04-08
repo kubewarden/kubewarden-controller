@@ -46,7 +46,7 @@ time = { version = "0.3.34", features = ["serde-human-readable"] }
 tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
-validator = { version = "0.16", features = ["derive"] }
+validator = { version = "0.18", features = ["derive"] }
 wapc = "1.1"
 wasi-common = { workspace = true }
 wasmparser = "0.202"
