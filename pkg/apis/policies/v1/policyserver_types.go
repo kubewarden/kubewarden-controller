@@ -99,6 +99,16 @@ type PolicyServerSpec struct {
 	// Affinity rules for the associated Policy Server pods.
 	// +optional
 	Affinity corev1.Affinity `json:"affinity,omitempty"`
+
+	// Limits describes the maximum amount of compute resources allowed.
+	// +optional
+	Limits corev1.ResourceList `json:"limits,omitempty"`
+
+	// Requests describes the minimum amount of compute resources required.
+	// If Request is omitted for, it defaults to Limits if that is explicitly specified,
+	// otherwise to an implementation-defined value
+	// +optional
+	Requests corev1.ResourceList `json:"requests,omitempty"`
 }
 
 type ReconciliationTransitionReason string
