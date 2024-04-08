@@ -22,6 +22,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -73,7 +75,6 @@ var _ = Describe("PolicyServer controller", func() {
 					return err
 				}, timeout, pollInterval).ShouldNot(Succeed())
 			})
-
 		})
 
 		Context("with assigned policies", Serial, func() {
@@ -173,7 +174,6 @@ var _ = Describe("PolicyServer controller", func() {
 				pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
 				return pdb
 			}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, &minAvailable, nil))
-
 		})
 
 		It("with MaxUnavailable PodDisruptionBudget configuration should create PDB", func() {
@@ -261,7 +261,6 @@ var _ = Describe("PolicyServer controller", func() {
 				pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
 				return pdb
 			}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
-
 		})
 
 		AfterEach(func() {
@@ -283,4 +282,78 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 	})
 
+	When("creating a PolicyServer with requests and no limits", func() {
+		policyServerName := newName("policy-server")
+		policyServer := policyServerFactory(policyServerName)
+		policyServer.Spec.Limits = corev1.ResourceList{
+			"cpu":    resource.MustParse("1Gi"),
+			"memory": resource.MustParse("500Mi"),
+		}
+
+		It("should create the PolicyServer pod with the limits and the requests", func() {
+			By("creating the PolicyServer")
+			Expect(
+				k8sClient.Create(ctx, policyServer),
+			).To(haveSucceededOrAlreadyExisted())
+
+			By("creating a deployment with limits and requests set")
+			Eventually(func(g Gomega) error {
+				deployment, err := getTestPolicyServerDeployment(policyServerName)
+				if err != nil {
+					return err
+				}
+
+				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+				By("setting the requests to the same value as the limits")
+				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
+
+				return nil
+			})
+
+			By("creating a pod with limit and request set")
+			Eventually(func(g Gomega) error {
+				pod, err := getTestPolicyServerPod(policyServerName)
+				if err != nil {
+					return err
+				}
+
+				Expect(pod.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+				Expect(pod.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
+
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
+		When("the requests are updated", func() {
+			It("should update the PolicyServer pod with the new requests", func() {
+				By("updating the PolicyServer requests")
+				policyServer, err := getTestPolicyServer(policyServerName)
+				Expect(err).ToNot(HaveOccurred())
+
+				policyServer.Spec.Requests = corev1.ResourceList{
+					"cpu":    resource.MustParse("100Mi"),
+					"memory": resource.MustParse("300Mi"),
+				}
+
+				Expect(
+					k8sClient.Update(ctx, policyServer),
+				).To(Succeed())
+
+				By("updating the pod with the new requests")
+				Eventually(func(g Gomega) (*corev1.Container, error) {
+					pod, err := getTestPolicyServerPod(policyServerName)
+					if err != nil {
+						return nil, err
+					}
+
+					return &pod.Spec.Containers[0], nil
+				}, timeout, pollInterval).Should(
+					And(
+						HaveField("Resources.Requests", Equal(policyServer.Spec.Requests)),
+						HaveField("Resources.Limits", Equal(policyServer.Spec.Limits)),
+					),
+				)
+			})
+		})
+	})
 })

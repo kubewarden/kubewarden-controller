@@ -125,6 +125,7 @@ func shouldUpdatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, o
 		originalDeployment.Spec.Template.Spec.SecurityContext != newDeployment.Spec.Template.Spec.SecurityContext ||
 		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
+		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Resources, newDeployment.Spec.Template.Spec.Containers[0].Resources) ||
 		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Affinity, newDeployment.Spec.Template.Spec.Affinity) ||
 		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment), nil
 }
@@ -266,6 +267,10 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 					Scheme: corev1.URISchemeHTTPS,
 				},
 			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: policyServer.Spec.Requests,
+			Limits:   policyServer.Spec.Limits,
 		},
 	}
 	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
