@@ -18,10 +18,13 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/policyserver"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	validationutils "k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -56,6 +59,16 @@ func (ps *PolicyServer) Default() {
 	if ps.ObjectMeta.DeletionTimestamp == nil {
 		controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
 	}
+
+	// Default the requests to the limits if not set
+	for limitName, limitQuantity := range ps.Spec.Limits {
+		if _, found := ps.Spec.Requests[limitName]; !found {
+			if ps.Spec.Requests == nil {
+				ps.Spec.Requests = make(corev1.ResourceList)
+			}
+			ps.Spec.Requests[limitName] = limitQuantity
+		}
+	}
 }
 
 // +kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-policyserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=vpolicyserver.kb.io,admissionReviewVersions=v1
@@ -86,7 +99,12 @@ func (v *policyServerValidator) validate(ctx context.Context, obj runtime.Object
 
 	// Kubernetes does not allow to set both MinAvailable and MaxUnavailable at the same time
 	if policyServer.Spec.MinAvailable != nil && policyServer.Spec.MaxUnavailable != nil {
-		return fmt.Errorf("minAvailable and maxUnavailable cannot be both set")
+		return errors.New("minAvailable and maxUnavailable cannot be both set")
+	}
+
+	err := validateLimitsAndRequests(policyServer.Spec.Limits, policyServer.Spec.Requests)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -102,4 +120,32 @@ func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, obj runti
 
 func (v *policyServerValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
 	return nil, nil
+}
+
+func validateLimitsAndRequests(limits, requests corev1.ResourceList) error {
+	if requests == nil || limits == nil {
+		return nil
+	}
+
+	for limitName, limitQuantity := range limits {
+		if limitQuantity.Cmp(resource.Quantity{}) < 0 {
+			return fmt.Errorf("%s limit must be greater than or equal to 0", limitName)
+		}
+	}
+
+	for requestName, requestQuantity := range requests {
+		if requestQuantity.Cmp(resource.Quantity{}) < 0 {
+			return fmt.Errorf("%s request must be greater than or equal to 0", requestName)
+		}
+
+		limitQuantity, ok := limits[requestName]
+		if !ok {
+			continue
+		}
+
+		if requestQuantity.Cmp(limitQuantity) > 0 {
+			return fmt.Errorf("request must be less than or equal to %s limit", requestName)
+		}
+	}
+	return nil
 }
