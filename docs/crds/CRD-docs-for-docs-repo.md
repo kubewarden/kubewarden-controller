@@ -241,6 +241,8 @@ _Appears in:_
 | --- | --- |
 | `image` _string_ | Docker image name. |
 | `replicas` _integer_ | Replicas is the number of desired replicas. |
+| `minAvailable` _IntOrString_ | Number of policy server replicas that must be still available after the eviction |
+| `maxUnavailable` _IntOrString_ | Number of policy server replicas that can be unavailable after the eviction |
 | `annotations` _object (keys:string, values:string)_ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations |
 | `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#envvar-v1-core) array_ | List of environment variables to set in the container. |
 | `serviceAccountName` _string_ | Name of the service account associated with the policy server. Namespace service account will be used if not specified. |
@@ -249,6 +251,9 @@ _Appears in:_
 | `sourceAuthorities` _object (keys:string, values:string array)_ | Key value map of registry URIs endpoints to a list of their associated PEM encoded certificate authorities that have to be used to verify the certificate used by the endpoint. The `sourceAuthorities` content format corresponds with the contents of the `source_authorities` key in `sources.yaml`. Reference for `sources.yaml` is found in the Kubewarden documentation in the reference section. |
 | `verificationConfig` _string_ | Name of VerificationConfig configmap in the same namespace, containing Sigstore verification configuration. The configuration must be under a key named verification-config in the Configmap. |
 | `securityContexts` _[PolicyServerSecurity](#policyserversecurity)_ | Security configuration to be used in the Policy Server workload. The field allows different configurations for the pod and containers. If set for the containers, this configuration will not be used in containers added by other controllers (e.g. telemetry sidecars) |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#affinity-v1-core)_ | Affinity rules for the associated Policy Server pods. |
+| `limits` _object (keys:[ResourceName](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core), values:Quantity)_ | Limits describes the maximum amount of compute resources allowed. |
+| `requests` _object (keys:[ResourceName](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core), values:Quantity)_ | Requests describes the minimum amount of compute resources required. If Request is omitted for, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value |
 
 
 
