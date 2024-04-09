@@ -65,7 +65,7 @@ test-log = "0.2.15"
 k8s-openapi = { version = "0.21.1", default-features = false, features = [
   "v1_28",
 ] }
-rstest = "0.18"
+rstest = "0.19"
 serial_test = "3.0"
 test-context = "0.3"
 tempfile = "3.8.1"
