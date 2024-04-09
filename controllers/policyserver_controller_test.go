@@ -286,8 +286,8 @@ var _ = Describe("PolicyServer controller", func() {
 		policyServerName := newName("policy-server")
 		policyServer := policyServerFactory(policyServerName)
 		policyServer.Spec.Limits = corev1.ResourceList{
-			"cpu":    resource.MustParse("1Gi"),
-			"memory": resource.MustParse("500Mi"),
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("1Gi"),
 		}
 
 		It("should create the PolicyServer pod with the limits and the requests", func() {
@@ -331,8 +331,8 @@ var _ = Describe("PolicyServer controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				policyServer.Spec.Requests = corev1.ResourceList{
-					"cpu":    resource.MustParse("100Mi"),
-					"memory": resource.MustParse("300Mi"),
+					"cpu":    resource.MustParse("50m"),
+					"memory": resource.MustParse("500Mi"),
 				}
 
 				Expect(

@@ -36,7 +36,7 @@ func TestDefault(t *testing.T) {
 		},
 		Spec: PolicyServerSpec{
 			Limits: corev1.ResourceList{
-				"cpu":    resource.MustParse("1Gi"),
+				"cpu":    resource.MustParse("100m"),
 				"memory": resource.MustParse("1Gi"),
 			},
 		},
@@ -46,7 +46,7 @@ func TestDefault(t *testing.T) {
 
 	assert.Contains(t, policyServer.Finalizers, constants.KubewardenFinalizer)
 	assert.Equal(t, corev1.ResourceList{
-		"cpu":    resource.MustParse("1Gi"),
+		"cpu":    resource.MustParse("100m"),
 		"memory": resource.MustParse("1Gi"),
 	}, policyServer.Spec.Requests)
 }
@@ -105,26 +105,26 @@ func TestValidateLimitsAndRequests(t *testing.T) {
 	}{
 		{
 			Name:        "valid",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("1Gi")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("500Mi")},
+			Limits:      corev1.ResourceList{"cpu": resource.MustParse("100m")},
+			Requests:    corev1.ResourceList{"cpu": resource.MustParse("50m")},
 			ExpectedErr: nil,
 		},
 		{
 			Name:        "negative limit",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("-1Gi")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("500Mi")},
+			Limits:      corev1.ResourceList{"cpu": resource.MustParse("-100m")},
+			Requests:    corev1.ResourceList{"cpu": resource.MustParse("100m")},
 			ExpectedErr: errors.New("cpu limit must be greater than or equal to 0"),
 		},
 		{
 			Name:        "negative request",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("1Gi")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("-500Mi")},
+			Limits:      corev1.ResourceList{"cpu": resource.MustParse("100m")},
+			Requests:    corev1.ResourceList{"cpu": resource.MustParse("-100m")},
 			ExpectedErr: errors.New("cpu request must be greater than or equal to 0"),
 		},
 		{
 			Name:        "request greater than limit",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("1Gi")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("2Gi")},
+			Limits:      corev1.ResourceList{"cpu": resource.MustParse("100m")},
+			Requests:    corev1.ResourceList{"cpu": resource.MustParse("200m")},
 			ExpectedErr: errors.New("request must be less than or equal to cpu limit"),
 		},
 	}
