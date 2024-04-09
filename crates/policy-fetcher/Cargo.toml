@@ -48,6 +48,6 @@ tokio = { version = "1", default_features = false }
 cfg-if = "1.0"
 
 [dev-dependencies]
-rstest = "0.18"
+rstest = "0.19"
 tempfile = "3.2"
 textwrap = "0.16"
