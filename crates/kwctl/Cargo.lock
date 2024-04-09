@@ -2210,23 +2210,6 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0bea761b46ae2b24eb4aef630d8d1c398157b6fc29e6350ecf090a0b70c952c"
-dependencies = [
- "futures-util",
- "http 1.1.0",
- "hyper 1.2.0",
- "hyper-util",
- "rustls 0.22.2",
- "rustls-pki-types",
- "tokio",
- "tokio-rustls 0.25.0",
- "tower-service",
-]
-
-[[package]]
-name = "hyper-rustls"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "736f15a50e749d033164c56c09783b6102c4ff8da79ad77dbddbbaea0f8567f7"
@@ -2237,7 +2220,7 @@ dependencies = [
  "hyper-util",
  "log",
  "rustls 0.23.3",
- "rustls-native-certs",
+ "rustls-native-certs 0.7.0",
  "rustls-pki-types",
  "tokio",
  "tokio-rustls 0.26.0",
@@ -2679,7 +2662,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.11.0"
+version = "1.12.0-rc1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2697,7 +2680,7 @@ dependencies = [
  "pulldown-cmark",
  "pulldown-cmark-mdcat",
  "regex",
- "reqwest 0.12.1",
+ "reqwest",
  "rstest",
  "semver",
  "serde",
@@ -3059,7 +3042,7 @@ dependencies = [
  "getrandom",
  "http 0.2.12",
  "rand",
- "reqwest 0.11.27",
+ "reqwest",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -3103,7 +3086,7 @@ dependencies = [
  "lazy_static",
  "olpc-cjson",
  "regex",
- "reqwest 0.11.27",
+ "reqwest",
  "serde",
  "serde_json",
  "sha2",
@@ -3129,7 +3112,7 @@ dependencies = [
  "lazy_static",
  "olpc-cjson",
  "regex",
- "reqwest 0.11.27",
+ "reqwest",
  "serde",
  "serde_json",
  "sha2",
@@ -3716,7 +3699,7 @@ dependencies = [
  "path-slash",
  "rayon",
  "regex",
- "reqwest 0.11.27",
+ "reqwest",
  "rustls 0.23.3",
  "serde",
  "serde_json",
@@ -4093,6 +4076,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "rustls 0.21.10",
+ "rustls-native-certs 0.6.3",
  "rustls-pemfile 1.0.4",
  "serde",
  "serde_json",
@@ -4109,47 +4093,6 @@ dependencies = [
  "wasm-streams",
  "web-sys",
  "webpki-roots",
- "winreg",
-]
-
-[[package]]
-name = "reqwest"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e333b1eb9fe677f6893a9efcb0d277a2d3edd83f358a236b657c32301dc6e5f6"
-dependencies = [
- "base64 0.21.7",
- "bytes",
- "futures-core",
- "futures-util",
- "http 1.1.0",
- "http-body 1.0.0",
- "http-body-util",
- "hyper 1.2.0",
- "hyper-rustls 0.26.0",
- "hyper-util",
- "ipnet",
- "js-sys",
- "log",
- "mime",
- "once_cell",
- "percent-encoding",
- "pin-project-lite",
- "rustls 0.22.2",
- "rustls-native-certs",
- "rustls-pemfile 1.0.4",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sync_wrapper",
- "tokio",
- "tokio-rustls 0.25.0",
- "tower-service",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
  "winreg",
 ]
 
@@ -4306,20 +4249,6 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.22.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e87c9956bd9807afa1f77e0f7594af32566e830e088a5576d27c5b6f30f49d41"
-dependencies = [
- "log",
- "ring 0.17.8",
- "rustls-pki-types",
- "rustls-webpki 0.102.2",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "rustls"
 version = "0.23.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b3818d6051afeb6f88412bc8693cf8219799b2f2c2365f15e7534f0e198a16c"
@@ -4331,6 +4260,18 @@ dependencies = [
  "rustls-webpki 0.102.2",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "rustls-native-certs"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9aace74cb666635c918e9c12bc0d348266037aa8eb599b5cba565709a8dff00"
+dependencies = [
+ "openssl-probe",
+ "rustls-pemfile 1.0.4",
+ "schannel",
+ "security-framework",
 ]
 
 [[package]]
@@ -4770,7 +4711,7 @@ dependencies = [
  "pkcs8",
  "rand",
  "regex",
- "reqwest 0.11.27",
+ "reqwest",
  "rsa",
  "scrypt",
  "serde",
@@ -5228,17 +5169,6 @@ dependencies = [
 
 [[package]]
 name = "tokio-rustls"
-version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "775e0c0f0adb3a2f22a00c4745d728b479985fc15ee7ca6a2608388c5569860f"
-dependencies = [
- "rustls 0.22.2",
- "rustls-pki-types",
- "tokio",
-]
-
-[[package]]
-name = "tokio-rustls"
 version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c7bc40d0e5a97695bb96e27995cd3a08538541b0a846f65bba7a359f36700d4"
@@ -5313,7 +5243,7 @@ dependencies = [
  "path-absolutize",
  "pem 1.1.1",
  "percent-encoding",
- "reqwest 0.11.27",
+ "reqwest",
  "ring 0.16.20",
  "serde",
  "serde_json",
