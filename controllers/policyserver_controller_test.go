@@ -308,7 +308,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
 
 				return nil
-			})
+			}).Should(Succeed())
 
 			By("creating a pod with limit and request set")
 			Eventually(func(g Gomega) error {
