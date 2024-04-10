@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/kubewarden/kubewarden-controller v1.11.1
+	github.com/kubewarden/kubewarden-controller v1.12.0-rc1
 	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
@@ -54,7 +54,7 @@ require (
 	github.com/prometheus/procfs v0.13.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.18.0 // indirect
