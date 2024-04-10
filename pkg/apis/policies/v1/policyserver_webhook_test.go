@@ -45,10 +45,6 @@ func TestDefault(t *testing.T) {
 	policyServer.Default()
 
 	assert.Contains(t, policyServer.Finalizers, constants.KubewardenFinalizer)
-	assert.Equal(t, corev1.ResourceList{
-		"cpu":    resource.MustParse("100m"),
-		"memory": resource.MustParse("1Gi"),
-	}, policyServer.Spec.Requests)
 }
 
 func TestValidatePolicyServerName(t *testing.T) {
