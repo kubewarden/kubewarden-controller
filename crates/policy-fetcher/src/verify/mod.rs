@@ -1,76 +1,43 @@
-use crate::registry::build_fully_resolved_reference;
-use crate::sources::Sources;
-use crate::{errors::FailedToParseYamlDataError, policy::Policy};
-
-use oci_distribution::manifest::WASM_LAYER_MEDIA_TYPE;
+use oci_distribution::{manifest::WASM_LAYER_MEDIA_TYPE, secrets::RegistryAuth, Reference};
 use sigstore::{
     cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities},
+    errors::SigstoreError,
     registry::oci_reference::OciReference,
+    trust::ManualTrustRoot,
 };
-
-use crate::verify::config::Signature;
-use crate::verify::errors::VerifyError;
-use crate::Registry;
-
-use oci_distribution::secrets::RegistryAuth;
-use oci_distribution::Reference;
-use sigstore::errors::SigstoreError;
-use std::convert::TryFrom;
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{convert::TryFrom, str::FromStr, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
-use self::errors::VerifyResult;
-
-/// This structure simplifies the process of policy verification
-/// using Sigstore
-#[derive(Clone)]
-pub struct Verifier {
-    cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
-    sources: Option<Sources>,
-}
+use crate::{
+    errors::FailedToParseYamlDataError,
+    policy::Policy,
+    registry::build_fully_resolved_reference,
+    sources::Sources,
+    verify::{
+        config::Signature,
+        errors::{VerifyError, VerifyResult},
+    },
+    Registry,
+};
 
 pub mod config;
 pub mod errors;
 pub mod verification_constraints;
 
-/// Define how Fulcio and Rekor data are going to be provided to sigstore cosign client
+/// This structure simplifies the process of policy verification
+/// using Sigstore
 #[derive(Clone)]
-pub enum FulcioAndRekorData {
-    /// Data is read from the official Sigstore TUF repository
-    ///
-    /// Note well: we have to rely on the consumer of policy-fetcher library to provide
-    /// an instance of sigstore::tuf::SigstoreRepository instead of creating our own
-    /// object "on-demand". That's because currently (Mar 2022), fetching the contents
-    /// of a TUF repository is a **blocking** operation that cannot be done inside of
-    /// `async` contexes without causing a tokio runtime panic. That happens because
-    /// the `tough` library, used by sigstore-rs, performs a blocking fetch.
-    ///
-    /// Note well: for end users of this library, there's no need to depend on sigstore-rs.
-    /// This library is re-exposing the crate exactly for this purpose:
-    ///
-    /// ```
-    /// use policy_fetcher::sigstore;
-    ///
-    /// let repo: sigstore::tuf::SigstoreRepository;
-    /// ```
-    FromTufRepository {
-        repo: sigstore::tuf::SigstoreRepository,
-    },
-    /// Data is somehow provided by the user, probably by reading it from the
-    /// local filesystem
-    FromCustomData {
-        rekor_public_key: Option<String>,
-        fulcio_certs: Vec<crate::sources::Certificate>,
-    },
+pub struct Verifier<'a> {
+    cosign_client: Arc<Mutex<sigstore::cosign::Client<'a>>>,
+    sources: Option<Sources>,
 }
 
-impl Verifier {
+impl<'a> Verifier<'a> {
     /// Creates a new verifier that leverages an already existing
     /// Cosign client.
     pub fn new_from_cosign_client(
-        cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
+        cosign_client: Arc<Mutex<sigstore::cosign::Client<'a>>>,
         sources: Option<Sources>,
     ) -> Self {
         Self {
@@ -81,48 +48,32 @@ impl Verifier {
 
     /// Creates a new verifier using the `Sources` provided. These are
     /// later used to interact with remote OCI registries.
-    pub fn new(
+    pub async fn new(
         sources: Option<Sources>,
-        fulcio_and_rekor_data: Option<&FulcioAndRekorData>,
+        trust_root: Option<Arc<ManualTrustRoot<'static>>>,
     ) -> VerifyResult<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
-        let mut cosign_client_builder =
-            ClientBuilder::default().with_oci_client_config(client_config);
-        match fulcio_and_rekor_data {
-            Some(FulcioAndRekorData::FromTufRepository { repo }) => {
-                cosign_client_builder = cosign_client_builder
-                    .with_rekor_pub_key(repo.rekor_pub_key())
-                    .with_fulcio_certs(repo.fulcio_certs());
-            }
-            Some(FulcioAndRekorData::FromCustomData {
-                rekor_public_key,
-                fulcio_certs,
-            }) => {
-                if let Some(pk) = rekor_public_key {
-                    cosign_client_builder = cosign_client_builder.with_rekor_pub_key(pk);
-                }
-                if !fulcio_certs.is_empty() {
-                    let certs: Vec<sigstore::registry::Certificate> = fulcio_certs
-                        .iter()
-                        .map(|c| {
-                            let sc: sigstore::registry::Certificate = c.into();
-                            sc
-                        })
-                        .collect();
-                    cosign_client_builder = cosign_client_builder.with_fulcio_certs(&certs);
-                }
+        let mut cosign_client_builder = ClientBuilder::default()
+            .with_oci_client_config(client_config)
+            .enable_registry_caching();
+        let cosign_client = match trust_root {
+            Some(trust_root) => {
+                cosign_client_builder =
+                    cosign_client_builder.with_trust_repository(trust_root.as_ref())?;
+                let cosign_client = cosign_client_builder.build()?;
+                cosign_client.to_owned()
             }
             None => {
                 warn!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
                 warn!("Sigstore Verifier created without Rekor data: transparency log data won't be used");
                 warn!("Sigstore capabilities are going to be limited");
+
+                let cosign_client = cosign_client_builder.build()?;
+                cosign_client.to_owned()
             }
-        }
+        };
 
-        cosign_client_builder = cosign_client_builder.enable_registry_caching();
-
-        let cosign_client = cosign_client_builder.build()?;
         Ok(Verifier {
             cosign_client: Arc::new(Mutex::new(cosign_client)),
             sources,
@@ -321,8 +272,8 @@ fn verify_signatures_against_config(
 /// Returns:
 /// * String holding the source image digest
 /// * List of signature layers
-pub async fn fetch_sigstore_remote_data(
-    cosign_client_input: &Arc<Mutex<cosign::Client>>,
+pub async fn fetch_sigstore_remote_data<'a>(
+    cosign_client_input: &Arc<Mutex<cosign::Client<'a>>>,
     image_url: &str,
 ) -> VerifyResult<(String, Vec<SignatureLayer>)> {
     let mut cosign_client = cosign_client_input.lock().await;

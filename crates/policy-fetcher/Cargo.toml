@@ -16,10 +16,13 @@ async-trait = "0.1"
 base64 = "0.22"
 directories = "5.0"
 lazy_static = "1.4"
-oci-distribution = { version = "0.11.0", default-features = false, features = [
+# warning: we have to stick to this version of oci-distribution because the `tough` crate (which is used by `sigstore`)
+# uses an older version of `reqwest` that is not compatible with the latest version of `oci-distribution`
+oci-distribution = { version = "0.10.0", default-features = false, features = [
   "rustls-tls",
 ] }
 path-slash = "0.2"
+pem = "3"
 regex = "1.5"
 reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
@@ -29,13 +32,19 @@ rustls = { version = "0.23", default-features = false, features = [
   "ring",
   "tls12",
 ] }
+rustls-pki-types = "1.0.1" # stick to the same version used by sigstore
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
-sigstore = { version = "0.7.2", default-features = false, features = [
-  "full-rustls-tls",
-  "tuf",
+# sigstore = { git = "https://github.com/flavio/sigstore-rs.git", branch = "kubewarden", default-features = false, features = [
+#   "sigstore-trust-root",
+#   "cosign-native-tls",
+#   "cached-client",
+# ] }
+sigstore = { version = "0.9.0", default-features = false, features = [
+  "sigstore-trust-root",
+  "cosign-native-tls",
   "cached-client",
 ] }
 thiserror = "1.0"
@@ -51,3 +60,6 @@ cfg-if = "1.0"
 rstest = "0.19"
 tempfile = "3.2"
 textwrap = "0.16"
+
+[patch.crates-io]
+sigstore = { git = "https://github.com/flavio/sigstore-rs.git", branch = "kubewarden" }
