@@ -59,16 +59,6 @@ func (ps *PolicyServer) Default() {
 	if ps.ObjectMeta.DeletionTimestamp == nil {
 		controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
 	}
-
-	// Default the requests to the limits if not set
-	for limitName, limitQuantity := range ps.Spec.Limits {
-		if _, found := ps.Spec.Requests[limitName]; !found {
-			if ps.Spec.Requests == nil {
-				ps.Spec.Requests = make(corev1.ResourceList)
-			}
-			ps.Spec.Requests[limitName] = limitQuantity
-		}
-	}
 }
 
 // +kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-policyserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=vpolicyserver.kb.io,admissionReviewVersions=v1
