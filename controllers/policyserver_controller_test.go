@@ -304,11 +304,9 @@ var _ = Describe("PolicyServer controller", func() {
 				}
 
 				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
-				By("setting the requests to the same value as the limits")
-				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
 
 				return nil
-			}).Should(Succeed())
+			}, timeout, pollInterval).Should(Succeed())
 
 			By("creating a pod with limit and request set")
 			Eventually(func(g Gomega) error {
@@ -318,6 +316,7 @@ var _ = Describe("PolicyServer controller", func() {
 				}
 
 				Expect(pod.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+				By("setting the requests to the same value as the limits")
 				Expect(pod.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
 
 				return nil
