@@ -224,37 +224,6 @@ func getTestCASecret() (*corev1.Secret, error) {
 	return &secret, nil
 }
 
-func alreadyExists() types.GomegaMatcher { //nolint:ireturn
-	return WithTransform(
-		func(err error) bool {
-			return err != nil && apierrors.IsAlreadyExists(err)
-		},
-		BeTrue(),
-	)
-}
-
-func haveSucceededOrAlreadyExisted() types.GomegaMatcher { //nolint:ireturn
-	return SatisfyAny(
-		BeNil(),
-		alreadyExists(),
-	)
-}
-
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
-
-func randStringRunes(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))] //nolint:gosec
-	}
-
-	return string(b)
-}
-
-func newName(prefix string) string {
-	return fmt.Sprintf("%s-%s", prefix, randStringRunes(8))
-}
-
 func getPolicyServerPodDisruptionBudget(policyServerName string) (*k8spoliciesv1.PodDisruptionBudget, error) {
 	policyServer := policiesv1.PolicyServer{
 		ObjectMeta: metav1.ObjectMeta{
@@ -301,4 +270,35 @@ func policyServerPodDisruptionBudgetMatcher(policyServer *policiesv1.PolicyServe
 		}),
 		),
 	)
+}
+
+func alreadyExists() types.GomegaMatcher { //nolint:ireturn
+	return WithTransform(
+		func(err error) bool {
+			return err != nil && apierrors.IsAlreadyExists(err)
+		},
+		BeTrue(),
+	)
+}
+
+func haveSucceededOrAlreadyExisted() types.GomegaMatcher { //nolint:ireturn
+	return SatisfyAny(
+		BeNil(),
+		alreadyExists(),
+	)
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
+
+func randStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))] //nolint:gosec
+	}
+
+	return string(b)
+}
+
+func newName(prefix string) string {
+	return fmt.Sprintf("%s-%s", prefix, randStringRunes(8))
 }
