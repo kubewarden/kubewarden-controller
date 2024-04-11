@@ -152,6 +152,24 @@ impl From<&Certificate> for sigstore::registry::Certificate {
     }
 }
 
+impl<'a> TryFrom<&Certificate> for rustls_pki_types::CertificateDer<'a> {
+    type Error = &'static str;
+
+    fn try_from(cert: &Certificate) -> std::result::Result<Self, Self::Error> {
+        match cert {
+            Certificate::Der(data) => Ok(rustls_pki_types::CertificateDer::from(
+                data.as_slice().to_owned(),
+            )),
+            Certificate::Pem(data) => {
+                let pem = pem::parse(data).map_err(|_| "Failed to parse PEM data")?;
+                Ok(rustls_pki_types::CertificateDer::from(
+                    pem.contents().to_owned(),
+                ))
+            }
+        }
+    }
+}
+
 impl From<Sources> for oci_distribution::client::ClientConfig {
     fn from(sources: Sources) -> Self {
         let protocol = if sources.insecure_sources.is_empty() {
