@@ -75,9 +75,11 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		})
 
 		It("should create the ValidatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) {
+			Eventually(func(g Gomega) error {
 				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
-				Expect(err).ToNot(HaveOccurred())
+				if err != nil {
+					return err
+				}
 
 				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
 				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("namespace"))
@@ -89,6 +91,8 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
+
+				return nil
 			}, timeout, pollInterval).Should(Succeed())
 		})
 
@@ -178,9 +182,11 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		})
 
 		It("should create the MutatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) {
+			Eventually(func(g Gomega) error {
 				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
-				Expect(err).ToNot(HaveOccurred())
+				if err != nil {
+					return err
+				}
 
 				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
 				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("namespace"))
@@ -192,6 +198,8 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
+
+				return nil
 			}, timeout, pollInterval).Should(Succeed())
 		})
 

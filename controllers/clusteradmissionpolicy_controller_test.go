@@ -60,9 +60,11 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 		})
 
 		It("should create the ValidatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) {
+			Eventually(func(g Gomega) error {
 				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
-				Expect(err).ToNot(HaveOccurred())
+				if err != nil {
+					return err
+				}
 
 				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
 				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("cluster"))
@@ -74,6 +76,8 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
+
+				return nil
 			}, timeout, pollInterval).Should(Succeed())
 		})
 
@@ -139,10 +143,11 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 		})
 
 		It("should create the MutatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) {
+			Eventually(func(g Gomega) error {
 				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
-				Expect(err).ToNot(HaveOccurred())
-
+				if err != nil {
+					return err
+				}
 				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
 				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("cluster"))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
@@ -153,6 +158,8 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())
 				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
+
+				return nil
 			}, timeout, pollInterval).Should(Succeed())
 		})
 
