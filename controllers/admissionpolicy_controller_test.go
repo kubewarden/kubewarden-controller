@@ -60,14 +60,14 @@ var _ = Describe("AdmissionPolicy controller", func() {
 			).To(Succeed())
 
 			By("changing the policy status to pending")
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
@@ -75,7 +75,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		})
 
 		It("should create the ValidatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 				if err != nil {
 					return err
@@ -114,7 +114,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				).To(Succeed())
 
 				By("reconciling the ValidatingWebhookConfiguration to its original state")
-				Eventually(func(g Gomega) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+				Eventually(func() (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
 					return getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 				}, timeout, pollInterval).Should(
 					And(
@@ -138,7 +138,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				).To(Succeed())
 
 				By("reconciling the ValidatingWebhookConfiguration to its original state")
-				Eventually(func(g Gomega) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+				Eventually(func() (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
 					return getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 				}, timeout, pollInterval).Should(
 					And(
@@ -167,14 +167,14 @@ var _ = Describe("AdmissionPolicy controller", func() {
 			).To(Succeed())
 
 			By("changing the policy status to pending")
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
@@ -182,7 +182,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		})
 
 		It("should create the MutatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 				if err != nil {
 					return err
@@ -221,7 +221,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				).To(Succeed())
 
 				By("reconciling the MutatingWebhookConfiguration to its original state")
-				Eventually(func(g Gomega) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+				Eventually(func() (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 					return getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 				}, timeout, pollInterval).Should(
 					And(
@@ -245,7 +245,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				).To(Succeed())
 
 				By("reconciling the MutatingWebhookConfiguration to its original state")
-				Eventually(func(g Gomega) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+				Eventually(func() (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 					return getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 				}, timeout, pollInterval).Should(
 					And(
@@ -266,7 +266,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				k8sClient.Create(ctx, admissionPolicyFactory(policyName, policyNamespace, "", false)),
 			).To(haveSucceededOrAlreadyExisted())
 
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, 30*time.Second, 250*time.Millisecond).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusUnscheduled)),
@@ -285,7 +285,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				k8sClient.Create(ctx, admissionPolicyFactory(policyName, policyNamespace, policyServerName, false)),
 			).To(haveSucceededOrAlreadyExisted())
 
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusScheduled)),
@@ -299,14 +299,14 @@ var _ = Describe("AdmissionPolicy controller", func() {
 			).To(haveSucceededOrAlreadyExisted())
 
 			By("changing the policy status to pending")
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
-			Eventually(func(g Gomega) (*policiesv1.AdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),

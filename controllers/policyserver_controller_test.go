@@ -41,7 +41,7 @@ var _ = Describe("PolicyServer controller", func() {
 				k8sClient.Create(ctx, policyServerFactory(policyServerName)),
 			).To(haveSucceededOrAlreadyExisted())
 			// Wait for the Service associated with the PolicyServer to be created
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				_, err := getTestPolicyServerService(policyServerName)
 				return err
 			}, timeout, pollInterval).Should(Succeed())
@@ -54,7 +54,7 @@ var _ = Describe("PolicyServer controller", func() {
 					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
 				).To(Succeed())
 
-				Eventually(func(g Gomega) (*policiesv1.PolicyServer, error) {
+				Eventually(func() (*policiesv1.PolicyServer, error) {
 					return getTestPolicyServer(policyServerName)
 				}, timeout, pollInterval).ShouldNot(
 					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
@@ -70,7 +70,7 @@ var _ = Describe("PolicyServer controller", func() {
 				controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
 				err = reconciler.Client.Update(ctx, policyServer)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(func(g Gomega) error {
+				Eventually(func() error {
 					_, err := getTestPolicyServer(policyServerName)
 					return err
 				}, timeout, pollInterval).ShouldNot(Succeed())
@@ -97,7 +97,7 @@ var _ = Describe("PolicyServer controller", func() {
 					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
 				).To(Succeed())
 
-				Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 					return getTestClusterAdmissionPolicy(policyName)
 				}, timeout, pollInterval).ShouldNot(
 					HaveField("DeletionTimestamp", BeNil()),
@@ -116,7 +116,7 @@ var _ = Describe("PolicyServer controller", func() {
 					),
 				)
 
-				Eventually(func(g Gomega) error {
+				Eventually(func() error {
 					_, err := getTestPolicyServerService(policyServerName)
 					return err
 				}).Should(Succeed())
@@ -132,17 +132,17 @@ var _ = Describe("PolicyServer controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// wait for the reconciliation loop of the ClusterAdmissionPolicy to remove the resource
-				Eventually(func(g Gomega) error {
+				Eventually(func() error {
 					_, err := getTestClusterAdmissionPolicy(policyName)
 					return err
 				}, timeout, pollInterval).ShouldNot(Succeed())
 
-				Eventually(func(g Gomega) error {
+				Eventually(func() error {
 					_, err := getTestPolicyServerService(policyServerName)
 					return err
 				}, timeout, pollInterval).ShouldNot(Succeed())
 
-				Eventually(func(g Gomega) (*policiesv1.PolicyServer, error) {
+				Eventually(func() (*policiesv1.PolicyServer, error) {
 					return getTestPolicyServer(policyServerName)
 				}, timeout, pollInterval).ShouldNot(
 					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
@@ -169,7 +169,7 @@ var _ = Describe("PolicyServer controller", func() {
 				).To(haveSucceededOrAlreadyExisted())
 
 				By("creating the PodDisruptionBudget")
-				Eventually(func(g Gomega) *k8spoliciesv1.PodDisruptionBudget {
+				Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
 					pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
 					return pdb
 				}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, &minAvailable, nil))
@@ -191,7 +191,7 @@ var _ = Describe("PolicyServer controller", func() {
 				).To(haveSucceededOrAlreadyExisted())
 
 				By("creating the PodDisruptionBudget")
-				Eventually(func(g Gomega) *k8spoliciesv1.PodDisruptionBudget {
+				Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
 					pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
 					return pdb
 				}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
@@ -213,12 +213,12 @@ var _ = Describe("PolicyServer controller", func() {
 				By("creating the PolicyServer service")
 				// Wait for the Service associated with the PolicyServer to be created.
 				// The service reconciliation is after the PDB reconciliation.
-				Eventually(func(g Gomega) error {
+				Eventually(func() error {
 					_, err := getTestPolicyServerService(policyServerName)
 					return err
 				}, timeout, pollInterval).Should(Succeed())
 
-				Consistently(func(g Gomega) error {
+				Consistently(func() error {
 					_, err := getPolicyServerPodDisruptionBudget(policyServerName)
 					return err
 				}, 10*time.Second, pollInterval).ShouldNot(Succeed())
@@ -240,12 +240,12 @@ var _ = Describe("PolicyServer controller", func() {
 				By("creating the PolicyServer service")
 				// Wait for the Service associated with the PolicyServer to be created.
 				// The service reconciliation is after the PDB reconciliation.
-				Eventually(func(g Gomega) error {
+				Eventually(func() error {
 					_, err := getTestPolicyServerService(policyServerName)
 					return err
 				}, timeout, pollInterval).Should(Succeed())
 
-				Consistently(func(g Gomega) error {
+				Consistently(func() error {
 					_, err := getPolicyServerPodDisruptionBudget(policyServerName)
 					return err
 				}, 10*time.Second, pollInterval).ShouldNot(Succeed())
@@ -259,7 +259,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				By("creating a PodDisruptionBudget with a MaxUnavailable configuration")
-				Eventually(func(g Gomega) *k8spoliciesv1.PodDisruptionBudget {
+				Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
 					pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
 					return pdb
 				}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
@@ -273,12 +273,12 @@ var _ = Describe("PolicyServer controller", func() {
 			err = reconciler.Client.Delete(ctx, policyServer)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				_, err := getTestPolicyServer(policyServerName)
 				return err
 			}, timeout, pollInterval).ShouldNot(Succeed())
 
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				_, err := getPolicyServerPodDisruptionBudget(policyServerName)
 				return err
 			}, timeout, pollInterval).ShouldNot(Succeed())
@@ -300,7 +300,7 @@ var _ = Describe("PolicyServer controller", func() {
 			).To(haveSucceededOrAlreadyExisted())
 
 			By("creating a deployment with limits and requests set")
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				deployment, err := getTestPolicyServerDeployment(policyServerName)
 				if err != nil {
 					return err
@@ -312,7 +312,7 @@ var _ = Describe("PolicyServer controller", func() {
 			}, timeout, pollInterval).Should(Succeed())
 
 			By("creating a pod with limit and request set")
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				pod, err := getTestPolicyServerPod(policyServerName)
 				if err != nil {
 					return err
@@ -343,7 +343,7 @@ var _ = Describe("PolicyServer controller", func() {
 				).To(Succeed())
 
 				By("updating the pod with the new requests")
-				Eventually(func(g Gomega) (*corev1.Container, error) {
+				Eventually(func() (*corev1.Container, error) {
 					pod, err := getTestPolicyServerPod(policyServerName)
 					if err != nil {
 						return nil, err

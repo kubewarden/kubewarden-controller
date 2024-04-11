@@ -45,14 +45,14 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 			).To(Succeed())
 
 			By("changing the policy status to pending")
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
@@ -60,7 +60,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 		})
 
 		It("should create the ValidatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
 				if err != nil {
 					return err
@@ -99,7 +99,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				).To(Succeed())
 
 				By("reconciling the ValidatingWebhookConfiguration to its original state")
-				Eventually(func(g Gomega) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+				Eventually(func() (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
 					return getTestValidatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
 				}, timeout, pollInterval).Should(
 					And(
@@ -128,14 +128,14 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 			).To(Succeed())
 
 			By("changing the policy status to pending")
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
@@ -143,7 +143,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 		})
 
 		It("should create the MutatingWebhookConfiguration", func() {
-			Eventually(func(g Gomega) error {
+			Eventually(func() error {
 				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
 				if err != nil {
 					return err
@@ -181,7 +181,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				).To(Succeed())
 
 				By("reconciling the MutatingWebhookConfiguration to its original state")
-				Eventually(func(g Gomega) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+				Eventually(func() (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 					return getTestMutatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
 				}, timeout, pollInterval).Should(
 					And(
@@ -202,7 +202,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, "", false)),
 			).To(haveSucceededOrAlreadyExisted())
 
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusUnscheduled)),
@@ -221,7 +221,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, false)),
 			).To(haveSucceededOrAlreadyExisted())
 
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusScheduled)),
@@ -235,14 +235,14 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 			).To(haveSucceededOrAlreadyExisted())
 
 			By("changing the policy status to pending")
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
-			Eventually(func(g Gomega) (*policiesv1.ClusterAdmissionPolicy, error) {
+			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 				return getTestClusterAdmissionPolicy(policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
