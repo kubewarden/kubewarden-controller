@@ -1,3 +1,4 @@
+use crate::registry::build_fully_resolved_reference;
 use crate::sources::Sources;
 use crate::{errors::FailedToParseYamlDataError, policy::Policy};
 
@@ -336,7 +337,8 @@ pub async fn fetch_sigstore_remote_data(
     }
 
     // obtain registry auth:
-    let auth = Registry::auth(image_url);
+    let reference = build_fully_resolved_reference(image_url)?;
+    let auth = Registry::auth(reference.registry());
 
     let sigstore_auth = match auth {
         RegistryAuth::Anonymous => sigstore::registry::Auth::Anonymous,
