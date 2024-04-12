@@ -265,6 +265,7 @@ async fn test_runtime_context_aware<F, Fut>(
     let mut callback_handler = callback_builder
         .kube_client(client)
         .build()
+        .await
         .expect("cannot build callback handler");
     let callback_handler_channel = callback_handler.sender_channel();
 
@@ -326,6 +327,7 @@ async fn test_oci_manifest_capability(
     let callback_builder = CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx);
     let mut callback_handler = callback_builder
         .build()
+        .await
         .expect("cannot build callback handler");
     let callback_handler_channel = callback_handler.sender_channel();
 
