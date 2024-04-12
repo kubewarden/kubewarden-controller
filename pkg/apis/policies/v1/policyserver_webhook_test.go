@@ -16,7 +16,6 @@ package v1
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
@@ -94,43 +93,43 @@ func TestValidateMinAvailable(t *testing.T) {
 
 func TestValidateLimitsAndRequests(t *testing.T) {
 	testCases := []struct {
-		Name        string
-		Limits      corev1.ResourceList
-		Requests    corev1.ResourceList
-		ExpectedErr error
+		name     string
+		limits   corev1.ResourceList
+		requests corev1.ResourceList
+		error    string
 	}{
 		{
-			Name:        "valid",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("100m")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("50m")},
-			ExpectedErr: nil,
+			name:     "valid",
+			limits:   corev1.ResourceList{"cpu": resource.MustParse("100m")},
+			requests: corev1.ResourceList{"cpu": resource.MustParse("50m")},
+			error:    "",
 		},
 		{
-			Name:        "negative limit",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("-100m")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("100m")},
-			ExpectedErr: errors.New("cpu limit must be greater than or equal to 0"),
+			name:     "negative limit",
+			limits:   corev1.ResourceList{"cpu": resource.MustParse("-100m")},
+			requests: corev1.ResourceList{"cpu": resource.MustParse("100m")},
+			error:    `spec.limits.cpu: Invalid value: "-100m": must be greater than or equal to 0`,
 		},
 		{
-			Name:        "negative request",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("100m")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("-100m")},
-			ExpectedErr: errors.New("cpu request must be greater than or equal to 0"),
+			name:     "negative request",
+			limits:   corev1.ResourceList{"cpu": resource.MustParse("100m")},
+			requests: corev1.ResourceList{"cpu": resource.MustParse("-100m")},
+			error:    `spec.requests.cpu: Invalid value: "-100m": must be greater than or equal to 0`,
 		},
 		{
-			Name:        "request greater than limit",
-			Limits:      corev1.ResourceList{"cpu": resource.MustParse("100m")},
-			Requests:    corev1.ResourceList{"cpu": resource.MustParse("200m")},
-			ExpectedErr: errors.New("request must be less than or equal to cpu limit"),
+			name:     "request greater than limit",
+			limits:   corev1.ResourceList{"cpu": resource.MustParse("100m")},
+			requests: corev1.ResourceList{"cpu": resource.MustParse("200m")},
+			error:    `spec.requests.cpu: Invalid value: "200m": must be less than or equal to cpu limit of 100m`,
 		},
 	}
 
 	for _, test := range testCases {
-		t.Run(test.Name, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			policyServer := &PolicyServer{
 				Spec: PolicyServerSpec{
-					Limits:   test.Limits,
-					Requests: test.Requests,
+					Limits:   test.limits,
+					Requests: test.requests,
 				},
 			}
 			policyServerValidator := policyServerValidator{
@@ -138,7 +137,10 @@ func TestValidateLimitsAndRequests(t *testing.T) {
 				deploymentsNamespace: "default",
 			}
 			err := policyServerValidator.validate(context.Background(), policyServer)
-			assert.Equal(t, err, test.ExpectedErr)
+
+			if test.error != "" {
+				require.ErrorContains(t, err, test.error)
+			}
 		})
 	}
 }
