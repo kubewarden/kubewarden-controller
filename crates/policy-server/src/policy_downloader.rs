@@ -1,20 +1,20 @@
 use anyhow::{anyhow, Result};
-use policy_evaluator::policy_metadata::Metadata;
 use policy_evaluator::{
     policy_fetcher,
     policy_fetcher::{
         sigstore,
         sources::Sources,
-        verify::{config::LatestVerificationConfig, FulcioAndRekorData, Verifier},
+        verify::{config::LatestVerificationConfig, Verifier},
     },
+    policy_metadata::Metadata,
 };
-use std::path::Path;
+use sigstore::trust::{ManualTrustRoot, TrustRoot};
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
-use tokio::task::spawn_blocking;
 use tracing::{debug, error, info};
 
 use crate::config::Policy;
@@ -25,22 +25,17 @@ use crate::config::Policy;
 pub(crate) type FetchedPolicies = HashMap<String, Result<PathBuf>>;
 
 /// Handles download and verification of policies
-pub(crate) struct Downloader {
-    verifier: Option<Verifier>,
+pub(crate) struct Downloader<'v> {
+    verifier: Option<Verifier<'v>>,
     sources: Option<Sources>,
 }
 
-impl Downloader {
+impl<'v> Downloader<'v> {
     /// Create a new instance of Downloader
     ///
     /// **Warning:** this needs network connectivity because the constructor
     /// fetches Fulcio and Rekor data from the official TUF repository of
-    /// sigstore. This network operations are going to be blocking, that's
-    /// caused by the libraries used by sigstore-rs to interact with TUF.
-    ///
-    /// Being a blocking operation, the other tokio operations are going to be
-    /// put on hold until this method is done. This should not be done too often,
-    /// otherwise there will be performance consequences.
+    /// sigstore.
     pub async fn new(
         sources: Option<Sources>,
         enable_verification: bool,
@@ -225,10 +220,10 @@ impl Downloader {
 
 /// Creates a new Verifier that fetches Fulcio and Rekor data from the official
 /// TUF repository of the sigstore project
-async fn create_verifier(
+async fn create_verifier<'v>(
     sources: Option<Sources>,
     sigstore_cache_dir: Option<PathBuf>,
-) -> Result<Verifier> {
+) -> Result<Verifier<'v>> {
     if let Some(cache_dir) = sigstore_cache_dir.clone() {
         if !cache_dir.exists() {
             fs::create_dir_all(cache_dir)
@@ -236,26 +231,27 @@ async fn create_verifier(
         }
     }
 
-    let repo = spawn_blocking(move || match sigstore_cache_dir {
-        Some(d) => sigstore::tuf::SigstoreRepository::fetch(Some(d.as_path())),
-        None => sigstore::tuf::SigstoreRepository::fetch(None),
-    })
-    .await
-    .map_err(|e| anyhow!("Cannot spawn blocking task: {}", e))?;
-
-    let fulcio_and_rekor_data = match repo {
-        Ok(repo) => Some(FulcioAndRekorData::FromTufRepository { repo }),
-        Err(e) => {
-            error!("Cannot fetch TUF repository: {e:?}");
-            error!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
-            error!(
-                "Sigstore Verifier created without Rekor data: transparency log data won't be used"
-            );
-            error!("Sigstore capabilities are going to be limited");
-            None
-        }
+    let repo =
+        sigstore::trust::sigstore::SigstoreTrustRoot::new(sigstore_cache_dir.as_deref()).await?;
+    let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
+        .fulcio_certs()
+        .unwrap()
+        .into_iter()
+        .map(|c| c.into_owned())
+        .collect();
+    let manual_root = ManualTrustRoot {
+        fulcio_certs: Some(fulcio_certs),
+        rekor_keys: Some(
+            repo.rekor_keys()
+                .unwrap()
+                .iter()
+                .map(|k| k.to_vec())
+                .collect(),
+        ),
     };
-    Ok(Verifier::new(sources, fulcio_and_rekor_data.as_ref())?)
+    let verifier = Verifier::new(sources, Some(Arc::new(manual_root))).await?;
+
+    Ok(verifier)
 }
 
 #[cfg(test)]
