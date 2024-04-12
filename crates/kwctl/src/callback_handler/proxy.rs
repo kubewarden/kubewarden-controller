@@ -4,10 +4,10 @@ use policy_evaluator::{
     callback_handler::CallbackHandlerBuilder,
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     kube,
-    policy_fetcher::{sources::Sources, verify::FulcioAndRekorData},
+    policy_fetcher::{sigstore::trust::ManualTrustRoot, sources::Sources},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::VecDeque, fs::File, path::PathBuf};
+use std::{collections::VecDeque, fs::File, path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info, warn};
 
@@ -29,7 +29,7 @@ struct Exchange {
 /// Can record guest requests, save them to file and reply them back
 pub(crate) struct CallbackHandlerProxy {
     sources: Option<Sources>,
-    fulcio_and_rekor_data: Option<FulcioAndRekorData>,
+    sigstore_trust_root: Option<Arc<ManualTrustRoot<'static>>>,
     kube_client: Option<kube::Client>,
     mode: ProxyMode,
 
@@ -53,7 +53,7 @@ impl CallbackHandlerProxy {
         mode: &ProxyMode,
         shutdown_channel: oneshot::Receiver<()>,
         sources: Option<Sources>,
-        fulcio_and_rekor_data: Option<FulcioAndRekorData>,
+        sigstore_trust_root: Option<Arc<ManualTrustRoot<'static>>>,
         kube_client: Option<kube::Client>,
     ) -> Result<CallbackHandlerProxy> {
         // the channels used to interact with this callback handler.
@@ -68,7 +68,7 @@ impl CallbackHandlerProxy {
             rx,
             shutdown_channel,
             sources,
-            fulcio_and_rekor_data,
+            sigstore_trust_root,
             kube_client,
             recorded_exchanges: vec![],
         })
@@ -238,13 +238,14 @@ impl CallbackHandlerProxy {
         let mut callback_handler_builder =
             CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx)
                 .registry_config(self.sources.clone())
-                .fulcio_and_rekor_data(self.fulcio_and_rekor_data.as_ref());
+                .trust_root(self.sigstore_trust_root.clone());
         if let Some(kc) = &self.kube_client {
             callback_handler_builder = callback_handler_builder.kube_client(kc.to_owned());
         }
 
         let mut callback_handler = callback_handler_builder
             .build()
+            .await
             .expect("cannot build callback handler");
         let callback_handler_sender = callback_handler.sender_channel();
 

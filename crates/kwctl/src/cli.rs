@@ -44,8 +44,9 @@ fn subcommand_pull() -> Command {
             .help("Path to the Fulcio certificate. Can be repeated multiple times"),
         Arg::new("rekor-public-key-path")
             .long("rekor-public-key-path")
+            .action(ArgAction::Append)
             .value_name("PATH")
-            .help("Path to the Rekor public key"),
+            .help("Path to the Rekor public key. Can be repeated multiple times"),
         Arg::new("verification-annotation")
             .short('a')
             .long("verification-annotation")

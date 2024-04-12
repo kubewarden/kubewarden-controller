@@ -64,7 +64,7 @@ async fn new_proxy(
         mode,
         shutdown_channel,
         cfg.sources.clone(),
-        cfg.fulcio_and_rekor_data.clone(),
+        cfg.sigstore_trust_root.clone(),
         kube_client,
     )
     .await?;
@@ -80,12 +80,12 @@ async fn new_transparent(
     let mut callback_handler_builder =
         policy_evaluator::callback_handler::CallbackHandlerBuilder::new(shutdown_channel)
             .registry_config(cfg.sources.clone())
-            .fulcio_and_rekor_data(cfg.fulcio_and_rekor_data.as_ref());
+            .trust_root(cfg.sigstore_trust_root.clone());
     if let Some(kc) = kube_client {
         callback_handler_builder = callback_handler_builder.kube_client(kc);
     }
 
-    let real_callback_handler = callback_handler_builder.build()?;
+    let real_callback_handler = callback_handler_builder.build().await?;
 
     Ok(CallbackHandler::Direct(real_callback_handler))
 }

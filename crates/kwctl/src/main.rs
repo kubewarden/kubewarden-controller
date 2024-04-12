@@ -18,9 +18,8 @@ use std::{
     io::{self, Read},
     path::{Path, PathBuf},
     str::FromStr,
+    sync::Arc,
 };
-
-use tokio::task::spawn_blocking;
 use verify::VerificationAnnotations;
 
 use tracing::{debug, info, warn};
@@ -32,17 +31,19 @@ use tracing_subscriber::{
 
 use crate::load::load;
 use crate::save::save;
-use policy_evaluator::policy_evaluator::PolicyExecutionMode;
-use policy_evaluator::policy_fetcher::{
-    registry::Registry,
-    sigstore,
-    sources::{read_sources_file, Certificate, Sources},
-    store::DEFAULT_ROOT,
-    verify::{
-        config::{read_verification_file, LatestVerificationConfig, Signature, Subject},
-        FulcioAndRekorData,
+use policy_evaluator::{
+    policy_evaluator::PolicyExecutionMode,
+    policy_fetcher::{
+        registry::Registry,
+        sigstore::{
+            self,
+            trust::{ManualTrustRoot, TrustRoot},
+        },
+        sources::{read_sources_file, Sources},
+        store::DEFAULT_ROOT,
+        verify::config::{read_verification_file, LatestVerificationConfig, Signature, Subject},
+        PullDestination,
     },
-    PullDestination,
 };
 
 use crate::utils::new_policy_execution_mode_from_str;
@@ -148,7 +149,7 @@ async fn main() -> Result<()> {
                 let verification_options = verification_options(matches)?;
                 let mut verified_manifest_digest: Option<String> = None;
                 if verification_options.is_some() {
-                    let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
+                    let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
                     // verify policy prior to pulling if keys listed, and keep the
                     // verified manifest digest:
                     verified_manifest_digest = Some(
@@ -156,7 +157,7 @@ async fn main() -> Result<()> {
                             uri,
                             sources.as_ref(),
                             verification_options.as_ref().unwrap(),
-                            fulcio_and_rekor_data.as_ref(),
+                            sigstore_trust_root.clone(),
                         )
                         .await
                         .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
@@ -166,12 +167,12 @@ async fn main() -> Result<()> {
                 let policy = pull::pull(uri, sources.as_ref(), destination).await?;
 
                 if verification_options.is_some() {
-                    let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
+                    let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
                     verify::verify_local_checksum(
                         &policy,
                         sources.as_ref(),
                         &verified_manifest_digest.unwrap(),
-                        fulcio_and_rekor_data.as_ref(),
+                        sigstore_trust_root.clone(),
                     )
                     .await?
                 }
@@ -184,12 +185,12 @@ async fn main() -> Result<()> {
                 let sources = remote_server_options(matches)?;
                 let verification_options = verification_options(matches)?
                     .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
-                let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
+                let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
                 verify::verify(
                     uri,
                     sources.as_ref(),
                     &verification_options,
-                    fulcio_and_rekor_data.as_ref(),
+                    sigstore_trust_root.clone(),
                 )
                 .await
                 .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?;
@@ -669,7 +670,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
 
     let verification_options = verification_options(matches)?;
     let mut verified_manifest_digest: Option<String> = None;
-    let fulcio_and_rekor_data = build_fulcio_and_rekor_data(matches).await?;
+    let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
     if verification_options.is_some() {
         // verify policy prior to pulling if keys listed, and keep the
         // verified manifest digest:
@@ -678,7 +679,7 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
                 &uri,
                 sources.as_ref(),
                 verification_options.as_ref().unwrap(),
-                fulcio_and_rekor_data.as_ref(),
+                sigstore_trust_root.clone(),
             )
             .await
             .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
@@ -727,58 +728,84 @@ async fn parse_pull_and_run_settings(matches: &ArgMatches) -> Result<run::PullAn
         raw,
         settings,
         verified_manifest_digest,
-        fulcio_and_rekor_data,
+        sigstore_trust_root,
         enable_wasmtime_cache,
         allow_context_aware_resources,
         host_capabilities_mode,
     })
 }
 
-async fn build_fulcio_and_rekor_data(matches: &ArgMatches) -> Result<Option<FulcioAndRekorData>> {
+async fn build_sigstore_trust_root(
+    matches: ArgMatches,
+) -> Result<Option<Arc<ManualTrustRoot<'static>>>> {
+    use sigstore::registry::Certificate;
+
     if matches.contains_id("fulcio-cert-path") || matches.contains_id("rekor-public-key-path") {
         let mut fulcio_certs: Vec<Certificate> = vec![];
         if let Some(items) = matches.get_many::<String>("fulcio-cert-path") {
             for item in items {
                 let data = fs::read(item)?;
-                let cert = Certificate::Pem(data);
+                let cert = Certificate {
+                    data,
+                    encoding: sigstore::registry::CertificateEncoding::Pem,
+                };
                 fulcio_certs.push(cert);
             }
         };
 
-        let rekor_public_key = if let Some(rekor_public_key_path) =
-            matches.get_one::<String>("rekor-public-key-path")
-        {
-            Some(fs::read_to_string(rekor_public_key_path)?)
-        } else {
-            None
+        let mut rekor_public_keys: Vec<Vec<u8>> = vec![];
+        if let Some(items) = matches.get_many::<String>("rekor-public-key-path") {
+            for item in items {
+                let data = fs::read(item)?;
+                let pem_data = pem::parse(&data)?;
+                rekor_public_keys.push(pem_data.contents().to_owned());
+            }
         };
 
-        if fulcio_certs.is_empty() || rekor_public_key.is_none() {
+        if fulcio_certs.is_empty() || rekor_public_keys.is_empty() {
             return Err(anyhow!(
                 "both a fulcio certificate and a rekor public key are required"
             ));
         }
-
-        Ok(Some(FulcioAndRekorData::FromCustomData {
-            fulcio_certs,
-            rekor_public_key,
-        }))
+        debug!("building Sigstore trust root from flags");
+        Ok(Some(Arc::new(ManualTrustRoot {
+            fulcio_certs: Some(
+                fulcio_certs
+                    .iter()
+                    .map(|c| {
+                        let cert: sigstore::registry::Certificate = c.to_owned();
+                        cert.try_into()
+                            .expect("could not convert certificate to CertificateDer")
+                    })
+                    .collect(),
+            ),
+            rekor_keys: Some(rekor_public_keys),
+        })))
     } else {
+        debug!("building Sigstore trust root from Sigstore's TUF repository");
         let checkout_path = DEFAULT_ROOT.config_dir().join("fulcio_and_rekor_data");
         if !Path::exists(&checkout_path) {
             fs::create_dir_all(checkout_path.clone())?
         }
 
-        let repo =
-            spawn_blocking(move || sigstore::tuf::SigstoreRepository::fetch(Some(&checkout_path)))
-                .await?;
-        match repo {
-            Ok(repo) => Ok(Some(FulcioAndRekorData::FromTufRepository { repo })),
-            Err(e) => {
-                warn!("Cannot fetch TUF repository: {:?}", e);
-                // policy-fetcher will print the needed follow-up warning messages
-                Ok(None)
-            }
-        }
+        let repo = sigstore::trust::sigstore::SigstoreTrustRoot::new(Some(checkout_path.as_path()))
+            .await?;
+        let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
+            .fulcio_certs()
+            .expect("no fulcio certs found inside of TUF repository")
+            .into_iter()
+            .map(|c| c.into_owned())
+            .collect();
+        let manual_root = ManualTrustRoot {
+            fulcio_certs: Some(fulcio_certs),
+            rekor_keys: Some(
+                repo.rekor_keys()
+                    .expect("no rekor keys found inside of TUF repository")
+                    .iter()
+                    .map(|k| k.to_vec())
+                    .collect(),
+            ),
+        };
+        Ok(Some(Arc::new(manual_root)))
     }
 }

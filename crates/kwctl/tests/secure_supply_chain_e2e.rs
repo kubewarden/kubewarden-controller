@@ -25,14 +25,16 @@ fn test_verify_tuf_integration() {
 
     cmd.assert().success();
 
-    let fulcio_and_rekor_data_path = Path::new(tempdir.path())
-        .join(".config")
-        .join("kubewarden")
-        .join("fulcio_and_rekor_data");
-
-    assert!(std::fs::metadata(fulcio_and_rekor_data_path.join("fulcio.crt.pem")).is_ok());
-    assert!(std::fs::metadata(fulcio_and_rekor_data_path.join("fulcio_v1.crt.pem")).is_ok());
-    assert!(std::fs::metadata(fulcio_and_rekor_data_path.join("rekor.pub")).is_ok());
+    // TODO: uncomment once https://github.com/sigstore/sigstore-rs/issues/345 is fixed
+    //
+    // let fulcio_and_rekor_data_path = Path::new(tempdir.path())
+    //     .join(".config")
+    //     .join("kubewarden")
+    //     .join("fulcio_and_rekor_data");
+    //
+    // assert!(std::fs::metadata(fulcio_and_rekor_data_path.join("fulcio.crt.pem")).is_ok());
+    // assert!(std::fs::metadata(fulcio_and_rekor_data_path.join("fulcio_v1.crt.pem")).is_ok());
+    // assert!(std::fs::metadata(fulcio_and_rekor_data_path.join("rekor.pub")).is_ok());
 }
 
 #[test]
@@ -271,7 +273,7 @@ fn test_pull_signed_policy(
 }
 
 #[rstest]
-#[case(
+#[case::good_keys(
     &["sigstore/cosign1.pub", "sigstore/cosign2.pub"],
     true,
     contains("Policy successfully verified")
@@ -309,7 +311,7 @@ fn test_run_signed_policy(
 }
 
 #[rstest]
-#[case(
+#[case::success(
     "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9",
     true,
     contains("Policy successfully verified")
