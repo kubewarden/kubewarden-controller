@@ -6,13 +6,14 @@ use policy_evaluator::{
     kube,
     policy_evaluator::{PolicyEvaluator, PolicyExecutionMode, PolicySettings, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
-    policy_fetcher::{sources::Sources, verify::FulcioAndRekorData, PullDestination},
+    policy_fetcher::{sigstore::trust::ManualTrustRoot, sources::Sources, PullDestination},
     policy_metadata::{ContextAwareResource, Metadata, PolicyType},
 };
 use std::collections::BTreeSet;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     path::Path,
+    sync::Arc,
 };
 use tokio::sync::oneshot;
 use tracing::{error, info, warn};
@@ -40,7 +41,7 @@ pub(crate) struct PullAndRunSettings {
     pub raw: bool,
     pub settings: Option<String>,
     pub verified_manifest_digest: Option<String>,
-    pub fulcio_and_rekor_data: Option<FulcioAndRekorData>,
+    pub sigstore_trust_root: Option<Arc<ManualTrustRoot<'static>>>,
     pub enable_wasmtime_cache: bool,
     pub allow_context_aware_resources: bool,
     pub host_capabilities_mode: HostCapabilitiesMode,
@@ -56,14 +57,14 @@ pub(crate) struct RunEnv {
 
 pub(crate) async fn prepare_run_env(cfg: &PullAndRunSettings) -> Result<RunEnv> {
     let sources = cfg.sources.as_ref();
-    let fulcio_and_rekor_data = cfg.fulcio_and_rekor_data.as_ref();
 
     let policy = pull::pull(&cfg.uri, sources, PullDestination::MainStore)
         .await
         .map_err(|e| anyhow!("error pulling policy {}: {}", &cfg.uri, e))?;
 
     if let Some(digest) = cfg.verified_manifest_digest.as_ref() {
-        verify::verify_local_checksum(&policy, sources, digest, fulcio_and_rekor_data).await?
+        verify::verify_local_checksum(&policy, sources, digest, cfg.sigstore_trust_root.clone())
+            .await?
     }
 
     let metadata = Metadata::from_path(&policy.local_path)?;
