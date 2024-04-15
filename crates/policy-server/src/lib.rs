@@ -13,22 +13,28 @@ pub mod metrics;
 pub mod profiling;
 pub mod tracing;
 
-use ::tracing::{debug, error, info, Level};
+use ::tracing::{debug, info, Level};
 use anyhow::{anyhow, Result};
-use axum::routing::{get, post};
-use axum::Router;
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use axum_server::tls_rustls::RustlsConfig;
-use policy_evaluator::callback_handler::CallbackHandler;
-use policy_evaluator::policy_fetcher::sigstore;
-use policy_evaluator::policy_fetcher::verify::FulcioAndRekorData;
-use policy_evaluator::wasmtime;
-use policy_evaluator::{callback_handler::CallbackHandlerBuilder, kube};
+use policy_evaluator::{
+    callback_handler::{CallbackHandler, CallbackHandlerBuilder},
+    kube,
+    policy_fetcher::sigstore::trust::{
+        sigstore::{ManualTrustRoot, SigstoreTrustRoot},
+        TrustRoot,
+    },
+    wasmtime,
+};
 use rayon::prelude::*;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::sync::oneshot;
-use tokio::sync::Semaphore;
-use tokio::time;
+use std::{net::SocketAddr, sync::Arc};
+use tokio::{
+    sync::{oneshot, Semaphore},
+    time,
+};
 use tower_http::trace::{self, TraceLayer};
 
 use crate::api::handlers::{
@@ -57,30 +63,28 @@ impl PolicyServer {
         let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
             oneshot::channel();
 
-        // TODO: remove the spawn blocking once the Sigstore client is async
-        // see: https://github.com/sigstore/sigstore-rs/pull/320
-        let fulcio_and_rekor_data = match tokio::task::spawn_blocking(|| {
-            sigstore::tuf::SigstoreRepository::fetch(None)
-        })
-        .await
-        .unwrap()
-        {
-            Ok(repo) => Some(FulcioAndRekorData::FromTufRepository { repo }),
-            Err(e) => {
-                error!("Cannot fetch TUF repository: {e:?}");
-                error!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
-                error!(
-                "Sigstore Verifier created without Rekor data: transparency log data won't be used"
-            );
-                error!("Sigstore capabilities are going to be limited");
-                None
-            }
+        let repo = SigstoreTrustRoot::new(Some(config.sigstore_cache_dir.as_path())).await?;
+        let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
+            .fulcio_certs()
+            .expect("Cannot fetch Fulcio certificates from TUF repository")
+            .into_iter()
+            .map(|c| c.into_owned())
+            .collect();
+        let manual_root = ManualTrustRoot {
+            fulcio_certs: Some(fulcio_certs),
+            rekor_keys: Some(
+                repo.rekor_keys()
+                    .expect("Cannot fetch Rekor keys from TUF repository")
+                    .iter()
+                    .map(|k| k.to_vec())
+                    .collect(),
+            ),
         };
 
         let mut callback_handler_builder =
             CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx)
                 .registry_config(config.sources.clone())
-                .fulcio_and_rekor_data(fulcio_and_rekor_data.as_ref());
+                .trust_root(Some(Arc::new(manual_root)));
 
         let kube_client: Option<kube::Client> = match kube::Client::try_default().await {
             Ok(client) => Some(client),
@@ -111,7 +115,7 @@ impl PolicyServer {
             }
         };
 
-        let callback_handler = callback_handler_builder.build()?;
+        let callback_handler = callback_handler_builder.build().await?;
         let callback_sender_channel = callback_handler.sender_channel();
 
         // Download policies
