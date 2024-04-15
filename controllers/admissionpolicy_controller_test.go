@@ -123,14 +123,12 @@ var _ = Describe("AdmissionPolicy controller", func() {
 						HaveField("Webhooks", Equal(originalValidatingWebhookConfiguration.Webhooks)),
 					),
 				)
-			})
 
-			It("should reconcile unitialized label and annotation maps (behavior of Kubewarden <= 1.9.0))", func() {
-				By("changing the ValidatingWebhookConfiguration")
-				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
-				Expect(err).ToNot(HaveOccurred())
-				originalValidatingWebhookConfiguration := validatingWebhookConfiguration.DeepCopy()
 				// simulate unitialized labels and annotation maps (behaviour of Kubewarden <= 1.9.0), or user change
+				By("setting the ValidatingWebhookConfiguration labels and annotation to nil")
+				validatingWebhookConfiguration, err = getTestValidatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				Expect(err).ToNot(HaveOccurred())
+				originalValidatingWebhookConfiguration = validatingWebhookConfiguration.DeepCopy()
 				validatingWebhookConfiguration.Labels = nil
 				validatingWebhookConfiguration.Annotations = nil
 				Expect(
@@ -230,14 +228,12 @@ var _ = Describe("AdmissionPolicy controller", func() {
 						HaveField("Webhooks", Equal(originalMutatingWebhookConfiguration.Webhooks)),
 					),
 				)
-			})
 
-			It("should reconcile unitialized label and annotation maps (behavior of Kubewarden <= 1.9.0))", func() {
-				By("changing the MutatingWebhookConfiguration")
-				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
-				Expect(err).ToNot(HaveOccurred())
-				originalMutatingWebhookConfiguration := mutatingWebhookConfiguration.DeepCopy()
 				// simulate unitialized labels and annotation maps (behaviour of Kubewarden <= 1.9.0), or user change
+				By("by setting the MutatingWebhookConfiguration labels and annotation to nil")
+				mutatingWebhookConfiguration, err = getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				Expect(err).ToNot(HaveOccurred())
+				originalMutatingWebhookConfiguration = mutatingWebhookConfiguration.DeepCopy()
 				mutatingWebhookConfiguration.Labels = nil
 				mutatingWebhookConfiguration.Annotations = nil
 				Expect(
