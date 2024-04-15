@@ -11,10 +11,9 @@ rules:
   - mutatingwebhookconfigurations
   verbs:
   - create
-  - get
+  - delete
   - list
   - patch
-  - update
   - watch
 - apiGroups:
   - admissionregistration.k8s.io
@@ -22,19 +21,21 @@ rules:
   - validatingwebhookconfigurations
   verbs:
   - create
-  - get
+  - delete
   - list
   - patch
-  - update
   - watch
 - apiGroups:
   - policies.kubewarden.io
   resources:
   - admissionpolicies
   verbs:
+  - create
   - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - policies.kubewarden.io
@@ -55,9 +56,12 @@ rules:
   resources:
   - clusteradmissionpolicies
   verbs:
+  - create
   - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - policies.kubewarden.io

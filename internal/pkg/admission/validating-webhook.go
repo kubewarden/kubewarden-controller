@@ -17,7 +17,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
 
-//+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;delete;list;patch;watch
 
 func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 	ctx context.Context,
