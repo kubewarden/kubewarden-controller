@@ -37,12 +37,12 @@ serde_yaml = "0.9"
 sha2 = "0.10"
 sigstore = { git = "https://github.com/flavio/sigstore-rs.git", rev = "46b1cb63b193ab3402beeae5b4999c42cfc65e43", default-features = false, features = [
   "sigstore-trust-root",
-  "cosign-native-tls",
+  "cosign-rustls-tls",
   "cached-client",
 ] }
 # sigstore = { version = "0.9.0", default-features = false, features = [
 #   "sigstore-trust-root",
-#   "cosign-native-tls",
+#   "cosign-rustls-tls",
 #   "cached-client",
 # ] }
 thiserror = "1.0"
