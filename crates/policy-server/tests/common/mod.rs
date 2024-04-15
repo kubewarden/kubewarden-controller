@@ -93,6 +93,7 @@ pub(crate) async fn app() -> Router {
         daemon_stdout_file: None,
         daemon_stderr_file: None,
         enable_pprof: true,
+        continue_on_errors: true,
     };
 
     let server = PolicyServer::new_from_config(config).await.unwrap();

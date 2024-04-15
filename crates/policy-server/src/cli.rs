@@ -165,6 +165,11 @@ pub(crate) fn build_cli() -> Command {
                 .env("KUBEWARDEN_ENABLE_PPROF")
                 .action(ArgAction::SetTrue)
                 .help("Enable pprof profiling"),
+            Arg::new("continue-on-errors")
+                .long("continue-on-errors")
+                .env("KUBEWARDEN_CONTINUE_ON_ERRORS")
+                .action(ArgAction::SetTrue)
+                .hide(true)
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 
