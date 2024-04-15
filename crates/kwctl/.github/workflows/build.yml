@@ -187,6 +187,10 @@ jobs:
           toolchain: stable
       - run: rustup target add x86_64-pc-windows-msvc
 
+      - name: enable git long paths on Windows
+        if: matrix.os == 'windows-latest'
+        run: git config --global core.longpaths true
+
       - name: Build kwctl
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
         with:
