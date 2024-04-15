@@ -9,7 +9,31 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func TestServiceOwnerReference(t *testing.T) {
+	reconciler := newReconciler([]client.Object{}, false, false)
+	policyServer := &policiesv1.PolicyServer{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "policies.kubewarden.io/v1",
+			Kind:       "PolicyServer",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "policy-server",
+			UID:  "uid",
+		},
+	}
+	service := &corev1.Service{}
+
+	err := reconciler.updateService(service, policyServer)
+
+	require.NoError(t, err)
+	require.Equal(t, policyServer.GetName(), service.OwnerReferences[0].Name)
+	require.Equal(t, policyServer.GetUID(), service.OwnerReferences[0].UID)
+	require.Equal(t, policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String(), service.OwnerReferences[0].APIVersion)
+	require.Equal(t, policyServer.GetObjectKind().GroupVersionKind().Kind, service.OwnerReferences[0].Kind)
+}
 
 func TestServiceConfiguration(t *testing.T) {
 	tests := []struct {
@@ -28,7 +52,8 @@ func TestServiceConfiguration(t *testing.T) {
 					Name: "test",
 				},
 			}
-			reconciler.updateService(service, policyServer)
+			err := reconciler.updateService(service, policyServer)
+			require.NoError(t, err)
 			require.Equal(t, policyServer.AppLabel(), service.Labels[constants.AppLabelKey])
 			require.Equal(t, policyServer.NameWithPrefix(), service.Name)
 			require.Equal(t, reconciler.DeploymentsNamespace, service.Namespace)

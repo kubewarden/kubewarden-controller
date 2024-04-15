@@ -3,6 +3,7 @@ package admission
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -88,6 +89,9 @@ func (r *Reconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *po
 	cfg.Data = data
 	cfg.ObjectMeta.Labels = map[string]string{
 		constants.PolicyServerLabelKey: policyServer.ObjectMeta.Name,
+	}
+	if err := controllerutil.SetOwnerReference(policyServer, cfg, r.Client.Scheme()); err != nil {
+		return errors.Join(fmt.Errorf("failed to set policy server configmap owner reference"), err)
 	}
 	return nil
 }

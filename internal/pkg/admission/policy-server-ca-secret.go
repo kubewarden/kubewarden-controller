@@ -4,12 +4,15 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"errors"
 	"fmt"
 
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
@@ -28,16 +31,16 @@ func (r *Reconciler) reconcileCASecret(ctx context.Context, secret *corev1.Secre
 	return fmt.Errorf("error reconciling policy-server CA Secret: %w", err)
 }
 
-func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, policyServerName string, caSecret *corev1.Secret, generateCert generateCertFunc) (*corev1.Secret, error) {
+func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret, generateCert generateCertFunc) (*corev1.Secret, error) {
 	policyServerSecret := corev1.Secret{}
 	err := r.Client.Get(
 		ctx,
 		client.ObjectKey{
 			Namespace: r.DeploymentsNamespace,
-			Name:      policyServerName},
+			Name:      policyServer.NameWithPrefix()},
 		&policyServerSecret)
 	if err != nil && apierrors.IsNotFound(err) {
-		secret, err := r.buildPolicyServerCASecret(policyServerName, caSecret, generateCert)
+		secret, err := r.buildPolicyServerCASecret(policyServer, caSecret, generateCert)
 		if err != nil {
 			return secret, fmt.Errorf("cannot fetch or initialize Policy Server CA secret: %w", err)
 		}
@@ -53,31 +56,36 @@ func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, 
 	return &policyServerSecret, nil
 }
 
-func (r *Reconciler) buildPolicyServerCASecret(policyServerName string, caSecret *corev1.Secret, generateCert generateCertFunc) (*corev1.Secret, error) {
+func (r *Reconciler) buildPolicyServerCASecret(policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret, generateCert generateCertFunc) (*corev1.Secret, error) {
 	admissionregCA, err := extractCaFromSecret(caSecret)
 	if err != nil {
 		return nil, err
 	}
 	servingCert, servingKey, err := generateCert(
 		admissionregCA.CaCert,
-		fmt.Sprintf("%s.%s.svc", policyServerName, r.DeploymentsNamespace),
-		[]string{fmt.Sprintf("%s.%s.svc", policyServerName, r.DeploymentsNamespace)},
+		fmt.Sprintf("%s.%s.svc", policyServer.NameWithPrefix(), r.DeploymentsNamespace),
+		[]string{fmt.Sprintf("%s.%s.svc", policyServer.NameWithPrefix(), r.DeploymentsNamespace)},
 		admissionregCA.CaPrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("cannot generate policy-server %s certificate: %w", policyServerName, err)
+		return nil, fmt.Errorf("cannot generate policy-server %s certificate: %w", policyServer.NameWithPrefix(), err)
 	}
 	secretContents := map[string]string{
 		constants.PolicyServerTLSCert: string(servingCert),
 		constants.PolicyServerTLSKey:  string(servingKey),
 	}
-	return &corev1.Secret{
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyServerName,
+			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
 		},
 		StringData: secretContents,
 		Type:       corev1.SecretTypeOpaque,
-	}, nil
+	}
+	if err := controllerutil.SetOwnerReference(policyServer, secret, r.Client.Scheme()); err != nil {
+		return nil, errors.Join(fmt.Errorf("failed to set policy server secret owner reference"), err)
+	}
+
+	return secret, nil
 }
 
 func extractCaFromSecret(caSecret *corev1.Secret) (*admissionregistration.CA, error) {

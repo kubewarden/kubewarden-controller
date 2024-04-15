@@ -18,7 +18,7 @@ const port = "8181"
 func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
 	const domain = "localhost"
 	const maxRetries = 10
-	r := createReconcilerWithEmptyClient()
+	r := newReconciler(nil, false, false)
 	// create CA
 	caSecret, err := r.buildPolicyServerCARootSecret(admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {

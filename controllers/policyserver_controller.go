@@ -107,10 +107,6 @@ func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policySe
 		return r.deletePoliciesAndRequeue(ctx, policyServer, policies)
 	}
 
-	if err := r.Reconciler.ReconcileDeletion(ctx, policyServer); err != nil {
-		return ctrl.Result{}, errors.Join(errors.New("could not reconcile policy server deletion"), err)
-	}
-
 	controllerutil.RemoveFinalizer(policyServer, constants.KubewardenFinalizer)
 	if err := r.Update(ctx, policyServer); err != nil {
 		// return if PolicyServer was previously deleted

@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -127,27 +128,7 @@ func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.Polic
 		templateAnnotations = make(map[string]string)
 	}
 
-	if r.MetricsEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
-
-		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
-		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
-			admissionContainer.Env[index] = envvar
-		} else {
-			admissionContainer.Env = append(admissionContainer.Env, envvar)
-		}
-	}
-
-	if r.TracingEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
-
-		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
-		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
-			admissionContainer.Env[index] = logFmtEnvVar
-		} else {
-			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
-		}
-	}
+	r.adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations, &admissionContainer)
 
 	policyServerDeployment.Annotations = map[string]string{
 		constants.PolicyServerDeploymentConfigVersionAnnotation: configMapVersion,
@@ -215,7 +196,34 @@ func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.Polic
 		},
 	}
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
+	if err := controllerutil.SetOwnerReference(policyServer, policyServerDeployment, r.Client.Scheme()); err != nil {
+		return errors.Join(fmt.Errorf("failed to set policy server deployment owner reference"), err)
+	}
 	return nil
+}
+
+func (r *Reconciler) adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations map[string]string, admissionContainer *corev1.Container) {
+	if r.MetricsEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
+
+		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
+		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
+			admissionContainer.Env[index] = envvar
+		} else {
+			admissionContainer.Env = append(admissionContainer.Env, envvar)
+		}
+	}
+
+	if r.TracingEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
+
+		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
+		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
+			admissionContainer.Env[index] = logFmtEnvVar
+		} else {
+			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
+		}
+	}
 }
 
 func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer) {

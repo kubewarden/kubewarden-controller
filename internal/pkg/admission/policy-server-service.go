@@ -2,6 +2,7 @@ package admission
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -42,8 +43,7 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policySer
 		},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, &svc, func() error {
-		r.updateService(&svc, policyServer)
-		return nil
+		return r.updateService(&svc, policyServer)
 	})
 
 	if err != nil {
@@ -52,7 +52,7 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policySer
 	return nil
 }
 
-func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) {
+func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) error {
 	svc.Name = policyServer.NameWithPrefix()
 	svc.Namespace = r.DeploymentsNamespace
 	svc.Labels = map[string]string{
@@ -81,4 +81,9 @@ func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1
 			},
 		)
 	}
+
+	if err := controllerutil.SetOwnerReference(policyServer, svc, r.Client.Scheme()); err != nil {
+		return errors.Join(fmt.Errorf("failed to set policy server service owner reference"), err)
+	}
+	return nil
 }

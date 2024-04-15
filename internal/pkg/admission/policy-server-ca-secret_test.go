@@ -12,9 +12,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
@@ -49,7 +50,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 		generateCACalled bool
 	}{
 		{"Existing CA", createReconcilerWithExistingCA(), nil, mockSecretContents, false},
-		{"CA does not exist", createReconcilerWithEmptyClient(), nil, caSecretContents, true},
+		{"CA does not exist", newReconciler(nil, false, false), nil, caSecretContents, true},
 	}
 
 	for _, test := range tests {
@@ -98,13 +99,18 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 		generateCertCalled bool
 	}{
 		{"Existing cert", createReconcilerWithExistingCert(), nil, mockSecretCert, false},
-		{"cert does not exist", createReconcilerWithEmptyClient(), nil, caSecretContents, true},
+		{"cert does not exist", newReconciler(nil, false, false), nil, caSecretContents, true},
 	}
 
 	for _, test := range tests {
 		ttest := test // ensure tt is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			secret, err := ttest.r.fetchOrInitializePolicyServerCASecret(context.Background(), "policyServer", caSecret, generateCertFunc)
+			policyServer := &policiesv1.PolicyServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "policyServer",
+				},
+			}
+			secret, err := ttest.r.fetchOrInitializePolicyServerCASecret(context.Background(), policyServer, caSecret, generateCertFunc)
 			if diff := cmp.Diff(secret.StringData, ttest.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
@@ -135,12 +141,7 @@ func createReconcilerWithExistingCA() Reconciler {
 		Type: corev1.SecretTypeOpaque,
 	}
 
-	// Create a fake client to mock API calls. It will return the mock secret
-	cl := fake.NewClientBuilder().WithObjects(mockSecret).Build()
-	return Reconciler{
-		Client:               cl,
-		DeploymentsNamespace: namespace,
-	}
+	return newReconciler([]client.Object{mockSecret}, false, false)
 }
 
 var mockSecretCert = map[string]string{"cert": "certString"}
@@ -148,26 +149,12 @@ var mockSecretCert = map[string]string{"cert": "certString"}
 func createReconcilerWithExistingCert() Reconciler {
 	mockSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "policyServer",
+			Name:      "policy-server-policyServer",
 			Namespace: namespace,
 		},
 		StringData: mockSecretCert,
 		Type:       corev1.SecretTypeOpaque,
 	}
 
-	// Create a fake client to mock API calls. It will return the mock secret
-	cl := fake.NewClientBuilder().WithObjects(mockSecret).Build()
-	return Reconciler{
-		Client:               cl,
-		DeploymentsNamespace: namespace,
-	}
-}
-
-func createReconcilerWithEmptyClient() Reconciler {
-	// Create a fake client to mock API calls.
-	cl := fake.NewClientBuilder().WithObjects().Build()
-	return Reconciler{
-		Client:               cl,
-		DeploymentsNamespace: namespace,
-	}
+	return newReconciler([]client.Object{mockSecret}, false, false)
 }

@@ -121,9 +121,9 @@ unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
 	ACK_GINKGO_DEPRECATIONS=2.12.0 K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" POLICY_SERVER_VERSION="$(POLICY_SERVER_VERSION)" \
 	go test -v ./controllers/... -ginkgo.v -ginkgo.progress -race -test.v \
-	-ginkgo.randomize-all -ginkgo.timeout=$(TEST_TIMEOUT) \
-	-coverprofile=coverage/integration-tests/coverage-controllers.txt \
-	-covermode=atomic -timeout=$(TEST_TIMEOUT) -coverpkg=all
+		-ginkgo.randomize-all -ginkgo.timeout=$(TEST_TIMEOUT) \
+		-coverprofile=coverage/integration-tests/coverage-controllers.txt \
+		-covermode=atomic -timeout=$(TEST_TIMEOUT) -coverpkg=all
 
 .PHONY: generate-crds
 generate-crds: $(KUSTOMIZE) manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
