@@ -57,8 +57,10 @@ func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.
 		}
 		if policyServer.Spec.MinAvailable != nil {
 			pdb.Spec.MinAvailable = policyServer.Spec.MinAvailable
+			pdb.Spec.MaxUnavailable = nil
 		} else {
 			pdb.Spec.MaxUnavailable = policyServer.Spec.MaxUnavailable
+			pdb.Spec.MinAvailable = nil
 		}
 		return nil
 	})
