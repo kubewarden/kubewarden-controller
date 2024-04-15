@@ -45,6 +45,7 @@ pub struct Config {
     pub daemon_pid_file: String,
     pub daemon_stdout_file: Option<String>,
     pub daemon_stderr_file: Option<String>,
+    pub continue_on_errors: bool,
 }
 
 pub struct TlsConfig {
@@ -137,6 +138,11 @@ impl Config {
             .expect("clap should have assigned a default value")
             .to_owned();
 
+        let continue_on_errors = matches
+            .get_one::<bool>("continue-on-errors")
+            .expect("clap should have assigned a default value")
+            .to_owned();
+
         Ok(Self {
             addr,
             sources,
@@ -158,6 +164,7 @@ impl Config {
             daemon_stdout_file,
             daemon_stderr_file,
             enable_pprof,
+            continue_on_errors,
         })
     }
 }

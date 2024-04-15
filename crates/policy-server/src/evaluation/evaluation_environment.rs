@@ -79,6 +79,7 @@ impl EvaluationEnvironment {
         always_accept_admission_reviews_on_namespace: Option<String>,
         policy_evaluation_limit_seconds: Option<u64>,
         callback_handler_tx: mpsc::Sender<CallbackRequest>,
+        continue_on_errors: bool,
     ) -> Result<Self> {
         let mut eval_env = Self {
             always_accept_admission_reviews_on_namespace,
@@ -114,7 +115,7 @@ impl EvaluationEnvironment {
                 )
                 .map_err(|e| EvaluationError::BootstrapFailure(e.to_string()))?;
 
-            eval_env.validate_settings(policy_id)?;
+            eval_env.validate_settings(policy_id, continue_on_errors)?;
         }
 
         Ok(eval_env)
@@ -236,7 +237,11 @@ impl EvaluationEnvironment {
     }
 
     /// Validate the settings the user provided for the given policy
-    fn validate_settings(&mut self, policy_id: &str) -> Result<()> {
+    fn validate_settings(
+        &mut self,
+        policy_id: &str,
+        continue_on_policy_initialization_errors: bool,
+    ) -> Result<()> {
         let settings = self.get_policy_settings(policy_id)?;
         let mut evaluator = self.rehydrate(policy_id)?;
 
@@ -249,13 +254,17 @@ impl EvaluationEnvironment {
                 valid: false,
                 message,
             } => {
-                self.policy_initialization_errors.insert(
-                    policy_id.to_string(),
-                    format!(
-                        "Policy settings are invalid: {}",
-                        message.unwrap_or("no message".to_owned())
-                    ),
+                let error_message = format!(
+                    "Policy settings are invalid: {}",
+                    message.unwrap_or("no message".to_owned())
                 );
+
+                if !continue_on_policy_initialization_errors {
+                    return Err(EvaluationError::PolicyInitialization(error_message));
+                }
+
+                self.policy_initialization_errors
+                    .insert(policy_id.to_string(), error_message.clone());
             }
         };
 
@@ -371,6 +380,7 @@ mod tests {
             None,
             None,
             callback_handler_tx,
+            true,
         )
     }
 

@@ -137,6 +137,14 @@ impl PolicyServer {
         let engine = wasmtime::Engine::new(&wasmtime_config)?;
         let precompiled_policies = precompile_policies(&engine, &fetched_policies);
 
+        if !config.continue_on_errors {
+            for result in precompiled_policies.values() {
+                if let Err(error) = result {
+                    return Err(anyhow!(error.to_string()));
+                }
+            }
+        }
+
         let evaluation_environment = EvaluationEnvironment::new(
             &engine,
             &config.policies,
@@ -144,6 +152,7 @@ impl PolicyServer {
             config.always_accept_admission_reviews_on_namespace,
             config.policy_evaluation_limit_seconds,
             callback_sender_channel.clone(),
+            config.continue_on_errors,
         )?;
 
         if let Some(limit) = config.policy_evaluation_limit_seconds {
