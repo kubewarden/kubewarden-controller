@@ -42,7 +42,7 @@ import (
 //
 // We need access to these resources inside of all the namespaces -> a ClusterRole
 // is needed
-//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies,verbs=get;list;watch;delete
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;delete;get;list;patch;update;watch
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/finalizers,verbs=update
 //
