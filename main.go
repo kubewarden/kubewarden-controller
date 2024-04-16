@@ -87,9 +87,6 @@ func main() {
 		"Enable tracing collection for all Policy Servers")
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
 	flag.StringVar(&constants.DefaultPolicyServer, "default-policy-server", "", "The default policy server to set on policies before they are persisted")
-	opts := zap.Options{
-		Development: true,
-	}
 	flag.StringVar(&deploymentsNamespace,
 		"deployments-namespace",
 		"",
@@ -98,6 +95,8 @@ func main() {
 		"always-accept-admission-reviews-on-deployments-namespace",
 		false,
 		"Always accept admission reviews targeting the deployments-namespace.")
+
+	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
