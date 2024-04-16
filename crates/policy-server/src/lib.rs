@@ -30,7 +30,7 @@ use policy_evaluator::{
     wasmtime,
 };
 use rayon::prelude::*;
-use std::{net::SocketAddr, sync::Arc};
+use std::{fs, net::SocketAddr, sync::Arc};
 use tokio::{
     sync::{oneshot, Semaphore},
     time,
@@ -63,28 +63,42 @@ impl PolicyServer {
         let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
             oneshot::channel();
 
-        let repo = SigstoreTrustRoot::new(Some(config.sigstore_cache_dir.as_path())).await?;
-        let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
-            .fulcio_certs()
-            .expect("Cannot fetch Fulcio certificates from TUF repository")
-            .into_iter()
-            .map(|c| c.into_owned())
-            .collect();
-        let manual_root = ManualTrustRoot {
-            fulcio_certs: Some(fulcio_certs),
-            rekor_keys: Some(
-                repo.rekor_keys()
-                    .expect("Cannot fetch Rekor keys from TUF repository")
-                    .iter()
-                    .map(|k| k.to_vec())
-                    .collect(),
-            ),
+        let manual_root = if config.verification_config.is_some() {
+            if !config.sigstore_cache_dir.exists() {
+                fs::create_dir_all(&config.sigstore_cache_dir).map_err(|e| {
+                    anyhow!("Cannot create directory to cache sigstore data: {}", e)
+                })?;
+            }
+
+            let repo = SigstoreTrustRoot::new(Some(config.sigstore_cache_dir.as_path())).await?;
+
+            let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
+                .fulcio_certs()
+                .expect("Cannot fetch Fulcio certificates from TUF repository")
+                .into_iter()
+                .map(|c| c.into_owned())
+                .collect();
+
+            let manual_root = ManualTrustRoot {
+                fulcio_certs: Some(fulcio_certs),
+                rekor_keys: Some(
+                    repo.rekor_keys()
+                        .expect("Cannot fetch Rekor keys from TUF repository")
+                        .iter()
+                        .map(|k| k.to_vec())
+                        .collect(),
+                ),
+            };
+
+            Some(Arc::new(manual_root))
+        } else {
+            None
         };
 
         let mut callback_handler_builder =
             CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx)
                 .registry_config(config.sources.clone())
-                .trust_root(Some(Arc::new(manual_root)));
+                .trust_root(manual_root.clone());
 
         let kube_client: Option<kube::Client> = match kube::Client::try_default().await {
             Ok(client) => Some(client),
@@ -119,12 +133,7 @@ impl PolicyServer {
         let callback_sender_channel = callback_handler.sender_channel();
 
         // Download policies
-        let mut downloader = Downloader::new(
-            config.sources.clone(),
-            config.verification_config.is_some(),
-            Some(config.sigstore_cache_dir.clone()),
-        )
-        .await?;
+        let mut downloader = Downloader::new(config.sources.clone(), manual_root.clone()).await?;
 
         let fetched_policies = downloader
             .download_policies(
