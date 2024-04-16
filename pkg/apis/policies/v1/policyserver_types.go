@@ -40,10 +40,14 @@ type PolicyServerSpec struct {
 	// Replicas is the number of desired replicas.
 	Replicas int32 `json:"replicas"`
 
-	// Number of policy server replicas that must be still available after the eviction
+	// Number of policy server replicas that must be still available after the
+	// eviction. The value can be an absolute number or a percentage. Only one of
+	// MinAvailable or Max MaxUnavailable can be set.
 	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
 
-	// Number of policy server replicas that can be unavailable after the eviction
+	// Number of policy server replicas that can be unavailable after the
+	// eviction. The value can be an absolute number or a percentage. Only one of
+	// MinAvailable or Max MaxUnavailable can be set.
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 
 	// Annotations is an unstructured key value map stored with a resource that may be

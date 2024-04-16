@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8spoliciesv1 "k8s.io/api/policy/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,13 +78,21 @@ func TestPDBCreation(t *testing.T) {
 func TestPDBUpdate(t *testing.T) {
 	one := 1
 	two := 2
+	eight := 8
+	nine := 9
 	tests := []struct {
-		name           string
-		minAvailable   *int
-		maxUnavailable *int
+		name              string
+		oldMinAvailable   *int
+		oldMaxUnavailable *int
+		minAvailable      *int
+		maxUnavailable    *int
 	}{
-		{"with min value", &two, nil},
-		{"with max value", nil, &one},
+		{"update min value", nil, nil, &two, nil},
+		{"update max value", nil, nil, nil, &one},
+		{"update from min to max value", &eight, nil, nil, &one},
+		{"update from max to min value", nil, &nine, nil, &one},
+		{"update from min to no value", &eight, nil, nil, nil},
+		{"update from max to no value", nil, &nine, nil, nil},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -109,19 +118,23 @@ func TestPDBUpdate(t *testing.T) {
 					Namespace: namespace,
 				},
 				Spec: k8spoliciesv1.PodDisruptionBudgetSpec{
-					MinAvailable: &intstr.IntOrString{
-						Type:   intstr.Int,
-						IntVal: 9,
-					},
-					MaxUnavailable: &intstr.IntOrString{
-						Type:   intstr.Int,
-						IntVal: 8,
-					},
+					MinAvailable:   nil,
+					MaxUnavailable: nil,
 				},
 			}
-
+			if test.oldMinAvailable != nil {
+				oldPDB.Spec.MinAvailable = &intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: int32(*test.oldMinAvailable),
+				}
+			}
+			if test.oldMaxUnavailable != nil {
+				oldPDB.Spec.MaxUnavailable = &intstr.IntOrString{
+					Type:   intstr.Int,
+					IntVal: int32(*test.oldMaxUnavailable),
+				}
+			}
 			reconciler := newReconciler([]client.Object{oldPDB}, false)
-
 			err := reconciler.reconcilePolicyServerPodDisruptionBudget(context.Background(), policyServer)
 			require.NoError(t, err)
 
@@ -131,21 +144,22 @@ func TestPDBUpdate(t *testing.T) {
 				Name:      policyServer.NameWithPrefix(),
 			}, pdb)
 
-			require.NoError(t, err)
-			assert.Equal(t, policyServer.NameWithPrefix(), pdb.Name)
-			if test.minAvailable == nil {
-				assert.Equal(t, intstr.FromInt(9), *pdb.Spec.MinAvailable)
+			if test.minAvailable == nil && test.maxUnavailable == nil {
+				// pdb should be deleted
+				require.True(t, apierrors.IsNotFound(err))
 			} else {
-				assert.Equal(t, intstr.FromInt(*test.minAvailable), *pdb.Spec.MinAvailable)
+				require.NoError(t, err)
+				assert.Equal(t, policyServer.NameWithPrefix(), pdb.Name)
+				assert.Equal(t, policyServer.AppLabel(), pdb.Spec.Selector.MatchLabels[constants.AppLabelKey])
+				assert.Equal(t, policyServer.GetName(), pdb.Spec.Selector.MatchLabels[constants.PolicyServerLabelKey])
+				assert.Equal(t, pdb.OwnerReferences[0].UID, policyServer.UID)
+				if test.minAvailable != nil {
+					assert.Equal(t, intstr.FromInt(*test.minAvailable), *pdb.Spec.MinAvailable)
+				}
+				if test.maxUnavailable != nil {
+					assert.Equal(t, intstr.FromInt(*test.maxUnavailable), *pdb.Spec.MaxUnavailable)
+				}
 			}
-			if test.maxUnavailable == nil {
-				assert.Equal(t, intstr.FromInt(8), *pdb.Spec.MaxUnavailable)
-			} else {
-				assert.Equal(t, intstr.FromInt(*test.maxUnavailable), *pdb.Spec.MaxUnavailable)
-			}
-			assert.Equal(t, policyServer.AppLabel(), pdb.Spec.Selector.MatchLabels[constants.AppLabelKey])
-			assert.Equal(t, policyServer.GetName(), pdb.Spec.Selector.MatchLabels[constants.PolicyServerLabelKey])
-			assert.Equal(t, pdb.OwnerReferences[0].UID, policyServer.UID)
 		})
 	}
 }
