@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
@@ -41,7 +40,7 @@ type policyServerSourceAuthority struct {
 }
 
 //nolint:tagliatelle
-type policyServerSourcesEntry struct {
+type PolicyServerSourcesEntry struct {
 	InsecureSources   []string                                 `json:"insecure_sources,omitempty"`
 	SourceAuthorities map[string][]policyServerSourceAuthority `json:"source_authorities,omitempty"`
 }
@@ -52,96 +51,30 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
 ) error {
-	cfg := &corev1.ConfigMap{}
-	err := r.Client.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      policyServer.NameWithPrefix(),
-	}, cfg)
+	cfg := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
+		},
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, cfg, func() error {
+		return r.updateConfigMapData(cfg, policyServer, policies)
+	})
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return r.createPolicyServerConfigMap(ctx, policyServer, policies)
-		}
-		return fmt.Errorf("cannot lookup Policy server ConfigMap: %w", err)
+		return fmt.Errorf("cannot create or update PolicyServer ConfigMap: %w", err)
 	}
-
-	return r.updateIfNeeded(ctx, cfg, policies, policyServer)
-}
-
-func (r *Reconciler) updateIfNeeded(ctx context.Context, cfg *corev1.ConfigMap,
-	policies []policiesv1.Policy,
-	policyServer *policiesv1.PolicyServer) error {
-	newPoliciesMap := r.createPoliciesMap(policies)
-	newSourcesList := r.createSourcesMap(policyServer)
-
-	var (
-		shouldUpdatePolicies, shouldUpdateSources bool
-		err                                       error
-	)
-	if shouldUpdatePolicies, err = shouldUpdatePolicyMap(cfg.Data[constants.PolicyServerConfigPoliciesEntry], newPoliciesMap); err != nil {
-		return fmt.Errorf("cannot compare policies: %w", err)
-	}
-	if shouldUpdateSources, err = shouldUpdateSourcesList(cfg.Data[constants.PolicyServerConfigSourcesEntry],
-		newSourcesList); err != nil {
-		return fmt.Errorf("cannot compare insecureSources: %w", err)
-	}
-	if !(shouldUpdatePolicies || shouldUpdateSources) {
-		return nil
-	}
-
-	patch := cfg.DeepCopy()
-	if shouldUpdatePolicies {
-		newPoliciesYML, err := json.Marshal(newPoliciesMap)
-		if err != nil {
-			return fmt.Errorf("cannot marshal policies: %w", err)
-		}
-		patch.Data[constants.PolicyServerConfigPoliciesEntry] = string(newPoliciesYML)
-	}
-	if shouldUpdateSources {
-		newSourcesYML, err := json.Marshal(newSourcesList)
-		if err != nil {
-			return fmt.Errorf("cannot marshal insecureSources: %w", err)
-		}
-		patch.Data[constants.PolicyServerConfigSourcesEntry] = string(newSourcesYML)
-	}
-	err = r.Client.Patch(ctx, patch, client.MergeFrom(cfg))
-	if err != nil {
-		return fmt.Errorf("cannot patch PolicyServer Configmap: %w", err)
-	}
-
 	return nil
 }
 
-func shouldUpdatePolicyMap(currentPoliciesYML string, newPoliciesMap PolicyConfigEntryMap) (bool, error) {
-	var currentPoliciesMap PolicyConfigEntryMap
-
-	if err := json.Unmarshal([]byte(currentPoliciesYML), &currentPoliciesMap); err != nil {
-		return false, fmt.Errorf("cannot unmarshal policies: %w", err)
-	}
-
-	return !reflect.DeepEqual(currentPoliciesMap, newPoliciesMap), nil
-}
-
-func shouldUpdateSourcesList(currentSourcesYML string, newSources policyServerSourcesEntry) (bool, error) {
-	var currentSources policyServerSourcesEntry
-	if err := json.Unmarshal([]byte(currentSourcesYML), &currentSources); err != nil {
-		return false, fmt.Errorf("cannot unmarshal insecureSources: %w", err)
-	}
-
-	return !reflect.DeepEqual(currentSources, newSources), nil
-}
-
-func (r *Reconciler) createPolicyServerConfigMap(
-	ctx context.Context,
-	policyServer *policiesv1.PolicyServer,
-	policies []policiesv1.Policy,
-) error {
-	policiesMap := r.createPoliciesMap(policies)
+// Function used to update the ConfigMap data when creating or updating it
+func (r *Reconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) error {
+	policiesMap := r.CreatePoliciesMap(policies)
 	policiesYML, err := json.Marshal(policiesMap)
 	if err != nil {
 		return fmt.Errorf("cannot marshal policies: %w", err)
 	}
 
-	sources := r.createSourcesMap(policyServer)
+	sources := r.CreateSourcesMap(policyServer)
 	sourcesYML, err := json.Marshal(sources)
 	if err != nil {
 		return fmt.Errorf("cannot marshal insecureSources: %w", err)
@@ -152,19 +85,11 @@ func (r *Reconciler) createPolicyServerConfigMap(
 		constants.PolicyServerConfigSourcesEntry:  string(sourcesYML),
 	}
 
-	cfg := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyServer.NameWithPrefix(),
-			Namespace: r.DeploymentsNamespace,
-			Labels: map[string]string{
-				constants.PolicyServerLabelKey: policyServer.ObjectMeta.Name,
-			},
-		},
-		Data: data,
+	cfg.Data = data
+	cfg.ObjectMeta.Labels = map[string]string{
+		constants.PolicyServerLabelKey: policyServer.ObjectMeta.Name,
 	}
-
-	//nolint:wrapcheck
-	return r.Client.Create(ctx, cfg)
+	return nil
 }
 
 type PolicyConfigEntryMap map[string]PolicyServerConfigEntry
@@ -200,7 +125,7 @@ func (policyConfigEntryMap PolicyConfigEntryMap) ToClusterAdmissionPolicyReconci
 	return res
 }
 
-func (r *Reconciler) createPoliciesMap(admissionPolicies []policiesv1.Policy) PolicyConfigEntryMap {
+func (r *Reconciler) CreatePoliciesMap(admissionPolicies []policiesv1.Policy) PolicyConfigEntryMap {
 	policies := PolicyConfigEntryMap{}
 	for _, admissionPolicy := range admissionPolicies {
 		policies[admissionPolicy.GetUniqueName()] = PolicyServerConfigEntry{
@@ -218,8 +143,8 @@ func (r *Reconciler) createPoliciesMap(admissionPolicies []policiesv1.Policy) Po
 	return policies
 }
 
-func (r *Reconciler) createSourcesMap(policyServer *policiesv1.PolicyServer) policyServerSourcesEntry {
-	sourcesEntry := policyServerSourcesEntry{}
+func (r *Reconciler) CreateSourcesMap(policyServer *policiesv1.PolicyServer) PolicyServerSourcesEntry {
+	sourcesEntry := PolicyServerSourcesEntry{}
 	sourcesEntry.InsecureSources = policyServer.Spec.InsecureSources
 	if sourcesEntry.InsecureSources == nil {
 		sourcesEntry.InsecureSources = make([]string, 0)
