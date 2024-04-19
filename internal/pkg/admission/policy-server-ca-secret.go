@@ -29,7 +29,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, 
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, policyServerSecret, func() error {
 		if err := controllerutil.SetOwnerReference(policyServer, policyServerSecret, r.Client.Scheme()); err != nil {
-			return errors.Join(fmt.Errorf("failed to set policy server secret owner reference"), err)
+			return errors.Join(errors.New("failed to set policy server secret owner reference"), err)
 		}
 
 		// check if secret has the required data
@@ -63,7 +63,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, 
 			string(policiesv1.PolicyServerCASecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
-		return errors.Join(fmt.Errorf("cannot fetch or initialize Policy Server CA secret"), err)
+		return errors.Join(errors.New("cannot fetch or initialize Policy Server CA secret"), err)
 	}
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
@@ -113,7 +113,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Conte
 			string(policiesv1.PolicyServerCARootSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
-		return nil, errors.Join(fmt.Errorf("cannot fetch or initialize Policy Server CA secret"), err)
+		return nil, errors.Join(errors.New("cannot fetch or initialize Policy Server CA secret"), err)
 	}
 	setTrueConditionType(
 		&policyServer.Status.Conditions,

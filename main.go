@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -125,7 +124,7 @@ func main() {
 	}
 
 	namespaceSelector := cache.ByObject{
-		Field: fields.ParseSelectorOrDie(fmt.Sprintf("metadata.namespace=%s", deploymentsNamespace)),
+		Field: fields.ParseSelectorOrDie("metadata.namespace=" + deploymentsNamespace),
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

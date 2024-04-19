@@ -18,8 +18,6 @@ limitations under the License.
 package controllers
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -30,6 +28,9 @@ import (
 
 var _ = Describe("ClusterAdmissionPolicy controller", func() {
 	var policyServerName string
+
+	// let's use this constant to avoid linter errors
+	const PolicyServerNamePrefix = "policy-server-"
 
 	BeforeEach(func() {
 		policyServerName = newName("policy-server")
@@ -74,7 +75,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
-				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(PolicyServerNamePrefix + policyServerName))
 
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())
@@ -110,7 +111,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 
 			By("reconciling the ValidatingWebhookConfiguration to its original state")
 			Eventually(func() (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
-				return getTestValidatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+				return getTestValidatingWebhookConfiguration(policy.GetUniqueName())
 			}, timeout, pollInterval).Should(
 				And(
 					HaveField("Labels", Equal(originalValidatingWebhookConfiguration.Labels)),
@@ -159,7 +160,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
-				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(PolicyServerNamePrefix + policyServerName))
 
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())
@@ -195,7 +196,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 
 			By("reconciling the MutatingWebhookConfiguration to its original state")
 			Eventually(func() (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
-				return getTestMutatingWebhookConfiguration(fmt.Sprintf("clusterwide-%s", policyName))
+				return getTestMutatingWebhookConfiguration("clusterwide-" + policyName)
 			}, timeout, pollInterval).Should(
 				And(
 					HaveField("Labels", Equal(originalMutatingWebhookConfiguration.Labels)),

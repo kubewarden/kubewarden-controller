@@ -1,6 +1,7 @@
 package admission
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -20,7 +21,7 @@ func TestIsPolicyServerNotReady(t *testing.T) {
 		t.Errorf("expected wrapped error to be identified")
 	}
 
-	otherErr := fmt.Errorf("this is generic error")
+	otherErr := errors.New("this is generic error")
 	if IsPolicyServerNotReady(otherErr) != false {
 		t.Errorf("expected generic error to not be identified")
 	}

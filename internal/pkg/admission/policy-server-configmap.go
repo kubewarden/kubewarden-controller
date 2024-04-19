@@ -91,7 +91,7 @@ func (r *Reconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *po
 		constants.PolicyServerLabelKey: policyServer.ObjectMeta.Name,
 	}
 	if err := controllerutil.SetOwnerReference(policyServer, cfg, r.Client.Scheme()); err != nil {
-		return errors.Join(fmt.Errorf("failed to set policy server configmap owner reference"), err)
+		return errors.Join(errors.New("failed to set policy server configmap owner reference"), err)
 	}
 	return nil
 }

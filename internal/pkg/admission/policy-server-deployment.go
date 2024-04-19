@@ -197,7 +197,7 @@ func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.Polic
 	}
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
 	if err := controllerutil.SetOwnerReference(policyServer, policyServerDeployment, r.Client.Scheme()); err != nil {
-		return errors.Join(fmt.Errorf("failed to set policy server deployment owner reference"), err)
+		return errors.Join(errors.New("failed to set policy server deployment owner reference"), err)
 	}
 	return nil
 }

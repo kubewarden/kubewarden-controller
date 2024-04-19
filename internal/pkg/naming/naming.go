@@ -1,8 +1,6 @@
 package naming
 
 import (
-	"fmt"
-
 	"github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1alpha2"
 )
 
@@ -11,5 +9,5 @@ func PolicyServerDeploymentNameForPolicyServer(policyServer *v1alpha2.PolicyServ
 }
 
 func PolicyServerDeploymentNameForPolicyServerName(policyServerName string) string {
-	return fmt.Sprintf("policy-server-%s", policyServerName)
+	return "policy-server-" + policyServerName
 }
