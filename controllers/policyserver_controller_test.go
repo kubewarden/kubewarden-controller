@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,10 +18,10 @@ package controllers
 
 import (
 	"fmt"
-	"time"
 
-	. "github.com/onsi/ginkgo/v2" //nolint:revive
-	. "github.com/onsi/gomega"    //nolint:revive
+	. "github.com/onsi/ginkgo/v2"      //nolint:revive
+	. "github.com/onsi/gomega"         //nolint:revive
+	. "github.com/onsi/gomega/gstruct" //nolint:revive
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -32,67 +32,39 @@ import (
 	k8spoliciesv1 "k8s.io/api/policy/v1"
 )
 
+//nolint:wrapcheck
 var _ = Describe("PolicyServer controller", func() {
-	When("creating a new PolicyServer", func() {
-		policyServerName := newName("policy-server")
+	var policyServerName string
 
+	BeforeEach(func() {
+		policyServerName = newName("policy-server")
+	})
+
+	When("deleting a PolicyServer", func() {
 		BeforeEach(func() {
-			Expect(
-				k8sClient.Create(ctx, policyServerFactory(policyServerName)),
-			).To(haveSucceededOrAlreadyExisted())
-			// Wait for the Service associated with the PolicyServer to be created
-			Eventually(func() error {
-				_, err := getTestPolicyServerService(policyServerName)
-				return err
-			}, timeout, pollInterval).Should(Succeed())
+			createPolicyServerAndWaitForItsService(policyServerFactory(policyServerName))
 		})
 
-		Context("with no assigned policies", func() {
-			It("should get its finalizer removed", func() {
-				By("deleting the policy server")
-				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
-				).To(Succeed())
+		Context("with assigned policies", func() {
+			var policyName string
 
-				Eventually(func() (*policiesv1.PolicyServer, error) {
-					return getTestPolicyServer(policyServerName)
-				}, timeout, pollInterval).ShouldNot(
-					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
-				)
-			})
-
-			AfterEach(func() {
-				// It's necessary remove the test finalizer to make the
-				// BeforeEach work as extected. Otherwise, the policy service
-				// creation will not work as expected
-				policyServer, err := getTestPolicyServer(policyServerName)
-				Expect(err).Should(Succeed())
-				controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
-				err = reconciler.Client.Update(ctx, policyServer)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(func() error {
-					_, err := getTestPolicyServer(policyServerName)
-					return err
-				}, timeout, pollInterval).ShouldNot(Succeed())
-			})
-		})
-
-		Context("with assigned policies", Serial, func() {
-			policyName := newName("policy")
-
-			It("should delete assigned policies", func() {
-				By("creating a policy and assigning it to the policy server")
+			BeforeEach(func() {
+				policyName = newName("policy")
 				Expect(
 					k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, false)),
-				).To(haveSucceededOrAlreadyExisted())
-
+				).To(Succeed())
+				Eventually(func() error {
+					_, err := getTestClusterAdmissionPolicy(policyName)
+					return err
+				}, timeout, pollInterval).Should(Succeed())
 				Expect(
 					getTestPolicyServerService(policyServerName),
 				).To(
 					HaveField("DeletionTimestamp", BeNil()),
 				)
+			})
 
-				By("deleting the policy server")
+			It("should delete assigned policies", func() {
 				Expect(
 					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
 				).To(Succeed())
@@ -105,16 +77,17 @@ var _ = Describe("PolicyServer controller", func() {
 			})
 
 			It("should not delete its managed resources until all the scheduled policies are gone", func() {
-				By("having still policies pending deletion")
 				Expect(
-					getTestClusterAdmissionPolicy(policyName),
-				).To(
-					And(
-						HaveField("DeletionTimestamp", Not(BeNil())),
-						HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
-						HaveField("Finalizers", ContainElement(IntegrationTestsFinalizer)),
-					),
-				)
+					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+				).To(Succeed())
+
+				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
+					return getTestClusterAdmissionPolicy(policyName)
+				}).Should(And(
+					HaveField("DeletionTimestamp", Not(BeNil())),
+					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
+					HaveField("Finalizers", ContainElement(IntegrationTestsFinalizer)),
+				))
 
 				Eventually(func() error {
 					_, err := getTestPolicyServerService(policyServerName)
@@ -123,13 +96,16 @@ var _ = Describe("PolicyServer controller", func() {
 			})
 
 			It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
-				By("not having policies assigned")
 				policy, err := getTestClusterAdmissionPolicy(policyName)
 				Expect(err).ToNot(HaveOccurred())
 
 				controllerutil.RemoveFinalizer(policy, IntegrationTestsFinalizer)
 				err = reconciler.Client.Update(ctx, policy)
 				Expect(err).ToNot(HaveOccurred())
+
+				Expect(
+					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+				).To(Succeed())
 
 				// wait for the reconciliation loop of the ClusterAdmissionPolicy to remove the resource
 				Eventually(func() error {
@@ -149,198 +125,147 @@ var _ = Describe("PolicyServer controller", func() {
 				)
 			})
 		})
+
+		Context("with no assigned policies", func() {
+			It("should get its finalizer removed", func() {
+				Expect(
+					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+				).To(Succeed())
+
+				Eventually(func() (*policiesv1.PolicyServer, error) {
+					return getTestPolicyServer(policyServerName)
+				}, timeout, pollInterval).ShouldNot(
+					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
+				)
+			})
+
+		})
 	})
 
-	When("creating a PolicyServer with PodDisruptionBudget configuration", func() {
-		policyServerName := newName("policy-server")
+	When("creating a new PolicyServer", func() {
+		var policyServer *policiesv1.PolicyServer
 
-		Context("with MinAvailable set", func() {
-			minAvailable := intstr.FromInt(2)
-			policyServer := policyServerFactory(policyServerName)
-			policyServer.Spec.MinAvailable = &minAvailable
-			// It's necessary remove the test finalizer to make the
-			// policy service goes away.
-			controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
-
-			It("should create a PodDisruptionBudget with MinAvailable set", func() {
-				By("creating the PolicyServer")
-				Expect(
-					k8sClient.Create(ctx, policyServer),
-				).To(haveSucceededOrAlreadyExisted())
-
-				By("creating the PodDisruptionBudget")
-				Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
-					pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
-					return pdb
-				}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, &minAvailable, nil))
-			})
+		BeforeEach(func() {
+			policyServer = policyServerFactory(policyServerName)
 		})
 
-		Context("with MaxUnavailable set", func() {
-			maxUnavailable := intstr.FromInt(2)
-			policyServer := policyServerFactory(policyServerName)
-			policyServer.Spec.MaxUnavailable = &maxUnavailable
-			// It's necessary remove the test finalizer to make the
-			// policy service goes away.
-			controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
-
-			It("should create a PodDisruptionBudget with MaxUnavailable set", func() {
-				By("creating the PolicyServer")
-				Expect(
-					k8sClient.Create(ctx, policyServer),
-				).To(haveSucceededOrAlreadyExisted())
-
-				By("creating the PodDisruptionBudget")
-				Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
-					pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
-					return pdb
-				}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
-			})
-		})
-
-		Context("with no PodDisruptionBudget configuration", func() {
-			policyServer := policyServerFactory(policyServerName)
-			// It's necessary remove the test finalizer to make the
-			// policy service goes away.
-			controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
-
-			It("should not create a PodDisruptionBudget", func() {
-				By("creating the PolicyServer")
-				Expect(
-					k8sClient.Create(ctx, policyServer),
-				).To(haveSucceededOrAlreadyExisted())
-
-				By("creating the PolicyServer service")
-				// Wait for the Service associated with the PolicyServer to be created.
-				// The service reconciliation is after the PDB reconciliation.
-				Eventually(func() error {
-					_, err := getTestPolicyServerService(policyServerName)
-					return err
-				}, timeout, pollInterval).Should(Succeed())
-
-				Consistently(func() error {
-					_, err := getPolicyServerPodDisruptionBudget(policyServerName)
-					return err
-				}, 10*time.Second, pollInterval).ShouldNot(Succeed())
-			})
-		})
-
-		When("updating the policy server with a PodDisruptionBudget configuration", func() {
-			policyServer := policyServerFactory(policyServerName)
-			// It's necessary remove the test finalizer to make the
-			// policy service goes away.
-			controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
-
-			It("should create a PodDisruptionBudget with the new configuration", func() {
-				By("creating the PolicyServer with no PodDisruptionBudget configuration")
-				Expect(
-					k8sClient.Create(ctx, policyServer),
-				).To(haveSucceededOrAlreadyExisted())
-
-				By("creating the PolicyServer service")
-				// Wait for the Service associated with the PolicyServer to be created.
-				// The service reconciliation is after the PDB reconciliation.
-				Eventually(func() error {
-					_, err := getTestPolicyServerService(policyServerName)
-					return err
-				}, timeout, pollInterval).Should(Succeed())
-
-				Consistently(func() error {
-					_, err := getPolicyServerPodDisruptionBudget(policyServerName)
-					return err
-				}, 10*time.Second, pollInterval).ShouldNot(Succeed())
-
-				By("updating the PolicyServer with a MaxAvailable PDB configuration")
-				policyServer, err := getTestPolicyServer(policyServerName)
-				Expect(err).ToNot(HaveOccurred())
-				maxUnavailable := intstr.FromInt(2)
-				policyServer.Spec.MaxUnavailable = &maxUnavailable
-				err = k8sClient.Update(ctx, policyServer)
-				Expect(err).ToNot(HaveOccurred())
-
-				By("creating a PodDisruptionBudget with a MaxUnavailable configuration")
-				Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
-					pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
-					return pdb
-				}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
-			})
-		})
-
-		AfterEach(func() {
-			policyServer, err := getTestPolicyServer(policyServerName)
-			Expect(err).Should(Succeed())
-
-			err = reconciler.Client.Delete(ctx, policyServer)
-			Expect(err).ToNot(HaveOccurred())
-
+		It("it should creates the policy server configmap empty when no policy is assigned", func() {
+			createPolicyServerAndWaitForItsService(policyServer)
 			Eventually(func() error {
-				_, err := getTestPolicyServer(policyServerName)
+				_, err := getTestPolicyServerConfigMap(policyServerName)
 				return err
-			}, timeout, pollInterval).ShouldNot(Succeed())
+			}, timeout, pollInterval).Should(Succeed())
+			configmap, err := getTestPolicyServerConfigMap(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configmap).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: Equal("{}"),
+					constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
+				}),
+			})))
+		})
 
-			Eventually(func() error {
+		It("it should create a PDB when policy server is defined with MinAvailable", func() {
+			minAvailable := intstr.FromInt(2)
+			policyServer.Spec.MinAvailable = &minAvailable
+			createPolicyServerAndWaitForItsService(policyServer)
+			Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
+				pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
+				return pdb
+			}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, &minAvailable, nil))
+		})
+
+		It("should create a PodDisruptionBudget when policy server is defined with MaxUnavailable", func() {
+			maxUnavailable := intstr.FromInt(2)
+			policyServer.Spec.MaxUnavailable = &maxUnavailable
+			createPolicyServerAndWaitForItsService(policyServer)
+			Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
+				pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
+				return pdb
+			}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
+		})
+
+		It("it should not create PDB when policy server is defined with no PodDisruptionBudget", func() {
+			createPolicyServerAndWaitForItsService(policyServer)
+			Consistently(func() error {
 				_, err := getPolicyServerPodDisruptionBudget(policyServerName)
 				return err
-			}, timeout, pollInterval).ShouldNot(Succeed())
-		})
-	})
-
-	When("creating a PolicyServer with requests and no limits", func() {
-		policyServerName := newName("policy-server")
-		policyServer := policyServerFactory(policyServerName)
-		policyServer.Spec.Limits = corev1.ResourceList{
-			"cpu":    resource.MustParse("100m"),
-			"memory": resource.MustParse("1Gi"),
-		}
-
-		It("should create the PolicyServer pod with the limits and the requests", func() {
-			By("creating the PolicyServer")
-			Expect(
-				k8sClient.Create(ctx, policyServer),
-			).To(haveSucceededOrAlreadyExisted())
-
-			By("creating a deployment with limits and requests set")
-			Eventually(func() error {
-				deployment, err := getTestPolicyServerDeployment(policyServerName)
-				if err != nil {
-					return err
-				}
-
-				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
-
-				return nil
-			}, timeout, pollInterval).Should(Succeed())
-
-			By("creating a pod with limit and request set")
-			Eventually(func() error {
-				pod, err := getTestPolicyServerPod(policyServerName)
-				if err != nil {
-					return err
-				}
-
-				Expect(pod.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
-
-				By("setting the requests to the same value as the limits")
-				Expect(pod.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
-
-				return nil
-			}, timeout, pollInterval).Should(Succeed())
+			}, consistencyTimeout, pollInterval).ShouldNot(Succeed())
 		})
 
-		When("the requests are updated", func() {
-			It("should update the PolicyServer pod with the new requests", func() {
+		It("should create a PDB if the policy server definition is updated with a PodDisruptionBudget configuration", func() {
+			createPolicyServerAndWaitForItsService(policyServer)
+			Consistently(func() error {
+				_, err := getPolicyServerPodDisruptionBudget(policyServerName)
+				return err
+			}, consistencyTimeout, pollInterval).ShouldNot(Succeed())
+
+			By("updating the PolicyServer with a MaxAvailable PDB configuration")
+			policyServer, err := getTestPolicyServer(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			maxUnavailable := intstr.FromInt(2)
+			policyServer.Spec.MaxUnavailable = &maxUnavailable
+			err = k8sClient.Update(ctx, policyServer)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("creating a PodDisruptionBudget with a MaxUnavailable configuration")
+			Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
+				pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
+				return pdb
+			}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
+		})
+
+		Context("with requests and no limits", func() {
+
+			BeforeEach(func() {
+				policyServer.Spec.Limits = corev1.ResourceList{
+					"cpu":    resource.MustParse("100m"),
+					"memory": resource.MustParse("1Gi"),
+				}
+				createPolicyServerAndWaitForItsService(policyServer)
+			})
+
+			It("should create the PolicyServer pod with the limits and the requests", func() {
+				By("creating a deployment with limits and requests set")
+				Eventually(func() error {
+					deployment, err := getTestPolicyServerDeployment(policyServerName)
+					if err != nil {
+						return err
+					}
+					Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+					return nil
+				}, timeout, pollInterval).Should(Succeed())
+
+				By("creating a pod with limit and request set")
+				Eventually(func() error {
+					pod, err := getTestPolicyServerPod(policyServerName)
+					if err != nil {
+						return err
+					}
+
+					Expect(pod.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+
+					By("setting the requests to the same value as the limits")
+					Expect(pod.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
+
+					return nil
+				}, timeout, pollInterval).Should(Succeed())
+			})
+
+			It("when the requests are updated should update the PolicyServer pod with the new requests", func() {
 				By("updating the PolicyServer requests")
-				policyServer, err := getTestPolicyServer(policyServerName)
-				Expect(err).ToNot(HaveOccurred())
-
-				policyServer.Spec.Requests = corev1.ResourceList{
+				updatedRequestsResources := corev1.ResourceList{
 					"cpu":    resource.MustParse("50m"),
 					"memory": resource.MustParse("500Mi"),
 				}
-
-				Expect(
-					k8sClient.Update(ctx, policyServer),
-				).To(Succeed())
+				Eventually(func() error {
+					policyServer, err := getTestPolicyServer(policyServerName)
+					if err != nil {
+						return err
+					}
+					policyServer.Spec.Requests = updatedRequestsResources
+					return k8sClient.Update(ctx, policyServer)
+				}).Should(Succeed())
 
 				By("updating the pod with the new requests")
 				Eventually(func() (*corev1.Container, error) {
@@ -348,11 +273,10 @@ var _ = Describe("PolicyServer controller", func() {
 					if err != nil {
 						return nil, err
 					}
-
 					return &pod.Spec.Containers[0], nil
 				}, timeout, pollInterval).Should(
 					And(
-						HaveField("Resources.Requests", Equal(policyServer.Spec.Requests)),
+						HaveField("Resources.Requests", Equal(updatedRequestsResources)),
 						HaveField("Resources.Limits", Equal(policyServer.Spec.Limits)),
 					),
 				)

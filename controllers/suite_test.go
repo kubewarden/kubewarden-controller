@@ -46,12 +46,13 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg        *rest.Config //nolint
-	k8sClient  client.Client
-	testEnv    *envtest.Environment
-	ctx        context.Context
-	cancel     context.CancelFunc
-	reconciler admission.Reconciler
+	cfg          *rest.Config //nolint
+	k8sClient    client.Client
+	testEnv      *envtest.Environment
+	ctx          context.Context
+	cancel       context.CancelFunc
+	reconciler   admission.Reconciler
+	k3sContainer *k3s.K3sContainer
 )
 
 const (
@@ -75,7 +76,8 @@ var _ = BeforeSuite(func() {
 		k3sTestcontainerVersion = "latest"
 	}
 
-	k3sContainer, err := k3s.RunContainer(ctx,
+	var err error
+	k3sContainer, err = k3s.RunContainer(ctx,
 		testcontainers.WithImage("docker.io/rancher/k3s:"+k3sTestcontainerVersion),
 	)
 	Expect(err).NotTo(HaveOccurred())
@@ -156,9 +158,17 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	cancel() // This also stops the k3s testcontainer
+	// When running the suite muiltply times, canceling the context
+	// is not enough to stop the container in time. We need to terminate it.
+	// Otherwise, the next run may fail in the container initialization.
+	By("terminate the k3s container")
+	err := k3sContainer.Terminate(ctx)
+	Expect(err).NotTo(HaveOccurred())
+
+	cancel()
 	By("tearing down the test environment")
 
-	err := testEnv.Stop()
+	err = testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
+
 })
