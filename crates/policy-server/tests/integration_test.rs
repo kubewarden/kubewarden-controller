@@ -276,6 +276,61 @@ async fn test_timeout_protection_reject() {
 }
 
 #[tokio::test]
+async fn test_verified_policy() {
+    let verification_cfg_yml = r#"---
+    allOf:
+      - kind: pubKey
+        owner: pubkey1.pub
+        key: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQiTy5S+2JFvVlhUwWPLziM7iTM2j
+              byLgh2IjpNQN0Uio/9pZOTP/CsJmXoUNshfpTUHd3OxgHgz/6adtf2nBwQ==
+              -----END PUBLIC KEY-----
+        annotations:
+          env: prod
+          stable: "true"
+      - kind: pubKey
+        owner: pubkey2.pub
+        key: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx0HuqSss8DUIIUg3I006b1EQjj3Q
+              igsTrvZ/Q3+h+81DkNJg4LzID1rz0UJFUcdzI5NqlFLSTDIQw0gVKOiK7g==
+              -----END PUBLIC KEY-----
+        annotations:
+          env: prod
+        "#;
+    let verification_config = serde_yaml::from_str::<VerificationConfigV1>(verification_cfg_yml)
+        .expect("Cannot parse verification config");
+
+    let mut config = default_test_config();
+    config.policies = HashMap::from([(
+        "pod-privileged".to_owned(),
+        Policy {
+            url: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: None,
+            context_aware_resources: BTreeSet::new(),
+        },
+    )]);
+    config.verification_config = Some(verification_config);
+
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+}
+
+#[tokio::test]
 async fn test_policy_with_invalid_settings() {
     let mut config = default_test_config();
     config.policies.insert(
