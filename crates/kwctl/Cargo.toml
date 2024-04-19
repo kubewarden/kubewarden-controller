@@ -42,7 +42,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.5.0"
 walrus = "0.20.3"
-wasmparser = "0.204"
+wasmparser = "0.205"
 time = "0.3.36"
 semver = { version = "1.0.22", features = ["serde"] }
 
