@@ -321,3 +321,14 @@ func getPolicyServerNameWithPrefix(policyServerName string) string {
 	}
 	return policyServer.NameWithPrefix()
 }
+
+func createPolicyServerAndWaitForItsService(policyServer *policiesv1.PolicyServer) {
+	Expect(
+		k8sClient.Create(ctx, policyServer),
+	).To(haveSucceededOrAlreadyExisted())
+	// Wait for the Service associated with the PolicyServer to be created
+	Eventually(func() error {
+		_, err := getTestPolicyServerService(policyServer.GetName())
+		return err
+	}, timeout, pollInterval).Should(Succeed())
+}
