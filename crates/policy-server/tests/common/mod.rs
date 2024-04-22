@@ -9,7 +9,7 @@ use std::{
 };
 use tempfile::tempdir;
 
-pub(crate) async fn app() -> Router {
+pub(crate) fn default_test_config() -> Config {
     let policies = HashMap::from([
         (
             "pod-privileged".to_owned(),
@@ -47,32 +47,9 @@ pub(crate) async fn app() -> Router {
                 context_aware_resources: BTreeSet::new(),
             },
         ),
-        (
-            "invalid_settings".to_owned(),
-            Policy {
-                url: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
-                policy_mode: PolicyMode::Protect,
-                allowed_to_mutate: None,
-                settings: Some(HashMap::from([(
-                    "sleepMilliseconds".to_owned(),
-                    "abc".into(),
-                )])),
-                context_aware_resources: BTreeSet::new(),
-            },
-        ),
-        (
-            "wrong_url".to_owned(),
-            Policy {
-                url: "ghcr.io/kubewarden/tests/not_existing:v0.1.0".to_owned(),
-                policy_mode: PolicyMode::Protect,
-                allowed_to_mutate: None,
-                settings: None,
-                context_aware_resources: BTreeSet::new(),
-            },
-        ),
     ]);
 
-    let config = Config {
+    Config {
         addr: SocketAddr::from(([127, 0, 0, 1], 3001)),
         sources: None,
         policies,
@@ -93,9 +70,11 @@ pub(crate) async fn app() -> Router {
         daemon_stdout_file: None,
         daemon_stderr_file: None,
         enable_pprof: true,
-        continue_on_errors: true,
-    };
+        continue_on_errors: false,
+    }
+}
 
+pub(crate) async fn app(config: Config) -> Router {
     let server = PolicyServer::new_from_config(config).await.unwrap();
 
     server.router()

@@ -1,5 +1,7 @@
 mod common;
 
+use std::collections::{BTreeSet, HashMap};
+
 use common::app;
 
 use axum::{
@@ -7,14 +9,23 @@ use axum::{
     http::{self, header, Request},
 };
 use http_body_util::BodyExt;
-use policy_evaluator::admission_response::AdmissionResponseStatus;
-use policy_server::api::admission_review::AdmissionReviewResponse;
+use policy_evaluator::{
+    admission_response::AdmissionResponseStatus,
+    policy_fetcher::verify::config::VerificationConfigV1,
+};
+use policy_server::{
+    api::admission_review::AdmissionReviewResponse,
+    config::{Policy, PolicyMode},
+};
 use regex::Regex;
 use tower::ServiceExt;
 
+use crate::common::default_test_config;
+
 #[tokio::test]
 async fn test_validate() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -46,7 +57,8 @@ async fn test_validate() {
 
 #[tokio::test]
 async fn test_validate_policy_not_found() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -64,7 +76,8 @@ async fn test_validate_policy_not_found() {
 
 #[tokio::test]
 async fn test_validate_invalid_payload() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -80,7 +93,8 @@ async fn test_validate_invalid_payload() {
 
 #[tokio::test]
 async fn test_validate_raw() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -107,7 +121,8 @@ async fn test_validate_raw() {
 
 #[tokio::test]
 async fn test_validate_raw_policy_not_found() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -125,7 +140,8 @@ async fn test_validate_raw_policy_not_found() {
 
 #[tokio::test]
 async fn test_validate_raw_invalid_payload() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -141,7 +157,8 @@ async fn test_validate_raw_invalid_payload() {
 
 #[tokio::test]
 async fn test_audit() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -171,7 +188,8 @@ async fn test_audit() {
 
 #[tokio::test]
 async fn test_audit_policy_not_found() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -189,7 +207,8 @@ async fn test_audit_policy_not_found() {
 
 #[tokio::test]
 async fn test_audit_invalid_payload() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -205,7 +224,8 @@ async fn test_audit_invalid_payload() {
 
 #[tokio::test]
 async fn test_timeout_protection_accept() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -226,7 +246,8 @@ async fn test_timeout_protection_accept() {
 
 #[tokio::test]
 async fn test_timeout_protection_reject() {
-    let app = app().await;
+    let config = default_test_config();
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -255,8 +276,79 @@ async fn test_timeout_protection_reject() {
 }
 
 #[tokio::test]
+async fn test_verified_policy() {
+    let verification_cfg_yml = r#"---
+    allOf:
+      - kind: pubKey
+        owner: pubkey1.pub
+        key: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQiTy5S+2JFvVlhUwWPLziM7iTM2j
+              byLgh2IjpNQN0Uio/9pZOTP/CsJmXoUNshfpTUHd3OxgHgz/6adtf2nBwQ==
+              -----END PUBLIC KEY-----
+        annotations:
+          env: prod
+          stable: "true"
+      - kind: pubKey
+        owner: pubkey2.pub
+        key: |
+              -----BEGIN PUBLIC KEY-----
+              MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx0HuqSss8DUIIUg3I006b1EQjj3Q
+              igsTrvZ/Q3+h+81DkNJg4LzID1rz0UJFUcdzI5NqlFLSTDIQw0gVKOiK7g==
+              -----END PUBLIC KEY-----
+        annotations:
+          env: prod
+        "#;
+    let verification_config = serde_yaml::from_str::<VerificationConfigV1>(verification_cfg_yml)
+        .expect("Cannot parse verification config");
+
+    let mut config = default_test_config();
+    config.policies = HashMap::from([(
+        "pod-privileged".to_owned(),
+        Policy {
+            url: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: None,
+            context_aware_resources: BTreeSet::new(),
+        },
+    )]);
+    config.verification_config = Some(verification_config);
+
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+}
+
+#[tokio::test]
 async fn test_policy_with_invalid_settings() {
-    let app = app().await;
+    let mut config = default_test_config();
+    config.policies.insert(
+        "invalid_settings".to_owned(),
+        Policy {
+            url: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: Some(HashMap::from([(
+                "sleepMilliseconds".to_owned(),
+                "abc".into(),
+            )])),
+            context_aware_resources: BTreeSet::new(),
+        },
+    );
+    config.continue_on_errors = true;
+
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
@@ -286,7 +378,20 @@ async fn test_policy_with_invalid_settings() {
 
 #[tokio::test]
 async fn test_policy_with_wrong_url() {
-    let app = app().await;
+    let mut config = default_test_config();
+    config.policies.insert(
+        "wrong_url".to_owned(),
+        Policy {
+            url: "ghcr.io/kubewarden/tests/not_existing:v0.1.0".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: None,
+            context_aware_resources: BTreeSet::new(),
+        },
+    );
+    config.continue_on_errors = true;
+
+    let app = app(config).await;
 
     let request = Request::builder()
         .method(http::Method::POST)
