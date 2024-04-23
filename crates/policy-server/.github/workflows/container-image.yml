@@ -36,7 +36,7 @@ jobs:
           args: --release --target ${{matrix.targetarch}}-unknown-linux-musl
 
       - name: Upload policy-server binary
-        uses: actions/upload-artifact@1746f4ab65b179e0ea60a494b83293b640dd5bba # v4.3.2
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: policy-server-${{ matrix.targetarch }}
           path: |
@@ -70,12 +70,12 @@ jobs:
 
       # Download the policy-server artifacts we've built inside of the previous job
       - name: Download policy-server-x86_64 artifact
-        uses: actions/download-artifact@8caf195ad4b1dee92908e23f56eeb0696f1dd42d # v4.1.5
+        uses: actions/download-artifact@9c19ed7fe5d278cd354c7dfd5d3b88589c7e2395 # v4.1.6
         with:
           name: policy-server-x86_64
           path: artifacts-x86_64
       - name: Download policy-server-aarch64 artifact
-        uses: actions/download-artifact@8caf195ad4b1dee92908e23f56eeb0696f1dd42d # v4.1.5
+        uses: actions/download-artifact@9c19ed7fe5d278cd354c7dfd5d3b88589c7e2395 # v4.1.6
         with:
           name: policy-server-aarch64
           path: artifacts-aarch64
