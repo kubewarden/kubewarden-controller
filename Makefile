@@ -112,8 +112,8 @@ setup-envtest: $(SETUP_ENVTEST) # Build setup-envtest
 
 .PHONY: unit-tests
 unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
-	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./internal/... -race -test.v -coverprofile=coverage/unit-tests/coverage-internal.txt -covermode=atomic -coverpkg=all
-	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... -race -test.v -coverprofile=coverage/unit-tests/coverage-pkg.txt -covermode=atomic -coverpkg=all
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./internal/... -race -test.v -coverprofile=coverage/unit-tests/coverage-internal.txt -covermode=atomic
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test ./pkg/... -race -test.v -coverprofile=coverage/unit-tests/coverage-pkg.txt -covermode=atomic
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
@@ -121,7 +121,7 @@ integration-tests: manifests generate fmt vet setup-envtest ## Run integration t
 	go test -v ./controllers/... -ginkgo.v -ginkgo.progress -race -test.v \
 	-ginkgo.randomize-all -ginkgo.timeout=$(TEST_TIMEOUT) \
 	-coverprofile=coverage/integration-tests/coverage-controllers.txt \
-	-covermode=atomic -timeout=$(TEST_TIMEOUT)
+	-covermode=atomic -timeout=$(TEST_TIMEOUT) -coverpkg=all
 
 .PHONY: generate-crds
 generate-crds: $(KUSTOMIZE) manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
