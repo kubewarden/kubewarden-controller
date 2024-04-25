@@ -28,7 +28,7 @@ func TestPDBCreation(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			reconciler := newReconciler(nil)
+			reconciler := newReconciler(nil, false, false)
 			policyServer := &policiesv1.PolicyServer{
 				ObjectMeta: metav1.ObjectMeta{
 					UID:       "uid",
@@ -134,7 +134,7 @@ func TestPDBUpdate(t *testing.T) {
 					IntVal: int32(*test.oldMaxUnavailable),
 				}
 			}
-			reconciler := newReconciler([]client.Object{oldPDB})
+			reconciler := newReconciler([]client.Object{oldPDB}, false, false)
 			err := reconciler.reconcilePolicyServerPodDisruptionBudget(context.Background(), policyServer)
 			require.NoError(t, err)
 
@@ -187,7 +187,7 @@ func TestPDBDelete(t *testing.T) {
 			},
 		},
 	}
-	reconciler := newReconciler([]client.Object{oldPDB})
+	reconciler := newReconciler([]client.Object{oldPDB}, false, false)
 
 	err := reconciler.reconcilePolicyServerPodDisruptionBudget(context.Background(), policyServer)
 	require.NoError(t, err)

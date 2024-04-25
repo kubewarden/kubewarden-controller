@@ -42,32 +42,7 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policySer
 		},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, &svc, func() error {
-		svc.Labels = map[string]string{
-			constants.AppLabelKey: policyServer.AppLabel(),
-		}
-		svc.Spec = corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "policy-server",
-					Port:       constants.PolicyServerPort,
-					TargetPort: intstr.FromInt(constants.PolicyServerPort),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-			Selector: map[string]string{
-				constants.AppLabelKey: policyServer.AppLabel(),
-			},
-		}
-		if r.MetricsEnabled {
-			svc.Spec.Ports = append(
-				svc.Spec.Ports,
-				corev1.ServicePort{
-					Name:     "metrics",
-					Port:     int32(metricsPort),
-					Protocol: corev1.ProtocolTCP,
-				},
-			)
-		}
+		r.updateService(&svc, policyServer)
 		return nil
 	})
 
@@ -75,4 +50,35 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policySer
 		return fmt.Errorf("cannot reconcile policy-server service: %w", err)
 	}
 	return nil
+}
+
+func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) {
+	svc.Name = policyServer.NameWithPrefix()
+	svc.Namespace = r.DeploymentsNamespace
+	svc.Labels = map[string]string{
+		constants.AppLabelKey: policyServer.AppLabel(),
+	}
+	svc.Spec = corev1.ServiceSpec{
+		Ports: []corev1.ServicePort{
+			{
+				Name:       "policy-server",
+				Port:       constants.PolicyServerPort,
+				TargetPort: intstr.FromInt(constants.PolicyServerPort),
+				Protocol:   corev1.ProtocolTCP,
+			},
+		},
+		Selector: map[string]string{
+			constants.AppLabelKey: policyServer.AppLabel(),
+		},
+	}
+	if r.MetricsEnabled {
+		svc.Spec.Ports = append(
+			svc.Spec.Ports,
+			corev1.ServicePort{
+				Name:     "metrics",
+				Port:     int32(metricsPort),
+				Protocol: corev1.ProtocolTCP,
+			},
+		)
+	}
 }

@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -52,5 +55,50 @@ func TestMetricAndLogFmtEnvVarsDetection(t *testing.T) {
 		if envIndex != -1 {
 			t.Error("Function must the metrics environment variable at position {}. Found at {}.", -1, envIndex)
 		}
+	}
+}
+
+func TestDeploymentMetricsConfiguration(t *testing.T) {
+	tests := []struct {
+		name           string
+		metricsEnabled bool
+		tracingEnabled bool
+	}{
+		{"with metrics enabled", true, false},
+		{"with tracing enabled", false, true},
+		{"with metrics and tracing enabled", true, true},
+		{"with metrics and tracing disabled", false, false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			reconciler := newReconciler(nil, test.metricsEnabled, test.tracingEnabled)
+			deployment := &appsv1.Deployment{}
+			policyServer := &policiesv1.PolicyServer{}
+			err := reconciler.updatePolicyServerDeployment(policyServer, deployment, "")
+			require.NoError(t, err)
+			if test.metricsEnabled || test.tracingEnabled {
+				require.Contains(t, deployment.Spec.Template.GetAnnotations(), constants.OptelInjectAnnotation, "Deployment pod spec should have OpenTelemetry annotations")
+				require.Equal(t, "true", deployment.Spec.Template.GetAnnotations()[constants.OptelInjectAnnotation], "Deployment pod spec should have OpenTelemetry annotations value equal to 'true'")
+			}
+			if !test.metricsEnabled && !test.tracingEnabled {
+				require.NotContains(t, deployment.Spec.Template.GetAnnotations(), constants.OptelInjectAnnotation, "Deployment pod spec should not have OpenTelemetry annotations")
+			}
+
+			if test.metricsEnabled {
+				require.Contains(t, deployment.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}, "Policy server container should have metrics environment variable")
+			} else {
+				require.NotContains(t, deployment.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}, "Policy server container should not have metrics environment variable")
+			}
+
+			if test.tracingEnabled {
+				require.Contains(t, deployment.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}, "Policy server container should have tracing environment variable")
+			} else {
+				require.NotContains(t, deployment.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}, "Policy server container should not have tracing environment variable")
+			}
+		})
 	}
 }
