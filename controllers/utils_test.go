@@ -44,6 +44,7 @@ const (
 	timeout                   = 180 * time.Second
 	pollInterval              = 250 * time.Millisecond
 	IntegrationTestsFinalizer = "integration-tests-safety-net-finalizer"
+	consistencyTimeout        = 5 * time.Second
 )
 
 var (
@@ -301,4 +302,34 @@ func randStringRunes(n int) string {
 
 func newName(prefix string) string {
 	return fmt.Sprintf("%s-%s", prefix, randStringRunes(8))
+}
+
+func getTestPolicyServerConfigMap(policyServerName string) (*corev1.ConfigMap, error) {
+	configMapName := getPolicyServerNameWithPrefix(policyServerName)
+
+	configmap := corev1.ConfigMap{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: DeploymentsNamespace}, &configmap); err != nil {
+		return nil, errors.Join(errors.New("could not find ConfigMap owned by PolicyServer"), err)
+	}
+	return &configmap, nil
+}
+
+func getPolicyServerNameWithPrefix(policyServerName string) string {
+	policyServer := policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: policyServerName,
+		},
+	}
+	return policyServer.NameWithPrefix()
+}
+
+func createPolicyServerAndWaitForItsService(policyServer *policiesv1.PolicyServer) {
+	Expect(
+		k8sClient.Create(ctx, policyServer),
+	).To(haveSucceededOrAlreadyExisted())
+	// Wait for the Service associated with the PolicyServer to be created
+	Eventually(func() error {
+		_, err := getTestPolicyServerService(policyServer.GetName())
+		return err
+	}, timeout, pollInterval).Should(Succeed())
 }
