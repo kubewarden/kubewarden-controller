@@ -146,322 +146,289 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 	})
 
-	It("should use the policy server affinity configuration in the policy server deployment", func() {
-		policyServer := policyServerFactory(policyServerName)
-		policyServer.Spec.Affinity = corev1.Affinity{
-			NodeAffinity: &corev1.NodeAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					NodeSelectorTerms: []corev1.NodeSelectorTerm{
-						{
-							MatchExpressions: []corev1.NodeSelectorRequirement{
-								{
-									Key:      "label",
-									Operator: corev1.NodeSelectorOpIn,
-									Values:   []string{"nodename"},
+	When("creating a PolicyServer", func() {
+
+		It("should use the policy server affinity configuration in the policy server deployment", func() {
+			policyServer := policyServerFactory(policyServerName)
+			policyServer.Spec.Affinity = corev1.Affinity{
+				NodeAffinity: &corev1.NodeAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+						NodeSelectorTerms: []corev1.NodeSelectorTerm{
+							{
+								MatchExpressions: []corev1.NodeSelectorRequirement{
+									{
+										Key:      "label",
+										Operator: corev1.NodeSelectorOpIn,
+										Values:   []string{"nodename"},
+									},
 								},
 							},
 						},
 					},
 				},
-			},
-		}
-		createPolicyServerAndWaitForItsService(policyServer)
-		deployment, err := getTestPolicyServerDeployment(policyServerName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deployment.Spec.Template.Spec.Affinity).To(PointTo(MatchFields(IgnoreExtras, Fields{
-			"NodeAffinity": PointTo(MatchFields(IgnoreExtras, Fields{
-				"RequiredDuringSchedulingIgnoredDuringExecution": PointTo(MatchFields(IgnoreExtras, Fields{
-					"NodeSelectorTerms": ContainElement(MatchFields(IgnoreExtras, Fields{
-						"MatchExpressions": ContainElement(MatchAllFields(Fields{
-							"Key":      Equal("label"),
-							"Operator": Equal(corev1.NodeSelectorOpIn),
-							"Values":   Equal([]string{"nodename"}),
+			}
+			createPolicyServerAndWaitForItsService(policyServer)
+			deployment, err := getTestPolicyServerDeployment(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(deployment.Spec.Template.Spec.Affinity).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				"NodeAffinity": PointTo(MatchFields(IgnoreExtras, Fields{
+					"RequiredDuringSchedulingIgnoredDuringExecution": PointTo(MatchFields(IgnoreExtras, Fields{
+						"NodeSelectorTerms": ContainElement(MatchFields(IgnoreExtras, Fields{
+							"MatchExpressions": ContainElement(MatchAllFields(Fields{
+								"Key":      Equal("label"),
+								"Operator": Equal(corev1.NodeSelectorOpIn),
+								"Values":   Equal([]string{"nodename"}),
+							})),
 						})),
 					})),
 				})),
-			})),
-		})))
-	})
-
-	It("should creates policy server deployment with some default configuration", func() {
-		policyServer := policyServerFactory(policyServerName)
-		createPolicyServerAndWaitForItsService(policyServer)
-		deployment, err := getTestPolicyServerDeployment(policyServerName)
-		Expect(err).ToNot(HaveOccurred())
-		By("checking the deployment container security context")
-		Expect(deployment.Spec.Template.Spec.Containers).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-			"SecurityContext": PointTo(MatchFields(IgnoreExtras, Fields{
-				"RunAsNonRoot":             PointTo(BeTrue()),
-				"AllowPrivilegeEscalation": PointTo(BeFalse()),
-				"Privileged":               PointTo(BeFalse()),
-				"ReadOnlyRootFilesystem":   PointTo(BeTrue()),
-				"Capabilities": PointTo(MatchAllFields(Fields{
-					"Add":  BeNil(),
-					"Drop": Equal([]corev1.Capability{"all"}),
-				})),
-				"SELinuxOptions": BeNil(),
-				"WindowsOptions": BeNil(),
-				"RunAsUser":      BeNil(),
-				"RunAsGroup":     BeNil(),
-				"ProcMount":      BeNil(),
-				"SeccompProfile": BeNil(),
-			}))})))
-		By("checking the deployment pod security context")
-		Expect(deployment.Spec.Template.Spec.SecurityContext).To(PointTo(MatchFields(IgnoreExtras, Fields{
-			"SELinuxOptions":      BeNil(),
-			"WindowsOptions":      BeNil(),
-			"RunAsUser":           BeNil(),
-			"RunAsGroup":          BeNil(),
-			"RunAsNonRoot":        BeNil(),
-			"SupplementalGroups":  BeNil(),
-			"FSGroup":             BeNil(),
-			"Sysctls":             BeNil(),
-			"FSGroupChangePolicy": BeNil(),
-			"SeccompProfile":      BeNil()})))
-
-		By("checking the deployment affinity")
-		Expect(deployment.Spec.Template.Spec.Affinity).To(BeNil())
-	})
-
-	It("should creates the policy server deployment and use the user defined security contexts", func() {
-		policyServer := policyServerFactory(policyServerName)
-		runAsUser := int64(1000)
-		privileged := true
-		runAsNonRoot := false
-		policyServer.Spec.SecurityContexts = policiesv1.PolicyServerSecurity{
-			Container: &corev1.SecurityContext{
-				RunAsUser:    &runAsUser,
-				Privileged:   &privileged,
-				RunAsNonRoot: &runAsNonRoot,
-			},
-			Pod: &corev1.PodSecurityContext{
-				RunAsUser:    &runAsUser,
-				RunAsNonRoot: &runAsNonRoot,
-			},
-		}
-		createPolicyServerAndWaitForItsService(policyServer)
-		deployment, err := getTestPolicyServerDeployment(policyServerName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deployment.Spec.Template.Spec.Containers).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
-			"SecurityContext": PointTo(MatchFields(IgnoreExtras, Fields{
-				"RunAsNonRoot":             PointTo(BeFalse()),
-				"AllowPrivilegeEscalation": BeNil(),
-				"Privileged":               PointTo(BeTrue()),
-				"ReadOnlyRootFilesystem":   BeNil(),
-				"Capabilities":             BeNil(),
-				"SELinuxOptions":           BeNil(),
-				"WindowsOptions":           BeNil(),
-				"RunAsUser":                PointTo(BeNumerically("==", 1000)),
-				"RunAsGroup":               BeNil(),
-				"ProcMount":                BeNil(),
-				"SeccompProfile":           BeNil(),
-			}))})))
-		Expect(deployment.Spec.Template.Spec.SecurityContext).To(PointTo(MatchFields(IgnoreExtras, Fields{
-			"SELinuxOptions":      BeNil(),
-			"WindowsOptions":      BeNil(),
-			"RunAsUser":           PointTo(BeNumerically("==", 1000)),
-			"RunAsGroup":          BeNil(),
-			"RunAsNonRoot":        PointTo(BeFalse()),
-			"SupplementalGroups":  BeNil(),
-			"FSGroup":             BeNil(),
-			"Sysctls":             BeNil(),
-			"FSGroupChangePolicy": BeNil(),
-			"SeccompProfile":      BeNil()})))
-	})
-
-	It("should creates the policy server configmap empty if no policies are assigned ", func() {
-		policyServer := policyServerFactory(policyServerName)
-		createPolicyServerAndWaitForItsService(policyServer)
-		configmap, err := getTestPolicyServerConfigMap(policyServerName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(configmap).To(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Data": MatchAllKeys(Keys{
-				constants.PolicyServerConfigPoliciesEntry: Equal("{}"),
-				constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
-			}),
-		})))
-	})
-
-	It("should creates the policy server configmap with the assigned policies", func() {
-		policyServer := policyServerFactory(policyServerName)
-		createPolicyServerAndWaitForItsService(policyServer)
-		policyName := newName("policy")
-		policy := clusterAdmissionPolicyFactory(policyName, policyServerName, false)
-		Expect(k8sClient.Create(ctx, policy)).To(Succeed())
-
-		policiesMap := admission.PolicyConfigEntryMap{}
-		policiesMap[policy.GetUniqueName()] = admission.PolicyServerConfigEntry{
-			NamespacedName: types.NamespacedName{
-				Namespace: policy.GetNamespace(),
-				Name:      policy.GetName(),
-			},
-			URL:                   policy.GetModule(),
-			PolicyMode:            string(policy.GetPolicyMode()),
-			AllowedToMutate:       policy.IsMutating(),
-			Settings:              policy.GetSettings(),
-			ContextAwareResources: policy.GetContextAwareResources(),
-		}
-		policies, err := json.Marshal(policiesMap)
-		Expect(err).ToNot(HaveOccurred())
-
-		Eventually(func() error {
-			_, err := getTestClusterAdmissionPolicy(policyName)
-			return err
-		}, timeout, pollInterval).Should(Succeed())
-		Eventually(func() error {
-			_, err := getTestPolicyServerConfigMap(policyServerName)
-			return err
-		}, timeout, pollInterval).Should(Succeed())
-		configMap, err := getTestPolicyServerConfigMap(policyServerName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(configMap).To(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Data": MatchAllKeys(Keys{
-				constants.PolicyServerConfigPoliciesEntry: MatchJSON(policies),
-				constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
-			}),
-		})))
-	})
-
-	It("should creates the policy server configmap with the sources authorities", func() {
-		policyServer := policyServerFactory(policyServerName)
-		policyServer.Spec.InsecureSources = []string{"localhost:5000"}
-		policyServer.Spec.SourceAuthorities = map[string][]string{
-			"myprivateregistry:5000": {"cert1", "cert2"},
-		}
-		createPolicyServerAndWaitForItsService(policyServer)
-		sourceAuthoriries := map[string][]map[string]string{}
-		for uri, certificates := range policyServer.Spec.SourceAuthorities {
-			certs := []map[string]string{}
-			for _, cert := range certificates {
-				certs = append(certs, map[string]string{
-					"type": "Data",
-					"data": cert,
-				})
-			}
-			sourceAuthoriries[uri] = certs
-		}
-		sources, err := json.Marshal(map[string]interface{}{
-			"insecure_sources":   policyServer.Spec.InsecureSources,
-			"source_authorities": sourceAuthoriries,
+			})))
 		})
-		Expect(err).ToNot(HaveOccurred())
 
-		Eventually(func() error {
-			_, err := getTestPolicyServerConfigMap(policyServerName)
-			return err
-		}, timeout, pollInterval).Should(Succeed())
-		configMap, err := getTestPolicyServerConfigMap(policyServerName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(configMap).To(PointTo(MatchFields(IgnoreExtras, Fields{
-			"Data": MatchAllKeys(Keys{
-				constants.PolicyServerConfigPoliciesEntry: Equal("{}"),
-				constants.PolicyServerConfigSourcesEntry:  MatchJSON(sources),
-			}),
-		})))
-	})
-
-	It("should creates PodDisruptionBudget when policy server has MinAvailable configuration set", func() {
-
-		policyServer := policyServerFactory(policyServerName)
-		minAvailable := intstr.FromInt(2)
-		policyServer.Spec.MinAvailable = &minAvailable
-		createPolicyServerAndWaitForItsService(policyServer)
-
-		Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
-			pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
-			return pdb
-		}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, &minAvailable, nil))
-	})
-
-	It("should creates PodDisruptionBudget when policy server has MaxUnavailable configuration set", func() {
-		policyServer := policyServerFactory(policyServerName)
-		maxUnavailable := intstr.FromInt(2)
-		policyServer.Spec.MaxUnavailable = &maxUnavailable
-		createPolicyServerAndWaitForItsService(policyServer)
-
-		Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
-			pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
-			return pdb
-		}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
-	})
-
-	It("should not create PodDisruptionBudget when policy server has no PDB configuration", func() {
-		policyServer := policyServerFactory(policyServerName)
-		createPolicyServerAndWaitForItsService(policyServer)
-		Consistently(func() error {
-			_, err := getPolicyServerPodDisruptionBudget(policyServerName)
-			return err
-		}, consistencyTimeout, pollInterval).ShouldNot(Succeed())
-	})
-
-	It("should creates the PolicyServer pod with the limits and the requests", func() {
-		policyServer := policyServerFactory(policyServerName)
-		policyServer.Spec.Limits = corev1.ResourceList{
-			"cpu":    resource.MustParse("100m"),
-			"memory": resource.MustParse("1Gi"),
-		}
-		createPolicyServerAndWaitForItsService(policyServer)
-		By("creating a deployment with limits and requests set")
-		Eventually(func() error {
+		It("should create policy server deployment with some default configuration", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
 			deployment, err := getTestPolicyServerDeployment(policyServerName)
-			if err != nil {
+			Expect(err).ToNot(HaveOccurred())
+			By("checking the deployment container security context")
+			Expect(deployment.Spec.Template.Spec.Containers).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"SecurityContext": PointTo(MatchFields(IgnoreExtras, Fields{
+					"RunAsNonRoot":             PointTo(BeTrue()),
+					"AllowPrivilegeEscalation": PointTo(BeFalse()),
+					"Privileged":               PointTo(BeFalse()),
+					"ReadOnlyRootFilesystem":   PointTo(BeTrue()),
+					"Capabilities": PointTo(MatchAllFields(Fields{
+						"Add":  BeNil(),
+						"Drop": Equal([]corev1.Capability{"all"}),
+					})),
+					"SELinuxOptions": BeNil(),
+					"WindowsOptions": BeNil(),
+					"RunAsUser":      BeNil(),
+					"RunAsGroup":     BeNil(),
+					"ProcMount":      BeNil(),
+					"SeccompProfile": BeNil(),
+				}))})))
+			By("checking the deployment pod security context")
+			Expect(deployment.Spec.Template.Spec.SecurityContext).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				"SELinuxOptions":      BeNil(),
+				"WindowsOptions":      BeNil(),
+				"RunAsUser":           BeNil(),
+				"RunAsGroup":          BeNil(),
+				"RunAsNonRoot":        BeNil(),
+				"SupplementalGroups":  BeNil(),
+				"FSGroup":             BeNil(),
+				"Sysctls":             BeNil(),
+				"FSGroupChangePolicy": BeNil(),
+				"SeccompProfile":      BeNil()})))
+
+			By("checking the deployment affinity")
+			Expect(deployment.Spec.Template.Spec.Affinity).To(BeNil())
+		})
+
+		It("should create the policy server deployment and use the user defined security contexts", func() {
+			policyServer := policyServerFactory(policyServerName)
+			runAsUser := int64(1000)
+			privileged := true
+			runAsNonRoot := false
+			policyServer.Spec.SecurityContexts = policiesv1.PolicyServerSecurity{
+				Container: &corev1.SecurityContext{
+					RunAsUser:    &runAsUser,
+					Privileged:   &privileged,
+					RunAsNonRoot: &runAsNonRoot,
+				},
+				Pod: &corev1.PodSecurityContext{
+					RunAsUser:    &runAsUser,
+					RunAsNonRoot: &runAsNonRoot,
+				},
+			}
+			createPolicyServerAndWaitForItsService(policyServer)
+			deployment, err := getTestPolicyServerDeployment(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(deployment.Spec.Template.Spec.Containers).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"SecurityContext": PointTo(MatchFields(IgnoreExtras, Fields{
+					"RunAsNonRoot":             PointTo(BeFalse()),
+					"AllowPrivilegeEscalation": BeNil(),
+					"Privileged":               PointTo(BeTrue()),
+					"ReadOnlyRootFilesystem":   BeNil(),
+					"Capabilities":             BeNil(),
+					"SELinuxOptions":           BeNil(),
+					"WindowsOptions":           BeNil(),
+					"RunAsUser":                PointTo(BeNumerically("==", 1000)),
+					"RunAsGroup":               BeNil(),
+					"ProcMount":                BeNil(),
+					"SeccompProfile":           BeNil(),
+				}))})))
+			Expect(deployment.Spec.Template.Spec.SecurityContext).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				"SELinuxOptions":      BeNil(),
+				"WindowsOptions":      BeNil(),
+				"RunAsUser":           PointTo(BeNumerically("==", 1000)),
+				"RunAsGroup":          BeNil(),
+				"RunAsNonRoot":        PointTo(BeFalse()),
+				"SupplementalGroups":  BeNil(),
+				"FSGroup":             BeNil(),
+				"Sysctls":             BeNil(),
+				"FSGroupChangePolicy": BeNil(),
+				"SeccompProfile":      BeNil()})))
+		})
+
+		It("should create the policy server configmap empty if no policies are assigned ", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			configmap, err := getTestPolicyServerConfigMap(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configmap).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: Equal("{}"),
+					constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
+				}),
+			})))
+		})
+
+		It("should create the policy server configmap with the assigned policies", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			policyName := newName("policy")
+			policy := clusterAdmissionPolicyFactory(policyName, policyServerName, false)
+			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
+
+			policiesMap := admission.PolicyConfigEntryMap{}
+			policiesMap[policy.GetUniqueName()] = admission.PolicyServerConfigEntry{
+				NamespacedName: types.NamespacedName{
+					Namespace: policy.GetNamespace(),
+					Name:      policy.GetName(),
+				},
+				URL:                   policy.GetModule(),
+				PolicyMode:            string(policy.GetPolicyMode()),
+				AllowedToMutate:       policy.IsMutating(),
+				Settings:              policy.GetSettings(),
+				ContextAwareResources: policy.GetContextAwareResources(),
+			}
+			policies, err := json.Marshal(policiesMap)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() error {
+				_, err := getTestClusterAdmissionPolicy(policyName)
 				return err
-			}
-			Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
-			return nil
-		}, timeout, pollInterval).Should(Succeed())
-
-		By("creating a pod with limit and request set")
-		Eventually(func() error {
-			pod, err := getTestPolicyServerPod(policyServerName)
-			if err != nil {
+			}, timeout, pollInterval).Should(Succeed())
+			Eventually(func() error {
+				_, err := getTestPolicyServerConfigMap(policyServerName)
 				return err
+			}, timeout, pollInterval).Should(Succeed())
+			configMap, err := getTestPolicyServerConfigMap(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configMap).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: MatchJSON(policies),
+					constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
+				}),
+			})))
+		})
+
+		It("should create the policy server configmap with the sources authorities", func() {
+			policyServer := policyServerFactory(policyServerName)
+			policyServer.Spec.InsecureSources = []string{"localhost:5000"}
+			policyServer.Spec.SourceAuthorities = map[string][]string{
+				"myprivateregistry:5000": {"cert1", "cert2"},
 			}
+			createPolicyServerAndWaitForItsService(policyServer)
+			sourceAuthoriries := map[string][]map[string]string{}
+			for uri, certificates := range policyServer.Spec.SourceAuthorities {
+				certs := []map[string]string{}
+				for _, cert := range certificates {
+					certs = append(certs, map[string]string{
+						"type": "Data",
+						"data": cert,
+					})
+				}
+				sourceAuthoriries[uri] = certs
+			}
+			sources, err := json.Marshal(map[string]interface{}{
+				"insecure_sources":   policyServer.Spec.InsecureSources,
+				"source_authorities": sourceAuthoriries,
+			})
+			Expect(err).ToNot(HaveOccurred())
 
-			Expect(pod.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
-
-			By("setting the requests to the same value as the limits")
-			Expect(pod.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
-
-			return nil
-		}, timeout, pollInterval).Should(Succeed())
-	})
-
-	It("when the requests are updated should update the PolicyServer pod with the new requests", func() {
-		policyServer := policyServerFactory(policyServerName)
-		policyServer.Spec.Limits = corev1.ResourceList{
-			"cpu":    resource.MustParse("100m"),
-			"memory": resource.MustParse("1Gi"),
-		}
-		createPolicyServerAndWaitForItsService(policyServer)
-
-		By("updating the PolicyServer requests")
-		updatedRequestsResources := corev1.ResourceList{
-			"cpu":    resource.MustParse("50m"),
-			"memory": resource.MustParse("500Mi"),
-		}
-		Eventually(func() error {
-			policyServer, err := getTestPolicyServer(policyServerName)
-			if err != nil {
+			Eventually(func() error {
+				_, err := getTestPolicyServerConfigMap(policyServerName)
 				return err
-			}
-			policyServer.Spec.Requests = updatedRequestsResources
-			return k8sClient.Update(ctx, policyServer)
-		}).Should(Succeed())
+			}, timeout, pollInterval).Should(Succeed())
+			configMap, err := getTestPolicyServerConfigMap(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configMap).To(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: Equal("{}"),
+					constants.PolicyServerConfigSourcesEntry:  MatchJSON(sources),
+				}),
+			})))
+		})
 
-		By("updating the pod with the new requests")
-		Eventually(func() (*corev1.Container, error) {
-			pod, err := getTestPolicyServerPod(policyServerName)
-			if err != nil {
-				return nil, err
+		It("should create PodDisruptionBudget when policy server has MinAvailable configuration set", func() {
+
+			policyServer := policyServerFactory(policyServerName)
+			minAvailable := intstr.FromInt(2)
+			policyServer.Spec.MinAvailable = &minAvailable
+			createPolicyServerAndWaitForItsService(policyServer)
+
+			Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
+				pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
+				return pdb
+			}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, &minAvailable, nil))
+		})
+
+		It("should create PodDisruptionBudget when policy server has MaxUnavailable configuration set", func() {
+			policyServer := policyServerFactory(policyServerName)
+			maxUnavailable := intstr.FromInt(2)
+			policyServer.Spec.MaxUnavailable = &maxUnavailable
+			createPolicyServerAndWaitForItsService(policyServer)
+
+			Eventually(func() *k8spoliciesv1.PodDisruptionBudget {
+				pdb, _ := getPolicyServerPodDisruptionBudget(policyServerName)
+				return pdb
+			}, timeout, pollInterval).Should(policyServerPodDisruptionBudgetMatcher(policyServer, nil, &maxUnavailable))
+		})
+
+		It("should not create PodDisruptionBudget when policy server has no PDB configuration", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			Consistently(func() error {
+				_, err := getPolicyServerPodDisruptionBudget(policyServerName)
+				return err
+			}, consistencyTimeout, pollInterval).ShouldNot(Succeed())
+		})
+
+		It("should create the PolicyServer pod with the limits and the requests", func() {
+			policyServer := policyServerFactory(policyServerName)
+			policyServer.Spec.Limits = corev1.ResourceList{
+				"cpu":    resource.MustParse("100m"),
+				"memory": resource.MustParse("1Gi"),
 			}
-			return &pod.Spec.Containers[0], nil
-		}, timeout, pollInterval).Should(
-			And(
-				HaveField("Resources.Requests", Equal(updatedRequestsResources)),
-				HaveField("Resources.Limits", Equal(policyServer.Spec.Limits)),
-			),
-		)
+			createPolicyServerAndWaitForItsService(policyServer)
+			By("creating a deployment with limits and requests set")
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(policyServerName)
+				if err != nil {
+					return err
+				}
+				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			By("creating a pod with limit and request set")
+			Eventually(func() error {
+				pod, err := getTestPolicyServerPod(policyServerName)
+				if err != nil {
+					return err
+				}
+
+				Expect(pod.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+
+				By("setting the requests to the same value as the limits")
+				Expect(pod.Spec.Containers[0].Resources.Requests).To(Equal(policyServer.Spec.Limits))
+
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
 	})
 
 	When("updating the PolicyServer", func() {
@@ -706,6 +673,36 @@ var _ = Describe("PolicyServer controller", func() {
 			}).Should(And(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Env": ContainElement(Equal(newEnvironmentVariable)),
 			})), Not(Equal(oldContainers))))
+		})
+
+		It("should update the PolicyServer pod with the new requests when the requests are updated", func() {
+			By("updating the PolicyServer requests")
+			updatedRequestsResources := corev1.ResourceList{
+				"cpu":    resource.MustParse("50m"),
+				"memory": resource.MustParse("500Mi"),
+			}
+			Eventually(func() error {
+				policyServer, err := getTestPolicyServer(policyServerName)
+				if err != nil {
+					return err
+				}
+				policyServer.Spec.Requests = updatedRequestsResources
+				return k8sClient.Update(ctx, policyServer)
+			}).Should(Succeed())
+
+			By("updating the pod with the new requests")
+			Eventually(func() (*corev1.Container, error) {
+				pod, err := getTestPolicyServerPod(policyServerName)
+				if err != nil {
+					return nil, err
+				}
+				return &pod.Spec.Containers[0], nil
+			}, timeout, pollInterval).Should(
+				And(
+					HaveField("Resources.Requests", Equal(updatedRequestsResources)),
+					HaveField("Resources.Limits", Equal(policyServer.Spec.Limits)),
+				),
+			)
 		})
 
 	})
