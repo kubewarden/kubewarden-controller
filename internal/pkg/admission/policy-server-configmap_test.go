@@ -10,17 +10,17 @@ import (
 )
 
 func TestCreatePoliciesMap(t *testing.T) {
-	reconciler, validationPolicy, mutatingPolicy, contextAwarePolicy := createReconciler()
+	_, validationPolicy, mutatingPolicy, contextAwarePolicy := createReconciler()
 
 	var policies PolicyConfigEntryMap
 	clusterAdmissionPolicies := []policiesv1.Policy{}
-	policies = reconciler.CreatePoliciesMap(clusterAdmissionPolicies)
+	policies = buildPoliciesMap(clusterAdmissionPolicies)
 	if len(policies) != 0 {
 		t.Error("Empty ClusterAdmissionPolicyList should generate empty policies map")
 	}
 
 	clusterAdmissionPolicies = []policiesv1.Policy{&validationPolicy, &mutatingPolicy, &contextAwarePolicy}
-	policies = reconciler.CreatePoliciesMap(clusterAdmissionPolicies)
+	policies = buildPoliciesMap(clusterAdmissionPolicies)
 	if len(policies) != 3 {
 		t.Error("Policy map must has 3 entries")
 	}

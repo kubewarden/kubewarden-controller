@@ -68,13 +68,13 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 
 // Function used to update the ConfigMap data when creating or updating it
 func (r *Reconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) error {
-	policiesMap := r.CreatePoliciesMap(policies)
+	policiesMap := buildPoliciesMap(policies)
 	policiesYML, err := json.Marshal(policiesMap)
 	if err != nil {
 		return fmt.Errorf("cannot marshal policies: %w", err)
 	}
 
-	sources := r.CreateSourcesMap(policyServer)
+	sources := buildSourcesMap(policyServer)
 	sourcesYML, err := json.Marshal(sources)
 	if err != nil {
 		return fmt.Errorf("cannot marshal insecureSources: %w", err)
@@ -125,7 +125,7 @@ func (policyConfigEntryMap PolicyConfigEntryMap) ToClusterAdmissionPolicyReconci
 	return res
 }
 
-func (r *Reconciler) CreatePoliciesMap(admissionPolicies []policiesv1.Policy) PolicyConfigEntryMap {
+func buildPoliciesMap(admissionPolicies []policiesv1.Policy) PolicyConfigEntryMap {
 	policies := PolicyConfigEntryMap{}
 	for _, admissionPolicy := range admissionPolicies {
 		policies[admissionPolicy.GetUniqueName()] = PolicyServerConfigEntry{
@@ -143,7 +143,7 @@ func (r *Reconciler) CreatePoliciesMap(admissionPolicies []policiesv1.Policy) Po
 	return policies
 }
 
-func (r *Reconciler) CreateSourcesMap(policyServer *policiesv1.PolicyServer) PolicyServerSourcesEntry {
+func buildSourcesMap(policyServer *policiesv1.PolicyServer) PolicyServerSourcesEntry {
 	sourcesEntry := PolicyServerSourcesEntry{}
 	sourcesEntry.InsecureSources = policyServer.Spec.InsecureSources
 	if sourcesEntry.InsecureSources == nil {
