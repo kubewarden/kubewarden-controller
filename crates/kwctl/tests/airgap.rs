@@ -1,7 +1,7 @@
 use assert_cmd::Command;
 use std::path::{Path, PathBuf};
 use tempfile::tempdir;
-use testcontainers::{clients, core::WaitFor};
+use testcontainers::{core::WaitFor, runners::SyncRunner};
 
 mod common;
 
@@ -11,10 +11,9 @@ fn test_airgap() {
     let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
     // Run registry
-    let docker = clients::Cli::default();
     let registry_image = testcontainers::GenericImage::new("docker.io/library/registry", "2")
         .with_wait_for(WaitFor::message_on_stderr("listening on "));
-    let testcontainer = docker.run(registry_image);
+    let testcontainer = registry_image.start();
     let port = testcontainer.get_host_port_ipv4(5000);
 
     // Save policies
