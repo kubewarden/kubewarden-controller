@@ -24,10 +24,10 @@ jobs:
         uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@971e9a094d010900399dafc13fd4787bffce6d81 # v3.1.18
+        uses: kubewarden/github-actions/syft-installer@5eea0bfad475f7b24620b26208b121c545ef21f1 # v3.1.19
 
       - name: Install the crane command
-        uses: kubewarden/github-actions/crane-installer@971e9a094d010900399dafc13fd4787bffce6d81 # v3.1.18
+        uses: kubewarden/github-actions/crane-installer@5eea0bfad475f7b24620b26208b121c545ef21f1 # v3.1.19
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
