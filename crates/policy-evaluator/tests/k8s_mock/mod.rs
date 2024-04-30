@@ -135,6 +135,29 @@ pub(crate) async fn rego_scenario(handle: Handle<Request<Body>, Response<Body>>)
     });
 }
 
+pub(crate) async fn reflector_error_scenario(handle: Handle<Request<Body>, Response<Body>>) {
+    tokio::spawn(async move {
+        let mut handle = handle;
+        loop {
+            let (request, send) = handle.next_request().await.expect("service not called");
+            match request.uri().path() {
+                "/api/v1" => {
+                    send_response(send, fixtures::v1_resource_list());
+                }
+
+                "/apis/apps/v1" => {
+                    send_response(send, fixtures::apps_v1_resource_list());
+                }
+                _ => {
+                    send.send_response(
+                        Response::builder().status(500).body(Body::empty()).unwrap(),
+                    );
+                }
+            }
+        }
+    });
+}
+
 fn send_response<T: Serialize>(send: SendResponse<Response<Body>>, response: T) {
     let response = serde_json::to_vec(&response).unwrap();
     send.send_response(Response::builder().body(Body::from(response)).unwrap());

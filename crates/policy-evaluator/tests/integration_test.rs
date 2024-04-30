@@ -29,7 +29,7 @@ use policy_evaluator::{
 };
 
 use crate::common::{build_policy_evaluator, fetch_policy, load_request_data};
-use crate::k8s_mock::{rego_scenario, wapc_and_wasi_scenario};
+use crate::k8s_mock::{reflector_error_scenario, rego_scenario, wapc_and_wasi_scenario};
 
 #[rstest]
 #[case::wapc(
@@ -218,31 +218,43 @@ async fn test_policy_evaluator(
     PolicyExecutionMode::Wasi,
     "ghcr.io/kubewarden/tests/go-wasi-context-aware-test-policy:latest",
     "app_deployment.json",
+    true,
     wapc_and_wasi_scenario
 )]
 #[case::wapc(
     PolicyExecutionMode::KubewardenWapc,
     "ghcr.io/kubewarden/tests/context-aware-test-policy:v0.1.0",
     "app_deployment.json",
+    true,
     wapc_and_wasi_scenario
 )]
 #[case::opa(
     PolicyExecutionMode::Opa,
     "ghcr.io/kubewarden/tests/context-aware-test-opa-policy:v0.1.0",
     "app_deployment.json",
+    true,
     rego_scenario
 )]
 #[case::gatekeeper(
     PolicyExecutionMode::OpaGatekeeper,
     "ghcr.io/kubewarden/tests/context-aware-test-gatekeeper-policy:v0.1.0",
     "app_deployment.json",
+    true,
     rego_scenario
+)]
+#[case::error(
+    PolicyExecutionMode::Wasi,
+    "ghcr.io/kubewarden/tests/go-wasi-context-aware-test-policy:latest",
+    "app_deployment.json",
+    false,
+    reflector_error_scenario
 )]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_runtime_context_aware<F, Fut>(
     #[case] execution_mode: PolicyExecutionMode,
     #[case] policy_uri: &str,
     #[case] request_file_path: &str,
+    #[case] allowed: bool,
     #[case] scenario: F,
 ) where
     F: FnOnce(Handle<Request<Body>, Response<Body>>) -> Fut,
@@ -303,8 +315,14 @@ async fn test_runtime_context_aware<F, Fut>(
             &PolicySettings::default(),
         );
 
-        assert!(admission_response.allowed, "the admission request should have been accepted, it has been rejected with this details: {:?}", admission_response);
-    }).await.unwrap();
+        assert_eq!(
+            allowed, admission_response.allowed,
+            "unexpexcted admission response, expecting allowed: {}, got: {:?}",
+            allowed, admission_response
+        );
+    })
+    .await
+    .unwrap();
 
     callback_handler_shutdown_channel_tx
         .send(())
