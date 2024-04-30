@@ -7,7 +7,7 @@ use kube::{
 };
 use std::hash::Hash;
 use tokio::{sync::watch, time::Instant};
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::callback_handler::kubernetes::KubeResource;
 
@@ -23,12 +23,21 @@ where
     K::DynamicType: Eq + Hash + Clone,
     W: Stream<Item = watcher::Result<watcher::Event<K>>>,
 {
-    stream.inspect_ok(move |event| {
-        if let Err(err) = last_change_seen_at.send(Instant::now()) {
-            warn!(error = ?err, "failed to set last_change_seen_at");
-        }
-        writer.apply_watcher_event(event)
-    })
+    stream
+        .take_while(|event| {
+            if let Err(watcher::Error::InitialListFailed(err)) = event {
+                error!(error = ?err, "watcher error: initial list failed");
+                ready(false)
+            } else {
+                ready(true)
+            }
+        })
+        .inspect_ok(move |event| {
+            if let Err(err) = last_change_seen_at.send(Instant::now()) {
+                warn!(error = ?err, "failed to set last_change_seen_at");
+            }
+            writer.apply_watcher_event(event)
+        })
 }
 
 /// A reflector fetches kubernetes objects based on filtering criteria.
