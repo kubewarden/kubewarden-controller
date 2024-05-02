@@ -25,6 +25,9 @@ where
 {
     stream
         .take_while(|event| {
+            // InitialListFailed is returned when the initial list of objects failed to be fetched.
+            // In this case, we should break the stream and return an error to the caller.
+            // For all other errors, we should continue the stream, as the watch will be retried.
             if let Err(watcher::Error::InitialListFailed(err)) = event {
                 error!(error = ?err, "watcher error: initial list failed");
                 ready(false)
