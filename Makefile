@@ -41,7 +41,9 @@ GOLANGCI_LINT_VER := v1.55.2
 GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(BIN_DIR)/$(GOLANGCI_LINT_BIN)
 
-TEST_TIMEOUT := 20m
+# Let's use a generous timeout for integration tests because GitHub workers can
+# be slow
+TEST_TIMEOUT := 30m
 
 all: build
 

@@ -75,7 +75,7 @@ func TestGetPolicies(t *testing.T) {
 	for _, test := range tests {
 		ttest := test // ensure ttest is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			reconciler := newReconciler(ttest.policies, false)
+			reconciler := newReconciler(ttest.policies, false, false)
 			policies, err := reconciler.GetPolicies(context.Background(), &policiesv1.PolicyServer{
 				ObjectMeta: metav1.ObjectMeta{Name: policyServer},
 			})
@@ -89,14 +89,21 @@ func TestGetPolicies(t *testing.T) {
 	}
 }
 
-func newReconciler(policies []client.Object, metricsEnabled bool) Reconciler {
+func newReconciler(objects []client.Object, metricsEnabled bool, tracingEnabled bool) Reconciler {
 	customScheme := scheme.Scheme
-	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"}, &policiesv1.ClusterAdmissionPolicy{}, &policiesv1.AdmissionPolicy{}, &policiesv1.ClusterAdmissionPolicyList{}, &policiesv1.AdmissionPolicyList{}, &policiesv1.PolicyServer{}, &policiesv1.PolicyServerList{})
-	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(policies...).Build()
+	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"},
+		&policiesv1.ClusterAdmissionPolicy{},
+		&policiesv1.AdmissionPolicy{},
+		&policiesv1.ClusterAdmissionPolicyList{},
+		&policiesv1.AdmissionPolicyList{},
+		&policiesv1.PolicyServer{},
+		&policiesv1.PolicyServerList{})
+	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(objects...).Build()
 
 	return Reconciler{
 		Client:               cl,
 		DeploymentsNamespace: namespace,
 		MetricsEnabled:       metricsEnabled,
+		TracingEnabled:       tracingEnabled,
 	}
 }

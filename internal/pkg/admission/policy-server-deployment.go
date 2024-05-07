@@ -4,16 +4,14 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"strconv"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/policyserver"
@@ -51,96 +49,173 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 		}
 	}
 
-	deployment := r.deployment(configMapVersion, policyServer)
-	err = r.Client.Create(ctx, deployment)
-	if err == nil {
-		return nil
+	policyServerDeployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
+		},
 	}
-	if !apierrors.IsAlreadyExists(err) {
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, policyServerDeployment, func() error {
+		return r.updatePolicyServerDeployment(policyServer, policyServerDeployment, configMapVersion)
+	})
+	if err != nil {
 		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
 	}
-
-	return r.updatePolicyServerDeployment(ctx, policyServer, deployment)
-}
-
-func (r *Reconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer, newDeployment *appsv1.Deployment) error {
-	originalDeployment := &appsv1.Deployment{}
-	err := r.Client.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      policyServer.NameWithPrefix(),
-	}, originalDeployment)
-	if err != nil {
-		return fmt.Errorf("cannot retrieve existing policy-server Deployment: %w", err)
-	}
-
-	shouldUpdate, err := shouldUpdatePolicyServerDeployment(policyServer, originalDeployment, newDeployment)
-	if err != nil {
-		return fmt.Errorf("cannot check if it is necessary to update the policy server deployment: %w", err)
-	}
-	if shouldUpdate {
-		patch := originalDeployment.DeepCopy()
-		patch.Spec.Replicas = newDeployment.Spec.Replicas
-		patch.Spec.Template = newDeployment.Spec.Template
-		patch.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation]
-		err = r.Client.Patch(ctx, patch, client.MergeFrom(originalDeployment))
-		if err != nil {
-			return fmt.Errorf("cannot patch policy-server Deployment: %w", err)
-		}
-		r.Log.Info("deployment patched")
-	}
-
 	return nil
 }
 
-func getPolicyServerImageFromDeployment(policyServer *policiesv1.PolicyServer, deployment *appsv1.Deployment) (string, error) {
-	for containerIndex := range deployment.Spec.Template.Spec.Containers {
-		container := &deployment.Spec.Template.Spec.Containers[containerIndex]
-		if container.Name == policyServer.NameWithPrefix() {
-			return container.Image, nil
+func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
+	admissionContainer := getPolicyServerContainer(policyServer)
+	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
+		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
+			Name:  "KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE",
+			Value: r.DeploymentsNamespace,
+		})
+	}
+	if policyServer.Spec.VerificationConfig != "" {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      verificationConfigVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerVerificationConfigContainerPath,
+			})
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_VERIFICATION_CONFIG_PATH",
+				Value: filepath.Join(constants.PolicyServerVerificationConfigContainerPath, verificationFilename),
+			})
+	}
+	if policyServer.Spec.ImagePullSecret != "" {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      imagePullSecretVolumeName,
+				ReadOnly:  true,
+				MountPath: dockerConfigJSONPolicyServerPath,
+			})
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
+				Value: dockerConfigJSONPolicyServerPath,
+			})
+	}
+	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      sourcesVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerSourcesConfigContainerPath,
+			})
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_SOURCES_PATH",
+				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
+			})
+	}
+
+	podSecurityContext := &corev1.PodSecurityContext{}
+	if policyServer.Spec.SecurityContexts.Pod != nil {
+		podSecurityContext = policyServer.Spec.SecurityContexts.Pod
+	}
+	if policyServer.Spec.SecurityContexts.Container != nil {
+		admissionContainer.SecurityContext = policyServer.Spec.SecurityContexts.Container
+	} else {
+		admissionContainer.SecurityContext = defaultContainerSecurityContext()
+	}
+
+	templateAnnotations := policyServer.Spec.Annotations
+	if templateAnnotations == nil {
+		templateAnnotations = make(map[string]string)
+	}
+
+	if r.MetricsEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
+
+		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
+		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
+			admissionContainer.Env[index] = envvar
+		} else {
+			admissionContainer.Env = append(admissionContainer.Env, envvar)
 		}
 	}
-	return "", fmt.Errorf("cannot find policy server container")
-}
 
-func isPolicyServerImageChanged(policyServer *policiesv1.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
-	var oldImage, newImage string
-	var err error
-	if oldImage, err = getPolicyServerImageFromDeployment(policyServer, originalDeployment); err != nil {
-		return false, err
-	}
-	if newImage, err = getPolicyServerImageFromDeployment(policyServer, newDeployment); err != nil {
-		return false, err
-	}
-	return oldImage != newImage, nil
-}
+	if r.TracingEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
 
-func shouldUpdatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) (bool, error) {
-	containerImageChanged, err := isPolicyServerImageChanged(policyServer, originalDeployment, newDeployment)
-	if err != nil {
-		return false, err
-	}
-	return *originalDeployment.Spec.Replicas != *newDeployment.Spec.Replicas ||
-		containerImageChanged ||
-		originalDeployment.Spec.Template.Spec.ServiceAccountName != newDeployment.Spec.Template.Spec.ServiceAccountName ||
-		originalDeployment.Spec.Template.Spec.SecurityContext != newDeployment.Spec.Template.Spec.SecurityContext ||
-		originalDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] != newDeployment.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] ||
-		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Env, newDeployment.Spec.Template.Spec.Containers[0].Env) ||
-		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Containers[0].Resources, newDeployment.Spec.Template.Spec.Containers[0].Resources) ||
-		!reflect.DeepEqual(originalDeployment.Spec.Template.Spec.Affinity, newDeployment.Spec.Template.Spec.Affinity) ||
-		!haveEqualAnnotationsWithoutRestart(originalDeployment, newDeployment), nil
-}
-
-func haveEqualAnnotationsWithoutRestart(originalDeployment *appsv1.Deployment, newDeployment *appsv1.Deployment) bool {
-	if originalDeployment.Spec.Template.Annotations == nil && newDeployment.Spec.Template.Annotations == nil {
-		return true
-	}
-	annotationsWithoutRestart := make(map[string]string)
-	for k, v := range originalDeployment.Spec.Template.Annotations {
-		if k != constants.PolicyServerDeploymentRestartAnnotation {
-			annotationsWithoutRestart[k] = v
+		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
+		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
+			admissionContainer.Env[index] = logFmtEnvVar
+		} else {
+			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
 		}
 	}
-	return reflect.DeepEqual(annotationsWithoutRestart, newDeployment.Spec.Template.Annotations)
+
+	policyServerDeployment.Annotations = map[string]string{
+		constants.PolicyServerDeploymentConfigVersionAnnotation: configMapVersion,
+	}
+	policyServerDeployment.Labels = map[string]string{
+		constants.AppLabelKey:          policyServer.AppLabel(),
+		constants.PolicyServerLabelKey: policyServer.Name,
+	}
+	policyServerDeployment.Spec = appsv1.DeploymentSpec{
+		Replicas: &policyServer.Spec.Replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				constants.AppLabelKey: policyServer.AppLabel(),
+			},
+		},
+		Strategy: appsv1.DeploymentStrategy{
+			Type: appsv1.RollingUpdateDeploymentStrategyType,
+		},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					constants.AppLabelKey: policyServer.AppLabel(),
+					constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
+					constants.PolicyServerLabelKey:                            policyServer.Name,
+				},
+				Annotations: templateAnnotations,
+			},
+			Spec: corev1.PodSpec{
+				SecurityContext:    podSecurityContext,
+				Containers:         []corev1.Container{admissionContainer},
+				ServiceAccountName: policyServer.Spec.ServiceAccountName,
+				Volumes: []corev1.Volume{
+					{
+						Name: policyStoreVolume,
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					},
+					{
+						Name: certsVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: policyServer.NameWithPrefix(),
+							},
+						},
+					},
+					{
+						Name: policiesVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: policyServer.NameWithPrefix(),
+								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  constants.PolicyServerConfigPoliciesEntry,
+										Path: policiesFilename,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
+	return nil
 }
 
 func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer) {
@@ -213,8 +288,27 @@ func envVarsContainVariable(envVars []corev1.EnvVar, envVarName string) int {
 	return -1
 }
 
-func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv1.PolicyServer) *appsv1.Deployment {
-	admissionContainer := corev1.Container{
+func defaultContainerSecurityContext() *corev1.SecurityContext {
+	enableReadOnlyFilesystem := true
+	privileged := false
+	runAsNonRoot := true
+	allowPrivilegeEscalation := false
+	capabilities := corev1.Capabilities{
+		Add:  []corev1.Capability{},
+		Drop: []corev1.Capability{"all"},
+	}
+	admissionContainerSecurityContext := corev1.SecurityContext{
+		ReadOnlyRootFilesystem:   &enableReadOnlyFilesystem,
+		Privileged:               &privileged,
+		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+		Capabilities:             &capabilities,
+		RunAsNonRoot:             &runAsNonRoot,
+	}
+	return &admissionContainerSecurityContext
+}
+
+func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Container {
+	return corev1.Container{
 		Name:  policyServer.NameWithPrefix(),
 		Image: policyServer.Spec.Image,
 		VolumeMounts: []corev1.VolumeMount{
@@ -273,187 +367,4 @@ func (r *Reconciler) deployment(configMapVersion string, policyServer *policiesv
 			Limits:   policyServer.Spec.Limits,
 		},
 	}
-	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
-		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
-			Name:  "KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE",
-			Value: r.DeploymentsNamespace,
-		})
-	}
-	if policyServer.Spec.VerificationConfig != "" {
-		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      verificationConfigVolumeName,
-				ReadOnly:  true,
-				MountPath: constants.PolicyServerVerificationConfigContainerPath,
-			},
-		)
-		admissionContainer.Env = append(admissionContainer.Env,
-			corev1.EnvVar{
-				Name:  "KUBEWARDEN_VERIFICATION_CONFIG_PATH",
-				Value: filepath.Join(constants.PolicyServerVerificationConfigContainerPath, verificationFilename),
-			},
-		)
-	}
-	if policyServer.Spec.ImagePullSecret != "" {
-		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      imagePullSecretVolumeName,
-				ReadOnly:  true,
-				MountPath: dockerConfigJSONPolicyServerPath,
-			},
-		)
-		admissionContainer.Env = append(admissionContainer.Env,
-			corev1.EnvVar{
-				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
-				Value: dockerConfigJSONPolicyServerPath,
-			},
-		)
-	}
-	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
-		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      sourcesVolumeName,
-				ReadOnly:  true,
-				MountPath: constants.PolicyServerSourcesConfigContainerPath,
-			},
-		)
-		admissionContainer.Env = append(admissionContainer.Env,
-			corev1.EnvVar{
-				Name:  "KUBEWARDEN_SOURCES_PATH",
-				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
-			},
-		)
-	}
-
-	podSecurityContext := &corev1.PodSecurityContext{}
-	if policyServer.Spec.SecurityContexts.Pod != nil {
-		podSecurityContext = policyServer.Spec.SecurityContexts.Pod
-	}
-	if policyServer.Spec.SecurityContexts.Container != nil {
-		admissionContainer.SecurityContext = policyServer.Spec.SecurityContexts.Container
-	} else {
-		admissionContainer.SecurityContext = defaultContainerSecurityContext()
-	}
-
-	templateAnnotations := policyServer.Spec.Annotations
-	if templateAnnotations == nil {
-		templateAnnotations = make(map[string]string)
-	}
-
-	if r.MetricsEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true" //nolint:goconst
-
-		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
-		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
-			admissionContainer.Env[index] = envvar
-		} else {
-			admissionContainer.Env = append(admissionContainer.Env, envvar)
-		}
-	}
-
-	if r.TracingEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
-
-		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
-		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
-			admissionContainer.Env[index] = logFmtEnvVar
-		} else {
-			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
-		}
-	}
-
-	policyServerDeployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyServer.NameWithPrefix(),
-			Namespace: r.DeploymentsNamespace,
-			Annotations: map[string]string{
-				constants.PolicyServerDeploymentConfigVersionAnnotation: configMapVersion,
-			},
-			Labels: map[string]string{
-				constants.AppLabelKey:          policyServer.AppLabel(),
-				constants.PolicyServerLabelKey: policyServer.Name,
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &policyServer.Spec.Replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					constants.AppLabelKey: policyServer.AppLabel(),
-				},
-			},
-			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						constants.AppLabelKey: policyServer.AppLabel(),
-						constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
-						constants.PolicyServerLabelKey:                            policyServer.Name,
-					},
-					Annotations: templateAnnotations,
-				},
-				Spec: corev1.PodSpec{
-					SecurityContext:    podSecurityContext,
-					Containers:         []corev1.Container{admissionContainer},
-					ServiceAccountName: policyServer.Spec.ServiceAccountName,
-					Volumes: []corev1.Volume{
-						{
-							Name: policyStoreVolume,
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-						{
-							Name: certsVolumeName,
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: policyServer.NameWithPrefix(),
-								},
-							},
-						},
-						{
-							Name: policiesVolumeName,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: policyServer.NameWithPrefix(),
-									},
-									Items: []corev1.KeyToPath{
-										{
-											Key:  constants.PolicyServerConfigPoliciesEntry,
-											Path: policiesFilename,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
-
-	return policyServerDeployment
-}
-
-func defaultContainerSecurityContext() *corev1.SecurityContext {
-	enableReadOnlyFilesystem := true
-	privileged := false
-	runAsNonRoot := true
-	allowPrivilegeEscalation := false
-	capabilities := corev1.Capabilities{
-		Add:  []corev1.Capability{},
-		Drop: []corev1.Capability{"all"},
-	}
-	admissionContainerSecurityContext := corev1.SecurityContext{
-		ReadOnlyRootFilesystem:   &enableReadOnlyFilesystem,
-		Privileged:               &privileged,
-		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
-		Capabilities:             &capabilities,
-		RunAsNonRoot:             &runAsNonRoot,
-	}
-	return &admissionContainerSecurityContext
 }

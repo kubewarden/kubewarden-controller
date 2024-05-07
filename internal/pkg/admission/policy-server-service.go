@@ -8,9 +8,9 @@ import (
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 )
@@ -35,39 +35,40 @@ func init() {
 }
 
 func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
-	service := r.service(policyServer)
-	err := r.Client.Create(ctx, service)
-
-	if err != nil && apierrors.IsAlreadyExists(err) {
-		err = r.Client.Update(ctx, service)
-	}
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("cannot reconcile policy-server service: %w", err)
-}
-
-func (r *Reconciler) service(policyServer *policiesv1.PolicyServer) *corev1.Service {
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
-			Labels: map[string]string{
-				constants.AppLabelKey: policyServer.AppLabel(),
+		},
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, &svc, func() error {
+		r.updateService(&svc, policyServer)
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("cannot reconcile policy-server service: %w", err)
+	}
+	return nil
+}
+
+func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) {
+	svc.Name = policyServer.NameWithPrefix()
+	svc.Namespace = r.DeploymentsNamespace
+	svc.Labels = map[string]string{
+		constants.AppLabelKey: policyServer.AppLabel(),
+	}
+	svc.Spec = corev1.ServiceSpec{
+		Ports: []corev1.ServicePort{
+			{
+				Name:       "policy-server",
+				Port:       constants.PolicyServerPort,
+				TargetPort: intstr.FromInt(constants.PolicyServerPort),
+				Protocol:   corev1.ProtocolTCP,
 			},
 		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "policy-server",
-					Port:       constants.PolicyServerPort,
-					TargetPort: intstr.FromInt(constants.PolicyServerPort),
-					Protocol:   corev1.ProtocolTCP,
-				},
-			},
-			Selector: map[string]string{
-				constants.AppLabelKey: policyServer.AppLabel(),
-			},
+		Selector: map[string]string{
+			constants.AppLabelKey: policyServer.AppLabel(),
 		},
 	}
 	if r.MetricsEnabled {
@@ -80,5 +81,4 @@ func (r *Reconciler) service(policyServer *policiesv1.PolicyServer) *corev1.Serv
 			},
 		)
 	}
-	return &svc
 }
