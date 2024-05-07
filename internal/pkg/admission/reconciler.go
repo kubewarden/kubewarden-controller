@@ -57,53 +57,15 @@ func (r *Reconciler) Reconcile(
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
 ) error {
-	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, policyServer, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
 		return err
 	}
 
-	if err := r.reconcileCASecret(ctx, policyServerCARootSecret); err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
-		return err
-	}
-
-	setTrueConditionType(
-		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCARootSecretReconciled),
-	)
-
-	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer, policyServerCARootSecret, admissionregistration.GenerateCert)
+	err = r.fetchOrInitializePolicyServerCASecret(ctx, policyServer, policyServerCARootSecret, admissionregistration.GenerateCert)
 	if err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
 		return err
 	}
-
-	if err := r.reconcileCASecret(ctx, policyServerCASecret); err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
-		return err
-	}
-
-	setTrueConditionType(
-		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCASecretReconciled),
-	)
 
 	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, policies); err != nil {
 		setFalseConditionType(
