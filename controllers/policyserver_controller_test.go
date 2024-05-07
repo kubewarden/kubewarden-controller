@@ -65,11 +65,14 @@ var _ = Describe("PolicyServer controller", func() {
 			It("policy server resources should be gone after it being deleted", func() {
 				// It's necessary remove the test finalizer to make the
 				// Kubernetes garbage collector to remove the resources
-				policyServer, err := getTestPolicyServer(policyServerName)
-				Expect(err).Should(Succeed())
-				controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
-				err = reconciler.Client.Update(ctx, policyServer)
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(func() error {
+					policyServer, err := getTestPolicyServer(policyServerName)
+					if err != nil {
+						return err
+					}
+					controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
+					return reconciler.Client.Update(ctx, policyServer)
+				}).Should(Succeed())
 
 				Expect(
 					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
@@ -154,12 +157,14 @@ var _ = Describe("PolicyServer controller", func() {
 			})
 
 			It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
-				policy, err := getTestClusterAdmissionPolicy(policyName)
-				Expect(err).ToNot(HaveOccurred())
-
-				controllerutil.RemoveFinalizer(policy, IntegrationTestsFinalizer)
-				err = reconciler.Client.Update(ctx, policy)
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(func() error {
+					policy, err := getTestClusterAdmissionPolicy(policyName)
+					if err != nil {
+						return err
+					}
+					controllerutil.RemoveFinalizer(policy, IntegrationTestsFinalizer)
+					return reconciler.Client.Update(ctx, policy)
+				}).Should(Succeed())
 
 				Expect(
 					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
@@ -343,17 +348,10 @@ var _ = Describe("PolicyServer controller", func() {
 			policies, err := json.Marshal(policiesMap)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(func() error {
-				_, err := getTestClusterAdmissionPolicy(policyName)
-				return err
-			}, timeout, pollInterval).Should(Succeed())
-			Eventually(func() error {
-				_, err := getTestPolicyServerConfigMap(policyServerName)
-				return err
-			}, timeout, pollInterval).Should(Succeed())
-			configMap, err := getTestPolicyServerConfigMap(policyServerName)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(configMap).To(PointTo(MatchFields(IgnoreExtras, Fields{
+			Eventually(func() *corev1.ConfigMap {
+				configMap, _ := getTestPolicyServerConfigMap(policyServerName)
+				return configMap
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Data": MatchAllKeys(Keys{
 					constants.PolicyServerConfigPoliciesEntry: MatchJSON(policies),
 					constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
