@@ -278,15 +278,6 @@ pub async fn fetch_sigstore_remote_data<'a>(
 ) -> VerifyResult<(String, Vec<SignatureLayer>)> {
     let mut cosign_client = cosign_client_input.lock().await;
 
-    // obtain image name:
-    let image_name = match image_url.strip_prefix("registry://") {
-        None => image_url,
-        Some(url) => url,
-    };
-    if let Err(e) = Reference::try_from(image_name) {
-        return Err(VerifyError::InvalidOCIImageReferenceError(e));
-    }
-
     // obtain registry auth:
     let reference = build_fully_resolved_reference(image_url)?;
     let auth = Registry::auth(reference.registry());
@@ -302,8 +293,9 @@ pub async fn fetch_sigstore_remote_data<'a>(
     //
     // trusted_signature_layers() will error early if cosign_client using
     // Fulcio,Rekor certs and signatures are not verified
-    let image_oci_ref =
-        OciReference::from_str(image_name).map_err(VerifyError::FailedToFetchTrustedLayersError)?;
+    let image_name = reference.whole();
+    let image_oci_ref = OciReference::from_str(&image_name)
+        .map_err(VerifyError::FailedToFetchTrustedLayersError)?;
     let (cosign_signature_image, source_image_digest) = cosign_client
         .triangulate(&image_oci_ref, &sigstore_auth)
         .await
