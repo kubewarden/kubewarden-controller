@@ -4,18 +4,25 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const port = "8181"
 
 func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 	caPemBytes := []byte{}
@@ -48,14 +55,15 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 		secretContents   map[string][]byte
 		generateCACalled bool
 	}{
-		{"Existing CA", createReconcilerWithExistingCA(), nil, mockSecretContents, false},
-		{"CA does not exist", createReconcilerWithEmptyClient(), nil, caSecretContents, true},
+		{"Existing CA", createReconcilerWithExistingCA(), nil, mockRootCASecretContents, false},
+		{"CA does not exist", newReconciler(nil, false, false), nil, caSecretContents, true},
 	}
 
 	for _, test := range tests {
 		ttest := test // ensure tt is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			secret, err := ttest.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), generateCAFunc, pemEncodeCertificateFunc)
+			policyServer := &policiesv1.PolicyServer{}
+			secret, err := ttest.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), policyServer, generateCAFunc, pemEncodeCertificateFunc)
 			if diff := cmp.Diff(secret.Data, ttest.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
@@ -98,13 +106,22 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 		generateCertCalled bool
 	}{
 		{"Existing cert", createReconcilerWithExistingCert(), nil, mockSecretCert, false},
-		{"cert does not exist", createReconcilerWithEmptyClient(), nil, caSecretContents, true},
+		{"cert does not exist", newReconciler(nil, false, false), nil, caSecretContents, true},
 	}
 
 	for _, test := range tests {
 		ttest := test // ensure tt is correctly scoped when used in function literal
 		t.Run(ttest.name, func(t *testing.T) {
-			secret, err := ttest.r.fetchOrInitializePolicyServerCASecret(context.Background(), "policyServer", caSecret, generateCertFunc)
+			policyServer := &policiesv1.PolicyServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "policyServer",
+				},
+			}
+			err := ttest.r.fetchOrInitializePolicyServerCASecret(context.Background(), policyServer, caSecret, generateCertFunc)
+
+			secret := &corev1.Secret{}
+			_ = ttest.r.Client.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: policyServer.NameWithPrefix()}, secret)
+
 			if diff := cmp.Diff(secret.StringData, ttest.secretContents); diff != "" {
 				t.Errorf("got an unexpected secret, diff %s", diff)
 			}
@@ -121,9 +138,98 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	}
 }
 
+func TestCAAndCertificateCreationInAHttpsServer(t *testing.T) {
+	const domain = "localhost"
+	const maxRetries = 10
+	caSecret := &corev1.Secret{}
+	// create CA
+	err := updateSecretCA(caSecret, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	if err != nil {
+		t.Errorf("CA secret could not be created: %s", err.Error())
+	}
+	admissionregCA, err := extractCaFromSecret(caSecret)
+	if err != nil {
+		t.Errorf("CA could not be extracted from secret: %s", err.Error())
+	}
+	// create cert using CA previously created
+	servingCert, servingKey, err := admissionregistration.GenerateCert(
+		admissionregCA.CaCert,
+		domain,
+		[]string{domain},
+		admissionregCA.CaPrivateKey)
+	if err != nil {
+		t.Errorf("failed generating cert: %s", err.Error())
+	}
+
+	var server http.Server
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
+
+	// create https server with the certificates created
+	go func() {
+		cert, err := tls.X509KeyPair(servingCert, servingKey)
+		if err != nil {
+			t.Errorf("could not load cert: %s", err.Error())
+		}
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
+		}
+		server = http.Server{
+			Addr:              ":" + port,
+			TLSConfig:         tlsConfig,
+			ReadHeaderTimeout: time.Second,
+		}
+		waitGroup.Done()
+		_ = server.ListenAndServeTLS("", "")
+	}()
+
+	// wait for https server to be ready to avoid race conditions
+	waitGroup.Wait()
+	rootCAs := x509.NewCertPool()
+	rootCAs.AppendCertsFromPEM(caSecret.Data[constants.PolicyServerCARootPemName])
+	retries := 0
+	var conn *tls.Conn
+	for retries < maxRetries {
+		// test ssl handshake using the ca pem
+		conn, err = tls.Dial("tcp", domain+":"+port, &tls.Config{RootCAs: rootCAs, MinVersion: tls.VersionTLS12})
+		if err == nil || !isConnectionRefusedError(err) {
+			break
+		}
+		// wait 50 millisecond and retry to avoid race conditions as server might still not be ready
+		time.Sleep(50 * time.Millisecond)
+		retries++
+	}
+	if err != nil {
+		t.Errorf("error when connecting to the https server : %s", err.Error())
+	}
+	err = conn.Close()
+	if err != nil {
+		t.Errorf("error when closing connection : %s", err.Error())
+	}
+	err = server.Shutdown(context.Background())
+	if err != nil {
+		t.Errorf("error when shutting down https server : %s", err.Error())
+	}
+}
+
+func isConnectionRefusedError(err error) bool {
+	return err.Error() == "dial tcp [::1]:"+port+": connect: connection refused"
+}
+
 const namespace = "namespace"
 
-var mockSecretContents = map[string][]byte{"ca": []byte("secretContents")}
+var mockRootCASecretContents = map[string][]byte{
+	constants.PolicyServerCARootCACert:             []byte("caCert"),
+	constants.PolicyServerCARootPemName:            []byte("caPem"),
+	constants.PolicyServerCARootPrivateKeyCertName: []byte("caPrivateKey"),
+}
+
+var mockRootCASecretCert = map[string]string{
+	constants.PolicyServerCARootCACert:             "caCert",
+	constants.PolicyServerCARootPemName:            "caPem",
+	constants.PolicyServerCARootPrivateKeyCertName: "caPrivateKey",
+}
 
 func createReconcilerWithExistingCA() Reconciler {
 	mockSecret := &corev1.Secret{
@@ -131,43 +237,34 @@ func createReconcilerWithExistingCA() Reconciler {
 			Name:      constants.PolicyServerCARootSecretName,
 			Namespace: namespace,
 		},
-		Data: mockSecretContents,
-		Type: corev1.SecretTypeOpaque,
+		Data:       mockRootCASecretContents,
+		StringData: mockRootCASecretCert,
+		Type:       corev1.SecretTypeOpaque,
 	}
 
-	// Create a fake client to mock API calls. It will return the mock secret
-	cl := fake.NewClientBuilder().WithObjects(mockSecret).Build()
-	return Reconciler{
-		Client:               cl,
-		DeploymentsNamespace: namespace,
-	}
+	return newReconciler([]client.Object{mockSecret}, false, false)
 }
 
-var mockSecretCert = map[string]string{"cert": "certString"}
+var mockSecretContents = map[string][]byte{
+	constants.PolicyServerTLSCert: []byte("tlsCert"),
+	constants.PolicyServerTLSKey:  []byte("tlsKey"),
+}
+
+var mockSecretCert = map[string]string{
+	constants.PolicyServerTLSCert: "tlsCert",
+	constants.PolicyServerTLSKey:  "tlsKey",
+}
 
 func createReconcilerWithExistingCert() Reconciler {
 	mockSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "policyServer",
+			Name:      "policy-server-policyServer",
 			Namespace: namespace,
 		},
+		Data:       mockSecretContents,
 		StringData: mockSecretCert,
 		Type:       corev1.SecretTypeOpaque,
 	}
 
-	// Create a fake client to mock API calls. It will return the mock secret
-	cl := fake.NewClientBuilder().WithObjects(mockSecret).Build()
-	return Reconciler{
-		Client:               cl,
-		DeploymentsNamespace: namespace,
-	}
-}
-
-func createReconcilerWithEmptyClient() Reconciler {
-	// Create a fake client to mock API calls.
-	cl := fake.NewClientBuilder().WithObjects().Build()
-	return Reconciler{
-		Client:               cl,
-		DeploymentsNamespace: namespace,
-	}
+	return newReconciler([]client.Object{mockSecret}, false, false)
 }

@@ -49,6 +49,63 @@ var _ = Describe("PolicyServer controller", func() {
 			createPolicyServerAndWaitForItsService(policyServerFactory(policyServerName))
 		})
 
+		Context("with no assigned policies", func() {
+			It("should get its finalizer removed", func() {
+				Expect(
+					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+				).To(Succeed())
+
+				Eventually(func() (*policiesv1.PolicyServer, error) {
+					return getTestPolicyServer(policyServerName)
+				}, timeout, pollInterval).ShouldNot(
+					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
+				)
+			})
+
+			It("policy server resources should be gone after it being deleted", func() {
+				// It's necessary remove the test finalizer to make the
+				// Kubernetes garbage collector to remove the resources
+				Eventually(func() error {
+					policyServer, err := getTestPolicyServer(policyServerName)
+					if err != nil {
+						return err
+					}
+					controllerutil.RemoveFinalizer(policyServer, IntegrationTestsFinalizer)
+					return reconciler.Client.Update(ctx, policyServer)
+				}).Should(Succeed())
+
+				Expect(
+					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+				).To(Succeed())
+
+				Eventually(func() error {
+					_, err := getTestPolicyServer(policyServerName)
+					return err
+				}, timeout, pollInterval).Should(notFound())
+
+				Eventually(func() error {
+					_, err := getTestPolicyServerService(policyServerName)
+					return err
+				}, timeout, pollInterval).Should(notFound())
+
+				Eventually(func() error {
+					_, err := getTestPolicyServerSecret(policyServerName)
+					return err
+				}, timeout, pollInterval).Should(notFound())
+
+				Eventually(func() error {
+					_, err := getTestPolicyServerDeployment(policyServerName)
+					return err
+				}, timeout, pollInterval).Should(notFound())
+
+				Eventually(func() error {
+					_, err := getTestPolicyServerConfigMap(policyServerName)
+					return err
+				}, timeout, pollInterval).Should(notFound())
+			})
+
+		})
+
 		Context("with assigned policies", func() {
 			var policyName string
 
@@ -100,12 +157,14 @@ var _ = Describe("PolicyServer controller", func() {
 			})
 
 			It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
-				policy, err := getTestClusterAdmissionPolicy(policyName)
-				Expect(err).ToNot(HaveOccurred())
-
-				controllerutil.RemoveFinalizer(policy, IntegrationTestsFinalizer)
-				err = reconciler.Client.Update(ctx, policy)
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(func() error {
+					policy, err := getTestClusterAdmissionPolicy(policyName)
+					if err != nil {
+						return err
+					}
+					controllerutil.RemoveFinalizer(policy, IntegrationTestsFinalizer)
+					return reconciler.Client.Update(ctx, policy)
+				}).Should(Succeed())
 
 				Expect(
 					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
@@ -117,33 +176,16 @@ var _ = Describe("PolicyServer controller", func() {
 					return err
 				}, timeout, pollInterval).ShouldNot(Succeed())
 
-				Eventually(func() error {
-					_, err := getTestPolicyServerService(policyServerName)
-					return err
-				}, timeout, pollInterval).ShouldNot(Succeed())
-
 				Eventually(func() (*policiesv1.PolicyServer, error) {
 					return getTestPolicyServer(policyServerName)
 				}, timeout, pollInterval).ShouldNot(
 					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
 				)
-			})
-		})
 
-		Context("with no assigned policies", func() {
-			It("should get its finalizer removed", func() {
-				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
-				).To(Succeed())
-
-				Eventually(func() (*policiesv1.PolicyServer, error) {
-					return getTestPolicyServer(policyServerName)
-				}, timeout, pollInterval).ShouldNot(
-					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
-				)
 			})
 
 		})
+
 	})
 
 	When("creating a PolicyServer", func() {
@@ -306,17 +348,10 @@ var _ = Describe("PolicyServer controller", func() {
 			policies, err := json.Marshal(policiesMap)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(func() error {
-				_, err := getTestClusterAdmissionPolicy(policyName)
-				return err
-			}, timeout, pollInterval).Should(Succeed())
-			Eventually(func() error {
-				_, err := getTestPolicyServerConfigMap(policyServerName)
-				return err
-			}, timeout, pollInterval).Should(Succeed())
-			configMap, err := getTestPolicyServerConfigMap(policyServerName)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(configMap).To(PointTo(MatchFields(IgnoreExtras, Fields{
+			Eventually(func() *corev1.ConfigMap {
+				configMap, _ := getTestPolicyServerConfigMap(policyServerName)
+				return configMap
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Data": MatchAllKeys(Keys{
 					constants.PolicyServerConfigPoliciesEntry: MatchJSON(policies),
 					constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
@@ -427,6 +462,102 @@ var _ = Describe("PolicyServer controller", func() {
 
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
+		})
+
+		It("should create deployment with owner reference", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(policyServerName)
+				if err != nil {
+					return err
+				}
+				policyServer, err := getTestPolicyServer(policyServerName)
+				if err != nil {
+					return err
+				}
+				Expect(deployment.OwnerReferences).To(ContainElement(
+					MatchFields(IgnoreExtras, Fields{
+						"UID":        Equal(policyServer.GetUID()),
+						"Name":       Equal(policyServer.GetName()),
+						"Kind":       Equal(policyServer.GetObjectKind().GroupVersionKind().Kind),
+						"APIVersion": Equal(policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String()),
+					}),
+				))
+				return nil
+			}).Should(Succeed())
+		})
+
+		It("should create configmap with owner reference", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			Eventually(func() error {
+				configmap, err := getTestPolicyServerConfigMap(policyServerName)
+				if err != nil {
+					return err
+				}
+				policyServer, err := getTestPolicyServer(policyServerName)
+				if err != nil {
+					return err
+				}
+				Expect(configmap.OwnerReferences).To(ContainElement(
+					MatchFields(IgnoreExtras, Fields{
+						"UID":        Equal(policyServer.GetUID()),
+						"Name":       Equal(policyServer.GetName()),
+						"Kind":       Equal(policyServer.GetObjectKind().GroupVersionKind().Kind),
+						"APIVersion": Equal(policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String()),
+					}),
+				))
+				return nil
+			}).Should(Succeed())
+		})
+
+		It("should create service with owner reference", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			Eventually(func() error {
+				service, err := getTestPolicyServerService(policyServerName)
+				if err != nil {
+					return err
+				}
+				policyServer, err := getTestPolicyServer(policyServerName)
+				if err != nil {
+					return err
+				}
+				Expect(service.OwnerReferences).To(ContainElement(
+					MatchFields(IgnoreExtras, Fields{
+						"UID":        Equal(policyServer.GetUID()),
+						"Name":       Equal(policyServer.GetName()),
+						"Kind":       Equal(policyServer.GetObjectKind().GroupVersionKind().Kind),
+						"APIVersion": Equal(policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String()),
+					}),
+				))
+				return nil
+			}).Should(Succeed())
+		})
+
+		It("should create secret with owner reference", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			Eventually(func() error {
+				secret, err := getTestPolicyServerSecret(policyServerName)
+				if err != nil {
+					return err
+				}
+				policyServer, err := getTestPolicyServer(policyServerName)
+				if err != nil {
+					return err
+				}
+				Expect(secret.OwnerReferences).To(ContainElement(
+					MatchFields(IgnoreExtras, Fields{
+						"UID":        Equal(policyServer.GetUID()),
+						"Name":       Equal(policyServer.GetName()),
+						"Kind":       Equal(policyServer.GetObjectKind().GroupVersionKind().Kind),
+						"APIVersion": Equal(policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String()),
+					}),
+				))
+				return nil
+			}).Should(Succeed())
 		})
 
 	})

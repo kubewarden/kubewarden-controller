@@ -3,16 +3,13 @@ package admission
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
-	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	corev1 "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,101 +23,6 @@ type Reconciler struct {
 	Log                                                logr.Logger
 	MetricsEnabled                                     bool
 	TracingEnabled                                     bool
-}
-
-type reconcilerErrors []error
-
-func (errorList reconcilerErrors) Error() string {
-	errors := []string{}
-	for _, error := range errorList {
-		errors = append(errors, error.Error())
-	}
-	return strings.Join(errors, ", ")
-}
-
-func (r *Reconciler) ReconcileDeletion(
-	ctx context.Context,
-	policyServer *policiesv1.PolicyServer,
-) error {
-	errors := reconcilerErrors{}
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyServer.NameWithPrefix(),
-			Namespace: r.DeploymentsNamespace,
-		},
-	}
-	err := r.Client.Delete(ctx, deployment)
-	if err == nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerDeploymentReconciled),
-			"Policy Server has been deleted",
-		)
-	} else if !apierrors.IsNotFound(err) {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Deployment "+policyServer.Name)
-		errors = append(errors, err)
-	}
-
-	certificateSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyServer.NameWithPrefix(),
-			Namespace: r.DeploymentsNamespace,
-		},
-	}
-	err = r.Client.Delete(ctx, certificateSecret)
-	if err == nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
-			"Policy Server has been deleted",
-		)
-	} else if !apierrors.IsNotFound(err) {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Certificate Secret "+policyServer.Name)
-		errors = append(errors, err)
-	}
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyServer.NameWithPrefix(),
-			Namespace: r.DeploymentsNamespace,
-		},
-	}
-	err = r.Client.Delete(ctx, service)
-	if err == nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerServiceReconciled),
-			"Policy Server has been deleted",
-		)
-	} else if !apierrors.IsNotFound(err) {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer Service "+policyServer.Name)
-		errors = append(errors, err)
-	}
-
-	cfg := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      policyServer.NameWithPrefix(),
-			Namespace: r.DeploymentsNamespace,
-		},
-	}
-	err = r.Client.Delete(ctx, cfg)
-	if err == nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerConfigMapReconciled),
-			"Policy Server has been deleted",
-		)
-	} else if !apierrors.IsNotFound(err) {
-		r.Log.Error(err, "ReconcileDeletion: cannot delete PolicyServer ConfigMap "+policyServer.Name)
-		errors = append(errors, err)
-	}
-
-	if len(errors) == 0 {
-		return nil
-	}
-
-	return errors
 }
 
 func setFalseConditionType(
@@ -155,53 +57,15 @@ func (r *Reconciler) Reconcile(
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
 ) error {
-	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, policyServer, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
 	if err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
 		return err
 	}
 
-	if err := r.reconcileCASecret(ctx, policyServerCARootSecret); err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
-		return err
-	}
-
-	setTrueConditionType(
-		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCARootSecretReconciled),
-	)
-
-	policyServerCASecret, err := r.fetchOrInitializePolicyServerCASecret(ctx, policyServer.NameWithPrefix(), policyServerCARootSecret, admissionregistration.GenerateCert)
+	err = r.fetchOrInitializePolicyServerCASecret(ctx, policyServer, policyServerCARootSecret, admissionregistration.GenerateCert)
 	if err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
 		return err
 	}
-
-	if err := r.reconcileCASecret(ctx, policyServerCASecret); err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
-			fmt.Sprintf("error reconciling secret: %v", err),
-		)
-		return err
-	}
-
-	setTrueConditionType(
-		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCASecretReconciled),
-	)
 
 	if err := r.reconcilePolicyServerConfigMap(ctx, policyServer, policies); err != nil {
 		setFalseConditionType(

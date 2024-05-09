@@ -67,6 +67,7 @@ func createReconciler() (Reconciler, policiesv1.ClusterAdmissionPolicy, policies
 
 	customScheme := scheme.Scheme
 	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"}, &validationPolicy)
+	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"}, &policiesv1.PolicyServer{})
 	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(validatingWebhook, mutatingWebhook, contextAwareWebhook, &validationPolicy, &mutatingPolicy, &contextAwarePolicy).Build()
 	reconciler := Reconciler{
 		Client:               cl,
