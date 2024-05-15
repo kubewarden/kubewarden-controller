@@ -13,9 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
-func NewFakeClient(objects ...runtime.Object) client.Client {
+func NewFakeClient(objects ...runtime.Object) (client.Client, error) {
 	groupVersion := []schema.GroupVersion{
 		{Group: "", Version: "v1"},
 		{Group: "apps", Version: "v1"},
@@ -25,7 +26,93 @@ func NewFakeClient(objects ...runtime.Object) client.Client {
 	restMapper.Add(schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}, meta.RESTScopeNamespace)
 	restMapper.Add(schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}, meta.RESTScopeRoot)
 
-	return fake.NewClientBuilder().WithRESTMapper(restMapper).WithScheme(scheme.NewScheme()).WithRuntimeObjects(objects...).Build()
+	auditScheme, err := scheme.NewScheme()
+	if err != nil {
+		return nil, err
+	}
+	return fake.NewClientBuilder().WithRESTMapper(restMapper).WithScheme(auditScheme).WithRuntimeObjects(objects...).Build(), nil
+}
+
+type PolicyReportFactory struct {
+	name      string
+	namespace string
+	labels    map[string]string
+}
+
+func NewPolicyReportFactory() *PolicyReportFactory {
+	return &PolicyReportFactory{
+		labels: map[string]string{},
+	}
+}
+
+func (factory *PolicyReportFactory) Name(name string) *PolicyReportFactory {
+	factory.name = name
+
+	return factory
+}
+
+func (factory *PolicyReportFactory) ScanUID(scanuid string) *PolicyReportFactory {
+	factory.labels[constants.AuditScannerRunUIDLabel] = scanuid
+
+	return factory
+}
+
+func (factory *PolicyReportFactory) Namespace(namespace string) *PolicyReportFactory {
+	factory.namespace = namespace
+
+	return factory
+}
+
+func (factory *PolicyReportFactory) WithAppLabel() *PolicyReportFactory {
+	factory.labels["app.kubernetes.io/managed-by"] = "kubewarden"
+
+	return factory
+}
+
+func (factory *PolicyReportFactory) Build() *wgpolicy.PolicyReport {
+	return &wgpolicy.PolicyReport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      factory.name,
+			Namespace: factory.namespace,
+			Labels:    factory.labels,
+		},
+	}
+}
+
+type ClusterPolicyReportFactory struct {
+	name   string
+	labels map[string]string
+}
+
+func NewClusterPolicyReportFactory() *ClusterPolicyReportFactory {
+	return &ClusterPolicyReportFactory{
+		labels: map[string]string{},
+	}
+}
+
+func (factory *ClusterPolicyReportFactory) Name(name string) *ClusterPolicyReportFactory {
+	factory.name = name
+	return factory
+}
+
+func (factory *ClusterPolicyReportFactory) ScanUID(scanuid string) *ClusterPolicyReportFactory {
+	factory.labels[constants.AuditScannerRunUIDLabel] = scanuid
+
+	return factory
+}
+func (factory *ClusterPolicyReportFactory) WithAppLabel() *ClusterPolicyReportFactory {
+	factory.labels["app.kubernetes.io/managed-by"] = "kubewarden"
+
+	return factory
+}
+
+func (factory *ClusterPolicyReportFactory) Build() *wgpolicy.ClusterPolicyReport {
+	return &wgpolicy.ClusterPolicyReport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   factory.name,
+			Labels: factory.labels,
+		},
+	}
 }
 
 type AdmissionPolicyFactory struct {

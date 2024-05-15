@@ -8,6 +8,7 @@ const (
 	KubewardenKindClusterAdmissionPolicy = "ClusterAdmissionPolicy"
 	KubewardenKindAdmissionPolicy        = "AdmissionPolicy"
 	DefaultClusterwideReportName         = "clusterwide"
+	AuditScannerRunUIDLabel              = "kubewarden.io/audit-scanner-run-uid"
 )
 
 // ErrResourceNotFound is an error used to tell that the required resource is not found

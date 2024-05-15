@@ -67,12 +67,10 @@ func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*
 		if err != nil {
 			return nil, err
 		}
-
 		return resources, nil
 	})
 
 	listPager.PageSize = pageSize
-
 	return listPager, nil
 }
 

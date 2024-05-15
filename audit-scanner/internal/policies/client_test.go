@@ -173,7 +173,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		}).
 		Build()
 
-	client := testutils.NewFakeClient(
+	client, err := testutils.NewFakeClient(
 		namespace,
 		policyServer,
 		policyServerService,
@@ -186,6 +186,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		admissionPolicy3,
 		admissionPolicy4,
 	)
+	require.NoError(t, err)
 
 	policiesClient, err := NewClient(client, "kubewarden", "")
 	require.NoError(t, err)
@@ -338,7 +339,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		Namespace("test").
 		Build()
 
-	client := testutils.NewFakeClient(
+	client, err := testutils.NewFakeClient(
 		namespace,
 		policyServer,
 		policyServerService,
@@ -350,6 +351,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		clusterAdmissionPolicy6,
 		admissionPolicy1,
 	)
+	require.NoError(t, err)
 
 	policiesClient, err := NewClient(client, "kubewarden", "")
 	require.NoError(t, err)
