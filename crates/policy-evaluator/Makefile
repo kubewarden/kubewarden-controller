@@ -1,4 +1,4 @@
-KUBE_API_VERSION?=1.26
+KUBE_API_VERSION?=1.30
 
 .PHONY: build
 build:
