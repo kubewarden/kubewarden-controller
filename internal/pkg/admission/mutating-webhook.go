@@ -28,7 +28,7 @@ func (r *Reconciler) ReconcileMutatingWebhookConfiguration(
 			Name: policy.GetUniqueName(),
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, webhook, func() error {
+	_, err := controllerutil.CreateOrPatch(ctx, r.Client, webhook, func() error {
 		admissionPath := filepath.Join("/validate", policy.GetUniqueName())
 		admissionPort := int32(constants.PolicyServerPort)
 
