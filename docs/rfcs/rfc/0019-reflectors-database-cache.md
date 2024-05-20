@@ -4,7 +4,7 @@
 | Start Date   | Mar 26 2024                                       |
 | Category     | enhancement,feature                               |
 | RFC PR       | [PR33](https://github.com/kubewarden/rfc/pull/33) |
-| State        | **ACCEPTED**                                      |
+| State        | **REJECTED**                                      |
 
 # Summary
 
@@ -152,3 +152,33 @@ This way we could reduce the number of items that are requested from the Kuberne
 # Unresolved questions
 
 [unresolved]: #unresolved-questions
+
+# Rejection Reason
+
+This RFC was rejected after further discussion and analysis.
+The main reasons for the rejection are the performance loss and the added complexity of the solution.
+By fixing the buffer spike of the watcher event and swithing to jemallocator, we could reduce the memory usage and improve the performances of the policy server without the need of a database.
+
+## Benchmark data
+
+10000 RoleBindings
+
+[k6 load testing](https://github.com/kubewarden/load-testing/tree/k6-sqlite) (`load_all` policy)
+[policy server branch](https://github.com/fabriziosestito/policy-server/tree/feat/sqlite-cache)
+
+|                               | HTTP Request Duration (avg) | Max RSS | Idle RSS |
+| ----------------------------- | --------------------------- | ------- | -------- |
+| No fixes                      | 436.15ms                    | 1.4 Gb  | 1.2 Gb   |
+| kube-rs buffer fix + jemalloc | 233.663ms                   | 1.2 Gb  | 264 Mb   |
+| SQLite                        | 1.58s                       | 492 Mb  | 480 Mb   |
+| SQLite in memory              | 1.56s                       | 515 Mb  | 434 Mb   |
+| SQLite + in memory + raw JSON | 656.84ms                    | 558 Mb  | 462 Mb   |
+| SQLite + raw JSON             | 698ms                       | 564 Mb  | 490 Mb   |
+| SQLite + raw JSON + jemalloc  | 736.66ms                    | 512 Mb  | 249 Mb   |
+| SQLite + in memory + jemalloc | 738.41ms                    | 514 Mb  | 260 Mb   |
+
+## Further development
+
+We can still reduce memory usage by using an eager reflector creation strategy.
+As we will not create one reflector per filter, the filtering will be done by iterating over the stored objects.
+We have yet to measure the performance impact of this strategy.
