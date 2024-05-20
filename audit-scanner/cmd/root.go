@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/kubewarden/audit-scanner/internal/k8s"
 	logconfig "github.com/kubewarden/audit-scanner/internal/log"
 	"github.com/kubewarden/audit-scanner/internal/policies"
@@ -70,7 +71,11 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		dynamicClient := dynamic.NewForConfigOrDie(config)
 		clientset := kubernetes.NewForConfigOrDie(config)
 
-		client, err := client.New(config, client.Options{Scheme: scheme.NewScheme()})
+		auditScheme, err := scheme.NewScheme()
+		if err != nil {
+			return err
+		}
+		client, err := client.New(config, client.Options{Scheme: auditScheme})
 		if err != nil {
 			return err
 		}
@@ -110,22 +115,23 @@ func startScanner(namespace string, clusterWide bool, scanner *scanner.Scanner) 
 		log.Fatal().Msg("Cannot scan cluster wide and only a namespace at the same time")
 	}
 
+	runUID := uuid.New().String()
 	ctx := context.Background()
 	if clusterWide {
 		// only scan clusterwide
-		return scanner.ScanClusterWideResources(ctx)
+		return scanner.ScanClusterWideResources(ctx, runUID)
 	}
 	if namespace != "" {
 		// only scan namespace
-		return scanner.ScanNamespace(ctx, namespace)
+		return scanner.ScanNamespace(ctx, namespace, runUID)
 	}
 
 	// neither clusterWide flag nor namespace was provided, default
 	// behaviour of scanning cluster wide and all ns
-	if err := scanner.ScanClusterWideResources(ctx); err != nil {
+	if err := scanner.ScanClusterWideResources(ctx, runUID); err != nil {
 		return err
 	}
-	return scanner.ScanAllNamespaces(ctx)
+	return scanner.ScanAllNamespaces(ctx, runUID)
 }
 
 func init() {

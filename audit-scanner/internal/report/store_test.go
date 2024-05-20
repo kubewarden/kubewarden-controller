@@ -2,20 +2,25 @@ package report
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	auditConstants "github.com/kubewarden/audit-scanner/internal/constants"
 	testutils "github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
 func TestCreatePolicyReport(t *testing.T) {
-	fakeClient := testutils.NewFakeClient()
+	fakeClient, err := testutils.NewFakeClient()
+	require.NoError(t, err)
 	store := NewPolicyReportStore(fakeClient)
 
 	resource := unstructured.Unstructured{}
@@ -26,8 +31,8 @@ func TestCreatePolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport(resource)
-	err := store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
+	policyReport := NewPolicyReport("scanUID", resource)
+	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
 	require.NoError(t, err)
 
 	storedPolicyReport := &wgpolicy.PolicyReport{}
@@ -42,7 +47,8 @@ func TestCreatePolicyReport(t *testing.T) {
 }
 
 func TestPatchPolicyReport(t *testing.T) {
-	fakeClient := testutils.NewFakeClient()
+	fakeClient, err := testutils.NewFakeClient()
+	require.NoError(t, err)
 	store := NewPolicyReportStore(fakeClient)
 
 	resource := unstructured.Unstructured{}
@@ -53,13 +59,13 @@ func TestPatchPolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport(resource)
-	err := store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
+	policyReport := NewPolicyReport("scanUID", resource)
+	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newPolicyReport := NewPolicyReport(resource)
+	newPolicyReport := NewPolicyReport("scanUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,7 +97,8 @@ func TestPatchPolicyReport(t *testing.T) {
 }
 
 func TestCreateClusterPolicyReport(t *testing.T) {
-	fakeClient := testutils.NewFakeClient()
+	fakeClient, err := testutils.NewFakeClient()
+	require.NoError(t, err)
 	store := NewPolicyReportStore(fakeClient)
 
 	resource := unstructured.Unstructured{}
@@ -101,8 +108,8 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 	resource.SetKind("Namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport(resource)
-	err := store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
+	clusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
 	require.NoError(t, err)
 
 	storedClusterPolicyReport := &wgpolicy.ClusterPolicyReport{}
@@ -117,7 +124,8 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 }
 
 func TestPatchClusterPolicyReport(t *testing.T) {
-	fakeClient := testutils.NewFakeClient()
+	fakeClient, err := testutils.NewFakeClient()
+	require.NoError(t, err)
 	store := NewPolicyReportStore(fakeClient)
 
 	resource := unstructured.Unstructured{}
@@ -127,13 +135,13 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	resource.SetName("test-namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport(resource)
-	err := store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
+	clusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newClusterPolicyReport := NewClusterPolicyReport(resource)
+	newClusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -161,4 +169,73 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	require.Equal(t, newClusterPolicyReport.Scope, storedClusterPolicyReport.Scope)
 	require.Equal(t, newClusterPolicyReport.Summary, storedClusterPolicyReport.Summary)
 	require.Equal(t, newClusterPolicyReport.Results, storedClusterPolicyReport.Results)
+}
+
+func TestDeletePolicyReport(t *testing.T) {
+	oldPolicyReport := testutils.NewPolicyReportFactory().
+		Name("old-report").Namespace("default").ScanUID("old-uid").WithAppLabel().Build()
+	otherOldPolicyReport := testutils.NewPolicyReportFactory().
+		Name("other-old-report").Namespace("default").ScanUID("old-uid").Build()
+	newPolicyReport := testutils.NewPolicyReportFactory().
+		Name("new-report").Namespace("default").ScanUID("new-uid").WithAppLabel().Build()
+	oldPolicyReportOtheNamespace := testutils.NewPolicyReportFactory().
+		Name("old-report-other-namespace").Namespace("other").ScanUID("old-uid").WithAppLabel().Build()
+
+	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport, oldPolicyReportOtheNamespace)
+	require.NoError(t, err)
+	store := NewPolicyReportStore(fakeClient)
+
+	err = store.DeleteOldPolicyReports(context.Background(), "new-uid", "default")
+	require.NoError(t, err)
+
+	storedPolicyReportList := &wgpolicy.PolicyReportList{}
+
+	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{Namespace: "other"})
+	require.NoError(t, err)
+	require.Len(t, storedPolicyReportList.Items, 1)
+
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
+	require.NoError(t, err)
+	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector, Namespace: "default"})
+	require.NoError(t, err)
+	require.Len(t, storedPolicyReportList.Items, 1)
+	require.Equal(t, storedPolicyReportList.Items[0].Name, "other-old-report")
+
+	labelSelector, err = labels.Parse(fmt.Sprintf("%s!=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
+	require.NoError(t, err)
+	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector, Namespace: "default"})
+	require.NoError(t, err)
+	require.Len(t, storedPolicyReportList.Items, 1)
+}
+
+func TestDeleteClusterPolicyReport(t *testing.T) {
+	oldPolicyReport := testutils.NewClusterPolicyReportFactory().
+		Name("old-report-with-app-label").WithAppLabel().ScanUID("old-uid").Build()
+	otherOldPolicyReport := testutils.NewClusterPolicyReportFactory().
+		Name("old-report-with-no-app-label").ScanUID("old-uid").Build()
+	newPolicyReport := testutils.NewClusterPolicyReportFactory().
+		Name("new-report").WithAppLabel().ScanUID("new-uid").Build()
+	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport)
+	require.NoError(t, err)
+	store := NewPolicyReportStore(fakeClient)
+
+	err = store.DeleteOldClusterPolicyReports(context.Background(), "new-uid")
+	require.NoError(t, err)
+
+	storedPolicyReportList := &wgpolicy.ClusterPolicyReportList{}
+
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
+	require.NoError(t, err)
+	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector})
+	require.NoError(t, err)
+	require.Len(t, storedPolicyReportList.Items, 1)
+	require.Equal(t, storedPolicyReportList.Items[0].Name, "old-report-with-no-app-label")
+
+	storedPolicyReportList = &wgpolicy.ClusterPolicyReportList{}
+
+	labelSelector, err = labels.Parse(fmt.Sprintf("%s!=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
+	require.NoError(t, err)
+	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector})
+	require.NoError(t, err)
+	require.Len(t, storedPolicyReportList.Items, 1)
 }

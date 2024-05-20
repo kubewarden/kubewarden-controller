@@ -7,9 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
+	auditConstants "github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/k8s"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/report"
+	auditscheme "github.com/kubewarden/audit-scanner/internal/scheme"
 	"github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +21,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apimachineryErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	dynamicFake "k8s.io/client-go/dynamic/fake"
@@ -200,18 +204,32 @@ func TestScanAllNamespaces(t *testing.T) {
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
+	// add a policy report that should be deleted by the scanner
+	oldPolicyReportScanUID := uuid.New().String()
+	oldPolicyReport := testutils.NewPolicyReportFactory().
+		Name("report1").
+		Namespace(namespace1.GetName()).
+		WithAppLabel().
+		ScanUID(oldPolicyReportScanUID).
+		Build()
 
+	auditScheme, err := auditscheme.NewScheme()
+	if err != nil {
+		t.Fatal(err)
+	}
 	dynamicClient := dynamicFake.NewSimpleDynamicClient(
-		scheme.Scheme,
+		auditScheme,
 		deployment1,
 		deployment2,
 		pod1,
-		pod2)
+		pod2,
+		namespace1,
+		oldPolicyReport)
 	clientset := fake.NewSimpleClientset(
 		namespace1,
 		namespace2,
 	)
-	client := testutils.NewFakeClient(
+	client, err := testutils.NewFakeClient(
 		namespace1,
 		namespace2,
 		policyServer,
@@ -221,7 +239,9 @@ func TestScanAllNamespaces(t *testing.T) {
 		admissionPolicy3,
 		admissionPolicy4,
 		clusterAdmissionPolicy,
+		oldPolicyReport,
 	)
+	require.NoError(t, err)
 
 	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil)
 	require.NoError(t, err)
@@ -233,30 +253,39 @@ func TestScanAllNamespaces(t *testing.T) {
 
 	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "")
 	require.NoError(t, err)
-	err = scanner.ScanAllNamespaces(context.Background())
+
+	runUID := uuid.New().String()
+	err = scanner.ScanAllNamespaces(context.Background(), runUID)
 	require.NoError(t, err)
 
 	policyReport := wgpolicy.PolicyReport{}
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: oldPolicyReport.GetName(), Namespace: oldPolicyReport.GetNamespace()}, oldPolicyReport)
+	require.True(t, apimachineryErrors.IsNotFound(err))
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod1.GetUID()), Namespace: "namespace1"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, policyReport.Summary.Pass)
 	assert.Len(t, policyReport.Results, 2)
+	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod2.GetUID()), Namespace: "namespace2"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 1, policyReport.Summary.Pass)
 	assert.Len(t, policyReport.Results, 1)
+	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment1.GetUID()), Namespace: "namespace1"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, policyReport.Summary.Pass)
 	assert.Len(t, policyReport.Results, 2)
+	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment2.GetUID()), Namespace: "namespace2"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, policyReport.Summary.Pass)
 	assert.Len(t, policyReport.Results, 2)
+	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 }
 
 func TestScanClusterWideResources(t *testing.T) {
@@ -345,17 +374,25 @@ func TestScanClusterWideResources(t *testing.T) {
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
+	// add a policy report that should be deleted by the scanner
+	oldClusterPolicyReportScanUID := uuid.New().String()
+	oldClusterPolicyReport := testutils.NewClusterPolicyReportFactory().
+		Name("report1").
+		WithAppLabel().
+		ScanUID(oldClusterPolicyReportScanUID).
+		Build()
 
 	dynamicClient := dynamicFake.NewSimpleDynamicClient(
 		scheme.Scheme,
 		namespace1,
 		namespace2,
+		oldClusterPolicyReport,
 	)
 	clientset := fake.NewSimpleClientset(
 		namespace1,
 		namespace2,
 	)
-	client := testutils.NewFakeClient(
+	client, err := testutils.NewFakeClient(
 		namespace1,
 		namespace2,
 		policyServer,
@@ -363,7 +400,9 @@ func TestScanClusterWideResources(t *testing.T) {
 		clusterAdmissionPolicy1,
 		clusterAdmissionPolicy2,
 		clusterAdmissionPolicy3,
+		oldClusterPolicyReport,
 	)
+	require.NoError(t, err)
 
 	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil)
 	require.NoError(t, err)
@@ -375,8 +414,13 @@ func TestScanClusterWideResources(t *testing.T) {
 
 	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "")
 	require.NoError(t, err)
-	err = scanner.ScanClusterWideResources(context.Background())
+
+	runUID := uuid.New().String()
+	err = scanner.ScanClusterWideResources(context.Background(), runUID)
 	require.NoError(t, err)
+
+	err = client.Get(context.TODO(), types.NamespacedName{Name: oldClusterPolicyReport.GetName()}, oldClusterPolicyReport)
+	require.True(t, apimachineryErrors.IsNotFound(err))
 
 	clusterPolicyReport := wgpolicy.ClusterPolicyReport{}
 
@@ -384,9 +428,11 @@ func TestScanClusterWideResources(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, clusterPolicyReport.Summary.Pass)
 	assert.Len(t, clusterPolicyReport.Results, 1)
+	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace2.GetUID())}, &clusterPolicyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, clusterPolicyReport.Summary.Pass)
 	assert.Len(t, clusterPolicyReport.Results, 2)
+	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	"github.com/stretchr/testify/assert"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -22,12 +23,13 @@ func TestNewPolicyReport(t *testing.T) {
 	resource.SetName("test-pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport(resource)
+	policyReport := NewPolicyReport("runUID", resource)
 
 	assert.Equal(t, "uid", policyReport.ObjectMeta.Name)
 	assert.Equal(t, "namespace", policyReport.ObjectMeta.Namespace)
 	assert.Equal(t, "kubewarden", policyReport.ObjectMeta.Labels["app.kubernetes.io/managed-by"])
 	assert.Equal(t, "v2", policyReport.ObjectMeta.Labels["kubewarden.io/policyreport-version"])
+	assert.Equal(t, "runUID", policyReport.ObjectMeta.Labels[constants.AuditScannerRunUIDLabel])
 
 	assert.Equal(t, "v1", policyReport.ObjectMeta.OwnerReferences[0].APIVersion)
 	assert.Equal(t, "Pod", policyReport.ObjectMeta.OwnerReferences[0].Kind)
@@ -52,7 +54,7 @@ func TestAddResultToPolicyReport(t *testing.T) {
 		},
 	}
 
-	policyReport := NewPolicyReport(unstructured.Unstructured{})
+	policyReport := NewPolicyReport("scanUID", unstructured.Unstructured{})
 	AddResultToPolicyReport(policyReport, policy, admissionReview, false)
 
 	assert.Len(t, policyReport.Results, 1)
@@ -70,11 +72,12 @@ func TestNewClusterPolicyReport(t *testing.T) {
 	resource.SetKind("Namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport(resource)
+	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
 
 	assert.Equal(t, "uid", clusterPolicyReport.ObjectMeta.Name)
 	assert.Equal(t, "kubewarden", clusterPolicyReport.ObjectMeta.Labels[labelAppManagedBy])
 	assert.Equal(t, "v2", clusterPolicyReport.ObjectMeta.Labels["kubewarden.io/policyreport-version"])
+	assert.Equal(t, "runUID", clusterPolicyReport.ObjectMeta.Labels[constants.AuditScannerRunUIDLabel])
 
 	assert.Equal(t, "v1", clusterPolicyReport.ObjectMeta.OwnerReferences[0].APIVersion)
 	assert.Equal(t, "Namespace", clusterPolicyReport.ObjectMeta.OwnerReferences[0].Kind)
@@ -99,7 +102,7 @@ func TestAddResultToClusterPolicyReport(t *testing.T) {
 		},
 	}
 
-	clusterPolicyReport := NewClusterPolicyReport(unstructured.Unstructured{})
+	clusterPolicyReport := NewClusterPolicyReport("scanUID", unstructured.Unstructured{})
 	AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionReview, false)
 
 	assert.Len(t, clusterPolicyReport.Results, 1)

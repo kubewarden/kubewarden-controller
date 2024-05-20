@@ -3,6 +3,7 @@ package report
 import (
 	"time"
 
+	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,14 +13,15 @@ import (
 )
 
 // NewPolicyReport creates a new PolicyReport from a given resource
-func NewPolicyReport(resource unstructured.Unstructured) *wgpolicy.PolicyReport {
+func NewPolicyReport(scanUID string, resource unstructured.Unstructured) *wgpolicy.PolicyReport {
 	return &wgpolicy.PolicyReport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      string(resource.GetUID()),
 			Namespace: resource.GetNamespace(),
 			Labels: map[string]string{
-				labelAppManagedBy:        labelApp,
-				labelPolicyReportVersion: labelPolicyReportVersionValue,
+				labelAppManagedBy:                 labelApp,
+				labelPolicyReportVersion:          labelPolicyReportVersionValue,
+				constants.AuditScannerRunUIDLabel: scanUID,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -71,13 +73,14 @@ func AddResultToPolicyReport(
 }
 
 // NewClusterPolicyReport creates a new ClusterPolicyReport from a given resource
-func NewClusterPolicyReport(resource unstructured.Unstructured) *wgpolicy.ClusterPolicyReport {
+func NewClusterPolicyReport(scanUID string, resource unstructured.Unstructured) *wgpolicy.ClusterPolicyReport {
 	return &wgpolicy.ClusterPolicyReport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(resource.GetUID()),
 			Labels: map[string]string{
-				labelAppManagedBy:        labelApp,
-				labelPolicyReportVersion: labelPolicyReportVersionValue,
+				labelAppManagedBy:                 labelApp,
+				labelPolicyReportVersion:          labelPolicyReportVersionValue,
+				constants.AuditScannerRunUIDLabel: scanUID,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
