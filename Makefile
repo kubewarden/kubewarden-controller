@@ -25,7 +25,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 # Tools binaries
-CONTROLLER_GEN_VER := v0.8.0
+CONTROLLER_GEN_VER := v0.15.0
 CONTROLLER_GEN_BIN := controller-gen
 CONTROLLER_GEN := $(BIN_DIR)/$(CONTROLLER_GEN_BIN)
 
