@@ -205,12 +205,12 @@ func TestScanAllNamespaces(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 	// add a policy report that should be deleted by the scanner
-	oldPolicyReportScanUID := uuid.New().String()
+	oldPolicyReportRunUID := uuid.New().String()
 	oldPolicyReport := testutils.NewPolicyReportFactory().
 		Name("report1").
 		Namespace(namespace1.GetName()).
 		WithAppLabel().
-		ScanUID(oldPolicyReportScanUID).
+		RunUID(oldPolicyReportRunUID).
 		Build()
 
 	auditScheme, err := auditscheme.NewScheme()
@@ -375,11 +375,11 @@ func TestScanClusterWideResources(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 	// add a policy report that should be deleted by the scanner
-	oldClusterPolicyReportScanUID := uuid.New().String()
+	oldClusterPolicyReportRunUID := uuid.New().String()
 	oldClusterPolicyReport := testutils.NewClusterPolicyReportFactory().
 		Name("report1").
 		WithAppLabel().
-		ScanUID(oldClusterPolicyReportScanUID).
+		RunUID(oldClusterPolicyReportRunUID).
 		Build()
 
 	dynamicClient := dynamicFake.NewSimpleDynamicClient(

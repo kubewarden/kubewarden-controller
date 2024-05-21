@@ -107,7 +107,7 @@ func NewScanner(
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) error {
-	log.Info().Str("namespace", nsName).Str("ScanUID", runUID).Msg("namespace scan started")
+	log.Info().Str("namespace", nsName).Str("RunUID", runUID).Msg("namespace scan started")
 	semaphore := semaphore.NewWeighted(parallelAuditRequests)
 	var workers sync.WaitGroup
 
@@ -159,7 +159,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	}
 	workers.Wait()
 	if err := s.policyReportStore.DeleteOldPolicyReports(ctx, runUID, nsName); err != nil {
-		log.Error().Err(err).Str("ScanUID", runUID).Msg("error deleting old PolicyReports")
+		log.Error().Err(err).Str("RunUID", runUID).Msg("error deleting old PolicyReports")
 	}
 	log.Info().Msg("Namespaced resources scan finished")
 	return nil
@@ -193,7 +193,7 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) error {
-	log.Info().Str("ScanUID", runUID).Msg("clusterwide resources scan started")
+	log.Info().Str("RunUID", runUID).Msg("clusterwide resources scan started")
 
 	semaphore := semaphore.NewWeighted(parallelAuditRequests)
 	var workers sync.WaitGroup
@@ -244,7 +244,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 
 	workers.Wait()
 	if err := s.policyReportStore.DeleteOldClusterPolicyReports(ctx, runUID); err != nil {
-		log.Error().Err(err).Str("ScanUID", runUID).Msg("error deleting old ClusterPolicyReports")
+		log.Error().Err(err).Str("RunUID", runUID).Msg("error deleting old ClusterPolicyReports")
 	}
 	log.Info().Msg("Cluster-wide resources scan finished")
 
