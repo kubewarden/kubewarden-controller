@@ -51,8 +51,8 @@ func (factory *PolicyReportFactory) Name(name string) *PolicyReportFactory {
 	return factory
 }
 
-func (factory *PolicyReportFactory) ScanUID(scanuid string) *PolicyReportFactory {
-	factory.labels[constants.AuditScannerRunUIDLabel] = scanuid
+func (factory *PolicyReportFactory) RunUID(runUID string) *PolicyReportFactory {
+	factory.labels[constants.AuditScannerRunUIDLabel] = runUID
 
 	return factory
 }
@@ -95,8 +95,8 @@ func (factory *ClusterPolicyReportFactory) Name(name string) *ClusterPolicyRepor
 	return factory
 }
 
-func (factory *ClusterPolicyReportFactory) ScanUID(scanuid string) *ClusterPolicyReportFactory {
-	factory.labels[constants.AuditScannerRunUIDLabel] = scanuid
+func (factory *ClusterPolicyReportFactory) RunUID(runUID string) *ClusterPolicyReportFactory {
+	factory.labels[constants.AuditScannerRunUIDLabel] = runUID
 
 	return factory
 }

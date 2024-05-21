@@ -54,7 +54,7 @@ func TestAddResultToPolicyReport(t *testing.T) {
 		},
 	}
 
-	policyReport := NewPolicyReport("scanUID", unstructured.Unstructured{})
+	policyReport := NewPolicyReport("runUID", unstructured.Unstructured{})
 	AddResultToPolicyReport(policyReport, policy, admissionReview, false)
 
 	assert.Len(t, policyReport.Results, 1)
@@ -102,7 +102,7 @@ func TestAddResultToClusterPolicyReport(t *testing.T) {
 		},
 	}
 
-	clusterPolicyReport := NewClusterPolicyReport("scanUID", unstructured.Unstructured{})
+	clusterPolicyReport := NewClusterPolicyReport("runUID", unstructured.Unstructured{})
 	AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionReview, false)
 
 	assert.Len(t, clusterPolicyReport.Results, 1)

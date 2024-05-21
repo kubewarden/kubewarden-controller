@@ -31,7 +31,7 @@ func TestCreatePolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport("scanUID", resource)
+	policyReport := NewPolicyReport("runUID", resource)
 	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
 	require.NoError(t, err)
 
@@ -59,13 +59,13 @@ func TestPatchPolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport("scanUID", resource)
+	policyReport := NewPolicyReport("runUID", resource)
 	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newPolicyReport := NewPolicyReport("scanUID", resource)
+	newPolicyReport := NewPolicyReport("runUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,7 +108,7 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 	resource.SetKind("Namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
 	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
 	require.NoError(t, err)
 
@@ -135,13 +135,13 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	resource.SetName("test-namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
 	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newClusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	newClusterPolicyReport := NewClusterPolicyReport("runUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -173,13 +173,13 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 
 func TestDeletePolicyReport(t *testing.T) {
 	oldPolicyReport := testutils.NewPolicyReportFactory().
-		Name("old-report").Namespace("default").ScanUID("old-uid").WithAppLabel().Build()
+		Name("old-report").Namespace("default").RunUID("old-uid").WithAppLabel().Build()
 	otherOldPolicyReport := testutils.NewPolicyReportFactory().
-		Name("other-old-report").Namespace("default").ScanUID("old-uid").Build()
+		Name("other-old-report").Namespace("default").RunUID("old-uid").Build()
 	newPolicyReport := testutils.NewPolicyReportFactory().
-		Name("new-report").Namespace("default").ScanUID("new-uid").WithAppLabel().Build()
+		Name("new-report").Namespace("default").RunUID("new-uid").WithAppLabel().Build()
 	oldPolicyReportOtheNamespace := testutils.NewPolicyReportFactory().
-		Name("old-report-other-namespace").Namespace("other").ScanUID("old-uid").WithAppLabel().Build()
+		Name("old-report-other-namespace").Namespace("other").RunUID("old-uid").WithAppLabel().Build()
 
 	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport, oldPolicyReportOtheNamespace)
 	require.NoError(t, err)
@@ -210,11 +210,11 @@ func TestDeletePolicyReport(t *testing.T) {
 
 func TestDeleteClusterPolicyReport(t *testing.T) {
 	oldPolicyReport := testutils.NewClusterPolicyReportFactory().
-		Name("old-report-with-app-label").WithAppLabel().ScanUID("old-uid").Build()
+		Name("old-report-with-app-label").WithAppLabel().RunUID("old-uid").Build()
 	otherOldPolicyReport := testutils.NewClusterPolicyReportFactory().
-		Name("old-report-with-no-app-label").ScanUID("old-uid").Build()
+		Name("old-report-with-no-app-label").RunUID("old-uid").Build()
 	newPolicyReport := testutils.NewClusterPolicyReportFactory().
-		Name("new-report").WithAppLabel().ScanUID("new-uid").Build()
+		Name("new-report").WithAppLabel().RunUID("new-uid").Build()
 	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport)
 	require.NoError(t, err)
 	store := NewPolicyReportStore(fakeClient)
