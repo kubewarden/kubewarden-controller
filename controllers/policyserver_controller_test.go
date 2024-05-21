@@ -35,7 +35,6 @@ import (
 	k8spoliciesv1 "k8s.io/api/policy/v1"
 )
 
-//nolint:wrapcheck
 var _ = Describe("PolicyServer controller", func() {
 	var policyServerName string
 

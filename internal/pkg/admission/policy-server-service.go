@@ -83,7 +83,7 @@ func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1
 	}
 
 	if err := controllerutil.SetOwnerReference(policyServer, svc, r.Client.Scheme()); err != nil {
-		return errors.Join(fmt.Errorf("failed to set policy server service owner reference"), err)
+		return errors.Join(errors.New("failed to set policy server service owner reference"), err)
 	}
 	return nil
 }

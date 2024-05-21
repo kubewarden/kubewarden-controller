@@ -3,7 +3,6 @@ package admission
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -30,7 +29,7 @@ func deletePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.Pol
 	}
 	err := client.IgnoreNotFound(k8s.Delete(ctx, pdb))
 	if err != nil {
-		err = errors.Join(fmt.Errorf("failed to delete PodDisruptionBudget"), err)
+		err = errors.Join(errors.New("failed to delete PodDisruptionBudget"), err)
 	}
 	return err
 }
@@ -46,7 +45,7 @@ func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.
 		pdb.Name = policyServer.NameWithPrefix()
 		pdb.Namespace = namespace
 		if err := controllerutil.SetOwnerReference(policyServer, pdb, k8s.Scheme()); err != nil {
-			return errors.Join(fmt.Errorf("failed to set policy server PDB owner reference"), err)
+			return errors.Join(errors.New("failed to set policy server PDB owner reference"), err)
 		}
 
 		pdb.Spec.Selector = &metav1.LabelSelector{
@@ -65,7 +64,7 @@ func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.
 		return nil
 	})
 	if err != nil {
-		err = errors.Join(fmt.Errorf("failed to create or update PodDisruptionBudget"), err)
+		err = errors.Join(errors.New("failed to create or update PodDisruptionBudget"), err)
 	}
 	return err
 }

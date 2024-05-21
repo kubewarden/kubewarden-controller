@@ -60,7 +60,7 @@ func (r *Reconciler) ReconcileValidatingWebhookConfiguration(
 		}
 		webhook.Webhooks = []admissionregistrationv1.ValidatingWebhook{
 			{
-				Name: fmt.Sprintf("%s.kubewarden.admission", policy.GetUniqueName()),
+				Name: policy.GetUniqueName() + ".kubewarden.admission",
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
 					CABundle: admissionSecret.Data[constants.PolicyServerCARootPemName],

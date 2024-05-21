@@ -144,12 +144,10 @@ func (r *Reconciler) GetPolicies(ctx context.Context, policyServer *policiesv1.P
 
 	policies := make([]policiesv1.Policy, 0)
 	for _, clusterAdmissionPolicy := range clusterAdmissionPolicies.Items {
-		clusterAdmissionPolicy := clusterAdmissionPolicy
-		policies = append(policies, &clusterAdmissionPolicy)
+		policies = append(policies, clusterAdmissionPolicy.DeepCopy())
 	}
 	for _, admissionPolicy := range admissionPolicies.Items {
-		admissionPolicy := admissionPolicy
-		policies = append(policies, &admissionPolicy)
+		policies = append(policies, admissionPolicy.DeepCopy())
 	}
 
 	return policies, nil

@@ -72,8 +72,7 @@ func TestGetPolicies(t *testing.T) {
 			2,
 		},
 	}
-	for _, test := range tests {
-		ttest := test // ensure ttest is correctly scoped when used in function literal
+	for _, ttest := range tests {
 		t.Run(ttest.name, func(t *testing.T) {
 			reconciler := newReconciler(ttest.policies, false, false)
 			policies, err := reconciler.GetPolicies(context.Background(), &policiesv1.PolicyServer{

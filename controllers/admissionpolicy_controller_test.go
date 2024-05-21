@@ -33,6 +33,8 @@ import (
 var _ = Describe("AdmissionPolicy controller", func() {
 	var policyNamespace string
 	var policyServerName string
+	// let's use this constant to avoid linter errors
+	const PolicyServerNamePrefix = "policy-server-"
 
 	BeforeEach(func() {
 		policyNamespace = "admission-policy-controller-test"
@@ -85,7 +87,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
-				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(PolicyServerNamePrefix + policyServerName))
 
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())
@@ -193,7 +195,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
-				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(fmt.Sprintf("policy-server-%s", policyServerName)))
+				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(PolicyServerNamePrefix + policyServerName))
 
 				caSecret, err := getTestCASecret()
 				Expect(err).ToNot(HaveOccurred())

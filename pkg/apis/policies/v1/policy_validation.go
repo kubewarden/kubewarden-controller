@@ -17,8 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
-
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -86,7 +84,7 @@ func checkRulesArrayForEmptyString(rulesArray []string, fieldName string, parent
 		if apiVersion == "" {
 			apiVersionField := parentField.Child(fieldName)
 
-			return field.Invalid(apiVersionField, "", fmt.Sprintf("%s value cannot contain the empty string", fieldName))
+			return field.Invalid(apiVersionField, "", fieldName+" value cannot contain the empty string")
 		}
 	}
 

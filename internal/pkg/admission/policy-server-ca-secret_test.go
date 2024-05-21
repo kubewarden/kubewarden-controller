@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"net/http"
 	"sync"
 	"testing"
@@ -37,7 +36,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 
 	pemEncodeCertificateFunc := func(certificate []byte) ([]byte, error) {
 		if !bytes.Equal(certificate, admissionregCA.CaCert) {
-			return nil, fmt.Errorf("certificate received should be the one returned by generateCA")
+			return nil, errors.New("certificate received should be the one returned by generateCA")
 		}
 		return caPemBytes, nil
 	}
@@ -59,8 +58,7 @@ func TestFetchOrInitializePolicyServerCARootSecret(t *testing.T) {
 		{"CA does not exist", newReconciler(nil, false, false), nil, caSecretContents, true},
 	}
 
-	for _, test := range tests {
-		ttest := test // ensure tt is correctly scoped when used in function literal
+	for _, ttest := range tests {
 		t.Run(ttest.name, func(t *testing.T) {
 			policyServer := &policiesv1.PolicyServer{}
 			secret, err := ttest.r.fetchOrInitializePolicyServerCARootSecret(context.Background(), policyServer, generateCAFunc, pemEncodeCertificateFunc)
@@ -87,8 +85,8 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 	admissionregCA, _ := admissionregistration.GenerateCA()
 	caSecret := &corev1.Secret{Data: map[string][]byte{constants.PolicyServerCARootCACert: admissionregCA.CaCert, constants.PolicyServerCARootPrivateKeyCertName: x509.MarshalPKCS1PrivateKey(admissionregCA.CaPrivateKey)}}
 
-	//nolint:unparam
-	generateCertFunc := func(ca []byte, commonName string, extraSANs []string, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
+	//nolint:unparam,revive
+	generateCertFunc := func(_ca []byte, _commonName string, _extraSANs []string, _CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
 		generateCertCalled = true
 		return servingCert, servingKey, nil
 	}
@@ -109,8 +107,7 @@ func TestFetchOrInitializePolicyServerSecret(t *testing.T) {
 		{"cert does not exist", newReconciler(nil, false, false), nil, caSecretContents, true},
 	}
 
-	for _, test := range tests {
-		ttest := test // ensure tt is correctly scoped when used in function literal
+	for _, ttest := range tests {
 		t.Run(ttest.name, func(t *testing.T) {
 			policyServer := &policiesv1.PolicyServer{
 				ObjectMeta: metav1.ObjectMeta{
