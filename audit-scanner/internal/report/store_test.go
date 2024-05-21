@@ -31,7 +31,7 @@ func TestCreatePolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport("scanUID", resource)
+	policyReport := NewPolicyReport("runUID", resource)
 	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
 	require.NoError(t, err)
 
@@ -59,13 +59,13 @@ func TestPatchPolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport("scanUID", resource)
+	policyReport := NewPolicyReport("runUID", resource)
 	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newPolicyReport := NewPolicyReport("scanUID", resource)
+	newPolicyReport := NewPolicyReport("runUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,7 +108,7 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 	resource.SetKind("Namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
 	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
 	require.NoError(t, err)
 
@@ -135,13 +135,13 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	resource.SetName("test-namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
 	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newClusterPolicyReport := NewClusterPolicyReport("scanUID", resource)
+	newClusterPolicyReport := NewClusterPolicyReport("runUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{

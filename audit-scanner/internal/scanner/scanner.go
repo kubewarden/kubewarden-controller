@@ -106,8 +106,8 @@ func NewScanner(
 // Returns errors if there's any when fetching policies or resources, but only
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
-func (s *Scanner) ScanNamespace(ctx context.Context, nsName, scanUID string) error {
-	log.Info().Str("namespace", nsName).Str("ScanUID", scanUID).Msg("namespace scan started")
+func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) error {
+	log.Info().Str("namespace", nsName).Str("ScanUID", runUID).Msg("namespace scan started")
 	semaphore := semaphore.NewWeighted(parallelAuditRequests)
 	var workers sync.WaitGroup
 
@@ -149,7 +149,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, scanUID string) err
 				defer semaphore.Release(1)
 				defer workers.Done()
 
-				s.auditResource(ctx, policiesToAudit, *resource, scanUID)
+				s.auditResource(ctx, policiesToAudit, *resource, runUID)
 			}()
 			return nil
 		})
@@ -158,8 +158,8 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, scanUID string) err
 		}
 	}
 	workers.Wait()
-	if err := s.policyReportStore.DeleteOldPolicyReports(ctx, scanUID, nsName); err != nil {
-		log.Error().Err(err).Str("ScanUID", scanUID).Msg("error deleting old PolicyReports")
+	if err := s.policyReportStore.DeleteOldPolicyReports(ctx, runUID, nsName); err != nil {
+		log.Error().Err(err).Str("ScanUID", runUID).Msg("error deleting old PolicyReports")
 	}
 	log.Info().Msg("Namespaced resources scan finished")
 	return nil
@@ -169,7 +169,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, scanUID string) err
 // Returns errors if there's any when fetching policies or resources, but only
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
-func (s *Scanner) ScanAllNamespaces(ctx context.Context, scanUID string) error {
+func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 	log.Info().Msg("all-namespaces scan started")
 	nsList, err := s.k8sClient.GetAuditedNamespaces(ctx)
 	if err != nil {
@@ -177,7 +177,7 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, scanUID string) error {
 	}
 
 	for _, ns := range nsList.Items {
-		if e := s.ScanNamespace(ctx, ns.Name, scanUID); e != nil {
+		if e := s.ScanNamespace(ctx, ns.Name, runUID); e != nil {
 			log.Error().Err(e).Str("ns", ns.Name).Msg("error scanning namespace")
 			err = errors.Join(err, e)
 		}
@@ -192,8 +192,8 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, scanUID string) error {
 // Returns errors if there's any when fetching policies or resources, but only
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
-func (s *Scanner) ScanClusterWideResources(ctx context.Context, scanUID string) error {
-	log.Info().Str("ScanUID", scanUID).Msg("clusterwide resources scan started")
+func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) error {
+	log.Info().Str("ScanUID", runUID).Msg("clusterwide resources scan started")
 
 	semaphore := semaphore.NewWeighted(parallelAuditRequests)
 	var workers sync.WaitGroup
@@ -232,7 +232,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, scanUID string) 
 				defer semaphore.Release(1)
 				defer workers.Done()
 
-				s.auditClusterResource(ctx, policiesToAudit, *resource, scanUID)
+				s.auditClusterResource(ctx, policiesToAudit, *resource, runUID)
 			}()
 
 			return nil
@@ -243,16 +243,16 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, scanUID string) 
 	}
 
 	workers.Wait()
-	if err := s.policyReportStore.DeleteOldClusterPolicyReports(ctx, scanUID); err != nil {
-		log.Error().Err(err).Str("ScanUID", scanUID).Msg("error deleting old ClusterPolicyReports")
+	if err := s.policyReportStore.DeleteOldClusterPolicyReports(ctx, runUID); err != nil {
+		log.Error().Err(err).Str("ScanUID", runUID).Msg("error deleting old ClusterPolicyReports")
 	}
 	log.Info().Msg("Cluster-wide resources scan finished")
 
 	return nil
 }
 
-func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, scanUID string) {
-	policyReport := report.NewPolicyReport(scanUID, resource)
+func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) {
+	policyReport := report.NewPolicyReport(runUID, resource)
 
 	for _, p := range policies {
 		url := p.PolicyServer
@@ -311,8 +311,8 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	}
 }
 
-func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, scanUID string) {
-	clusterPolicyReport := report.NewClusterPolicyReport(scanUID, resource)
+func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) {
+	clusterPolicyReport := report.NewClusterPolicyReport(runUID, resource)
 	for _, p := range policies {
 		url := p.PolicyServer
 		policy := p.Policy
