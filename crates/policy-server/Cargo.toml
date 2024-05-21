@@ -48,8 +48,11 @@ axum = { version = "0.7.5", features = ["macros", "query"] }
 axum-server = { version = "0.6", features = ["tls-rustls"] }
 tower-http = { version = "0.5.2", features = ["trace"] }
 tikv-jemallocator = { version = "0.5.4", features = [
+  "profiling",
   "unprefixed_malloc_on_supported_platforms",
 ] }
+jemalloc_pprof = "0.1.0"
+tikv-jemalloc-ctl = "0.5.4"
 
 [dev-dependencies]
 mockall = "0.12"

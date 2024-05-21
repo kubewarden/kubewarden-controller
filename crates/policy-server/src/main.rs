@@ -17,7 +17,9 @@ static GLOBAL: Jemalloc = Jemalloc;
 
 #[allow(non_upper_case_globals)]
 #[export_name = "malloc_conf"]
-pub static malloc_conf: &[u8] = b"background_thread:true,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000,abort_conf:true\0";
+/// Prioritize memory usage, then enable features request by pprof but do not activate them by
+/// default. When pprof is activate there's a CPU overhead.
+pub static malloc_conf: &[u8] = b"background_thread:true,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000,abort_conf:true,prof:true,prof_active:false,lg_prof_sample:19\0";
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -173,6 +173,10 @@ pub(crate) async fn validate_raw_handler(
     Ok(Json(RawReviewResponse::new(response)))
 }
 
+pub(crate) async fn readiness_handler() -> StatusCode {
+    StatusCode::OK
+}
+
 #[derive(Deserialize)]
 pub(crate) struct ProfileParams {
     /// profiling frequency (Hz)
@@ -217,8 +221,36 @@ pub(crate) async fn pprof_get_cpu(
 
     Ok((headers, body))
 }
-pub(crate) async fn readiness_handler() -> StatusCode {
-    StatusCode::OK
+
+// Generate a pprof heap profile using google's pprof format
+// The report is generated and sent to the user as binary data
+pub(crate) async fn pprof_get_heap(
+) -> Result<impl axum::response::IntoResponse, (StatusCode, ApiError)> {
+    let mut prof_ctl = jemalloc_pprof::PROF_CTL
+        .as_ref()
+        .ok_or_else(|| handle_pprof_error(ReportGenerationError::CannotGetJemallocControlHandle))?
+        .lock()
+        .await;
+
+    let pprof = prof_ctl
+        .dump_pprof()
+        .map_err(|e| handle_pprof_error(ReportGenerationError::JemallocError(e.to_string())))?;
+
+    let mut headers = header::HeaderMap::new();
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        r#"attachment; filename="heap_profile"#.parse().unwrap(),
+    );
+    headers.insert(
+        header::CONTENT_LENGTH,
+        pprof.len().to_string().parse().unwrap(),
+    );
+    headers.insert(
+        header::CONTENT_TYPE,
+        mime::APPLICATION_OCTET_STREAM.to_string().parse().unwrap(),
+    );
+
+    Ok((headers, pprof))
 }
 
 async fn acquire_semaphore_and_evaluate(

@@ -8,6 +8,7 @@ use pprof::protos::Message;
 use regex::Regex;
 use std::{pin::Pin, sync::Mutex};
 use thiserror::Error;
+use tracing::info;
 
 lazy_static! {
     // If it's some it means there are already a CPU profiling.
@@ -29,6 +30,14 @@ pub enum ReportGenerationError {
 
     #[error("cannot encode report to pprof format: {0}")]
     EncodeError(String),
+
+    #[error("failed to dump the profile: {0}")]
+    JemallocError(String),
+
+    #[error("error enabling jemalloc profiling: {0}")]
+    HeapProfilingActivationError(#[from] tikv_jemalloc_ctl::Error),
+    #[error("cannot get jemalloc control handle")]
+    CannotGetJemallocControlHandle,
 }
 
 /// Default frequency of sampling. 99Hz to avoid coincide with special periods
@@ -146,4 +155,20 @@ impl<I, T> Future for ProfileRunner<I, T> {
             Poll::Pending => Poll::Pending,
         }
     }
+}
+
+pub(crate) async fn activate_memory_profiling() -> Result<(), ReportGenerationError> {
+    let mut prof_ctl = jemalloc_pprof::PROF_CTL
+        .as_ref()
+        .ok_or_else(|| ReportGenerationError::CannotGetJemallocControlHandle)?
+        .lock()
+        .await;
+
+    if !prof_ctl.activated() {
+        info!("Activating jemalloc profiling");
+        prof_ctl
+            .activate()
+            .map_err(ReportGenerationError::HeapProfilingActivationError)?;
+    }
+    Ok(())
 }
