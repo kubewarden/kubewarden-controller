@@ -116,6 +116,9 @@ impl Reflector {
             ev.modify(|obj| {
                 // clear managed fields to reduce memory usage
                 obj.managed_fields_mut().clear();
+                // clear last-applied-configuration to reduce memory usage
+                obj.annotations_mut()
+                    .remove("kubectl.kubernetes.io/last-applied-configuration");
             })
         });
 
