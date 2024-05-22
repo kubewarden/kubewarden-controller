@@ -3039,7 +3039,7 @@ dependencies = [
 [[package]]
 name = "olpc-cjson"
 version = "0.1.3"
-source = "git+https://github.com/flavio/tough.git?branch=update-reqwest#ad9cb20c1bc871111e2de7f799e1e43e30e2eec3"
+source = "git+https://github.com/flavio/tough.git?branch=update-reqwest#3d80071bacca1f4be1bc4f2226bf7dbd5ac9a031"
 dependencies = [
  "serde",
  "serde_json",
@@ -5036,7 +5036,7 @@ dependencies = [
 [[package]]
 name = "tough"
 version = "0.17.1"
-source = "git+https://github.com/flavio/tough.git?branch=update-reqwest#ad9cb20c1bc871111e2de7f799e1e43e30e2eec3"
+source = "git+https://github.com/flavio/tough.git?branch=update-reqwest#3d80071bacca1f4be1bc4f2226bf7dbd5ac9a031"
 dependencies = [
  "async-recursion",
  "async-trait",
