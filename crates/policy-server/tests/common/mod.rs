@@ -69,7 +69,7 @@ pub(crate) fn default_test_config() -> Config {
         daemon_pid_file: "policy_server.pid".to_owned(),
         daemon_stdout_file: None,
         daemon_stderr_file: None,
-        enable_pprof: true,
+        enable_pprof: false,
         continue_on_errors: false,
     }
 }
