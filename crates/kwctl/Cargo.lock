@@ -426,7 +426,7 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.2#e505f91e2cfc09a133e15f5988debd8150909751"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.3#aeca44baca933a132f95e42754c04c3139090e8f"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -3479,8 +3479,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.17.2"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.2#e505f91e2cfc09a133e15f5988debd8150909751"
+version = "0.17.3"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.3#aeca44baca933a132f95e42754c04c3139090e8f"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
