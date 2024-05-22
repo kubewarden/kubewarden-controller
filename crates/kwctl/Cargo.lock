@@ -426,7 +426,7 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.3#aeca44baca933a132f95e42754c04c3139090e8f"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.4#703b87c00cb195cb0bac6ee7e65b39efcb6aa7ac"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -2388,7 +2388,7 @@ dependencies = [
 [[package]]
 name = "kube"
 version = "0.91.0"
-source = "git+https://github.com/fabriziosestito/kube?rev=f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8#f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8"
+source = "git+https://github.com/fabriziosestito/kube?branch=fix/reduce-buffering-between-watcher-and-store#d573f4f78cbb015551b9480817506e23b88b9af0"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -2399,7 +2399,7 @@ dependencies = [
 [[package]]
 name = "kube-client"
 version = "0.91.0"
-source = "git+https://github.com/fabriziosestito/kube?rev=f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8#f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8"
+source = "git+https://github.com/fabriziosestito/kube?branch=fix/reduce-buffering-between-watcher-and-store#d573f4f78cbb015551b9480817506e23b88b9af0"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -2435,7 +2435,7 @@ dependencies = [
 [[package]]
 name = "kube-core"
 version = "0.91.0"
-source = "git+https://github.com/fabriziosestito/kube?rev=f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8#f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8"
+source = "git+https://github.com/fabriziosestito/kube?branch=fix/reduce-buffering-between-watcher-and-store#d573f4f78cbb015551b9480817506e23b88b9af0"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -2450,7 +2450,7 @@ dependencies = [
 [[package]]
 name = "kube-runtime"
 version = "0.91.0"
-source = "git+https://github.com/fabriziosestito/kube?rev=f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8#f7de17b6984839c08c9a0645d0ec73c2ffd6f4a8"
+source = "git+https://github.com/fabriziosestito/kube?branch=fix/reduce-buffering-between-watcher-and-store#d573f4f78cbb015551b9480817506e23b88b9af0"
 dependencies = [
  "ahash 0.8.11",
  "async-broadcast",
@@ -2498,7 +2498,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.12.0"
+version = "1.13.0-rc1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3479,8 +3479,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.17.3"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.3#aeca44baca933a132f95e42754c04c3139090e8f"
+version = "0.17.4"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.4#703b87c00cb195cb0bac6ee7e65b39efcb6aa7ac"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
