@@ -8,6 +8,10 @@ permissions: read-all
 
 jobs:
   audit:
+    permissions:
+      checks: write # for rustsec/audit-check to create check
+      contents: read # for actions/checkout to fetch code
+      issues: write # for rustsec/audit-check to create issues
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
