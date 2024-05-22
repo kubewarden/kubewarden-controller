@@ -11,6 +11,10 @@ permissions: read-all
 jobs:
   security_audit:
     runs-on: ubuntu-latest
+    permissions:
+      checks: write # for rustsec/audit-check to create check
+      contents: read # for actions/checkout to fetch code
+      issues: write # for rustsec/audit-check to create issues
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - uses: rustsec/audit-check@dd51754d4e59da7395a4cd9b593f0ff2d61a9b95 # v1.4.1
