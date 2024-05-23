@@ -216,13 +216,16 @@ impl PolicyServer {
             .route("/audit/:policy_id", post(audit_handler))
             .route("/validate/:policy_id", post(validate_handler))
             .route("/validate_raw/:policy_id", post(validate_raw_handler))
-            .route("/readiness", get(readiness_handler))
             .with_state(state.clone())
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
                     .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
-            );
+            )
+            // Adding the readiness probe handler after the tracing layer to avoid logging
+            // See: https://github.com/tokio-rs/axum/discussions/355
+            .route("/readiness", get(readiness_handler));
+
         if config.enable_pprof {
             activate_memory_profiling().await?;
 
