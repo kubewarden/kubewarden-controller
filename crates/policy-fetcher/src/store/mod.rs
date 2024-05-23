@@ -272,7 +272,7 @@ mod tests {
     ) {
         let default = Store::default();
         let path = default.policy_full_path(input_url, input_policy_path);
-        assert!(matches!(path, Ok(_)));
+        assert!(path.is_ok());
         assert_eq!(
             default.root.join(path::encode_path(expected_relative_path)),
             path.unwrap_or_default()

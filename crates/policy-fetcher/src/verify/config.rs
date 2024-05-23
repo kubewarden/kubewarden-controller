@@ -230,12 +230,13 @@ mod tests {
         #subject:
         #   urlPrefix: https://github.com/kubewarden/
     "#;
-        let error = build_latest_verification_config(config);
-        print!("{:?}", error);
-        let expected_msg = "Not a valid configuration file: missing field `subject`";
-        assert!(
-            matches!(error, Err(VerifyError::InvalidVerifyFileError(msg)) if msg.to_string() == expected_msg)
-        );
+        match build_latest_verification_config(config) {
+            Err(VerifyError::InvalidVerifyFileError(msg)) => assert_eq!(
+                msg,
+                "Not a valid configuration file: missing field `subject`"
+            ),
+            _ => panic!("expected an error"),
+        }
     }
 
     #[test]
