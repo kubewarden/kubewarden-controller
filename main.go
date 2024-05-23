@@ -165,16 +165,8 @@ func main() {
 				&corev1.Pod{}:                        namespaceSelector,
 				&corev1.Service{}:                    namespaceSelector,
 				&k8spoliciesv1.PodDisruptionBudget{}: namespaceSelector,
-			},
-		},
-		// These types of resources should never be cached because we need fresh
-		// data coming from the cliet. This is required to perform the rollout
-		// of the PolicyServer Deployment whenever a policy is added/changed/removed.
-		// Because of that, there's not need to scope these resources inside
-		// of the cache, like we did for Pods, Services,... right above.
-		Client: client.Options{
-			Cache: &client.CacheOptions{
-				DisableFor: []client.Object{&corev1.ConfigMap{}, &appsv1.Deployment{}},
+				&corev1.ConfigMap{}:                  namespaceSelector,
+				&appsv1.Deployment{}:                 namespaceSelector,
 			},
 		},
 	})
