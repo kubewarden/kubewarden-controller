@@ -28,16 +28,16 @@ pub mod verification_constraints;
 /// This structure simplifies the process of policy verification
 /// using Sigstore
 #[derive(Clone)]
-pub struct Verifier<'a> {
-    cosign_client: Arc<Mutex<sigstore::cosign::Client<'a>>>,
+pub struct Verifier {
+    cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
     sources: Option<Sources>,
 }
 
-impl<'a> Verifier<'a> {
+impl Verifier {
     /// Creates a new verifier that leverages an already existing
     /// Cosign client.
     pub fn new_from_cosign_client(
-        cosign_client: Arc<Mutex<sigstore::cosign::Client<'a>>>,
+        cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
         sources: Option<Sources>,
     ) -> Self {
         Self {
@@ -61,16 +61,14 @@ impl<'a> Verifier<'a> {
             Some(trust_root) => {
                 cosign_client_builder =
                     cosign_client_builder.with_trust_repository(trust_root.as_ref())?;
-                let cosign_client = cosign_client_builder.build()?;
-                cosign_client.to_owned()
+                cosign_client_builder.build()?
             }
             None => {
                 warn!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
                 warn!("Sigstore Verifier created without Rekor data: transparency log data won't be used");
                 warn!("Sigstore capabilities are going to be limited");
 
-                let cosign_client = cosign_client_builder.build()?;
-                cosign_client.to_owned()
+                cosign_client_builder.build()?
             }
         };
 
@@ -272,8 +270,8 @@ fn verify_signatures_against_config(
 /// Returns:
 /// * String holding the source image digest
 /// * List of signature layers
-pub async fn fetch_sigstore_remote_data<'a>(
-    cosign_client_input: &Arc<Mutex<cosign::Client<'a>>>,
+pub async fn fetch_sigstore_remote_data(
+    cosign_client_input: &Arc<Mutex<cosign::Client>>,
     image_url: &str,
 ) -> VerifyResult<(String, Vec<SignatureLayer>)> {
     let mut cosign_client = cosign_client_input.lock().await;
