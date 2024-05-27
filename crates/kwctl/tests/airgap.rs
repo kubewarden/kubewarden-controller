@@ -13,8 +13,12 @@ fn test_airgap() {
     // Run registry
     let registry_image = testcontainers::GenericImage::new("docker.io/library/registry", "2")
         .with_wait_for(WaitFor::message_on_stderr("listening on "));
-    let testcontainer = registry_image.start();
-    let port = testcontainer.get_host_port_ipv4(5000);
+    let testcontainer = registry_image
+        .start()
+        .expect("Failed to start registry container");
+    let port = testcontainer
+        .get_host_port_ipv4(5000)
+        .expect("Failed to get host port");
 
     // Save policies
     let mut save_policies_script = setup_airgap_script_command(
