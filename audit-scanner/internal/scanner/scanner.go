@@ -46,6 +46,8 @@ type Scanner struct {
 // If insecureClient is false, it will read the caCertFile and add it to the in-app
 // cert trust store. This gets used by the httpClient when connection to
 // PolicyServers endpoints.
+//
+//nolint:funlen // the comment lines make this check fail
 func NewScanner(
 	policiesClient *policies.Client,
 	k8sClient *k8s.Client,
@@ -82,6 +84,15 @@ func NewScanner(
 	if !ok {
 		return nil, errors.New("failed to build httpClient: failed http.Transport type assertion")
 	}
+
+	// By dafault, the http client reuses connections. This causes
+	// scaling issues when a PolicyServer instance is backed by multiple
+	// replicas. In this scanerio, the requests are sent to the same
+	// PolicyServer Pod, causing the load to be unevenly distributed.
+	// To avoid this, we disable keep-alives, which ensures a
+	// new connection is created for each evaluation request.
+	transport.DisableKeepAlives = true
+
 	transport.TLSClientConfig = &tls.Config{
 		RootCAs:    rootCAs, // our augmented in-app cert pool
 		MinVersion: tls.VersionTLS12,
