@@ -181,9 +181,15 @@ mod e2e {
     #[tokio::test]
     async fn test_fetch_sigstore_data_from_registry_with_authentication() {
         let (registry_image, auth_dir) = setup_registry_image();
-        let container = registry_image.start().await;
+        let container = registry_image
+            .start()
+            .await
+            .expect("failed to start registry container");
 
-        let port = container.get_host_port_ipv4(REGISTRY_PORT).await;
+        let port = container
+            .get_host_port_ipv4(REGISTRY_PORT)
+            .await
+            .expect("failed to get port");
         let (push_image, signature_verifier) = push_container_image(port).await;
 
         // prepare the cosign client to fetch the signature
