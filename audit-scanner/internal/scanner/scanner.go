@@ -29,17 +29,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const parallelAuditRequests = int64(100)
-
 // Scanner verifies that existing resources don't violate any of the policies
 type Scanner struct {
 	policiesClient    *policies.Client
 	k8sClient         *k8s.Client
 	policyReportStore *report.PolicyReportStore
 	// http client used to make requests against the Policy Server
-	httpClient   http.Client
-	outputScan   bool
-	disableStore bool
+	httpClient              http.Client
+	outputScan              bool
+	disableStore            bool
+	parallelResourcesAudits int
 }
 
 // NewScanner creates a new scanner
@@ -56,6 +55,7 @@ func NewScanner(
 	disableStore bool,
 	insecureClient bool,
 	caCertFile string,
+	parallelResourcesAudits int,
 ) (*Scanner, error) {
 	// Get the SystemCertPool to build an in-app cert pool from it
 	// Continue with an empty pool on error
@@ -104,12 +104,13 @@ func NewScanner(
 	}
 
 	return &Scanner{
-		policiesClient:    policiesClient,
-		k8sClient:         k8sClient,
-		policyReportStore: policyReportStore,
-		httpClient:        httpClient,
-		outputScan:        outputScan,
-		disableStore:      disableStore,
+		policiesClient:          policiesClient,
+		k8sClient:               k8sClient,
+		policyReportStore:       policyReportStore,
+		httpClient:              httpClient,
+		outputScan:              outputScan,
+		disableStore:            disableStore,
+		parallelResourcesAudits: parallelResourcesAudits,
 	}, nil
 }
 
@@ -119,7 +120,7 @@ func NewScanner(
 // Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) error {
 	log.Info().Str("namespace", nsName).Str("RunUID", runUID).Msg("namespace scan started")
-	semaphore := semaphore.NewWeighted(parallelAuditRequests)
+	semaphore := semaphore.NewWeighted(int64(s.parallelResourcesAudits))
 	var workers sync.WaitGroup
 
 	_, err := s.k8sClient.GetNamespace(ctx, nsName)
@@ -206,7 +207,7 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) error {
 	log.Info().Str("RunUID", runUID).Msg("clusterwide resources scan started")
 
-	semaphore := semaphore.NewWeighted(parallelAuditRequests)
+	semaphore := semaphore.NewWeighted(int64(s.parallelResourcesAudits))
 	var workers sync.WaitGroup
 
 	policies, err := s.policiesClient.GetClusterWidePolicies(ctx)

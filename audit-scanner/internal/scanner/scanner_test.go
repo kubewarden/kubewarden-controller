@@ -251,7 +251,7 @@ func TestScanAllNamespaces(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "")
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", 10)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
@@ -412,7 +412,7 @@ func TestScanClusterWideResources(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "")
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", 10)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
