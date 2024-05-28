@@ -1,3 +1,4 @@
 registry: ghcr.io
 image: <your github handle>/kubewarden-controller
 helm_charts_path: ../helm-charts/
+audit_scanner_path: ../audit-scanner/

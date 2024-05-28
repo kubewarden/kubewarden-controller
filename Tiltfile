@@ -9,6 +9,7 @@ kubectl_cmd = "kubectl"
 if str(local("command -v " + kubectl_cmd + " || true", quiet = True)) == "":
     fail("Required command '" + kubectl_cmd + "' not found in PATH")
 
+
 # Install cert manager
 load('ext://cert_manager', 'deploy_cert_manager')
 deploy_cert_manager()
@@ -19,6 +20,11 @@ load('ext://namespace', 'namespace_create')
 namespace_create('kubewarden')
 
 # Install CRDs
+
+# Install the policy report CRDs
+k8s_yaml(settings.get('audit_scanner_path') + '/config/crd/wgpolicyk8s.io_clusterpolicyreports.yaml')
+k8s_yaml(settings.get('audit_scanner_path') + '/config/crd/wgpolicyk8s.io_policyreports.yaml')
+
 crd = kustomize('config/crd')
 k8s_yaml(crd)
 roles = decode_yaml_stream(kustomize('config/rbac'))
