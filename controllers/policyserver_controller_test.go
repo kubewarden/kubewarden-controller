@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"      //nolint:revive
@@ -557,6 +558,72 @@ var _ = Describe("PolicyServer controller", func() {
 				))
 				return nil
 			}).Should(Succeed())
+		})
+
+		It("should set the configMap version as a deployment annotation", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			configmap, err := getTestPolicyServerConfigMap(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(policyServerName)
+				if err != nil {
+					return err
+				}
+				if deployment.GetAnnotations()[constants.PolicyServerDeploymentConfigVersionAnnotation] != configmap.GetResourceVersion() {
+					return errors.New("deployment configmap version did not change")
+				}
+				if deployment.Spec.Template.GetLabels()[constants.PolicyServerDeploymentConfigVersionAnnotation] != configmap.GetResourceVersion() {
+					return errors.New("pod configmap version did not change")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
+		It("should update the configMap version after adding a policy", func() {
+			policyServer := policyServerFactory(policyServerName)
+			createPolicyServerAndWaitForItsService(policyServer)
+			initalConfigMap, err := getTestPolicyServerConfigMap(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(policyServerName)
+				if err != nil {
+					return err
+				}
+				if deployment.GetAnnotations()[constants.PolicyServerDeploymentConfigVersionAnnotation] != initalConfigMap.GetResourceVersion() {
+					return errors.New("deployment configmap version did not change")
+				}
+				if deployment.Spec.Template.GetLabels()[constants.PolicyServerDeploymentConfigVersionAnnotation] != initalConfigMap.GetResourceVersion() {
+					return errors.New("pod configmap version did not change")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			policyName := newName("validating-policy")
+			policy := clusterAdmissionPolicyFactory(policyName, policyServerName, false)
+			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
+
+			Eventually(func() error {
+				configmap, err := getTestPolicyServerConfigMap(policyServerName)
+				if err != nil {
+					return err
+				}
+				if configmap.GetResourceVersion() == initalConfigMap.GetResourceVersion() {
+					return errors.New("configmap version did not change")
+				}
+				deployment, err := getTestPolicyServerDeployment(policyServerName)
+				if err != nil {
+					return err
+				}
+				if deployment.GetAnnotations()[constants.PolicyServerDeploymentConfigVersionAnnotation] != configmap.GetResourceVersion() {
+					return errors.New("deployment configmap version did not change")
+				}
+				if deployment.Spec.Template.GetLabels()[constants.PolicyServerDeploymentConfigVersionAnnotation] != configmap.GetResourceVersion() {
+					return errors.New("pod configmap version did not change")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
 		})
 
 	})
