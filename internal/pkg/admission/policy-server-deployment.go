@@ -56,7 +56,7 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 			Namespace: r.DeploymentsNamespace,
 		},
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, policyServerDeployment, func() error {
+	_, err = controllerutil.CreateOrPatch(ctx, r.Client, policyServerDeployment, func() error {
 		return r.updatePolicyServerDeployment(policyServer, policyServerDeployment, configMapVersion)
 	})
 	if err != nil {
