@@ -35,7 +35,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
-sigstore = { git = "https://github.com/flavio/sigstore-rs.git", rev = "46b1cb63b193ab3402beeae5b4999c42cfc65e43", default-features = false, features = [
+sigstore = { git = "https://github.com/flavio/sigstore-rs.git", branch = "kubewarden", default-features = false, features = [
   "sigstore-trust-root",
   "cosign-rustls-tls",
   "cached-client",

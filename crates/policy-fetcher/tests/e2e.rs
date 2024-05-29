@@ -100,14 +100,14 @@ mod e2e {
         let image: Reference = POLICY_IMAGE_TAG.parse().unwrap();
         let anonymous_auth = &RegistryAuth::Anonymous;
 
-        return client
+        client
             .pull(
                 &image,
                 anonymous_auth,
                 vec![manifest::WASM_LAYER_MEDIA_TYPE],
             )
             .await
-            .expect("failed to pull manifest");
+            .expect("failed to pull manifest")
     }
 
     async fn push_image_to_test_registry(client: Client, port: u16, image: ImageData) -> Reference {
@@ -148,19 +148,18 @@ mod e2e {
     /// Creates the docker config.json file with the credentials to be
     /// used to pull the image from the registry
     fn create_docker_config_file(auth_dir: &TempDir, port: u16) {
-        let auth_string = BASE64_STANDARD_NO_PAD
-            .encode(format!("{}:{}", REGISTRY_USER, REGISTRY_PASSWORD).to_owned());
+        let auth_string =
+            BASE64_STANDARD_NO_PAD.encode(format!("{}:{}", REGISTRY_USER, REGISTRY_PASSWORD));
         let docker_auth_config = format!(
             r#"
     {{
         "auths": {{
-            "{}": {{
+            "localhost:{}": {{
                 "auth": "{}"
             }}
         }}
     }}"#,
-            format!("localhost:{}", port),
-            auth_string,
+            port, auth_string,
         )
         .to_owned();
         let docker_config_path = path::Path::join(auth_dir.path(), "config.json");
