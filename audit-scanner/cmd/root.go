@@ -165,7 +165,7 @@ func init() {
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
 	rootCmd.Flags().BoolVar(&disableStore, "disable-store", false, "disable storing the results in the k8s cluster")
 	rootCmd.Flags().IntP("parallel-namespaces", "", 1, "number of Namespaces to scan in parallel")
-	rootCmd.Flags().IntP("parallel-resources", "", 50, "number of resources to scan in parallel")
-	rootCmd.Flags().IntP("parallel-policies", "", 10, "number of policies to evaluate for a given resource in parallel")
+	rootCmd.Flags().IntP("parallel-resources", "", 100, "number of resources to scan in parallel")
+	rootCmd.Flags().IntP("parallel-policies", "", 5, "number of policies to evaluate for a given resource in parallel")
 	rootCmd.Flags().IntP("page-size", "", 100, "number of resources to fetch from the Kubernetes API server when paginating")
 }
