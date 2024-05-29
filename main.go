@@ -140,14 +140,14 @@ func main() {
 		// it will be able to watch resources across the entire cluster. This is of
 		// course constrained by the RBAC rules applied to the ServiceAccount that
 		// runs the controller.
-		// **However**, even when accessing a resource inside of a specific Namespace,
-		// the default behaviour of the cache is to create a Watch that is not namespaced;
+		// *However*, even when accessing a resource inside a specific Namespace,
+		// the default behavior of the cache is to create a Watch that is not namespaced;
 		// hence requires the privilege to access all the resources of that type inside
 		// of the cluster. That can cause runtime error if the ServiceAccount lacking
 		// this privilege.
 		// For example, when we access a secret inside the `kubewarden`
 		// namespace, the cache will create a Watch against Secrets, that will require
-		// privileged to acccess ALL the secrets of the cluster.
+		// privileged to access ALL the secrets of the cluster.
 		//
 		// To be able to have stricter RBAC rules, we need to instruct the cache to
 		// only watch objects inside of the namespace where the controller is running.
