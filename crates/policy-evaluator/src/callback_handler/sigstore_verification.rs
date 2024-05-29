@@ -21,8 +21,8 @@ use tracing::warn;
 
 #[derive(Clone)]
 pub(crate) struct Client {
-    cosign_client: Arc<Mutex<sigstore::cosign::Client<'static>>>,
-    verifier: Verifier<'static>,
+    cosign_client: Arc<Mutex<sigstore::cosign::Client>>,
+    verifier: Verifier,
 }
 
 impl Client {
@@ -31,9 +31,7 @@ impl Client {
         trust_root: Option<Arc<ManualTrustRoot<'static>>>,
     ) -> Result<Self> {
         let cosign_client = Arc::new(Mutex::new(
-            Self::build_cosign_client(sources.clone(), trust_root)
-                .await?
-                .to_owned(),
+            Self::build_cosign_client(sources.clone(), trust_root).await?,
         ));
         let verifier = Verifier::new_from_cosign_client(cosign_client.clone(), sources);
 
@@ -56,16 +54,14 @@ impl Client {
             Some(trust_root) => {
                 cosign_client_builder =
                     cosign_client_builder.with_trust_repository(trust_root.as_ref())?;
-                let cosign_client = cosign_client_builder.build()?;
-                cosign_client.to_owned()
+                cosign_client_builder.build()?
             }
             None => {
                 warn!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
                 warn!("Sigstore Verifier created without Rekor data: transparency log data won't be used");
                 warn!("Sigstore capabilities are going to be limited");
 
-                let cosign_client = cosign_client_builder.build()?;
-                cosign_client.to_owned()
+                cosign_client_builder.build()?
             }
         };
         Ok(cosign_client)
