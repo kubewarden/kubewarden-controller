@@ -93,14 +93,14 @@ impl PolicyServer {
                 .collect();
 
             let manual_root = ManualTrustRoot {
-                fulcio_certs: Some(fulcio_certs),
-                rekor_keys: Some(
-                    repo.rekor_keys()
-                        .expect("Cannot fetch Rekor keys from TUF repository")
-                        .iter()
-                        .map(|k| k.to_vec())
-                        .collect(),
-                ),
+                fulcio_certs,
+                rekor_keys: repo
+                    .rekor_keys()
+                    .expect("Cannot fetch Rekor keys from TUF repository")
+                    .iter()
+                    .map(|k| k.to_vec())
+                    .collect(),
+                ..Default::default()
             };
 
             Some(Arc::new(manual_root))

@@ -24,12 +24,12 @@ use crate::config::Policy;
 pub(crate) type FetchedPolicies = HashMap<String, Result<PathBuf>>;
 
 /// Handles download and verification of policies
-pub(crate) struct Downloader<'v> {
-    verifier: Option<Verifier<'v>>,
+pub(crate) struct Downloader {
+    verifier: Option<Verifier>,
     sources: Option<Sources>,
 }
 
-impl<'v> Downloader<'v> {
+impl Downloader {
     /// Create a new instance of Downloader
     ///
     /// **Warning:** this needs network connectivity because the constructor
@@ -218,10 +218,10 @@ impl<'v> Downloader<'v> {
 
 /// Creates a new Verifier that fetches Fulcio and Rekor data from the official
 /// TUF repository of the sigstore project
-async fn create_verifier<'v>(
+async fn create_verifier(
     sources: Option<Sources>,
     manual_root: Arc<ManualTrustRoot<'static>>,
-) -> Result<Verifier<'v>> {
+) -> Result<Verifier> {
     let verifier = Verifier::new(sources, Some(manual_root)).await?;
 
     Ok(verifier)
@@ -326,14 +326,14 @@ mod tests {
             .collect();
 
         let manual_root = ManualTrustRoot {
-            fulcio_certs: Some(fulcio_certs),
-            rekor_keys: Some(
-                repo.rekor_keys()
-                    .expect("Cannot fetch Rekor keys from TUF repository")
-                    .iter()
-                    .map(|k| k.to_vec())
-                    .collect(),
-            ),
+            fulcio_certs,
+            rekor_keys: repo
+                .rekor_keys()
+                .expect("Cannot fetch Rekor keys from TUF repository")
+                .iter()
+                .map(|k| k.to_vec())
+                .collect(),
+            ..Default::default()
         };
 
         let mut downloader = Downloader::new(None, Some(Arc::new(manual_root)))
