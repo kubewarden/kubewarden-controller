@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	parallelNamespacesAudit = 1
-	parallelResourcesAudit  = 10
+	parallelNamespacesAudits = 1
+	parallelResourcesAudits  = 10
+	parallelPoliciesAudits   = 2
 )
 
 func newMockPolicyServer() *httptest.Server {
@@ -256,7 +257,7 @@ func TestScanAllNamespaces(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudit, parallelResourcesAudit)
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelResourcesAudits, parallelPoliciesAudits)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
@@ -417,7 +418,7 @@ func TestScanClusterWideResources(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudit, parallelNamespacesAudit)
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelNamespacesAudits, parallelPoliciesAudits)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()

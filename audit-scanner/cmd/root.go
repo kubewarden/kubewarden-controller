@@ -74,6 +74,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
+		parallelPoliciesAudit, err := cmd.Flags().GetInt("parallel-policies")
+		if err != nil {
+			return err
+		}
 
 		config := ctrl.GetConfigOrDie()
 		dynamicClient := dynamic.NewForConfigOrDie(config)
@@ -99,7 +103,8 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 
 		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL, caCertFile,
 			parallelNamespacesAudits,
-			parallelResourcesAudits)
+			parallelResourcesAudits,
+			parallelPoliciesAudit)
 		if err != nil {
 			return err
 		}
@@ -155,6 +160,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
 	rootCmd.Flags().BoolVar(&disableStore, "disable-store", false, "disable storing the results in the k8s cluster")
-	rootCmd.Flags().IntP("parallel-namespaces", "parallel-namespaces", 1, "number of Namespaces to scan in parallel")
-	rootCmd.Flags().IntP("parallel-resources", "parallel-resources", 50, "number of resources to scan in parallel")
+	rootCmd.Flags().IntP("parallel-namespaces", "", 1, "number of Namespaces to scan in parallel")
+	rootCmd.Flags().IntP("parallel-resources", "", 50, "number of resources to scan in parallel")
+	rootCmd.Flags().IntP("parallel-policies", "", 10, "number of policies to evaluate for a given resource in parallel")
 }

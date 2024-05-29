@@ -40,6 +40,7 @@ type Scanner struct {
 	disableStore             bool
 	parallelNamespacesAudits int
 	parallelResourcesAudits  int
+	parallelPoliciesAudits   int
 }
 
 // NewScanner creates a new scanner
@@ -58,6 +59,7 @@ func NewScanner(
 	caCertFile string,
 	parallelNamespacesAudits int,
 	parallelResourcesAudits int,
+	parallelPoliciesAudits int,
 ) (*Scanner, error) {
 	// Get the SystemCertPool to build an in-app cert pool from it
 	// Continue with an empty pool on error
@@ -114,6 +116,7 @@ func NewScanner(
 		disableStore:             disableStore,
 		parallelNamespacesAudits: parallelNamespacesAudits,
 		parallelResourcesAudits:  parallelResourcesAudits,
+		parallelPoliciesAudits:   parallelPoliciesAudits,
 	}, nil
 }
 
@@ -121,6 +124,8 @@ func NewScanner(
 // Returns errors if there's any when fetching policies or resources, but only
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
+//
+//nolint:funlen
 func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) error {
 	log.Info().
 		Dict("dict", zerolog.Dict().
@@ -169,7 +174,9 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 				defer semaphore.Release(1)
 				defer workers.Done()
 
-				s.auditResource(ctx, policiesToAudit, *resource, runUID)
+				if err := s.auditResource(ctx, policiesToAudit, *resource, runUID); err != nil {
+					log.Error().Err(err).Str("RunUID", runUID).Msg("error auditing resource")
+				}
 			}()
 			return nil
 		})
@@ -201,23 +208,23 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 	semaphore := semaphore.NewWeighted(int64(s.parallelNamespacesAudits))
 	var workers sync.WaitGroup
 
-	for _, ns := range nsList.Items {
+	for _, namespace := range nsList.Items {
 		workers.Add(1)
 		err := semaphore.Acquire(ctx, 1)
 		if err != nil {
 			return err
 		}
+		namespaceName := namespace.Name
 
 		go func() {
 			defer semaphore.Release(1)
 			defer workers.Done()
 
-			if e := s.ScanNamespace(ctx, ns.Name, runUID); e != nil {
-				log.Error().Err(e).Str("ns", ns.Name).Msg("error scanning namespace")
+			if e := s.ScanNamespace(ctx, namespaceName, runUID); e != nil {
+				log.Error().Err(e).Str("ns", namespaceName).Msg("error scanning namespace")
 				err = errors.Join(err, e)
 			}
 		}()
-
 	}
 	workers.Wait()
 
@@ -290,45 +297,83 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 	return nil
 }
 
-func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) {
-	policyReport := report.NewPolicyReport(runUID, resource)
+type policyAuditResult struct {
+	policy                  policiesv1.Policy
+	admissionReviewResponse *admissionv1.AdmissionReview
+	errored                 bool
+}
 
-	for _, p := range policies {
-		url := p.PolicyServer
-		policy := p.Policy
+//nolint:funlen
+func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) error {
+	log.Info().
+		Str("resource", resource.GetName()).
+		Dict("dict", zerolog.Dict().
+			Int("policies to evaluate", len(policies)).
+			Int("parallel policies audit", s.parallelPoliciesAudits),
+		).Msg("audit resource")
 
-		matches, err := policyMatches(policy, resource)
+	semaphore := semaphore.NewWeighted(int64(s.parallelPoliciesAudits))
+	var workers sync.WaitGroup
+	auditResults := make(chan policyAuditResult, len(policies))
+
+	for _, policyToUse := range policies {
+		err := semaphore.Acquire(ctx, 1)
 		if err != nil {
-			log.Error().Err(err).Msg("error matching policy to resource")
+			return err
 		}
+		workers.Add(1)
 
-		if !matches {
-			continue
-		}
+		url := policyToUse.PolicyServer
+		policy := policyToUse.Policy
 
-		admissionReviewRequest := newAdmissionReview(resource)
-		admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
+		go func() {
+			defer semaphore.Release(1)
+			defer workers.Done()
 
-		errored := responseErr != nil
-		if errored {
-			// log responseErr, will end in PolicyReportResult too
-			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
-				Str("admissionRequest name", admissionReviewRequest.Request.Name).
-				Str("policy", policy.GetName()).
-				Str("resource", resource.GetName()),
-			).
-				Msg("error sending AdmissionReview to PolicyServer")
-		} else {
-			log.Debug().Dict("response", zerolog.Dict().
-				Str("uid", string(admissionReviewResponse.Response.UID)).
-				Str("policy", policy.GetName()).
-				Str("resource", resource.GetName()).
-				Bool("allowed", admissionReviewResponse.Response.Allowed),
-			).
-				Msg("audit review response")
-		}
+			matches, err := policyMatches(policy, resource)
+			if err != nil {
+				log.Error().Err(err).Msg("error matching policy to resource")
+			}
 
-		report.AddResultToPolicyReport(policyReport, policy, admissionReviewResponse, errored)
+			if !matches {
+				return
+			}
+
+			admissionReviewRequest := newAdmissionReview(resource)
+			admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
+
+			errored := responseErr != nil
+			if errored {
+				// log responseErr, will end in PolicyReportResult too
+				log.Error().Err(responseErr).Dict("response", zerolog.Dict().
+					Str("admissionRequest name", admissionReviewRequest.Request.Name).
+					Str("policy", policy.GetName()).
+					Str("resource", resource.GetName()),
+				).
+					Msg("error sending AdmissionReview to PolicyServer")
+			} else {
+				log.Debug().Dict("response", zerolog.Dict().
+					Str("uid", string(admissionReviewResponse.Response.UID)).
+					Str("policy", policy.GetName()).
+					Str("resource", resource.GetName()).
+					Bool("allowed", admissionReviewResponse.Response.Allowed),
+				).
+					Msg("audit review response")
+			}
+
+			auditResults <- policyAuditResult{
+				policy,
+				admissionReviewResponse,
+				errored,
+			}
+		}()
+	}
+	workers.Wait()
+	close(auditResults)
+
+	policyReport := report.NewPolicyReport(runUID, resource)
+	for res := range auditResults {
+		report.AddResultToPolicyReport(policyReport, res.policy, res.admissionReviewResponse, res.errored)
 	}
 
 	if s.outputScan {
@@ -348,6 +393,8 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			log.Error().Err(err).Msg("error adding PolicyReport to store.")
 		}
 	}
+
+	return nil
 }
 
 func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) {
