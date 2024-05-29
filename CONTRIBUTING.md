@@ -30,8 +30,14 @@ repository](https://github.com/kubewarden/helm-charts) in your local machine:
 git clone git@github.com/kubewarden/helm-charts.git
 ```
 
-A development Kubernetes cluster is needed to run the controller. You can use
-[k3d](https://k3d.io/) to create a local cluster for development purposes.
+You need to clone the [kubewarden audit-scanner repository](https://github.com/kubewarden/audit-scanner) in your local machine:
+
+```console
+git clone git@github.com/kubewarden/audit-scanner.git
+```
+
+A development Kubernetes cluster is needed to run the controller.
+You can use [k3d](https://k3d.io/) to create a local cluster for development purposes.
 
 ### Settings
 
