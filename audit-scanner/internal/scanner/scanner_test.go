@@ -30,6 +30,11 @@ import (
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
+const (
+	parallelNamespacesAudit = 1
+	parallelResourcesAudit  = 10
+)
+
 func newMockPolicyServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
@@ -251,7 +256,7 @@ func TestScanAllNamespaces(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", 10)
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudit, parallelResourcesAudit)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
@@ -412,7 +417,7 @@ func TestScanClusterWideResources(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", 10)
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudit, parallelNamespacesAudit)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()

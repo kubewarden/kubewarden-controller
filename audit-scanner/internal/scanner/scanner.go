@@ -35,10 +35,11 @@ type Scanner struct {
 	k8sClient         *k8s.Client
 	policyReportStore *report.PolicyReportStore
 	// http client used to make requests against the Policy Server
-	httpClient              http.Client
-	outputScan              bool
-	disableStore            bool
-	parallelResourcesAudits int
+	httpClient               http.Client
+	outputScan               bool
+	disableStore             bool
+	parallelNamespacesAudits int
+	parallelResourcesAudits  int
 }
 
 // NewScanner creates a new scanner
@@ -55,6 +56,7 @@ func NewScanner(
 	disableStore bool,
 	insecureClient bool,
 	caCertFile string,
+	parallelNamespacesAudits int,
 	parallelResourcesAudits int,
 ) (*Scanner, error) {
 	// Get the SystemCertPool to build an in-app cert pool from it
@@ -104,13 +106,14 @@ func NewScanner(
 	}
 
 	return &Scanner{
-		policiesClient:          policiesClient,
-		k8sClient:               k8sClient,
-		policyReportStore:       policyReportStore,
-		httpClient:              httpClient,
-		outputScan:              outputScan,
-		disableStore:            disableStore,
-		parallelResourcesAudits: parallelResourcesAudits,
+		policiesClient:           policiesClient,
+		k8sClient:                k8sClient,
+		policyReportStore:        policyReportStore,
+		httpClient:               httpClient,
+		outputScan:               outputScan,
+		disableStore:             disableStore,
+		parallelNamespacesAudits: parallelNamespacesAudits,
+		parallelResourcesAudits:  parallelResourcesAudits,
 	}, nil
 }
 
@@ -119,7 +122,12 @@ func NewScanner(
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) error {
-	log.Info().Str("namespace", nsName).Str("RunUID", runUID).Msg("namespace scan started")
+	log.Info().
+		Dict("dict", zerolog.Dict().
+			Str("namespace", nsName).
+			Str("RunUID", runUID).
+			Int("parallel resources audits", s.parallelResourcesAudits),
+		).Msg("namespace scan started")
 	semaphore := semaphore.NewWeighted(int64(s.parallelResourcesAudits))
 	var workers sync.WaitGroup
 
@@ -182,18 +190,36 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
 func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
-	log.Info().Msg("all-namespaces scan started")
+	log.Info().
+		Dict("dict", zerolog.Dict().
+			Int("parallel namespaces audits", s.parallelNamespacesAudits),
+		).Msg("all-namespaces scan started")
 	nsList, err := s.k8sClient.GetAuditedNamespaces(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("error scanning all namespaces")
 	}
+	semaphore := semaphore.NewWeighted(int64(s.parallelNamespacesAudits))
+	var workers sync.WaitGroup
 
 	for _, ns := range nsList.Items {
-		if e := s.ScanNamespace(ctx, ns.Name, runUID); e != nil {
-			log.Error().Err(e).Str("ns", ns.Name).Msg("error scanning namespace")
-			err = errors.Join(err, e)
+		workers.Add(1)
+		err := semaphore.Acquire(ctx, 1)
+		if err != nil {
+			return err
 		}
+
+		go func() {
+			defer semaphore.Release(1)
+			defer workers.Done()
+
+			if e := s.ScanNamespace(ctx, ns.Name, runUID); e != nil {
+				log.Error().Err(e).Str("ns", ns.Name).Msg("error scanning namespace")
+				err = errors.Join(err, e)
+			}
+		}()
+
 	}
+	workers.Wait()
 
 	log.Info().Msg("all-namespaces scan finished")
 
@@ -218,7 +244,8 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 	log.Info().
 		Dict("dict", zerolog.Dict().
 			Int("policies to evaluate", policies.PolicyNum).
-			Int("policies skipped", policies.SkippedNum),
+			Int("policies skipped", policies.SkippedNum).
+			Int("parallel resources audits", s.parallelResourcesAudits),
 		).Msg("cluster admission policies count")
 
 	for gvr, policies := range policies.PoliciesByGVR {

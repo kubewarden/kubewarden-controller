@@ -66,6 +66,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
+		parallelNamespacesAudits, err := cmd.Flags().GetInt("parallel-namespaces")
+		if err != nil {
+			return err
+		}
 		parallelResourcesAudits, err := cmd.Flags().GetInt("parallel-resources")
 		if err != nil {
 			return err
@@ -93,7 +97,9 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		}
 		policyReportStore := report.NewPolicyReportStore(client)
 
-		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL, caCertFile, parallelResourcesAudits)
+		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL, caCertFile,
+			parallelNamespacesAudits,
+			parallelResourcesAudits)
 		if err != nil {
 			return err
 		}
@@ -149,5 +155,6 @@ func init() {
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
 	rootCmd.Flags().BoolVar(&disableStore, "disable-store", false, "disable storing the results in the k8s cluster")
-	rootCmd.Flags().IntP("parallel-resources", "conc-res", 50, "number of resources to scan concurrently")
+	rootCmd.Flags().IntP("parallel-namespaces", "parallel-namespaces", 1, "number of Namespaces to scan in parallel")
+	rootCmd.Flags().IntP("parallel-resources", "parallel-resources", 50, "number of resources to scan in parallel")
 }
