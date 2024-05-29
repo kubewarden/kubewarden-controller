@@ -34,6 +34,7 @@ const (
 	parallelNamespacesAudits = 1
 	parallelResourcesAudits  = 10
 	parallelPoliciesAudits   = 2
+	pageSize                 = 100
 )
 
 func newMockPolicyServer() *httptest.Server {
@@ -249,7 +250,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil)
+	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
 	require.NoError(t, err)
 
 	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL)
@@ -410,7 +411,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil)
+	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
 	require.NoError(t, err)
 
 	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL)

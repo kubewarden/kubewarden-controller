@@ -17,6 +17,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+const pageSize = 100
+
 func TestGetResources(t *testing.T) {
 	var pods []runtime.Object
 	for i := 0; i < pageSize+5; i++ {
@@ -26,7 +28,7 @@ func TestGetResources(t *testing.T) {
 	dynamicClient := dynamicFake.NewSimpleDynamicClient(scheme.Scheme, pods...)
 	clientset := fake.NewSimpleClientset()
 
-	k8sClient, err := NewClient(dynamicClient, clientset, "kubewarden", nil)
+	k8sClient, err := NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
 	require.NoError(t, err)
 
 	pager, err := k8sClient.GetResources(schema.GroupVersionResource{

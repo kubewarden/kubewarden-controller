@@ -18,8 +18,6 @@ import (
 	"k8s.io/client-go/tools/pager"
 )
 
-const pageSize = 100
-
 // A client to get resources and namespaces from a Kubernetes cluster
 type Client struct {
 	// dynamicClient is used to get resource lists
@@ -28,16 +26,19 @@ type Client struct {
 	clientset kubernetes.Interface
 	// list of skipped namespaces from audit, by name. It includes kubewardenNamespace
 	skippedNs []string
+	// pageSize is the number of resources to fetch when paginating
+	pageSize int64
 }
 
 // NewClient returns a new client
-func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, kubewardenNamespace string, skippedNs []string) (*Client, error) {
+func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, kubewardenNamespace string, skippedNs []string, pageSize int64) (*Client, error) {
 	skippedNs = append(skippedNs, kubewardenNamespace)
 
 	return &Client{
 		dynamicClient,
 		clientset,
 		skippedNs,
+		pageSize,
 	}, nil
 }
 
@@ -70,7 +71,7 @@ func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*
 		return resources, nil
 	})
 
-	listPager.PageSize = pageSize
+	listPager.PageSize = f.pageSize
 	return listPager, nil
 }
 

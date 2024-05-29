@@ -78,6 +78,10 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
+		pageSize, err := cmd.Flags().GetInt("page-size")
+		if err != nil {
+			return err
+		}
 
 		config := ctrl.GetConfigOrDie()
 		dynamicClient := dynamic.NewForConfigOrDie(config)
@@ -95,7 +99,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
-		k8sClient, err := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs)
+		k8sClient, err := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs, int64(pageSize))
 		if err != nil {
 			return err
 		}
@@ -163,4 +167,5 @@ func init() {
 	rootCmd.Flags().IntP("parallel-namespaces", "", 1, "number of Namespaces to scan in parallel")
 	rootCmd.Flags().IntP("parallel-resources", "", 50, "number of resources to scan in parallel")
 	rootCmd.Flags().IntP("parallel-policies", "", 10, "number of policies to evaluate for a given resource in parallel")
+	rootCmd.Flags().IntP("page-size", "", 100, "number of resources to fetch from the Kubernetes API server when paginating")
 }
