@@ -51,7 +51,7 @@ validator = { version = "0.18", features = ["derive"] }
 #wapc = "1.1"
 wapc = { git = "https://github.com/wapc/wapc-rs.git", tag = "wasmtime-provider-v1.17.0" }
 wasi-common = { workspace = true }
-wasmparser = "0.208"
+wasmparser = "0.209"
 wasmtime = { workspace = true }
 # wasmtime-provider = { version = "1.16", features = ["cache"] }
 wasmtime-provider = { git = "https://github.com/wapc/wapc-rs.git", tag = "wasmtime-provider-v1.17.0", features = [
