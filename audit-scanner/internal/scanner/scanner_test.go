@@ -30,6 +30,13 @@ import (
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
+const (
+	parallelNamespacesAudits = 1
+	parallelResourcesAudits  = 10
+	parallelPoliciesAudits   = 2
+	pageSize                 = 100
+)
+
 func newMockPolicyServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
@@ -243,7 +250,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil)
+	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
 	require.NoError(t, err)
 
 	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL)
@@ -251,7 +258,7 @@ func TestScanAllNamespaces(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "")
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelResourcesAudits, parallelPoliciesAudits)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
@@ -404,7 +411,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil)
+	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
 	require.NoError(t, err)
 
 	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL)
@@ -412,7 +419,7 @@ func TestScanClusterWideResources(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "")
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelNamespacesAudits, parallelPoliciesAudits)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()

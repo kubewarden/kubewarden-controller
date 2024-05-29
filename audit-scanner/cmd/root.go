@@ -66,6 +66,22 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
+		parallelNamespacesAudits, err := cmd.Flags().GetInt("parallel-namespaces")
+		if err != nil {
+			return err
+		}
+		parallelResourcesAudits, err := cmd.Flags().GetInt("parallel-resources")
+		if err != nil {
+			return err
+		}
+		parallelPoliciesAudit, err := cmd.Flags().GetInt("parallel-policies")
+		if err != nil {
+			return err
+		}
+		pageSize, err := cmd.Flags().GetInt("page-size")
+		if err != nil {
+			return err
+		}
 
 		config := ctrl.GetConfigOrDie()
 		dynamicClient := dynamic.NewForConfigOrDie(config)
@@ -83,13 +99,16 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		if err != nil {
 			return err
 		}
-		k8sClient, err := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs)
+		k8sClient, err := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs, int64(pageSize))
 		if err != nil {
 			return err
 		}
 		policyReportStore := report.NewPolicyReportStore(client)
 
-		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL, caCertFile)
+		scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL, caCertFile,
+			parallelNamespacesAudits,
+			parallelResourcesAudits,
+			parallelPoliciesAudit)
 		if err != nil {
 			return err
 		}
@@ -145,4 +164,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
 	rootCmd.Flags().BoolVar(&disableStore, "disable-store", false, "disable storing the results in the k8s cluster")
+	rootCmd.Flags().IntP("parallel-namespaces", "", 1, "number of Namespaces to scan in parallel")
+	rootCmd.Flags().IntP("parallel-resources", "", 100, "number of resources to scan in parallel")
+	rootCmd.Flags().IntP("parallel-policies", "", 5, "number of policies to evaluate for a given resource in parallel")
+	rootCmd.Flags().IntP("page-size", "", 100, "number of resources to fetch from the Kubernetes API server when paginating")
 }

@@ -23,17 +23,21 @@ See [Querying the reports](#querying-the-reports) for more information.
 audit-scanner [flags]
 
 Flags:
--c, --cluster scan cluster wide resources
---disable-store disable storing the results in the k8s cluster
--f, --extra-ca string File path to CA cert in PEM format of PolicyServer endpoints
--h, --help help for audit-scanner
--i, --ignore-namespaces strings comma separated list of namespace names to be skipped from scan. This flag can be repeated
---insecure-ssl skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development
--k, --kubewarden-namespace string namespace where the Kubewarden components (e.g. PolicyServer) are installed (required) (default "kubewarden")
--l, --loglevel string level of the logs. Supported values are: [trace debug info warn error fatal] (default "info")
--n, --namespace string namespace to be evaluated
--o, --output-scan print result of scan in JSON to stdout
--u, --policy-server-url string URI to the PolicyServers the Audit Scanner will query. Example: https://localhost:3000. Useful for out-of-cluster debugging
+  -c, --cluster                       scan cluster wide resources
+      --disable-store                 disable storing the results in the k8s cluster
+  -f, --extra-ca string               File path to CA cert in PEM format of PolicyServer endpoints
+  -h, --help                          help for audit-scanner
+  -i, --ignore-namespaces strings     comma separated list of namespace names to be skipped from scan. This flag can be repeated
+      --insecure-ssl                  skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development
+  -k, --kubewarden-namespace string   namespace where the Kubewarden components (e.g. PolicyServer) are installed (required) (default "kubewarden")
+  -l, --loglevel string               level of the logs. Supported values are: [trace debug info warn error fatal] (default "info")
+  -n, --namespace string              namespace to be evaluated
+  -o, --output-scan                   print result of scan in JSON to stdout
+      --page-size int                 number of resources to fetch from the Kubernetes API server when paginating (default 100)
+      --parallel-namespaces int       number of Namespaces to scan in parallel (default 1)
+      --parallel-policies int         number of policies to evaluate for a given resource in parallel (default 5)
+      --parallel-resources int        number of resources to scan in parallel (default 100)
+  -u, --policy-server-url string      URI to the PolicyServers the Audit Scanner will query. Example: https://localhost:3000. Useful for out-of-cluster debugging
 ```
 
 ## Examples
@@ -55,6 +59,39 @@ Disable storing the results in etcd and print the reports to stdout in JSON form
 ```shell
 audit-scanner  --kubewarden-namespace kubewarden --disable-store --output-scan
 ```
+
+## Tuning
+
+The audit scanner works by entering each Namespace of the cluster and finding all the policies that are "looking" at the contents of the Namespace.
+It then identifies all the resource types that are relevant to these policies (e.g. Deployments, Pods, etc.) and iterates over each resource type.
+
+When looking into a specific type of resource, audit-scanner fetches these objects in chunks. The size of the chunk can be set using the `--page-size` flag.
+The scanner fetches one chunk of resources, then iterates over each one of them, evaluating all the policies that are looking at that specific resource.
+
+Each iteration step can be done in parallel. The number of Namespaces to be evaluated at the same time can be set using the `--parallel-namespaces` flag.
+The number of resources to be evaluated at the same time can be set using the `--parallel-resources` flag.
+When evaluating the policies for a specific resource, the number of policies to be evaluated at the same time can be set using the `--parallel-policies` flag.
+
+A concrete example:
+
+- We have 5 namespaces, each with 1000 Pods.
+- We have 10 `ClusterAdmissionPolicy` resources that are looking at Pods.
+- We have set `--page-size=200`, `--parallel-namespaces=2`, `--parallel-resources=100`, and `--parallel-policies=5`.
+
+The scanner will:
+
+- Work on 2 Namespaces at the same time.
+- Inside of each Namespace:
+  - Fetch 200 Pods at the same time (`--page-size=200`).
+  - Evaluate 100 Pods at the same time (`--parallel-resources=100`).
+  - Evaluate 5 policies at the same time (`--parallel-policies=5`).
+
+Things to consider:
+
+- The pagination size has a direct impact on
+  - The number of API calls that the scanner will make.
+  - The amount of memory that the scanner will use.
+- The maximum number of outgoing evaluation requests is the product of `--parallel-namespaces`, `--parallel-resources`, and `--parallel-policies`.
 
 # Querying the reports
 
