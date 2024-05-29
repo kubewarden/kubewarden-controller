@@ -102,7 +102,7 @@ func (r *AdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectCl
 	return r.Spec.SideEffects
 }
 
-// GetRules returns all rules. Scope is namespaced since AdmissionPolicy just watch for namespace resources
+// GetRules returns all rules. Scope is namespaced since AdmissionPolicy just watches for namespace resources
 func (r *AdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
 	namespacedScopeV1 := admissionregistrationv1.NamespacedScope
 	rules := make([]admissionregistrationv1.RuleWithOperations, 0)

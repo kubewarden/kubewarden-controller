@@ -158,7 +158,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	// When running the suite muiltply times, canceling the context
+	// When running the suite multiple times, canceling the context
 	// is not enough to stop the container in time. We need to terminate it.
 	// Otherwise, the next run may fail in the container initialization.
 	By("terminate the k3s container")

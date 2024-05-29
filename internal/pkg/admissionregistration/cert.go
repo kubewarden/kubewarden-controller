@@ -25,7 +25,7 @@ func GenerateCert(ca []byte,
 
 	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot generate serialNumber for cartificate: %w", err)
+		return nil, nil, fmt.Errorf("cannot generate serialNumber for certificate: %w", err)
 	}
 
 	// key size must be higher than 1024, otherwise the PolicyServer

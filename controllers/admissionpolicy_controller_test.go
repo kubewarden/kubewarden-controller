@@ -132,7 +132,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				),
 			)
 
-			// simulate unitialized labels and annotation maps (behaviour of Kubewarden <= 1.9.0), or user change
+			// simulate uninitialized labels and annotation maps (behavior of Kubewarden <= 1.9.0), or user change
 			By("setting the ValidatingWebhookConfiguration labels and annotation to nil")
 			validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(policy.GetUniqueName())
 			Expect(err).ToNot(HaveOccurred())

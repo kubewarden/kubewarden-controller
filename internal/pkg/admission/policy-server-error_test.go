@@ -16,7 +16,7 @@ func TestIsPolicyServerNotReady(t *testing.T) {
 		t.Errorf("foo")
 	}
 
-	errWrapped := fmt.Errorf("this is a wraped error: %w", err)
+	errWrapped := fmt.Errorf("this is a wrapped error: %w", err)
 	if IsPolicyServerNotReady(errWrapped) != true {
 		t.Errorf("expected wrapped error to be identified")
 	}

@@ -13,25 +13,25 @@ For more information refer to the [official Kubewarden website](https://kubeward
 `kubewarden-controller` is a Kubernetes controller that allows you to
 dynamically register Kubewarden admission policies.
 
-The `kubewarden-controller` will reconcile the admission policies you
-have registered against the Kubernetes webhooks of the cluster where
-it is deployed.
+The `kubewarden-controller` reconciles the admission policies you
+have registered with the Kubernetes webhooks of the cluster where
+it's deployed.
 
 ## Installation
 
-The kubewarden-controller can be deployed using a helm chart. For instructions,
+The kubewarden-controller can be deployed using a Helm chart. For instructions,
 see https://charts.kubewarden.io.
 
 ## Usage
 
-Once the kubewarden-controller is up and running, Kubewarden policies can be defined
-via the `ClusterAdmissionPolicy` resource.
+Once the kubewarden-controller is up and running, you can define Kubewarden policies
+using the `ClusterAdmissionPolicy` resource.
 
 The documentation of this Custom Resource can be found
 [here](https://github.com/kubewarden/kubewarden-controller/blob/main/docs/crds/README.asciidoc)
 or on [docs.crds.dev](https://doc.crds.dev/github.com/kubewarden/kubewarden-controller).
 
-**Note well:** `ClusterAdmissionPolicy` resources are cluster-wide.
+**Note:** `ClusterAdmissionPolicy` resources are cluster-wide.
 
 ### Deploy your first admission policy
 
@@ -61,35 +61,35 @@ spec:
       - NET_ADMIN
 ```
 
-This `ClusterAdmissionPolicy` will evaluate all the `CREATE` and
-`UPDATE` operations performed against Pods.
-The homepage of this policy provides more insights about how this policy behaves.
+This `ClusterAdmissionPolicy` evaluates all the `CREATE` and `UPDATE` operations
+performed against Pods. The homepage of this policy provides more insights about
+how this policy behaves.
 
-Creating the resource inside of Kubernetes is sufficient to enforce the policy:
+Creating the resource inside Kubernetes is sufficient to enforce the policy:
 
 ```shell
-$ kubectl apply -f https://raw.githubusercontent.com/kubewarden/kubewarden-controller/main/config/samples/policies_v1alpha2_clusteradmissionpolicy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubewarden/kubewarden-controller/main/config/samples/policies_v1alpha2_clusteradmissionpolicy.yaml
 ```
 
 ### Remove your first admission policy
 
 You can delete the admission policy you just created:
 
-```
-$ kubectl delete clusteradmissionpolicy psp-capabilities
-$ kubectl patch clusteradmissionpolicy psp-capabilities -p '{"metadata":{"finalizers":null}}' --type=merge
+```console
+kubectl delete clusteradmissionpolicy psp-capabilities
+kubectl patch clusteradmissionpolicy psp-capabilities -p '{"metadata":{"finalizers":null}}' --type=merge
 ```
 
 ## Learn more
 
-The [official documentation](https://docs.kubewarden.io) provides more insights
+The [documentation](https://docs.kubewarden.io) provides more insights
 about how the project works and how to use it.
 
 # Software bill of materials
 
 Kubewarden controller has its software bill of materials (SBOM) published every
-release. It follows the [SPDX](https://spdx.dev/) version 2.2 format and it can be found
-together with the signature and certificate used to signed it in the
+release. It follows the [SPDX](https://spdx.dev/) version 2.2 format and you can
+find it together with the signature and certificate used to sign it in the
 [release assets](https://github.com/kubewarden/kubewarden-controller/releases)
 
 # Roadmap
@@ -98,14 +98,16 @@ together with the signature and certificate used to signed it in the
 
 # Governance
 
-See our [governance document](https://github.com/kubewarden/rfc/blob/main/rfc/0013-governance.md).
+See the [governance document](https://github.com/kubewarden/rfc/blob/main/rfc/0013-governance.md).
 
 # Community meeting
 
-We host regular online meetings for contributors, adopters, maintainers, and anyone else interested to connect in a synchronous fashion. These meetings usually take place on second Thursday of the month at 4PM UTC.
+We host regular online meetings for contributors, adopters, maintainers, and
+anyone else interested. These meetings usually take place on the second Thursday
+of the month at 4 PM UTC.
 
 - [Zoom link](https://zoom.us/j/92928111886)
-- [Minutes from previous meetings](https://docs.google.com/document/d/1TgPIFKygkR2_vViCSfBEzwDDactfTcedc9fc4AeVJ9w/edit#)
+- [Minutes from earlier meetings](https://docs.google.com/document/d/1TgPIFKygkR2_vViCSfBEzwDDactfTcedc9fc4AeVJ9w/edit#)
 
 We're a friendly group, so please feel free to join us!
 
