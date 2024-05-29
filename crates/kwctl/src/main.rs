@@ -769,17 +769,16 @@ async fn build_sigstore_trust_root(
         }
         debug!("building Sigstore trust root from flags");
         Ok(Some(Arc::new(ManualTrustRoot {
-            fulcio_certs: Some(
-                fulcio_certs
-                    .iter()
-                    .map(|c| {
-                        let cert: sigstore::registry::Certificate = c.to_owned();
-                        cert.try_into()
-                            .expect("could not convert certificate to CertificateDer")
-                    })
-                    .collect(),
-            ),
-            rekor_keys: Some(rekor_public_keys),
+            fulcio_certs: fulcio_certs
+                .iter()
+                .map(|c| {
+                    let cert: sigstore::registry::Certificate = c.to_owned();
+                    cert.try_into()
+                        .expect("could not convert certificate to CertificateDer")
+                })
+                .collect(),
+            rekor_keys: rekor_public_keys,
+            ..Default::default()
         })))
     } else {
         debug!("building Sigstore trust root from Sigstore's TUF repository");
@@ -797,14 +796,14 @@ async fn build_sigstore_trust_root(
             .map(|c| c.into_owned())
             .collect();
         let manual_root = ManualTrustRoot {
-            fulcio_certs: Some(fulcio_certs),
-            rekor_keys: Some(
-                repo.rekor_keys()
-                    .expect("no rekor keys found inside of TUF repository")
-                    .iter()
-                    .map(|k| k.to_vec())
-                    .collect(),
-            ),
+            fulcio_certs,
+            rekor_keys: repo
+                .rekor_keys()
+                .expect("no rekor keys found inside of TUF repository")
+                .iter()
+                .map(|k| k.to_vec())
+                .collect(),
+            ..Default::default()
         };
         Ok(Some(Arc::new(manual_root)))
     }
