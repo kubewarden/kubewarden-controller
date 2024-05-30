@@ -130,13 +130,17 @@ func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.Polic
 
 	r.adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations, &admissionContainer)
 
-	policyServerDeployment.Annotations = map[string]string{
-		constants.PolicyServerDeploymentConfigVersionAnnotation: configMapVersion,
+	if policyServerDeployment.ObjectMeta.Annotations == nil {
+		policyServerDeployment.ObjectMeta.Annotations = make(map[string]string)
 	}
-	policyServerDeployment.Labels = map[string]string{
-		constants.AppLabelKey:          policyServer.AppLabel(),
-		constants.PolicyServerLabelKey: policyServer.Name,
+	policyServerDeployment.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
+
+	if policyServerDeployment.Labels == nil {
+		policyServerDeployment.Labels = make(map[string]string)
 	}
+	policyServerDeployment.Labels[constants.AppLabelKey] = policyServer.AppLabel()
+	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
+
 	policyServerDeployment.Spec = appsv1.DeploymentSpec{
 		Replicas: &policyServer.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
