@@ -41,7 +41,7 @@ func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.
 			Namespace: namespace,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, k8s, pdb, func() error {
+	_, err := controllerutil.CreateOrPatch(ctx, k8s, pdb, func() error {
 		pdb.Name = policyServer.NameWithPrefix()
 		pdb.Namespace = namespace
 		if err := controllerutil.SetOwnerReference(policyServer, pdb, k8s.Scheme()); err != nil {
