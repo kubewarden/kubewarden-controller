@@ -12,7 +12,7 @@ The code gets all the `ClusterAdmissionPolicy` objects defined in the cluster.
 The code then creates a map with the Kubernetes resource as key, and the policies targeting that kind of resource as value.
 This happens [here](https://github.com/kubewarden/audit-scanner/blob/038da594f989f97420bf235979ae1e60335303e6/internal/policies/client.go#L174).
 
-The map would look like this:
+The map looks like this:
 
 ```hcl
 {
