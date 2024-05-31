@@ -27,7 +27,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, 
 			Name:      policyServer.NameWithPrefix(),
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, policyServerSecret, func() error {
+	_, err := controllerutil.CreateOrPatch(ctx, r.Client, policyServerSecret, func() error {
 		if err := controllerutil.SetOwnerReference(policyServer, policyServerSecret, r.Client.Scheme()); err != nil {
 			return errors.Join(errors.New("failed to set policy server secret owner reference"), err)
 		}
@@ -97,7 +97,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Conte
 			Name:      constants.PolicyServerCARootSecretName,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, policyServerSecret, func() error {
+	_, err := controllerutil.CreateOrPatch(ctx, r.Client, policyServerSecret, func() error {
 		_, hasCARootCert := policyServerSecret.Data[constants.PolicyServerCARootCACert]
 		_, hasCARootPem := policyServerSecret.Data[constants.PolicyServerCARootPemName]
 		_, hasCARootPrivateKey := policyServerSecret.Data[constants.PolicyServerCARootPrivateKeyCertName]

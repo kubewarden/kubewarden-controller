@@ -42,7 +42,7 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policySer
 			Namespace: r.DeploymentsNamespace,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, &svc, func() error {
+	_, err := controllerutil.CreateOrPatch(ctx, r.Client, &svc, func() error {
 		return r.updateService(&svc, policyServer)
 	})
 
