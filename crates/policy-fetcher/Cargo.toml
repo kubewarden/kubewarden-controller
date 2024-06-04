@@ -55,7 +55,7 @@ tokio = { version = "1", default_features = false }
 cfg-if = "1.0"
 
 [dev-dependencies]
-rstest = "0.20"
+rstest = "0.21"
 tempfile = "3.2"
 textwrap = "0.16"
 testcontainers = "0.17.0"
