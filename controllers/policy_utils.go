@@ -72,6 +72,13 @@ func startReconciling(ctx context.Context, client client.Client, reconciler admi
 		return reconcilePolicyDeletion(ctx, client, policy)
 	}
 
+	if !controllerutil.ContainsFinalizer(policy, constants.KubewardenFinalizer) {
+		controllerutil.AddFinalizer(policy, constants.KubewardenFinalizer)
+		if err := client.Update(ctx, policy); err != nil {
+			return ctrl.Result{}, fmt.Errorf("cannot update policy finalizer: %w", err)
+		}
+	}
+
 	reconcileResult, reconcileErr := reconcilePolicy(ctx, client, reconciler, policy)
 
 	_ = setPolicyStatus(ctx, reconciler.DeploymentsNamespace, reconciler.APIReader, policy)
@@ -193,6 +200,11 @@ func reconcilePolicyDeletion(ctx context.Context, client client.Client, policy p
 			return ctrl.Result{}, err
 		}
 	}
+	// Remove the old finalizer used to ensure that the policy server created
+	// before this controller version is delete as well. As the upgrade path
+	// supported by the Kubewarden project does not allow jumping versions, we
+	// can safely remove this line of code after a few releases.
+	controllerutil.RemoveFinalizer(policy, constants.KubewardenFinalizerPre114)
 	controllerutil.RemoveFinalizer(policy, constants.KubewardenFinalizer)
 	if err := client.Update(ctx, policy); err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot update admission policy: %w", err)

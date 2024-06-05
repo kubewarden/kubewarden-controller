@@ -62,6 +62,38 @@ var _ = Describe("PolicyServer controller", func() {
 				)
 			})
 
+			It("should get its old not domain-qualified finalizer removed", func() {
+				Eventually(func() error {
+					policyServer, err := getTestPolicyServer(policyServerName)
+					if err != nil {
+						return err
+					}
+					controllerutil.AddFinalizer(policyServer, constants.KubewardenFinalizerPre114)
+					return k8sClient.Update(ctx, policyServer)
+				}, timeout, pollInterval).Should(Succeed())
+
+				Eventually(func() error {
+					policyServer, err := getTestPolicyServer(policyServerName)
+					if err != nil {
+						return err
+					}
+					if controllerutil.ContainsFinalizer(policyServer, constants.KubewardenFinalizerPre114) {
+						return nil
+					}
+					return errors.New("finalizer not found")
+				}, timeout, pollInterval).Should(Succeed())
+
+				Expect(
+					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+				).To(Succeed())
+
+				Eventually(func() (*policiesv1.PolicyServer, error) {
+					return getTestPolicyServer(policyServerName)
+				}, timeout, pollInterval).ShouldNot(
+					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizerPre114)),
+				)
+			})
+
 			It("policy server resources should be gone after it being deleted", func() {
 				// It's necessary remove the test finalizer to make the
 				// Kubernetes garbage collector to remove the resources
@@ -135,6 +167,41 @@ var _ = Describe("PolicyServer controller", func() {
 				}, timeout, pollInterval).ShouldNot(
 					HaveField("DeletionTimestamp", BeNil()),
 				)
+			})
+
+			It("should get its old not domain-qualidied finalizer removed from policies", func() {
+				Eventually(func() error {
+					policy, err := getTestClusterAdmissionPolicy(policyName)
+					if err != nil {
+						return err
+					}
+					controllerutil.AddFinalizer(policy, constants.KubewardenFinalizerPre114)
+					return k8sClient.Update(ctx, policy)
+				}, timeout, pollInterval).Should(Succeed())
+				Eventually(func() error {
+					policy, err := getTestClusterAdmissionPolicy(policyName)
+					if err != nil {
+						return err
+					}
+					if controllerutil.ContainsFinalizer(policy, constants.KubewardenFinalizerPre114) {
+						return nil
+					}
+					return errors.New("old finalizer not found")
+				}, timeout, pollInterval).Should(Succeed())
+
+				Expect(
+					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+				).To(Succeed())
+
+				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
+					return getTestClusterAdmissionPolicy(policyName)
+				}, timeout, pollInterval).Should(And(
+					HaveField("DeletionTimestamp", Not(BeNil())),
+					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
+					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizerPre114))),
+					HaveField("Finalizers", ContainElement(IntegrationTestsFinalizer)),
+				))
+
 			})
 
 			It("should not delete its managed resources until all the scheduled policies are gone", func() {
@@ -624,6 +691,17 @@ var _ = Describe("PolicyServer controller", func() {
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
 
+		})
+
+		It("should add missing finalizer", func() {
+			policyServer := policyServerFactory(policyServerName)
+			controllerutil.RemoveFinalizer(policyServer, constants.KubewardenFinalizer)
+			createPolicyServerAndWaitForItsService(policyServer)
+			Eventually(func() (*policiesv1.PolicyServer, error) {
+				return getTestPolicyServer(policyServerName)
+			}, timeout, pollInterval).Should(
+				HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
+			)
 		})
 
 	})
