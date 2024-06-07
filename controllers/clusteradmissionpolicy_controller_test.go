@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
@@ -217,6 +218,18 @@ var _ = Describe("ClusterAdmissionPolicy controller", func() {
 			return getTestClusterAdmissionPolicy(policyName)
 		}, timeout, pollInterval).Should(
 			HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusUnscheduled)),
+		)
+	})
+
+	It("should adds policy's missing finalizer", func() {
+		policyName := newName("missing-finalizer-policy")
+		policy := clusterAdmissionPolicyFactory(policyName, "", false)
+		controllerutil.RemoveFinalizer(policy, constants.KubewardenFinalizer)
+		Expect(k8sClient.Create(ctx, policy)).To(haveSucceededOrAlreadyExisted())
+		Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
+			return getTestClusterAdmissionPolicy(policyName)
+		}, timeout, pollInterval).Should(
+			HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
 		)
 	})
 

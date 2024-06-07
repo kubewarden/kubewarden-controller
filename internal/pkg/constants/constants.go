@@ -42,7 +42,8 @@ const (
 	PolicyServerIndexKey = ".spec.policyServer"
 
 	// Finalizers
-	KubewardenFinalizer = "kubewarden"
+	KubewardenFinalizerPre114 = "kubewarden"
+	KubewardenFinalizer       = "kubewarden.io/finalizer"
 
 	// Kubernetes
 	KubernetesRevisionAnnotation = "deployment.kubernetes.io/revision"

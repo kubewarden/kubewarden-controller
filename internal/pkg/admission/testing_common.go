@@ -3,6 +3,7 @@ package admission
 import (
 	"time"
 
+	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ import (
 func createReconciler() (Reconciler, policiesv1.ClusterAdmissionPolicy, policiesv1.ClusterAdmissionPolicy, policiesv1.ClusterAdmissionPolicy) {
 	admissionPolicyName := "admissionPolicy"
 	validationPolicy := policiesv1.ClusterAdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: admissionPolicyName, Finalizers: []string{"kubewarden"}},
+		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: admissionPolicyName, Finalizers: []string{constants.KubewardenFinalizer}},
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				Mutating: false,
@@ -29,7 +30,7 @@ func createReconciler() (Reconciler, policiesv1.ClusterAdmissionPolicy, policies
 	}
 	mutatingPolicyName := "mutatingPolicy"
 	mutatingPolicy := policiesv1.ClusterAdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: mutatingPolicyName, Finalizers: []string{"kubewarden"}},
+		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: mutatingPolicyName, Finalizers: []string{constants.KubewardenFinalizer}},
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				Mutating: true,
@@ -45,7 +46,7 @@ func createReconciler() (Reconciler, policiesv1.ClusterAdmissionPolicy, policies
 
 	contextAwarePolicyName := "contextAwarePolicy"
 	contextAwarePolicy := policiesv1.ClusterAdmissionPolicy{
-		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: contextAwarePolicyName, Finalizers: []string{"kubewarden"}},
+		ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now()}, Name: contextAwarePolicyName, Finalizers: []string{constants.KubewardenFinalizer}},
 		Spec: policiesv1.ClusterAdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				Mutating: false,
