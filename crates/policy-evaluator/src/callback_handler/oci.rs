@@ -1,14 +1,22 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
-use policy_fetcher::oci_distribution::manifest::OciManifest;
+use policy_fetcher::oci_distribution::manifest::{OciImageManifest, OciManifest};
 use policy_fetcher::oci_distribution::Reference;
 use policy_fetcher::{registry::Registry, sources::Sources};
+use serde::{Deserialize, Serialize};
 
 /// Helper struct to interact with an OCI registry
 pub(crate) struct Client {
     sources: Option<Sources>,
     registry: Registry,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ManifestAndConfigResponse {
+    pub manifest: OciImageManifest,
+    pub digest: String,
+    pub config: serde_json::Value,
 }
 
 impl Client {
@@ -43,6 +51,22 @@ impl Client {
             .manifest(&image_with_proto, self.sources.as_ref())
             .await?;
         Ok(manifest)
+    }
+
+    pub async fn manifest_and_config(&self, image: &str) -> Result<ManifestAndConfigResponse> {
+        // this is needed to expand names as `busybox` into
+        // fully resolved references like `docker.io/library/busybox`
+        let image_ref: Reference = image.parse()?;
+        let image_with_proto = format!("registry://{}", image_ref.whole());
+        let (manifest, digest, config) = self
+            .registry
+            .manifest_and_config(&image_with_proto, self.sources.as_ref())
+            .await?;
+        Ok(ManifestAndConfigResponse {
+            manifest,
+            digest,
+            config,
+        })
     }
 }
 
@@ -96,4 +120,22 @@ pub(crate) async fn get_oci_manifest_cached(
     img: &str,
 ) -> Result<cached::Return<OciManifest>> {
     oci_client.manifest(img).await.map(cached::Return::new)
+}
+
+#[cached(
+    time = 60,
+    result = true,
+    sync_writes = true,
+    key = "String",
+    convert = r#"{ format!("{}", img) }"#,
+    with_cached_flag = true
+)]
+pub(crate) async fn get_oci_manifest_and_config_cached(
+    oci_client: &Client,
+    img: &str,
+) -> Result<cached::Return<ManifestAndConfigResponse>> {
+    oci_client
+        .manifest_and_config(img)
+        .await
+        .map(cached::Return::new)
 }

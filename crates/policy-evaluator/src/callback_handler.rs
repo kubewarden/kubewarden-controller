@@ -107,6 +107,11 @@ impl CallbackHandler {
                         oci::get_oci_manifest_cached(&oci_client, &image)
                     });
                 }
+                CallbackRequestType::OciManifestAndConfig { image } => {
+                    handle_callback!(req, image, "Image manifest computed", {
+                        oci::get_oci_manifest_and_config_cached(&oci_client, &image)
+                    });
+                }
                 CallbackRequestType::SigstorePubKeyVerify {
                     image,
                     pub_keys,

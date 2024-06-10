@@ -42,6 +42,13 @@ pub enum CallbackRequestType {
         image: String,
     },
 
+    /// Require the OCI object manifest and digest returned by the registry (be it an image or anything else
+    /// that can be stored into an OCI registry) and the config used to run the container
+    OciManifestAndConfig {
+        /// String pointing to the object (e.g.: `registry.testing.lan/busybox:1.0.0`)
+        image: String,
+    },
+
     /// Require the verification of the manifest digest of an OCI object (be
     /// it an image or anything else that can be stored into an OCI registry)
     /// to be signed by Sigstore, using public keys mode
