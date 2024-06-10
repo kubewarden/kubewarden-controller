@@ -7,6 +7,7 @@ mod e2e {
 
     use base64::prelude::{Engine as _, BASE64_STANDARD_NO_PAD};
     use oci_distribution::{client::ImageData, manifest, secrets::RegistryAuth, Client, Reference};
+    use policy_fetcher::registry::Registry;
     use policy_fetcher::verify::fetch_sigstore_remote_data;
     use sigstore::cosign::{
         constraint::PrivateKeySigner,
@@ -212,5 +213,34 @@ mod e2e {
             .expect("failed to verify constraints");
 
         std::env::remove_var("DOCKER_CONFIG");
+    }
+
+    #[tokio::test]
+    async fn test_fetch_image_config() {
+        let url = "ghcr.io/kubewarden/tests/policy-server:v1.13.0";
+        let expected_config = serde_json::json!({
+    "User": "65533:65533",
+    "ExposedPorts": {
+      "3000/tcp": {}
+    },
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "Entrypoint": [
+      "/policy-server"
+    ],
+    "WorkingDir": "/"});
+        let registry = Registry::new();
+        let (manifest, _digest, config) = registry.manifest_and_config(url, None).await.unwrap();
+        assert_eq!(config.get("config").unwrap(), &expected_config);
+        assert_eq!(
+            manifest.media_type.unwrap(),
+            "application/vnd.docker.distribution.manifest.v2+json"
+        );
+        assert_eq!(manifest.schema_version, 2);
+        assert_eq!(
+            manifest.config.digest,
+            "sha256:bc3511804cb29da6333f0187a333eba13a43a3a0a1737e9b50227a5cf057af74"
+        );
     }
 }
