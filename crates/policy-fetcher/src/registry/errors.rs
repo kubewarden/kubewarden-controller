@@ -18,4 +18,6 @@ pub enum RegistryError {
     UrlParserError(#[from] url::ParseError),
     #[error(transparent)]
     InvalidURLError(#[from] InvalidURLError),
+    #[error(transparent)]
+    JSONParseError(#[from] serde_json::Error),
 }

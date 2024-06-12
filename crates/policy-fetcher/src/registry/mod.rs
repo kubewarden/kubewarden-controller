@@ -248,6 +248,29 @@ impl Registry {
             .await
             .map(|push_response| push_response.manifest_url)?)
     }
+    /// Fetch the manifest, its digest and container image configuration of the OCI object referenced by the given url.
+    pub async fn manifest_and_config(
+        &self,
+        url: &str,
+        sources: Option<&Sources>,
+    ) -> RegistryResult<(
+        oci_distribution::manifest::OciImageManifest,
+        String,
+        serde_json::Value,
+    )> {
+        let reference = build_fully_resolved_reference(url)?;
+        let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
+        let registry_auth = Registry::auth(reference.registry());
+        let sources: Sources = sources.cloned().unwrap_or_default();
+        let cp = crate::client_protocol(&url, &sources)?;
+
+        let (manifest, digest, config) = Registry::client(cp)
+            .pull_manifest_and_config(&reference, &registry_auth)
+            .await?;
+        let config_json = serde_json::from_str(&config)?;
+
+        Ok((manifest, digest, config_json))
+    }
 }
 
 pub(crate) fn build_fully_resolved_reference(url: &str) -> RegistryResult<Reference> {
