@@ -7,6 +7,7 @@ use core::panic;
 use hyper::{Request, Response};
 use kube::client::Body;
 use kube::Client;
+use policy_fetcher::oci_distribution::manifest::OciImageManifest;
 use rstest::*;
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -15,7 +16,7 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tower_test::mock::Handle;
 
-use policy_fetcher::oci_distribution::manifest::OciManifest;
+use policy_fetcher::oci_distribution::manifest::{OciDescriptor, OciManifest};
 
 use policy_evaluator::{
     admission_request::AdmissionRequest,
@@ -30,6 +31,30 @@ use policy_evaluator::{
 
 use crate::common::{build_policy_evaluator, fetch_policy, load_request_data};
 use crate::k8s_mock::{rego_scenario, wapc_and_wasi_scenario};
+
+async fn setup_callback_handler(
+    client: Option<Client>,
+) -> (oneshot::Sender<()>, mpsc::Sender<CallbackRequest>) {
+    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
+        oneshot::channel();
+    let mut callback_builder = CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx);
+    if let Some(client) = client {
+        callback_builder = callback_builder.kube_client(client);
+    }
+    let mut callback_handler = callback_builder
+        .build()
+        .await
+        .expect("cannot build callback handler");
+    let callback_handler_channel = callback_handler.sender_channel();
+
+    tokio::spawn(async move {
+        callback_handler.loop_eval().await;
+    });
+    (
+        callback_handler_shutdown_channel_tx,
+        callback_handler_channel,
+    )
+}
 
 #[rstest]
 #[case::wapc(
@@ -257,21 +282,8 @@ async fn test_runtime_context_aware<F, Fut>(
     let client = Client::new(mocksvc, "default");
     scenario(handle).await;
 
-    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
-        oneshot::channel();
-    let callback_builder = policy_evaluator::callback_handler::CallbackHandlerBuilder::new(
-        callback_handler_shutdown_channel_rx,
-    );
-    let mut callback_handler = callback_builder
-        .kube_client(client)
-        .build()
-        .await
-        .expect("cannot build callback handler");
-    let callback_handler_channel = callback_handler.sender_channel();
-
-    tokio::spawn(async move {
-        callback_handler.loop_eval().await;
-    });
+    let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
+        setup_callback_handler(Some(client)).await;
 
     let eval_ctx = EvaluationContext {
         policy_id: "test".to_owned(),
@@ -322,18 +334,8 @@ async fn test_oci_manifest_capability(
     #[case] policy_uri: &str,
     #[case] expected_manifest_type: OciManifest,
 ) {
-    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
-        oneshot::channel();
-    let callback_builder = CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx);
-    let mut callback_handler = callback_builder
-        .build()
-        .await
-        .expect("cannot build callback handler");
-    let callback_handler_channel = callback_handler.sender_channel();
-
-    tokio::spawn(async move {
-        callback_handler.loop_eval().await;
-    });
+    let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
+        setup_callback_handler(None).await;
     let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
     let req = CallbackRequest {
         request: CallbackRequestType::OciManifest {
@@ -355,29 +357,127 @@ async fn test_oci_manifest_capability(
     assert!(cb_channel.try_send(req).is_ok());
 
     // wait for the response
-    match rx.await {
-        Ok(msg) => match msg {
-            Ok(response_raw) => {
-                let response: OciManifest = serde_json::from_slice(&response_raw.payload).unwrap();
-                println!("{:?}", response);
-                match (response, expected_manifest_type) {
-                    (OciManifest::Image { .. }, OciManifest::ImageIndex { .. }) => {
-                        panic!("Image index manifest expected. But got a single image manifest")
-                    }
-                    (OciManifest::ImageIndex { .. }, OciManifest::Image { .. }) => {
-                        panic!("Image manifest expected. But got a image index manifest")
-                    }
-                    _ => {}
-                }
-            }
-            Err(e) => {
-                panic!("{}", e)
-            }
-        },
-        Err(e) => {
-            panic!("{}", e)
+    let response_raw = rx
+        .await
+        .expect("cannot receive response")
+        .expect("cannot get response");
+    let response: OciManifest = serde_json::from_slice(&response_raw.payload).unwrap();
+    match (response, expected_manifest_type) {
+        (OciManifest::Image { .. }, OciManifest::ImageIndex { .. }) => {
+            panic!("Image index manifest expected. But got a single image manifest")
         }
+        (OciManifest::ImageIndex { .. }, OciManifest::Image { .. }) => {
+            panic!("Image manifest expected. But got a image index manifest")
+        }
+        _ => {}
     }
+    callback_handler_shutdown_channel_tx
+        .send(())
+        .expect("cannot send shutdown signal");
+}
+
+#[rstest]
+#[case::container_image("ghcr.io/kubewarden/tests/policy-server:v1.13.0", 
+    policy_fetcher::oci_distribution::manifest::OciImageManifest {
+        schema_version:2,
+        media_type: Some("application/vnd.docker.distribution.manifest.v2+json".to_owned()),
+        annotations: None,
+        artifact_type:None,
+        config: OciDescriptor{
+            media_type:  "application/vnd.docker.container.image.v1+json".to_owned(),
+            size: 1592,
+            digest: "sha256:bc3511804cb29da6333f0187a333eba13a43a3a0a1737e9b50227a5cf057af74".to_owned(),
+            annotations: None,
+            urls: None,
+        },
+    layers: vec![]}, Some(serde_json::json!({
+    "User": "65533:65533",
+    "ExposedPorts": {
+      "3000/tcp": {}
+    },
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    ],
+    "Entrypoint": [
+      "/policy-server"
+    ],
+    "WorkingDir": "/"})))]
+#[case::policy(
+    "ghcr.io/kubewarden/tests/context-aware-test-policy:latest",
+    policy_fetcher::oci_distribution::manifest::OciImageManifest {
+        schema_version:2,
+        media_type: None, annotations: None, artifact_type:None,
+        config: OciDescriptor{
+            media_type:  "application/vnd.wasm.config.v1+json".to_owned(),
+            size: 2,
+            digest: "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a".to_owned(),
+            annotations: None, urls: None,
+        },
+    layers: vec![]},
+    None
+)]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_oci_manifest_and_config_capability(
+    #[case] policy_uri: &str,
+    #[case] expected_manifest: OciImageManifest,
+    #[case] expected_config: Option<serde_json::Value>,
+) {
+    let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
+        setup_callback_handler(None).await;
+
+    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+    let req = CallbackRequest {
+        request: CallbackRequestType::OciManifestAndConfig {
+            image: policy_uri.to_owned(),
+        },
+        response_channel: tx,
+    };
+
+    let eval_ctx = EvaluationContext {
+        policy_id: "test".to_owned(),
+        callback_channel: Some(callback_handler_channel),
+        ctx_aware_resources_allow_list: Default::default(),
+    };
+
+    let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
+        .callback_channel
+        .clone()
+        .expect("missing callback channel");
+    assert!(cb_channel.try_send(req).is_ok());
+
+    // wait for the response
+    let response_raw = rx
+        .await
+        .expect("cannot receive response")
+        .expect("cannot get response");
+    let response: serde_json::Value = serde_json::from_slice(&response_raw.payload).unwrap();
+    if let Some(expected_config_json) = expected_config {
+        assert!(response
+            .get("config")
+            .unwrap()
+            .get("config")
+            .unwrap()
+            .eq(&expected_config_json));
+    } else {
+        assert!(response
+            .get("config")
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .is_empty());
+    }
+    let manifest: OciImageManifest =
+        serde_json::from_value(response.get("manifest").unwrap().clone())
+            .expect("cannot deserialize manifest");
+    // The OciImageManifest does not implement the Eq trait. Therefore, we need to
+    // compare the fields one by one. Thus, let's checks some of them only. We do not
+    // need to validate all of them here.
+    assert_eq!(manifest.media_type, expected_manifest.media_type);
+    assert_eq!(manifest.schema_version, expected_manifest.schema_version);
+    assert_eq!(
+        manifest.config.to_string(),
+        expected_manifest.config.to_string()
+    );
     callback_handler_shutdown_channel_tx
         .send(())
         .expect("cannot send shutdown signal");
