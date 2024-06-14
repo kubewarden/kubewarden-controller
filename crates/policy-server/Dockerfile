@@ -1,4 +1,4 @@
-FROM rust:1.70 AS build
+FROM rust:1.78 AS build
 WORKDIR /usr/src
 
 # Download the target for static linking.
