@@ -72,10 +72,7 @@ impl<'a> Runtime<'a> {
                     ),
                 }
             }
-            Err(e) => AdmissionResponse::reject_internal_server_error(
-                request.uid().to_string(),
-                e.to_string(),
-            ),
+            Err(e) => AdmissionResponse::reject(request.uid().to_string(), e.to_string(), 500),
         }
     }
 

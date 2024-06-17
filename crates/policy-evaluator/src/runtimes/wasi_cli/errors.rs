@@ -4,9 +4,8 @@ pub type Result<T> = std::result::Result<T, WasiRuntimeError>;
 
 #[derive(Error, Debug)]
 pub enum WasiRuntimeError {
-    #[error("program exited with code {code:?}; stderr set to '{stderr}', error: '{error}'")]
+    #[error("{stderr}")]
     WasiEvaluation {
-        code: Option<i32>,
         stderr: String,
         #[source]
         error: wasmtime::Error,

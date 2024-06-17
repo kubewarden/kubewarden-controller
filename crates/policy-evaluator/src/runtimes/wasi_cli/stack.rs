@@ -1,5 +1,6 @@
 use std::io::Cursor;
 use std::sync::{Arc, RwLock};
+use tracing::debug;
 use wasi_common::pipe::{ReadPipe, WritePipe};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::WasiCtx;
@@ -71,7 +72,7 @@ impl Stack {
         // references to the WritePipe(s) that we need exclusive access to.
         drop(store);
 
-        let stderr = pipe_to_string("stderr", stderr_pipe)?;
+        let stderr = pipe_to_string("stderr", stderr_pipe)?.trim().to_string();
 
         if let Err(err) = evaluation_result {
             if let Some(exit_error) = err.downcast_ref::<wasi_common::I32Exit>() {
@@ -79,18 +80,17 @@ impl Stack {
                     let stdout = pipe_to_string("stdout", stdout_pipe)?;
                     return Ok(RunResult { stdout, stderr });
                 } else {
-                    return Err(WasiRuntimeError::WasiEvaluation {
-                        code: Some(exit_error.0),
-                        stderr,
-                        error: err,
-                    });
+                    debug!(
+                        "WASI program exited with error code: {}, error: {}",
+                        exit_error.0, stderr
+                    );
+
+                    return Err(WasiRuntimeError::WasiEvaluation { stderr, error: err });
                 }
             }
-            return Err(WasiRuntimeError::WasiEvaluation {
-                code: None,
-                stderr,
-                error: err,
-            });
+
+            debug!("WASI program exited with error: {}", stderr);
+            return Err(WasiRuntimeError::WasiEvaluation { stderr, error: err });
         }
 
         let stdout = pipe_to_string("stdout", stdout_pipe)?;
