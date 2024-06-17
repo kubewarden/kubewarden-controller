@@ -434,7 +434,7 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.6#5f1fa142fbce1118563ce5a5cd2abb91c5755326"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.7#cd093d73ebd17ad5390ef94e70940bc79daae798"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -3632,8 +3632,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.17.6"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.6#5f1fa142fbce1118563ce5a5cd2abb91c5755326"
+version = "0.17.7"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.17.7#cd093d73ebd17ad5390ef94e70940bc79daae798"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3665,7 +3665,7 @@ dependencies = [
  "validator",
  "wapc",
  "wasi-common",
- "wasmparser 0.209.1",
+ "wasmparser 0.210.0",
  "wasmtime",
  "wasmtime-provider",
  "wasmtime-wasi",
@@ -3673,8 +3673,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.8.6"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.8.6#dab4f5d9cdb1229496b543ad3d256700c364c6bc"
+version = "0.8.7"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.8.7#fa98db1aad51fa3181d5259f5c251702eb18963c"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -5876,20 +5876,6 @@ dependencies = [
  "hashbrown 0.14.5",
  "indexmap 2.2.6",
  "semver",
-]
-
-[[package]]
-name = "wasmparser"
-version = "0.209.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07035cc9a9b41e62d3bb3a3815a66ab87c993c06fe1cf6b2a3f2a18499d937db"
-dependencies = [
- "ahash 0.8.11",
- "bitflags 2.5.0",
- "hashbrown 0.14.5",
- "indexmap 2.2.6",
- "semver",
- "serde",
 ]
 
 [[package]]
