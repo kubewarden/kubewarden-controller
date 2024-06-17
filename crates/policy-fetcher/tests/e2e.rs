@@ -178,6 +178,7 @@ mod e2e {
         std::env::set_var("DOCKER_CONFIG", auth_dir.path());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_fetch_sigstore_data_from_registry_with_authentication() {
         let (registry_image, auth_dir) = setup_registry_image();
