@@ -131,7 +131,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 		Dict("dict", zerolog.Dict().
 			Str("namespace", nsName).
 			Str("RunUID", runUID).
-			Int("parallel resources audits", s.parallelResourcesAudits),
+			Int("parallel-resources-audits", s.parallelResourcesAudits),
 		).Msg("namespace scan started")
 	semaphore := semaphore.NewWeighted(int64(s.parallelResourcesAudits))
 	var workers sync.WaitGroup
@@ -147,8 +147,8 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	log.Info().
 		Str("namespace", nsName).
 		Dict("dict", zerolog.Dict().
-			Int("policies to evaluate", policies.PolicyNum).
-			Int("policies skipped", policies.SkippedNum),
+			Int("policies-to-evaluate", policies.PolicyNum).
+			Int("policies-skipped", policies.SkippedNum),
 		).Msg("policy count")
 
 	for gvr, policies := range policies.PoliciesByGVR {
@@ -199,7 +199,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 	log.Info().
 		Dict("dict", zerolog.Dict().
-			Int("parallel namespaces audits", s.parallelNamespacesAudits),
+			Int("parallel-namespaces-audits", s.parallelNamespacesAudits),
 		).Msg("all-namespaces scan started")
 	nsList, err := s.k8sClient.GetAuditedNamespaces(ctx)
 	if err != nil {
@@ -250,9 +250,9 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 
 	log.Info().
 		Dict("dict", zerolog.Dict().
-			Int("policies to evaluate", policies.PolicyNum).
-			Int("policies skipped", policies.SkippedNum).
-			Int("parallel resources audits", s.parallelResourcesAudits),
+			Int("policies-to-evaluate", policies.PolicyNum).
+			Int("policies-skipped", policies.SkippedNum).
+			Int("parallel-resources-audits", s.parallelResourcesAudits),
 		).Msg("cluster admission policies count")
 
 	for gvr, policies := range policies.PoliciesByGVR {
@@ -308,8 +308,8 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	log.Info().
 		Str("resource", resource.GetName()).
 		Dict("dict", zerolog.Dict().
-			Int("policies to evaluate", len(policies)).
-			Int("parallel policies audit", s.parallelPoliciesAudits),
+			Int("policies-to-evaluate", len(policies)).
+			Int("parallel-policies-audit", s.parallelPoliciesAudits),
 		).Msg("audit resource")
 
 	semaphore := semaphore.NewWeighted(int64(s.parallelPoliciesAudits))
@@ -346,7 +346,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			if errored {
 				// log responseErr, will end in PolicyReportResult too
 				log.Error().Err(responseErr).Dict("response", zerolog.Dict().
-					Str("admissionRequest name", admissionReviewRequest.Request.Name).
+					Str("admissionRequest-name", admissionReviewRequest.Request.Name).
 					Str("policy", policy.GetName()).
 					Str("resource", resource.GetName()),
 				).
