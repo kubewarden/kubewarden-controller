@@ -48,11 +48,11 @@ func (s *PolicyReportStore) CreateOrPatchPolicyReport(ctx context.Context, polic
 	}
 
 	log.Debug().Dict("dict", zerolog.Dict()).
-		Str("report name", policyReport.GetName()).
-		Str("report version", policyReport.GetResourceVersion()).
-		Str("resource name", policyReport.Scope.Name).
-		Str("resource namespace", policyReport.Scope.Namespace).
-		Str("resource version", policyReport.Scope.ResourceVersion).
+		Str("report-name", policyReport.GetName()).
+		Str("report-version", policyReport.GetResourceVersion()).
+		Str("resource-name", policyReport.Scope.Name).
+		Str("resource-namespace", policyReport.Scope.Namespace).
+		Str("resource-version", policyReport.Scope.ResourceVersion).
 		Msgf("PolicyReport %s", operation)
 
 	return nil
@@ -91,11 +91,11 @@ func (s *PolicyReportStore) CreateOrPatchClusterPolicyReport(ctx context.Context
 	}
 
 	log.Debug().Dict("dict", zerolog.Dict()).
-		Str("report name", clusterPolicyReport.GetName()).
-		Str("report version", clusterPolicyReport.GetResourceVersion()).
-		Str("resource name", clusterPolicyReport.Scope.Name).
-		Str("resource namespace", clusterPolicyReport.Scope.Namespace).
-		Str("resource version", clusterPolicyReport.Scope.ResourceVersion).
+		Str("report-name", clusterPolicyReport.GetName()).
+		Str("report-version", clusterPolicyReport.GetResourceVersion()).
+		Str("resource-name", clusterPolicyReport.Scope.Name).
+		Str("resource-namespace", clusterPolicyReport.Scope.Namespace).
+		Str("resource-version", clusterPolicyReport.Scope.ResourceVersion).
 		Msgf("ClusterPolicyReport %s", operation)
 
 	return nil

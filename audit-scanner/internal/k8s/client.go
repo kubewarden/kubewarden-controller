@@ -53,7 +53,7 @@ func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*
 		if apimachineryerrors.IsNotFound(err) {
 			log.Warn().
 				Dict("dict", zerolog.Dict().
-					Str("resource GVK", gvr.String()).
+					Str("resource-GVK", gvr.String()).
 					Str("ns", nsName),
 				).Msg("API resource not found")
 		}
@@ -61,7 +61,7 @@ func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*
 			// ServiceAccount lacks permissions, GVK may not exist, or policies may be misconfigured
 			log.Warn().
 				Dict("dict", zerolog.Dict().
-					Str("resource GVK", gvr.String()).
+					Str("resource-GVK", gvr.String()).
 					Str("ns", nsName),
 				).Msg("API resource forbidden, unknown GVK or ServiceAccount lacks permissions")
 		}
