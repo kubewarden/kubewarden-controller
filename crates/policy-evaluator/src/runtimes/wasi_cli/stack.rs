@@ -1,5 +1,6 @@
 use std::io::Cursor;
 use std::sync::{Arc, RwLock};
+use tracing::debug;
 use wasi_common::pipe::{ReadPipe, WritePipe};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::WasiCtx;
@@ -79,18 +80,17 @@ impl Stack {
                     let stdout = pipe_to_string("stdout", stdout_pipe)?;
                     return Ok(RunResult { stdout, stderr });
                 } else {
-                    return Err(WasiRuntimeError::WasiEvaluation {
-                        code: Some(exit_error.0),
-                        stderr,
-                        error: err,
-                    });
+                    debug!(
+                        "WASI program exited with error code: {}, error: {}",
+                        exit_error.0, stderr
+                    );
+
+                    return Err(WasiRuntimeError::WasiEvaluation { stderr, error: err });
                 }
             }
-            return Err(WasiRuntimeError::WasiEvaluation {
-                code: None,
-                stderr,
-                error: err,
-            });
+
+            debug!("WASI program exited with error: {}", stderr);
+            return Err(WasiRuntimeError::WasiEvaluation { stderr, error: err });
         }
 
         let stdout = pipe_to_string("stdout", stdout_pipe)?;
