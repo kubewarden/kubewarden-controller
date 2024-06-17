@@ -59,4 +59,4 @@ rstest = "0.21.0"
 tempfile = "3.10.1"
 assert_cmd = "2.0.14"
 predicates = "3.1.0"
-testcontainers = { version = "0.17", features = ["blocking"] }
+testcontainers = { version = "0.18", features = ["blocking"] }
