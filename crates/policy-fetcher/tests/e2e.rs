@@ -18,7 +18,9 @@ mod e2e {
     use sigstore::registry::{Auth, ClientConfig, ClientProtocol, OciReference};
     use std::{fs, path, str::FromStr, sync::Arc};
     use tempfile::TempDir;
-    use testcontainers::{core::Mount, core::WaitFor, runners::AsyncRunner, GenericImage};
+    use testcontainers::{
+        core::Mount, core::WaitFor, runners::AsyncRunner, ContainerRequest, GenericImage, ImageExt,
+    };
     use tokio::sync::Mutex;
 
     const REGISTRY_USER: &str = "user";
@@ -79,7 +81,7 @@ mod e2e {
         )
     }
 
-    fn setup_registry_image() -> (GenericImage, TempDir) {
+    fn setup_registry_image() -> (ContainerRequest<GenericImage>, TempDir) {
         let auth_dir = TempDir::new().expect("cannot create tmp directory");
         let htpasswd_path = path::Path::join(auth_dir.path(), "htpasswd");
         fs::write(htpasswd_path, REGISTRY_CREDENTIALS_BCRYPT).expect("cannot write htpasswd file");
