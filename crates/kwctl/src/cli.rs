@@ -465,6 +465,27 @@ fn subcommand_scaffold() -> Command {
             .help("Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory."),
     );
 
+    let mut vap_args = vec![
+        Arg::new("cel-policy")
+            .long("cel-policy")
+            .value_name("URI")
+            .default_value("ghcr.io/kubewarden/policies/cel-policy:latest")
+            .help("The CEL policy module to use"),
+        Arg::new("policy")
+            .long("policy")
+            .short('p')
+            .required(true)
+            .value_name("VALIDATING-ADMISSION-POLICY.yaml")
+            .help("The file containining the ValidatingAdmissionPolicy definition"),
+        Arg::new("binding")
+            .long("binding")
+            .short('b')
+            .required(true)
+            .value_name("VALIDATING-ADMISSION-POLICY-BINDING.yaml")
+            .help("The file containining the ValidatingAdmissionPolicyBinding definition"),
+    ];
+    vap_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+
     let mut subcommands = vec![
         Command::new("verification-config")
             .about("Output a default Sigstore verification configuration file"),
@@ -474,6 +495,9 @@ fn subcommand_scaffold() -> Command {
         Command::new("manifest")
             .about("Output a Kubernetes resource manifest")
             .args(manifest_args),
+        Command::new("vap")
+            .about("Convert a Kubernetes `ValidatingAdmissionPolicy` into a Kubewarden `ClusterAdmissionPolicy`")
+            .args(vap_args),
     ];
     subcommands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 

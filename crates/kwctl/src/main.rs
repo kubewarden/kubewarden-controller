@@ -394,6 +394,20 @@ async fn main() -> Result<()> {
                     )?;
                 };
             }
+            if let Some(matches) = matches.subcommand_matches("scaffold") {
+                if let Some(matches) = matches.subcommand_matches("vap") {
+                    let cel_policy_uri = matches.get_one::<String>("cel-policy").unwrap();
+                    let vap_file: PathBuf = matches.get_one::<String>("policy").unwrap().into();
+                    let vap_binding_file: PathBuf =
+                        matches.get_one::<String>("binding").unwrap().into();
+
+                    scaffold::vap(
+                        cel_policy_uri.as_str(),
+                        vap_file.as_path(),
+                        vap_binding_file.as_path(),
+                    )?;
+                };
+            }
             Ok(())
         }
         Some("completions") => {
