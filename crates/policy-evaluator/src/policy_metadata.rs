@@ -1,3 +1,4 @@
+use k8s_openapi::api::admissionregistration::v1::NamedRuleWithOperations;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -24,7 +25,22 @@ pub enum Operation {
     All,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Validate)]
+impl TryFrom<&str> for Operation {
+    type Error = &'static str;
+
+    fn try_from(op: &str) -> Result<Self, Self::Error> {
+        match op {
+            "CREATE" => Ok(Operation::Create),
+            "UPDATE" => Ok(Operation::Update),
+            "DELETE" => Ok(Operation::Delete),
+            "CONNECT" => Ok(Operation::Connect),
+            "*" => Ok(Operation::All),
+            _ => Err("unknown operation"),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, Validate, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Rule {
     #[validate(length(min = 1), custom(function = "validate_asterisk_usage"))]
@@ -118,6 +134,27 @@ fn validate_resources(data: &[String]) -> Result<(), ValidationError> {
     }
 
     Ok(())
+}
+
+impl TryFrom<&NamedRuleWithOperations> for Rule {
+    type Error = &'static str;
+
+    fn try_from(rule: &NamedRuleWithOperations) -> Result<Self, Self::Error> {
+        let operations = match &rule.operations {
+            Some(operations) => operations
+                .iter()
+                .map(|op| Operation::try_from(op.as_str()))
+                .collect::<Result<Vec<Operation>, Self::Error>>()?,
+            None => Vec::new(),
+        };
+
+        Ok(Rule {
+            operations,
+            api_groups: rule.api_groups.clone().unwrap_or_default(),
+            api_versions: rule.api_versions.clone().unwrap_or_default(),
+            resources: rule.resources.clone().unwrap_or_default(),
+        })
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, Validate, PartialEq, Hash, Eq, PartialOrd, Ord)]
