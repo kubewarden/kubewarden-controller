@@ -402,6 +402,80 @@ fn test_scaffold_manifest() {
 }
 
 #[rstest]
+#[case::latest_cel_policy(
+    Some("vap/vap-with-variables.yml"),
+    Some("vap/vap-binding.yml"),
+    Some("registry.example.com/cel-policy"),
+    true,
+    contains("module: registry.example.com/cel-policy"),
+    contains("Using the 'latest' version of the CEL policy")
+)]
+#[case::cel_policy_version_not_provided(
+    Some("vap/vap-with-variables.yml"),
+    Some("vap/vap-binding.yml"),
+    None,
+    true,
+    contains("module: ghcr.io/kubewarden/policies/cel-policy:latest"),
+    contains("Using the 'latest' version of the CEL policy")
+)]
+#[case::custom_cel_policy(
+    Some("vap/vap-with-variables.yml"),
+    Some("vap/vap-binding.yml"),
+    Some("ghcr.io/kubewarden/policies/cel-policy:1.0.0"),
+    true,
+    contains("module: ghcr.io/kubewarden/policies/cel-policy:1.0.0"),
+    is_empty()
+)]
+#[case::missing_policy(
+    None,
+    Some("vap/vap-binding.yml"),
+    None,
+    false,
+    is_empty(),
+    contains("the following required arguments were not provided")
+)]
+#[case::missing_binding(
+    Some("vap/vap-with-variables.yml"),
+    None,
+    None,
+    false,
+    is_empty(),
+    contains("the following required arguments were not provided")
+)]
+fn test_scaffold_from_vap(
+    #[case] vap_path: Option<&str>,
+    #[case] vap_binding: Option<&str>,
+    #[case] cel_policy_module: Option<&str>,
+    #[case] success: bool,
+    #[case] stdout_predicate: impl predicates::str::PredicateStrExt,
+    #[case] stderr_predicate: impl predicates::str::PredicateStrExt,
+) {
+    let tempdir = tempdir().unwrap();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold").arg("vap");
+
+    if let Some(vap) = vap_path {
+        cmd.arg("--policy").arg(test_data(vap));
+    }
+    if let Some(vap_binding) = vap_binding {
+        cmd.arg("--binding").arg(test_data(vap_binding));
+    }
+    if let Some(module) = cel_policy_module {
+        cmd.arg("--cel-policy").arg(module);
+    }
+
+    if success {
+        cmd.assert().success();
+    } else {
+        cmd.assert().failure();
+    }
+
+    cmd.assert().stdout(stdout_predicate);
+    cmd.assert().stderr(stderr_predicate);
+}
+
+#[rstest]
 #[case::correct("rego-annotate/metadata-correct.yml", true, is_empty())]
 #[case::wrong(
     "rego-annotate/metadata-wrong.yml",

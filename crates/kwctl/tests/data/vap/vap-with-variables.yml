@@ -1,0 +1,19 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "force-liveness-probe"
+spec:
+  failurePolicy: Fail
+  variables:
+    - name: containers_without_liveness_probe
+      expression: "object.spec.template.spec.containers.filter(c, !has(c.livenessProbe)).map(c, c.name)"
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["deployments"]
+  validations:
+    - expression: "size(variables.containers_without_liveness_probe) == 0"
+      messageExpression: "'These containers are missing a liveness probe: ' + variables.containers_without_liveness_probe.join(' ')"
+      reason: Invalid
