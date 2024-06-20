@@ -247,7 +247,15 @@ async fn main() -> Result<()> {
         Some("run") => {
             if let Some(matches) = matches.subcommand_matches("run") {
                 let pull_and_run_settings = parse_pull_and_run_settings(matches).await?;
-                run::pull_and_run(&pull_and_run_settings).await?;
+                run::pull_and_run(&pull_and_run_settings)
+                    .await
+                    .map_err(|e| {
+                        anyhow!(
+                            "Error running policy {}: {}",
+                            pull_and_run_settings.uri,
+                            e.to_string()
+                        )
+                    })?;
             }
             Ok(())
         }

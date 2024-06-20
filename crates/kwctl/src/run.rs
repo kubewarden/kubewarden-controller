@@ -168,10 +168,9 @@ pub(crate) async fn pull_and_run(cfg: &PullAndRunSettings) -> Result<()> {
     // validate the settings given by the user
     let settings_validation_response = policy_evaluator.validate_settings(&run_env.policy_settings);
     if !settings_validation_response.valid {
-        println!("{}", serde_json::to_string(&settings_validation_response)?);
         return Err(anyhow!(
             "Provided settings are not valid: {:?}",
-            settings_validation_response.message
+            settings_validation_response.message.unwrap_or_default()
         ));
     }
 
