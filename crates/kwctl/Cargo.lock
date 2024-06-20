@@ -2766,7 +2766,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.13.0"
+version = "1.14.0-rc1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -6145,20 +6145,6 @@ dependencies = [
  "hashbrown 0.14.5",
  "indexmap 2.2.6",
  "semver",
-]
-
-[[package]]
-name = "wasmparser"
-version = "0.210.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7bbcd21e7581619d9f6ca00f8c4f08f1cacfe58bf63f83af57cd0476f1026f5"
-dependencies = [
- "ahash 0.8.11",
- "bitflags 2.5.0",
- "hashbrown 0.14.5",
- "indexmap 2.2.6",
- "semver",
- "serde",
 ]
 
 [[package]]
