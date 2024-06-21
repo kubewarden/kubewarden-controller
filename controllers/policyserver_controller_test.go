@@ -693,17 +693,6 @@ var _ = Describe("PolicyServer controller", func() {
 
 		})
 
-		It("should add missing finalizer", func() {
-			policyServer := policyServerFactory(policyServerName)
-			controllerutil.RemoveFinalizer(policyServer, constants.KubewardenFinalizer)
-			createPolicyServerAndWaitForItsService(policyServer)
-			Eventually(func() (*policiesv1.PolicyServer, error) {
-				return getTestPolicyServer(policyServerName)
-			}, timeout, pollInterval).Should(
-				HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
-			)
-		})
-
 	})
 
 	When("updating the PolicyServer", func() {

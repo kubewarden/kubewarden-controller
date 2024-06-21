@@ -72,13 +72,6 @@ func startReconciling(ctx context.Context, client client.Client, reconciler admi
 		return reconcilePolicyDeletion(ctx, client, policy)
 	}
 
-	if !controllerutil.ContainsFinalizer(policy, constants.KubewardenFinalizer) {
-		controllerutil.AddFinalizer(policy, constants.KubewardenFinalizer)
-		if err := client.Update(ctx, policy); err != nil {
-			return ctrl.Result{}, fmt.Errorf("cannot update policy finalizer: %w", err)
-		}
-	}
-
 	reconcileResult, reconcileErr := reconcilePolicy(ctx, client, reconciler, policy)
 
 	_ = setPolicyStatus(ctx, reconciler.DeploymentsNamespace, reconciler.APIReader, policy)
