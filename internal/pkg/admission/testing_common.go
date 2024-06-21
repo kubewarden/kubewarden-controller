@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+const namespace = "namespace"
+
 func createReconciler() (Reconciler, policiesv1.ClusterAdmissionPolicy, policiesv1.ClusterAdmissionPolicy, policiesv1.ClusterAdmissionPolicy) {
 	admissionPolicyName := "admissionPolicy"
 	validationPolicy := policiesv1.ClusterAdmissionPolicy{
