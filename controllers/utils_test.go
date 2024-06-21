@@ -164,6 +164,14 @@ func getTestPolicyServerService(policyServerName string) (*corev1.Service, error
 	return &service, nil
 }
 
+func getTestPolicyServerCASecret() (*corev1.Secret, error) {
+	secret := corev1.Secret{}
+	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: constants.PolicyServerCARootSecretName, Namespace: DeploymentsNamespace}, &secret); err != nil {
+		return nil, errors.Join(errors.New("could not find the PolicyServer CA secret"), err)
+	}
+	return &secret, nil
+}
+
 func getTestPolicyServerSecret(policyServerName string) (*corev1.Secret, error) {
 	secretName := getPolicyServerNameWithPrefix(policyServerName)
 	secret := corev1.Secret{}

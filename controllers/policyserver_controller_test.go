@@ -599,9 +599,24 @@ var _ = Describe("PolicyServer controller", func() {
 			}).Should(Succeed())
 		})
 
-		It("should create secret with owner reference", func() {
+		It("should create the policy server secrets", func() {
 			policyServer := policyServerFactory(policyServerName)
 			createPolicyServerAndWaitForItsService(policyServer)
+
+			Eventually(func() error {
+				secret, err := getTestPolicyServerCASecret()
+				if err != nil {
+					return err
+				}
+
+				By("creating a secret containing the CA certificate and key")
+				Expect(secret.Data).To(HaveKey(constants.PolicyServerCARootCACert))
+				Expect(secret.Data).To(HaveKey(constants.PolicyServerCARootPemName))
+				Expect(secret.Data).To(HaveKey(constants.PolicyServerCARootPrivateKeyCertName))
+
+				return nil
+			}).Should(Succeed())
+
 			Eventually(func() error {
 				secret, err := getTestPolicyServerSecret(policyServerName)
 				if err != nil {
@@ -611,6 +626,12 @@ var _ = Describe("PolicyServer controller", func() {
 				if err != nil {
 					return err
 				}
+
+				By("creating a secret containing the TLS certificate and key")
+				Expect(secret.Data).To(HaveKey(constants.PolicyServerTLSCert))
+				Expect(secret.Data).To(HaveKey(constants.PolicyServerTLSKey))
+
+				By("setting the secret owner reference")
 				Expect(secret.OwnerReferences).To(ContainElement(
 					MatchFields(IgnoreExtras, Fields{
 						"UID":        Equal(policyServer.GetUID()),
