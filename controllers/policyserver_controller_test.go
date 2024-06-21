@@ -44,7 +44,6 @@ var _ = Describe("PolicyServer controller", func() {
 	})
 
 	When("deleting a PolicyServer", func() {
-
 		BeforeEach(func() {
 			createPolicyServerAndWaitForItsService(policyServerFactory(policyServerName))
 		})
@@ -135,7 +134,6 @@ var _ = Describe("PolicyServer controller", func() {
 					return err
 				}, timeout, pollInterval).Should(notFound())
 			})
-
 		})
 
 		Context("with assigned policies", func() {
@@ -201,7 +199,6 @@ var _ = Describe("PolicyServer controller", func() {
 					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizerPre114))),
 					HaveField("Finalizers", ContainElement(IntegrationTestsFinalizer)),
 				))
-
 			})
 
 			It("should not delete its managed resources until all the scheduled policies are gone", func() {
@@ -248,15 +245,11 @@ var _ = Describe("PolicyServer controller", func() {
 				}, timeout, pollInterval).ShouldNot(
 					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
 				)
-
 			})
-
 		})
-
 	})
 
 	When("creating a PolicyServer", func() {
-
 		It("should use the policy server affinity configuration in the policy server deployment", func() {
 			policyServer := policyServerFactory(policyServerName)
 			policyServer.Spec.Affinity = corev1.Affinity{
@@ -316,7 +309,8 @@ var _ = Describe("PolicyServer controller", func() {
 					"RunAsGroup":     BeNil(),
 					"ProcMount":      BeNil(),
 					"SeccompProfile": BeNil(),
-				}))})))
+				})),
+			})))
 			By("checking the deployment pod security context")
 			Expect(deployment.Spec.Template.Spec.SecurityContext).To(PointTo(MatchFields(IgnoreExtras, Fields{
 				"SELinuxOptions":      BeNil(),
@@ -328,7 +322,8 @@ var _ = Describe("PolicyServer controller", func() {
 				"FSGroup":             BeNil(),
 				"Sysctls":             BeNil(),
 				"FSGroupChangePolicy": BeNil(),
-				"SeccompProfile":      BeNil()})))
+				"SeccompProfile":      BeNil(),
+			})))
 
 			By("checking the deployment affinity")
 			Expect(deployment.Spec.Template.Spec.Affinity).To(BeNil())
@@ -366,7 +361,8 @@ var _ = Describe("PolicyServer controller", func() {
 					"RunAsGroup":               BeNil(),
 					"ProcMount":                BeNil(),
 					"SeccompProfile":           BeNil(),
-				}))})))
+				})),
+			})))
 			Expect(deployment.Spec.Template.Spec.SecurityContext).To(PointTo(MatchFields(IgnoreExtras, Fields{
 				"SELinuxOptions":      BeNil(),
 				"WindowsOptions":      BeNil(),
@@ -377,7 +373,8 @@ var _ = Describe("PolicyServer controller", func() {
 				"FSGroup":             BeNil(),
 				"Sysctls":             BeNil(),
 				"FSGroupChangePolicy": BeNil(),
-				"SeccompProfile":      BeNil()})))
+				"SeccompProfile":      BeNil(),
+			})))
 		})
 
 		It("should create the policy server configmap empty if no policies are assigned ", func() {
@@ -465,7 +462,6 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create PodDisruptionBudget when policy server has MinAvailable configuration set", func() {
-
 			policyServer := policyServerFactory(policyServerName)
 			minAvailable := intstr.FromInt(2)
 			policyServer.Spec.MinAvailable = &minAvailable
@@ -690,9 +686,7 @@ var _ = Describe("PolicyServer controller", func() {
 				}
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
-
 		})
-
 	})
 
 	When("updating the PolicyServer", func() {
@@ -968,6 +962,5 @@ var _ = Describe("PolicyServer controller", func() {
 				),
 			)
 		})
-
 	})
 })
