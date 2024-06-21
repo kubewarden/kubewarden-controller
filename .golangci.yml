@@ -94,3 +94,5 @@ linters-settings:
             desc: not allowed
           - pkg: "github.com/pkg/errors"
             desc: Should be replaced by standard lib errors package
+  varnamelen:
+    ignore-map-index-ok: true
