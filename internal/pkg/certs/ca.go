@@ -1,4 +1,4 @@
-package admissionregistration
+package certs
 
 import (
 	"crypto/rand"
@@ -10,21 +10,18 @@ import (
 	"time"
 )
 
-type CA struct {
-	CaCert       []byte
-	CaPrivateKey *rsa.PrivateKey
-}
-
-func GenerateCA() (*CA, error) {
-	privateKey, err := newPrivateKey(1024)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create private key: %w", err)
-	}
+func GenerateCA() ([]byte, *rsa.PrivateKey, error) {
 	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
 	if err != nil {
-		return nil, fmt.Errorf("cannot init serial number: %w", err)
+		return nil, nil, fmt.Errorf("cannot init serial number: %w", err)
 	}
-	caCertificate := x509.Certificate{
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot create private key: %w", err)
+	}
+
+	caCert := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization:  []string{""},
@@ -41,14 +38,16 @@ func GenerateCA() (*CA, error) {
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
-	caCertificateBytes, err := x509.CreateCertificate(
+
+	caCertBytes, err := x509.CreateCertificate(
 		rand.Reader,
-		&caCertificate,
-		&caCertificate,
-		&privateKey.Key().PublicKey,
-		privateKey.Key())
+		&caCert,
+		&caCert,
+		&privateKey.PublicKey,
+		privateKey)
 	if err != nil {
-		return nil, fmt.Errorf("cannot create certificate: %w", err)
+		return nil, nil, fmt.Errorf("cannot create certificate: %w", err)
 	}
-	return &CA{caCertificateBytes, privateKey.Key()}, nil
+
+	return caCertBytes, privateKey, nil
 }
