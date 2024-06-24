@@ -1,0 +1,109 @@
+package admission
+
+import (
+	"context"
+	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+)
+
+func TestGetPolicies(t *testing.T) {
+	const policyServer = "test"
+
+	tests := []struct {
+		name     string
+		policies []client.Object
+		expect   int
+	}{
+		{
+			"empty lists",
+			[]client.Object{},
+			0,
+		},
+		{
+			"with cluster and no namespaced policies",
+			[]client.Object{
+				&policiesv1.ClusterAdmissionPolicy{
+					Spec: policiesv1.ClusterAdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
+							PolicyServer: policyServer,
+						},
+					},
+				},
+			},
+			1,
+		},
+		{
+			"with namespaced and no cluster policies",
+			[]client.Object{
+				&policiesv1.AdmissionPolicy{
+					Spec: policiesv1.AdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
+							PolicyServer: policyServer,
+						},
+					},
+				},
+			},
+			1,
+		},
+		{
+			"with cluster and namespaced policies",
+			[]client.Object{
+				&policiesv1.ClusterAdmissionPolicy{
+					Spec: policiesv1.ClusterAdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
+							PolicyServer: policyServer,
+						},
+					},
+				},
+				&policiesv1.AdmissionPolicy{
+					Spec: policiesv1.AdmissionPolicySpec{
+						PolicySpec: policiesv1.PolicySpec{
+							PolicyServer: policyServer,
+						},
+					},
+				},
+			},
+			2,
+		},
+	}
+	for _, ttest := range tests {
+		t.Run(ttest.name, func(t *testing.T) {
+			reconciler := newReconciler(ttest.policies, false, false)
+			policies, err := reconciler.GetPolicies(context.Background(), &policiesv1.PolicyServer{
+				ObjectMeta: metav1.ObjectMeta{Name: policyServer},
+			})
+			if err != nil {
+				t.Errorf("received unexpected error %s", err.Error())
+			}
+			if len(policies) != ttest.expect {
+				t.Errorf("expected %b, but got %b", ttest.expect, len(policies))
+			}
+		})
+	}
+}
+
+func newReconciler(objects []client.Object, metricsEnabled bool, tracingEnabled bool) Reconciler {
+	customScheme := scheme.Scheme
+	customScheme.AddKnownTypes(schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1"},
+		&policiesv1.ClusterAdmissionPolicy{},
+		&policiesv1.AdmissionPolicy{},
+		&policiesv1.ClusterAdmissionPolicyList{},
+		&policiesv1.AdmissionPolicyList{},
+		&policiesv1.PolicyServer{},
+		&policiesv1.PolicyServerList{})
+	cl := fake.NewClientBuilder().WithScheme(customScheme).WithObjects(objects...).Build()
+
+	return Reconciler{
+		Client:               cl,
+		DeploymentsNamespace: namespace,
+		MetricsEnabled:       metricsEnabled,
+		TracingEnabled:       tracingEnabled,
+	}
+}
