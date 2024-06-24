@@ -75,13 +75,6 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.reconcileDeletion(ctx, &policyServer, policies)
 	}
 
-	if !controllerutil.ContainsFinalizer(&policyServer, constants.KubewardenFinalizer) {
-		controllerutil.AddFinalizer(&policyServer, constants.KubewardenFinalizer)
-		if err := r.Client.Update(ctx, &policyServer); err != nil {
-			return ctrl.Result{}, fmt.Errorf("cannot update policy server finalizer: %w", err)
-		}
-	}
-
 	reconcileResult, reconcileErr := r.reconcile(ctx, &policyServer, policies)
 
 	if err := r.Client.Status().Update(ctx, &policyServer); err != nil {
