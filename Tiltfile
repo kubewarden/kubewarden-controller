@@ -9,7 +9,6 @@ kubectl_cmd = "kubectl"
 if str(local("command -v " + kubectl_cmd + " || true", quiet = True)) == "":
     fail("Required command '" + kubectl_cmd + "' not found in PATH")
 
-
 # Install cert manager
 load('ext://cert_manager', 'deploy_cert_manager')
 deploy_cert_manager()
@@ -82,7 +81,7 @@ k8s_yaml(updated_install)
 # binary is rebuilt and the hot swat wrapper takes care of the rest.
 local_resource(
     'manager',
-    "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/manager ./",
+    "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/manager cmd/main.go",
     deps = [
         "main.go",
         "go.mod",
