@@ -91,7 +91,7 @@ var _ = BeforeSuite(func() {
 
 	trueValue := true
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 		Config:                restcfg,
 		UseExistingCluster:    &trueValue,
