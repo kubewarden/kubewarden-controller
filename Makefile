@@ -114,7 +114,7 @@ setup-envtest: $(SETUP_ENVTEST) # Build setup-envtest
 
 .PHONY: unit-tests
 unit-tests: manifests generate fmt vet setup-envtest ## Run unit tests.
-	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test $$(go list ./... | grep -v /internal/controller) -race -test.v -coverprofile=coverage/unit-tests/coverage-internal.txt -covermode=atomic
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" go test $$(go list ./... | grep -v /internal/controller) -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic
 
 .PHONY: setup-envtest integration-tests
 integration-tests: manifests generate fmt vet setup-envtest ## Run integration tests.
