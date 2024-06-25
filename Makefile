@@ -29,7 +29,7 @@ CONTROLLER_GEN_VER := v0.15.0
 CONTROLLER_GEN_BIN := controller-gen
 CONTROLLER_GEN := $(BIN_DIR)/$(CONTROLLER_GEN_BIN)
 
-KUSTOMIZE_VER := v4.5.2
+KUSTOMIZE_VER := v5.4.1
 KUSTOMIZE_BIN := kustomize
 KUSTOMIZE := $(BIN_DIR)/$(KUSTOMIZE_BIN)
 
@@ -74,7 +74,7 @@ $(CONTROLLER_GEN): ## Install controller-gen.
 	GOBIN=$(BIN_DIR) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VER)
 
 $(KUSTOMIZE): ## Install kustomize.
-	GOBIN=$(BIN_DIR) go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VER)
+	GOBIN=$(BIN_DIR) go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VER)
 
 $(SETUP_ENVTEST): ## Install setup-envtest.
 	GOBIN=$(BIN_DIR) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VER)
