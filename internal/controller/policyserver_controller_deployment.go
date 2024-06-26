@@ -1,4 +1,4 @@
-package admission
+package controller
 
 import (
 	"context"
@@ -36,8 +36,7 @@ const (
 )
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
-// component
-func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
+func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
@@ -62,17 +61,20 @@ func (r *Reconciler) reconcilePolicyServerDeployment(ctx context.Context, policy
 	if err != nil {
 		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
 	}
+
 	return nil
 }
 
-func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
+func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
 	admissionContainer := getPolicyServerContainer(policyServer)
+
 	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
 		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
 			Name:  "KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE",
 			Value: r.DeploymentsNamespace,
 		})
 	}
+
 	if policyServer.Spec.VerificationConfig != "" {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
 			corev1.VolumeMount{
@@ -86,6 +88,7 @@ func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.Polic
 				Value: filepath.Join(constants.PolicyServerVerificationConfigContainerPath, verificationFilename),
 			})
 	}
+
 	if policyServer.Spec.ImagePullSecret != "" {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
 			corev1.VolumeMount{
@@ -99,6 +102,7 @@ func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.Polic
 				Value: dockerConfigJSONPolicyServerPath,
 			})
 	}
+
 	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
 			corev1.VolumeMount{
@@ -199,14 +203,17 @@ func (r *Reconciler) updatePolicyServerDeployment(policyServer *policiesv1.Polic
 			},
 		},
 	}
+
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
+
 	if err := controllerutil.SetOwnerReference(policyServer, policyServerDeployment, r.Client.Scheme()); err != nil {
 		return errors.Join(errors.New("failed to set policy server deployment owner reference"), err)
 	}
+
 	return nil
 }
 
-func (r *Reconciler) adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations map[string]string, admissionContainer *corev1.Container) {
+func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations map[string]string, admissionContainer *corev1.Container) {
 	if r.MetricsEnabled {
 		templateAnnotations[constants.OptelInjectAnnotation] = "true"
 
@@ -230,7 +237,7 @@ func (r *Reconciler) adaptDeploymentForMetricsAndTracingConfiguration(templateAn
 	}
 }
 
-func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer) {
+func (r *PolicyServerReconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer) {
 	if policyServer.Spec.VerificationConfig != "" {
 		policyServerDeployment.Spec.Template.Spec.Volumes = append(
 			policyServerDeployment.Spec.Template.Spec.Volumes,
@@ -252,6 +259,7 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 			},
 		)
 	}
+
 	if policyServer.Spec.ImagePullSecret != "" {
 		policyServerDeployment.Spec.Template.Spec.Volumes = append(
 			policyServerDeployment.Spec.Template.Spec.Volumes,
@@ -271,6 +279,7 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 			},
 		)
 	}
+
 	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
 		policyServerDeployment.Spec.Template.Spec.Volumes = append(
 			policyServerDeployment.Spec.Template.Spec.Volumes,
@@ -286,6 +295,7 @@ func (r *Reconciler) adaptDeploymentSettingsForPolicyServer(policyServerDeployme
 			},
 		)
 	}
+
 	if emptyAffinity := (corev1.Affinity{}); policyServer.Spec.Affinity != emptyAffinity {
 		policyServerDeployment.Spec.Template.Spec.Affinity = &policyServer.Spec.Affinity
 	}

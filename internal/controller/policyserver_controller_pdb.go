@@ -1,4 +1,4 @@
-package admission
+package controller
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-func (r *Reconciler) reconcilePolicyServerPodDisruptionBudget(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
+func (r *PolicyServerReconciler) reconcilePolicyServerPodDisruptionBudget(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	if policyServer.Spec.MinAvailable != nil || policyServer.Spec.MaxUnavailable != nil {
 		return reconcilePodDisruptionBudget(ctx, policyServer, r.Client, r.DeploymentsNamespace)
 	}
@@ -27,10 +27,12 @@ func deletePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.Pol
 			Namespace: namespace,
 		},
 	}
+
 	err := client.IgnoreNotFound(k8s.Delete(ctx, pdb))
 	if err != nil {
 		err = errors.Join(errors.New("failed to delete PodDisruptionBudget"), err)
 	}
+
 	return err
 }
 
@@ -66,5 +68,6 @@ func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.
 	if err != nil {
 		err = errors.Join(errors.New("failed to create or update PodDisruptionBudget"), err)
 	}
+
 	return err
 }

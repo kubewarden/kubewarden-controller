@@ -1,4 +1,4 @@
-package admission
+package controller
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret) error {
+func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret) error {
 	policyServerSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.DeploymentsNamespace,
@@ -83,26 +83,7 @@ func (r *Reconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, 
 	return nil
 }
 
-func extractCAFromSecret(caSecret *corev1.Secret) ([]byte, *rsa.PrivateKey, error) {
-	caCert, ok := caSecret.Data[constants.PolicyServerCARootCACert]
-	if !ok {
-		return nil, nil, fmt.Errorf("CA could not be extracted from secret %s", caSecret.Kind)
-	}
-
-	privateKeyBytes, ok := caSecret.Data[constants.PolicyServerCARootPrivateKeyCertName]
-	if !ok {
-		return nil, nil, fmt.Errorf("CA private key bytes could not be extracted from secret %s", caSecret.Kind)
-	}
-
-	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBytes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("CA private key could not be extracted from secret %s", caSecret.Kind)
-	}
-
-	return caCert, privateKey, nil
-}
-
-func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Context, policyServer *policiesv1.PolicyServer) (*corev1.Secret, error) {
+func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Context, policyServer *policiesv1.PolicyServer) (*corev1.Secret, error) {
 	policyServerSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.DeploymentsNamespace,
@@ -135,6 +116,25 @@ func (r *Reconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Conte
 	)
 
 	return policyServerSecret, nil
+}
+
+func extractCAFromSecret(caSecret *corev1.Secret) ([]byte, *rsa.PrivateKey, error) {
+	caCert, ok := caSecret.Data[constants.PolicyServerCARootCACert]
+	if !ok {
+		return nil, nil, fmt.Errorf("CA could not be extracted from secret %s", caSecret.Kind)
+	}
+
+	privateKeyBytes, ok := caSecret.Data[constants.PolicyServerCARootPrivateKeyCertName]
+	if !ok {
+		return nil, nil, fmt.Errorf("CA private key bytes could not be extracted from secret %s", caSecret.Kind)
+	}
+
+	privateKey, err := x509.ParsePKCS1PrivateKey(privateKeyBytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("CA private key could not be extracted from secret %s", caSecret.Kind)
+	}
+
+	return caCert, privateKey, nil
 }
 
 func updateCASecret(policyServerSecret *corev1.Secret) error {

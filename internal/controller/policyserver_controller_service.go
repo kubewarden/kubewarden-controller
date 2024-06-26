@@ -1,4 +1,4 @@
-package admission
+package controller
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func init() {
 	}
 }
 
-func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
+func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	svc := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
@@ -49,7 +49,7 @@ func (r *Reconciler) reconcilePolicyServerService(ctx context.Context, policySer
 	return nil
 }
 
-func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) error {
+func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) error {
 	svc.Name = policyServer.NameWithPrefix()
 	svc.Namespace = r.DeploymentsNamespace
 	svc.Labels = map[string]string{
@@ -82,5 +82,6 @@ func (r *Reconciler) updateService(svc *corev1.Service, policyServer *policiesv1
 	if err := controllerutil.SetOwnerReference(policyServer, svc, r.Client.Scheme()); err != nil {
 		return errors.Join(errors.New("failed to set policy server service owner reference"), err)
 	}
+
 	return nil
 }

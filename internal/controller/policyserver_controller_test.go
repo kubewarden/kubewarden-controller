@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
@@ -398,8 +397,8 @@ var _ = Describe("PolicyServer controller", func() {
 			policy := clusterAdmissionPolicyFactory(policyName, policyServerName, false)
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 
-			policiesMap := admission.PolicyConfigEntryMap{}
-			policiesMap[policy.GetUniqueName()] = admission.PolicyServerConfigEntry{
+			policiesMap := policyConfigEntryMap{}
+			policiesMap[policy.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
 					Namespace: policy.GetNamespace(),
 					Name:      policy.GetName(),
