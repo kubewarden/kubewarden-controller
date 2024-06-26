@@ -1,4 +1,4 @@
-package admissionregistration
+package certs
 
 import (
 	"bytes"
@@ -13,11 +13,59 @@ import (
 	"time"
 )
 
+const bitSize = 4096
+
+// GenerateCA generates a self-signed CA root certificate and private key
+// The certificate is valid for 10 years.
+func GenerateCA() ([]byte, *rsa.PrivateKey, error) {
+	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot init serial number: %w", err)
+	}
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot create private key: %w", err)
+	}
+
+	caCert := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization:  []string{""},
+			Country:       []string{""},
+			Province:      []string{""},
+			Locality:      []string{""},
+			StreetAddress: []string{""},
+			PostalCode:    []string{""},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0),
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+	}
+
+	caCertBytes, err := x509.CreateCertificate(
+		rand.Reader,
+		&caCert,
+		&caCert,
+		&privateKey.PublicKey,
+		privateKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot create certificate: %w", err)
+	}
+
+	return caCertBytes, privateKey, nil
+}
+
+// GenerateCert generates a certificate and private key signed by the provided CA.
+// The certificate is valid for 10 years.
 func GenerateCert(ca []byte,
 	commonName string,
 	extraSANs []string,
-	CAPrivateKey *rsa.PrivateKey,
-) ([]byte, []byte, error) {
+	caPrivateKey *rsa.PrivateKey,
+) ([]byte, *rsa.PrivateKey, error) {
 	caCertificate, err := x509.ParseCertificate(ca)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing certificate: %w", err)
@@ -30,7 +78,7 @@ func GenerateCert(ca []byte,
 
 	// key size must be higher than 1024, otherwise the PolicyServer
 	// TLS acceptor will refuse to start
-	servingPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot generate private key: %w", err)
 	}
@@ -47,7 +95,7 @@ func GenerateCert(ca []byte,
 		}
 	}
 
-	newCertificate := x509.Certificate{
+	cert := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			CommonName:    commonName,
@@ -66,29 +114,24 @@ func GenerateCert(ca []byte,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 	}
-	servingCert, err := x509.CreateCertificate(
+
+	certBytes, err := x509.CreateCertificate(
 		rand.Reader,
-		&newCertificate,
+		&cert,
 		caCertificate,
-		&servingPrivateKey.PublicKey,
-		CAPrivateKey)
+		&privateKey.PublicKey,
+		caPrivateKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot create certificate: %w", err)
 	}
-	servingCertPEM, err := PemEncodeCertificate(servingCert)
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot encode certificate to PEM format: %w", err)
-	}
-	servingPrivateKeyPKCS1 := x509.MarshalPKCS1PrivateKey(servingPrivateKey)
-	servingPrivateKeyPEM, err := pemEncodePrivateKey(servingPrivateKeyPKCS1)
-	if err != nil {
-		return nil, nil, fmt.Errorf("cannot encode private key to PEM format: %w", err)
-	}
-	return servingCertPEM, servingPrivateKeyPEM, nil
+
+	return certBytes, privateKey, nil
 }
 
-func PemEncodeCertificate(certificate []byte) ([]byte, error) {
+// PEMEncodeCertificate encodes a certificate to PEM format
+func PEMEncodeCertificate(certificate []byte) ([]byte, error) {
 	certificatePEM := new(bytes.Buffer)
+
 	err := pem.Encode(certificatePEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certificate,
@@ -96,17 +139,22 @@ func PemEncodeCertificate(certificate []byte) ([]byte, error) {
 	if err != nil {
 		return []byte{}, fmt.Errorf("PEM encode failure: %w", err)
 	}
+
 	return certificatePEM.Bytes(), nil
 }
 
-func pemEncodePrivateKey(privateKey []byte) ([]byte, error) {
+// PEMEncodePrivateKey encodes a private key to PEM format
+func PEMEncodePrivateKey(privateKey *rsa.PrivateKey) ([]byte, error) {
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
 	privateKeyPEM := new(bytes.Buffer)
+
 	err := pem.Encode(privateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
-		Bytes: privateKey,
+		Bytes: privateKeyBytes,
 	})
 	if err != nil {
 		return []byte{}, fmt.Errorf("PEM encode failure: %w", err)
 	}
+
 	return privateKeyPEM.Bytes(), nil
 }

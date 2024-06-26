@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/kubewarden/kubewarden-controller/internal/pkg/admissionregistration"
 	"github.com/kubewarden/kubewarden-controller/internal/pkg/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,12 +56,12 @@ func (r *Reconciler) Reconcile(
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
 ) error {
-	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, policyServer, admissionregistration.GenerateCA, admissionregistration.PemEncodeCertificate)
+	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, policyServer)
 	if err != nil {
 		return err
 	}
 
-	err = r.fetchOrInitializePolicyServerCASecret(ctx, policyServer, policyServerCARootSecret, admissionregistration.GenerateCert)
+	err = r.fetchOrInitializePolicyServerCASecret(ctx, policyServer, policyServerCARootSecret)
 	if err != nil {
 		return err
 	}
