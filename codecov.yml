@@ -4,5 +4,6 @@ coverage:
       default:
         threshold: 1%
 ignore:
-  - pkg/apis/policies/v1/zz_generated.deepcopy.go
-  - pkg/apis/policies/v1alpha2
+  - api/policies/v1/zz_generated.deepcopy.go
+  - api/policies/v1alpha2
+  - cmd
