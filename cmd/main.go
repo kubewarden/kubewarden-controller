@@ -181,16 +181,16 @@ func main() {
 		APIReader:            mgr.GetAPIReader(),
 		Log:                  ctrl.Log.WithName("reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
-		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
-		MetricsEnabled: enableMetrics,
-		TracingEnabled: enableTracing,
 	}
 
 	if err = (&controller.PolicyServerReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		Log:        ctrl.Log.WithName("policy-server-reconciler"),
-		Reconciler: reconciler,
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  ctrl.Log.WithName("policy-server-reconciler"),
+		DeploymentsNamespace: deploymentsNamespace,
+		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
+		MetricsEnabled: enableMetrics,
+		TracingEnabled: enableTracing,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
 		retcode = 1
