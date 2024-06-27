@@ -137,9 +137,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&PolicyServerReconciler{
-		Client:     k8sManager.GetClient(),
-		Scheme:     k8sManager.GetScheme(),
-		Reconciler: reconciler,
+		Client:               k8sManager.GetClient(),
+		Scheme:               k8sManager.GetScheme(),
+		DeploymentsNamespace: DeploymentsNamespace,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

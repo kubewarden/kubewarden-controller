@@ -108,7 +108,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForConfig
 	if err != nil {
 		return []reconcile.Request{}
 	}
-	return policyMap.ToClusterAdmissionPolicyReconcileRequests()
+	return policyMap.toClusterAdmissionPolicyReconcileRequests()
 }
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {

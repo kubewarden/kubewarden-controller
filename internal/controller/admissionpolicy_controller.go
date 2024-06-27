@@ -111,7 +111,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForConfigMap(object cli
 	if err != nil {
 		return []reconcile.Request{}
 	}
-	return policyMap.ToAdmissionPolicyReconcileRequests()
+	return policyMap.toAdmissionPolicyReconcileRequests()
 }
 
 func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {

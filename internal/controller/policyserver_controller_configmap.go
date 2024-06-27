@@ -1,4 +1,4 @@
-package admission
+package controller
 
 import (
 	"context"
@@ -20,7 +20,9 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-type PolicyServerConfigEntry struct {
+const dataType string = "Data" // only data type is supported
+
+type policyServerConfigEntry struct {
 	NamespacedName        types.NamespacedName              `json:"namespacedName"`
 	URL                   string                            `json:"url"`
 	PolicyMode            string                            `json:"policyMode"`
@@ -29,25 +31,19 @@ type PolicyServerConfigEntry struct {
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 }
 
-type sourceAuthorityType string
-
-const (
-	Data sourceAuthorityType = "Data" // only data type is supported
-)
-
 type policyServerSourceAuthority struct {
-	Type sourceAuthorityType `json:"type"`
-	Data string              `json:"data"` // contains a PEM encoded certificate
+	Type string `json:"type"`
+	Data string `json:"data"` // contains a PEM encoded certificate
 }
 
 //nolint:tagliatelle
-type PolicyServerSourcesEntry struct {
+type policyServerSourcesEntry struct {
 	InsecureSources   []string                                 `json:"insecure_sources,omitempty"`
 	SourceAuthorities map[string][]policyServerSourceAuthority `json:"source_authorities,omitempty"`
 }
 
 // Reconciles the ConfigMap that holds the configuration of the Policy Server
-func (r *Reconciler) reconcilePolicyServerConfigMap(
+func (r *PolicyServerReconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1.PolicyServer,
 	policies []policiesv1.Policy,
@@ -68,7 +64,7 @@ func (r *Reconciler) reconcilePolicyServerConfigMap(
 }
 
 // Function used to update the ConfigMap data when creating or updating it
-func (r *Reconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) error {
+func (r *PolicyServerReconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) error {
 	policiesMap := buildPoliciesMap(policies)
 	policiesYML, err := json.Marshal(policiesMap)
 	if err != nil {
@@ -96,43 +92,29 @@ func (r *Reconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *po
 	return nil
 }
 
-type PolicyConfigEntryMap map[string]PolicyServerConfigEntry
-
-func (policyConfigEntryMap PolicyConfigEntryMap) ToAdmissionPolicyReconcileRequests() []reconcile.Request {
-	res := []reconcile.Request{}
-	for _, policy := range policyConfigEntryMap {
-		if policy.NamespacedName.Namespace == "" {
-			continue
-		}
-		res = append(res, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: policy.NamespacedName.Namespace,
-				Name:      policy.NamespacedName.Name,
-			},
-		})
+func (r *PolicyServerReconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *policiesv1.PolicyServer) (string, error) {
+	// By using Unstructured data we force the client to fetch fresh, uncached
+	// data from the API server
+	unstructuredObj := &unstructured.Unstructured{}
+	unstructuredObj.SetGroupVersionKind(schema.GroupVersionKind{
+		Kind:    "ConfigMap",
+		Version: "v1",
+	})
+	err := r.Client.Get(ctx, client.ObjectKey{
+		Namespace: r.DeploymentsNamespace,
+		Name:      policyServer.NameWithPrefix(),
+	}, unstructuredObj)
+	if err != nil {
+		return "", fmt.Errorf("cannot retrieve existing policies ConfigMap: %w", err)
 	}
-	return res
+
+	return unstructuredObj.GetResourceVersion(), nil
 }
 
-func (policyConfigEntryMap PolicyConfigEntryMap) ToClusterAdmissionPolicyReconcileRequests() []reconcile.Request {
-	res := []reconcile.Request{}
-	for _, policy := range policyConfigEntryMap {
-		if policy.NamespacedName.Namespace != "" {
-			continue
-		}
-		res = append(res, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name: policy.NamespacedName.Name,
-			},
-		})
-	}
-	return res
-}
-
-func buildPoliciesMap(admissionPolicies []policiesv1.Policy) PolicyConfigEntryMap {
-	policies := PolicyConfigEntryMap{}
+func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMap {
+	policies := policyConfigEntryMap{}
 	for _, admissionPolicy := range admissionPolicies {
-		policies[admissionPolicy.GetUniqueName()] = PolicyServerConfigEntry{
+		policies[admissionPolicy.GetUniqueName()] = policyServerConfigEntry{
 			NamespacedName: types.NamespacedName{
 				Namespace: admissionPolicy.GetNamespace(),
 				Name:      admissionPolicy.GetName(),
@@ -147,8 +129,8 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) PolicyConfigEntryMa
 	return policies
 }
 
-func buildSourcesMap(policyServer *policiesv1.PolicyServer) PolicyServerSourcesEntry {
-	sourcesEntry := PolicyServerSourcesEntry{}
+func buildSourcesMap(policyServer *policiesv1.PolicyServer) policyServerSourcesEntry {
+	sourcesEntry := policyServerSourcesEntry{}
 	sourcesEntry.InsecureSources = policyServer.Spec.InsecureSources
 	if sourcesEntry.InsecureSources == nil {
 		sourcesEntry.InsecureSources = make([]string, 0)
@@ -161,7 +143,7 @@ func buildSourcesMap(policyServer *policiesv1.PolicyServer) PolicyServerSourcesE
 		for _, cert := range certs {
 			sourcesEntry.SourceAuthorities[uri] = append(sourcesEntry.SourceAuthorities[uri],
 				policyServerSourceAuthority{
-					Type: Data,
+					Type: dataType,
 					Data: cert,
 				})
 		}
@@ -169,21 +151,35 @@ func buildSourcesMap(policyServer *policiesv1.PolicyServer) PolicyServerSourcesE
 	return sourcesEntry
 }
 
-func (r *Reconciler) policyServerConfigMapVersion(ctx context.Context, policyServer *policiesv1.PolicyServer) (string, error) {
-	// By using Unstructured data we force the client to fetch fresh, uncached
-	// data from the API server
-	unstructuredObj := &unstructured.Unstructured{}
-	unstructuredObj.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "ConfigMap",
-		Version: "v1",
-	})
-	err := r.APIReader.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      policyServer.NameWithPrefix(),
-	}, unstructuredObj)
-	if err != nil {
-		return "", fmt.Errorf("cannot retrieve existing policies ConfigMap: %w", err)
-	}
+type policyConfigEntryMap map[string]policyServerConfigEntry
 
-	return unstructuredObj.GetResourceVersion(), nil
+func (e policyConfigEntryMap) toAdmissionPolicyReconcileRequests() []reconcile.Request {
+	res := []reconcile.Request{}
+	for _, policy := range e {
+		if policy.NamespacedName.Namespace == "" {
+			continue
+		}
+		res = append(res, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: policy.NamespacedName.Namespace,
+				Name:      policy.NamespacedName.Name,
+			},
+		})
+	}
+	return res
+}
+
+func (e policyConfigEntryMap) toClusterAdmissionPolicyReconcileRequests() []reconcile.Request {
+	res := []reconcile.Request{}
+	for _, policy := range e {
+		if policy.NamespacedName.Namespace != "" {
+			continue
+		}
+		res = append(res, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: policy.NamespacedName.Name,
+			},
+		})
+	}
+	return res
 }
