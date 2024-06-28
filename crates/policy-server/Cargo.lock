@@ -2213,17 +2213,14 @@ dependencies = [
 
 [[package]]
 name = "jemalloc_pprof"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45b38a2cc3eb7b0e332c6368a6fd6a1a603a5be9526f0810f8e0682513538541"
+checksum = "9dc0a5dcb97aa2ec4e2653ab53050676b530fe41515f07fbd4d51bba9e0b1d41"
 dependencies = [
  "anyhow",
- "flate2",
  "libc",
- "num",
  "once_cell",
- "paste",
- "prost 0.11.9",
+ "rust_jemalloc_pprof_internal",
  "tempfile",
  "tikv-jemalloc-ctl",
  "tokio",
@@ -4239,6 +4236,22 @@ dependencies = [
  "rustc_version",
  "syn 2.0.68",
  "unicode-ident",
+]
+
+[[package]]
+name = "rust_jemalloc_pprof_internal"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0c886bcae195e803348bfb93d12f0045ae4a43d543f4d476cd9d444e6782e0b"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "libc",
+ "num",
+ "once_cell",
+ "paste",
+ "prost 0.11.9",
+ "tracing",
 ]
 
 [[package]]
