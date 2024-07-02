@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//nolint:ireturn
 package controller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand"
 	"os"
-	"time"
 
 	. "github.com/onsi/gomega"         //nolint:revive
 	. "github.com/onsi/gomega/gstruct" //nolint:revive
@@ -40,12 +41,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-const (
-	timeout                   = 180 * time.Second
-	pollInterval              = 250 * time.Millisecond
-	IntegrationTestsFinalizer = "integration-tests-safety-net-finalizer"
-	consistencyTimeout        = 5 * time.Second
-)
+const integrationTestsFinalizer = "integration-tests-safety-net-finalizer"
 
 var (
 	templatePolicyServer = policiesv1.PolicyServer{
@@ -91,7 +87,7 @@ func policyServerFactory(name string) *policiesv1.PolicyServer {
 		// By adding this finalizer automatically, we ensure that when
 		// testing removal of finalizers on deleted objects, that they will
 		// exist at all times
-		IntegrationTestsFinalizer,
+		integrationTestsFinalizer,
 	}
 	return policyServer
 }
@@ -109,7 +105,7 @@ func admissionPolicyFactory(name, policyNamespace, policyServerName string, muta
 		// By adding this finalizer automatically, we ensure that when
 		// testing removal of finalizers on deleted objects, that they will
 		// exist at all times
-		IntegrationTestsFinalizer,
+		integrationTestsFinalizer,
 	}
 	return admissionPolicy
 }
@@ -126,75 +122,75 @@ func clusterAdmissionPolicyFactory(name, policyServerName string, mutating bool)
 		// By adding this finalizer automatically, we ensure that when
 		// testing removal of finalizers on deleted objects, that they will
 		// exist at all times
-		IntegrationTestsFinalizer,
+		integrationTestsFinalizer,
 	}
 	return clusterAdmissionPolicy
 }
 
-func getTestAdmissionPolicy(namespace, name string) (*policiesv1.AdmissionPolicy, error) {
+func getTestAdmissionPolicy(ctx context.Context, namespace, name string) (*policiesv1.AdmissionPolicy, error) {
 	admissionPolicy := policiesv1.AdmissionPolicy{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &admissionPolicy); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &admissionPolicy); err != nil {
 		return nil, errors.Join(errors.New("could not find AdmissionPolicy"), err)
 	}
 	return &admissionPolicy, nil
 }
 
-func getTestClusterAdmissionPolicy(name string) (*policiesv1.ClusterAdmissionPolicy, error) {
+func getTestClusterAdmissionPolicy(ctx context.Context, name string) (*policiesv1.ClusterAdmissionPolicy, error) {
 	clusterAdmissionPolicy := policiesv1.ClusterAdmissionPolicy{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &clusterAdmissionPolicy); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &clusterAdmissionPolicy); err != nil {
 		return nil, errors.Join(errors.New("could not find ClusterAdmissionPolicy"), err)
 	}
 	return &clusterAdmissionPolicy, nil
 }
 
-func getTestPolicyServer(name string) (*policiesv1.PolicyServer, error) {
+func getTestPolicyServer(ctx context.Context, name string) (*policiesv1.PolicyServer, error) {
 	policyServer := policiesv1.PolicyServer{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &policyServer); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &policyServer); err != nil {
 		return nil, errors.Join(errors.New("could not find PolicyServer"), err)
 	}
 	return &policyServer, nil
 }
 
-func getTestPolicyServerService(policyServerName string) (*corev1.Service, error) {
+func getTestPolicyServerService(ctx context.Context, policyServerName string) (*corev1.Service, error) {
 	serviceName := getPolicyServerNameWithPrefix(policyServerName)
 	service := corev1.Service{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: DeploymentsNamespace}, &service); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: deploymentsNamespace}, &service); err != nil {
 		return nil, errors.Join(errors.New("could not find Service owned by PolicyServer"), err)
 	}
 	return &service, nil
 }
 
-func getTestPolicyServerCASecret() (*corev1.Secret, error) {
+func getTestPolicyServerCASecret(ctx context.Context) (*corev1.Secret, error) {
 	secret := corev1.Secret{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: constants.PolicyServerCARootSecretName, Namespace: DeploymentsNamespace}, &secret); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: constants.PolicyServerCARootSecretName, Namespace: deploymentsNamespace}, &secret); err != nil {
 		return nil, errors.Join(errors.New("could not find the PolicyServer CA secret"), err)
 	}
 	return &secret, nil
 }
 
-func getTestPolicyServerSecret(policyServerName string) (*corev1.Secret, error) {
+func getTestPolicyServerSecret(ctx context.Context, policyServerName string) (*corev1.Secret, error) {
 	secretName := getPolicyServerNameWithPrefix(policyServerName)
 	secret := corev1.Secret{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: secretName, Namespace: DeploymentsNamespace}, &secret); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: secretName, Namespace: deploymentsNamespace}, &secret); err != nil {
 		return nil, errors.Join(errors.New("could not find secret owned by PolicyServer"), err)
 	}
 	return &secret, nil
 }
 
-func getTestPolicyServerDeployment(policyServerName string) (*appsv1.Deployment, error) {
+func getTestPolicyServerDeployment(ctx context.Context, policyServerName string) (*appsv1.Deployment, error) {
 	deploymentName := getPolicyServerNameWithPrefix(policyServerName)
 	deployment := appsv1.Deployment{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: DeploymentsNamespace}, &deployment); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: deploymentsNamespace}, &deployment); err != nil {
 		return nil, errors.Join(errors.New("could not find Deployment owned by PolicyServer"), err)
 	}
 	return &deployment, nil
 }
 
-func getTestPolicyServerConfigMap(policyServerName string) (*corev1.ConfigMap, error) {
+func getTestPolicyServerConfigMap(ctx context.Context, policyServerName string) (*corev1.ConfigMap, error) {
 	configMapName := getPolicyServerNameWithPrefix(policyServerName)
 
 	configmap := corev1.ConfigMap{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: DeploymentsNamespace}, &configmap); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: configMapName, Namespace: deploymentsNamespace}, &configmap); err != nil {
 		return nil, errors.Join(errors.New("could not find ConfigMap owned by PolicyServer"), err)
 	}
 	return &configmap, nil
@@ -209,47 +205,32 @@ func getPolicyServerNameWithPrefix(policyServerName string) string {
 	return policyServer.NameWithPrefix()
 }
 
-func getTestPolicyServerPod(policyServerName string) (*corev1.Pod, error) {
-	podList := corev1.PodList{}
-	if err := reconciler.APIReader.List(ctx, &podList, client.MatchingLabels{
-		constants.PolicyServerLabelKey: policyServerName,
-	}); err != nil {
-		return nil, errors.Join(errors.New("could not list Pods owned by PolicyServer"), err)
-	}
-
-	if len(podList.Items) == 0 {
-		return nil, errors.New("could not find Pod owned by PolicyServer")
-	}
-
-	return &podList.Items[0], nil
-}
-
-func getTestValidatingWebhookConfiguration(name string) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+func getTestValidatingWebhookConfiguration(ctx context.Context, name string) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
 	validatingWebhookConfiguration := admissionregistrationv1.ValidatingWebhookConfiguration{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &validatingWebhookConfiguration); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &validatingWebhookConfiguration); err != nil {
 		return nil, errors.Join(errors.New("could not find ValidatingWebhookConfiguration"), err)
 	}
 	return &validatingWebhookConfiguration, nil
 }
 
-func getTestMutatingWebhookConfiguration(name string) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
+func getTestMutatingWebhookConfiguration(ctx context.Context, name string) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	mutatingWebhookConfiguration := admissionregistrationv1.MutatingWebhookConfiguration{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: name}, &mutatingWebhookConfiguration); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &mutatingWebhookConfiguration); err != nil {
 		return nil, errors.Join(errors.New("could not find ValidatingWebhookConfiguration"), err)
 	}
 	return &mutatingWebhookConfiguration, nil
 }
 
-func getTestCASecret() (*corev1.Secret, error) {
+func getTestCASecret(ctx context.Context) (*corev1.Secret, error) {
 	secret := corev1.Secret{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: constants.PolicyServerCARootSecretName, Namespace: DeploymentsNamespace}, &secret); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: constants.PolicyServerCARootSecretName, Namespace: deploymentsNamespace}, &secret); err != nil {
 		return nil, errors.Join(errors.New("could not find CA secret"), err)
 	}
 
 	return &secret, nil
 }
 
-func getPolicyServerPodDisruptionBudget(policyServerName string) (*k8spoliciesv1.PodDisruptionBudget, error) {
+func getPolicyServerPodDisruptionBudget(ctx context.Context, policyServerName string) (*k8spoliciesv1.PodDisruptionBudget, error) {
 	policyServer := policiesv1.PolicyServer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: policyServerName,
@@ -257,7 +238,7 @@ func getPolicyServerPodDisruptionBudget(policyServerName string) (*k8spoliciesv1
 	}
 	podDisruptionBudgetName := policyServer.NameWithPrefix()
 	pdb := &k8spoliciesv1.PodDisruptionBudget{}
-	if err := reconciler.APIReader.Get(ctx, client.ObjectKey{Name: podDisruptionBudgetName, Namespace: DeploymentsNamespace}, pdb); err != nil {
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: podDisruptionBudgetName, Namespace: deploymentsNamespace}, pdb); err != nil {
 		return nil, errors.Join(errors.New("could not find PodDisruptionBudget"), err)
 	}
 	return pdb, nil
@@ -297,7 +278,7 @@ func policyServerPodDisruptionBudgetMatcher(policyServer *policiesv1.PolicyServe
 	)
 }
 
-func alreadyExists() types.GomegaMatcher { //nolint:ireturn
+func alreadyExists() types.GomegaMatcher {
 	return WithTransform(
 		func(err error) bool {
 			return err != nil && apierrors.IsAlreadyExists(err)
@@ -306,7 +287,7 @@ func alreadyExists() types.GomegaMatcher { //nolint:ireturn
 	)
 }
 
-func haveSucceededOrAlreadyExisted() types.GomegaMatcher { //nolint:ireturn
+func haveSucceededOrAlreadyExisted() types.GomegaMatcher {
 	return SatisfyAny(
 		BeNil(),
 		alreadyExists(),
@@ -328,22 +309,13 @@ func newName(prefix string) string {
 	return fmt.Sprintf("%s-%s", prefix, randStringRunes(8))
 }
 
-func createPolicyServerAndWaitForItsService(policyServer *policiesv1.PolicyServer) {
+func createPolicyServerAndWaitForItsService(ctx context.Context, policyServer *policiesv1.PolicyServer) {
 	Expect(
 		k8sClient.Create(ctx, policyServer),
 	).To(haveSucceededOrAlreadyExisted())
 	// Wait for the Service associated with the PolicyServer to be created
 	Eventually(func() error {
-		_, err := getTestPolicyServerService(policyServer.GetName())
+		_, err := getTestPolicyServerService(ctx, policyServer.GetName())
 		return err
 	}, timeout, pollInterval).Should(Succeed())
-}
-
-func notFound() types.GomegaMatcher { //nolint:ireturn
-	return WithTransform(
-		func(err error) bool {
-			return err != nil && apierrors.IsNotFound(err)
-		},
-		BeTrue(),
-	)
 }
