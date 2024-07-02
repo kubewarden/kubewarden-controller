@@ -154,6 +154,20 @@ It will also stop and remove the container when the tests finish.
 Note that the `real-cluster` tests are slower than the `envtest` tests, therefore, it is recommended to keep the number of `real-cluster` tests to a minimum.
 An example of a test that requires a real cluster is the `AdmissionPolicy` test suite, since at the time of writing, we wait for the `PolicyServer` Pod to be ready before reconciling the webhook configuration.
 
+### Focusing
+
+You can focus on a specific test or spec by using a [Focused Spec](https://onsi.github.io/ginkgo/#focused-specs).
+
+Example:
+
+```go
+var _ = Describe("Controller test", func() {
+    FIt("should do something", func() {
+        // This spec will be the only one executed
+    })
+})
+```
+
 ## Tagging a new release
 
 ### Make sure to update the CRD docs
