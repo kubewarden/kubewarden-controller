@@ -168,6 +168,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 				SecurityContext:    podSecurityContext,
 				Containers:         []corev1.Container{admissionContainer},
 				ServiceAccountName: policyServer.Spec.ServiceAccountName,
+				Tolerations:        policyServer.Spec.Tolerations,
 				Volumes: []corev1.Volume{
 					{
 						Name: policyStoreVolume,
