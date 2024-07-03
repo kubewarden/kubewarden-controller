@@ -173,6 +173,18 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		}).
 		Build()
 
+	// an AdmissionPolicy with unknown GVR, it should be errored and skipped
+	admissionPolicy5 := testutils.
+		NewAdmissionPolicyFactory().
+		Name("policy9").
+		Namespace("test").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"foo"},
+		}).
+		Build()
+
 	client, err := testutils.NewFakeClient(
 		namespace,
 		policyServer,
@@ -185,6 +197,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		admissionPolicy2,
 		admissionPolicy3,
 		admissionPolicy4,
+		admissionPolicy5,
 	)
 	require.NoError(t, err)
 
@@ -227,6 +240,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 		},
 		PolicyNum:  2,
 		SkippedNum: 3,
+		ErroredNum: 1,
 	}
 
 	assert.Equal(t, expectedPolicies, policies)
@@ -339,6 +353,17 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		Namespace("test").
 		Build()
 
+	// a ClusterAdmissionPolicy targeting unknown GVR, it should be errored and skipped
+	clusterAdmissionPolicy7 := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("policy8").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"foo"},
+		}).
+		Build()
+
 	client, err := testutils.NewFakeClient(
 		namespace,
 		policyServer,
@@ -350,6 +375,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		clusterAdmissionPolicy5,
 		clusterAdmissionPolicy6,
 		admissionPolicy1,
+		clusterAdmissionPolicy7,
 	)
 	require.NoError(t, err)
 
@@ -382,6 +408,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		},
 		PolicyNum:  3,
 		SkippedNum: 2,
+		ErroredNum: 1,
 	}
 
 	assert.Equal(t, expectedPolicies, policies)
