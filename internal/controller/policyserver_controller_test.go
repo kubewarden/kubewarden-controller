@@ -366,7 +366,11 @@ var _ = Describe("PolicyServer controller", func() {
 					"FSGroupChangePolicy": BeNil(),
 					"SeccompProfile":      BeNil(),
 				})),
-				"Affinity": BeNil(),
+				"Affinity": PointTo(MatchAllFields(Fields{
+					"NodeAffinity":    BeNil(),
+					"PodAffinity":     BeNil(),
+					"PodAntiAffinity": BeNil(),
+				})),
 			}))
 		})
 
