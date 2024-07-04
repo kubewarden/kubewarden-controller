@@ -255,6 +255,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 		Dict("dict", zerolog.Dict().
 			Int("policies-to-evaluate", policies.PolicyNum).
 			Int("policies-skipped", policies.SkippedNum).
+			Int("policies-errored", policies.ErroredNum).
 			Int("parallel-resources-audits", s.parallelResourcesAudits),
 		).Msg("cluster admission policies count")
 
