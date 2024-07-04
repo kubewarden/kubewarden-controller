@@ -16,7 +16,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-// Reconcile the certificate to be used by the policy server for TLS. The 
+// Reconcile the certificate to be used by the policy server for TLS. The
 // generated certificate is signed by the CA certificate provided in the
 // caSecret. The generated certificate is stored in a secret
 func (r *PolicyServerReconciler) reconcilePolicyServerCertSecret(ctx context.Context, policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret) error {
