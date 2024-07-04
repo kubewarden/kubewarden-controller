@@ -160,7 +160,7 @@ func getTestPolicyServerService(ctx context.Context, policyServerName string) (*
 	return &service, nil
 }
 
-func getTestPolicyServerCASecret(ctx context.Context) (*corev1.Secret, error) {
+func getInternalPolicyServerRootCASecret(ctx context.Context) (*corev1.Secret, error) {
 	secret := corev1.Secret{}
 	if err := k8sClient.Get(ctx, client.ObjectKey{Name: constants.PolicyServerCARootSecretName, Namespace: deploymentsNamespace}, &secret); err != nil {
 		return nil, errors.Join(errors.New("could not find the PolicyServer CA secret"), err)

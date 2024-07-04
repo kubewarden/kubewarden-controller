@@ -16,7 +16,10 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCASecret(ctx context.Context, policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret) error {
+// Reconcile the certificate to be used by the policy server for TLS. The 
+// generated certificate is signed by the CA certificate provided in the
+// caSecret. The generated certificate is stored in a secret
+func (r *PolicyServerReconciler) reconcilePolicyServerCertSecret(ctx context.Context, policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret) error {
 	policyServerSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.DeploymentsNamespace,
@@ -69,7 +72,7 @@ func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCASecret(ctx conte
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCASecretReconciled),
+			string(policiesv1.PolicyServerCertSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return errors.Join(errors.New("cannot fetch or initialize Policy Server CA secret"), err)
@@ -77,13 +80,15 @@ func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCASecret(ctx conte
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCASecretReconciled),
+		string(policiesv1.PolicyServerCertSecretReconciled),
 	)
 
 	return nil
 }
 
-func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCARootSecret(ctx context.Context, policyServer *policiesv1.PolicyServer) (*corev1.Secret, error) {
+// Reconcile the internal CA root secret used by the controller to sign
+// the policy server certificate.
+func (r *PolicyServerReconciler) reconcileInternalCARootSecret(ctx context.Context, policyServer *policiesv1.PolicyServer) (*corev1.Secret, error) {
 	policyServerSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.DeploymentsNamespace,
@@ -97,14 +102,14 @@ func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCARootSecret(ctx c
 		_, hasCARootPrivateKey := policyServerSecret.Data[constants.PolicyServerCARootPrivateKeyCertName]
 
 		if !hasCARootCert || !hasCARootPem || !hasCARootPrivateKey {
-			return updateCASecret(policyServerSecret)
+			return createInternalCASecret(policyServerSecret)
 		}
 		return nil
 	})
 	if err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerCARootSecretReconciled),
+			string(policiesv1.CARootSecretReconciled),
 			fmt.Sprintf("error reconciling secret: %v", err),
 		)
 		return nil, errors.Join(errors.New("cannot fetch or initialize Policy Server CA secret"), err)
@@ -112,12 +117,14 @@ func (r *PolicyServerReconciler) fetchOrInitializePolicyServerCARootSecret(ctx c
 
 	setTrueConditionType(
 		&policyServer.Status.Conditions,
-		string(policiesv1.PolicyServerCARootSecretReconciled),
+		string(policiesv1.CARootSecretReconciled),
 	)
 
 	return policyServerSecret, nil
 }
 
+// Extract the CA certificate and private key from the secret storing the CA data
+// used in the policy server certificate generation
 func extractCAFromSecret(caSecret *corev1.Secret) ([]byte, *rsa.PrivateKey, error) {
 	caCert, ok := caSecret.Data[constants.PolicyServerCARootCACert]
 	if !ok {
@@ -137,7 +144,10 @@ func extractCAFromSecret(caSecret *corev1.Secret) ([]byte, *rsa.PrivateKey, erro
 	return caCert, privateKey, nil
 }
 
-func updateCASecret(policyServerSecret *corev1.Secret) error {
+// Create the internal CA root secret used by the controller to sign
+// the policy server certificates. The created CA is stored in the secret
+// provided as argument
+func createInternalCASecret(policyServerSecret *corev1.Secret) error {
 	caCert, privateKey, err := certs.GenerateCA()
 	if err != nil {
 		return fmt.Errorf("cannot generate policy-server secret CA: %w", err)

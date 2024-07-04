@@ -80,12 +80,12 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.reconcileDeletion(ctx, &policyServer, policies)
 	}
 
-	policyServerCARootSecret, err := r.fetchOrInitializePolicyServerCARootSecret(ctx, &policyServer)
+	caRootSecret, err := r.reconcileInternalCARootSecret(ctx, &policyServer)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.fetchOrInitializePolicyServerCASecret(ctx, &policyServer, policyServerCARootSecret)
+	err = r.reconcilePolicyServerCertSecret(ctx, &policyServer, caRootSecret)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

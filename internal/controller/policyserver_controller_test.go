@@ -454,7 +454,7 @@ var _ = Describe("PolicyServer controller", func() {
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			Eventually(func() error {
-				secret, err := getTestPolicyServerCASecret(ctx)
+				secret, err := getInternalPolicyServerRootCASecret(ctx)
 				if err != nil {
 					return err
 				}
