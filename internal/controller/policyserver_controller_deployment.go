@@ -168,6 +168,8 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 				SecurityContext:    podSecurityContext,
 				Containers:         []corev1.Container{admissionContainer},
 				ServiceAccountName: policyServer.Spec.ServiceAccountName,
+				Tolerations:        policyServer.Spec.Tolerations,
+				Affinity:           &policyServer.Spec.Affinity,
 				Volumes: []corev1.Volume{
 					{
 						Name: policyStoreVolume,
@@ -294,10 +296,6 @@ func (r *PolicyServerReconciler) adaptDeploymentSettingsForPolicyServer(policySe
 				},
 			},
 		)
-	}
-
-	if emptyAffinity := (corev1.Affinity{}); policyServer.Spec.Affinity != emptyAffinity {
-		policyServerDeployment.Spec.Template.Spec.Affinity = &policyServer.Spec.Affinity
 	}
 }
 

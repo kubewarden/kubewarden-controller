@@ -250,6 +250,46 @@ var _ = Describe("PolicyServer controller", func() {
 	})
 
 	When("creating a PolicyServer", func() {
+		It("should use the policy server tolerations configuration in the policy server deployment", func() {
+			tolerationSeconds := int64(10)
+			policyServer := policyServerFactory(policyServerName)
+			policyServer.Spec.Tolerations = []corev1.Toleration{{
+				Key:               "key1",
+				Operator:          corev1.TolerationOpEqual,
+				Value:             "value1",
+				Effect:            corev1.TaintEffectNoSchedule,
+				TolerationSeconds: nil,
+			}, {
+				Key:               "key2",
+				Operator:          corev1.TolerationOpEqual,
+				Value:             "value2",
+				Effect:            corev1.TaintEffectNoExecute,
+				TolerationSeconds: &tolerationSeconds,
+			}}
+			createPolicyServerAndWaitForItsService(policyServer)
+			deployment, err := getTestPolicyServerDeployment(policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(deployment.Spec.Template.Spec.Tolerations).To(MatchAllElements(func(element interface{}) string {
+				toleration, _ := element.(corev1.Toleration)
+				return toleration.Key
+			}, Elements{
+				"key1": MatchAllFields(Fields{
+					"Key":               Equal("key1"),
+					"Operator":          Equal(corev1.TolerationOpEqual),
+					"Value":             Equal("value1"),
+					"Effect":            Equal(corev1.TaintEffectNoSchedule),
+					"TolerationSeconds": BeNil(),
+				}),
+				"key2": MatchAllFields(Fields{
+					"Key":               Equal("key2"),
+					"Operator":          Equal(corev1.TolerationOpEqual),
+					"Value":             Equal("value2"),
+					"Effect":            Equal(corev1.TaintEffectNoExecute),
+					"TolerationSeconds": PointTo(Equal(tolerationSeconds)),
+				}),
+			}))
+		})
+
 		It("should use the policy server affinity configuration in the policy server deployment", func() {
 			policyServer := policyServerFactory(policyServerName)
 			policyServer.Spec.Affinity = corev1.Affinity{
@@ -311,22 +351,27 @@ var _ = Describe("PolicyServer controller", func() {
 					"SeccompProfile": BeNil(),
 				})),
 			})))
-			By("checking the deployment pod security context")
-			Expect(deployment.Spec.Template.Spec.SecurityContext).To(PointTo(MatchFields(IgnoreExtras, Fields{
-				"SELinuxOptions":      BeNil(),
-				"WindowsOptions":      BeNil(),
-				"RunAsUser":           BeNil(),
-				"RunAsGroup":          BeNil(),
-				"RunAsNonRoot":        BeNil(),
-				"SupplementalGroups":  BeNil(),
-				"FSGroup":             BeNil(),
-				"Sysctls":             BeNil(),
-				"FSGroupChangePolicy": BeNil(),
-				"SeccompProfile":      BeNil(),
-			})))
-
-			By("checking the deployment affinity")
-			Expect(deployment.Spec.Template.Spec.Affinity).To(BeNil())
+			By("checking the deployment spec")
+			Expect(deployment.Spec.Template.Spec).To(MatchFields(IgnoreExtras, Fields{
+				"Tolerations": BeEmpty(),
+				"SecurityContext": PointTo(MatchFields(IgnoreExtras, Fields{
+					"SELinuxOptions":      BeNil(),
+					"WindowsOptions":      BeNil(),
+					"RunAsUser":           BeNil(),
+					"RunAsGroup":          BeNil(),
+					"RunAsNonRoot":        BeNil(),
+					"SupplementalGroups":  BeNil(),
+					"FSGroup":             BeNil(),
+					"Sysctls":             BeNil(),
+					"FSGroupChangePolicy": BeNil(),
+					"SeccompProfile":      BeNil(),
+				})),
+				"Affinity": PointTo(MatchAllFields(Fields{
+					"NodeAffinity":    BeNil(),
+					"PodAffinity":     BeNil(),
+					"PodAntiAffinity": BeNil(),
+				})),
+			}))
 		})
 
 		It("should create the policy server deployment and use the user defined security contexts", func() {
