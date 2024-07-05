@@ -5,7 +5,7 @@ ENVTEST_K8S_VERSION = 1.30.0
 # K3S_TESTCONTAINER_VERSION refers to the version of k3s testcontainer to be used by envtest to run integration tests.
 K3S_TESTCONTAINER_VERSION = v1.30.0-k3s1
 # POLICY_SERVER_VERSION refers to the version of the policy server to be used by integration tests.
-POLICY_SERVER_VERSION = v1.13.0
+POLICY_SERVER_VERSION = v1.14.0
 
 # Let's use a generous timeout for integration tests because GitHub workers can
 # be slow
