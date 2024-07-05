@@ -321,3 +321,7 @@ func setTrueConditionType(conditions *[]metav1.Condition, conditionType string) 
 		},
 	)
 }
+
+func policyServerDeploymentName(policyServerName string) string {
+	return "policy-server-" + policyServerName
+}
