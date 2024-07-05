@@ -18,6 +18,7 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
@@ -31,15 +32,11 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-var _ = Describe("AdmissionPolicy controller", func() {
-	var policyNamespace string
-	var policyServerName string
-	// let's use this constant to avoid linter errors
-	const PolicyServerNamePrefix = "policy-server-"
+var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
+	ctx := context.Background()
+	policyNamespace := "admission-policy-controller-test"
 
 	BeforeEach(func() {
-		policyNamespace = "admission-policy-controller-test"
-		policyServerName = newName("policy-server")
 		Expect(
 			k8sClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -49,13 +46,16 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		).To(haveSucceededOrAlreadyExisted())
 	})
 
-	When("creating a validating AdmissionPolicy", func() {
+	When("creating a validating AdmissionPolicy", Ordered, func() {
+		var policyServerName string
 		var policyName string
 		var policy *policiesv1.AdmissionPolicy
 
-		BeforeEach(func() {
+		BeforeAll(func() {
+			policyServerName = newName("policy-server")
+			createPolicyServerAndWaitForItsService(ctx, policyServerFactory(policyServerName))
+
 			policyName = newName("validating-policy")
-			createPolicyServerAndWaitForItsService(policyServerFactory(policyServerName))
 			policy = admissionPolicyFactory(policyName, policyNamespace, policyServerName, false)
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 		})
@@ -63,14 +63,14 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		It("should set the AdminissionPolicy to active sometime after its creation", func() {
 			By("changing the policy status to pending")
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-				return getTestAdmissionPolicy(policyNamespace, policyName)
+				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-				return getTestAdmissionPolicy(policyNamespace, policyName)
+				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
 			)
@@ -78,7 +78,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 		It("should create the ValidatingWebhookConfiguration", func() {
 			Eventually(func() error {
-				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(policy.GetUniqueName())
+				validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(ctx, policy.GetUniqueName())
 				if err != nil {
 					return err
 				}
@@ -88,9 +88,9 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
-				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(PolicyServerNamePrefix + policyServerName))
+				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal("policy-server-" + policyServerName))
 
-				caSecret, err := getTestCASecret()
+				caSecret, err := getTestCASecret(ctx)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
 
@@ -98,12 +98,12 @@ var _ = Describe("AdmissionPolicy controller", func() {
 			}, timeout, pollInterval).Should(Succeed())
 		})
 
-		It("should be reconcile the ValidationWebhookConfiguration to the original state after some change", func() {
+		It("should reconcile the ValidationWebhookConfiguration to the original state after some change", func() {
 			var originalValidatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
 			var validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
 			Eventually(func() error {
 				var err error
-				validatingWebhookConfiguration, err = getTestValidatingWebhookConfiguration(policy.GetUniqueName())
+				validatingWebhookConfiguration, err = getTestValidatingWebhookConfiguration(ctx, policy.GetUniqueName())
 				if err != nil {
 					return err
 				}
@@ -124,7 +124,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 			By("reconciling the ValidatingWebhookConfiguration to its original state")
 			Eventually(func() (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
-				return getTestValidatingWebhookConfiguration(policy.GetUniqueName())
+				return getTestValidatingWebhookConfiguration(ctx, policy.GetUniqueName())
 			}, timeout, pollInterval).Should(
 				And(
 					HaveField("Labels", Equal(originalValidatingWebhookConfiguration.Labels)),
@@ -135,7 +135,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 			// simulate uninitialized labels and annotation maps (behavior of Kubewarden <= 1.9.0), or user change
 			By("setting the ValidatingWebhookConfiguration labels and annotation to nil")
-			validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(policy.GetUniqueName())
+			validatingWebhookConfiguration, err := getTestValidatingWebhookConfiguration(ctx, policy.GetUniqueName())
 			Expect(err).ToNot(HaveOccurred())
 			originalValidatingWebhookConfiguration = validatingWebhookConfiguration.DeepCopy()
 			validatingWebhookConfiguration.Labels = nil
@@ -146,7 +146,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 			By("reconciling the ValidatingWebhookConfiguration to its original state")
 			Eventually(func() (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
-				return getTestValidatingWebhookConfiguration(policy.GetUniqueName())
+				return getTestValidatingWebhookConfiguration(ctx, policy.GetUniqueName())
 			}, timeout, pollInterval).Should(
 				And(
 					HaveField("Labels", Equal(originalValidatingWebhookConfiguration.Labels)),
@@ -157,13 +157,16 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		})
 	})
 
-	When("creating a mutating AdmissionPolicy", func() {
+	When("creating a mutating AdmissionPolicy", Ordered, func() {
+		var policyServerName string
 		var policyName string
 		var policy *policiesv1.AdmissionPolicy
 
-		BeforeEach(func() {
+		BeforeAll(func() {
+			policyServerName = newName("policy-server")
+			createPolicyServerAndWaitForItsService(ctx, policyServerFactory(policyServerName))
+
 			policyName = newName("mutating-policy")
-			createPolicyServerAndWaitForItsService(policyServerFactory(policyServerName))
 			policy = admissionPolicyFactory(policyName, policyNamespace, policyServerName, true)
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 		})
@@ -171,14 +174,14 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		It("should set the AdmissionPolicy to active", func() {
 			By("changing the policy status to pending")
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-				return getTestAdmissionPolicy(policyNamespace, policyName)
+				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-				return getTestAdmissionPolicy(policyNamespace, policyName)
+				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
 			)
@@ -186,7 +189,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 		It("should create the MutatingWebhookConfiguration", func() {
 			Eventually(func() error {
-				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(policy.GetUniqueName())
+				mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(ctx, policy.GetUniqueName())
 				if err != nil {
 					return err
 				}
@@ -196,9 +199,9 @@ var _ = Describe("AdmissionPolicy controller", func() {
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
-				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal(PolicyServerNamePrefix + policyServerName))
+				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal("policy-server-" + policyServerName))
 
-				caSecret, err := getTestCASecret()
+				caSecret, err := getTestCASecret(ctx)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
 
@@ -211,7 +214,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 			var mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration
 			Eventually(func() error {
 				var err error
-				mutatingWebhookConfiguration, err = getTestMutatingWebhookConfiguration(policy.GetUniqueName())
+				mutatingWebhookConfiguration, err = getTestMutatingWebhookConfiguration(ctx, policy.GetUniqueName())
 				if err != nil {
 					return err
 				}
@@ -232,7 +235,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 			By("reconciling the MutatingWebhookConfiguration to its original state")
 			Eventually(func() (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
-				return getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				return getTestMutatingWebhookConfiguration(ctx, fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 			}, timeout, pollInterval).Should(
 				And(
 					HaveField("Labels", Equal(originalMutatingWebhookConfiguration.Labels)),
@@ -243,7 +246,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 			// simulate unitialized labels and annotation maps (behaviour of Kubewarden <= 1.9.0), or user change
 			By("by setting the MutatingWebhookConfiguration labels and annotation to nil")
-			mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+			mutatingWebhookConfiguration, err := getTestMutatingWebhookConfiguration(ctx, fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 			Expect(err).ToNot(HaveOccurred())
 			originalMutatingWebhookConfiguration = mutatingWebhookConfiguration.DeepCopy()
 			mutatingWebhookConfiguration.Labels = nil
@@ -254,7 +257,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 			By("reconciling the MutatingWebhookConfiguration to its original state")
 			Eventually(func() (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
-				return getTestMutatingWebhookConfiguration(fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
+				return getTestMutatingWebhookConfiguration(ctx, fmt.Sprintf("namespaced-%s-%s", policyNamespace, policyName))
 			}, timeout, pollInterval).Should(
 				And(
 					HaveField("Labels", Equal(originalMutatingWebhookConfiguration.Labels)),
@@ -272,17 +275,17 @@ var _ = Describe("AdmissionPolicy controller", func() {
 		).To(haveSucceededOrAlreadyExisted())
 
 		Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-			return getTestAdmissionPolicy(policyNamespace, policyName)
+			return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 		}, timeout, pollInterval).Should(
 			HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusUnscheduled)),
 		)
 	})
 
-	When("creating an AdmissionPolicy with a PolicyServer assigned but not running yet", func() {
-		var policyName string
+	When("creating an AdmissionPolicy with a PolicyServer assigned but not running yet", Ordered, func() {
+		policyName := newName("scheduled-policy")
+		policyServerName := newName("policy-server")
 
-		BeforeEach(func() {
-			policyName = newName("scheduled-policy")
+		BeforeAll(func() {
 			Expect(
 				k8sClient.Create(ctx, admissionPolicyFactory(policyName, policyNamespace, policyServerName, false)),
 			).To(haveSucceededOrAlreadyExisted())
@@ -290,7 +293,7 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 		It("should set the policy status to scheduled", func() {
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-				return getTestAdmissionPolicy(policyNamespace, policyName)
+				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusScheduled)),
 			)
@@ -304,14 +307,14 @@ var _ = Describe("AdmissionPolicy controller", func() {
 
 			By("changing the policy status to pending")
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-				return getTestAdmissionPolicy(policyNamespace, policyName)
+				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusPending)),
 			)
 
 			By("changing the policy status to active")
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
-				return getTestAdmissionPolicy(policyNamespace, policyName)
+				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
 			}, timeout, pollInterval).Should(
 				HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusActive)),
 			)
