@@ -82,7 +82,7 @@ jobs:
             ghcr.io/${{github.repository_owner}}/audit-scanner:${{ env.TAG_NAME }}
       - name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: audit-scanner-image-${{ env.TAG_NAME }}
           path: /tmp/audit-scanner-image-${{ env.TAG_NAME }}.tar
