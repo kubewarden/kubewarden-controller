@@ -35,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/policyserver"
 )
 
 // log is for logging in this package.
@@ -86,8 +85,7 @@ func (v *policyServerValidator) validate(ctx context.Context, obj runtime.Object
 	}
 
 	if policyServer.Spec.ImagePullSecret != "" {
-		err := policyserver.ValidateImagePullSecret(ctx, v.k8sClient, policyServer.Spec.ImagePullSecret, v.deploymentsNamespace)
-		if err != nil {
+		if err := validateImagePullSecret(ctx, v.k8sClient, policyServer.Spec.ImagePullSecret, v.deploymentsNamespace); err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("imagePullSecret"), policyServer.Spec.ImagePullSecret, err.Error()))
 		}
 	}
@@ -118,6 +116,25 @@ func (v *policyServerValidator) ValidateDelete(_ context.Context, _ runtime.Obje
 	return nil, nil
 }
 
+// validateImagePullSecret validates that the specified PolicyServer imagePullSecret exists and is of type kubernetes.io/dockerconfigjson
+func validateImagePullSecret(ctx context.Context, k8sClient client.Client, imagePullSecret string, deploymentsNamespace string) error {
+	secret := &corev1.Secret{}
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: deploymentsNamespace,
+		Name:      imagePullSecret,
+	}, secret)
+	if err != nil {
+		return fmt.Errorf("cannot get spec.ImagePullSecret: %w", err)
+	}
+
+	if secret.Type != "kubernetes.io/dockerconfigjson" {
+		return fmt.Errorf("spec.ImagePullSecret secret \"%s\" is not of type kubernetes.io/dockerconfigjson", secret.Name)
+	}
+
+	return nil
+}
+
+// validateLimitsAndRequests validates that the specified PolicyServer limits and requests are not negative and requests are less than or equal to limits
 func validateLimitsAndRequests(limits, requests corev1.ResourceList) field.ErrorList {
 	var allErrs field.ErrorList
 

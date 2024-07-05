@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -92,8 +93,78 @@ func TestValidateMinAvailable(t *testing.T) {
 	require.ErrorContains(t, err, "minAvailable and maxUnavailable cannot be both set")
 }
 
+func TestValidateImagePullSecret(t *testing.T) {
+	tests := []struct {
+		name   string
+		secret *corev1.Secret
+		valid  bool
+	}{
+		{
+			"non existing secret",
+			nil,
+			false,
+		},
+		{
+			"secret of wrong type",
+			&corev1.Secret{
+				Type: "Opaque",
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			false,
+		},
+		{
+			"valid secret",
+			&corev1.Secret{
+				Type: "kubernetes.io/dockerconfigjson",
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "default",
+				},
+			},
+			true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			k8sClient := fake.NewClientBuilder().Build()
+
+			if test.secret != nil {
+				err := k8sClient.Create(context.TODO(), test.secret)
+				if err != nil {
+					t.Errorf("failed to create secret: %s", err.Error())
+				}
+			}
+
+			policyServer := &PolicyServer{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "policy-server",
+					Namespace: "default",
+				},
+				Spec: PolicyServerSpec{
+					ImagePullSecret: "test",
+				},
+			}
+
+			policyServerValidator := policyServerValidator{
+				k8sClient:            k8sClient,
+				deploymentsNamespace: "default",
+			}
+			err := policyServerValidator.validate(context.Background(), policyServer)
+
+			if test.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
 func TestValidateLimitsAndRequests(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		name     string
 		limits   corev1.ResourceList
 		requests corev1.ResourceList
@@ -125,7 +196,7 @@ func TestValidateLimitsAndRequests(t *testing.T) {
 		},
 	}
 
-	for _, test := range testCases {
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			policyServer := &PolicyServer{
 				Spec: PolicyServerSpec{
