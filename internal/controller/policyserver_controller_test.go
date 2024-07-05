@@ -388,6 +388,7 @@ var _ = Describe("PolicyServer controller", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"UID":  Equal(policyServer.GetUID()),
 						"Name": Equal(policyServer.GetName()),
+						// FIXME: for some reason GroupVersionKind is not set
 						// "Kind":       Equal(policyServer.GetObjectKind().GroupVersionKind().Kind),
 						// "APIVersion": Equal(policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String()),
 					}),
