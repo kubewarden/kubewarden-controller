@@ -211,6 +211,20 @@ func TestScanAllNamespaces(t *testing.T) {
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
+
+	// an AdmissionPolicy targeting an unknown GVR, should error and be skipped
+	admissionPolicyUnknownGVR := testutils.
+		NewAdmissionPolicyFactory().
+		Name("policy6").
+		Namespace("namespace1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
 	// add a policy report that should be deleted by the scanner
 	oldPolicyReportRunUID := uuid.New().String()
 	oldPolicyReport := testutils.NewPolicyReportFactory().
@@ -245,6 +259,7 @@ func TestScanAllNamespaces(t *testing.T) {
 		admissionPolicy2,
 		admissionPolicy3,
 		admissionPolicy4,
+		admissionPolicyUnknownGVR,
 		clusterAdmissionPolicy,
 		oldPolicyReport,
 	)
@@ -381,6 +396,19 @@ func TestScanClusterWideResources(t *testing.T) {
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
+
+	// a ClusterAdmissionPolicy targeting an unknown GVR, should error and be skipped
+	clusterAdmissionPolicyUnknownGVR := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("policy4").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"foo"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
 	// add a policy report that should be deleted by the scanner
 	oldClusterPolicyReportRunUID := uuid.New().String()
 	oldClusterPolicyReport := testutils.NewClusterPolicyReportFactory().
@@ -407,6 +435,7 @@ func TestScanClusterWideResources(t *testing.T) {
 		clusterAdmissionPolicy1,
 		clusterAdmissionPolicy2,
 		clusterAdmissionPolicy3,
+		clusterAdmissionPolicyUnknownGVR,
 		oldClusterPolicyReport,
 	)
 	require.NoError(t, err)

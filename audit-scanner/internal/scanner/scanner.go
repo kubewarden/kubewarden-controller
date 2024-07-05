@@ -142,19 +142,22 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	}
 	policies, err := s.policiesClient.GetPoliciesForANamespace(ctx, nsName)
 	if err != nil {
+		log.Error().Err(err).Str("namespace", nsName).Msg("failed to obtain auditable policies")
 		return err
 	}
+
 	log.Info().
 		Str("namespace", nsName).
 		Dict("dict", zerolog.Dict().
 			Int("policies-to-evaluate", policies.PolicyNum).
-			Int("policies-skipped", policies.SkippedNum),
+			Int("policies-skipped", policies.SkippedNum).
+			Int("policies-errored", policies.ErroredNum),
 		).Msg("policy count")
 
 	for gvr, policies := range policies.PoliciesByGVR {
 		pager, err := s.k8sClient.GetResources(gvr, nsName)
 		if err != nil {
-			return err
+			log.Error().Err(err).Str("gvr", gvr.String()).Str("ns", nsName).Msg("failed to get resources")
 		}
 
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
@@ -252,6 +255,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 		Dict("dict", zerolog.Dict().
 			Int("policies-to-evaluate", policies.PolicyNum).
 			Int("policies-skipped", policies.SkippedNum).
+			Int("policies-errored", policies.ErroredNum).
 			Int("parallel-resources-audits", s.parallelResourcesAudits),
 		).Msg("cluster admission policies count")
 

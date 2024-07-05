@@ -34,8 +34,10 @@ type Policies struct {
 	PoliciesByGVR map[schema.GroupVersionResource][]*Policy
 	// PolicyNum represents the number of policies
 	PolicyNum int
-	// SkippedNum represents the number of skipped policies
+	// SkippedNum represents the number of skipped policies that don't match audit constraints
 	SkippedNum int
+	// ErroredNum represents the number of errored policies. These policies may be misconfigured
+	ErroredNum int
 }
 
 // Policy represents a policy and the URL of the policy server where it is running
@@ -171,10 +173,12 @@ func (f *Client) getAdmissionPolicies(ctx context.Context, namespace string) ([]
 
 // groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
 // If namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
+// If the policy targets an unknown GVR or the policy server URL cannot be constructed, the policy will be counted as errored.
 func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) { //nolint:funlen
 	policiesByGVR := make(map[schema.GroupVersionResource][]*Policy)
 	auditablePolicies := map[string]struct{}{}
 	skippedPolicies := map[string]struct{}{}
+	erroredPolicies := map[string]struct{}{}
 
 	for _, policy := range policies {
 		rules := filterWildcardRules(policy.GetRules())
@@ -201,14 +205,17 @@ func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.P
 
 		groupVersionResources, err := f.getGroupVersionResources(rules, namespaced)
 		if err != nil {
-			return nil, err
+			erroredPolicies[policy.GetUniqueName()] = struct{}{}
+			log.Error().Err(err).Str("policy", policy.GetUniqueName()).Msg("failed to obtain unknown GroupVersion resources. The policy may be misconfigured, skipping as error...")
+			continue
 		}
+
 		if len(groupVersionResources) == 0 {
 			log.
 				Debug().
 				Str("policy", policy.GetUniqueName()).
 				Bool("namespaced", namespaced).
-				Msg("the policy does not target resources with the selected scope")
+				Msg("the policy does not target resources within the selected scope")
 
 			continue
 		}
@@ -229,11 +236,12 @@ func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.P
 
 		url, err := f.getPolicyServerURLRunningPolicy(ctx, policy)
 		if err != nil {
-			return nil, err
+			erroredPolicies[policy.GetUniqueName()] = struct{}{}
+			log.Error().Err(err).Str("policy", policy.GetUniqueName()).Msg("failed to obtain matching policy-server URL, skipping as error...")
+			continue
 		}
 
 		auditablePolicies[policy.GetUniqueName()] = struct{}{}
-
 		policy := &Policy{
 			Policy:       policy,
 			PolicyServer: url,
@@ -248,6 +256,7 @@ func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.P
 		PoliciesByGVR: policiesByGVR,
 		PolicyNum:     len(auditablePolicies),
 		SkippedNum:    len(skippedPolicies),
+		ErroredNum:    len(erroredPolicies),
 	}, nil
 }
 
