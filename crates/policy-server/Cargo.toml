@@ -51,7 +51,7 @@ tikv-jemallocator = { version = "0.5.4", features = [
   "profiling",
   "unprefixed_malloc_on_supported_platforms",
 ] }
-jemalloc_pprof = "0.2.0"
+jemalloc_pprof = "0.4.1"
 tikv-jemalloc-ctl = "0.5.4"
 
 [dev-dependencies]

@@ -2213,14 +2213,15 @@ dependencies = [
 
 [[package]]
 name = "jemalloc_pprof"
-version = "0.2.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dc0a5dcb97aa2ec4e2653ab53050676b530fe41515f07fbd4d51bba9e0b1d41"
+checksum = "27e92eac9f0249a801a215bc5a9edb16486e7615f6b2a334b93bb3b1423a04c8"
 dependencies = [
  "anyhow",
  "libc",
+ "mappings",
  "once_cell",
- "rust_jemalloc_pprof_internal",
+ "pprof_util",
  "tempfile",
  "tikv-jemalloc-ctl",
  "tokio",
@@ -2662,6 +2663,19 @@ checksum = "ed5a1335c3a964788c90cb42ae04a34b5f2628e89566949ce3bd4ada695c0bcd"
 dependencies = [
  "encoding_rs",
  "serde",
+]
+
+[[package]]
+name = "mappings"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c012489c8d9854763e1bca83817084d7aefcc14ba00f48fa13a855c7a6a4560"
+dependencies = [
+ "anyhow",
+ "libc",
+ "once_cell",
+ "pprof_util",
+ "tracing",
 ]
 
 [[package]]
@@ -3717,6 +3731,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pprof_util"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36a97c97faba2c539e30e8a3e625ad152fb1f38c297078b8078b2205c25778d2"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "num",
+ "paste",
+ "prost 0.11.9",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4236,22 +4263,6 @@ dependencies = [
  "rustc_version",
  "syn 2.0.68",
  "unicode-ident",
-]
-
-[[package]]
-name = "rust_jemalloc_pprof_internal"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0c886bcae195e803348bfb93d12f0045ae4a43d543f4d476cd9d444e6782e0b"
-dependencies = [
- "anyhow",
- "flate2",
- "libc",
- "num",
- "once_cell",
- "paste",
- "prost 0.11.9",
- "tracing",
 ]
 
 [[package]]
