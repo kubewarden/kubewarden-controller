@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/admission"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	//+kubebuilder:scaffold:imports
 )
@@ -114,24 +113,17 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	reconciler := admission.Reconciler{
-		Client:               k8sManager.GetClient(),
-		APIReader:            k8sManager.GetClient(),
-		Log:                  ctrl.Log.WithName("reconciler"),
-		DeploymentsNamespace: deploymentsNamespace,
-	}
-
 	err = (&AdmissionPolicyReconciler{
-		Client:     k8sManager.GetClient(),
-		Scheme:     k8sManager.GetScheme(),
-		Reconciler: reconciler,
+		Client:               k8sManager.GetClient(),
+		Scheme:               k8sManager.GetScheme(),
+		DeploymentsNamespace: deploymentsNamespace,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&ClusterAdmissionPolicyReconciler{
-		Client:     k8sManager.GetClient(),
-		Scheme:     k8sManager.GetScheme(),
-		Reconciler: reconciler,
+		Client:               k8sManager.GetClient(),
+		Scheme:               k8sManager.GetScheme(),
+		DeploymentsNamespace: deploymentsNamespace,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
