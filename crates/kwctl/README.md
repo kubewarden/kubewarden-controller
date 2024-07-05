@@ -1,7 +1,7 @@
 [![Kubewarden Core Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-core.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#core-scope)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6627/badge)](https://bestpractices.coreinfrastructure.org/projects/6627)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl.svg?type=shield)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl?ref=badge_shield)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9180/badge)](https://www.bestpractices.dev/projects/9180)
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl.svg?type=shield)](https://app.fossa.com/projects/cjustom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl?ref=badge_shield)
 
 # `kwctl`
 
