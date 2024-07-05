@@ -62,9 +62,6 @@ jobs:
         uses: golangci/golangci-lint-action@a4f60bb28d35aeee14e6880718e0c85ff1882e64 # v6.0.1
         with:
           version: v1.57.2
-          # Disable caching as a workaround for https://github.com/golangci/golangci-lint-action/issues/135.
-          # The line can be removed once the golangci-lint issue is resolved.
-          skip-pkg-cache: true
 
   shellcheck:
     name: Shellcheck
