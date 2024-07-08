@@ -25,7 +25,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //nolint:revive
 	. "github.com/onsi/gomega"    //nolint:revive
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/k3s"
 
 	corev1 "k8s.io/api/core/v1"
@@ -83,9 +82,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 			k3sTestcontainerVersion = "latest"
 		}
 
-		k3sContainer, err := k3s.RunContainer(ctx,
-			testcontainers.WithImage("docker.io/rancher/k3s:"+k3sTestcontainerVersion),
-		)
+		k3sContainer, err := k3s.Run(ctx, "docker.io/rancher/k3s:"+k3sTestcontainerVersion)
 		Expect(err).NotTo(HaveOccurred())
 
 		kubeConfigYaml, err := k3sContainer.GetKubeConfig(ctx)
