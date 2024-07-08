@@ -5102,9 +5102,9 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "testcontainers"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81abdf87437235a275fd0fecaa6ca2c6af28240506e695e9abe84597b3431b35"
+checksum = "cb74bff469141dfded423ce9b8aa47430bfd9058e8d8ddac4a7c0966da0025bb"
 dependencies = [
  "async-trait",
  "bollard",
@@ -5117,6 +5117,7 @@ dependencies = [
  "log",
  "memchr",
  "parse-display",
+ "pin-project-lite",
  "reqwest",
  "serde",
  "serde_json",
