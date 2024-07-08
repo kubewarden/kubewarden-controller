@@ -166,12 +166,19 @@ func (r *policySubReconciler) reconcilePolicyDeletion(ctx context.Context, polic
 
 func (r *policySubReconciler) setPolicyStatus(ctx context.Context, policy policiesv1.Policy) error {
 	policyServerDeployment := appsv1.Deployment{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: policyServerDeploymentName(policy.GetPolicyServer())}, &policyServerDeployment); err != nil {
+	policyServerDeploymentName := policyServerDeploymentName(policy.GetPolicyServer())
+
+	if err := r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: policyServerDeploymentName}, &policyServerDeployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			// If the policy server deployment is not found, the policy is not scheduled
+			return nil
+		}
+
 		return errors.Join(errors.New("could not get policy server deployment"), err)
 	}
 
 	policyServerConfigMap := corev1.ConfigMap{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: policyServerDeploymentName(policy.GetPolicyServer())}, &policyServerConfigMap); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: policyServerDeploymentName}, &policyServerConfigMap); err != nil {
 		return errors.Join(errors.New("could not get configmap"), err)
 	}
 
