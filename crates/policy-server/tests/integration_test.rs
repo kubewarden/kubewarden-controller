@@ -15,9 +15,10 @@ use policy_evaluator::{
 };
 use policy_server::{
     api::admission_review::AdmissionReviewResponse,
-    config::{Policy, PolicyMode},
+    config::{PolicyMode, PolicyOrPolicyGroup},
 };
 use regex::Regex;
+use rstest::*;
 use tower::ServiceExt;
 
 use crate::common::default_test_config;
@@ -53,6 +54,65 @@ async fn test_validate() {
             }
         )
     )
+}
+
+#[tokio::test]
+#[rstest]
+#[case::pod_with_privileged_containers(
+    include_str!("data/pod_with_privileged_containers.json"),
+    false,
+)]
+#[case::pod_without_privileged_containers(
+    include_str!("data/pod_without_privileged_containers.json"),
+    true,
+)]
+async fn test_validate_policy_group(#[case] payload: &str, #[case] expected_allowed: bool) {
+    let config = default_test_config();
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/group-policy-just-pod-privileged")
+        .body(Body::from(payload.to_owned()))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert_eq!(expected_allowed, admission_review_response.response.allowed);
+
+    if expected_allowed {
+        assert_eq!(admission_review_response.response.status, None);
+    } else {
+        assert_eq!(
+            admission_review_response.response.status,
+            Some(
+                policy_evaluator::admission_response::AdmissionResponseStatus {
+                    message: Some("The group policy rejected your request".to_owned()),
+                    code: None
+                }
+            )
+        );
+    }
+
+    let warning_messages = &admission_review_response
+        .response
+        .warnings
+        .expect("warning messages should always be filled by policy groups");
+    assert_eq!(1, warning_messages.len());
+
+    let warning_msg = &warning_messages[0];
+    if expected_allowed {
+        assert!(warning_msg.contains("ALLOWED"));
+    } else {
+        assert!(warning_msg.contains("DENIED"));
+        assert!(warning_msg.contains("Privileged container is not allowed"));
+    }
 }
 
 #[tokio::test]
@@ -117,6 +177,47 @@ async fn test_validate_raw() {
         Some("JSONPatch".to_owned()),
         admission_review_response.response.patch_type
     );
+}
+
+#[tokio::test]
+async fn test_validate_policy_group_does_not_do_mutation() {
+    let config = default_test_config();
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate_raw/group-policy-just-raw-mutation")
+        .body(Body::from(include_str!("data/raw_review.json")))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+    assert_eq!(
+        admission_review_response.response.status,
+        Some(
+            policy_evaluator::admission_response::AdmissionResponseStatus {
+                message: Some("The group policy rejected your request".to_owned()),
+                code: None
+            }
+        )
+    );
+    assert!(admission_review_response.response.patch.is_none());
+
+    let warning_messages = &admission_review_response
+        .response
+        .warnings
+        .expect("warning messages should always be filled by policy groups");
+    assert_eq!(1, warning_messages.len());
+    let warning_msg = &warning_messages[0];
+    assert!(warning_msg.contains("DENIED"));
+    assert!(warning_msg.contains("mutation is not allowed inside of policy group"));
 }
 
 #[tokio::test]
@@ -305,7 +406,7 @@ async fn test_verified_policy() {
     let mut config = default_test_config();
     config.policies = HashMap::from([(
         "pod-privileged".to_owned(),
-        Policy {
+        PolicyOrPolicyGroup::Policy {
             url: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
             policy_mode: PolicyMode::Protect,
             allowed_to_mutate: None,
@@ -335,7 +436,7 @@ async fn test_policy_with_invalid_settings() {
     let mut config = default_test_config();
     config.policies.insert(
         "invalid_settings".to_owned(),
-        Policy {
+        PolicyOrPolicyGroup::Policy {
             url: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
             policy_mode: PolicyMode::Protect,
             allowed_to_mutate: None,
@@ -381,7 +482,7 @@ async fn test_policy_with_wrong_url() {
     let mut config = default_test_config();
     config.policies.insert(
         "wrong_url".to_owned(),
-        Policy {
+        PolicyOrPolicyGroup::Policy {
             url: "ghcr.io/kubewarden/tests/not_existing:v0.1.0".to_owned(),
             policy_mode: PolicyMode::Protect,
             allowed_to_mutate: None,

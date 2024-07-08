@@ -52,12 +52,12 @@ through its web interface. Policies are exposed under `/validate/<policy id>.
 For example, given the configuration file from above, the following API endpoint
 would be created:
 
-  * `/validate/psp-apparmor`: this exposes the `psp-apparmor:v0.1.3`
-    policy. The Wasm module is downloaded from the OCI registry of GitHub.
-  * `/validate/psp-capabilities`: this exposes the `psp-capabilities:v0.1.3`
-    policy. The Wasm module is downloaded from the OCI registry of GitHub.
-  * `/validate/namespace_simple`: this exposes the `namespace-validate-policy`
-    policy. The Wasm module is loaded from a local file located under `/tmp/namespace-validate-policy.wasm`.
+- `/validate/psp-apparmor`: this exposes the `psp-apparmor:v0.1.3`
+  policy. The Wasm module is downloaded from the OCI registry of GitHub.
+- `/validate/psp-capabilities`: this exposes the `psp-capabilities:v0.1.3`
+  policy. The Wasm module is downloaded from the OCI registry of GitHub.
+- `/validate/namespace_simple`: this exposes the `namespace-validate-policy`
+  policy. The Wasm module is loaded from a local file located under `/tmp/namespace-validate-policy.wasm`.
 
 It's common for policies to allow users to tune their behaviour via ad-hoc settings.
 These customization parameters are provided via the `settings` dictionary.
@@ -72,11 +72,103 @@ The Wasm file providing the Kubewarden Policy can be either loaded from
 the local filesystem or it can be fetched from a remote location. The behaviour
 depends on the URL format provided by the user:
 
-* `file:///some/local/program.wasm`: load the policy from the local filesystem
-* `https://some-host.com/some/remote/program.wasm`: download the policy from the
+- `file:///some/local/program.wasm`: load the policy from the local filesystem
+- `https://some-host.com/some/remote/program.wasm`: download the policy from the
   remote http(s) server
-* `registry://localhost:5000/project/artifact:some-version` download the policy
+- `registry://localhost:5000/project/artifact:some-version` download the policy
   from a OCI registry. The policy must have been pushed as an OCI artifact
+
+### Policy Group
+
+Multiple policies can be grouped together and are evaluated using a user provided boolean expression.
+
+The motivation for this feature is to enable users to create complex policies by combining simpler ones.
+This allows users to avoid the need to create custom policies from scratch and instead leverage existing policies.
+This reduces the need to duplicate policy logic across different policies, increases reusability, removes
+the cognitive load of managing complex policy logic, and enables the creation of custom policies using
+a DSL-like configuration.
+
+Policy groups are added to the same policy configuration file as individual policies.
+
+This is an example of the policies file with a policy group:
+
+```yml
+pod-image-signatures: # policy group
+  policies:
+    - name: sigstore_pgp
+      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      settings:
+        signatures:
+          - image: "*"
+            pubKeys:
+              - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
+              - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
+    - name: sigstore_gh_action
+      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      settings:
+        signatures:
+          - image: "*"
+            githubActions:
+            owner: "kubewarden"
+    - name: reject_latest_tag
+      url: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
+      settings:
+        tags:
+          reject:
+            - latest
+  expression: "sigstore_pgp() || (sigstore_gh_action() && reject_latest_tag())"
+  message: "The group policy is rejected."
+```
+
+This will lead to the exposure of a validation endpoint `/validate/pod-image-signatures`
+that will accept the incoming request if the image is signed with the given public keys or
+if the image is built by the given GitHub Actions and the image tag is not `latest`.
+
+Each policy in the group can have its own settings and its own list of Kubernetes resources
+that is allowed to access:
+
+```yml
+strict-ingress-checks:
+  policies:
+    - name: unique_ingress
+      url: ghcr.io/kubewarden/policies/cel-policy:latest
+      contextAwareResources:
+        - apiVersion: networking.k8s.io/v1
+          kind: Ingress
+      settings:
+        variables:
+          - name: knownIngresses
+            expression: kw.k8s.apiVersion("networking.k8s.io/v1").kind("Ingress").list().items
+          - name: knownHosts
+            expression: |
+              variables.knownIngresses
+              .filter(i, (i.metadata.name != object.metadata.name) && (i.metadata.namespace != object.metadata.namespace))
+              .map(i, i.spec.rules.map(r, r.host))
+          - name: desiredHosts
+            expression: |
+              object.spec.rules.map(r, r.host)
+        validations:
+          - expression: |
+              !variables.knownHost.exists_one(hosts, sets.intersects(hosts, variables.desiredHosts))
+            message: "Cannot reuse a host across multiple ingresses"
+    - name: https_only
+      url: ghcr.io/kubewarden/policies/ingress:latest
+      settings:
+        requireTLS: true
+        allowPorts: [443]
+        denyPorts: [80]
+    - name: http_only
+      url: ghcr.io/kubewarden/policies/ingress:latest
+      settings:
+        requireTLS: false
+        allowPorts: [80]
+        denyPorts: [443]
+
+  expression: "unique_ingress() && (https_only() || http_only())"
+  message: "The group policy is rejected."
+```
+
+For more details, please refer to the Kubewarden documentation.
 
 ## Logging and distributed tracing
 
@@ -103,14 +195,14 @@ Policy server can send trace events to the Open Telemetry Collector using the
 
 Current limitations:
 
-  * Traces can be sent to the collector only via grpc. The HTTP transport
-    layer is not supported.
-  * The Open Telemetry Collector must be listening on localhost. When deployed
-    on Kubernetes, policy-server must have the Open Telemetry Collector
-    running as a sidecar.
-  * Policy server doesn't expose any configuration setting for Open Telemetry
-    (e.g.: endpoint URL, encryption, authentication,...). All of the tuning
-    has to be done on the collector process that runs as a sidecar.
+- Traces can be sent to the collector only via grpc. The HTTP transport
+  layer is not supported.
+- The Open Telemetry Collector must be listening on localhost. When deployed
+  on Kubernetes, policy-server must have the Open Telemetry Collector
+  running as a sidecar.
+- Policy server doesn't expose any configuration setting for Open Telemetry
+  (e.g.: endpoint URL, encryption, authentication,...). All of the tuning
+  has to be done on the collector process that runs as a sidecar.
 
 More details about OpenTelemetry and tracing can be found inside of
 our [official docs](https://docs.kubewarden.io/operator-manual/tracing/01-quickstart.html).

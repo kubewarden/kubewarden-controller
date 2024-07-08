@@ -53,6 +53,7 @@ tikv-jemallocator = { version = "0.5.4", features = [
 ] }
 jemalloc_pprof = "0.4.1"
 tikv-jemalloc-ctl = "0.5.4"
+rhai = { version = "1.19.0", features = ["sync"] }
 
 [dev-dependencies]
 mockall = "0.12"

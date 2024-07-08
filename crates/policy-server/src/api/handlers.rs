@@ -269,10 +269,9 @@ async fn acquire_semaphore_and_evaluate(
     let span = Span::current();
     let response = task::spawn_blocking(move || {
         let _enter = span.enter();
-        let evaluation_environment = &state.evaluation_environment;
 
         evaluate(
-            evaluation_environment,
+            state.evaluation_environment.clone(),
             &policy_id,
             &validate_request,
             request_origin,
