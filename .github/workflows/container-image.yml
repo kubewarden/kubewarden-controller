@@ -35,9 +35,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+        uses: docker/setup-qemu-action@5927c834f5b4fdf503fca6f4c7eccda82949e1ee # v3.1.0
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
+        uses: docker/setup-buildx-action@4fd812986e6c8c2a69e18311145f9371337f27d4 # v3.4.0
       - name: Login to GitHub Container Registry
         uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
         with:
@@ -59,7 +59,7 @@ jobs:
       - name: Build and push container image
         if: ${{ inputs.push-image }}
         id: build-image
-        uses: docker/build-push-action@15560696de535e4014efeff63c48f16952e52dd1 # v6.2.0
+        uses: docker/build-push-action@1a162644f9a7e87d8f4b053101d1d9a712edc18c # v6.3.0
         with:
           context: .
           file: ./Dockerfile
@@ -72,7 +72,7 @@ jobs:
         # and they run on amd64 arch, let's skip the arm64 build for now.
         name: Build linux/amd64 container image
         if: ${{ inputs.push-image == false }}
-        uses: docker/build-push-action@15560696de535e4014efeff63c48f16952e52dd1 # v6.2.0
+        uses: docker/build-push-action@1a162644f9a7e87d8f4b053101d1d9a712edc18c # v6.3.0
         with:
           context: .
           file: ./Dockerfile
@@ -82,7 +82,7 @@ jobs:
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
       - name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: kubewarden-controller-image-${{ env.TAG_NAME }}
           path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
