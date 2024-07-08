@@ -169,7 +169,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_
 	}
 
 	// Filter out ClusterAdmissionPolicies
-	if policyScope != "namespace" {
+	if policyScope != constants.NamespacePolicyScope {
 		return []reconcile.Request{}
 	}
 

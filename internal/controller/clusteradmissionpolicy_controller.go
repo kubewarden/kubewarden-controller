@@ -165,7 +165,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 	}
 
 	// Filter out AdmissionPolicies
-	if policyScope != "cluster" {
+	if policyScope != constants.ClusterPolicyScope {
 		return []reconcile.Request{}
 	}
 

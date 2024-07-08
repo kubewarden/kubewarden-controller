@@ -46,9 +46,9 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 			sideEffects = &noneSideEffects
 		}
 
-		policyScope := "namespace"
+		policyScope := constants.NamespacePolicyScope
 		if policy.GetNamespace() == "" {
-			policyScope = "cluster"
+			policyScope = constants.ClusterPolicyScope
 		}
 		webhook.Name = policy.GetUniqueName()
 		webhook.Labels = map[string]string{
@@ -129,9 +129,9 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 			sideEffects = &noneSideEffects
 		}
 
-		policyScope := "namespace"
+		policyScope := constants.NamespacePolicyScope
 		if policy.GetNamespace() == "" {
-			policyScope = "cluster"
+			policyScope = constants.ClusterPolicyScope
 		}
 
 		webhook.Name = policy.GetUniqueName()

@@ -70,7 +70,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 				}
 
 				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
-				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("cluster"))
+				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.ClusterPolicyScope))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
@@ -158,7 +158,7 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 					return err
 				}
 				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
-				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("cluster"))
+				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.ClusterPolicyScope))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
