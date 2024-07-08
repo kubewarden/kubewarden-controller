@@ -82,16 +82,16 @@ integration-tests: integration-tests-envtest integration-tests-real-cluster ## R
 # Note that the label-filter "!real-cluster" is used to exclude tests that require a real cluster, 
 # otherwise ginkgo will try to run ALL tests.
 .PHONY: integration-tests-envtest
-integration-tests-envtest: manifests generate fmt vet envtest ## Run integration tests that do not require a real cluster only (using envtest).
+integration-tests-envtest: manifests generate fmt vet ginkgo envtest ## Run integration tests that do not require a real cluster only (using envtest).
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-	ginkgo -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="!real-cluster" \
+	$(GINKGO) -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="!real-cluster" \
 	-output-dir=./coverage/integration-tests/ -coverprofile=coverage-envtest.txt -covermode=atomic -coverpkg=all \
 	./internal/controller/ 
 
 .PHONY: integration-tests-real-cluster
-integration-tests-real-cluster: manifests generate fmt vet ## Run integration tests that require a real cluster only.
+integration-tests-real-cluster: manifests generate fmt ginkgo vet ## Run integration tests that require a real cluster only.
 	K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" POLICY_SERVER_VERSION="$(POLICY_SERVER_VERSION)" \
-	ginkgo -p -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="real-cluster" \
+	$(GINKGO) -p -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="real-cluster" \
 	-output-dir=./coverage/integration-tests/ -coverprofile=coverage-real-cluster.txt -covermode=atomic -coverpkg=all \
 	./internal/controller/
 
@@ -187,12 +187,14 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
+GINKGO ?= $(LOCALBIN)/ginkgo-$(GINGKO_VERSION)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.4.1
 CONTROLLER_TOOLS_VERSION ?= v0.15.0
 ENVTEST_VERSION ?= release-0.18
 GOLANGCI_LINT_VERSION ?= v1.57.2
+GINGKO_VERSION ?= v2.19.0
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -213,6 +215,11 @@ $(ENVTEST): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
+
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
+$(GINKGO): $(LOCALBIN)
+	$(call go-install-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo,$(GINGKO_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)
