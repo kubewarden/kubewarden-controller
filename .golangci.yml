@@ -13,10 +13,7 @@ issues:
       # Disable 'funlen' linter for test functions.
       # It's common for table-driven tests to be more than 60 characters long
       source: "^func Test"
-    - path: internal/admission/validating-webhook.go
-      linters:
-        - dupl
-    - path: internal/admission/mutating-webhook.go
+    - path: internal/controller/policy_subreconciler_webhook.go
       linters:
         - dupl
 
