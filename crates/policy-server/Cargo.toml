@@ -27,7 +27,7 @@ opentelemetry = { version = "0.23.0", default-features = false, features = [
   "metrics",
   "trace",
 ] }
-opentelemetry_sdk = { version = "0.22.1", features = ["rt-tokio"] }
+opentelemetry_sdk = { version = "0.23.0", features = ["rt-tokio"] }
 pprof = { version = "0.13", features = ["prost-codec"] }
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.18.0" }
 rustls-pki-types = { version = "1", features = ["alloc"] }
