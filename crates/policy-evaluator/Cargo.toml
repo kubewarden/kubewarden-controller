@@ -23,8 +23,7 @@ email_address = { version = "0.2.4", features = ["serde"] }
 itertools = "0.13"
 json-patch = "2.0"
 k8s-openapi = { version = "0.22.0", default-features = false }
-# TODO: revert to upstream kube once this is merged: https://github.com/kube-rs/kube/pull/1494
-kube = { git = "https://github.com/fabriziosestito/kube", branch = "fix/reduce-buffering-between-watcher-and-store", default-features = false, features = [
+kube = { version = "0.92.1", default-features = false, features = [
   "client",
   "rustls-tls",
   "runtime",
