@@ -84,7 +84,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 				}
 
 				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
-				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("namespace"))
+				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.NamespacePolicyScope))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
@@ -195,7 +195,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 				}
 
 				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
-				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal("namespace"))
+				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.NamespacePolicyScope))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))

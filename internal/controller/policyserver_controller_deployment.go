@@ -15,7 +15,6 @@ import (
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/policyserver"
 )
 
 const (
@@ -40,13 +39,6 @@ func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Con
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
 		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
-	}
-
-	if policyServer.Spec.ImagePullSecret != "" {
-		err = policyserver.ValidateImagePullSecret(ctx, r.Client, policyServer.Spec.ImagePullSecret, r.DeploymentsNamespace)
-		if err != nil {
-			r.Log.Error(err, "error while validating policy-server imagePullSecret")
-		}
 	}
 
 	policyServerDeployment := &appsv1.Deployment{

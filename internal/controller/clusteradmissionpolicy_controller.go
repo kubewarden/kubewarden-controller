@@ -31,9 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/naming"
 )
 
 // Warning: this controller is deployed by a helm chart which has its own
@@ -52,24 +50,30 @@ import (
 // ClusterAdmissionPolicyReconciler reconciles a ClusterAdmissionPolicy object
 type ClusterAdmissionPolicyReconciler struct {
 	client.Client
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	Reconciler admission.Reconciler
+	Log                  logr.Logger
+	Scheme               *runtime.Scheme
+	DeploymentsNamespace string
+	policySubReconciler  *policySubReconciler
 }
 
 // Reconcile reconciles admission policies
 func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var clusterAdmissionPolicy policiesv1.ClusterAdmissionPolicy
-	if err := r.Reconciler.APIReader.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
 		//nolint:wrapcheck
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	return startReconciling(ctx, r.Reconciler.Client, r.Reconciler, &clusterAdmissionPolicy)
+	return r.policySubReconciler.reconcile(ctx, &clusterAdmissionPolicy)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.policySubReconciler = &policySubReconciler{
+		r.Client,
+		r.DeploymentsNamespace,
+	}
+
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1.ClusterAdmissionPolicy{}).
 		Watches(
@@ -120,9 +124,9 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ct
 	if !ok {
 		return []reconcile.Request{}
 	}
-	policyServerDeploymentName := naming.PolicyServerDeploymentNameForPolicyServerName(policyServerName)
+	policyServerDeploymentName := policyServerDeploymentName(policyServerName)
 	configMap := corev1.ConfigMap{}
-	err := r.Reconciler.APIReader.Get(ctx, client.ObjectKey{
+	err := r.Get(ctx, client.ObjectKey{
 		Namespace: pod.ObjectMeta.Namespace,
 		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
 	}, &configMap)
@@ -137,10 +141,10 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicy
 	if !ok {
 		return []reconcile.Request{}
 	}
-	policyServerDeploymentName := naming.PolicyServerDeploymentNameForPolicyServerName(policyServer.Name)
+	policyServerDeploymentName := policyServerDeploymentName(policyServer.Name)
 	configMap := corev1.ConfigMap{}
-	err := r.Reconciler.APIReader.Get(ctx, client.ObjectKey{
-		Namespace: r.Reconciler.DeploymentsNamespace,
+	err := r.Get(ctx, client.ObjectKey{
+		Namespace: r.DeploymentsNamespace,
 		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
 	}, &configMap)
 	if err != nil {
@@ -161,7 +165,7 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 	}
 
 	// Filter out AdmissionPolicies
-	if policyScope != "cluster" {
+	if policyScope != constants.ClusterPolicyScope {
 		return []reconcile.Request{}
 	}
 

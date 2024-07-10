@@ -19,4 +19,4 @@ $(CRD_REF_DOCS): ## Install crd-ref-docs
 
 .PHONY: generate
 generate:
-	$(CRD_REF_DOCS) --log-level INFO --config=config.yml --renderer=markdown --source-path=../../pkg/apis --output-path=CRD-docs-for-docs-repo.md
+	$(CRD_REF_DOCS) --log-level INFO --config=config.yml --renderer=markdown --source-path=../../api --output-path=CRD-docs-for-docs-repo.md

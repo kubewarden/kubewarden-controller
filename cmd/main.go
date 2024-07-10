@@ -44,7 +44,6 @@ import (
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/api/policies/v1alpha2"
-	"github.com/kubewarden/kubewarden-controller/internal/admission"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/controller"
 	"github.com/kubewarden/kubewarden-controller/internal/metrics"
@@ -176,13 +175,6 @@ func main() {
 		return
 	}
 
-	reconciler := admission.Reconciler{
-		Client:               mgr.GetClient(),
-		APIReader:            mgr.GetAPIReader(),
-		Log:                  ctrl.Log.WithName("reconciler"),
-		DeploymentsNamespace: deploymentsNamespace,
-	}
-
 	if err = (&controller.PolicyServerReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
@@ -198,10 +190,10 @@ func main() {
 	}
 
 	if err = (&controller.AdmissionPolicyReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		Log:        ctrl.Log.WithName("admission-policy-reconciler"),
-		Reconciler: reconciler,
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  ctrl.Log.WithName("admission-policy-reconciler"),
+		DeploymentsNamespace: deploymentsNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
 		retcode = 1
@@ -209,10 +201,10 @@ func main() {
 	}
 
 	if err = (&controller.ClusterAdmissionPolicyReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		Log:        ctrl.Log.WithName("cluster-admission-policy-reconciler"),
-		Reconciler: reconciler,
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  ctrl.Log.WithName("cluster-admission-policy-reconciler"),
+		DeploymentsNamespace: deploymentsNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
 		retcode = 1
