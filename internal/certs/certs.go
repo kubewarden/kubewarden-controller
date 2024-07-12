@@ -11,14 +11,20 @@ import (
 	"math/big"
 	"net"
 	"time"
+
+	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-const bitSize = 4096
+const (
+	bitSize = 4096
+	base    = 2
+	exp     = 159
+)
 
 // GenerateCA generates a self-signed CA root certificate and private key
 // The certificate is valid for 10 years.
 func GenerateCA() ([]byte, *rsa.PrivateKey, error) {
-	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(base), big.NewInt(exp), nil))
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot init serial number: %w", err)
 	}
@@ -39,7 +45,7 @@ func GenerateCA() ([]byte, *rsa.PrivateKey, error) {
 			PostalCode:    []string{""},
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(10, 0, 0),
+		NotAfter:              time.Now().AddDate(constants.CertExpirationYears, 0, 0),
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
@@ -71,7 +77,7 @@ func GenerateCert(ca []byte,
 		return nil, nil, fmt.Errorf("error parsing certificate: %w", err)
 	}
 
-	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(2), big.NewInt(159), nil))
+	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(base), big.NewInt(exp), nil))
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot generate serialNumber for certificate: %w", err)
 	}
@@ -109,7 +115,7 @@ func GenerateCert(ca []byte,
 		DNSNames:     sansHosts,
 		IPAddresses:  sansIps,
 		NotBefore:    time.Now(),
-		NotAfter:     time.Now().AddDate(10, 0, 0),
+		NotAfter:     time.Now().AddDate(constants.CertExpirationYears, 0, 0),
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:     x509.KeyUsageDigitalSignature,
@@ -128,7 +134,7 @@ func GenerateCert(ca []byte,
 	return certBytes, privateKey, nil
 }
 
-// PEMEncodeCertificate encodes a certificate to PEM format
+// PEMEncodeCertificate encodes a certificate to PEM format.
 func PEMEncodeCertificate(certificate []byte) ([]byte, error) {
 	certificatePEM := new(bytes.Buffer)
 
@@ -143,7 +149,7 @@ func PEMEncodeCertificate(certificate []byte) ([]byte, error) {
 	return certificatePEM.Bytes(), nil
 }
 
-// PEMEncodePrivateKey encodes a private key to PEM format
+// PEMEncodePrivateKey encodes a private key to PEM format.
 func PEMEncodePrivateKey(privateKey *rsa.PrivateKey) ([]byte, error) {
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
 	privateKeyPEM := new(bytes.Buffer)

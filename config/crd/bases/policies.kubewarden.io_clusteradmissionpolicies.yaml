@@ -74,7 +74,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
+            description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy.
             properties:
               backgroundAudit:
                 default: true
@@ -90,7 +90,7 @@ spec:
                   Access to these resources is done using the `ServiceAccount` of the PolicyServer
                   the policy is assigned to.
                 items:
-                  description: ContextAwareResource identifies a Kubernetes resource
+                  description: ContextAwareResource identifies a Kubernetes resource.
                   properties:
                     apiVersion:
                       description: apiVersion of the resource (v1 for core group,
@@ -423,7 +423,7 @@ spec:
             type: object
           status:
             description: PolicyStatus defines the observed state of ClusterAdmissionPolicy
-              and AdmissionPolicy
+              and AdmissionPolicy.
             properties:
               conditions:
                 description: |-
@@ -575,7 +575,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
+            description: ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy.
             properties:
               failurePolicy:
                 description: |-
@@ -894,7 +894,7 @@ spec:
             type: object
           status:
             description: PolicyStatus defines the observed state of ClusterAdmissionPolicy
-              and AdmissionPolicy
+              and AdmissionPolicy.
             properties:
               conditions:
                 description: |-

@@ -37,9 +37,6 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-// log is for logging in this package.
-var policyserverlog = logf.Log.WithName("policyserver-resource")
-
 func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager, deploymentsNamespace string) error {
 	err := ctrl.NewWebhookManagedBy(mgr).
 		For(ps).
@@ -55,9 +52,9 @@ func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager, deploymentsNam
 
 var _ webhook.Defaulter = &PolicyServer{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (ps *PolicyServer) Default() {
-	policyserverlog.Info("default", "name", ps.Name)
+	logf.Log.WithName("policyserver-resource").Info("default", "name", ps.Name)
 	if ps.ObjectMeta.DeletionTimestamp == nil {
 		controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
 	}
@@ -65,7 +62,7 @@ func (ps *PolicyServer) Default() {
 
 // +kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-policyserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=vpolicyserver.kb.io,admissionReviewVersions=v1
 
-// polyServerValidator validates PolicyServers
+// polyServerValidator validates PolicyServers.
 type policyServerValidator struct {
 	k8sClient            client.Client
 	deploymentsNamespace string
@@ -116,7 +113,7 @@ func (v *policyServerValidator) ValidateDelete(_ context.Context, _ runtime.Obje
 	return nil, nil
 }
 
-// validateImagePullSecret validates that the specified PolicyServer imagePullSecret exists and is of type kubernetes.io/dockerconfigjson
+// validateImagePullSecret validates that the specified PolicyServer imagePullSecret exists and is of type kubernetes.io/dockerconfigjson.
 func validateImagePullSecret(ctx context.Context, k8sClient client.Client, imagePullSecret string, deploymentsNamespace string) error {
 	secret := &corev1.Secret{}
 	err := k8sClient.Get(ctx, client.ObjectKey{
@@ -134,7 +131,7 @@ func validateImagePullSecret(ctx context.Context, k8sClient client.Client, image
 	return nil
 }
 
-// validateLimitsAndRequests validates that the specified PolicyServer limits and requests are not negative and requests are less than or equal to limits
+// validateLimitsAndRequests validates that the specified PolicyServer limits and requests are not negative and requests are less than or equal to limits.
 func validateLimitsAndRequests(limits, requests corev1.ResourceList) field.ErrorList {
 	var allErrs field.ErrorList
 

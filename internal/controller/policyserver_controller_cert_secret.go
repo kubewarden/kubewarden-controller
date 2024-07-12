@@ -18,7 +18,7 @@ import (
 
 // Reconcile the certificate to be used by the policy server for TLS. The
 // generated certificate is signed by the CA certificate provided in the
-// caSecret. The generated certificate is stored in a secret
+// caSecret. The generated certificate is stored in a secret.
 func (r *PolicyServerReconciler) reconcilePolicyServerCertSecret(ctx context.Context, policyServer *policiesv1.PolicyServer, caSecret *corev1.Secret) error {
 	policyServerSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -124,7 +124,7 @@ func (r *PolicyServerReconciler) reconcileInternalCARootSecret(ctx context.Conte
 }
 
 // Extract the CA certificate and private key from the secret storing the CA data
-// used in the policy server certificate generation
+// used in the policy server certificate generation.
 func extractCAFromSecret(caSecret *corev1.Secret) ([]byte, *rsa.PrivateKey, error) {
 	caCert, ok := caSecret.Data[constants.PolicyServerCARootCACert]
 	if !ok {
@@ -146,7 +146,7 @@ func extractCAFromSecret(caSecret *corev1.Secret) ([]byte, *rsa.PrivateKey, erro
 
 // Create the internal CA root secret used by the controller to sign
 // the policy server certificates. The created CA is stored in the secret
-// provided as argument
+// provided as argument.
 func createInternalCASecret(policyServerSecret *corev1.Secret) error {
 	caCert, privateKey, err := certs.GenerateCA()
 	if err != nil {

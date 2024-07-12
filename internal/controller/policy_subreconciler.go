@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -92,7 +91,7 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 	}
 
 	policyServerDeployment := appsv1.Deployment{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: policyServerDeploymentName(policy.GetPolicyServer())}, &policyServerDeployment); err != nil {
+	if err = r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: policyServerDeploymentName(policy.GetPolicyServer())}, &policyServerDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -109,7 +108,7 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 				Message: "The latest replica set is not uniquely reachable",
 			},
 		)
-		return ctrl.Result{Requeue: true, RequeueAfter: 2 * time.Second}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: constants.TimeToRequeuePolicyReconciliation}, nil
 	}
 
 	apimeta.SetStatusCondition(
@@ -123,16 +122,16 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 	)
 
 	secret := corev1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
+	if err = r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
 		return ctrl.Result{}, errors.Join(errors.New("cannot find policy server secret"), err)
 	}
 
 	if policy.IsMutating() {
-		if err := r.reconcileMutatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
+		if err = r.reconcileMutatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
 			return ctrl.Result{}, errors.Join(errors.New("error reconciling mutating webhook"), err)
 		}
 	} else {
-		if err := r.reconcileValidatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
+		if err = r.reconcileValidatingWebhookConfiguration(ctx, policy, &secret, policyServer.NameWithPrefix()); err != nil {
 			return ctrl.Result{}, errors.Join(errors.New("error reconciling validating webhook"), err)
 		}
 	}
@@ -223,7 +222,7 @@ func (r *policySubReconciler) isPolicyUniquelyReachable(ctx context.Context, pol
 	}
 
 	replicaSets := appsv1.ReplicaSetList{}
-	if err := r.List(ctx, &replicaSets, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
+	if err = r.List(ctx, &replicaSets, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
 		return false
 	}
 	podTemplateHash := ""
@@ -237,7 +236,7 @@ func (r *policySubReconciler) isPolicyUniquelyReachable(ctx context.Context, pol
 		return false
 	}
 	pods := corev1.PodList{}
-	if err := r.List(ctx, &pods, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
+	if err = r.List(ctx, &pods, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
 		return false
 	}
 	if len(pods.Items) == 0 {

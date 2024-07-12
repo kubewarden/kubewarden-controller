@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//nolint:dupl
 package v1
 
 import (
@@ -30,6 +29,8 @@ import (
 )
 
 // log is for logging in this package.
+//
+//nolint:gochecknoglobals // let's keep the log variable here for now
 var admissionpolicylog = logf.Log.WithName("admissionpolicy-resource")
 
 func (r *AdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -46,7 +47,7 @@ func (r *AdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 var _ webhook.Defaulter = &AdmissionPolicy{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *AdmissionPolicy) Default() {
 	admissionpolicylog.Info("default", "name", r.Name)
 	if r.Spec.PolicyServer == "" {
@@ -61,13 +62,13 @@ func (r *AdmissionPolicy) Default() {
 
 var _ webhook.Validator = &AdmissionPolicy{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *AdmissionPolicy) ValidateCreate() (admission.Warnings, error) {
 	admissionpolicylog.Info("validate create", "name", r.Name)
 	return nil, validateRulesField(r)
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *AdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	admissionpolicylog.Info("validate update", "name", r.Name)
 
@@ -79,7 +80,7 @@ func (r *AdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.Warnings
 	return nil, validatePolicyUpdate(oldPolicy, r)
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *AdmissionPolicy) ValidateDelete() (admission.Warnings, error) {
 	admissionpolicylog.Info("validate delete", "name", r.Name)
 	return nil, nil

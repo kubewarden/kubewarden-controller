@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//nolint:godox
 package controller
 
 import (
@@ -23,9 +22,9 @@ import (
 	"errors"
 	"fmt"
 
-	. "github.com/onsi/ginkgo/v2"      //nolint:revive
-	. "github.com/onsi/gomega"         //nolint:revive
-	. "github.com/onsi/gomega/gstruct" //nolint:revive
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	corev1 "k8s.io/api/core/v1"
 	k8spoliciesv1 "k8s.io/api/policy/v1"
@@ -388,6 +387,7 @@ var _ = Describe("PolicyServer controller", func() {
 					MatchFields(IgnoreExtras, Fields{
 						"UID":  Equal(policyServer.GetUID()),
 						"Name": Equal(policyServer.GetName()),
+						//nolint:godox //We have some tests requiring some investigation to fix some FIXME comments
 						// FIXME: for some reason GroupVersionKind is not set
 						// "Kind":       Equal(policyServer.GetObjectKind().GroupVersionKind().Kind),
 						// "APIVersion": Equal(policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String()),

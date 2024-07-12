@@ -25,7 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-// Validates the spec.Rules field for non-empty, webhook-valid rules
+// Validates the spec.Rules field for non-empty, webhook-valid rules.
 func validateRulesField(policy Policy) error {
 	errs := field.ErrorList{}
 	rulesField := field.NewPath("spec", "rules")
@@ -91,7 +91,7 @@ func checkRulesArrayForEmptyString(rulesArray []string, fieldName string, parent
 	return nil
 }
 
-// prepareInvalidAPIError is a shorthand for generating an invalid apierrors.StatusError with data from a policy
+// prepareInvalidAPIError is a shorthand for generating an invalid apierrors.StatusError with data from a policy.
 func prepareInvalidAPIError(policy Policy, errorList field.ErrorList) *apierrors.StatusError {
 	return apierrors.NewInvalid(
 		policy.GetObjectKind().GroupVersionKind().GroupKind(),

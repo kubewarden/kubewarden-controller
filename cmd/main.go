@@ -21,7 +21,6 @@ import (
 	"errors"
 	"flag"
 	"os"
-	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -50,6 +49,7 @@ import (
 	//+kubebuilder:scaffold:imports
 )
 
+//nolint:gochecknoglobals // Following the kubebuilder pattern
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -62,6 +62,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+//nolint:funlen // Avoid splitting the main function in multiple functions to avoid changing the retcode logic for metrics shutdown
 func main() {
 	retcode := 0
 	defer func() { os.Exit(retcode) }()
@@ -111,10 +112,10 @@ func main() {
 		// cleanly shutdown and flush telemetry on application exit
 		defer func() {
 			// Do not make the application hang when it is shutdown.
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			ctx, cancel := context.WithTimeout(context.Background(), constants.MetricsShutdownTimeout)
 			defer cancel()
 
-			if err := shutdown(ctx); err != nil {
+			if err := shutdown(ctx); err != nil { //nolint:govet // err is shadowed in purpose
 				setupLog.Error(err, "Unable to shutdown telemetry")
 				retcode = 1
 				return
@@ -122,10 +123,45 @@ func main() {
 		}()
 	}
 
+	mgr, err := setupManager(deploymentsNamespace, metricsAddr, probeAddr, enableLeaderElection)
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		retcode = 1
+		return
+	}
+
+	if err = setupReconcilers(mgr, deploymentsNamespace, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace); err != nil {
+		setupLog.Error(err, "unable to create controllers")
+		retcode = 1
+		return
+	}
+
+	if err = setupWebhooks(mgr, deploymentsNamespace); err != nil {
+		setupLog.Error(err, "unable to create webhooks")
+		retcode = 1
+		return
+	}
+
+	//+kubebuilder:scaffold:builder
+
+	if err = setupProbes(mgr); err != nil {
+		setupLog.Error(err, "unable to set up probes")
+		retcode = 1
+		return
+	}
+
+	setupLog.Info("starting manager")
+	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "problem running manager")
+		retcode = 1
+		return
+	}
+}
+
+func setupManager(deploymentsNamespace string, metricsAddr string, probeAddr string, enableLeaderElection bool) (ctrl.Manager, error) {
 	namespaceSelector := cache.ByObject{
 		Field: fields.ParseSelectorOrDie("metadata.namespace=" + deploymentsNamespace),
 	}
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -169,13 +205,21 @@ func main() {
 			},
 		},
 	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		retcode = 1
-		return
-	}
+	return mgr, err
+}
 
-	if err = (&controller.PolicyServerReconciler{
+func setupProbes(mgr ctrl.Manager) error {
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		return errors.Join(errors.New("unable to set up health check"), err)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		return errors.Join(errors.New("unable to set up ready check"), err)
+	}
+	return nil
+}
+
+func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool) error {
+	if err := (&controller.PolicyServerReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("policy-server-reconciler"),
@@ -184,57 +228,27 @@ func main() {
 		MetricsEnabled: enableMetrics,
 		TracingEnabled: enableTracing,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "PolicyServer")
-		retcode = 1
-		return
+		return errors.Join(errors.New("unable to create PolicyServer controller"), err)
 	}
 
-	if err = (&controller.AdmissionPolicyReconciler{
+	if err := (&controller.AdmissionPolicyReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("admission-policy-reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "AdmissionPolicy")
-		retcode = 1
-		return
+		return errors.Join(errors.New("unable to create AdmissionPolicy controller"), err)
 	}
 
-	if err = (&controller.ClusterAdmissionPolicyReconciler{
+	if err := (&controller.ClusterAdmissionPolicyReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("cluster-admission-policy-reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterAdmissionPolicy")
-		retcode = 1
-		return
+		return errors.Join(errors.New("unable to create ClusterAdmissionPolicy controller"), err)
 	}
-
-	if err := setupWebhooks(mgr, deploymentsNamespace); err != nil {
-		retcode = 1
-		return
-	}
-
-	//+kubebuilder:scaffold:builder
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		retcode = 1
-		return
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		retcode = 1
-		return
-	}
-
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		retcode = 1
-		return
-	}
+	return nil
 }
 
 func setupWebhooks(mgr ctrl.Manager, deploymentsNamespace string) error {

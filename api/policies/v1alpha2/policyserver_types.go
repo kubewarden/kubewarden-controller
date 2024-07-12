@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PolicyServerSpec defines the desired state of PolicyServer
+// PolicyServerSpec defines the desired state of PolicyServer.
 type PolicyServerSpec struct {
 	// Docker image name.
 	Image string `json:"image"`
@@ -76,9 +76,9 @@ type PolicyServerSpec struct {
 type ReconciliationTransitionReason string
 
 const (
-	// ReconciliationFailed represents a reconciliation failure
+	// ReconciliationFailed represents a reconciliation failure.
 	ReconciliationFailed ReconciliationTransitionReason = "ReconciliationFailed"
-	// ReconciliationSucceeded represents a reconciliation success
+	// ReconciliationSucceeded represents a reconciliation success.
 	ReconciliationSucceeded ReconciliationTransitionReason = "ReconciliationSucceeded"
 )
 
@@ -86,23 +86,23 @@ type PolicyServerConditionType string
 
 const (
 	// PolicyServerCASecretReconciled represents the condition of the
-	// Policy Server Secret reconciliation
+	// Policy Server Secret reconciliation.
 	PolicyServerCASecretReconciled PolicyServerConditionType = "CASecretReconciled"
 	// PolicyServerCARootSecretReconciled represents the condition of the
-	// Policy Server CA Root Secret reconciliation
+	// Policy Server CA Root Secret reconciliation.
 	PolicyServerCARootSecretReconciled PolicyServerConditionType = "CARootSecretReconciled"
 	// PolicyServerConfigMapReconciled represents the condition of the
-	// Policy Server ConfigMap reconciliation
+	// Policy Server ConfigMap reconciliation.
 	PolicyServerConfigMapReconciled PolicyServerConditionType = "ConfigMapReconciled"
 	// PolicyServerDeploymentReconciled represents the condition of the
-	// Policy Server Deployment reconciliation
+	// Policy Server Deployment reconciliation.
 	PolicyServerDeploymentReconciled PolicyServerConditionType = "DeploymentReconciled"
 	// PolicyServerServiceReconciled represents the condition of the
-	// Policy Server Service reconciliation
+	// Policy Server Service reconciliation.
 	PolicyServerServiceReconciled PolicyServerConditionType = "ServiceReconciled"
 )
 
-// PolicyServerStatus defines the observed state of PolicyServer
+// PolicyServerStatus defines the observed state of PolicyServer.
 type PolicyServerStatus struct {
 	// Conditions represent the observed conditions of the
 	// PolicyServer resource.  Known .status.conditions.types
@@ -122,7 +122,7 @@ type PolicyServerStatus struct {
 //+kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicas`,description="Policy Server replicas"
 //+kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`,description="Policy Server image"
 
-// PolicyServer is the Schema for the policyservers API
+// PolicyServer is the Schema for the policyservers API.
 type PolicyServer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -141,7 +141,7 @@ func (ps *PolicyServer) AppLabel() string {
 
 //+kubebuilder:object:root=true
 
-// PolicyServerList contains a list of PolicyServer
+// PolicyServerList contains a list of PolicyServer.
 type PolicyServerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

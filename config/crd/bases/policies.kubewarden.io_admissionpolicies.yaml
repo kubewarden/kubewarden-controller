@@ -73,7 +73,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy
+            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy.
             properties:
               backgroundAudit:
                 default: true
@@ -311,7 +311,7 @@ spec:
             type: object
           status:
             description: PolicyStatus defines the observed state of ClusterAdmissionPolicy
-              and AdmissionPolicy
+              and AdmissionPolicy.
             properties:
               conditions:
                 description: |-
@@ -462,7 +462,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy
+            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy.
             properties:
               failurePolicy:
                 description: |-
@@ -690,7 +690,7 @@ spec:
             type: object
           status:
             description: PolicyStatus defines the observed state of ClusterAdmissionPolicy
-              and AdmissionPolicy
+              and AdmissionPolicy.
             properties:
               conditions:
                 description: |-

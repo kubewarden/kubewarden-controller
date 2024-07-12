@@ -47,7 +47,7 @@ import (
 // Some RBAC rules needed to access some resources used here are defined in the
 // policyserver_controller.go file.
 
-// ClusterAdmissionPolicyReconciler reconciles a ClusterAdmissionPolicy object
+// ClusterAdmissionPolicyReconciler reconciles a ClusterAdmissionPolicy object.
 type ClusterAdmissionPolicyReconciler struct {
 	client.Client
 	Log                  logr.Logger
@@ -56,11 +56,10 @@ type ClusterAdmissionPolicyReconciler struct {
 	policySubReconciler  *policySubReconciler
 }
 
-// Reconcile reconciles admission policies
+// Reconcile reconciles admission policies.
 func (r *ClusterAdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var clusterAdmissionPolicy policiesv1.ClusterAdmissionPolicy
 	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
-		//nolint:wrapcheck
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -160,7 +159,8 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 
 	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
 	if !found {
-		r.Log.Info("Found a webhook configuration without a scope label, reconciling it", "name", webhookConfiguration.GetName())
+		r.Log.Info("Found a webhook configuration without a scope label, reconciling it",
+			"name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 
@@ -171,7 +171,8 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookC
 
 	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
 	if !found {
-		r.Log.Info("Found a webhook configuration without a policy name annotation, reconciling it", "name", webhookConfiguration.GetName())
+		r.Log.Info("Found a webhook configuration without a policy name annotation, reconciling it",
+			"name", webhookConfiguration.GetName())
 		return []reconcile.Request{}
 	}
 

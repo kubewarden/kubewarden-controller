@@ -53,7 +53,7 @@ import (
 //+kubebuilder:rbac:namespace=kubewarden,groups=core,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:namespace=kubewarden,groups=policy,resources=poddisruptionbudgets,verbs=get;list;watch;create;update;patch;delete
 
-// PolicyServerReconciler reconciles a PolicyServer object
+// PolicyServerReconciler reconciles a PolicyServer object.
 type PolicyServerReconciler struct {
 	client.Client
 	Log                                                logr.Logger
@@ -67,7 +67,6 @@ type PolicyServerReconciler struct {
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var policyServer policiesv1.PolicyServer
 	if err := r.Get(ctx, req.NamespacedName, &policyServer); err != nil {
-		//nolint:wrapcheck
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -90,7 +89,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcilePolicyServerConfigMap(ctx, &policyServer, policies); err != nil {
+	if err = r.reconcilePolicyServerConfigMap(ctx, &policyServer, policies); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			string(policiesv1.PolicyServerConfigMapReconciled),
@@ -104,7 +103,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		string(policiesv1.PolicyServerConfigMapReconciled),
 	)
 
-	if err := r.reconcilePolicyServerPodDisruptionBudget(ctx, &policyServer); err != nil {
+	if err = r.reconcilePolicyServerPodDisruptionBudget(ctx, &policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			string(policiesv1.PolicyServerPodDisruptionBudgetReconciled),
@@ -118,7 +117,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		string(policiesv1.PolicyServerPodDisruptionBudgetReconciled),
 	)
 
-	if err := r.reconcilePolicyServerDeployment(ctx, &policyServer); err != nil {
+	if err = r.reconcilePolicyServerDeployment(ctx, &policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			string(policiesv1.PolicyServerDeploymentReconciled),
@@ -132,7 +131,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		string(policiesv1.PolicyServerDeploymentReconciled),
 	)
 
-	if err := r.reconcilePolicyServerService(ctx, &policyServer); err != nil {
+	if err = r.reconcilePolicyServerService(ctx, &policyServer); err != nil {
 		setFalseConditionType(
 			&policyServer.Status.Conditions,
 			string(policiesv1.PolicyServerServiceReconciled),
@@ -146,7 +145,7 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		string(policiesv1.PolicyServerServiceReconciled),
 	)
 
-	if err := r.Client.Status().Update(ctx, &policyServer); err != nil {
+	if err = r.Client.Status().Update(ctx, &policyServer); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update policy server status error: %w", err)
 	}
 
@@ -225,7 +224,7 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // getPolicies returns all admission policies and cluster admission
-// policies bound to the given policyServer
+// policies bound to the given policyServer.
 func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *policiesv1.PolicyServer) ([]policiesv1.Policy, error) {
 	var clusterAdmissionPolicies policiesv1.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})

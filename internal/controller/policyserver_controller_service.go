@@ -17,7 +17,7 @@ import (
 )
 
 // This is the port where the Policy Server service will be exposing metrics. Can be overridden
-// by an environment variable KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT
+// by an environment variable KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT.
 func getMetricsPort() int32 {
 	metricsPort := int32(constants.PolicyServerMetricsPort)
 	envMetricsPort := os.Getenv(constants.PolicyServerMetricsPortEnvVar)
@@ -30,7 +30,7 @@ func getMetricsPort() int32 {
 		}
 		metricsPort = int32(metricsPortInt32)
 	}
-	return int32(metricsPort)
+	return metricsPort
 }
 
 func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {

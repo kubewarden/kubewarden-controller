@@ -24,11 +24,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
+//nolint:gochecknoglobals // Global variables are expected for the kubebuilder code generation
 var (
-	// GroupVersion is group version used to register these objects
+	// GroupVersion is group version used to register these objects.
 	GroupVersion = schema.GroupVersion{Group: "policies.kubewarden.io", Version: "v1alpha2"}
 
-	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 
 	// AddToScheme adds the types in this group-version to the given scheme.
