@@ -18,9 +18,8 @@ import (
 
 // This is the port where the Policy Server service will be exposing metrics. Can be overridden
 // by an environment variable KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT
-var metricsPort = constants.PolicyServerMetricsPort
-
-func init() {
+func getMetricsPort() int32 {
+	metricsPort := int32(constants.PolicyServerMetricsPort)
 	envMetricsPort := os.Getenv(constants.PolicyServerMetricsPortEnvVar)
 	if envMetricsPort != "" {
 		var err error
@@ -29,8 +28,9 @@ func init() {
 			fmt.Fprintf(os.Stderr, "port %s provided in %s envvar cannot be parsed as integer: %v. Aborting.\n", envMetricsPort, constants.PolicyServerMetricsPortEnvVar, err)
 			os.Exit(1)
 		}
-		metricsPort = int(metricsPortInt32)
+		metricsPort = int32(metricsPortInt32)
 	}
+	return int32(metricsPort)
 }
 
 func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
@@ -73,7 +73,7 @@ func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer
 			svc.Spec.Ports,
 			corev1.ServicePort{
 				Name:     "metrics",
-				Port:     int32(metricsPort),
+				Port:     getMetricsPort(),
 				Protocol: corev1.ProtocolTCP,
 			},
 		)
