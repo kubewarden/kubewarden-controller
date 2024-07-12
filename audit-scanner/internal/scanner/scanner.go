@@ -29,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const httpClientTimeout = 10 * time.Second
+
 // Scanner verifies that existing resources don't violate any of the policies
 type Scanner struct {
 	policiesClient    *policies.Client
@@ -47,8 +49,6 @@ type Scanner struct {
 // If insecureClient is false, it will read the caCertFile and add it to the in-app
 // cert trust store. This gets used by the httpClient when connection to
 // PolicyServers endpoints.
-//
-//nolint:funlen // the comment lines make this check fail
 func NewScanner(
 	policiesClient *policies.Client,
 	k8sClient *k8s.Client,
@@ -82,7 +82,7 @@ func NewScanner(
 	}
 
 	httpClient := *http.DefaultClient
-	httpClient.Timeout = 10 * time.Second
+	httpClient.Timeout = httpClientTimeout
 	httpClient.Transport = http.DefaultTransport
 	transport, ok := httpClient.Transport.(*http.Transport)
 	if !ok {
@@ -124,8 +124,6 @@ func NewScanner(
 // Returns errors if there's any when fetching policies or resources, but only
 // logs them if there's a problem auditing the resource of saving the Report or
 // Result, so it can continue with the next audit, or next Result.
-//
-//nolint:funlen
 func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) error {
 	log.Info().
 		Dict("dict", zerolog.Dict().
@@ -307,7 +305,6 @@ type policyAuditResult struct {
 	errored                 bool
 }
 
-//nolint:funlen
 func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) error {
 	log.Info().
 		Str("resource", resource.GetName()).

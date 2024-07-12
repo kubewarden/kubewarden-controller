@@ -199,7 +199,7 @@ func TestDeletePolicyReport(t *testing.T) {
 	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector, Namespace: "default"})
 	require.NoError(t, err)
 	require.Len(t, storedPolicyReportList.Items, 1)
-	require.Equal(t, storedPolicyReportList.Items[0].Name, "other-old-report")
+	require.Equal(t, "other-old-report", storedPolicyReportList.Items[0].Name)
 
 	labelSelector, err = labels.Parse(fmt.Sprintf("%s!=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
 	require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestDeleteClusterPolicyReport(t *testing.T) {
 	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector})
 	require.NoError(t, err)
 	require.Len(t, storedPolicyReportList.Items, 1)
-	require.Equal(t, storedPolicyReportList.Items[0].Name, "old-report-with-no-app-label")
+	require.Equal(t, "old-report-with-no-app-label", storedPolicyReportList.Items[0].Name)
 
 	storedPolicyReportList = &wgpolicy.ClusterPolicyReportList{}
 
