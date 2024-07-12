@@ -240,7 +240,6 @@ linters:
     - funlen # tool for detection of long functions
     - gocheckcompilerdirectives # validates go compiler directive comments (//go:)
     - gochecknoglobals # checks that no global variables exist
-    - gochecknoinits # checks that no init functions are present in Go code
     - gochecksumtype # checks exhaustiveness on Go "sum types"
     - gocognit # computes and checks the cognitive complexity of functions
     - goconst # finds repeated strings that could be replaced by a constant
@@ -248,12 +247,10 @@ linters:
     - gocyclo # computes and checks the cyclomatic complexity of functions
     - godot # checks if comments end in a period
     - goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt
-    - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
     - gosec # inspects source code for security problems
     - intrange # finds places where for loops could make use of an integer range
-    - lll # reports long lines
     - loggercheck # checks key value pairs for common logger libraries (kitlog,klog,logr,zap)
     - makezero # finds slice declarations with non-zero initial length
     - mirror # reports wrong mirror patterns of bytes/strings usage
@@ -281,7 +278,6 @@ linters:
     - tenv # detects using os.Setenv instead of t.Setenv since Go1.17
     - testableexamples # checks if examples are testable (have an expected output)
     - testifylint # checks usage of github.com/stretchr/testify
-    - testpackage # makes you use a separate _test package
     - tparallel # detects inappropriate usage of t.Parallel() method in your Go test codes
     - unconvert # removes unnecessary type conversions
     - unparam # reports unused function parameters
@@ -327,7 +323,27 @@ linters:
     #- tagliatelle # checks the struct tags
     #- thelper # detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
+    
+    ############################################################################
+    # Kubewarden linter customization
+    # The following linters are disabled because they does not make sense for
+    # the Kubewarden 
+    ############################################################################
 
+    # We disable the testpackage linter because we have tests which is not
+    # black boxed and that will not cause issues for us for now.
+    # - testpackage # makes you use a separate _test package
+    
+    # We disable the lll linter because we have long lines in many places and splitting them
+    # will not make the code more readable.
+    # - lll 
+
+    # We use replace directives in go.mod to replace some dependencies. Dependabot updates it over time.
+    # - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
+    
+    # Init functions are used in many places in the project. For instance, to registry types in the 
+    # scheme. This is a common usage in kubebuilder projects 
+    # - gochecknoinits # checks that no init functions are present in Go code
 
 issues:
   # Maximum count of issues with the same text.
@@ -349,3 +365,11 @@ issues:
         - gosec
         - noctx
         - wrapcheck
+        - govet # many tests share variables
+        - revive # we use dot import for ginkgo and gomega
+        - gochecknoglobals # we use global variables in tests to access common resources among tests. e.g. k8s client, and resources templates
+        - exhaustive # tests does not define all the key in the maps to save some lines
+    # Webhooks code are very similar. Therefore, we allow duplication in these files.
+    - path: 'api/policies/v1/(.+)_webhook.go'
+      linters:
+        - dupl
