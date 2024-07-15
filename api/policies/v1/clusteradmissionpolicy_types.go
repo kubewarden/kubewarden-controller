@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// ContextAwareResource identifies a Kubernetes resource
+// ContextAwareResource identifies a Kubernetes resource.
 type ContextAwareResource struct {
 	// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
 	APIVersion string `json:"apiVersion"`
@@ -31,9 +31,9 @@ type ContextAwareResource struct {
 	Kind string `json:"kind"`
 }
 
-// ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
+// ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy.
 type ClusterAdmissionPolicySpec struct {
-	PolicySpec `json:""` //nolint
+	PolicySpec `json:""`
 
 	// NamespaceSelector decides whether to run the webhook on an object based
 	// on whether the namespace for that object matches the selector. If the

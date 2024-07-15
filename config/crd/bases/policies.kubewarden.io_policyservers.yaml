@@ -26,7 +26,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: PolicyServer is the Schema for the policyservers API
+        description: PolicyServer is the Schema for the policyservers API.
         properties:
           apiVersion:
             description: |-
@@ -46,7 +46,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: PolicyServerSpec defines the desired state of PolicyServer
+            description: PolicyServerSpec defines the desired state of PolicyServer.
             properties:
               affinity:
                 description: Affinity rules for the associated Policy Server pods.
@@ -1633,7 +1633,7 @@ spec:
             - replicas
             type: object
           status:
-            description: PolicyServerStatus defines the observed state of PolicyServer
+            description: PolicyServerStatus defines the observed state of PolicyServer.
             properties:
               conditions:
                 description: |-
@@ -1733,7 +1733,7 @@ spec:
     name: v1alpha2
     schema:
       openAPIV3Schema:
-        description: PolicyServer is the Schema for the policyservers API
+        description: PolicyServer is the Schema for the policyservers API.
         properties:
           apiVersion:
             description: |-
@@ -1753,7 +1753,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: PolicyServerSpec defines the desired state of PolicyServer
+            description: PolicyServerSpec defines the desired state of PolicyServer.
             properties:
               annotations:
                 additionalProperties:
@@ -1936,7 +1936,7 @@ spec:
             - replicas
             type: object
           status:
-            description: PolicyServerStatus defines the observed state of PolicyServer
+            description: PolicyServerStatus defines the observed state of PolicyServer.
             properties:
               conditions:
                 description: |-

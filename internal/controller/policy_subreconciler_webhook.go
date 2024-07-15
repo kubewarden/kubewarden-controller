@@ -18,6 +18,7 @@ import (
 
 //+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;delete;list;patch;watch
 
+//nolint:dupl // This function is similar to the other reconcileMutatingWebhookConfiguration
 func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 	ctx context.Context,
 	policy policiesv1.Policy,
@@ -89,7 +90,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfigurationDeletion(ct
 	webhook := admissionregistrationv1.ValidatingWebhookConfiguration{}
 	err := r.Get(ctx, types.NamespacedName{Name: admissionPolicy.GetUniqueName()}, &webhook)
 	if err == nil {
-		if err := r.Delete(ctx, &webhook); err != nil && !apierrors.IsNotFound(err) {
+		if err = r.Delete(ctx, &webhook); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("cannot delete validating webhook: %w", err)
 		}
 	} else if !apierrors.IsNotFound(err) {
@@ -101,6 +102,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfigurationDeletion(ct
 
 //+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;delete;list;patch;watch
 
+//nolint:dupl // This function is similar to the other reconcileValidatingWebhookConfiguration
 func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 	ctx context.Context,
 	policy policiesv1.Policy,
@@ -173,7 +175,7 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfigurationDeletion(ctx 
 	webhook := admissionregistrationv1.MutatingWebhookConfiguration{}
 	err := r.Get(ctx, types.NamespacedName{Name: admissionPolicy.GetUniqueName()}, &webhook)
 	if err == nil {
-		if err := r.Delete(ctx, &webhook); err != nil && !apierrors.IsNotFound(err) {
+		if err = r.Delete(ctx, &webhook); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("cannot delete mutating webhook: %w", err)
 		}
 	} else if !apierrors.IsNotFound(err) {

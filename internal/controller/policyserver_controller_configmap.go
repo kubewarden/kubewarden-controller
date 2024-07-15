@@ -36,13 +36,12 @@ type policyServerSourceAuthority struct {
 	Data string `json:"data"` // contains a PEM encoded certificate
 }
 
-//nolint:tagliatelle
 type policyServerSourcesEntry struct {
 	InsecureSources   []string                                 `json:"insecure_sources,omitempty"`
 	SourceAuthorities map[string][]policyServerSourceAuthority `json:"source_authorities,omitempty"`
 }
 
-// Reconciles the ConfigMap that holds the configuration of the Policy Server
+// Reconciles the ConfigMap that holds the configuration of the Policy Server.
 func (r *PolicyServerReconciler) reconcilePolicyServerConfigMap(
 	ctx context.Context,
 	policyServer *policiesv1.PolicyServer,
@@ -63,7 +62,7 @@ func (r *PolicyServerReconciler) reconcilePolicyServerConfigMap(
 	return nil
 }
 
-// Function used to update the ConfigMap data when creating or updating it
+// Function used to update the ConfigMap data when creating or updating it.
 func (r *PolicyServerReconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) error {
 	policiesMap := buildPoliciesMap(policies)
 	policiesYML, err := json.Marshal(policiesMap)
@@ -86,7 +85,7 @@ func (r *PolicyServerReconciler) updateConfigMapData(cfg *corev1.ConfigMap, poli
 	cfg.ObjectMeta.Labels = map[string]string{
 		constants.PolicyServerLabelKey: policyServer.ObjectMeta.Name,
 	}
-	if err := controllerutil.SetOwnerReference(policyServer, cfg, r.Client.Scheme()); err != nil {
+	if err = controllerutil.SetOwnerReference(policyServer, cfg, r.Client.Scheme()); err != nil {
 		return errors.Join(errors.New("failed to set policy server configmap owner reference"), err)
 	}
 	return nil

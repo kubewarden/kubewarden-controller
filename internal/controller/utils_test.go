@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//nolint:ireturn
 package controller
 
 import (
@@ -24,8 +23,8 @@ import (
 	"math/rand"
 	"os"
 
-	. "github.com/onsi/gomega"         //nolint:revive
-	. "github.com/onsi/gomega/gstruct" //nolint:revive
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -244,7 +243,7 @@ func getPolicyServerPodDisruptionBudget(ctx context.Context, policyServerName st
 	return pdb, nil
 }
 
-func policyServerPodDisruptionBudgetMatcher(policyServer *policiesv1.PolicyServer, minAvailable *intstr.IntOrString, maxUnavailable *intstr.IntOrString) types.GomegaMatcher { //nolint:ireturn
+func policyServerPodDisruptionBudgetMatcher(policyServer *policiesv1.PolicyServer, minAvailable *intstr.IntOrString, maxUnavailable *intstr.IntOrString) types.GomegaMatcher {
 	maxUnavailableMatcher := BeNil()
 	minAvailableMatcher := BeNil()
 	if minAvailable != nil {
@@ -299,7 +298,7 @@ var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 func randStringRunes(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))] //nolint:gosec
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 
 	return string(b)

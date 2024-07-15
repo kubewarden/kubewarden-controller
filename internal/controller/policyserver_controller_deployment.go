@@ -34,7 +34,7 @@ const (
 	sigstoreCacheDirPath             = "/tmp/sigstore-data"
 )
 
-// reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer
+// reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer.
 func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
 	if err != nil {
@@ -57,16 +57,7 @@ func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Con
 	return nil
 }
 
-func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
-	admissionContainer := getPolicyServerContainer(policyServer)
-
-	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
-		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
-			Name:  "KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE",
-			Value: r.DeploymentsNamespace,
-		})
-	}
-
+func configureVerificationConfig(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
 	if policyServer.Spec.VerificationConfig != "" {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
 			corev1.VolumeMount{
@@ -80,7 +71,9 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 				Value: filepath.Join(constants.PolicyServerVerificationConfigContainerPath, verificationFilename),
 			})
 	}
+}
 
+func configureImagePullSecret(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
 	if policyServer.Spec.ImagePullSecret != "" {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
 			corev1.VolumeMount{
@@ -94,7 +87,9 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 				Value: dockerConfigJSONPolicyServerPath,
 			})
 	}
+}
 
+func configuresInsecureSources(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
 	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
 		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
 			corev1.VolumeMount{
@@ -108,6 +103,34 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
 			})
 	}
+}
+
+func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer, configMapVersion string) {
+	if policyServerDeployment.ObjectMeta.Annotations == nil {
+		policyServerDeployment.ObjectMeta.Annotations = make(map[string]string)
+	}
+	policyServerDeployment.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
+
+	if policyServerDeployment.Labels == nil {
+		policyServerDeployment.Labels = make(map[string]string)
+	}
+	policyServerDeployment.Labels[constants.AppLabelKey] = policyServer.AppLabel()
+	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
+}
+
+func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
+	admissionContainer := getPolicyServerContainer(policyServer)
+
+	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
+		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
+			Name:  "KUBEWARDEN_ALWAYS_ACCEPT_ADMISSION_REVIEWS_ON_NAMESPACE",
+			Value: r.DeploymentsNamespace,
+		})
+	}
+
+	configureVerificationConfig(policyServer, &admissionContainer)
+	configureImagePullSecret(policyServer, &admissionContainer)
+	configuresInsecureSources(policyServer, &admissionContainer)
 
 	podSecurityContext := &corev1.PodSecurityContext{}
 	if policyServer.Spec.SecurityContexts.Pod != nil {
@@ -125,17 +148,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 	}
 
 	r.adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations, &admissionContainer)
-
-	if policyServerDeployment.ObjectMeta.Annotations == nil {
-		policyServerDeployment.ObjectMeta.Annotations = make(map[string]string)
-	}
-	policyServerDeployment.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
-
-	if policyServerDeployment.Labels == nil {
-		policyServerDeployment.Labels = make(map[string]string)
-	}
-	policyServerDeployment.Labels[constants.AppLabelKey] = policyServer.AppLabel()
-	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
+	configureLabelsAndAnnotations(policyServerDeployment, policyServer, configMapVersion)
 
 	policyServerDeployment.Spec = appsv1.DeploymentSpec{
 		Replicas: &policyServer.Spec.Replicas,

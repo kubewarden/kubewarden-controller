@@ -21,9 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
+// ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy.
 type ClusterAdmissionPolicySpec struct {
-	PolicySpec `json:""` //nolint
+	PolicySpec `json:""`
 
 	// NamespaceSelector decides whether to run the webhook on an object based
 	// on whether the namespace for that object matches the selector. If the

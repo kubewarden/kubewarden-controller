@@ -22,9 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// AdmissionPolicySpec defines the desired state of AdmissionPolicy
+// AdmissionPolicySpec defines the desired state of AdmissionPolicy.
 type AdmissionPolicySpec struct {
-	PolicySpec `json:""` //nolint
+	PolicySpec `json:""`
 }
 
 // AdmissionPolicy is the Schema for the admissionpolicies API
@@ -51,7 +51,7 @@ type AdmissionPolicy struct {
 
 //+kubebuilder:object:root=true
 
-// AdmissionPolicyList contains a list of AdmissionPolicy
+// AdmissionPolicyList contains a list of AdmissionPolicy.
 type AdmissionPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -102,7 +102,7 @@ func (r *AdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectCl
 	return r.Spec.SideEffects
 }
 
-// GetRules returns all rules. Scope is namespaced since AdmissionPolicy just watches for namespace resources
+// GetRules returns all rules. Scope is namespaced since AdmissionPolicy just watches for namespace resources.
 func (r *AdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
 	namespacedScopeV1 := admissionregistrationv1.NamespacedScope
 	rules := make([]admissionregistrationv1.RuleWithOperations, 0)

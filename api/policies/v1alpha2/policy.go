@@ -20,10 +20,10 @@ const (
 	// assigned.
 	PolicyStatusScheduled PolicyStatusEnum = "scheduled"
 	// PolicyStatusPending informs that the policy server exists,
-	// we are reconciling all resources
+	// we are reconciling all resources.
 	PolicyStatusPending PolicyStatusEnum = "pending"
 	// PolicyStatusActive informs that the k8s API server should be
-	// forwarding admission review objects to the policy
+	// forwarding admission review objects to the policy.
 	PolicyStatusActive PolicyStatusEnum = "active"
 )
 
@@ -40,11 +40,11 @@ type PolicyConditionType string
 
 const (
 	// PolicyActive represents the condition of the Policy admission
-	// webhook been registered
+	// webhook been registered.
 	PolicyActive PolicyConditionType = "PolicyActive"
 	// PolicyServerConfigurationUpToDate represents the condition of the
 	// associated Policy Server having the latest configuration up to
-	// date regarding this policy
+	// date regarding this policy.
 	PolicyServerConfigurationUpToDate PolicyConditionType = "PolicyServerConfigurationUpToDate"
 	// PolicyUniquelyReachable represents the condition of the latest
 	// applied policy being uniquely accessible. This means that after a
@@ -54,7 +54,7 @@ const (
 	PolicyUniquelyReachable PolicyConditionType = "PolicyUniquelyReachable"
 )
 
-// PolicyStatus defines the observed state of ClusterAdmissionPolicy and AdmissionPolicy
+// PolicyStatus defines the observed state of ClusterAdmissionPolicy and AdmissionPolicy.
 type PolicyStatus struct {
 	// PolicyStatus represents the observed status of the policy
 	PolicyStatus PolicyStatusEnum `json:"policyStatus"`

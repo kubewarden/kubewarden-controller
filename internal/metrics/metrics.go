@@ -18,6 +18,7 @@ const (
 	meterName                      = "kubewarden"
 	policyCounterMetricName        = "kubewarden_policy_total"
 	policyCounterMetricDescription = "How many policies are installed in the cluster"
+	timeBetweenExports             = 2 * time.Second
 )
 
 func New(openTelemetryEndpoint string) (func(context.Context) error, error) {
@@ -32,7 +33,7 @@ func New(openTelemetryEndpoint string) (func(context.Context) error, error) {
 		return nil, fmt.Errorf("cannot start metric exporter: %w", err)
 	}
 	meterProvider := metricSDK.NewMeterProvider(metricSDK.WithReader(
-		metricSDK.NewPeriodicReader(exporter, metricSDK.WithInterval(2*time.Second))))
+		metricSDK.NewPeriodicReader(exporter, metricSDK.WithInterval(timeBetweenExports))))
 
 	otel.SetMeterProvider(meterProvider)
 

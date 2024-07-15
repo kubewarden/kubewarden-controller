@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//nolint:dupl
 package v1
 
 import (
@@ -32,6 +31,8 @@ import (
 )
 
 // log is for logging in this package.
+//
+//nolint:gochecknoglobals // let's keep the log variable here for now
 var clusteradmissionpolicylog = logf.Log.WithName("clusteradmissionpolicy-resource")
 
 func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -48,7 +49,7 @@ func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error
 
 var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicy) Default() {
 	clusteradmissionpolicylog.Info("default", "name", r.Name)
 	if r.Spec.PolicyServer == "" {
@@ -63,14 +64,14 @@ func (r *ClusterAdmissionPolicy) Default() {
 
 var _ webhook.Validator = &ClusterAdmissionPolicy{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicy) ValidateCreate() (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate create", "name", r.Name)
 
 	return nil, validateRulesField(r)
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate update", "name", r.Name)
 
@@ -83,7 +84,7 @@ func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.W
 	return nil, validatePolicyUpdate(oldPolicy, r)
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicy) ValidateDelete() (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate delete", "name", r.Name)
 	return nil, nil

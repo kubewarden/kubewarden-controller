@@ -47,7 +47,7 @@ import (
 // Some RBAC rules needed to access some resources used here are defined in the
 // policyserver_controller.go file.
 
-// AdmissionPolicyReconciler reconciles an AdmissionPolicy object
+// AdmissionPolicyReconciler reconciles an AdmissionPolicy object.
 type AdmissionPolicyReconciler struct {
 	client.Client
 	Log                  logr.Logger
@@ -56,11 +56,10 @@ type AdmissionPolicyReconciler struct {
 	policySubReconciler  *policySubReconciler
 }
 
-// Reconcile reconciles admission policies
+// Reconcile reconciles admission policies.
 func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var admissionPolicy policiesv1.AdmissionPolicy
 	if err := r.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
-		//nolint:wrapcheck
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
