@@ -19,7 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const defaultKubewardenNamespace = "kubewarden"
+const (
+	defaultKubewardenNamespace = "kubewarden"
+	defaultParallelResources   = 100
+	defaultParallelPolicies    = 5
+	defaultParallelNamespaces  = 1
+	defaultPageSize            = 100
+)
 
 // log level
 var level logconfig.Level
@@ -44,7 +50,7 @@ var rootCmd = &cobra.Command{
 Each namespace will have a PolicyReport with the outcome of the scan for resources within this namespace.
 There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		level.SetZeroLogLevel()
 		namespace, err := cmd.Flags().GetString("namespace")
 		if err != nil {
@@ -164,8 +170,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
 	rootCmd.Flags().BoolVar(&disableStore, "disable-store", false, "disable storing the results in the k8s cluster")
-	rootCmd.Flags().IntP("parallel-namespaces", "", 1, "number of Namespaces to scan in parallel")
-	rootCmd.Flags().IntP("parallel-resources", "", 100, "number of resources to scan in parallel")
-	rootCmd.Flags().IntP("parallel-policies", "", 5, "number of policies to evaluate for a given resource in parallel")
-	rootCmd.Flags().IntP("page-size", "", 100, "number of resources to fetch from the Kubernetes API server when paginating")
+	rootCmd.Flags().IntP("parallel-namespaces", "", defaultParallelNamespaces, "number of Namespaces to scan in parallel")
+	rootCmd.Flags().IntP("parallel-resources", "", defaultParallelResources, "number of resources to scan in parallel")
+	rootCmd.Flags().IntP("parallel-policies", "", defaultParallelPolicies, "number of policies to evaluate for a given resource in parallel")
+	rootCmd.Flags().IntP("page-size", "", defaultPageSize, "number of resources to fetch from the Kubernetes API server when paginating")
 }

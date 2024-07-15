@@ -38,7 +38,7 @@ const (
 )
 
 func newMockPolicyServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 
 		admissionReview := admissionv1.AdmissionReview{

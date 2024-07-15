@@ -174,7 +174,7 @@ func (f *Client) getAdmissionPolicies(ctx context.Context, namespace string) ([]
 // groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
 // If namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
 // If the policy targets an unknown GVR or the policy server URL cannot be constructed, the policy will be counted as errored.
-func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) { //nolint:funlen
+func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) {
 	policiesByGVR := make(map[schema.GroupVersionResource][]*Policy)
 	auditablePolicies := map[string]struct{}{}
 	skippedPolicies := map[string]struct{}{}
@@ -269,36 +269,44 @@ func addPolicyToMap(policiesByGVR map[schema.GroupVersionResource][]*Policy, gvr
 	}
 }
 
+func getRuleGVRs(rule admissionregistrationv1.RuleWithOperations) []schema.GroupVersionResource {
+	gvrs := []schema.GroupVersionResource{}
+	for _, resource := range rule.Resources {
+		for _, version := range rule.APIVersions {
+			for _, group := range rule.APIGroups {
+				gvrs = append(gvrs, schema.GroupVersionResource{
+					Group:    group,
+					Version:  version,
+					Resource: resource,
+				})
+			}
+		}
+	}
+	return gvrs
+}
+
 // getGroupVersionResources returns a list of GroupVersionResource from a list of policies.
 // if namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
 func (f *Client) getGroupVersionResources(rules []admissionregistrationv1.RuleWithOperations, namespaced bool) ([]schema.GroupVersionResource, error) {
 	var groupVersionResources []schema.GroupVersionResource
 
 	for _, rule := range rules {
-		for _, resource := range rule.Resources {
-			for _, version := range rule.APIVersions {
-				for _, group := range rule.APIGroups {
-					gvr := schema.GroupVersionResource{
-						Group:    group,
-						Version:  version,
-						Resource: resource,
-					}
-					isNamespaced, err := f.isNamespacedResource(gvr)
-					if err != nil {
-						return nil, err
-					}
-					if namespaced && !isNamespaced {
-						// continue if resource is clusterwide
-						continue
-					}
-					if !namespaced && isNamespaced {
-						// continue if resource is namespaced
-						continue
-					}
-
-					groupVersionResources = append(groupVersionResources, gvr)
-				}
+		gvrs := getRuleGVRs(rule)
+		for _, gvr := range gvrs {
+			isNamespaced, err := f.isNamespacedResource(gvr)
+			if err != nil {
+				return nil, err
 			}
+			if namespaced && !isNamespaced {
+				// continue if resource is clusterwide
+				continue
+			}
+			if !namespaced && isNamespaced {
+				// continue if resource is namespaced
+				continue
+			}
+
+			groupVersionResources = append(groupVersionResources, gvr)
 		}
 	}
 
