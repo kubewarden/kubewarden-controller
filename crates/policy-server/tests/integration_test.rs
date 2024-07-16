@@ -519,3 +519,163 @@ async fn test_policy_with_wrong_url() {
     assert_eq!(status.code, Some(500));
     assert!(pattern.is_match(&status.message.unwrap()));
 }
+
+// helper functions for certificate rotation test, which is a feature supported only on Linux
+#[cfg(target_os = "linux")]
+mod certificate_reload_helpers {
+    use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
+    use rcgen::{generate_simple_self_signed, CertifiedKey};
+    use std::net::TcpStream;
+
+    pub struct TlsData {
+        pub key: String,
+        pub cert: String,
+    }
+
+    pub fn create_cert(hostname: &str) -> TlsData {
+        let subject_alt_names = vec![hostname.to_string()];
+
+        let CertifiedKey { cert, key_pair } =
+            generate_simple_self_signed(subject_alt_names).unwrap();
+
+        TlsData {
+            key: key_pair.serialize_pem(),
+            cert: cert.pem(),
+        }
+    }
+
+    pub async fn get_tls_san_names(domain_ip: &str, domain_port: &str) -> Vec<String> {
+        let domain_ip = domain_ip.to_string();
+        let domain_port = domain_port.to_string();
+
+        tokio::task::spawn_blocking(move || {
+            let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+            builder.set_verify(SslVerifyMode::NONE);
+            let connector = builder.build();
+            let stream = TcpStream::connect(format!("{domain_ip}:{domain_port}")).unwrap();
+            let stream = connector.connect(&domain_ip, stream).unwrap();
+
+            let cert = stream.ssl().peer_certificate().unwrap();
+            cert.subject_alt_names()
+                .expect("failed to get SAN names")
+                .iter()
+                .map(|name| {
+                    name.dnsname()
+                        .expect("failed to get DNS name from SAN entry")
+                        .to_string()
+                })
+                .collect::<Vec<String>>()
+        })
+        .await
+        .unwrap()
+    }
+
+    pub async fn check_tls_san_name(domain_ip: &str, domain_port: &str, hostname: &str) -> bool {
+        let sleep_interval = std::time::Duration::from_secs(1);
+        let max_retries = 10;
+        let mut failed_retries = 0;
+        let hostname = hostname.to_string();
+        loop {
+            let san_names = get_tls_san_names(domain_ip, domain_port).await;
+            if san_names.contains(&hostname) {
+                return true;
+            }
+            failed_retries += 1;
+            if failed_retries >= max_retries {
+                return false;
+            }
+            tokio::time::sleep(sleep_interval).await;
+        }
+    }
+
+    pub async fn wait_for_policy_server_to_be_ready(address: &str) {
+        let sleep_interval = std::time::Duration::from_secs(1);
+        let max_retries = 5;
+        let mut failed_retries = 0;
+
+        // wait for the server to start
+        let client = reqwest::Client::builder()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .unwrap();
+
+        loop {
+            let url = reqwest::Url::parse(&format!("https://{address}/readiness")).unwrap();
+            match client.get(url).send().await {
+                Ok(_) => break,
+                Err(e) => {
+                    failed_retries += 1;
+                    if failed_retries >= max_retries {
+                        panic!("failed to start the server: {:?}", e);
+                    }
+                    tokio::time::sleep(sleep_interval).await;
+                }
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_detect_certificate_rotation() {
+    use certificate_reload_helpers::*;
+
+    let certs_dir = tempfile::tempdir().unwrap();
+    let cert_file = certs_dir.path().join("policy-server.pem");
+    let key_file = certs_dir.path().join("policy-server-key.pem");
+
+    let hostname1 = "cert1.example.com";
+    let tls_data1 = create_cert(&hostname1);
+
+    std::fs::write(&cert_file, tls_data1.cert).unwrap();
+    std::fs::write(&key_file, tls_data1.key).unwrap();
+
+    let mut config = default_test_config();
+    config.tls_config = Some(policy_server::config::TlsConfig {
+        cert_file: cert_file.to_str().unwrap().to_string(),
+        key_file: key_file.to_str().unwrap().to_string(),
+    });
+    config.policies = HashMap::new();
+
+    let domain_ip = config.addr.ip().to_string();
+    let domain_port = config.addr.port().to_string();
+
+    tokio::spawn(async move {
+        policy_server::tracing::setup_tracing(
+            &config.log_level,
+            &config.log_fmt,
+            config.log_no_color,
+        )
+        .unwrap();
+        let api_server = policy_server::PolicyServer::new_from_config(config)
+            .await
+            .unwrap();
+        api_server.run().await.unwrap();
+    });
+    wait_for_policy_server_to_be_ready(format!("{domain_ip}:{domain_port}").as_str()).await;
+
+    assert!(check_tls_san_name(&domain_ip, &domain_port, hostname1).await);
+
+    // Generate a new certificate and key, and switch to them
+
+    let hostname2 = "cert2.example.com";
+    let tls_data2 = create_cert(hostname2);
+
+    // write only the cert file
+    std::fs::write(&cert_file, tls_data2.cert).unwrap();
+
+    // give inotify some time to ensure it detected the cert change
+    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+
+    // the old certificate should still be in use, since we didn't change also the key
+    assert!(check_tls_san_name(&domain_ip, &domain_port, hostname1).await);
+
+    // write only the cert file
+    std::fs::write(&key_file, tls_data2.key).unwrap();
+
+    // give inotify some time to ensure it detected the cert change
+    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+
+    // the new certificate should be in use
+    assert!(check_tls_san_name(&domain_ip, &domain_port, hostname2).await);
+}

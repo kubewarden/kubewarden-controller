@@ -29,7 +29,7 @@ opentelemetry = { version = "0.23.0", default-features = false, features = [
 ] }
 opentelemetry_sdk = { version = "0.23.0", features = ["rt-tokio"] }
 pprof = { version = "0.13", features = ["prost-codec"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.18.1" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.18.2" }
 rustls-pki-types = { version = "1", features = ["alloc"] }
 rayon = "1.10"
 regex = "1.10"
@@ -55,9 +55,22 @@ jemalloc_pprof = "0.4.1"
 tikv-jemalloc-ctl = "0.5.4"
 rhai = { version = "1.19.0", features = ["sync"] }
 
+[target.'cfg(target_os = "linux")'.dependencies]
+inotify = "0.10"
+tokio-stream = "0.1.15"
+
 [dev-dependencies]
 mockall = "0.12"
 rstest = "0.21"
 tempfile = "3.10.1"
 tower = { version = "0.4", features = ["util"] }
 http-body-util = "0.1.1"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+rcgen = { version = "0.13", features = ["crypto"] }
+openssl = "0.10"
+reqwest = { version = "0.12", default-features = false, features = [
+  "charset",
+  "http2",
+  "rustls-tls-manual-roots",
+] }
