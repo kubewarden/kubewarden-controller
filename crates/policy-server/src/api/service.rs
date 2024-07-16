@@ -1,15 +1,15 @@
-use std::fmt;
-
 use policy_evaluator::{
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
     policy_evaluator::ValidateRequest,
 };
+use std::fmt;
+use std::sync::Arc;
 use tokio::time::Instant;
 use tracing::info;
 
 use crate::{
     config::PolicyMode,
-    evaluation::{errors::EvaluationError, EvaluationEnvironment},
+    evaluation::{errors::EvaluationError, EvaluationEnvironment, PolicyID},
     metrics,
 };
 
@@ -28,37 +28,39 @@ impl fmt::Display for RequestOrigin {
 }
 
 pub(crate) fn evaluate(
-    evaluation_environment: &EvaluationEnvironment,
+    evaluation_environment: Arc<EvaluationEnvironment>,
     policy_id: &str,
     validate_request: &ValidateRequest,
     request_origin: RequestOrigin,
 ) -> Result<AdmissionResponse, EvaluationError> {
     let start_time = Instant::now();
+    let policy_id: PolicyID = policy_id.parse()?;
 
-    let policy_name = policy_id.to_owned();
-    let vanilla_validation_response =
-        match evaluation_environment.validate(policy_id, validate_request) {
-            Ok(validation_response) => validation_response,
-            Err(EvaluationError::PolicyInitialization(error)) => {
-                let policy_initialization_error_metric = metrics::PolicyInitializationError {
-                    policy_name: policy_id.to_string(),
-                    initialization_error: error.to_string(),
-                };
+    let vanilla_validation_response = match evaluation_environment
+        .clone()
+        .validate(&policy_id, validate_request)
+    {
+        Ok(validation_response) => validation_response,
+        Err(EvaluationError::PolicyInitialization(error)) => {
+            let policy_initialization_error_metric = metrics::PolicyInitializationError {
+                policy_name: policy_id.to_string(),
+                initialization_error: error.to_string(),
+            };
 
-                metrics::add_policy_evaluation(&policy_initialization_error_metric);
+            metrics::add_policy_evaluation(&policy_initialization_error_metric);
 
-                return Ok(AdmissionResponse::reject(
-                    validate_request.uid().to_owned(),
-                    error.to_string(),
-                    500,
-                ));
-            }
+            return Ok(AdmissionResponse::reject(
+                validate_request.uid().to_owned(),
+                error.to_string(),
+                500,
+            ));
+        }
 
-            Err(error) => return Err(error),
-        };
+        Err(error) => return Err(error),
+    };
 
-    let policy_mode = evaluation_environment.get_policy_mode(policy_id)?;
-    let allowed_to_mutate = evaluation_environment.get_policy_allowed_to_mutate(policy_id)?;
+    let policy_mode = evaluation_environment.get_policy_mode(&policy_id)?;
+    let allowed_to_mutate = evaluation_environment.get_policy_allowed_to_mutate(&policy_id)?;
 
     let policy_evaluation_duration = start_time.elapsed();
     let accepted = vanilla_validation_response.allowed;
@@ -71,7 +73,7 @@ pub(crate) fn evaluate(
 
     let mut validation_response = match request_origin {
         RequestOrigin::Validate => validation_response_with_constraints(
-            policy_id,
+            &policy_id,
             &policy_mode,
             allowed_to_mutate,
             vanilla_validation_response.clone(),
@@ -105,7 +107,7 @@ pub(crate) fn evaluate(
                 }
             }
             let policy_evaluation_metric = metrics::PolicyEvaluation {
-                policy_name,
+                policy_name: policy_id.to_string(),
                 policy_mode: policy_mode.into(),
                 resource_namespace: adm_req.clone().namespace,
                 resource_kind: adm_req.clone().request_kind.unwrap_or_default().kind,
@@ -122,7 +124,7 @@ pub(crate) fn evaluate(
             let accepted = vanilla_validation_response.allowed;
             let mutated = vanilla_validation_response.patch.is_some();
             let raw_policy_evaluation_metric = metrics::RawPolicyEvaluation {
-                policy_name,
+                policy_name: policy_id.to_string(),
                 policy_mode: policy_mode.into(),
                 accepted,
                 mutated,
@@ -145,7 +147,7 @@ pub(crate) fn evaluate(
 // - A policy might be running in "Monitor" mode, that always
 //   accepts the request (without mutation), logging the answer
 fn validation_response_with_constraints(
-    policy_id: &str,
+    policy_id: &PolicyID,
     policy_mode: &PolicyMode,
     allowed_to_mutate: bool,
     validation_response: AdmissionResponse,
@@ -177,7 +179,7 @@ fn validation_response_with_constraints(
             // overriden, as it's only taken into
             // account when a request is rejected.
             info!(
-                policy_id = policy_id,
+                policy_id = policy_id.to_string(),
                 allowed_to_mutate = allowed_to_mutate,
                 response = format!("{validation_response:?}").as_str(),
                 "policy evaluation (monitor mode)",
@@ -196,11 +198,14 @@ fn validation_response_with_constraints(
 #[cfg(test)]
 mod tests {
     use crate::test_utils::build_admission_review_request;
+    use lazy_static::lazy_static;
     use rstest::*;
 
     use super::*;
 
-    const POLICY_ID: &str = "policy-id";
+    lazy_static! {
+        static ref POLICY_ID: PolicyID = PolicyID::Policy("policy-id".to_string());
+    }
 
     fn create_evaluation_environment_that_accepts_request(
         policy_mode: PolicyMode,
@@ -215,6 +220,7 @@ mod tests {
                     ..Default::default()
                 })
             });
+
         mock_evaluation_environment
             .expect_get_policy_mode()
             .returning(move |_policy_id| Ok(policy_mode.clone()));
@@ -229,14 +235,14 @@ mod tests {
     }
 
     #[derive(Clone)]
-    struct EvaluationEnvironmentRejectionDetails {
+    struct RejectionDetails {
         message: String,
         code: u16,
     }
 
     fn create_evaluation_environment_that_reject_request(
         policy_mode: PolicyMode,
-        rejection_details: EvaluationEnvironmentRejectionDetails,
+        rejection_details: RejectionDetails,
         allowed_namespace: String,
     ) -> EvaluationEnvironment {
         let mut mock_evaluation_environment = EvaluationEnvironment::default();
@@ -281,7 +287,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
                 AdmissionResponse {
@@ -296,7 +302,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
                 AdmissionResponse {
@@ -319,7 +325,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
                 AdmissionResponse {
@@ -335,7 +341,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
                 AdmissionResponse {
@@ -350,7 +356,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
                 AdmissionResponse {
@@ -364,7 +370,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
                 AdmissionResponse {
@@ -381,7 +387,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
                 AdmissionResponse {
@@ -394,7 +400,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
                 AdmissionResponse {
@@ -419,7 +425,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Protect,
                 true,
                 AdmissionResponse {
@@ -440,7 +446,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
                 AdmissionResponse {
@@ -465,7 +471,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Protect,
                 true,
                 AdmissionResponse {
@@ -479,7 +485,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Protect,
                 true,
                 AdmissionResponse {
@@ -503,7 +509,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
                 AdmissionResponse {
@@ -516,7 +522,7 @@ mod tests {
 
         assert_eq!(
             validation_response_with_constraints(
-                POLICY_ID,
+                &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
                 AdmissionResponse {
@@ -556,7 +562,7 @@ mod tests {
             ValidateRequest::AdmissionRequest(build_admission_review_request().request);
 
         let response = evaluate(
-            &evaluation_environment,
+            Arc::new(evaluation_environment),
             policy_id,
             &validate_request,
             request_origin,
@@ -576,7 +582,7 @@ mod tests {
         #[case] request_origin: RequestOrigin,
         #[case] accept: bool,
     ) {
-        let rejection_details = EvaluationEnvironmentRejectionDetails {
+        let rejection_details = RejectionDetails {
             message: "boom".to_string(),
             code: 500,
         };
@@ -590,7 +596,7 @@ mod tests {
         let policy_id = "test_policy1";
 
         let response = evaluate(
-            &evaluation_environment,
+            Arc::new(evaluation_environment),
             policy_id,
             &validate_request,
             request_origin,
@@ -617,7 +623,7 @@ mod tests {
         let policy_id = "test_policy1";
 
         let response = evaluate(
-            &evaluation_environment,
+            Arc::new(evaluation_environment),
             policy_id,
             &validate_request,
             RequestOrigin::Validate,
@@ -629,7 +635,7 @@ mod tests {
 
     #[test]
     fn evaluate_policy_evaluator_rejects_request_raw() {
-        let rejection_details = EvaluationEnvironmentRejectionDetails {
+        let rejection_details = RejectionDetails {
             message: "boom".to_string(),
             code: 500,
         };
@@ -643,7 +649,7 @@ mod tests {
         let policy_id = "test_policy1";
 
         let response = evaluate(
-            &evaluation_environment,
+            Arc::new(evaluation_environment),
             policy_id,
             &validate_request,
             RequestOrigin::Validate,
@@ -664,7 +670,7 @@ mod tests {
         #[case] request_origin: RequestOrigin,
     ) {
         let allowed_namespace = "kubewarden_special".to_string();
-        let rejection_details = EvaluationEnvironmentRejectionDetails {
+        let rejection_details = RejectionDetails {
             message: "boom".to_string(),
             code: 500,
         };
@@ -680,7 +686,7 @@ mod tests {
         let policy_id = "test_policy1";
 
         let response = evaluate(
-            &evaluation_environment,
+            Arc::new(evaluation_environment),
             policy_id,
             &validate_request,
             request_origin,

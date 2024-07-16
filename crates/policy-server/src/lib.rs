@@ -20,6 +20,7 @@ use axum::{
     Router,
 };
 use axum_server::tls_rustls::RustlsConfig;
+use evaluation::EvaluationEnvironmentBuilder;
 use policy_evaluator::{
     callback_handler::{CallbackHandler, CallbackHandlerBuilder},
     kube,
@@ -43,10 +44,7 @@ use crate::api::handlers::{
     validate_raw_handler,
 };
 use crate::api::state::ApiServerState;
-use crate::evaluation::{
-    precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy},
-    EvaluationEnvironment,
-};
+use crate::evaluation::precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy};
 use crate::policy_downloader::{Downloader, FetchedPolicies};
 use config::Config;
 
@@ -155,15 +153,21 @@ impl PolicyServer {
             }
         }
 
-        let evaluation_environment = EvaluationEnvironment::new(
+        let mut evaluation_environment_builder = EvaluationEnvironmentBuilder::new(
             &engine,
-            &config.policies,
             &precompiled_policies,
-            config.always_accept_admission_reviews_on_namespace,
-            config.policy_evaluation_limit_seconds,
             callback_sender_channel.clone(),
-            config.continue_on_errors,
-        )?;
+        )
+        .with_continue_on_errors(config.continue_on_errors);
+        if let Some(namespace) = config.always_accept_admission_reviews_on_namespace {
+            evaluation_environment_builder = evaluation_environment_builder
+                .with_always_accept_admission_reviews_on_namespace(namespace);
+        }
+        if let Some(limit) = config.policy_evaluation_limit_seconds {
+            evaluation_environment_builder =
+                evaluation_environment_builder.with_policy_evaluation_limit_seconds(limit);
+        }
+        let evaluation_environment = evaluation_environment_builder.build(&config.policies)?;
 
         if let Some(limit) = config.policy_evaluation_limit_seconds {
             info!(
@@ -185,7 +189,7 @@ impl PolicyServer {
 
         let state = Arc::new(ApiServerState {
             semaphore: Semaphore::new(config.pool_size),
-            evaluation_environment,
+            evaluation_environment: Arc::new(evaluation_environment),
         });
 
         let tls_config = if let Some(tls_config) = config.tls_config {

@@ -4,6 +4,9 @@ pub type Result<T> = std::result::Result<T, EvaluationError>;
 
 #[derive(Debug, Error)]
 pub enum EvaluationError {
+    #[error("Not a valid Policy ID: {0}")]
+    InvalidPolicyId(String),
+
     #[error("{0}")]
     PolicyInitialization(String),
 
@@ -16,6 +19,9 @@ pub enum EvaluationError {
     #[error("WebAssembly failure: {0}")]
     WebAssemblyError(String),
 
-    #[error("{0}")]
-    InternalError(String),
+    #[error("Attempted to rehydrated policy group '{0}'")]
+    CannotRehydratePolicyGroup(String),
+
+    #[error("Policy group evaluation error: '{0}'")]
+    PolicyGroupRuntimeError(#[from] Box<rhai::EvalAltResult>),
 }

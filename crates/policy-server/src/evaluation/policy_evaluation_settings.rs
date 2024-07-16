@@ -1,6 +1,4 @@
-use policy_evaluator::policy_evaluator::PolicySettings;
-
-use crate::config::PolicyMode;
+use crate::config::{PolicyMode, PolicyOrPolicyGroupSettings};
 
 /// Holds the evaluation settings of loaded Policy. These settings are taken straight from the
 /// `policies.yml` file provided by the user
@@ -12,5 +10,5 @@ pub(crate) struct PolicyEvaluationSettings {
     /// Determines if a mutating policy is actually allowed to mutate
     pub(crate) allowed_to_mutate: bool,
     /// The policy-specific settings provided by the user
-    pub(crate) settings: PolicySettings,
+    pub(crate) settings: PolicyOrPolicyGroupSettings,
 }

@@ -6,3 +6,28 @@ psp-capabilities:
   settings:
     allowed_capabilities: ["*"]
     required_drop_capabilities: ["KILL"]
+pod-image-signatures: # policy group
+  policies:
+    - name: sigstore_pgp
+      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      settings:
+        signatures:
+          - image: "*"
+            pubKeys:
+              - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
+              - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
+    - name: sigstore_gh_action
+      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      settings:
+        signatures:
+          - image: "*"
+            githubActions:
+            owner: "kubewarden"
+    - name: reject_latest_tag
+      url: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
+      settings:
+        tags:
+          reject:
+            - latest
+  expression: "sigstore_pgp() || (sigstore_gh_action() && reject_latest_tag())"
+  message: "The group policy is rejected."
