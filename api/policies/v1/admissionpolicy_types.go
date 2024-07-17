@@ -122,6 +122,10 @@ func (r *AdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyT
 	return r.Spec.MatchPolicy
 }
 
+func (r *AdmissionPolicy) GetMatchConditions() []admissionregistrationv1.MatchCondition {
+	return r.Spec.MatchConditions
+}
+
 // GetNamespaceSelector returns the namespace of the AdmissionPolicy since it is the only namespace we want the policy to be applied to.
 func (r *AdmissionPolicy) GetUpdatedNamespaceSelector(string) *metav1.LabelSelector {
 	return &metav1.LabelSelector{
