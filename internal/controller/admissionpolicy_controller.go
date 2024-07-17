@@ -71,6 +71,7 @@ func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.policySubReconciler = &policySubReconciler{
 		r.Client,
+		r.Log,
 		r.DeploymentsNamespace,
 		r.FeatureGateAdmissionWebhookMatchConditions,
 	}
