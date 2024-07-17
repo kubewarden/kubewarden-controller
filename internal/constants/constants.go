@@ -2,14 +2,10 @@ package constants
 
 import "time"
 
-// DefaultPolicyServer is set to a non empty value if policies that
-// are missing a policy server should be defaulted to this one
-// before being persisted.
-//
-//nolint:gochecknoglobals //Disabling this check here because we have an issue to remove the default policy server configuration.
-var DefaultPolicyServer string
-
 const (
+	// DefaultPolicyServer is the default policy server name to be used when
+	// policies does not have a policy server name defined.
+	DefaultPolicyServer = "default"
 	// PolicyServer CA Secret.
 	PolicyServerTLSCert                  = "policy-server-cert"
 	PolicyServerTLSKey                   = "policy-server-key"
