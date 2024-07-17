@@ -333,7 +333,7 @@ impl PolicyGroupMember {
 
 /// Describes a policy that can be either an individual policy or a group policy.
 #[derive(Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields, untagged, rename_all = "camelCase")]
+#[serde(untagged, rename_all = "camelCase")]
 pub enum PolicyOrPolicyGroup {
     /// An individual policy
     Policy {
