@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/go-logr/logr"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/metrics"
@@ -39,6 +40,7 @@ import (
 
 type policySubReconciler struct {
 	client.Client
+	Log                                        logr.Logger
 	deploymentsNamespace                       string
 	featureGateAdmissionWebhookMatchConditions bool
 }
