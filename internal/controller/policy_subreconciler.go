@@ -39,7 +39,8 @@ import (
 
 type policySubReconciler struct {
 	client.Client
-	deploymentsNamespace string
+	deploymentsNamespace                       string
+	featureGateAdmissionWebhookMatchConditions bool
 }
 
 func (r *policySubReconciler) reconcile(ctx context.Context, policy policiesv1.Policy) (ctrl.Result, error) {

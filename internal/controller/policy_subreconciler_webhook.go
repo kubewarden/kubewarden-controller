@@ -77,6 +77,9 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 				AdmissionReviewVersions: []string{"v1"},
 			},
 		}
+		if r.featureGateAdmissionWebhookMatchConditions {
+			webhook.Webhooks[0].MatchConditions = policy.GetMatchConditions()
+		}
 		return nil
 	})
 	if err != nil {
@@ -161,6 +164,9 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 				TimeoutSeconds:          policy.GetTimeoutSeconds(),
 				AdmissionReviewVersions: []string{"v1"},
 			},
+		}
+		if r.featureGateAdmissionWebhookMatchConditions {
+			webhook.Webhooks[0].MatchConditions = policy.GetMatchConditions()
 		}
 		return nil
 	})
