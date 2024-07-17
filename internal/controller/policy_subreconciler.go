@@ -84,7 +84,7 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 	policyServer, err := r.getPolicyServer(ctx, policy)
 	if err != nil {
 		policy.SetStatus(policiesv1.PolicyStatusScheduled)
-		//lint:ignore nilerr set status to scheduled if policyServer can't be retrieved, and stop reconciling
+		//nolint:nilerr // set status to scheduled if policyServer can't be retrieved, and stop reconciling
 		return ctrl.Result{}, nil
 	}
 	if policy.GetStatus().PolicyStatus != policiesv1.PolicyStatusActive {
