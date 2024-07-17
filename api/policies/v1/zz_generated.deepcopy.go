@@ -413,6 +413,11 @@ func (in *PolicySpec) DeepCopyInto(out *PolicySpec) {
 		*out = new(admissionregistrationv1.MatchPolicyType)
 		**out = **in
 	}
+	if in.MatchConditions != nil {
+		in, out := &in.MatchConditions, &out.MatchConditions
+		*out = make([]admissionregistrationv1.MatchCondition, len(*in))
+		copy(*out, *in)
+	}
 	if in.ObjectSelector != nil {
 		in, out := &in.ObjectSelector, &out.ObjectSelector
 		*out = new(metav1.LabelSelector)
