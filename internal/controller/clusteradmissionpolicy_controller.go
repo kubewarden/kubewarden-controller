@@ -50,10 +50,11 @@ import (
 // ClusterAdmissionPolicyReconciler reconciles a ClusterAdmissionPolicy object.
 type ClusterAdmissionPolicyReconciler struct {
 	client.Client
-	Log                  logr.Logger
-	Scheme               *runtime.Scheme
-	DeploymentsNamespace string
-	policySubReconciler  *policySubReconciler
+	Log                                        logr.Logger
+	Scheme                                     *runtime.Scheme
+	DeploymentsNamespace                       string
+	FeatureGateAdmissionWebhookMatchConditions bool
+	policySubReconciler                        *policySubReconciler
 }
 
 // Reconcile reconciles admission policies.
@@ -71,6 +72,7 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 	r.policySubReconciler = &policySubReconciler{
 		r.Client,
 		r.DeploymentsNamespace,
+		r.FeatureGateAdmissionWebhookMatchConditions,
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).

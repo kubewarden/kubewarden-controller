@@ -34,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apiserver/pkg/features"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -129,7 +131,8 @@ func main() {
 		return
 	}
 
-	if err = setupReconcilers(mgr, deploymentsNamespace, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace); err != nil {
+	featureGateAdmissionWebhookMatchConditions := utilfeature.DefaultFeatureGate.Enabled(features.AdmissionWebhookMatchConditions)
+	if err = setupReconcilers(mgr, deploymentsNamespace, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions); err != nil {
 		setupLog.Error(err, "unable to create controllers")
 		retcode = 1
 		return
@@ -217,7 +220,7 @@ func setupProbes(mgr ctrl.Manager) error {
 	return nil
 }
 
-func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool) error {
+func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool, featureGateAdmissionWebhookMatchConditions bool) error {
 	if err := (&controller.PolicyServerReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
@@ -235,6 +238,7 @@ func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetri
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("admission-policy-reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: featureGateAdmissionWebhookMatchConditions,
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create AdmissionPolicy controller"), err)
 	}
@@ -244,6 +248,7 @@ func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetri
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("cluster-admission-policy-reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: featureGateAdmissionWebhookMatchConditions,
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create ClusterAdmissionPolicy controller"), err)
 	}
