@@ -45,6 +45,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/api/policies/v1alpha2"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/controller"
+	"github.com/kubewarden/kubewarden-controller/internal/featuregates"
 	"github.com/kubewarden/kubewarden-controller/internal/metrics"
 	//+kubebuilder:scaffold:imports
 )
@@ -125,6 +126,13 @@ func main() {
 	mgr, err := setupManager(deploymentsNamespace, metricsAddr, probeAddr, enableLeaderElection)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		retcode = 1
+		return
+	}
+
+	featureGateAdmissionWebhookMatchConditions, err := featuregates.CheckAdmissionWebhookMatchConditions(ctrl.GetConfigOrDie())
+	if err != nil {
+		setupLog.Error(err, "unable to check for feature gate AdmissionWebhookMatchConditions")
 		retcode = 1
 		return
 	}
