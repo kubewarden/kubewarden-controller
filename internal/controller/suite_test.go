@@ -117,6 +117,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		Client:               k8sManager.GetClient(),
 		Scheme:               k8sManager.GetScheme(),
 		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: true,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -124,6 +125,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		Client:               k8sManager.GetClient(),
 		Scheme:               k8sManager.GetScheme(),
 		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: true,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
