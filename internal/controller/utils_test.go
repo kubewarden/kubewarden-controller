@@ -97,6 +97,12 @@ func admissionPolicyFactory(name, policyNamespace, policyServerName string, muta
 	admissionPolicy.Namespace = policyNamespace
 	admissionPolicy.Spec.PolicyServer = policyServerName
 	admissionPolicy.Spec.PolicySpec.Mutating = mutating
+	admissionPolicy.Spec.PolicySpec.MatchConditions = []admissionregistrationv1.MatchCondition{
+		{
+			Name:       "noop",
+			Expression: "true",
+		},
+	}
 	admissionPolicy.Finalizers = []string{
 		// On a real cluster the Kubewarden finalizer is added by our mutating
 		// webhook. This is not running now, hence we have to manually add the finalizer
@@ -114,6 +120,12 @@ func clusterAdmissionPolicyFactory(name, policyServerName string, mutating bool)
 	clusterAdmissionPolicy.Name = name
 	clusterAdmissionPolicy.Spec.PolicyServer = policyServerName
 	clusterAdmissionPolicy.Spec.PolicySpec.Mutating = mutating
+	clusterAdmissionPolicy.Spec.PolicySpec.MatchConditions = []admissionregistrationv1.MatchCondition{
+		{
+			Name:       "noop",
+			Expression: "true",
+		},
+	}
 	clusterAdmissionPolicy.Finalizers = []string{
 		// On a real cluster the Kubewarden finalizer is added by our mutating
 		// webhook. This is not running now, hence we have to manually add the finalizer

@@ -88,6 +88,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal("policy-server-" + policyServerName))
+				Expect(validatingWebhookConfiguration.Webhooks[0].MatchConditions).To(HaveLen(1))
 
 				caSecret, err := getTestCASecret(ctx)
 				Expect(err).ToNot(HaveOccurred())
@@ -199,6 +200,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
 				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal("policy-server-" + policyServerName))
+				Expect(mutatingWebhookConfiguration.Webhooks[0].MatchConditions).To(HaveLen(1))
 
 				caSecret, err := getTestCASecret(ctx)
 				Expect(err).ToNot(HaveOccurred())
