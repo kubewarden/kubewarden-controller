@@ -83,12 +83,11 @@ local_resource(
     'manager',
     "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/manager cmd/main.go",
     deps = [
-        "main.go",
         "go.mod",
         "go.sum",
+        "cmd",
         "internal",
-        "controllers",
-        "pkg",
+        "api",
     ],
 )
 
