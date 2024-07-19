@@ -176,6 +176,10 @@ func (r *ClusterAdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOp
 	return r.Spec.Rules
 }
 
+func (r *ClusterAdmissionPolicy) GetMatchConditions() []admissionregistrationv1.MatchCondition {
+	return r.Spec.MatchConditions
+}
+
 func (r *ClusterAdmissionPolicy) GetUpdatedNamespaceSelector(deploymentNamespace string) *metav1.LabelSelector {
 	// exclude namespace where kubewarden was deployed
 	if r.Spec.NamespaceSelector != nil {

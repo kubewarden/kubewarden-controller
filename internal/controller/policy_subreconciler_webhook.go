@@ -77,6 +77,12 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 				AdmissionReviewVersions: []string{"v1"},
 			},
 		}
+		if r.featureGateAdmissionWebhookMatchConditions {
+			webhook.Webhooks[0].MatchConditions = policy.GetMatchConditions()
+		} else if len(policy.GetMatchConditions()) > 0 {
+			r.Log.Info("Skipping matchConditions for policy as the feature gate AdmissionWebhookMatchConditions is disabled",
+				"policy", policy.GetName())
+		}
 		return nil
 	})
 	if err != nil {
@@ -161,6 +167,12 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 				TimeoutSeconds:          policy.GetTimeoutSeconds(),
 				AdmissionReviewVersions: []string{"v1"},
 			},
+		}
+		if r.featureGateAdmissionWebhookMatchConditions {
+			webhook.Webhooks[0].MatchConditions = policy.GetMatchConditions()
+		} else if len(policy.GetMatchConditions()) > 0 {
+			r.Log.Info("Skipping matchConditions for policy as the feature gate AdmissionWebhookMatchConditions is disabled",
+				"policy", policy.GetName())
 		}
 		return nil
 	})

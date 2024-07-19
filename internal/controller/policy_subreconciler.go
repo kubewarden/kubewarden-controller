@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/go-logr/logr"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 	"github.com/kubewarden/kubewarden-controller/internal/metrics"
@@ -39,7 +40,9 @@ import (
 
 type policySubReconciler struct {
 	client.Client
-	deploymentsNamespace string
+	Log                                        logr.Logger
+	deploymentsNamespace                       string
+	featureGateAdmissionWebhookMatchConditions bool
 }
 
 func (r *policySubReconciler) reconcile(ctx context.Context, policy policiesv1.Policy) (ctrl.Result, error) {
@@ -83,7 +86,7 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 	policyServer, err := r.getPolicyServer(ctx, policy)
 	if err != nil {
 		policy.SetStatus(policiesv1.PolicyStatusScheduled)
-		//lint:ignore nilerr set status to scheduled if policyServer can't be retrieved, and stop reconciling
+		//nolint:nilerr // set status to scheduled if policyServer can't be retrieved, and stop reconciling
 		return ctrl.Result{}, nil
 	}
 	if policy.GetStatus().PolicyStatus != policiesv1.PolicyStatusActive {

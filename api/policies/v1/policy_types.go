@@ -104,6 +104,21 @@ type PolicySpec struct {
 	// +optional
 	MatchPolicy *admissionregistrationv1.MatchPolicyType `json:"matchPolicy,omitempty"`
 
+	// MatchConditions is a list of conditions that must be met for a request to be
+	// validated. Match conditions filter requests that have already been matched by
+	// the rules, namespaceSelector, and objectSelector. An empty list of
+	// matchConditions matches all requests. There are a maximum of 64 match
+	// conditions allowed. If a parameter object is provided, it can be accessed via
+	// the `params` handle in the same manner as validation expressions. The exact
+	// matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE,
+	// the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy
+	// is evaluated. 3. If any matchCondition evaluates to an error (but none are
+	// FALSE): - If failurePolicy=Fail, reject the request - If
+	// failurePolicy=Ignore, the policy is skipped
+	// Only available if the feature gate AdmissionWebhookMatchConditions is enabled.
+	// +optional
+	MatchConditions []admissionregistrationv1.MatchCondition `json:"matchConditions,omitempty"`
+
 	// ObjectSelector decides whether to run the webhook based on if the
 	// object has matching labels. objectSelector is evaluated against both
 	// the oldObject and newObject that would be sent to the webhook, and
