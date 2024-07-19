@@ -39,6 +39,10 @@ use tokio::{
 };
 use tower_http::trace::{self, TraceLayer};
 
+// This is required by certificate hot reload when using inotify, which is available only on linux
+#[cfg(target_os = "linux")]
+use tokio_stream::StreamExt;
+
 use crate::api::handlers::{
     audit_handler, pprof_get_cpu, pprof_get_heap, readiness_handler, validate_handler,
     validate_raw_handler,
@@ -46,7 +50,7 @@ use crate::api::handlers::{
 use crate::api::state::ApiServerState;
 use crate::evaluation::precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy};
 use crate::policy_downloader::{Downloader, FetchedPolicies};
-use config::Config;
+use config::{Config, TlsConfig};
 
 use tikv_jemallocator::Jemalloc;
 
@@ -193,9 +197,7 @@ impl PolicyServer {
         });
 
         let tls_config = if let Some(tls_config) = config.tls_config {
-            let rustls_config =
-                RustlsConfig::from_pem_file(tls_config.cert_file, tls_config.key_file).await?;
-            Some(rustls_config)
+            Some(create_tls_config_and_watch_certificate_changes(tls_config).await?)
         } else {
             None
         };
@@ -267,6 +269,88 @@ impl PolicyServer {
     pub fn router(&self) -> Router {
         self.router.clone()
     }
+}
+
+/// There's no watching of the certificate files on non-linux platforms
+/// since we rely on inotify to watch for changes
+#[cfg(not(target_os = "linux"))]
+async fn create_tls_config_and_watch_certificate_changes(
+    tls_config: TlsConfig,
+) -> Result<RustlsConfig> {
+    let cfg = RustlsConfig::from_pem_file(tls_config.cert_file, tls_config.key_file).await?;
+    Ok(cfg)
+}
+
+/// Return the RustlsConfig and watch for changes in the certificate files
+/// using inotify.
+/// When a both the certificate and its key are changed, the RustlsConfig is reloaded,
+/// causing the https server to use the new certificate.
+///
+/// Relying on inotify is only available on linux
+#[cfg(target_os = "linux")]
+async fn create_tls_config_and_watch_certificate_changes(
+    tls_config: TlsConfig,
+) -> Result<RustlsConfig> {
+    let cert_file = tls_config.cert_file.clone();
+    let key_file = tls_config.key_file.clone();
+
+    let rust_config =
+        RustlsConfig::from_pem_file(tls_config.cert_file, tls_config.key_file).await?;
+    let reloadable_rust_config = rust_config.clone();
+
+    let inotify =
+        inotify::Inotify::init().map_err(|e| anyhow!("Cannot initialize inotify: {e}"))?;
+    let cert_watch = inotify
+        .watches()
+        .add(cert_file.clone(), inotify::WatchMask::MODIFY)
+        .map_err(|e| anyhow!("Cannot watch certificate file: {e}"))?;
+    let key_watch = inotify
+        .watches()
+        .add(key_file.clone(), inotify::WatchMask::MODIFY)
+        .map_err(|e| anyhow!("Cannot watch key file: {e}"))?;
+
+    let buffer = [0; 1024];
+    let stream = inotify
+        .into_event_stream(buffer)
+        .map_err(|e| anyhow!("Cannot create inotify event stream: {e}"))?;
+
+    tokio::spawn(async move {
+        tokio::pin!(stream);
+        let mut cert_changed = false;
+        let mut key_changed = false;
+
+        while let Some(event) = stream.next().await {
+            let event = match event {
+                Ok(event) => event,
+                Err(e) => {
+                    warn!("Cannot read inotify event: {e}");
+                    continue;
+                }
+            };
+
+            if event.wd == cert_watch {
+                info!("TLS certificate file has been modified");
+                cert_changed = true;
+            }
+            if event.wd == key_watch {
+                info!("TLS key file has been modified");
+                key_changed = true;
+            }
+
+            if key_changed && cert_changed {
+                info!("reloading TLS certificate");
+
+                cert_changed = false;
+                key_changed = false;
+                reloadable_rust_config
+                    .reload_from_pem_file(cert_file.clone(), key_file.clone())
+                    .await
+                    .expect("Cannot reload TLS certificate"); //  we want to panic here
+            }
+        }
+    });
+
+    Ok(rust_config)
 }
 
 fn precompile_policies(
