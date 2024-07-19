@@ -122,7 +122,7 @@ pub(crate) fn manifest(
     policy_title: Option<&str>,
     allow_context_aware_resources: bool,
 ) -> Result<()> {
-    let uri = crate::utils::map_path_to_uri(uri_or_sha_prefix)?;
+    let uri = crate::utils::get_uri(&uri_or_sha_prefix.to_owned())?;
     let wasm_path = crate::utils::wasm_path(&uri)?;
 
     let metadata = Metadata::from_path(&wasm_path)?

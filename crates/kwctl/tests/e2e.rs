@@ -377,10 +377,14 @@ fn test_push() {
         .stdout(contains("my-pod-priviliged-policy:v0.1.10"));
 }
 
-#[test]
-fn test_scaffold_manifest() {
+#[rstest]
+#[case::pull_policies_before_scaffold(true)]
+#[case::pull_policies_on_demand(false)]
+fn test_scaffold_manifest(#[case] pull_policies_before: bool) {
     let tempdir = tempdir().unwrap();
-    pull_policies(tempdir.path(), POLICIES);
+    if pull_policies_before {
+        pull_policies(tempdir.path(), POLICIES);
+    }
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("scaffold")

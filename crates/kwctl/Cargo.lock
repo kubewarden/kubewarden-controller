@@ -2648,6 +2648,7 @@ dependencies = [
  "tar",
  "tempfile",
  "testcontainers",
+ "thiserror",
  "time",
  "tiny-bench",
  "tokio",

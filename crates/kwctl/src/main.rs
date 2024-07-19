@@ -22,6 +22,7 @@ use std::{
 };
 use verify::VerificationAnnotations;
 
+use crate::utils::LookupError;
 use tracing::{debug, info, warn};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{
@@ -147,39 +148,7 @@ async fn main() -> Result<()> {
                     Some(destination) => PullDestination::LocalFile(destination),
                     None => PullDestination::MainStore,
                 };
-
-                let sources = remote_server_options(matches)?;
-
-                let verification_options = verification_options(matches)?;
-                let mut verified_manifest_digest: Option<String> = None;
-                if verification_options.is_some() {
-                    let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
-                    // verify policy prior to pulling if keys listed, and keep the
-                    // verified manifest digest:
-                    verified_manifest_digest = Some(
-                        verify::verify(
-                            uri,
-                            sources.as_ref(),
-                            verification_options.as_ref().unwrap(),
-                            sigstore_trust_root.clone(),
-                        )
-                        .await
-                        .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
-                    );
-                }
-
-                let policy = pull::pull(uri, sources.as_ref(), destination).await?;
-
-                if verification_options.is_some() {
-                    let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
-                    verify::verify_local_checksum(
-                        &policy,
-                        sources.as_ref(),
-                        &verified_manifest_digest.unwrap(),
-                        sigstore_trust_root.clone(),
-                    )
-                    .await?
-                }
+                pull_command(uri, destination, matches).await?
             };
             Ok(())
         }
@@ -368,42 +337,7 @@ async fn main() -> Result<()> {
             }
             if let Some(matches) = matches.subcommand_matches("scaffold") {
                 if let Some(matches) = matches.subcommand_matches("manifest") {
-                    let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
-                    let resource_type = matches.get_one::<String>("type").unwrap();
-                    if matches.contains_id("settings-path") && matches.contains_id("settings-json")
-                    {
-                        return Err(anyhow!(
-                            "'settings-path' and 'settings-json' cannot be used at the same time"
-                        ));
-                    }
-                    let settings = if matches.contains_id("settings-path") {
-                        matches
-                            .get_one::<String>("settings-path")
-                            .map(|settings| -> Result<String> {
-                                fs::read_to_string(settings).map_err(|e| {
-                                    anyhow!("Error reading settings from {}: {}", settings, e)
-                                })
-                            })
-                            .transpose()?
-                    } else if matches.contains_id("settings-json") {
-                        Some(matches.get_one::<String>("settings-json").unwrap().clone())
-                    } else {
-                        None
-                    };
-                    let policy_title = matches.get_one::<String>("title").cloned();
-
-                    let allow_context_aware_resources = matches
-                        .get_one::<bool>("allow-context-aware")
-                        .unwrap_or(&false)
-                        .to_owned();
-
-                    scaffold::manifest(
-                        uri_or_sha_prefix,
-                        resource_type.parse()?,
-                        settings.as_deref(),
-                        policy_title.as_deref(),
-                        allow_context_aware_resources,
-                    )?;
+                    scaffold_manifest_command(matches).await?;
                 };
             }
             if let Some(matches) = matches.subcommand_matches("scaffold") {
@@ -835,4 +769,104 @@ async fn build_sigstore_trust_root(
         };
         Ok(Some(Arc::new(manual_root)))
     }
+}
+
+// Check if the policy is already present in the local store, and if not, pull it from the remote server.
+async fn pull_if_needed(uri_or_sha_prefix: &str, matches: &ArgMatches) -> Result<()> {
+    match crate::utils::get_wasm_path(uri_or_sha_prefix) {
+        Err(LookupError::PolicyMissing(uri)) => {
+            info!(
+                "cannot find policy with uri: {}, trying to pull it from remote registry",
+                uri
+            );
+            pull_command(&uri, PullDestination::MainStore, matches).await
+        }
+        Err(e) => Err(anyhow!("{}", e)),
+        Ok(_path) => Ok(()),
+    }
+}
+
+// Pulls a policy from a remote server and verifies it if verification options are provided.
+async fn pull_command(
+    uri: &String,
+    destination: PullDestination,
+    matches: &ArgMatches,
+) -> Result<()> {
+    let sources = remote_server_options(matches)?;
+
+    let verification_options = verification_options(matches)?;
+    let mut verified_manifest_digest: Option<String> = None;
+    if verification_options.is_some() {
+        let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
+        // verify policy prior to pulling if keys listed, and keep the
+        // verified manifest digest:
+        verified_manifest_digest = Some(
+            verify::verify(
+                uri,
+                sources.as_ref(),
+                verification_options.as_ref().unwrap(),
+                sigstore_trust_root.clone(),
+            )
+            .await
+            .map_err(|e| anyhow!("Policy {} cannot be validated\n{:?}", uri, e))?,
+        );
+    }
+
+    let policy = pull::pull(uri, sources.as_ref(), destination).await?;
+
+    if verification_options.is_some() {
+        let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
+        return verify::verify_local_checksum(
+            &policy,
+            sources.as_ref(),
+            &verified_manifest_digest.unwrap(),
+            sigstore_trust_root.clone(),
+        )
+        .await;
+    }
+    Ok(())
+}
+
+/*
+ * Scaffold a manifest from a policy.
+ * This function will pull the policy if it is not already present in the local store.
+ */
+async fn scaffold_manifest_command(matches: &ArgMatches) -> Result<()> {
+    let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
+
+    pull_if_needed(uri_or_sha_prefix, matches).await?;
+
+    let resource_type = matches.get_one::<String>("type").unwrap();
+    if matches.contains_id("settings-path") && matches.contains_id("settings-json") {
+        return Err(anyhow!(
+            "'settings-path' and 'settings-json' cannot be used at the same time"
+        ));
+    }
+    let settings = if matches.contains_id("settings-path") {
+        matches
+            .get_one::<String>("settings-path")
+            .map(|settings| -> Result<String> {
+                fs::read_to_string(settings)
+                    .map_err(|e| anyhow!("Error reading settings from {}: {}", settings, e))
+            })
+            .transpose()?
+    } else if matches.contains_id("settings-json") {
+        Some(matches.get_one::<String>("settings-json").unwrap().clone())
+    } else {
+        None
+    };
+    let policy_title = matches.get_one::<String>("title").cloned();
+
+    let allow_context_aware_resources = matches
+        .get_one::<bool>("allow-context-aware")
+        .unwrap_or(&false)
+        .to_owned();
+
+    scaffold::manifest(
+        uri_or_sha_prefix,
+        resource_type.parse()?,
+        settings.as_deref(),
+        policy_title.as_deref(),
+        allow_context_aware_resources,
+    )
 }
