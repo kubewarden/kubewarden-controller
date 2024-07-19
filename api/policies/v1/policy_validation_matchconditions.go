@@ -28,13 +28,13 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	plugincel "k8s.io/apiserver/pkg/admission/plugin/cel"
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/matchconditions"
 	"k8s.io/apiserver/pkg/cel"
 	"k8s.io/apiserver/pkg/cel/environment"
 	"k8s.io/kubernetes/pkg/apis/admissionregistration"
-	apivalidation "k8s.io/kubernetes/pkg/apis/core/validation"
 )
 
 type validationOptions struct {
@@ -82,7 +82,9 @@ func validateMatchCondition(v *admissionregistration.MatchCondition, opts valida
 	if len(v.Name) == 0 {
 		allErrors = append(allErrors, field.Required(fldPath.Child("name"), ""))
 	} else {
-		allErrors = append(allErrors, apivalidation.ValidateQualifiedName(v.Name, fldPath.Child("name"))...)
+		for _, msg := range validation.IsQualifiedName(v.Name) {
+			allErrors = append(allErrors, field.Invalid(fldPath, v.Name, msg))
+		}
 	}
 	return allErrors
 }
