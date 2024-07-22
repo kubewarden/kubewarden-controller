@@ -60,7 +60,7 @@ inotify = "0.10"
 tokio-stream = "0.1.15"
 
 [dev-dependencies]
-mockall = "0.12"
+mockall = "0.13"
 rstest = "0.21"
 tempfile = "3.10.1"
 tower = { version = "0.4", features = ["util"] }
