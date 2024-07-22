@@ -113,12 +113,13 @@ func TestValidateRulesField(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validateRulesField(test.policy)
+			errList := validateRulesField(test.policy)
 			if test.expectedErrorMessage != "" {
+				err := prepareInvalidAPIError(test.policy, errList)
 				require.ErrorContains(t, err, test.expectedErrorMessage)
 				return
 			}
-			require.NoError(t, err)
+			require.Len(t, errList, 0)
 		})
 	}
 }
