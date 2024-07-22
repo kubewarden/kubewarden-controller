@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strings"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -34,7 +35,6 @@ import (
 	"k8s.io/apiserver/pkg/admission/plugin/webhook/matchconditions"
 	"k8s.io/apiserver/pkg/cel"
 	"k8s.io/apiserver/pkg/cel/environment"
-	"k8s.io/kubernetes/pkg/apis/admissionregistration"
 )
 
 type validationOptions struct {
@@ -52,7 +52,7 @@ type preexistingExpressions struct {
 	matchConditionExpressions sets.Set[string]
 }
 
-func validateMatchConditions(m []admissionregistration.MatchCondition, opts validationOptions, fldPath *field.Path) field.ErrorList {
+func validateMatchConditions(m []admissionregistrationv1.MatchCondition, opts validationOptions, fldPath *field.Path) field.ErrorList {
 	var allErrors field.ErrorList
 	conditionNames := sets.NewString()
 	if len(m) > 64 {
@@ -71,7 +71,7 @@ func validateMatchConditions(m []admissionregistration.MatchCondition, opts vali
 	return allErrors
 }
 
-func validateMatchCondition(v *admissionregistration.MatchCondition, opts validationOptions, fldPath *field.Path) field.ErrorList {
+func validateMatchCondition(v *admissionregistrationv1.MatchCondition, opts validationOptions, fldPath *field.Path) field.ErrorList {
 	var allErrors field.ErrorList
 	trimmedExpression := strings.TrimSpace(v.Expression)
 	if len(trimmedExpression) == 0 {
