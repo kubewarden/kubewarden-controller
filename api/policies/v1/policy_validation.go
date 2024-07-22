@@ -90,6 +90,30 @@ func checkRulesArrayForEmptyString(rulesArray []string, fieldName string, parent
 	return nil
 }
 
+func validateMatchConditionsField(policy Policy) field.ErrorList {
+	// taken from the configuration for validating MutatingWebhookConfiguration:
+	// https://github.com/kubernetes/kubernetes/blob/c052f64689ee26aace4689f2433c5c7dcf1931ad/pkg/apis/admissionregistration/validation/validation.go#L257
+	opts := validationOptions{
+		ignoreMatchConditions:                   false,
+		allowParamsInMatchConditions:            false,
+		requireNoSideEffects:                    true,
+		requireRecognizedAdmissionReviewVersion: true,
+		requireUniqueWebhookNames:               true,
+		allowInvalidLabelValueInSelector:        false,
+		// strictCostEnforcement enables cost enforcement for CEL.
+		//	 This is enabled with the StrictCostEnforcementForWebhooks feature gate
+		//	 (alpha on v1.30). Don't check it for now. Nevertheless, will get
+		//	 checked by the k8s API on WebhookConfiguration creation if the feature
+		//   gate is enabled.
+		strictCostEnforcement: false,
+	}
+
+	if errs := validateMatchConditions(policy.GetMatchConditions(), opts, field.NewPath("spec").Child("matchConditions")); len(errs) != 0 {
+		return errs
+	}
+	return nil
+}
+
 // prepareInvalidAPIError is a shorthand for generating an invalid apierrors.StatusError with data from a policy.
 func prepareInvalidAPIError(policy Policy, errorList field.ErrorList) *apierrors.StatusError {
 	return apierrors.NewInvalid(
@@ -105,6 +129,9 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 	if errs := validateRulesField(newPolicy); len(errs) != 0 {
 		errList = append(errList, errs...)
 	}
+
+	if errs := validateMatchConditionsField(newPolicy); len(errs) != 0 {
+		errList = append(errList, errs...)
 	}
 
 	if newPolicy.GetPolicyServer() != oldPolicy.GetPolicyServer() {

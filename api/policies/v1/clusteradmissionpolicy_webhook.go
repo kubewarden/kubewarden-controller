@@ -73,6 +73,9 @@ func (r *ClusterAdmissionPolicy) ValidateCreate() (admission.Warnings, error) {
 	if errs := validateRulesField(r); len(errs) != 0 {
 		errList = append(errList, errs...)
 	}
+	if errs := validateMatchConditionsField(r); len(errs) != 0 {
+		errList = append(errList, errs...)
+	}
 	if len(errList) != 0 {
 		return nil, prepareInvalidAPIError(r, errList)
 	}
