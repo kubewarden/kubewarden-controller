@@ -39,7 +39,7 @@ func admissionPolicyFactory() *AdmissionPolicy {
 	}
 }
 
-func clusterAdmissionPolicyFactory(customRules []admissionregistrationv1.RuleWithOperations, policyServer string, policyMode PolicyMode) *ClusterAdmissionPolicy {
+func clusterAdmissionPolicyFactory(customRules []admissionregistrationv1.RuleWithOperations, matchConds []admissionregistrationv1.MatchCondition, policyServer string, policyMode PolicyMode) *ClusterAdmissionPolicy {
 	return &ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "testing-policy",
@@ -51,8 +51,9 @@ func clusterAdmissionPolicyFactory(customRules []admissionregistrationv1.RuleWit
 				Settings: runtime.RawExtension{
 					Raw: []byte("{}"),
 				},
-				Rules: getRules(customRules),
-				Mode:  policyMode,
+				Rules:           getRules(customRules),
+				Mode:            policyMode,
+				MatchConditions: matchConds,
 			},
 		},
 	}
