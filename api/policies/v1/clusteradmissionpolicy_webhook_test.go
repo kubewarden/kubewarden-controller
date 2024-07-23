@@ -23,7 +23,7 @@ import (
 )
 
 func TestClusterAdmissionPolicyDefault(t *testing.T) {
-	policy := clusterAdmissionPolicyFactory(nil, "", "protect")
+	policy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
 	policy.Default()
 
 	require.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
@@ -31,15 +31,15 @@ func TestClusterAdmissionPolicyDefault(t *testing.T) {
 }
 
 func TestClusterAdmissionPolicyValidateCreate(t *testing.T) {
-	policy := clusterAdmissionPolicyFactory(nil, "", "protect")
+	policy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
 	warnings, err := policy.ValidateCreate()
 	require.NoError(t, err)
 	require.Empty(t, warnings)
 }
 
 func TestClusterAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := clusterAdmissionPolicyFactory(nil, "", "protect")
-	newPolicy := clusterAdmissionPolicyFactory(nil, "", "protect")
+	oldPolicy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
+	newPolicy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.NoError(t, err)
 	require.Empty(t, warnings)
@@ -47,7 +47,7 @@ func TestClusterAdmissionPolicyValidateUpdate(t *testing.T) {
 
 func TestClusterAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
 	oldPolicy := admissionPolicyFactory()
-	newPolicy := clusterAdmissionPolicyFactory(nil, "", "protect")
+	newPolicy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.Empty(t, warnings)
 	require.ErrorContains(t, err, "object is not of type ClusterAdmissionPolicy")

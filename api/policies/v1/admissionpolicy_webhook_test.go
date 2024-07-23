@@ -46,7 +46,7 @@ func TestAdmissionPolicyValidateUpdate(t *testing.T) {
 }
 
 func TestAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
-	oldPolicy := clusterAdmissionPolicyFactory(nil, "", "protect")
+	oldPolicy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
 	newPolicy := admissionPolicyFactory()
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.Empty(t, warnings)
