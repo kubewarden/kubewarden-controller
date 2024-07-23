@@ -19,21 +19,20 @@ package v1
 import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // Validates the spec.Rules field for non-empty, webhook-valid rules.
-func validateRulesField(policy Policy) error {
+func validateRulesField(policy Policy) field.ErrorList {
 	errs := field.ErrorList{}
 	rulesField := field.NewPath("spec", "rules")
 
 	if len(policy.GetRules()) == 0 {
 		errs = append(errs, field.Required(rulesField, "a value must be specified"))
 
-		return prepareInvalidAPIError(policy, errs)
+		return errs
 	}
 
 	for _, rule := range policy.GetRules() {
@@ -59,7 +58,7 @@ func validateRulesField(policy Policy) error {
 	}
 
 	if len(errs) != 0 {
-		return prepareInvalidAPIError(policy, errs)
+		return errs
 	}
 
 	return nil
@@ -91,6 +90,30 @@ func checkRulesArrayForEmptyString(rulesArray []string, fieldName string, parent
 	return nil
 }
 
+func validateMatchConditionsField(policy Policy) field.ErrorList {
+	// taken from the configuration for validating MutatingWebhookConfiguration:
+	// https://github.com/kubernetes/kubernetes/blob/c052f64689ee26aace4689f2433c5c7dcf1931ad/pkg/apis/admissionregistration/validation/validation.go#L257
+	opts := validationOptions{
+		ignoreMatchConditions:                   false,
+		allowParamsInMatchConditions:            false,
+		requireNoSideEffects:                    true,
+		requireRecognizedAdmissionReviewVersion: true,
+		requireUniqueWebhookNames:               true,
+		allowInvalidLabelValueInSelector:        false,
+		// strictCostEnforcement enables cost enforcement for CEL.
+		//	 This is enabled with the StrictCostEnforcementForWebhooks feature gate
+		//	 (alpha on v1.30). Don't check it for now. Nevertheless, will get
+		//	 checked by the k8s API on WebhookConfiguration creation if the feature
+		//   gate is enabled.
+		strictCostEnforcement: false,
+	}
+
+	if errs := validateMatchConditions(policy.GetMatchConditions(), opts, field.NewPath("spec").Child("matchConditions")); len(errs) != 0 {
+		return errs
+	}
+	return nil
+}
+
 // prepareInvalidAPIError is a shorthand for generating an invalid apierrors.StatusError with data from a policy.
 func prepareInvalidAPIError(policy Policy, errorList field.ErrorList) *apierrors.StatusError {
 	return apierrors.NewInvalid(
@@ -101,8 +124,14 @@ func prepareInvalidAPIError(policy Policy, errorList field.ErrorList) *apierrors
 }
 
 func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
-	if err := validateRulesField(newPolicy); err != nil {
-		return err
+	errList := field.ErrorList{}
+
+	if errs := validateRulesField(newPolicy); len(errs) != 0 {
+		errList = append(errList, errs...)
+	}
+
+	if errs := validateMatchConditionsField(newPolicy); len(errs) != 0 {
+		errList = append(errList, errs...)
 	}
 
 	if newPolicy.GetPolicyServer() != oldPolicy.GetPolicyServer() {
@@ -110,10 +139,7 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 		p := field.NewPath("spec")
 		pp := p.Child("policyServer")
 		errs = append(errs, field.Forbidden(pp, "the field is immutable"))
-
-		return apierrors.NewInvalid(
-			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
-			newPolicy.GetName(), errs)
+		errList = append(errList, errs...)
 	}
 
 	if newPolicy.GetPolicyMode() == "monitor" && oldPolicy.GetPolicyMode() == "protect" {
@@ -121,11 +147,11 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 		p := field.NewPath("spec")
 		pp := p.Child("mode")
 		errs = append(errs, field.Forbidden(pp, "field cannot transition from protect to monitor. Recreate instead."))
-
-		return apierrors.NewInvalid(
-			schema.GroupKind{Group: GroupVersion.Group, Kind: "ClusterAdmissionPolicy"},
-			newPolicy.GetName(), errs)
+		errList = append(errList, errs...)
 	}
 
+	if len(errList) != 0 {
+		return prepareInvalidAPIError(newPolicy, errList)
+	}
 	return nil
 }
