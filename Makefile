@@ -157,6 +157,11 @@ ifndef ignore-not-found
   ignore-not-found = false
 endif
 
+.PHONY: generate-crds
+generate-crds: manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
+	mkdir -p generated-crds
+	$(KUSTOMIZE) build config/crd -o generated-crds # If -o points to a folder, kustomize saves them as several files instead of 1
+
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
