@@ -114,8 +114,8 @@ type PolicyServerSpec struct {
 	// +optional
 	Requests corev1.ResourceList `json:"requests,omitempty"`
 
-	// Tolerations describes the policy server pod's tolerations. It can be
-	// user to ensure that the policy server pod is not scheduled onto a
+	// Tolerations describe the policy server pod's tolerations. It can be
+	// used to ensure that the policy server pod is not scheduled onto a
 	// node with a taint.
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
