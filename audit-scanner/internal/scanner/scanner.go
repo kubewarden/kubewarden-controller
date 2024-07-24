@@ -18,7 +18,7 @@ import (
 	"github.com/kubewarden/audit-scanner/internal/k8s"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/report"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/semaphore"

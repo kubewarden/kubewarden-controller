@@ -5,7 +5,7 @@ package testutils
 import (
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/scheme"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
