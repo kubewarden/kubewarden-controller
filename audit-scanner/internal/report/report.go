@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/kubewarden/audit-scanner/internal/constants"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

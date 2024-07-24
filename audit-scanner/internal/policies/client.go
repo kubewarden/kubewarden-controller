@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"slices"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/rs/zerolog/log"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"

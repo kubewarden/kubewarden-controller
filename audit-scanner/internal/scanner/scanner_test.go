@@ -14,7 +14,7 @@ import (
 	"github.com/kubewarden/audit-scanner/internal/report"
 	auditscheme "github.com/kubewarden/audit-scanner/internal/scheme"
 	"github.com/kubewarden/audit-scanner/internal/testutils"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/pkg/apis/policies/v1"
+	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
