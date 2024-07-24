@@ -333,9 +333,10 @@ impl PolicyGroupMember {
 
 /// Describes a policy that can be either an individual policy or a group policy.
 #[derive(Deserialize, Debug, Clone)]
-#[serde(untagged, rename_all = "camelCase")]
+#[serde(untagged)]
 pub enum PolicyOrPolicyGroup {
     /// An individual policy
+    #[serde(rename_all = "camelCase")]
     Policy {
         /// The URL where the policy is located
         url: String,
@@ -351,6 +352,7 @@ pub enum PolicyOrPolicyGroup {
         context_aware_resources: BTreeSet<ContextAwareResource>,
     },
     /// A group of policies that are evaluated together using a given expression
+    #[serde(rename_all = "camelCase")]
     PolicyGroup {
         /// The mode of the policy
         #[serde(default)]
