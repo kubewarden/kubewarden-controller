@@ -104,7 +104,7 @@ type PolicySpec struct {
 	// +optional
 	MatchPolicy *admissionregistrationv1.MatchPolicyType `json:"matchPolicy,omitempty"`
 
-	// MatchConditions is a list of conditions that must be met for a request to be
+	// MatchConditions are a list of conditions that must be met for a request to be
 	// validated. Match conditions filter requests that have already been matched by
 	// the rules, namespaceSelector, and objectSelector. An empty list of
 	// matchConditions matches all requests. There are a maximum of 64 match
