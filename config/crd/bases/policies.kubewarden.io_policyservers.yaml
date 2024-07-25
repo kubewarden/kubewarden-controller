@@ -1582,8 +1582,8 @@ spec:
                 type: object
               tolerations:
                 description: |-
-                  Tolerations describes the policy server pod's tolerations. It can be
-                  user to ensure that the policy server pod is not scheduled onto a
+                  Tolerations describe the policy server pod's tolerations. It can be
+                  used to ensure that the policy server pod is not scheduled onto a
                   node with a taint.
                 items:
                   description: |-

@@ -114,7 +114,7 @@ type PolicySpec struct {
 	// the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy
 	// is evaluated. 3. If any matchCondition evaluates to an error (but none are
 	// FALSE): - If failurePolicy=Fail, reject the request - If
-	// failurePolicy=Ignore, the policy is skipped
+	// failurePolicy=Ignore, the policy is skipped.
 	// Only available if the feature gate AdmissionWebhookMatchConditions is enabled.
 	// +optional
 	MatchConditions []admissionregistrationv1.MatchCondition `json:"matchConditions,omitempty"`
