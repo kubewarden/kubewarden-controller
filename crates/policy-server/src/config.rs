@@ -258,7 +258,7 @@ fn remote_server_options(matches: &clap::ArgMatches) -> Result<Option<Sources>> 
     Ok(sources)
 }
 
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Debug, Clone, Default, PartialEq)]
 pub enum PolicyMode {
     #[serde(rename = "monitor")]
     Monitor,
@@ -312,7 +312,7 @@ pub enum PolicyOrPolicyGroupSettings {
 }
 
 /// `PolicyGroupMember` represents a single policy that is part of a policy group.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct PolicyGroupMember {
     /// Thge URL where the policy is located
@@ -332,10 +332,11 @@ impl PolicyGroupMember {
 }
 
 /// Describes a policy that can be either an individual policy or a group policy.
-#[derive(Deserialize, Debug, Clone)]
-#[serde(untagged, rename_all = "camelCase")]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(untagged)]
 pub enum PolicyOrPolicyGroup {
     /// An individual policy
+    #[serde(rename_all = "camelCase")]
     Policy {
         /// The URL where the policy is located
         url: String,
@@ -351,6 +352,7 @@ pub enum PolicyOrPolicyGroup {
         context_aware_resources: BTreeSet<ContextAwareResource>,
     },
     /// A group of policies that are evaluated together using a given expression
+    #[serde(rename_all = "camelCase")]
     PolicyGroup {
         /// The mode of the policy
         #[serde(default)]
@@ -432,6 +434,89 @@ mod tests {
     use serde_json::json;
     use std::io::Write;
     use tempfile::NamedTempFile;
+
+    #[test]
+    fn read_policies_file_test() {
+        let policies_yaml = r#"
+---
+example:
+    url: ghcr.io/kubewarden/policies/context-aware-policy:0.1.0
+    settings: {}
+    allowedToMutate: true
+    contextAwareResources:
+        - apiVersion: v1
+          kind: Namespace
+        - apiVersion: v1
+          kind: Pod
+group_policy:
+    policyMode: monitor
+    expression: "true"
+    message: "group policy message"
+    policies:
+        policy1:
+            url: ghcr.io/kubewarden/policies/policy1:0.1.0
+            settings: {}
+        policy2:
+            url: ghcr.io/kubewarden/policies/policy2:0.1.0
+            settings: {}
+"#;
+
+        let mut temp_file = NamedTempFile::new().unwrap();
+        temp_file.write_all(policies_yaml.as_bytes()).unwrap();
+        let file_path = temp_file.into_temp_path();
+
+        let policies = read_policies_file(file_path.as_ref()).unwrap();
+
+        let expected_policies = HashMap::from([
+            (
+                "example".to_owned(),
+                PolicyOrPolicyGroup::Policy {
+                    url: "ghcr.io/kubewarden/policies/context-aware-policy:0.1.0".to_owned(),
+                    policy_mode: PolicyMode::Protect,
+                    allowed_to_mutate: Some(true),
+                    settings: Some(HashMap::new()),
+                    context_aware_resources: BTreeSet::from([
+                        ContextAwareResource {
+                            api_version: "v1".to_owned(),
+                            kind: "Namespace".to_owned(),
+                        },
+                        ContextAwareResource {
+                            api_version: "v1".to_owned(),
+                            kind: "Pod".to_owned(),
+                        },
+                    ]),
+                },
+            ),
+            (
+                "group_policy".to_owned(),
+                PolicyOrPolicyGroup::PolicyGroup {
+                    policy_mode: PolicyMode::Monitor,
+                    expression: "true".to_owned(),
+                    message: "group policy message".to_owned(),
+                    policies: HashMap::from([
+                        (
+                            "policy1".to_owned(),
+                            PolicyGroupMember {
+                                url: "ghcr.io/kubewarden/policies/policy1:0.1.0".to_owned(),
+                                settings: Some(HashMap::new()),
+                                context_aware_resources: BTreeSet::new(),
+                            },
+                        ),
+                        (
+                            "policy2".to_string(),
+                            PolicyGroupMember {
+                                url: "ghcr.io/kubewarden/policies/policy2:0.1.0".to_owned(),
+                                settings: Some(HashMap::new()),
+                                context_aware_resources: BTreeSet::new(),
+                            },
+                        ),
+                    ]),
+                },
+            ),
+        ]);
+
+        assert_eq!(expected_policies, policies);
+    }
 
     #[rstest]
     #[case::settings_empty(
