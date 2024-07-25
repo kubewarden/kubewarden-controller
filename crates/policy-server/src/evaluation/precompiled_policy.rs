@@ -67,6 +67,7 @@ impl PrecompiledPolicy {
 /// A dictionary with:
 /// * Key: the URL of the WebAssembly module
 /// * Value: a Result containing the precompiled policy or an error.
+///
 /// Errors are stored and will be reported to the user in the API response.
 pub(crate) type PrecompiledPolicies = HashMap<String, Result<PrecompiledPolicy>>;
 
