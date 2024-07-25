@@ -116,7 +116,7 @@ spec:
                 type: string
               matchConditions:
                 description: |-
-                  MatchConditions is a list of conditions that must be met for a request to be
+                  MatchConditions are a list of conditions that must be met for a request to be
                   validated. Match conditions filter requests that have already been matched by
                   the rules, namespaceSelector, and objectSelector. An empty list of
                   matchConditions matches all requests. There are a maximum of 64 match
@@ -126,7 +126,7 @@ spec:
                   the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy
                   is evaluated. 3. If any matchCondition evaluates to an error (but none are
                   FALSE): - If failurePolicy=Fail, reject the request - If
-                  failurePolicy=Ignore, the policy is skipped
+                  failurePolicy=Ignore, the policy is skipped.
                   Only available if the feature gate AdmissionWebhookMatchConditions is enabled.
                 items:
                   description: MatchCondition represents a condition which must by

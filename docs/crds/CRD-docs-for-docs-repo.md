@@ -7,8 +7,6 @@
 
 ## policies.kubewarden.io/v1
 
-
-
 Package v1 contains API Schema definitions for the policies v1 API group
 
 ### Resource Types
@@ -42,7 +40,7 @@ _Appears in:_
 
 
 
-AdmissionPolicyList contains a list of AdmissionPolicy
+AdmissionPolicyList contains a list of AdmissionPolicy.
 
 
 
@@ -58,7 +56,7 @@ AdmissionPolicyList contains a list of AdmissionPolicy
 
 
 
-AdmissionPolicySpec defines the desired state of AdmissionPolicy
+AdmissionPolicySpec defines the desired state of AdmissionPolicy.
 
 _Appears in:_
 - [AdmissionPolicy](#admissionpolicy)
@@ -74,7 +72,7 @@ _Appears in:_
 | `mutating` _boolean_ | Mutating indicates whether a policy has the ability to mutate incoming requests or not. |
 | `backgroundAudit` _boolean_ | BackgroundAudit indicates whether a policy should be used or skipped when performing audit checks. If false, the policy cannot produce meaningful evaluation results during audit checks and will be skipped. The default is "true". |
 | `matchPolicy` _[MatchPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchpolicytype-v1-admissionregistration)_ | matchPolicy defines how the "rules" list is used to match incoming requests. Allowed values are "Exact" or "Equivalent". <ul> <li> Exact: match a request only if it exactly matches a specified rule. For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, but "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook. </li> <li> Equivalent: match a request if modifies a resource listed in rules, even via another API group or version. For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, and "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would be converted to apps/v1 and sent to the webhook. </li> </ul> Defaults to "Equivalent" |
-| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchcondition-v1-admissionregistration) array_ | MatchConditions is a list of conditions that must be met for a request to be validated. Match conditions filter requests that have already been matched by the rules, namespaceSelector, and objectSelector. An empty list of matchConditions matches all requests. There are a maximum of 64 match conditions allowed. If a parameter object is provided, it can be accessed via the `params` handle in the same manner as validation expressions. The exact matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE, the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy is evaluated. 3. If any matchCondition evaluates to an error (but none are FALSE): - If failurePolicy=Fail, reject the request - If failurePolicy=Ignore, the policy is skipped Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |
+| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchcondition-v1-admissionregistration) array_ | MatchConditions are a list of conditions that must be met for a request to be validated. Match conditions filter requests that have already been matched by the rules, namespaceSelector, and objectSelector. An empty list of matchConditions matches all requests. There are a maximum of 64 match conditions allowed. If a parameter object is provided, it can be accessed via the `params` handle in the same manner as validation expressions. The exact matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE, the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy is evaluated. 3. If any matchCondition evaluates to an error (but none are FALSE): - If failurePolicy=Fail, reject the request - If failurePolicy=Ignore, the policy is skipped. Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |
 | `objectSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#labelselector-v1-meta)_ | ObjectSelector decides whether to run the webhook based on if the object has matching labels. objectSelector is evaluated against both the oldObject and newObject that would be sent to the webhook, and is considered to match if either object matches the selector. A null object (oldObject in the case of create, or newObject in the case of delete) or an object that cannot have labels (like a DeploymentRollback or a PodProxyOptions object) is not considered to match. Use the object selector only if the webhook is opt-in, because end users may skip the admission webhook by setting the labels. Default to the empty LabelSelector, which matches everything. |
 | `sideEffects` _[SideEffectClass](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#sideeffectclass-v1-admissionregistration)_ | SideEffects states whether this webhook has side effects. Acceptable values are: None, NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown). Webhooks with side effects MUST implement a reconciliation system, since a request may be rejected by a future step in the admission change and the side effects therefore need to be undone. Requests with the dryRun attribute will be auto-rejected if they match a webhook with sideEffects == Unknown or Some. |
 | `timeoutSeconds` _integer_ | TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, the webhook call will be ignored or the API call will fail based on the failure policy. The timeout value must be between 1 and 30 seconds. Default to 10 seconds. |
@@ -117,7 +115,7 @@ ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
 
 
 
-ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
+ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy.
 
 _Appears in:_
 - [ClusterAdmissionPolicy](#clusteradmissionpolicy)
@@ -133,7 +131,7 @@ _Appears in:_
 | `mutating` _boolean_ | Mutating indicates whether a policy has the ability to mutate incoming requests or not. |
 | `backgroundAudit` _boolean_ | BackgroundAudit indicates whether a policy should be used or skipped when performing audit checks. If false, the policy cannot produce meaningful evaluation results during audit checks and will be skipped. The default is "true". |
 | `matchPolicy` _[MatchPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchpolicytype-v1-admissionregistration)_ | matchPolicy defines how the "rules" list is used to match incoming requests. Allowed values are "Exact" or "Equivalent". <ul> <li> Exact: match a request only if it exactly matches a specified rule. For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, but "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook. </li> <li> Equivalent: match a request if modifies a resource listed in rules, even via another API group or version. For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, and "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would be converted to apps/v1 and sent to the webhook. </li> </ul> Defaults to "Equivalent" |
-| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchcondition-v1-admissionregistration) array_ | MatchConditions is a list of conditions that must be met for a request to be validated. Match conditions filter requests that have already been matched by the rules, namespaceSelector, and objectSelector. An empty list of matchConditions matches all requests. There are a maximum of 64 match conditions allowed. If a parameter object is provided, it can be accessed via the `params` handle in the same manner as validation expressions. The exact matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE, the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy is evaluated. 3. If any matchCondition evaluates to an error (but none are FALSE): - If failurePolicy=Fail, reject the request - If failurePolicy=Ignore, the policy is skipped Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |
+| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchcondition-v1-admissionregistration) array_ | MatchConditions are a list of conditions that must be met for a request to be validated. Match conditions filter requests that have already been matched by the rules, namespaceSelector, and objectSelector. An empty list of matchConditions matches all requests. There are a maximum of 64 match conditions allowed. If a parameter object is provided, it can be accessed via the `params` handle in the same manner as validation expressions. The exact matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE, the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy is evaluated. 3. If any matchCondition evaluates to an error (but none are FALSE): - If failurePolicy=Fail, reject the request - If failurePolicy=Ignore, the policy is skipped. Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |
 | `objectSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#labelselector-v1-meta)_ | ObjectSelector decides whether to run the webhook based on if the object has matching labels. objectSelector is evaluated against both the oldObject and newObject that would be sent to the webhook, and is considered to match if either object matches the selector. A null object (oldObject in the case of create, or newObject in the case of delete) or an object that cannot have labels (like a DeploymentRollback or a PodProxyOptions object) is not considered to match. Use the object selector only if the webhook is opt-in, because end users may skip the admission webhook by setting the labels. Default to the empty LabelSelector, which matches everything. |
 | `sideEffects` _[SideEffectClass](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#sideeffectclass-v1-admissionregistration)_ | SideEffects states whether this webhook has side effects. Acceptable values are: None, NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown). Webhooks with side effects MUST implement a reconciliation system, since a request may be rejected by a future step in the admission change and the side effects therefore need to be undone. Requests with the dryRun attribute will be auto-rejected if they match a webhook with sideEffects == Unknown or Some. |
 | `timeoutSeconds` _integer_ | TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, the webhook call will be ignored or the API call will fail based on the failure policy. The timeout value must be between 1 and 30 seconds. Default to 10 seconds. |
@@ -145,7 +143,7 @@ _Appears in:_
 
 
 
-ContextAwareResource identifies a Kubernetes resource
+ContextAwareResource identifies a Kubernetes resource.
 
 _Appears in:_
 - [ClusterAdmissionPolicySpec](#clusteradmissionpolicyspec)
@@ -186,7 +184,7 @@ _Appears in:_
 
 
 
-PolicyServer is the Schema for the policyservers API
+PolicyServer is the Schema for the policyservers API.
 
 _Appears in:_
 - [PolicyServerList](#policyserverlist)
@@ -203,7 +201,7 @@ _Appears in:_
 
 
 
-PolicyServerList contains a list of PolicyServer
+PolicyServerList contains a list of PolicyServer.
 
 
 
@@ -219,7 +217,7 @@ PolicyServerList contains a list of PolicyServer
 
 
 
-PolicyServerSecurity defines securityContext configuration to be used in the Policy Server workload
+PolicyServerSecurity defines securityContext configuration to be used in the Policy Server workload.
 
 _Appears in:_
 - [PolicyServerSpec](#policyserverspec)
@@ -234,7 +232,7 @@ _Appears in:_
 
 
 
-PolicyServerSpec defines the desired state of PolicyServer
+PolicyServerSpec defines the desired state of PolicyServer.
 
 _Appears in:_
 - [PolicyServer](#policyserver)
@@ -256,7 +254,7 @@ _Appears in:_
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#affinity-v1-core)_ | Affinity rules for the associated Policy Server pods. |
 | `limits` _object (keys:[ResourceName](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core), values:Quantity)_ | Limits describes the maximum amount of compute resources allowed. |
 | `requests` _object (keys:[ResourceName](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core), values:Quantity)_ | Requests describes the minimum amount of compute resources required. If Request is omitted for, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value |
-| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#toleration-v1-core) array_ | Tolerations describes the policy server pod's tolerations. It can be user to ensure that the policy server pod is not scheduled onto a node with a taint. |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#toleration-v1-core) array_ | Tolerations describe the policy server pod's tolerations. It can be used to ensure that the policy server pod is not scheduled onto a node with a taint. |
 
 
 
@@ -282,7 +280,7 @@ _Appears in:_
 | `mutating` _boolean_ | Mutating indicates whether a policy has the ability to mutate incoming requests or not. |
 | `backgroundAudit` _boolean_ | BackgroundAudit indicates whether a policy should be used or skipped when performing audit checks. If false, the policy cannot produce meaningful evaluation results during audit checks and will be skipped. The default is "true". |
 | `matchPolicy` _[MatchPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchpolicytype-v1-admissionregistration)_ | matchPolicy defines how the "rules" list is used to match incoming requests. Allowed values are "Exact" or "Equivalent". <ul> <li> Exact: match a request only if it exactly matches a specified rule. For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, but "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook. </li> <li> Equivalent: match a request if modifies a resource listed in rules, even via another API group or version. For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, and "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would be converted to apps/v1 and sent to the webhook. </li> </ul> Defaults to "Equivalent" |
-| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchcondition-v1-admissionregistration) array_ | MatchConditions is a list of conditions that must be met for a request to be validated. Match conditions filter requests that have already been matched by the rules, namespaceSelector, and objectSelector. An empty list of matchConditions matches all requests. There are a maximum of 64 match conditions allowed. If a parameter object is provided, it can be accessed via the `params` handle in the same manner as validation expressions. The exact matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE, the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy is evaluated. 3. If any matchCondition evaluates to an error (but none are FALSE): - If failurePolicy=Fail, reject the request - If failurePolicy=Ignore, the policy is skipped Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |
+| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#matchcondition-v1-admissionregistration) array_ | MatchConditions are a list of conditions that must be met for a request to be validated. Match conditions filter requests that have already been matched by the rules, namespaceSelector, and objectSelector. An empty list of matchConditions matches all requests. There are a maximum of 64 match conditions allowed. If a parameter object is provided, it can be accessed via the `params` handle in the same manner as validation expressions. The exact matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE, the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy is evaluated. 3. If any matchCondition evaluates to an error (but none are FALSE): - If failurePolicy=Fail, reject the request - If failurePolicy=Ignore, the policy is skipped. Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |
 | `objectSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#labelselector-v1-meta)_ | ObjectSelector decides whether to run the webhook based on if the object has matching labels. objectSelector is evaluated against both the oldObject and newObject that would be sent to the webhook, and is considered to match if either object matches the selector. A null object (oldObject in the case of create, or newObject in the case of delete) or an object that cannot have labels (like a DeploymentRollback or a PodProxyOptions object) is not considered to match. Use the object selector only if the webhook is opt-in, because end users may skip the admission webhook by setting the labels. Default to the empty LabelSelector, which matches everything. |
 | `sideEffects` _[SideEffectClass](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#sideeffectclass-v1-admissionregistration)_ | SideEffects states whether this webhook has side effects. Acceptable values are: None, NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown). Webhooks with side effects MUST implement a reconciliation system, since a request may be rejected by a future step in the admission change and the side effects therefore need to be undone. Requests with the dryRun attribute will be auto-rejected if they match a webhook with sideEffects == Unknown or Some. |
 | `timeoutSeconds` _integer_ | TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, the webhook call will be ignored or the API call will fail based on the failure policy. The timeout value must be between 1 and 30 seconds. Default to 10 seconds. |
@@ -337,7 +335,7 @@ _Appears in:_
 
 
 
-AdmissionPolicyList contains a list of AdmissionPolicy
+AdmissionPolicyList contains a list of AdmissionPolicy.
 
 
 
@@ -353,7 +351,7 @@ AdmissionPolicyList contains a list of AdmissionPolicy
 
 
 
-AdmissionPolicySpec defines the desired state of AdmissionPolicy
+AdmissionPolicySpec defines the desired state of AdmissionPolicy.
 
 _Appears in:_
 - [AdmissionPolicy](#admissionpolicy)
@@ -410,7 +408,7 @@ ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
 
 
 
-ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy
+ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy.
 
 _Appears in:_
 - [ClusterAdmissionPolicy](#clusteradmissionpolicy)
@@ -461,7 +459,7 @@ _Appears in:_
 
 
 
-PolicyServer is the Schema for the policyservers API
+PolicyServer is the Schema for the policyservers API.
 
 _Appears in:_
 - [PolicyServerList](#policyserverlist)
@@ -478,7 +476,7 @@ _Appears in:_
 
 
 
-PolicyServerList contains a list of PolicyServer
+PolicyServerList contains a list of PolicyServer.
 
 
 
@@ -494,7 +492,7 @@ PolicyServerList contains a list of PolicyServer
 
 
 
-PolicyServerSpec defines the desired state of PolicyServer
+PolicyServerSpec defines the desired state of PolicyServer.
 
 _Appears in:_
 - [PolicyServer](#policyserver)
