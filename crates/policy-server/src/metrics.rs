@@ -1,6 +1,6 @@
-use opentelemetry::{metrics, KeyValue};
+use anyhow::Result;
+use opentelemetry::{global, KeyValue};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
-use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::runtime;
 
 mod policy_evaluations_total;
@@ -10,15 +10,19 @@ pub use policy_evaluations_latency::record_policy_latency;
 
 const METER_NAME: &str = "kubewarden";
 
-pub fn setup_metrics() -> metrics::Result<SdkMeterProvider> {
-    opentelemetry_otlp::new_pipeline()
+pub fn setup_metrics() -> Result<()> {
+    let meter_provider = opentelemetry_otlp::new_pipeline()
         .metrics(runtime::Tokio)
         .with_exporter(
             opentelemetry_otlp::new_exporter()
                 .tonic()
                 .with_export_config(ExportConfig::default()),
         )
-        .build()
+        .build()?;
+
+    global::set_meter_provider(meter_provider.clone());
+
+    Ok(())
 }
 
 pub trait PolicyEvaluationMetric: Into<Vec<KeyValue>> {}
