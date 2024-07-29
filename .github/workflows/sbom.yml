@@ -24,13 +24,13 @@ jobs:
         uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@f8887d83348e9df270c244afb8eb12c54a631f1c # v3.3.0
+        uses: kubewarden/github-actions/syft-installer@ec1c08ac56d3c16dfb7933b849da6370638fba54 # v3.3.1
 
       - name: Install the crane command
-        uses: kubewarden/github-actions/crane-installer@f8887d83348e9df270c244afb8eb12c54a631f1c # v3.3.0
+        uses: kubewarden/github-actions/crane-installer@ec1c08ac56d3c16dfb7933b849da6370638fba54 # v3.3.1
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
