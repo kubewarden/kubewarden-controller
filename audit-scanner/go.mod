@@ -6,7 +6,7 @@ toolchain go1.22.5
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/kubewarden/kubewarden-controller v1.15.0-rc3
+	github.com/kubewarden/kubewarden-controller v1.15.0
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
