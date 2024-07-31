@@ -141,7 +141,9 @@ func newPolicyReportResult(policy policiesv1.Policy, admissionReview *admissionv
 	// optional. If the policy returns "allowed" to the admissionReview,
 	// the Result field is not checked by Kubernetes.
 	// https://pkg.go.dev/k8s.io/api@v0.29.2/admission/v1#AdmissionResponse
-	if !errored && admissionReview.Response.Result != nil {
+	if admissionReview.Response != nil && admissionReview.Response.Result != nil {
+		// Mesage contains the human-readable error message if Response.Result.Code == 500
+		// or the reason why the policy returned a failure
 		message = admissionReview.Response.Result.Message
 	}
 

@@ -342,9 +342,10 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 
 			admissionReviewRequest := newAdmissionReview(resource)
 			admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
+			errored := false
 
-			errored := responseErr != nil
-			if errored {
+			if responseErr != nil {
+				errored = true
 				// log responseErr, will end in PolicyReportResult too
 				log.Error().Err(responseErr).Dict("response", zerolog.Dict().
 					Str("admissionRequest-name", admissionReviewRequest.Request.Name).
@@ -352,7 +353,21 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 					Str("resource", resource.GetName()),
 				).
 					Msg("error sending AdmissionReview to PolicyServer")
-			} else {
+			}
+
+			if admissionReviewResponse.Response.Result != nil &&
+				admissionReviewResponse.Response.Result.Code == 500 {
+				errored = true
+				// log Result.Message, will end in PolicyReportResult too
+				log.Error().Err(errors.New(admissionReviewResponse.Response.Result.Message)).Dict("response", zerolog.Dict().
+					Str("admissionRequest-name", admissionReviewRequest.Request.Name).
+					Str("policy", policy.GetName()).
+					Str("resource", resource.GetName()),
+				).
+					Msg("error evaluating Policy in PolicyServer")
+			}
+
+			if !errored {
 				log.Debug().Dict("response", zerolog.Dict().
 					Str("uid", string(admissionReviewResponse.Response.UID)).
 					Str("policy", policy.GetName()).
@@ -415,9 +430,10 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 
 		admissionReviewRequest := newAdmissionReview(resource)
 		admissionReviewResponse, responseErr := s.sendAdmissionReviewToPolicyServer(ctx, url, admissionReviewRequest)
+		errored := false
 
-		errored := responseErr != nil
-		if errored {
+		if responseErr != nil {
+			errored = true
 			// log error, will end in ClusterPolicyReportResult too
 			log.Error().Err(responseErr).Dict("response", zerolog.Dict().
 				Str("admissionRequest name", admissionReviewRequest.Request.Name).
@@ -425,12 +441,26 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 				Str("resource", resource.GetName()),
 			).
 				Msg("error sending AdmissionReview to PolicyServer")
-		} else {
-			log.Debug().Dict("response", zerolog.Dict().
-				Str("uid", string(admissionReviewResponse.Response.UID)).
-				Bool("allowed", admissionReviewResponse.Response.Allowed).
+		}
+
+		if admissionReviewResponse.Response.Result != nil &&
+			admissionReviewResponse.Response.Result.Code == 500 {
+			errored = true
+			// log Result.Message, will end in PolicyReportResult too
+			log.Error().Err(errors.New(admissionReviewResponse.Response.Result.Message)).Dict("response", zerolog.Dict().
+				Str("admissionRequest-name", admissionReviewRequest.Request.Name).
 				Str("policy", policy.GetName()).
 				Str("resource", resource.GetName()),
+			).
+				Msg("error evaluating Policy in PolicyServer")
+		}
+
+		if !errored {
+			log.Debug().Dict("response", zerolog.Dict().
+				Str("uid", string(admissionReviewResponse.Response.UID)).
+				Str("policy", policy.GetName()).
+				Str("resource", resource.GetName()).
+				Bool("allowed", admissionReviewResponse.Response.Allowed),
 			).
 				Msg("audit review response")
 		}
