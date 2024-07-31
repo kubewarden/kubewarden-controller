@@ -519,7 +519,10 @@ func (s *Scanner) sendAdmissionReviewToPolicyServer(ctx context.Context, url *ur
 		return nil, err
 	}
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, url.String(), bytes.NewBuffer(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url.String(), bytes.NewBuffer(payload))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := s.httpClient.Do(req)
