@@ -414,6 +414,12 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 }
 
 func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) {
+	log.Info().
+		Str("resource", resource.GetName()).
+		Dict("dict", zerolog.Dict().
+			Int("policies-to-evaluate", len(policies)),
+		).Msg("audit clusterwide resource")
+
 	clusterPolicyReport := report.NewClusterPolicyReport(runUID, resource)
 	for _, p := range policies {
 		url := p.PolicyServer
