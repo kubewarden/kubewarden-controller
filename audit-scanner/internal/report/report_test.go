@@ -225,8 +225,16 @@ func TestNewPolicyReportResult(t *testing.T) {
 					},
 				},
 			},
-			errored:        true,
-			admissionReview: nil,
+			admissionReview: &admissionv1.AdmissionReview{
+				Response: &admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result: &metav1.Status{
+						Message: "The server is on vacation",
+						Code:    500,
+					},
+				},
+			},
+			errored: true,
 			expectedResult: &wgpolicy.PolicyReportResult{
 				Source:          policyReportSource,
 				Policy:          "namespaced-policy-namespace-policy-name",
@@ -235,7 +243,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 				Timestamp:       now,
 				Scored:          true,
 				SubjectSelector: &metav1.LabelSelector{},
-				Description:     "",
+				Description:     "The server is on vacation",
 				Properties: map[string]string{
 					propertyPolicyUID:             "policy-uid",
 					propertyPolicyResourceVersion: "1",
@@ -249,7 +257,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := newPolicyReportResult(test.policy, test.amissionReview, test.errored, now)
+			result := newPolicyReportResult(test.policy, test.admissionReview, test.errored, now)
 			assert.Equal(t, test.expectedResult, result)
 		})
 	}
