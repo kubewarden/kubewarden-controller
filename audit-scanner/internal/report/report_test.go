@@ -116,11 +116,11 @@ func TestNewPolicyReportResult(t *testing.T) {
 	now := metav1.Timestamp{Seconds: time.Now().Unix()}
 
 	tests := []struct {
-		name           string
-		policy         policiesv1.Policy
-		amissionReview *admissionv1.AdmissionReview
-		errored        bool
-		expectedResult *wgpolicy.PolicyReportResult
+		name            string
+		policy          policiesv1.Policy
+		admissionReview *admissionv1.AdmissionReview
+		errored         bool
+		expectedResult  *wgpolicy.PolicyReportResult
 	}{
 		{
 			name: "Validating policy, allowed response",
@@ -139,7 +139,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 					},
 				},
 			},
-			amissionReview: &admissionv1.AdmissionReview{
+			admissionReview: &admissionv1.AdmissionReview{
 				Response: &admissionv1.AdmissionResponse{
 					Allowed: true,
 					Result:  nil,
@@ -181,7 +181,7 @@ func TestNewPolicyReportResult(t *testing.T) {
 					},
 				},
 			},
-			amissionReview: &admissionv1.AdmissionReview{
+			admissionReview: &admissionv1.AdmissionReview{
 				Response: &admissionv1.AdmissionResponse{
 					Allowed: false,
 					Result:  &metav1.Status{Message: "The request was rejected"},
@@ -225,8 +225,8 @@ func TestNewPolicyReportResult(t *testing.T) {
 					},
 				},
 			},
-			amissionReview: nil,
 			errored:        true,
+			admissionReview: nil,
 			expectedResult: &wgpolicy.PolicyReportResult{
 				Source:          policyReportSource,
 				Policy:          "namespaced-policy-namespace-policy-name",
