@@ -126,7 +126,7 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 	)
 
 	secret := corev1.Secret{}
-	if err = r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
+	if err = r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: constants.CARootSecretName}, &secret); err != nil {
 		return ctrl.Result{}, errors.Join(errors.New("cannot find policy server secret"), err)
 	}
 
