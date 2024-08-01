@@ -39,6 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/internal/certs"
+	"github.com/kubewarden/kubewarden-controller/internal/constants"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	//+kubebuilder:scaffold:imports
 )
@@ -156,6 +158,22 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	err = k8sClient.Create(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: deploymentsNamespace,
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	// Create the CA root secret
+	caCertBytes, caPrivateKey, err := certs.GenerateCA(time.Now(), time.Now().Add(constants.CACertExpiration))
+	Expect(err).NotTo(HaveOccurred())
+	err = k8sClient.Create(ctx, &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.CARootSecretName,
+			Namespace: deploymentsNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			constants.CARootCert:       caCertBytes,
+			constants.CARootPrivateKey: caPrivateKey,
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
