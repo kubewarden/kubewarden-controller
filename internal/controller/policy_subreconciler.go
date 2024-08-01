@@ -367,6 +367,13 @@ func findClusterPoliciesForPolicyServer(ctx context.Context, k8sClient client.Cl
 }
 
 func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object, log logr.Logger) []reconcile.Request {
+	// Pre v1.16.0
+	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
+	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
+	partOfLabel := webhookConfiguration.GetLabels()["app.kubernetes.io/part-of"]
+	if !kubwardenLabelExists && partOfLabel != "kubewarden" {
+		return []reconcile.Request{}
+	}
 	if _, found := webhookConfiguration.GetLabels()["kubewarden"]; !found {
 		return []reconcile.Request{}
 	}
