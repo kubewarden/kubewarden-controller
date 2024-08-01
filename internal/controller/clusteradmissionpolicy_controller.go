@@ -156,7 +156,11 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicy
 }
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	if _, found := webhookConfiguration.GetLabels()["kubewarden"]; !found {
+	// Pre v1.16.0
+	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
+	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
+	partOfLabel := webhookConfiguration.GetLabels()["app.kubernetes.io/part-of"]
+	if !kubwardenLabelExists && partOfLabel != "kubewarden" {
 		return []reconcile.Request{}
 	}
 

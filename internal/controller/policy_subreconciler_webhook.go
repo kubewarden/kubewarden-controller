@@ -53,7 +53,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 		}
 		webhook.Name = policy.GetUniqueName()
 		webhook.Labels = map[string]string{
-			"kubewarden": "true",
+			"app.kubernetes.io/part-of":                       "kubewarden",
 			constants.WebhookConfigurationPolicyScopeLabelKey: policyScope,
 		}
 		webhook.Annotations = map[string]string{
@@ -65,7 +65,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 				Name: policy.GetUniqueName() + ".kubewarden.admission",
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.PolicyServerCARootPemName],
+					CABundle: admissionSecret.Data[constants.CARootCert],
 				},
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
@@ -144,7 +144,7 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 
 		webhook.Name = policy.GetUniqueName()
 		webhook.Labels = map[string]string{
-			"kubewarden": "true",
+			"app.kubernetes.io/part-of":                       "kubewarden",
 			constants.WebhookConfigurationPolicyScopeLabelKey: policyScope,
 		}
 		webhook.Annotations = map[string]string{
@@ -156,7 +156,7 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 				Name: policy.GetUniqueName() + ".kubewarden.admission",
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.PolicyServerCARootPemName],
+					CABundle: admissionSecret.Data[constants.CARootCert],
 				},
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
