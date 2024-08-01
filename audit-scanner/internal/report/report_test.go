@@ -24,6 +24,8 @@ func TestNewPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	policyReport := NewPolicyReport("runUID", resource)
+	policyReport.Summary.Skip = 1
+	policyReport.Summary.Error = 1
 
 	assert.Equal(t, "uid", policyReport.ObjectMeta.Name)
 	assert.Equal(t, "namespace", policyReport.ObjectMeta.Namespace)
@@ -73,6 +75,8 @@ func TestNewClusterPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
+	clusterPolicyReport.Summary.Skip = 1
+	clusterPolicyReport.Summary.Error = 1
 
 	assert.Equal(t, "uid", clusterPolicyReport.ObjectMeta.Name)
 	assert.Equal(t, "kubewarden", clusterPolicyReport.ObjectMeta.Labels[labelAppManagedBy])
