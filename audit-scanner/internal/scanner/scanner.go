@@ -152,7 +152,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 			Int("policies-errored", policies.ErroredNum),
 		).Msg("policy count")
 
-	for gvr, policies := range policies.PoliciesByGVR {
+	for gvr, pols := range policies.PoliciesByGVR {
 		pager, err := s.k8sClient.GetResources(gvr, nsName)
 		if err != nil {
 			log.Error().Err(err).Str("gvr", gvr.String()).Str("ns", nsName).Msg("failed to get resources")
@@ -169,13 +169,13 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 				return err
 			}
 			workers.Add(1)
-			policiesToAudit := policies
+			policiesToAudit := pols
 
 			go func() {
 				defer semaphore.Release(1)
 				defer workers.Done()
 
-				if err := s.auditResource(ctx, policiesToAudit, *resource, runUID); err != nil {
+				if err := s.auditResource(ctx, policiesToAudit, *resource, runUID, policies.SkippedNum, policies.ErroredNum); err != nil {
 					log.Error().Err(err).Str("RunUID", runUID).Msg("error auditing resource")
 				}
 			}()
@@ -257,7 +257,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 			Int("parallel-resources-audits", s.parallelResourcesAudits),
 		).Msg("cluster admission policies count")
 
-	for gvr, policies := range policies.PoliciesByGVR {
+	for gvr, pols := range policies.PoliciesByGVR {
 		pager, err := s.k8sClient.GetResources(gvr, "")
 		if err != nil {
 			return err
@@ -274,13 +274,13 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 			if err != nil {
 				return err
 			}
-			policiesToAudit := policies
+			policiesToAudit := pols
 
 			go func() {
 				defer semaphore.Release(1)
 				defer workers.Done()
 
-				s.auditClusterResource(ctx, policiesToAudit, *resource, runUID)
+				s.auditClusterResource(ctx, policiesToAudit, *resource, runUID, policies.SkippedNum, policies.ErroredNum)
 			}()
 
 			return nil
@@ -305,7 +305,7 @@ type policyAuditResult struct {
 	errored                 bool
 }
 
-func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) error {
+func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string, skippedPoliciesNum, erroredPoliciesNum int) error {
 	log.Info().
 		Str("resource", resource.GetName()).
 		Dict("dict", zerolog.Dict().
@@ -388,6 +388,8 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	close(auditResults)
 
 	policyReport := report.NewPolicyReport(runUID, resource)
+	policyReport.Summary.Skip = skippedPoliciesNum
+	policyReport.Summary.Error = erroredPoliciesNum
 	for res := range auditResults {
 		report.AddResultToPolicyReport(policyReport, res.policy, res.admissionReviewResponse, res.errored)
 	}
@@ -413,7 +415,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	return nil
 }
 
-func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string) {
+func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string, skippedPoliciesNum, erroredPoliciesNum int) {
 	log.Info().
 		Str("resource", resource.GetName()).
 		Dict("dict", zerolog.Dict().
@@ -421,6 +423,8 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 		).Msg("audit clusterwide resource")
 
 	clusterPolicyReport := report.NewClusterPolicyReport(runUID, resource)
+	clusterPolicyReport.Summary.Skip = skippedPoliciesNum
+	clusterPolicyReport.Summary.Error = erroredPoliciesNum
 	for _, p := range policies {
 		url := p.PolicyServer
 		policy := p.Policy
