@@ -212,7 +212,7 @@ func TestScanAllNamespaces(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 
-	// an AdmissionPolicy targeting an unknown GVR, should error and be skipped
+	// an AdmissionPolicy targeting an unknown GVR, should be counted as error
 	admissionPolicyUnknownGVR := testutils.
 		NewAdmissionPolicyFactory().
 		Name("policy6").
@@ -221,6 +221,19 @@ func TestScanAllNamespaces(t *testing.T) {
 			APIGroups:   []string{"apps"},
 			APIVersions: []string{"v1"},
 			Resources:   []string{"pods"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	// an AdmissionPolicy targeting a GVR with *, should be skipped
+	admissionPolicyAsteriskGVR := testutils.
+		NewAdmissionPolicyFactory().
+		Name("policy7").
+		Namespace("namespace1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"*"},
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
@@ -260,6 +273,7 @@ func TestScanAllNamespaces(t *testing.T) {
 		admissionPolicy3,
 		admissionPolicy4,
 		admissionPolicyUnknownGVR,
+		admissionPolicyAsteriskGVR,
 		clusterAdmissionPolicy,
 		oldPolicyReport,
 	)
@@ -288,6 +302,8 @@ func TestScanAllNamespaces(t *testing.T) {
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod1.GetUID()), Namespace: "namespace1"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, policyReport.Summary.Pass)
+	assert.Equal(t, 1, policyReport.Summary.Error)
+	assert.Equal(t, 1, policyReport.Summary.Skip)
 	assert.Len(t, policyReport.Results, 2)
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
@@ -300,6 +316,8 @@ func TestScanAllNamespaces(t *testing.T) {
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment1.GetUID()), Namespace: "namespace1"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, policyReport.Summary.Pass)
+	assert.Equal(t, 1, policyReport.Summary.Error)
+	assert.Equal(t, 1, policyReport.Summary.Skip)
 	assert.Len(t, policyReport.Results, 2)
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
@@ -397,7 +415,7 @@ func TestScanClusterWideResources(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 
-	// a ClusterAdmissionPolicy targeting an unknown GVR, should error and be skipped
+	// a ClusterAdmissionPolicy targeting an unknown GVR, should be counted as error
 	clusterAdmissionPolicyUnknownGVR := testutils.
 		NewClusterAdmissionPolicyFactory().
 		Name("policy4").
@@ -405,6 +423,18 @@ func TestScanClusterWideResources(t *testing.T) {
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
 			Resources:   []string{"foo"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	// a ClusterAdmissionPolicy targeting a GVR with *, should be counted as skipped
+	clusterAdmissionPolicyAsteriskGVR := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("policy5").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"*"},
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
@@ -436,6 +466,7 @@ func TestScanClusterWideResources(t *testing.T) {
 		clusterAdmissionPolicy2,
 		clusterAdmissionPolicy3,
 		clusterAdmissionPolicyUnknownGVR,
+		clusterAdmissionPolicyAsteriskGVR,
 		oldClusterPolicyReport,
 	)
 	require.NoError(t, err)
@@ -463,6 +494,8 @@ func TestScanClusterWideResources(t *testing.T) {
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace1.GetUID())}, &clusterPolicyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 1, clusterPolicyReport.Summary.Pass)
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Error)
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Skip)
 	assert.Len(t, clusterPolicyReport.Results, 1)
 	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 

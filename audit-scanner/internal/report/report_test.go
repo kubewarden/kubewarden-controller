@@ -44,6 +44,9 @@ func TestNewPolicyReport(t *testing.T) {
 	assert.Equal(t, types.UID("uid"), policyReport.Scope.UID)
 	assert.Equal(t, "12345", policyReport.Scope.ResourceVersion)
 
+	assert.Equal(t, 1, policyReport.Summary.Skip)
+	assert.Equal(t, 1, policyReport.Summary.Error)
+
 	assert.Empty(t, policyReport.Results)
 }
 
@@ -93,6 +96,9 @@ func TestNewClusterPolicyReport(t *testing.T) {
 	assert.Equal(t, "test-namespace", clusterPolicyReport.Scope.Name)
 	assert.Equal(t, types.UID("uid"), clusterPolicyReport.Scope.UID)
 	assert.Equal(t, "12345", clusterPolicyReport.Scope.ResourceVersion)
+
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Skip)
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Error)
 
 	assert.Empty(t, clusterPolicyReport.Results)
 }
