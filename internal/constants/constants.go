@@ -6,13 +6,6 @@ const (
 	// DefaultPolicyServer is the default policy server name to be used when
 	// policies does not have a policy server name defined.
 	DefaultPolicyServer = "default"
-	// PolicyServer CA Secret.
-	PolicyServerTLSCert                  = "policy-server-cert"
-	PolicyServerTLSKey                   = "policy-server-key"
-	PolicyServerCARootSecretName         = "policy-server-root-ca"
-	PolicyServerCARootPemName            = "policy-server-root-ca-pem"
-	PolicyServerCARootCACert             = "policy-server-root-ca-cert"
-	PolicyServerCARootPrivateKeyCertName = "policy-server-root-ca-privatekey-cert"
 
 	// PolicyServer Deployment.
 	PolicyServerEnableMetricsEnvVar                 = "KUBEWARDEN_ENABLE_METRICS"
@@ -65,8 +58,22 @@ const (
 	TimeToRequeuePolicyReconciliation = 2 * time.Second
 	MetricsShutdownTimeout            = 5 * time.Second
 
+	// Server Cert Secrets.
+	WebhookServerCertSecretName = "kubewarden-webhook-server-cert" //nolint:gosec // This is not a credential
+	ServerCert                  = "tls.crt"
+	ServerPrivateKey            = "tls.key"
+
+	// CA Root Secret.
+	CARootSecretName = "kubewarden-ca"
+	CARootCert       = "ca.crt"
+	CARootPrivateKey = "ca.key"
+	OldCARootCert    = "old-ca.crt"
+
 	// Certs.
 	CertExpirationYears = 10
+	CACertExpiration     = 10 * 365 * 24 * time.Hour
+	ServerCertExpiration = 1 * 365 * 24 * time.Hour
+	CertLookahead        = 60 * 24 * time.Hour
 
 	// Feature flags.
 	EnablePolicyGroupsFlag = "KUBEWARDEN_ENABLE_POLICY_GROUPS"
