@@ -24,6 +24,8 @@ func TestNewPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	policyReport := NewPolicyReport("runUID", resource)
+	policyReport.Summary.Skip = 1
+	policyReport.Summary.Error = 1
 
 	assert.Equal(t, "uid", policyReport.ObjectMeta.Name)
 	assert.Equal(t, "namespace", policyReport.ObjectMeta.Namespace)
@@ -41,6 +43,9 @@ func TestNewPolicyReport(t *testing.T) {
 	assert.Equal(t, "test-pod", policyReport.Scope.Name)
 	assert.Equal(t, types.UID("uid"), policyReport.Scope.UID)
 	assert.Equal(t, "12345", policyReport.Scope.ResourceVersion)
+
+	assert.Equal(t, 1, policyReport.Summary.Skip)
+	assert.Equal(t, 1, policyReport.Summary.Error)
 
 	assert.Empty(t, policyReport.Results)
 }
@@ -73,6 +78,8 @@ func TestNewClusterPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
+	clusterPolicyReport.Summary.Skip = 1
+	clusterPolicyReport.Summary.Error = 1
 
 	assert.Equal(t, "uid", clusterPolicyReport.ObjectMeta.Name)
 	assert.Equal(t, "kubewarden", clusterPolicyReport.ObjectMeta.Labels[labelAppManagedBy])
@@ -89,6 +96,9 @@ func TestNewClusterPolicyReport(t *testing.T) {
 	assert.Equal(t, "test-namespace", clusterPolicyReport.Scope.Name)
 	assert.Equal(t, types.UID("uid"), clusterPolicyReport.Scope.UID)
 	assert.Equal(t, "12345", clusterPolicyReport.Scope.ResourceVersion)
+
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Skip)
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Error)
 
 	assert.Empty(t, clusterPolicyReport.Results)
 }
