@@ -61,7 +61,7 @@ tokio-stream = "0.1.15"
 
 [dev-dependencies]
 mockall = "0.13"
-rstest = "0.21"
+rstest = "0.22"
 tempfile = "3.10.1"
 tower = { version = "0.4", features = ["util"] }
 http-body-util = "0.1.1"
