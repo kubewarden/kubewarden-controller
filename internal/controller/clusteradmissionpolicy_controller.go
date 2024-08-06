@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 // Warning: this controller is deployed by a helm chart which has its own
@@ -105,85 +104,14 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 	return nil
 }
 
-func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForConfigMap(object client.Object) []reconcile.Request {
-	configMap, ok := object.(*corev1.ConfigMap)
-	if !ok {
-		return []reconcile.Request{}
-	}
-	policyMap, err := getPolicyMapFromConfigMap(configMap)
-	if err != nil {
-		return []reconcile.Request{}
-	}
-	return policyMap.toClusterAdmissionPolicyReconcileRequests()
-}
-
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
-	pod, ok := object.(*corev1.Pod)
-	if !ok {
-		return []reconcile.Request{}
-	}
-	policyServerName, ok := pod.Labels[constants.PolicyServerLabelKey]
-	if !ok {
-		return []reconcile.Request{}
-	}
-	policyServerDeploymentName := policyServerDeploymentName(policyServerName)
-	configMap := corev1.ConfigMap{}
-	err := r.Get(ctx, client.ObjectKey{
-		Namespace: pod.ObjectMeta.Namespace,
-		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
-	}, &configMap)
-	if err != nil {
-		return []reconcile.Request{}
-	}
-	return r.findClusterAdmissionPoliciesForConfigMap(&configMap)
+	return findClusterAdmissionPoliciesForPod(ctx, r.Client, object)
 }
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
-	policyServer, ok := object.(*policiesv1.PolicyServer)
-	if !ok {
-		return []reconcile.Request{}
-	}
-	policyServerDeploymentName := policyServerDeploymentName(policyServer.Name)
-	configMap := corev1.ConfigMap{}
-	err := r.Get(ctx, client.ObjectKey{
-		Namespace: r.DeploymentsNamespace,
-		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
-	}, &configMap)
-	if err != nil {
-		return []reconcile.Request{}
-	}
-	return r.findClusterAdmissionPoliciesForConfigMap(&configMap)
+	return findClusterAdmissionPoliciesForPolicyServer(ctx, r.Client, object, r.DeploymentsNamespace)
 }
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	if _, found := webhookConfiguration.GetLabels()["kubewarden"]; !found {
-		return []reconcile.Request{}
-	}
-
-	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
-	if !found {
-		r.Log.Info("Found a webhook configuration without a scope label, reconciling it",
-			"name", webhookConfiguration.GetName())
-		return []reconcile.Request{}
-	}
-
-	// Filter out AdmissionPolicies
-	if policyScope != constants.ClusterPolicyScope {
-		return []reconcile.Request{}
-	}
-
-	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
-	if !found {
-		r.Log.Info("Found a webhook configuration without a policy name annotation, reconciling it",
-			"name", webhookConfiguration.GetName())
-		return []reconcile.Request{}
-	}
-
-	return []reconcile.Request{
-		{
-			NamespacedName: client.ObjectKey{
-				Name: policyName,
-			},
-		},
-	}
+	return findClusterAdmissionPolicyForWebhookConfiguration(webhookConfiguration, r.Log)
 }

@@ -129,6 +129,22 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = (&AdmissionPolicyGroupReconciler{
+		Client:               k8sManager.GetClient(),
+		Scheme:               k8sManager.GetScheme(),
+		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: true,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&ClusterAdmissionPolicyGroupReconciler{
+		Client:               k8sManager.GetClient(),
+		Scheme:               k8sManager.GetScheme(),
+		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: true,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	err = (&PolicyServerReconciler{
 		Client:               k8sManager.GetClient(),
 		Scheme:               k8sManager.GetScheme(),
