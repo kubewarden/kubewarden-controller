@@ -32,6 +32,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-policies-kubewarden-io-v1-admissionpolicygroup
+  failurePolicy: Fail
+  name: madmissionpolicygroup.kb.io
+  rules:
+  - apiGroups:
+    - policies.kubewarden.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - admissionpoliciesgroup
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-policies-kubewarden-io-v1-clusteradmissionpolicy
   failurePolicy: Fail
   name: mclusteradmissionpolicy.kb.io
@@ -45,6 +66,27 @@ webhooks:
     - UPDATE
     resources:
     - clusteradmissionpolicies
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-policies-kubewarden-io-v1-clusteradmissionpolicygroup
+  failurePolicy: Fail
+  name: mclusteradmissionpolicygroup.kb.io
+  rules:
+  - apiGroups:
+    - policies.kubewarden.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - clusteradmissionpoliciesgroup
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -101,6 +143,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-policies-kubewarden-io-v1-admissionpolicygroup
+  failurePolicy: Fail
+  name: vadmissionpolicygroup.kb.io
+  rules:
+  - apiGroups:
+    - policies.kubewarden.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - admissionpoliciesgroup
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-policies-kubewarden-io-v1-clusteradmissionpolicy
   failurePolicy: Fail
   name: vclusteradmissionpolicy.kb.io
@@ -114,6 +177,27 @@ webhooks:
     - UPDATE
     resources:
     - clusteradmissionpolicies
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-policies-kubewarden-io-v1-clusteradmissionpolicygroup
+  failurePolicy: Fail
+  name: vclusteradmissionpolicygroup.kb.io
+  rules:
+  - apiGroups:
+    - policies.kubewarden.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - clusteradmissionpoliciesgroup
   sideEffects: None
 - admissionReviewVersions:
   - v1

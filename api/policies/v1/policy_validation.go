@@ -114,6 +114,13 @@ func validateMatchConditionsField(policy Policy) field.ErrorList {
 	return nil
 }
 
+func validatePolicyGroupMembers(policy Policy) *field.Error {
+	if policy.IsPolicyGroup() && len(policy.GetPolicyMembers()) == 0 {
+		return field.Invalid(field.NewPath("spec").Child("policies"), "", "policy groups must have at least one policy member")
+	}
+	return nil
+}
+
 // prepareInvalidAPIError is a shorthand for generating an invalid apierrors.StatusError with data from a policy.
 func prepareInvalidAPIError(policy Policy, errorList field.ErrorList) *apierrors.StatusError {
 	return apierrors.NewInvalid(
@@ -148,6 +155,10 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
 		pp := p.Child("mode")
 		errs = append(errs, field.Forbidden(pp, "field cannot transition from protect to monitor. Recreate instead."))
 		errList = append(errList, errs...)
+	}
+
+	if err := validatePolicyGroupMembers(newPolicy); err != nil {
+		errList = append(errList, err)
 	}
 
 	if len(errList) != 0 {
