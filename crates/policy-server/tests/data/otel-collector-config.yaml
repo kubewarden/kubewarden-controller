@@ -1,0 +1,24 @@
+# This configuration file is used by the tests in the `tests` directory.
+# It uses file exporters to write the metrics and traces to files in JSON format.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+
+exporters:
+  file/metrics:
+    path: /tmp/metrics.json
+  file/traces:
+    path: /tmp/traces.json
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: []
+      exporters: [file/metrics]
+    traces:
+      receivers: [otlp]
+      processors: []
+      exporters: [file/traces]

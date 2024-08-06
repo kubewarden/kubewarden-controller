@@ -97,7 +97,7 @@ pub(crate) fn default_test_config() -> Config {
         policy_evaluation_limit_seconds: Some(2),
         tls_config: None,
         pool_size: 2,
-        metrics_enabled: true,
+        metrics_enabled: false,
         sigstore_cache_dir: tempdir().unwrap().into_path(),
         verification_config: None,
         log_level: "info".to_owned(),
