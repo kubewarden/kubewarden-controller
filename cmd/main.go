@@ -257,6 +257,27 @@ func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetri
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create ClusterAdmissionPolicy controller"), err)
 	}
+
+	if err := (&controller.AdmissionPolicyGroupReconciler{
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  ctrl.Log.WithName("admission-policy-group-reconciler"),
+		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: featureGateAdmissionWebhookMatchConditions,
+	}).SetupWithManager(mgr); err != nil {
+		return errors.Join(errors.New("unable to create AdmissionPolicyGroup controller"), err)
+	}
+
+	if err := (&controller.ClusterAdmissionPolicyGroupReconciler{
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  ctrl.Log.WithName("cluster-admission-policy-group-reconciler"),
+		DeploymentsNamespace: deploymentsNamespace,
+		FeatureGateAdmissionWebhookMatchConditions: featureGateAdmissionWebhookMatchConditions,
+	}).SetupWithManager(mgr); err != nil {
+		return errors.Join(errors.New("unable to create ClusterAdmissionPolicyGroup controller"), err)
+	}
+
 	return nil
 }
 
@@ -269,6 +290,12 @@ func setupWebhooks(mgr ctrl.Manager, deploymentsNamespace string) error {
 	}
 	if err := (&policiesv1.AdmissionPolicy{}).SetupWebhookWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create webhook for admission policies"), err)
+	}
+	if err := (&policiesv1.AdmissionPolicyGroup{}).SetupWebhookWithManager(mgr); err != nil {
+		return errors.Join(errors.New("unable to create webhook for admission policies groups"), err)
+	}
+	if err := (&policiesv1.ClusterAdmissionPolicyGroup{}).SetupWebhookWithManager(mgr); err != nil {
+		return errors.Join(errors.New("unable to create webhook for cluster admission policies groups"), err)
 	}
 	return nil
 }

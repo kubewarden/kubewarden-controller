@@ -39,15 +39,15 @@ import (
 //
 // We need access to these resources inside of all the namespaces -> a ClusterRole
 // is needed
-//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies,verbs=create;delete;get;list;patch;update;watch
-//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=admissionpolicies/finalizers,verbs=update
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicygroups,verbs=create;delete;get;list;patch;update;watch
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicygroups/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=policies.kubewarden.io,resources=clusteradmissionpolicygroups/finalizers,verbs=update
 //
 // Some RBAC rules needed to access some resources used here are defined in the
 // policyserver_controller.go file.
 
-// AdmissionPolicyReconciler reconciles an AdmissionPolicy object.
-type AdmissionPolicyReconciler struct {
+// ClusterAdmissionPolicyGroupGroupReconciler reconciles an ClusterAdmissionPolicy object.
+type ClusterAdmissionPolicyGroupReconciler struct {
 	client.Client
 	Log                                        logr.Logger
 	Scheme                                     *runtime.Scheme
@@ -57,17 +57,17 @@ type AdmissionPolicyReconciler struct {
 }
 
 // Reconcile reconciles admission policies.
-func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var admissionPolicy policiesv1.AdmissionPolicy
-	if err := r.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
+func (r *ClusterAdmissionPolicyGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var clusterAdmissionPolicy policiesv1.ClusterAdmissionPolicyGroup
+	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	return r.policySubReconciler.reconcile(ctx, &admissionPolicy)
+	return r.policySubReconciler.reconcile(ctx, &clusterAdmissionPolicy)
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ClusterAdmissionPolicyGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.policySubReconciler = &policySubReconciler{
 		r.Client,
 		r.Log,
@@ -76,10 +76,10 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&policiesv1.AdmissionPolicy{}).
+		For(&policiesv1.ClusterAdmissionPolicyGroup{}).
 		Watches(
 			&corev1.Pod{},
-			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPod),
+			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
 		).
 		// Despite this policy server watch is not strictly necessary, we
 		// include it for the integration tests, so that we identify
@@ -87,32 +87,27 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// present (so no pods end up being created)
 		Watches(
 			&policiesv1.PolicyServer{},
-			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPolicyServer),
+			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPolicyServer),
 		).
 		Watches(
 			&admissionregistrationv1.ValidatingWebhookConfiguration{},
-			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyForWebhookConfiguration),
-		).
-		Watches(
-			&admissionregistrationv1.MutatingWebhookConfiguration{},
-			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyForWebhookConfiguration),
+			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPolicyForWebhookConfiguration),
 		).
 		Complete(r)
 	if err != nil {
 		return errors.Join(errors.New("failed enrolling controller with manager"), err)
 	}
-
 	return nil
 }
 
-func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
-	return findAdmissionPoliciesForPod(ctx, r.Client, object)
+func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
+	return findClusterAdmissionPoliciesForPod(ctx, r.Client, object)
 }
 
-func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
-	return findAdmissionPoliciesForPolicyServer(ctx, r.Client, object, r.DeploymentsNamespace)
+func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPoliciesForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
+	return findClusterAdmissionPoliciesForPolicyServer(ctx, r.Client, object, r.DeploymentsNamespace)
 }
 
-func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	return findAdmissionPolicyForWebhookConfiguration(webhookConfiguration, r.Log)
+func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
+	return findClusterAdmissionPolicyForWebhookConfiguration(webhookConfiguration, r.Log)
 }

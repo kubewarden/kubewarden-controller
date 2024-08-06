@@ -5,6 +5,8 @@ resources:
 - bases/policies.kubewarden.io_clusteradmissionpolicies.yaml
 - bases/policies.kubewarden.io_policyservers.yaml
 - bases/policies.kubewarden.io_admissionpolicies.yaml
+- bases/policies.kubewarden.io_admissionpolicygroups.yaml
+- bases/policies.kubewarden.io_clusteradmissionpolicygroups.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
