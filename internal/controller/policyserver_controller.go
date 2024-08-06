@@ -176,46 +176,35 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return fmt.Errorf("failed enrolling controller with manager: %w", err)
 	}
+	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1.AdmissionPolicyGroup{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
+		policy, ok := object.(*policiesv1.AdmissionPolicyGroup)
+		if !ok {
+			r.Log.Error(nil, "object is not type of AdmissionPolicyGroup: %#v", "policy", policy)
+			return []string{}
+		}
+		return []string{policy.Spec.PolicyServer}
+	})
+	if err != nil {
+		return fmt.Errorf("failed enrolling controller with manager: %w", err)
+	}
+	err = mgr.GetFieldIndexer().IndexField(context.Background(), &policiesv1.ClusterAdmissionPolicyGroup{}, constants.PolicyServerIndexKey, func(object client.Object) []string {
+		policy, ok := object.(*policiesv1.ClusterAdmissionPolicyGroup)
+		if !ok {
+			r.Log.Error(nil, "object is not type of ClusterAdmissionPolicyGroup: %#v", "policy", policy)
+			return []string{}
+		}
+		return []string{policy.Spec.PolicyServer}
+	})
+	if err != nil {
+		return fmt.Errorf("failed enrolling controller with manager: %w", err)
+	}
+
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&policiesv1.PolicyServer{}).
-		Watches(&policiesv1.AdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
-			// The watch will trigger twice per object change; once with the old
-			// object, and once the new object. We need to be mindful when doing
-			// Updates since they will invalidate the newer versions of the
-			// object.
-			policy, ok := object.(*policiesv1.AdmissionPolicy)
-			if !ok {
-				r.Log.Info("object is not type of AdmissionPolicy: %+v", "policy", policy)
-				return []ctrl.Request{}
-			}
-
-			return []ctrl.Request{
-				{
-					NamespacedName: client.ObjectKey{
-						Name: policy.Spec.PolicyServer,
-					},
-				},
-			}
-		})).
-		Watches(&policiesv1.ClusterAdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
-			// The watch will trigger twice per object change; once with the old
-			// object, and once the new object. We need to be mindful when doing
-			// Updates since they will invalidate the newer versions of the
-			// object.
-			policy, ok := object.(*policiesv1.ClusterAdmissionPolicy)
-			if !ok {
-				r.Log.Info("object is not type of ClusterAdmissionPolicy: %+v", "policy", policy)
-				return []ctrl.Request{}
-			}
-
-			return []ctrl.Request{
-				{
-					NamespacedName: client.ObjectKey{
-						Name: policy.Spec.PolicyServer,
-					},
-				},
-			}
-		})).
+		Watches(&policiesv1.AdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAdmissionPolicy)).
+		Watches(&policiesv1.AdmissionPolicyGroup{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAdmissionPolicyGroup)).
+		Watches(&policiesv1.ClusterAdmissionPolicy{}, handler.EnqueueRequestsFromMapFunc(r.enqueueClusterAdmissionPolicy)).
+		Watches(&policiesv1.ClusterAdmissionPolicyGroup{}, handler.EnqueueRequestsFromMapFunc(r.enqueueClusterAdmissionPolicyGroup)).
 		Complete(r)
 	if err != nil {
 		return errors.Join(errors.New("failed enrolling controller with manager"), err)
@@ -223,8 +212,88 @@ func (r *PolicyServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-// getPolicies returns all admission policies and cluster admission
-// policies bound to the given policyServer.
+func (r *PolicyServerReconciler) enqueueAdmissionPolicy(_ context.Context, object client.Object) []reconcile.Request {
+	// The watch will trigger twice per object change; once with the old
+	// object, and once the new object. We need to be mindful when doing
+	// Updates since they will invalidate the newer versions of the
+	// object.
+	policy, ok := object.(*policiesv1.AdmissionPolicy)
+	if !ok {
+		r.Log.Info("object is not type of AdmissionPolicy: %+v", "policy", policy)
+		return []ctrl.Request{}
+	}
+
+	return []ctrl.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name: policy.Spec.PolicyServer,
+			},
+		},
+	}
+}
+
+func (r *PolicyServerReconciler) enqueueAdmissionPolicyGroup(_ context.Context, object client.Object) []reconcile.Request {
+	// The watch will trigger twice per object change; once with the old
+	// object, and once the new object. We need to be mindful when doing
+	// Updates since they will invalidate the newer versions of the
+	// object.
+	policy, ok := object.(*policiesv1.AdmissionPolicyGroup)
+	if !ok {
+		r.Log.Info("object is not type of AdmissionPolicyGroup: %+v", "policy", policy)
+		return []ctrl.Request{}
+	}
+
+	return []ctrl.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name: policy.Spec.PolicyServer,
+			},
+		},
+	}
+}
+func (r *PolicyServerReconciler) enqueueClusterAdmissionPolicy(_ context.Context, object client.Object) []reconcile.Request {
+	// The watch will trigger twice per object change; once with the old
+	// object, and once the new object. We need to be mindful when doing
+	// Updates since they will invalidate the newer versions of the
+	// object.
+	policy, ok := object.(*policiesv1.ClusterAdmissionPolicy)
+	if !ok {
+		r.Log.Info("object is not type of ClusterAdmissionPolicy: %+v", "policy", policy)
+		return []ctrl.Request{}
+	}
+
+	return []ctrl.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name: policy.Spec.PolicyServer,
+			},
+		},
+	}
+}
+
+func (r *PolicyServerReconciler) enqueueClusterAdmissionPolicyGroup(_ context.Context, object client.Object) []reconcile.Request {
+	// The watch will trigger twice per object change; once with the old
+	// object, and once the new object. We need to be mindful when doing
+	// Updates since they will invalidate the newer versions of the
+	// object.
+	policy, ok := object.(*policiesv1.ClusterAdmissionPolicyGroup)
+	if !ok {
+		r.Log.Info("object is not type of ClusterAdmissionPolicyGroup: %+v", "policy", policy)
+		return []ctrl.Request{}
+	}
+
+	return []ctrl.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name: policy.Spec.PolicyServer,
+			},
+		},
+	}
+}
+
+// getPolicies returns all admission policies, cluster admission policy,
+// admission policies groups and cluster admission policy groups bound to the
+// given policyServer.
 func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *policiesv1.PolicyServer) ([]policiesv1.Policy, error) {
 	var clusterAdmissionPolicies policiesv1.ClusterAdmissionPolicyList
 	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
@@ -235,7 +304,21 @@ func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *
 	var admissionPolicies policiesv1.AdmissionPolicyList
 	err = r.Client.List(ctx, &admissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
+		err = fmt.Errorf("failed obtaining AdmissionPolicies: %w", err)
+		return nil, err
+	}
+
+	var admissionPoliciesGroup policiesv1.AdmissionPolicyGroupList
+	err = r.Client.List(ctx, &admissionPoliciesGroup, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
+	if err != nil && apierrors.IsNotFound(err) {
+		err = fmt.Errorf("failed obtaining AdmissionPoliciesGroups: %w", err)
+		return nil, err
+	}
+
+	var clusterAdmissionPoliciesGroup policiesv1.ClusterAdmissionPolicyGroupList
+	err = r.Client.List(ctx, &clusterAdmissionPoliciesGroup, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
+	if err != nil && apierrors.IsNotFound(err) {
+		err = fmt.Errorf("failed obtaining ClusterAdmissionPoliciesGroup: %w", err)
 		return nil, err
 	}
 
@@ -246,7 +329,12 @@ func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *
 	for _, admissionPolicy := range admissionPolicies.Items {
 		policies = append(policies, admissionPolicy.DeepCopy())
 	}
-
+	for _, admissionPolicyGroup := range admissionPoliciesGroup.Items {
+		policies = append(policies, admissionPolicyGroup.DeepCopy())
+	}
+	for _, clusterAdmissionPolicyGroup := range clusterAdmissionPoliciesGroup.Items {
+		policies = append(policies, clusterAdmissionPolicyGroup.DeepCopy())
+	}
 	return policies, nil
 }
 

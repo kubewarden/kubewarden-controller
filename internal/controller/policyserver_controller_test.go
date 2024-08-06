@@ -247,32 +247,195 @@ var _ = Describe("PolicyServer controller", func() {
 			policyServer := policyServerFactory(policyServerName)
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
-			policyName := newName("policy")
-			policy := clusterAdmissionPolicyFactory(policyName, policyServerName, false)
-			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
+			admissionPolicy := admissionPolicyFactory(newName("admission-policy"), "default", policyServerName, false)
+			Expect(k8sClient.Create(ctx, admissionPolicy)).To(Succeed())
+
+			clusterAdmissionPolicy := clusterAdmissionPolicyFactory(newName("cluster-admission"), policyServerName, false)
+			clusterAdmissionPolicy.Spec.ContextAwareResources = []policiesv1.ContextAwareResource{
+				{
+					APIVersion: "v1",
+					Kind:       "Pod",
+				},
+				{
+					APIVersion: "v1",
+					Kind:       "Deployment",
+				},
+			}
+			Expect(k8sClient.Create(ctx, clusterAdmissionPolicy)).To(Succeed())
+
+			admissionPolicyGroup := admissionPolicyGroupFactory(newName("admissing-policy-group"), "default", policyServerName)
+			Expect(k8sClient.Create(ctx, admissionPolicyGroup)).To(Succeed())
+
+			clusterPolicyGroup := clusterAdmissionPolicyGroupFactory(newName("cluster-admission-policy-group"), policyServerName)
+			clusterPolicyGroup.Spec.Policies[0].ContextAwareResources = []policiesv1.ContextAwareResource{
+				{
+					APIVersion: "v1",
+					Kind:       "Pod",
+				},
+			}
+			clusterPolicyGroup.Spec.Policies[1].ContextAwareResources = []policiesv1.ContextAwareResource{
+				{
+					APIVersion: "v1",
+					Kind:       "Deployment",
+				},
+			}
+			Expect(k8sClient.Create(ctx, clusterPolicyGroup)).To(Succeed())
 
 			policiesMap := policyConfigEntryMap{}
-			policiesMap[policy.GetUniqueName()] = policyServerConfigEntry{
+			policiesMap[admissionPolicy.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
-					Namespace: policy.GetNamespace(),
-					Name:      policy.GetName(),
+					Namespace: admissionPolicy.GetNamespace(),
+					Name:      admissionPolicy.GetName(),
 				},
-				URL:                   policy.GetModule(),
-				PolicyMode:            string(policy.GetPolicyMode()),
-				AllowedToMutate:       policy.IsMutating(),
-				Settings:              policy.GetSettings(),
-				ContextAwareResources: policy.GetContextAwareResources(),
+				URL:                   admissionPolicy.GetModule(),
+				PolicyMode:            string(admissionPolicy.GetPolicyMode()),
+				AllowedToMutate:       admissionPolicy.IsMutating(),
+				Settings:              admissionPolicy.GetSettings(),
+				ContextAwareResources: admissionPolicy.GetContextAwareResources(),
+				Policies:              buildPoliciesMembers(admissionPolicy.GetPolicyMembers()),
+				Expression:            admissionPolicy.GetExpression(),
+				Message:               admissionPolicy.GetMessage(),
 			}
+			policiesMap[clusterAdmissionPolicy.GetUniqueName()] = policyServerConfigEntry{
+				NamespacedName: types.NamespacedName{
+					Namespace: clusterAdmissionPolicy.GetNamespace(),
+					Name:      clusterAdmissionPolicy.GetName(),
+				},
+				URL:                   clusterAdmissionPolicy.GetModule(),
+				PolicyMode:            string(clusterAdmissionPolicy.GetPolicyMode()),
+				AllowedToMutate:       clusterAdmissionPolicy.IsMutating(),
+				Settings:              clusterAdmissionPolicy.GetSettings(),
+				ContextAwareResources: clusterAdmissionPolicy.GetContextAwareResources(),
+				Policies:              buildPoliciesMembers(clusterAdmissionPolicy.GetPolicyMembers()),
+				Expression:            clusterAdmissionPolicy.GetExpression(),
+				Message:               clusterAdmissionPolicy.GetMessage(),
+			}
+			policiesMap[admissionPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
+				NamespacedName: types.NamespacedName{
+					Namespace: admissionPolicyGroup.GetNamespace(),
+					Name:      admissionPolicyGroup.GetName(),
+				},
+				URL:                   admissionPolicyGroup.GetModule(),
+				PolicyMode:            string(admissionPolicyGroup.GetPolicyMode()),
+				AllowedToMutate:       admissionPolicyGroup.IsMutating(),
+				Settings:              admissionPolicyGroup.GetSettings(),
+				ContextAwareResources: admissionPolicyGroup.GetContextAwareResources(),
+				Policies:              buildPoliciesMembers(admissionPolicyGroup.GetPolicyMembers()),
+				Expression:            admissionPolicyGroup.GetExpression(),
+				Message:               admissionPolicyGroup.GetMessage(),
+			}
+			policiesMap[clusterPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
+				NamespacedName: types.NamespacedName{
+					Namespace: clusterPolicyGroup.GetNamespace(),
+					Name:      clusterPolicyGroup.GetName(),
+				},
+				URL:                   clusterPolicyGroup.GetModule(),
+				AllowedToMutate:       clusterPolicyGroup.IsMutating(),
+				Settings:              clusterPolicyGroup.GetSettings(),
+				ContextAwareResources: clusterPolicyGroup.GetContextAwareResources(),
+				PolicyMode:            string(clusterPolicyGroup.GetPolicyMode()),
+				Policies:              buildPoliciesMembers(clusterPolicyGroup.GetPolicyMembers()),
+				Expression:            clusterPolicyGroup.GetExpression(),
+				Message:               clusterPolicyGroup.GetMessage(),
+			}
+
 			policies, err := json.Marshal(policiesMap)
 			Expect(err).ToNot(HaveOccurred())
 
+			// As we have a customization in how we serialize the policies,
+			// let's check if the result json is in the expected format.
+			// Otherwise, the policy server will not start.
 			Eventually(func() *corev1.ConfigMap {
 				configMap, _ := getTestPolicyServerConfigMap(ctx, policyServerName)
 				return configMap
 			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Data": MatchAllKeys(Keys{
-					constants.PolicyServerConfigPoliciesEntry: MatchJSON(policies),
-					constants.PolicyServerConfigSourcesEntry:  Equal("{}"),
+					constants.PolicyServerConfigPoliciesEntry: And(
+						MatchJSON(policies),
+						// Let's validate the custom marshalling
+						WithTransform(func(data string) (map[string]interface{}, error) {
+							policiesData := map[string]interface{}{}
+							err = json.Unmarshal(policies, &policiesData)
+							return policiesData, err
+
+						}, MatchKeys(IgnoreExtras, Keys{
+							admissionPolicy.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+								"namespacedName": MatchAllKeys(Keys{
+									"Namespace": Equal(admissionPolicy.GetNamespace()),
+									"Name":      Equal(admissionPolicy.GetName()),
+								}),
+								"url":        Equal(admissionPolicy.GetModule()),
+								"policyMode": Equal(string(admissionPolicy.GetPolicyMode())),
+							}),
+							clusterAdmissionPolicy.GetUniqueName(): And(MatchAllKeys(Keys{
+								"namespacedName": MatchAllKeys(Keys{
+									"Namespace": Equal(clusterAdmissionPolicy.GetNamespace()),
+									"Name":      Equal(clusterAdmissionPolicy.GetName()),
+								}),
+								"url":             Equal(clusterAdmissionPolicy.GetModule()),
+								"policyMode":      Equal(string(clusterAdmissionPolicy.GetPolicyMode())),
+								"allowedToMutate": Equal(clusterAdmissionPolicy.IsMutating()),
+								"settings":        BeNil(),
+								"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
+									"apiVersion": Equal("v1"),
+									"kind":       Equal("Pod"),
+								})), ContainElement(MatchAllKeys(Keys{
+									"apiVersion": Equal("v1"),
+									"kind":       Equal("Deployment"),
+								})), HaveLen(2)),
+							}), Not(MatchAllKeys(Keys{
+								"expression": Ignore(),
+								"message":    Ignore(),
+								"policies":   Ignore(),
+							}))),
+							admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+								"namespacedName": MatchAllKeys(Keys{
+									"Namespace": Equal(admissionPolicyGroup.GetNamespace()),
+									"Name":      Equal(admissionPolicyGroup.GetName()),
+								}),
+								"policies": MatchKeys(IgnoreExtras, Keys{
+									admissionPolicyGroup.Spec.Policies[0].Name: MatchKeys(IgnoreExtras, Keys{
+										"url": Equal(admissionPolicyGroup.GetPolicyMembers()[0].Module),
+									})}),
+								"policyMode": Equal(string(admissionPolicyGroup.GetPolicyMode())),
+								"expression": Equal(admissionPolicyGroup.GetExpression()),
+								"message":    Equal(admissionPolicyGroup.GetMessage()),
+							}),
+							clusterPolicyGroup.GetUniqueName(): And(MatchAllKeys(Keys{
+								"namespacedName": MatchAllKeys(Keys{
+									"Namespace": Equal(clusterPolicyGroup.GetNamespace()),
+									"Name":      Equal(clusterPolicyGroup.GetName()),
+								}),
+								"policies": MatchKeys(IgnoreExtras, Keys{
+									clusterPolicyGroup.Spec.Policies[0].Name: MatchAllKeys(Keys{
+										"url":      Equal(clusterPolicyGroup.GetPolicyMembers()[0].Module),
+										"settings": Ignore(),
+										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
+											"apiVersion": Equal("v1"),
+											"kind":       Equal("Pod"),
+										})), HaveLen(1)),
+									}),
+									clusterPolicyGroup.Spec.Policies[1].Name: MatchAllKeys(Keys{
+										"url":      Equal(clusterPolicyGroup.GetPolicyMembers()[1].Module),
+										"settings": Ignore(),
+										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
+											"apiVersion": Equal("v1"),
+											"kind":       Equal("Deployment"),
+										})), HaveLen(1)),
+									}),
+								}),
+								"policyMode": Equal(string(clusterPolicyGroup.GetPolicyMode())),
+								"expression": Equal(clusterPolicyGroup.GetExpression()),
+								"message":    Equal(clusterPolicyGroup.GetMessage()),
+							}),
+								Not(MatchKeys(IgnoreExtras, Keys{
+									"settings":              Ignore(),
+									"allowedToMutate":       Ignore(),
+									"contextAwareResources": Ignore(),
+								}))),
+						}),
+						)),
+					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
 				}),
 			})))
 		})
