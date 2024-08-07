@@ -681,7 +681,7 @@ async fn test_detect_certificate_rotation() {
     // the old certificate should still be in use, since we didn't change also the key
     assert!(check_tls_san_name(&domain_ip, &domain_port, hostname1).await);
 
-    // write only the cert file
+    // write only the key file
     std::fs::write(&key_file, tls_data2.key).unwrap();
 
     // give inotify some time to ensure it detected the cert change
