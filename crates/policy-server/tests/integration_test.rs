@@ -1,6 +1,14 @@
 mod common;
 
-use std::collections::{BTreeSet, HashMap};
+use std::io::BufReader;
+use std::{
+    collections::{BTreeSet, HashMap},
+    fs::{set_permissions, File, Permissions},
+    io::BufRead,
+    os::unix::fs::PermissionsExt,
+    path::PathBuf,
+    time::Duration,
+};
 
 use common::app;
 
@@ -8,6 +16,7 @@ use axum::{
     body::Body,
     http::{self, header, Request},
 };
+use backon::{ExponentialBuilder, Retryable};
 use http_body_util::BodyExt;
 use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
@@ -16,9 +25,17 @@ use policy_evaluator::{
 use policy_server::{
     api::admission_review::AdmissionReviewResponse,
     config::{PolicyMode, PolicyOrPolicyGroup},
+    metrics::setup_metrics,
+    tracing::setup_tracing,
 };
 use regex::Regex;
 use rstest::*;
+use tempfile::NamedTempFile;
+use testcontainers::{
+    core::{Mount, WaitFor},
+    runners::AsyncRunner,
+    GenericImage, ImageExt,
+};
 use tower::ServiceExt;
 
 use crate::common::default_test_config;
@@ -625,7 +642,7 @@ async fn test_detect_certificate_rotation() {
     let key_file = certs_dir.path().join("policy-server-key.pem");
 
     let hostname1 = "cert1.example.com";
-    let tls_data1 = create_cert(&hostname1);
+    let tls_data1 = create_cert(hostname1);
 
     std::fs::write(&cert_file, tls_data1.cert).unwrap();
     std::fs::write(&key_file, tls_data1.key).unwrap();
@@ -641,12 +658,6 @@ async fn test_detect_certificate_rotation() {
     let domain_port = config.addr.port().to_string();
 
     tokio::spawn(async move {
-        policy_server::tracing::setup_tracing(
-            &config.log_level,
-            &config.log_fmt,
-            config.log_no_color,
-        )
-        .unwrap();
         let api_server = policy_server::PolicyServer::new_from_config(config)
             .await
             .unwrap();
@@ -678,4 +689,108 @@ async fn test_detect_certificate_rotation() {
 
     // the new certificate should be in use
     assert!(check_tls_san_name(&domain_ip, &domain_port, hostname2).await);
+}
+
+#[tokio::test]
+async fn test_otel() {
+    let mut otelc_config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    otelc_config_path.push("tests/data/otel-collector-config.yaml");
+
+    let metrics_output_file = NamedTempFile::new().unwrap();
+    let metrics_output_file_path = metrics_output_file.path();
+
+    let traces_output_file = NamedTempFile::new().unwrap();
+    let traces_output_file_path = traces_output_file.path();
+
+    let permissions = Permissions::from_mode(0o666);
+    set_permissions(metrics_output_file_path, permissions.clone()).unwrap();
+    set_permissions(traces_output_file_path, permissions).unwrap();
+
+    let otelc = GenericImage::new("otel/opentelemetry-collector", "0.98.0")
+        .with_wait_for(WaitFor::message_on_stderr("Everything is ready"))
+        .with_mount(Mount::bind_mount(
+            otelc_config_path.to_str().unwrap(),
+            "/etc/otel-collector-config.yaml",
+        ))
+        .with_mount(Mount::bind_mount(
+            metrics_output_file_path.to_str().unwrap(),
+            "/tmp/metrics.json",
+        ))
+        .with_mount(Mount::bind_mount(
+            traces_output_file_path.to_str().unwrap(),
+            "/tmp/traces.json",
+        ))
+        .with_mapped_port(4317, 4317.into())
+        .with_cmd(vec!["--config=/etc/otel-collector-config.yaml"])
+        .with_startup_timeout(Duration::from_secs(30))
+        .start()
+        .await
+        .unwrap();
+
+    let mut config = default_test_config();
+    config.metrics_enabled = true;
+    config.log_fmt = "otlp".to_string();
+    setup_metrics().unwrap();
+    setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color).unwrap();
+
+    let app = app(config).await;
+
+    // one succesful request
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_without_privileged_containers.json"
+        )))
+        .unwrap();
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+
+    let exponential_backoff = ExponentialBuilder::default()
+        .with_min_delay(Duration::from_secs(10))
+        .with_max_delay(Duration::from_secs(30))
+        .with_max_times(5);
+
+    let metrics_output_json =
+        (|| async { parse_exporter_output(metrics_output_file.as_file()).await })
+            .retry(&exponential_backoff)
+            .await
+            .unwrap();
+    let metrics = &metrics_output_json["resourceMetrics"][0]["scopeMetrics"][0];
+    assert_eq!(metrics["scope"]["name"], "kubewarden");
+    assert!(metrics["metrics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| { m["name"] == "kubewarden_policy_evaluation_latency_milliseconds" }));
+    assert!(metrics["metrics"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|m| { m["name"] == "kubewarden_policy_evaluations_total" }));
+
+    let traces_output_json =
+        (|| async { parse_exporter_output(traces_output_file.as_file()).await })
+            .retry(&exponential_backoff)
+            .await
+            .unwrap();
+    let spans = &traces_output_json["resourceSpans"][0]["scopeSpans"][0];
+    assert_eq!(spans["scope"]["name"], "kubewarden-policy-server");
+
+    otelc.stop().await.unwrap();
+}
+
+async fn parse_exporter_output(
+    exporter_output_file: &File,
+) -> serde_json::Result<serde_json::Value> {
+    let mut reader = BufReader::new(exporter_output_file);
+
+    // read only the first entry in the output file
+    let mut exporter_output = String::new();
+    reader
+        .read_line(&mut exporter_output)
+        .expect("failed to read exporter output");
+
+    serde_json::from_str(&exporter_output)
 }

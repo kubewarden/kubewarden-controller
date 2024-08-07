@@ -37,13 +37,13 @@ coverage: coverage-unit-tests coverage-integration-tests
 .PHONY: coverage-unit-tests
 coverage-unit-tests:
 	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--all-features --lib --bin --follow-exec \
+		--all-features --lib --bin --implicit-test-threads \
 		--out xml --out html --output-dir coverage/unit-tests
 	
 .PHONY: coverage-integration-tests
 coverage-integration-tests:
 	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--all-features --test integration_test --follow-exec \
+		--all-features --implicit-test-threads --test integration_test \
 		--out xml --out html --output-dir coverage/integration-tests
 
 .PHONY: clean

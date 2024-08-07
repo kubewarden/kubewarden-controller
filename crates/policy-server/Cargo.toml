@@ -65,6 +65,8 @@ rstest = "0.22"
 tempfile = "3.10.1"
 tower = { version = "0.4", features = ["util"] }
 http-body-util = "0.1.1"
+testcontainers = { version = "0.21.1", features = ["watchdog"] }
+backon = "0.4.4"
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 rcgen = { version = "0.13", features = ["crypto"] }
