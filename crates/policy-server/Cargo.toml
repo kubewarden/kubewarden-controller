@@ -45,7 +45,7 @@ tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 semver = { version = "1.0.22", features = ["serde"] }
 mockall_double = "0.3"
 axum = { version = "0.7.5", features = ["macros", "query"] }
-axum-server = { version = "0.7", features = ["tls-rustls"] }
+axum-server = { version = "0.7.1", features = ["tls-rustls-no-provider"] }
 tower-http = { version = "0.5.2", features = ["trace"] }
 tikv-jemallocator = { version = "0.5.4", features = [
   "profiling",
