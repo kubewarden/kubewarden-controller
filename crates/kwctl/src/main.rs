@@ -354,6 +354,28 @@ async fn main() -> Result<()> {
                     )?;
                 };
             }
+            if let Some(matches) = matches.subcommand_matches("scaffold") {
+                if let Some(matches) = matches.subcommand_matches("admission-request") {
+                    let operation: scaffold::AdmissionRequestOperation = matches
+                        .get_one::<String>("operation")
+                        .unwrap()
+                        .parse::<scaffold::AdmissionRequestOperation>()
+                        .map_err(|e| anyhow!("Error parsing operation: {}", e))?;
+                    let object_path: Option<PathBuf> = if matches.contains_id("object") {
+                        Some(matches.get_one::<String>("object").unwrap().into())
+                    } else {
+                        None
+                    };
+                    let old_object_path: Option<PathBuf> = if matches.contains_id("old-object") {
+                        Some(matches.get_one::<String>("old-object").unwrap().into())
+                    } else {
+                        None
+                    };
+
+                    scaffold::admission_request(operation, object_path, old_object_path).await?;
+                };
+            }
+
             Ok(())
         }
         Some("completions") => {

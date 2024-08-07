@@ -56,8 +56,10 @@ reqwest = { version = "0", default-features = false, features = [
 ] }
 
 [dev-dependencies]
-rstest = "0.22.0"
-tempfile = "3.12.0"
 assert_cmd = "2.0.14"
-predicates = "3.1.0"
+hyper = { version = "1.2.0" }
+predicates = "3.1"
+rstest = "0.22.0"
+tempfile = "3.12"
 testcontainers = { version = "0.21", features = ["blocking"] }
+tower-test = "0.4"
