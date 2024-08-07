@@ -29,14 +29,14 @@ pub struct AdmissionRequest {
     pub options: Option<k8s_openapi::apimachinery::pkg::runtime::RawExtension>,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, Eq, PartialEq)]
 pub struct GroupVersionKind {
     pub group: String,
     pub version: String,
     pub kind: String,
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, Eq, PartialEq)]
 pub struct GroupVersionResource {
     pub group: String,
     pub version: String,
