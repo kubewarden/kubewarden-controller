@@ -625,7 +625,7 @@ async fn test_detect_certificate_rotation() {
     let key_file = certs_dir.path().join("policy-server-key.pem");
 
     let hostname1 = "cert1.example.com";
-    let tls_data1 = create_cert(&hostname1);
+    let tls_data1 = create_cert(hostname1);
 
     std::fs::write(&cert_file, tls_data1.cert).unwrap();
     std::fs::write(&key_file, tls_data1.key).unwrap();
@@ -670,7 +670,7 @@ async fn test_detect_certificate_rotation() {
     // the old certificate should still be in use, since we didn't change also the key
     assert!(check_tls_san_name(&domain_ip, &domain_port, hostname1).await);
 
-    // write only the cert file
+    // write only the key file
     std::fs::write(&key_file, tls_data2.key).unwrap();
 
     // give inotify some time to ensure it detected the cert change
