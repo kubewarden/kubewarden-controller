@@ -80,8 +80,8 @@ var _ = Describe("Cert controller", func() {
 					Namespace: deploymentsNamespace,
 					Name:      policyServerName,
 					Labels: map[string]string{
-						"app.kubernetes.io/part-of":   "kubewarden",
-						"app.kubernetes.io/component": "policy-server",
+						constants.PartOfLabelKey:    constants.PartOfLabelValue,
+						constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
 					},
 				},
 				Type: corev1.SecretTypeOpaque,
@@ -200,7 +200,7 @@ var _ = Describe("Cert controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: validatingWebhookConfigurationName,
 					Labels: map[string]string{
-						"app.kubernetes.io/part-of": "kubewarden",
+						constants.PartOfLabelKey: "kubewarden",
 					},
 				},
 				Webhooks: []admissionregistrationv1.ValidatingWebhook{
@@ -226,7 +226,7 @@ var _ = Describe("Cert controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: mutatingWebhookConfigurationName,
 					Labels: map[string]string{
-						"app.kubernetes.io/part-of": "kubewarden",
+						constants.PartOfLabelKey: "kubewarden",
 					},
 				},
 				Webhooks: []admissionregistrationv1.MutatingWebhook{
@@ -255,8 +255,8 @@ var _ = Describe("Cert controller", func() {
 					Namespace: deploymentsNamespace,
 					Name:      policyServerName,
 					Labels: map[string]string{
-						"app.kubernetes.io/part-of":   "kubewarden",
-						"app.kubernetes.io/component": "policy-server",
+						constants.PartOfLabelKey:    constants.PartOfLabelValue,
+						constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
 					},
 				},
 				Type: corev1.SecretTypeOpaque,
@@ -284,8 +284,8 @@ var _ = Describe("Cert controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			By("checking whether the old CA cert has beeen added to the secret")
-			_, ok := caRootSecret.Data[constants.OldCARootCert]
-			Expect(ok).To(BeTrue())
+			_, found := caRootSecret.Data[constants.OldCARootCert]
+			Expect(found).To(BeTrue())
 		})
 
 		It("should inject the old + new CA bundle in the webhook configurations and rotate the webhook server cert", func() {
@@ -412,7 +412,7 @@ var _ = Describe("Cert controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: validatingWebhookConfigurationName,
 					Labels: map[string]string{
-						"app.kubernetes.io/part-of": "kubewarden",
+						constants.PartOfLabelKey: constants.PartOfLabelValue,
 					},
 				},
 				Webhooks: []admissionregistrationv1.ValidatingWebhook{
@@ -442,8 +442,8 @@ var _ = Describe("Cert controller", func() {
 			err := k8sClient.Get(ctx, types.NamespacedName{Name: caRootSecretName, Namespace: deploymentsNamespace}, caRootSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, ok := caRootSecret.Data[constants.OldCARootCert]
-			Expect(ok).To(BeFalse())
+			_, found := caRootSecret.Data[constants.OldCARootCert]
+			Expect(found).To(BeFalse())
 		})
 
 		It("should remove the old CA root from the webhook configurations' CA bundle", func() {
