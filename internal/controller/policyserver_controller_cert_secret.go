@@ -39,6 +39,11 @@ func (r *PolicyServerReconciler) reconcilePolicyServerCertSecret(ctx context.Con
 			return errors.Join(errors.New("failed to set policy server secret owner reference"), err)
 		}
 
+		policyServerSecret.ObjectMeta.Labels = map[string]string{
+			constants.PartOfLabelKey:    constants.PartOfLabelValue,
+			constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
+		}
+
 		// check if secret has the required data
 		_, hasTLSCert := policyServerSecret.Data[constants.ServerCert]
 		_, hasTLSKey := policyServerSecret.Data[constants.ServerPrivateKey]
