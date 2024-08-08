@@ -16,8 +16,9 @@ Use the `info` command to display system information.
     };
 }
 
-fn subcommand_pull() -> Command {
-    let mut args = vec![
+// Minimum set of flags required to pull a policy from a registry
+fn pull_shared_flags() -> Vec<Arg> {
+    vec![
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("DOCKER_CONFIG")
@@ -74,12 +75,16 @@ fn subcommand_pull() -> Command {
             .number_of_values(1)
             .value_name("VALUE")
             .help("GitHub repository expected in the certificates generated in CD pipelines"),
-        Arg::new("output-path")
-            .short('o')
-            .long("output-path")
-            .value_name("PATH")
-            .help("Output file. If not provided will be downloaded to the Kubewarden store"),
-    ];
+    ]
+}
+
+fn subcommand_pull() -> Command {
+    let mut args = pull_shared_flags();
+    args.extend_from_slice(&[Arg::new("output-path")
+        .short('o')
+        .long("output-path")
+        .value_name("PATH")
+        .help("Output file. If not provided will be downloaded to the Kubewarden store")]);
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
         Arg::new("uri")
@@ -457,6 +462,8 @@ fn subcommand_scaffold() -> Command {
             .num_args(0)
             .help("Uses the policy metadata to define which Kubernetes resources can be accessed by the policy. Warning: review the list of resources carefully to avoid abuses. Disabled by default"),
     ];
+    // When scaffolding the manifest of a missing policy, we can pull it from a registry
+    manifest_args.extend_from_slice(&pull_shared_flags());
     manifest_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     manifest_args.push(
         Arg::new("uri_or_sha_prefix")
