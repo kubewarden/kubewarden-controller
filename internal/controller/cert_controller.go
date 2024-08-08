@@ -159,7 +159,7 @@ func (r *CertReconciler) reconcileOldCARoot(ctx context.Context, caRootSecret *c
 func (r *CertReconciler) reconcileWebhookConfigurations(ctx context.Context, caBundle []byte) error {
 	validatingWebhookConfigurationList := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
 	if err := r.List(ctx, validatingWebhookConfigurationList, client.MatchingLabels{
-		"app.kubernetes.io/part-of": "kubewarden",
+		constants.PartOfLabelKey: constants.PartOfLabelValue,
 	}); err != nil {
 		return fmt.Errorf("failed to list validating webhook configurations: %w", err)
 	}
@@ -180,7 +180,7 @@ func (r *CertReconciler) reconcileWebhookConfigurations(ctx context.Context, caB
 
 	mutatingWebhookConfigurationList := &admissionregistrationv1.MutatingWebhookConfigurationList{}
 	if err := r.List(ctx, mutatingWebhookConfigurationList, client.MatchingLabels{
-		"app.kubernetes.io/part-of": "kubewarden",
+		constants.PartOfLabelKey: constants.PartOfLabelValue,
 	}); err != nil {
 		return fmt.Errorf("failed to list mutating webhook configurations: %w", err)
 	}
@@ -218,8 +218,8 @@ func (r *CertReconciler) reconcileServerCerts(ctx context.Context, caRootSecret 
 		serverCertSecretList,
 		client.InNamespace(r.DeploymentsNamespace),
 		client.MatchingLabels{
-			"app.kubernetes.io/part-of":   "kubewarden",
-			"app.kubernetes.io/component": "policy-server",
+			constants.PartOfLabelKey:    constants.PartOfLabelValue,
+			constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
 		},
 	)
 	if err != nil {

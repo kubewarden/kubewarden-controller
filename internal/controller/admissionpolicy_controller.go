@@ -163,8 +163,8 @@ func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_
 	// Pre v1.16.0
 	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
 	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
-	partOfLabel := webhookConfiguration.GetLabels()["app.kubernetes.io/part-of"]
-	if !kubwardenLabelExists && partOfLabel != "kubewarden" {
+	partOfLabel := webhookConfiguration.GetLabels()[constants.PartOfLabelKey]
+	if !kubwardenLabelExists && partOfLabel != constants.PartOfLabelValue {
 		return []reconcile.Request{}
 	}
 
