@@ -355,11 +355,11 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 		Env: append([]corev1.EnvVar{
 			{
 				Name:  "KUBEWARDEN_CERT_FILE",
-				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSCert),
+				Value: filepath.Join(secretsContainerPath, constants.ServerCert),
 			},
 			{
 				Name:  "KUBEWARDEN_KEY_FILE",
-				Value: filepath.Join(secretsContainerPath, constants.PolicyServerTLSKey),
+				Value: filepath.Join(secretsContainerPath, constants.ServerPrivateKey),
 			},
 			{
 				Name:  "KUBEWARDEN_PORT",
