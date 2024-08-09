@@ -637,6 +637,15 @@ mod certificate_reload_helpers {
 async fn test_detect_certificate_rotation() {
     use certificate_reload_helpers::*;
 
+    // Starting from rustls 0.22, each application must set its default crypto provider.
+    // This setup is done inside of the `main` function of the policy server,
+    // which is not called in this test.
+    // Hence we have to setup the crypto provider here.
+    let crypto_provider = rustls::crypto::aws_lc_rs::default_provider();
+    crypto_provider
+        .install_default()
+        .expect("Failed to install crypto provider");
+
     let certs_dir = tempfile::tempdir().unwrap();
     let cert_file = certs_dir.path().join("policy-server.pem");
     let key_file = certs_dir.path().join("policy-server-key.pem");
