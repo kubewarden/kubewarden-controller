@@ -38,7 +38,7 @@ use tracing::debug;
 use url::ParseError;
 
 // re-export for usage by kwctl, policy-server, policy-evaluator,...
-pub use oci_distribution;
+pub use oci_client;
 pub use sigstore;
 
 lazy_static! {

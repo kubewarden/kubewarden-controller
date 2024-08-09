@@ -1,4 +1,4 @@
-use oci_distribution::{manifest::WASM_LAYER_MEDIA_TYPE, secrets::RegistryAuth, Reference};
+use oci_client::{manifest::WASM_LAYER_MEDIA_TYPE, secrets::RegistryAuth, Reference};
 use sigstore::{
     cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities},
     errors::SigstoreError,
@@ -135,7 +135,7 @@ impl Verifier {
         }
 
         let registry = crate::registry::Registry::new();
-        let reference = oci_distribution::Reference::from_str(image_name)?;
+        let reference = oci_client::Reference::from_str(image_name)?;
         let image_immutable_ref = format!(
             "registry://{}/{}@{}",
             reference.registry(),
@@ -146,9 +146,8 @@ impl Verifier {
             .manifest(&image_immutable_ref, self.sources.as_ref())
             .await?;
 
-        let digests: Vec<String> = if let oci_distribution::manifest::OciManifest::Image(
-            ref image,
-        ) = manifest
+        let digests: Vec<String> = if let oci_client::manifest::OciManifest::Image(ref image) =
+            manifest
         {
             image
                 .layers

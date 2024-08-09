@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use docker_credential::DockerCredential;
 use lazy_static::lazy_static;
-use oci_distribution::{
+use oci_client::{
     client::{
         Certificate as OciCertificate, CertificateEncoding, Client, ClientConfig,
         ClientProtocol as OciClientProtocol, Config, ImageLayer,
@@ -129,7 +129,7 @@ impl Registry {
         &self,
         url: &str,
         sources: Option<&Sources>,
-    ) -> RegistryResult<oci_distribution::manifest::OciManifest> {
+    ) -> RegistryResult<oci_client::manifest::OciManifest> {
         // Start by building the Reference, this will expand the input url to
         // ensure it contains also the registry. Example: `busybox` ->
         // `docker.io/library/busybox:latest`
@@ -254,7 +254,7 @@ impl Registry {
         url: &str,
         sources: Option<&Sources>,
     ) -> RegistryResult<(
-        oci_distribution::manifest::OciImageManifest,
+        oci_client::manifest::OciImageManifest,
         String,
         serde_json::Value,
     )> {
@@ -340,7 +340,7 @@ fn build_immutable_ref(image_ref: &str, manifest_url: &str) -> RegistryResult<St
         )));
     }
 
-    let oci_reference = oci_distribution::Reference::try_from(image_ref)?;
+    let oci_reference = oci_client::Reference::try_from(image_ref)?;
     let mut image_immutable_ref = if oci_reference.registry() == "" {
         oci_reference.repository().to_string()
     } else {

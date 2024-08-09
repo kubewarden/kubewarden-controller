@@ -14,9 +14,9 @@ pub enum SourceError {
     #[error(transparent)]
     InvalidURLError(#[from] crate::errors::InvalidURLError),
     #[error("Fail to interact with OCI registry: {0}")]
-    OCIRegistryError(#[from] oci_distribution::errors::OciDistributionError),
+    OCIRegistryError(#[from] oci_client::errors::OciDistributionError),
     #[error("Invalid OCI image reference: {0}")]
-    InvalidOCIImageReferenceError(#[from] oci_distribution::ParseError),
+    InvalidOCIImageReferenceError(#[from] oci_client::ParseError),
     #[error("could not pull policy {0}: empty layers")]
     EmptyLayersError(String),
     #[error("Invalid certificate: {0}")]
@@ -170,16 +170,16 @@ impl<'a> TryFrom<&Certificate> for rustls_pki_types::CertificateDer<'a> {
     }
 }
 
-impl From<Sources> for oci_distribution::client::ClientConfig {
+impl From<Sources> for oci_client::client::ClientConfig {
     fn from(sources: Sources) -> Self {
         let protocol = if sources.insecure_sources.is_empty() {
-            oci_distribution::client::ClientProtocol::Https
+            oci_client::client::ClientProtocol::Https
         } else {
             let insecure: Vec<String> = sources.insecure_sources.iter().cloned().collect();
-            oci_distribution::client::ClientProtocol::HttpsExcept(insecure)
+            oci_client::client::ClientProtocol::HttpsExcept(insecure)
         };
 
-        let extra_root_certificates: Vec<oci_distribution::client::Certificate> = sources
+        let extra_root_certificates: Vec<oci_client::client::Certificate> = sources
             .source_authorities
             .0
             .iter()
@@ -187,11 +187,11 @@ impl From<Sources> for oci_distribution::client::ClientConfig {
                 certs
                     .iter()
                     .map(|c| c.into())
-                    .collect::<Vec<oci_distribution::client::Certificate>>()
+                    .collect::<Vec<oci_client::client::Certificate>>()
             })
             .collect();
 
-        oci_distribution::client::ClientConfig {
+        oci_client::client::ClientConfig {
             protocol,
             accept_invalid_certificates: false,
             extra_root_certificates,
