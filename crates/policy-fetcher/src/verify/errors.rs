@@ -15,7 +15,7 @@ pub enum VerifyError {
     #[error("{0}")]
     InvalidVerifyFileError(String),
     #[error("Verification only works with OCI images: Not a valid oci image: {0}")]
-    InvalidOCIImageReferenceError(#[from] oci_distribution::ParseError),
+    InvalidOCIImageReferenceError(#[from] oci_client::ParseError),
     #[error("key verification failure: {0} ")]
     KeyVerificationError(#[source] sigstore::errors::SigstoreError),
     // The next error is more specialized error based on a sigstore error. It must

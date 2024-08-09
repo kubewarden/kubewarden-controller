@@ -6,7 +6,7 @@
 mod e2e {
 
     use base64::prelude::{Engine as _, BASE64_STANDARD_NO_PAD};
-    use oci_distribution::{client::ImageData, manifest, secrets::RegistryAuth, Client, Reference};
+    use oci_client::{client::ImageData, manifest, secrets::RegistryAuth, Client, Reference};
     use policy_fetcher::registry::Registry;
     use policy_fetcher::verify::fetch_sigstore_remote_data;
     use sigstore::cosign::{
@@ -134,8 +134,8 @@ mod e2e {
 
     /// Loads a policy image into the registry running in the given port and signs it
     async fn push_container_image(port: u16) -> (Reference, Box<dyn VerificationConstraint>) {
-        let client = Client::new(oci_distribution::client::ClientConfig {
-            protocol: oci_distribution::client::ClientProtocol::HttpsExcept(vec![format!(
+        let client = Client::new(oci_client::client::ClientConfig {
+            protocol: oci_client::client::ClientProtocol::HttpsExcept(vec![format!(
                 "localhost:{}",
                 port
             )]),
