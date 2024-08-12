@@ -13,7 +13,7 @@ use policy_server::PolicyServer;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Starting from rustls 0.22, each application must set its default crypto provider.
-    let crypto_provider = rustls::crypto::aws_lc_rs::default_provider();
+    let crypto_provider = rustls::crypto::ring::default_provider();
     crypto_provider
         .install_default()
         .expect("Failed to install crypto provider");
