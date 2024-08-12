@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
-use policy_evaluator::policy_fetcher::oci_distribution::Reference;
+use policy_evaluator::policy_fetcher::oci_client::Reference;
 use policy_evaluator::policy_fetcher::store::{errors::StoreError, Store};
 use regex::Regex;
 use serde_json::json;
