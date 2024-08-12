@@ -2,7 +2,9 @@
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-defaults)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-defaults)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6626/badge)](https://bestpractices.coreinfrastructure.org/projects/6626)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/6626/badge)](https://www.bestpractices.dev/projects/6626)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fpolicy-server.svg?type=shield)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fpolicy-server?ref=badge_shield)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/policy-server/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/policy-server)
 
 > **Note well:** don't forget to checkout [Kubewarden's documentation](https://docs.kubewarden.io)
 > for more information
@@ -231,3 +233,7 @@ The Kubewarden team is security conscious. You can find our [threat model
 assessment](https://docs.kubewarden.io/security/threat-model) and
 [responsible disclosure approach](https://docs.kubewarden.io/security/disclosure)
 in our Kubewarden docs.
+
+## Changelog
+
+See [GitHub Releases content](https://github.com/kubewarden/policy-server/releases).
