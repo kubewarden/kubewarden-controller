@@ -2,6 +2,7 @@
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9180/badge)](https://www.bestpractices.dev/projects/9180)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl.svg?type=shield)](https://app.fossa.com/projects/cjustom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl?ref=badge_shield)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/kwctl/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/kwctl)
 
 # `kwctl`
 
@@ -52,6 +53,7 @@ Built binaries for `Linux x86_64`, `Windows x86_64`, `MacOS x86_64` and `MacOS
 aarch64 (M1)` are available in [GH Releases](https://github.com/kubewarden/kwctl/releases).
 
 There is also:
+
 - Community-created [Homebrew 🍺 formula for kwctl](https://formulae.brew.sh/formula/kwctl)
 - Community-created [AUR 🐧 package](https://aur.archlinux.org/packages/kwctl-bin)
 
@@ -75,9 +77,9 @@ Policies can be downloaded using the `pull` command.
 The name of the policy must be expressed as a url with one of the
 following protocols:
 
-* `http://`: pull from a HTTP server
-* `https://`: pull from a HTTPS server
-* `registry://`: pull from an OCI registry
+- `http://`: pull from a HTTP server
+- `https://`: pull from a HTTPS server
+- `registry://`: pull from an OCI registry
 
 Pulling from a registry, by tag:
 
@@ -91,6 +93,7 @@ same way as with regular container images):
 ```console
 kwctl pull registry://ghcr.io/kubewarden/policies/psp-capabilities@sha256:61ef63621fa5be8e422881d96d05edfef810992fbf9468e35d1fa5ae815bd97c
 ```
+
 Note well, the shasum is the digest of the OCI artifact containig the policy.
 This value can be obtained using a tool like [crane](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md):
 
@@ -100,11 +103,10 @@ crane digest ghcr.io/kubewarden/policies/psp-capabilities:v0.1.6
 
 ### Run a policy locally
 
-`kwctl` can be used to run a policy locally, outside of Kubernetes. This can be used 
+`kwctl` can be used to run a policy locally, outside of Kubernetes. This can be used
 to quickly evaluate a policy and find the right settings for it.
 
 The evalution is done against a pre-recorded [`AdmissionReview`](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#request).
-
 
 Running a policy locally:
 
@@ -185,7 +187,6 @@ kwctl run \
 Step #2, generate a manifest to enforce the policy inside of a
 Kubernetes cluster:
 
-
 ```console
 kwctl manifest\
   --settings-json '{"constrained_labels": {"owner": ".*"}}' \
@@ -225,11 +226,11 @@ Which can then be customized by hand, and then applied into a Kubernetes cluster
 
 `kwctl` can generate autocompletion scripts for the following shells:
 
-* bash
-* elvish
-* fish
-* powershell
-* zsh
+- bash
+- elvish
+- fish
+- powershell
+- zsh
 
 The completion script can be generated with the following command:
 
@@ -249,8 +250,8 @@ $ source <(kwctl completions -s bash)
 
 To load completions for every new session, execute once:
 
-* Linux: `$ kwctl completions -s bash > /etc/bash_completion.d/kwctl`
-* MacOS: `$ kwctl completions -s bash > /usr/local/etc/bash_completion.d/kwctl`
+- Linux: `$ kwctl completions -s bash > /etc/bash_completion.d/kwctl`
+- MacOS: `$ kwctl completions -s bash > /usr/local/etc/bash_completion.d/kwctl`
 
 You will need to start a new shell for this setup to take effect.
 
@@ -299,8 +300,8 @@ Then start a new shell or run `source ~/.zshrc` once.
 
 ## Verify kwctl binaries
 
-kwctl binaries are signed using [Sigstore's blog signing](https://docs.sigstore.dev/signing/signing_with_blobs/). 
-When you download a [kwctl release](https://github.com/kubewarden/kwctl/releases/) each zip file contains two 
+kwctl binaries are signed using [Sigstore's blog signing](https://docs.sigstore.dev/signing/signing_with_blobs/).
+When you download a [kwctl release](https://github.com/kubewarden/kwctl/releases/) each zip file contains two
 files that can be used for verification: `kwctl.sig` and `kwctl.pem`.
 
 In order to verify kwctl you need cosign installed, and then execute the following command:
@@ -308,7 +309,7 @@ In order to verify kwctl you need cosign installed, and then execute the followi
 ```
 cosign verify-blob \
   --signature kwctl-linux-x86_64.sig \
-  --cert kwctl-linux-x86_64.pem kwctl-linux-x86_64 
+  --cert kwctl-linux-x86_64.pem kwctl-linux-x86_64
   --certificate-identity-regexp 'https://github.com/kubewarden/*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
