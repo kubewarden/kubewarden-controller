@@ -320,6 +320,10 @@ The output should be:
 Verified OK
 ```
 
+## Security disclosure
+
+See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md) on the kubewarden/community repo.
+
 ## Changelog
 
 See [GitHub Releases content](https://github.com/kubewarden/kwctl/releases).
