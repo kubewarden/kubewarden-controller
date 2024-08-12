@@ -1,9 +1,11 @@
 [![Kubewarden Core Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-core.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#core-scope)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-controller)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller)
-[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/6502/badge)](https://bestpractices.coreinfrastructure.org/projects/6502)
+[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/6502/badge)](https://bestpractices.coreinfrastructure.org/projects/6502)
 [![E2E](https://github.com/kubewarden/kubewarden-controller/actions/workflows/e2e-tests.yml/badge.svg)](https://github.com/kubewarden/kubewarden-controller/actions/workflows/e2e-tests.yml)
 [![FOSSA license scan](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller.svg?type=shield)](https://app.fossa.com/projects/custom%252B25850%252Fgithub.com%252Fkubewarden%252Fkubewarden-controller?ref=badge_shield)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/kubewarden-controller/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/kubewarden-controller)
+[![CLOMonitor](https://img.shields.io/endpoint?url=https://clomonitor.io/api/projects/cncf/kubewarden/badge)](https://clomonitor.io/projects/cncf/kubewarden)
 
 Kubewarden is a Kubernetes Dynamic Admission Controller that uses policies written
 in WebAssembly.
@@ -94,25 +96,10 @@ release. It follows the [SPDX](https://spdx.dev/) version 2.2 format and you can
 find it together with the signature and certificate used to sign it in the
 [release assets](https://github.com/kubewarden/kubewarden-controller/releases)
 
-# Roadmap
+## Security disclosure
 
-[Roadmap](https://github.com/orgs/kubewarden/projects/2) for the Kubewarden project.
+See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md) on the kubewarden/community repo.
 
-# Governance
+# Changelog
 
-See the [governance document](https://github.com/kubewarden/rfc/blob/main/rfc/0013-governance.md).
-
-# Community meeting
-
-We host regular online meetings for contributors, adopters, maintainers, and
-anyone else interested. These meetings usually take place on the second Thursday
-of the month at 4 PM UTC.
-
-- [Zoom link](https://zoom.us/j/92928111886)
-- [Minutes from earlier meetings](https://docs.google.com/document/d/1TgPIFKygkR2_vViCSfBEzwDDactfTcedc9fc4AeVJ9w/edit#)
-
-We're a friendly group, so please feel free to join us!
-
-# Community
-
-- Slack: [#kubewarden](https://kubernetes.slack.com/archives/kubewarden) and [#kubewarden-dev](https://kubernetes.slack.com/archives/kubewarden-dev)
+See [GitHub Releases content](https://github.com/kubewarden/kubewarden-controller/releases).
