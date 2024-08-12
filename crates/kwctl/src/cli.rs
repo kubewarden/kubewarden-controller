@@ -16,8 +16,9 @@ Use the `info` command to display system information.
     };
 }
 
-fn subcommand_pull() -> Command {
-    let mut args = vec![
+// Minimum set of flags required to pull a policy from a registry
+fn pull_shared_flags() -> Vec<Arg> {
+    vec![
         Arg::new("docker-config-json-path")
             .long("docker-config-json-path")
             .value_name("DOCKER_CONFIG")
@@ -74,12 +75,16 @@ fn subcommand_pull() -> Command {
             .number_of_values(1)
             .value_name("VALUE")
             .help("GitHub repository expected in the certificates generated in CD pipelines"),
-        Arg::new("output-path")
-            .short('o')
-            .long("output-path")
-            .value_name("PATH")
-            .help("Output file. If not provided will be downloaded to the Kubewarden store"),
-    ];
+    ]
+}
+
+fn subcommand_pull() -> Command {
+    let mut args = pull_shared_flags();
+    args.extend_from_slice(&[Arg::new("output-path")
+        .short('o')
+        .long("output-path")
+        .value_name("PATH")
+        .help("Output file. If not provided will be downloaded to the Kubewarden store")]);
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
         Arg::new("uri")
@@ -285,7 +290,7 @@ fn run_args() -> Vec<Arg> {
             .value_name("MODE")
             .value_parser(PossibleValuesParser::new(["opa","gatekeeper", "kubewarden", "wasi"]))
             .help("The runtime to use to execute this policy"),
-            Arg::new("raw")
+        Arg::new("raw")
                 .long("raw")
                 .num_args(0)
                 .default_value("false")
@@ -457,6 +462,8 @@ fn subcommand_scaffold() -> Command {
             .num_args(0)
             .help("Uses the policy metadata to define which Kubernetes resources can be accessed by the policy. Warning: review the list of resources carefully to avoid abuses. Disabled by default"),
     ];
+    // When scaffolding the manifest of a missing policy, we can pull it from a registry
+    manifest_args.extend_from_slice(&pull_shared_flags());
     manifest_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     manifest_args.push(
         Arg::new("uri_or_sha_prefix")
@@ -486,6 +493,25 @@ fn subcommand_scaffold() -> Command {
     ];
     vap_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 
+    let mut admission_request_args = vec![
+        Arg::new("operation")
+            .long("operation")
+            .short('o')
+            .required(true)
+            .value_name("TYPE")
+            .value_parser(PossibleValuesParser::new(["CREATE"])) //TODO: add UPDATE and DELETE
+            .help("Kubewarden Custom Resource type"),
+        Arg::new("object")
+            .long("object")
+            .value_name("PATH")
+            .help("The file containing the new object being admitted"),
+        Arg::new("old-object")
+            .long("old-object")
+            .value_name("PATH")
+            .help("The file containing the existing object"),
+    ];
+    admission_request_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+
     let mut subcommands = vec![
         Command::new("verification-config")
             .about("Output a default Sigstore verification configuration file"),
@@ -498,6 +524,9 @@ fn subcommand_scaffold() -> Command {
         Command::new("vap")
             .about("Convert a Kubernetes `ValidatingAdmissionPolicy` into a Kubewarden `ClusterAdmissionPolicy`")
             .args(vap_args),
+        Command::new("admission-request")
+            .about("Scaffold an AdmissionRequest object")
+            .args(admission_request_args),
     ];
     subcommands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 

@@ -1,12 +1,30 @@
 use anyhow::{anyhow, Result};
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
-use policy_evaluator::policy_fetcher::store::Store;
+use policy_evaluator::policy_fetcher::oci_distribution::Reference;
+use policy_evaluator::policy_fetcher::store::{errors::StoreError, Store};
 use regex::Regex;
 use serde_json::json;
 use std::path::PathBuf;
+use std::str::FromStr;
 use url::Url;
 
-pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> Result<String> {
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum LookupError {
+    #[error("Cannot find policy with uri: {0}")]
+    PolicyMissing(String),
+    #[error("{0}")]
+    StoreError(#[from] StoreError),
+    #[error("Unknown scheme: {0}")]
+    UnknownScheme(String),
+    #[error("{0}")]
+    UrlParserError(#[from] url::ParseError),
+    #[error("Error while converting URL to string")]
+    UrlToStringConversionError(),
+    #[error("{0}")]
+    IoError(#[from] std::io::Error),
+}
+
+pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> std::result::Result<String, LookupError> {
     let uri_has_schema = Regex::new(r"^\w+://").unwrap();
     if uri_has_schema.is_match(uri_or_sha_prefix) {
         return Ok(String::from(uri_or_sha_prefix));
@@ -22,20 +40,30 @@ pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> Result<String> {
         if let Some(policy) = store.get_policy_by_sha_prefix(uri_or_sha_prefix)? {
             Ok(policy.uri.clone())
         } else {
-            Err(anyhow!(
-                "Cannot find policy with prefix: {}",
-                uri_or_sha_prefix
-            ))
+            Err(LookupError::PolicyMissing(uri_or_sha_prefix.to_string()))
         }
     }
 }
 
-pub(crate) fn wasm_path(uri: &str) -> Result<PathBuf> {
+pub(crate) fn get_uri(uri_or_sha_prefix: &String) -> std::result::Result<String, LookupError> {
+    map_path_to_uri(uri_or_sha_prefix).or_else(|_| {
+        Reference::from_str(uri_or_sha_prefix)
+            .map(|oci_reference| format!("registry://{}", oci_reference.whole()))
+            .map_err(|_| LookupError::PolicyMissing(uri_or_sha_prefix.to_string()))
+    })
+}
+
+pub(crate) fn get_wasm_path(uri_or_sha_prefix: &str) -> std::result::Result<PathBuf, LookupError> {
+    let uri = get_uri(&uri_or_sha_prefix.to_owned())?;
+    wasm_path(&uri)
+}
+
+pub(crate) fn wasm_path(uri: &str) -> std::result::Result<PathBuf, LookupError> {
     let url = Url::parse(uri)?;
     match url.scheme() {
         "file" => url
             .to_file_path()
-            .map_err(|err| anyhow!("cannot retrieve path from uri {}: {:?}", url, err)),
+            .map_err(|_| LookupError::UrlToStringConversionError()),
         "http" | "https" | "registry" => {
             let store = Store::default();
             let policy = store.get_policy_by_uri(uri)?;
@@ -43,10 +71,10 @@ pub(crate) fn wasm_path(uri: &str) -> Result<PathBuf> {
             if let Some(policy) = policy {
                 Ok(policy.local_path)
             } else {
-                Err(anyhow!("Cannot find policy '{uri}' inside of the local store.\nTry executing `kwctl pull {uri}`", uri = uri))
+                Err(LookupError::PolicyMissing(uri.to_string()))
             }
         }
-        _ => Err(anyhow!("unknown scheme: {}", url.scheme())),
+        _ => Err(LookupError::UnknownScheme(url.scheme().to_string())),
     }
 }
 

@@ -23,11 +23,13 @@ Open Policy Agent/Gatekeeper implemented builtins:
 
 Policy store: {}
 Config directory: {}
+kwctl cache directory: {}
     "#,
         crate_version!(),
         builtins,
         store.root.to_string_lossy(),
         DEFAULT_ROOT.config_dir().to_string_lossy(),
+        crate::scaffold::DEFAULT_KWCTL_CACHE.to_string_lossy(),
     );
 
     Ok(())

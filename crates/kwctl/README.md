@@ -120,6 +120,19 @@ kwctl run \
 Policy configuration can be passed on the CLI via the `--settings-json` flag
 or can be loaded from the disk via the `--settings-path` flag.
 
+#### Scaffold AdmissionReview from a Kubernetes resource
+
+It's possible to scaffold an `AdmissionReview` object from a Kubernetes resource:
+
+```console
+kwctl scaffold \
+  admission-request \
+  --operation CREATE \
+  --object ingress.yaml
+```
+
+The output of the above command can be used by the `run` command.
+
 ### Annotate a policy
 
 Kubewarden policies are WebAssembly module, which must contain some
@@ -309,7 +322,7 @@ In order to verify kwctl you need cosign installed, and then execute the followi
 ```
 cosign verify-blob \
   --signature kwctl-linux-x86_64.sig \
-  --cert kwctl-linux-x86_64.pem kwctl-linux-x86_64
+  --cert kwctl-linux-x86_64.pem kwctl-linux-x86_64 \
   --certificate-identity-regexp 'https://github.com/kubewarden/*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
