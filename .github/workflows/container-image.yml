@@ -59,7 +59,7 @@ jobs:
       - name: Build and push container image
         if: ${{ inputs.push-image }}
         id: build-image
-        uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
+        uses: docker/build-push-action@16ebe778df0e7752d2cfcbd924afdbbd89c1a755 # v6.6.1
         with:
           context: .
           file: ./Dockerfile
@@ -72,7 +72,7 @@ jobs:
         # and they run on amd64 arch, let's skip the arm64 build for now.
         name: Build linux/amd64 container image
         if: ${{ inputs.push-image == false }}
-        uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
+        uses: docker/build-push-action@16ebe778df0e7752d2cfcbd924afdbbd89c1a755 # v6.6.1
         with:
           context: .
           file: ./Dockerfile
@@ -82,7 +82,7 @@ jobs:
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
       - name: Upload container image to use in other jobs
         if: ${{ inputs.push-image == false }}
-        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           name: kubewarden-controller-image-${{ env.TAG_NAME }}
           path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar

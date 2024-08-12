@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install cosign
-        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
+        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
 
       - name: Install the syft command
         uses: kubewarden/github-actions/syft-installer@ec1c08ac56d3c16dfb7933b849da6370638fba54 # v3.3.1
@@ -77,7 +77,7 @@ jobs:
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${SBOM_TAG}
 
       - name: Upload SBOMs as artifacts
-        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
+        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
         with:
           name: sbom-${{ matrix.arch }}
           path: kubewarden-controller-sbom-${{ matrix.arch }}*
