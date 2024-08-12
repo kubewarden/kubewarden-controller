@@ -20,9 +20,6 @@ on:
         description: "Image digest"
         value: ${{ jobs.build.outputs.digest }}
 
-permissions:
-  contents: read
-
 jobs:
   build:
     name: Build container image
