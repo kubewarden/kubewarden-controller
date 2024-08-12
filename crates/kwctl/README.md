@@ -2,6 +2,7 @@
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9180/badge)](https://www.bestpractices.dev/projects/9180)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl.svg?type=shield)](https://app.fossa.com/projects/cjustom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl?ref=badge_shield)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/kwctl/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/kwctl)
 
 # `kwctl`
 
@@ -331,3 +332,11 @@ The output should be:
 ```
 Verified OK
 ```
+
+## Security disclosure
+
+See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md) on the kubewarden/community repo.
+
+## Changelog
+
+See [GitHub Releases content](https://github.com/kubewarden/kwctl/releases).
