@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use k8s_openapi::api::admissionregistration::v1::{
     ValidatingAdmissionPolicy, ValidatingAdmissionPolicyBinding,
 };
-use policy_evaluator::{policy_fetcher::oci_distribution::Reference, policy_metadata::Rule};
+use policy_evaluator::{policy_fetcher::oci_client::Reference, policy_metadata::Rule};
 use std::{collections::BTreeSet, convert::TryFrom, fs::File, path::Path};
 use tracing::warn;
 

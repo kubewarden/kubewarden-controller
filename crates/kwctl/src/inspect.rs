@@ -4,7 +4,7 @@ use policy_evaluator::{
     constants::*,
     policy_evaluator::PolicyExecutionMode,
     policy_fetcher::{
-        oci_distribution::{
+        oci_client::{
             manifest::{OciImageManifest, OciManifest},
             secrets::RegistryAuth,
         },
