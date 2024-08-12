@@ -6,7 +6,7 @@
 [![codecov](https://codecov.io/gh/kubewarden/audit-scanner/graph/badge.svg?token=EDPPGWJFSK)](https://codecov.io/gh/kubewarden/audit-scanner)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/7439/badge)](https://www.bestpractices.dev/projects/7439)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Faudit-scanner.svg?type=shield&issueType=license)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Faudit-scanner?ref=badge_shield&issueType=license)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller.svg?type=shield&issueType=security)](https://app.fossa.com/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller?ref=badge_shield&issueType=security)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/audit-scanner/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/audit-scanner)
 
 > **Note well:** don't forget to checkout [Kubewarden's Audit Scanner documentation](https://docs.kubewarden.io/explanations/audit-scanner)
 > for more information
@@ -215,3 +215,11 @@ The Kubewarden team is security conscious. You can find our [threat model
 assessment](https://docs.kubewarden.io/security/threat-model) and
 [responsible disclosure approach](https://docs.kubewarden.io/security/disclosure)
 in our Kubewarden docs.
+
+## Security disclosure
+
+See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md) on the kubewarden/community repo.
+
+# Changelog
+
+See [GitHub Releases content](https://github.com/kubewarden/audit-scanner/releases).
