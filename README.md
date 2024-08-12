@@ -96,6 +96,10 @@ release. It follows the [SPDX](https://spdx.dev/) version 2.2 format and you can
 find it together with the signature and certificate used to sign it in the
 [release assets](https://github.com/kubewarden/kubewarden-controller/releases)
 
+## Security disclosure
+
+See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md) on the kubewarden/community repo.
+
 # Changelog
 
 See [GitHub Releases content](https://github.com/kubewarden/kubewarden-controller/releases).
