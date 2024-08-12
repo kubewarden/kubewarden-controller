@@ -1,9 +1,14 @@
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
-use policy_fetcher::oci_distribution::manifest::{OciImageManifest, OciManifest};
-use policy_fetcher::oci_distribution::Reference;
-use policy_fetcher::{registry::Registry, sources::Sources};
+use policy_fetcher::{
+    oci_client::{
+        manifest::{OciImageManifest, OciManifest},
+        Reference,
+    },
+    registry::Registry,
+    sources::Sources,
+};
 use serde::{Deserialize, Serialize};
 
 /// Helper struct to interact with an OCI registry

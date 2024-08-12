@@ -1,5 +1,5 @@
 use email_address::*;
-use policy_fetcher::oci_distribution::{ParseError, Reference};
+use policy_fetcher::oci_client::{ParseError, Reference};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
