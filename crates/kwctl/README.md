@@ -319,3 +319,7 @@ The output should be:
 ```
 Verified OK
 ```
+
+## Changelog
+
+See [GitHub Releases content](https://github.com/kubewarden/kwctl/releases).
