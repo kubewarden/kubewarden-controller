@@ -12,9 +12,6 @@ on:
       - "main"
       - "feat-**"
 
-permissions:
-  contents: read
-
 jobs:
   build:
     uses: ./.github/workflows/container-image.yml
