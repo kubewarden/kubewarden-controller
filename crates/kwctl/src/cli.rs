@@ -290,7 +290,7 @@ fn run_args() -> Vec<Arg> {
             .value_name("MODE")
             .value_parser(PossibleValuesParser::new(["opa","gatekeeper", "kubewarden", "wasi"]))
             .help("The runtime to use to execute this policy"),
-            Arg::new("raw")
+        Arg::new("raw")
                 .long("raw")
                 .num_args(0)
                 .default_value("false")
@@ -493,6 +493,25 @@ fn subcommand_scaffold() -> Command {
     ];
     vap_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 
+    let mut admission_request_args = vec![
+        Arg::new("operation")
+            .long("operation")
+            .short('o')
+            .required(true)
+            .value_name("TYPE")
+            .value_parser(PossibleValuesParser::new(["CREATE"])) //TODO: add UPDATE and DELETE
+            .help("Kubewarden Custom Resource type"),
+        Arg::new("object")
+            .long("object")
+            .value_name("PATH")
+            .help("The file containing the new object being admitted"),
+        Arg::new("old-object")
+            .long("old-object")
+            .value_name("PATH")
+            .help("The file containing the existing object"),
+    ];
+    admission_request_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+
     let mut subcommands = vec![
         Command::new("verification-config")
             .about("Output a default Sigstore verification configuration file"),
@@ -505,6 +524,9 @@ fn subcommand_scaffold() -> Command {
         Command::new("vap")
             .about("Convert a Kubernetes `ValidatingAdmissionPolicy` into a Kubewarden `ClusterAdmissionPolicy`")
             .args(vap_args),
+        Command::new("admission-request")
+            .about("Scaffold an AdmissionRequest object")
+            .args(admission_request_args),
     ];
     subcommands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 
