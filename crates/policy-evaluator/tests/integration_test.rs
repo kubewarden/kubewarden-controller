@@ -7,7 +7,7 @@ use core::panic;
 use hyper::{Request, Response};
 use kube::client::Body;
 use kube::Client;
-use policy_fetcher::oci_distribution::manifest::OciImageManifest;
+use policy_fetcher::oci_client::manifest::OciImageManifest;
 use rstest::*;
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -16,7 +16,7 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tower_test::mock::Handle;
 
-use policy_fetcher::oci_distribution::manifest::{OciDescriptor, OciManifest};
+use policy_fetcher::oci_client::manifest::{OciDescriptor, OciManifest};
 
 use policy_evaluator::{
     admission_request::AdmissionRequest,
@@ -328,7 +328,7 @@ async fn test_runtime_context_aware<F, Fut>(
     "ghcr.io/kubewarden/tests/context-aware-test-policy:latest",
     OciManifest::Image(Default::default())
 )]
-#[case::container_image("ghcr.io/kubewarden/policy-server:latest", OciManifest::ImageIndex(policy_fetcher::oci_distribution::manifest::OciImageIndex { schema_version:2, media_type: None, manifests: vec![], annotations: None }))]
+#[case::container_image("ghcr.io/kubewarden/policy-server:latest", OciManifest::ImageIndex(policy_fetcher::oci_client::manifest::OciImageIndex { schema_version:2, media_type: None, manifests: vec![], annotations: None }))]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_oci_manifest_capability(
     #[case] policy_uri: &str,
@@ -378,7 +378,7 @@ async fn test_oci_manifest_capability(
 
 #[rstest]
 #[case::container_image("ghcr.io/kubewarden/tests/policy-server:v1.13.0", 
-    policy_fetcher::oci_distribution::manifest::OciImageManifest {
+    policy_fetcher::oci_client::manifest::OciImageManifest {
         schema_version:2,
         media_type: Some("application/vnd.docker.distribution.manifest.v2+json".to_owned()),
         annotations: None,
@@ -404,7 +404,7 @@ async fn test_oci_manifest_capability(
     "WorkingDir": "/"})))]
 #[case::policy(
     "ghcr.io/kubewarden/tests/context-aware-test-policy:latest",
-    policy_fetcher::oci_distribution::manifest::OciImageManifest {
+    policy_fetcher::oci_client::manifest::OciImageManifest {
         schema_version:2,
         media_type: None, annotations: None, artifact_type:None,
         config: OciDescriptor{
