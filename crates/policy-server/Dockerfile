@@ -1,12 +1,7 @@
-FROM rust:1.78 AS build
+FROM rust:1.80-alpine AS build
 WORKDIR /usr/src
 
-# Download the target for static linking.
-RUN rustup target add $(arch)-unknown-linux-musl
-
-# Fix ring building using musl - see https://github.com/briansmith/ring/issues/1414#issuecomment-1055177218
-RUN apt-get update && apt-get install musl-tools clang llvm -y
-ENV CC="clang"
+RUN apk add --no-cache musl-dev make 
 
 RUN mkdir /usr/src/policy-server
 WORKDIR /usr/src/policy-server
