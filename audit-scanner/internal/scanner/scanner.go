@@ -305,6 +305,7 @@ type policyAuditResult struct {
 	errored                 bool
 }
 
+//gocognit:ignore
 func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string, skippedPoliciesNum, erroredPoliciesNum int) error {
 	log.Info().Str("resource", resource.GetName()).
 		Dict("dict", zerolog.Dict().
