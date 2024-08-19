@@ -70,7 +70,6 @@ func (f *Client) GetPoliciesForANamespace(ctx context.Context, namespace string)
 		return nil, fmt.Errorf("can't get AdmissionPolicies: %w", err)
 	}
 	for _, policy := range admissionPolicies {
-		policy := policy
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
 	}
 
@@ -94,7 +93,6 @@ func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) 
 	}
 	policies := []policiesv1.Policy{}
 	for _, policy := range clusterAdmissionPolicies {
-		policy := policy
 		policies = append(policies, &policy)
 	}
 
@@ -130,7 +128,6 @@ func (f *Client) findNamespacesForAllClusterAdmissionPolicies(ctx context.Contex
 	}
 
 	for _, policy := range policies.Items {
-		policy := policy
 		namespaces, err := f.findNamespacesForClusterAdmissionPolicy(ctx, policy)
 		if err != nil {
 			return nil, fmt.Errorf("can't find namespaces for ClusterAdmissionPolicy %s: %w", policy.Name, err)
