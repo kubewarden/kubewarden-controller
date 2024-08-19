@@ -14,20 +14,20 @@ import (
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
-// PolicyReportStore is a store for PolicyReport and ClusterPolicyReport
+// PolicyReportStore is a store for PolicyReport and ClusterPolicyReport.
 type PolicyReportStore struct {
 	// client is a controller-runtime client that knows about PolicyReport and ClusterPolicyReport CRDs
 	client client.Client
 }
 
-// NewPolicyReportStore creates a new PolicyReportStore
+// NewPolicyReportStore creates a new PolicyReportStore.
 func NewPolicyReportStore(client client.Client) *PolicyReportStore {
 	return &PolicyReportStore{
 		client: client,
 	}
 }
 
-// CreateOrPatchPolicyReport creates or patches a PolicyReport
+// CreateOrPatchPolicyReport creates or patches a PolicyReport.
 func (s *PolicyReportStore) CreateOrPatchPolicyReport(ctx context.Context, policyReport *wgpolicy.PolicyReport) error {
 	oldPolicyReport := &wgpolicy.PolicyReport{ObjectMeta: metav1.ObjectMeta{
 		Name:      policyReport.GetName(),
@@ -71,7 +71,7 @@ func (s *PolicyReportStore) DeleteOldPolicyReports(ctx context.Context, scanRunI
 	}})
 }
 
-// CreateOrPatchClusterPolicyReport creates or patches a ClusterPolicyReport
+// CreateOrPatchClusterPolicyReport creates or patches a ClusterPolicyReport.
 func (s *PolicyReportStore) CreateOrPatchClusterPolicyReport(ctx context.Context, clusterPolicyReport *wgpolicy.ClusterPolicyReport) error {
 	oldClusterPolicyReport := &wgpolicy.ClusterPolicyReport{ObjectMeta: metav1.ObjectMeta{
 		Name: clusterPolicyReport.GetName(),

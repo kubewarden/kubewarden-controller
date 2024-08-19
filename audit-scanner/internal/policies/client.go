@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// A client to get Kubewarden policies from the Kubernetes cluster
+// A client to get Kubewarden policies from the Kubernetes cluster.
 type Client struct {
 	// client is a controller-runtime client extended with the Kubewarden CRDs
 	client client.Client
@@ -28,7 +28,7 @@ type Client struct {
 	policyServerURL string
 }
 
-// Policies represents a collection of auditable policies
+// Policies represents a collection of auditable policies.
 type Policies struct {
 	// PoliciesByGVR a map of policies grouped by GVR
 	PoliciesByGVR map[schema.GroupVersionResource][]*Policy
@@ -40,13 +40,13 @@ type Policies struct {
 	ErroredNum int
 }
 
-// Policy represents a policy and the URL of the policy server where it is running
+// Policy represents a policy and the URL of the policy server where it is running.
 type Policy struct {
 	policiesv1.Policy
 	PolicyServer *url.URL
 }
 
-// NewClient returns a policy Client
+// NewClient returns a policy Client.
 func NewClient(client client.Client, kubewardenNamespace string, policyServerURL string) (*Client, error) {
 	if policyServerURL != "" {
 		log.Info().Msg(fmt.Sprintf("querying PolicyServers at %s for debugging purposes. Don't forget to start `kubectl port-forward` if needed", policyServerURL))
@@ -59,7 +59,7 @@ func NewClient(client client.Client, kubewardenNamespace string, policyServerURL
 	}, nil
 }
 
-// GetPoliciesForANamespace gets all the auditable policies for a given namespace
+// GetPoliciesForANamespace gets all the auditable policies for a given namespace.
 func (f *Client) GetPoliciesForANamespace(ctx context.Context, namespace string) (*Policies, error) {
 	namespacePolicies, err := f.findNamespacesForAllClusterAdmissionPolicies(ctx)
 	if err != nil {
@@ -86,7 +86,7 @@ func (f *Client) getClusterAdmissionPolicies(ctx context.Context) ([]policiesv1.
 	return policies.Items, nil
 }
 
-// GetClusterWidePolicies returns all the auditable cluster-wide policies
+// GetClusterWidePolicies returns all the auditable cluster-wide policies.
 func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) {
 	clusterAdmissionPolicies, err := f.getClusterAdmissionPolicies(ctx)
 	if err != nil {
@@ -101,7 +101,7 @@ func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) 
 	return f.groupPoliciesByGVR(ctx, policies, false)
 }
 
-// initializes map with an entry for all namespaces with an empty policies array as value
+// initializes map with an entry for all namespaces with an empty policies array as value.
 func (f *Client) initNamespacePoliciesMap(ctx context.Context) (map[string][]policiesv1.Policy, error) {
 	namespacePolicies := make(map[string][]policiesv1.Policy)
 	namespaceList := &corev1.NamespaceList{}
@@ -382,7 +382,7 @@ func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, name
 	return &serviceList.Items[0], nil
 }
 
-// filterWildcardRules filters out rules that contain a wildcard in the APIGroups, APIVersions or Resources fields
+// filterWildcardRules filters out rules that contain a wildcard in the APIGroups, APIVersions or Resources fields.
 func filterWildcardRules(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
 	filteredRules := []admissionregistrationv1.RuleWithOperations{}
 	for _, rule := range rules {
@@ -397,7 +397,7 @@ func filterWildcardRules(rules []admissionregistrationv1.RuleWithOperations) []a
 	return filteredRules
 }
 
-// filterNonCreateOperations filters out rules that do not contain a CREATE operation
+// filterNonCreateOperations filters out rules that do not contain a CREATE operation.
 func filterNonCreateOperations(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
 	filteredRules := []admissionregistrationv1.RuleWithOperations{}
 	for _, rule := range rules {

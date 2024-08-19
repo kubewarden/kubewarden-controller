@@ -27,22 +27,22 @@ const (
 	defaultPageSize            = 100
 )
 
-// log level
+// log level.
 var level logconfig.Level
 
-// print result of scan as JSON to stdout
+// print result of scan as JSON to stdout.
 var outputScan bool
 
-// list of namespaces to be skipped from scan
+// list of namespaces to be skipped from scan.
 var skippedNs []string
 
-// skip SSL cert validation when connecting to PolicyServers endpoints
+// skip SSL cert validation when connecting to PolicyServers endpoints.
 var insecureSSL bool
 
-// disable storing the results in the k8s cluster
+// disable storing the results in the k8s cluster.
 var disableStore bool
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "audit-scanner",
 	Short: "Reports evaluation of existing Kubernetes resources with your already deployed Kubewarden policies",

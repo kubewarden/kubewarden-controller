@@ -12,7 +12,7 @@ import (
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
-// NewPolicyReport creates a new PolicyReport from a given resource
+// NewPolicyReport creates a new PolicyReport from a given resource.
 func NewPolicyReport(runUID string, resource unstructured.Unstructured) *wgpolicy.PolicyReport {
 	return &wgpolicy.PolicyReport{
 		ObjectMeta: metav1.ObjectMeta{
@@ -50,7 +50,7 @@ func NewPolicyReport(runUID string, resource unstructured.Unstructured) *wgpolic
 	}
 }
 
-// AddResultToPolicyReport adds a result to a PolicyReport and updates the summary
+// AddResultToPolicyReport adds a result to a PolicyReport and updates the summary.
 func AddResultToPolicyReport(
 	policyReport *wgpolicy.PolicyReport,
 	policy policiesv1.Policy,
@@ -72,7 +72,7 @@ func AddResultToPolicyReport(
 	return result
 }
 
-// NewClusterPolicyReport creates a new ClusterPolicyReport from a given resource
+// NewClusterPolicyReport creates a new ClusterPolicyReport from a given resource.
 func NewClusterPolicyReport(runUID string, resource unstructured.Unstructured) *wgpolicy.ClusterPolicyReport {
 	return &wgpolicy.ClusterPolicyReport{
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,7 +108,7 @@ func NewClusterPolicyReport(runUID string, resource unstructured.Unstructured) *
 	}
 }
 
-// AddResultToClusterPolicyReport adds a result to a ClusterPolicyReport and updates the summary
+// AddResultToClusterPolicyReport adds a result to a ClusterPolicyReport and updates the summary.
 func AddResultToClusterPolicyReport(
 	policyReport *wgpolicy.ClusterPolicyReport,
 	policy policiesv1.Policy,

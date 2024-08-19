@@ -31,7 +31,7 @@ import (
 
 const httpClientTimeout = 10 * time.Second
 
-// Scanner verifies that existing resources don't violate any of the policies
+// Scanner verifies that existing resources don't violate any of the policies.
 type Scanner struct {
 	policiesClient    *policies.Client
 	k8sClient         *k8s.Client
