@@ -161,7 +161,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
 			resource, ok := obj.(*unstructured.Unstructured)
 			if !ok {
-				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
+				return errors.New("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
 
 			err := semaphore.Acquire(ctx, 1)
@@ -266,7 +266,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
 			resource, ok := obj.(*unstructured.Unstructured)
 			if !ok {
-				return fmt.Errorf("failed to convert runtime.Object to *unstructured.Unstructured")
+				return errors.New("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
 
 			workers.Add(1)

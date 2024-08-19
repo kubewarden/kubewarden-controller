@@ -2,6 +2,7 @@ package policies
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -335,7 +336,7 @@ func (f *Client) getPolicyServerURLRunningPolicy(ctx context.Context, policy pol
 		return nil, err
 	}
 	if len(service.Spec.Ports) < 1 {
-		return nil, fmt.Errorf("policy server service does not have a port")
+		return nil, errors.New("policy server service does not have a port")
 	}
 	var urlStr string
 	if f.policyServerURL != "" {
@@ -373,7 +374,7 @@ func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, name
 	}
 
 	if len(serviceList.Items) != 1 {
-		return nil, fmt.Errorf("could not find a single service for the given policy server app label")
+		return nil, errors.New("could not find a single service for the given policy server app label")
 	}
 
 	return &serviceList.Items[0], nil
