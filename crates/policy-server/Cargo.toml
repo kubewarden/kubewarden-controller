@@ -69,7 +69,7 @@ tokio-stream = "0.1.15"
 mockall = "0.13"
 rstest = "0.22"
 tempfile = "3.12.0"
-tower = { version = "0.4", features = ["util"] }
+tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1.1"
 testcontainers = { version = "0.21", features = ["watchdog"] }
 backon = "0.4.4"
