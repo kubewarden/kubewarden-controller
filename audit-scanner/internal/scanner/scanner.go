@@ -306,8 +306,7 @@ type policyAuditResult struct {
 }
 
 func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy, resource unstructured.Unstructured, runUID string, skippedPoliciesNum, erroredPoliciesNum int) error {
-	log.Info().
-		Str("resource", resource.GetName()).
+	log.Info().Str("resource", resource.GetName()).
 		Dict("dict", zerolog.Dict().
 			Int("policies-to-evaluate", len(policies)).
 			Int("parallel-policies-audit", s.parallelPoliciesAudits),
@@ -351,8 +350,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 					Str("admissionRequest-name", admissionReviewRequest.Request.Name).
 					Str("policy", policy.GetName()).
 					Str("resource", resource.GetName()),
-				).
-					Msg("error sending AdmissionReview to PolicyServer")
+				).Msg("error sending AdmissionReview to PolicyServer")
 			}
 
 			if admissionReviewResponse.Response.Result != nil &&
@@ -363,8 +361,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 					Str("admissionRequest-name", admissionReviewRequest.Request.Name).
 					Str("policy", policy.GetName()).
 					Str("resource", resource.GetName()),
-				).
-					Msg("error evaluating Policy in PolicyServer")
+				).Msg("error evaluating Policy in PolicyServer")
 			}
 
 			if !errored {
@@ -373,8 +370,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 					Str("policy", policy.GetName()).
 					Str("resource", resource.GetName()).
 					Bool("allowed", admissionReviewResponse.Response.Allowed),
-				).
-					Msg("audit review response")
+				).Msg("audit review response")
 			}
 
 			auditResults <- policyAuditResult{
@@ -400,9 +396,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			log.Error().Err(err).Msg("error while marshalling PolicyReport to JSON, skipping output scan")
 		}
 
-		log.Info().
-			RawJSON("report", policyReportJSON).
-			Msg("PolicyReport summary")
+		log.Info().RawJSON("report", policyReportJSON).Msg("PolicyReport summary")
 	}
 
 	if !s.disableStore {
