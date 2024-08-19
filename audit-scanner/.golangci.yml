@@ -357,6 +357,8 @@ issues:
       linters: [ godot ]
     - source: "//noinspection"
       linters: [ gocritic ]
+    - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+      linters: [govet]
     - path: "_test\\.go"
       linters:
         - bodyclose
