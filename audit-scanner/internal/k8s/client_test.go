@@ -21,7 +21,7 @@ const pageSize = 100
 
 func TestGetResources(t *testing.T) {
 	var pods []runtime.Object
-	for i := 0; i < pageSize+5; i++ {
+	for i := range pageSize + 5 {
 		pods = append(pods, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("pod-%d", i), Namespace: "default"}})
 	}
 
