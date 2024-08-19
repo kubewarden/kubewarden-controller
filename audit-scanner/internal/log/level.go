@@ -6,12 +6,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var SupportedValues = [6]string{zerolog.LevelTraceValue, zerolog.LevelDebugValue, zerolog.LevelInfoValue, zerolog.LevelWarnValue, zerolog.LevelErrorValue, zerolog.LevelFatalValue}
-
 // Level implements the Value interface (https://pkg.go.dev/github.com/spf13/pflag@v1.0.5#Value).
 // Therefore we can get this value from a flag, and show an error if a supported value is not provided.
 type Level struct {
 	value string
+}
+
+func GetSupportedValues() [6]string {
+	return [6]string{zerolog.LevelTraceValue, zerolog.LevelDebugValue, zerolog.LevelInfoValue, zerolog.LevelWarnValue, zerolog.LevelErrorValue, zerolog.LevelFatalValue}
 }
 
 func (l *Level) SetZeroLogLevel() {
@@ -31,8 +33,9 @@ func (l *Level) String() string {
 }
 
 func (l *Level) Set(level string) error {
+	supportedValues := GetSupportedValues()
 	isIncluded := false
-	for _, opt := range SupportedValues {
+	for _, opt := range supportedValues {
 		if level == opt {
 			l.value = level
 			isIncluded = true
@@ -40,7 +43,7 @@ func (l *Level) Set(level string) error {
 	}
 
 	if !isIncluded {
-		return fmt.Errorf("supported values: %s", SupportedValues)
+		return fmt.Errorf("supported values: %s", supportedValues)
 	}
 
 	return nil
