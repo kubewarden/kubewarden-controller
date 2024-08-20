@@ -27,6 +27,7 @@ const (
 	defaultPageSize            = 100
 )
 
+//nolint:gocognit
 func NewRootCommand() *cobra.Command {
 	var (
 		level        logconfig.Level // log level.
