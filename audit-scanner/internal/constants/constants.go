@@ -11,5 +11,5 @@ const (
 	AuditScannerRunUIDLabel              = "kubewarden.io/audit-scanner-run-uid"
 )
 
-// ErrResourceNotFound is an error used to tell that the required resource is not found
+// ErrResourceNotFound is an error used to tell that the required resource is not found.
 var ErrResourceNotFound = errors.New("resource not found")

@@ -9,7 +9,7 @@ const (
 )
 
 const (
-	// Status specifies state of a policy result
+	// Status specifies state of a policy result.
 	statusPass  = "pass"
 	statusFail  = "fail"
 	statusWarn  = "warn"
@@ -18,7 +18,7 @@ const (
 )
 
 const (
-	// Severity specifies severity of a policy result
+	// Severity specifies severity of a policy result.
 	severityCritical = "critical"
 	severityHigh     = "high"
 	severityMedium   = "medium"
@@ -27,7 +27,7 @@ const (
 )
 
 const (
-	// Category specifies the category of a policy result
+	// Category specifies the category of a policy result.
 	typeMutating     = "mutating"
 	typeValidating   = "validating"
 	typeContextAware = "context-aware"

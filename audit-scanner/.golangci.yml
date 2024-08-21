@@ -11,7 +11,8 @@ run:
   # Timeout for analysis, e.g. 30s, 5m.
   # Default: 1m
   timeout: 3m
-
+  build-tags:
+    - testing
 
 # This file contains only configs which differ from defaults.
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
@@ -166,7 +167,7 @@ linters-settings:
   nolintlint:
     # Exclude following linters from requiring an explanation.
     # Default: []
-    allow-no-explanation: [ funlen, gocognit, lll ]
+    allow-no-explanation: [funlen, gocognit, lll]
     # Enable to require an explanation of nonzero length after each nolint directive.
     # Default: false
     require-explanation: true
@@ -209,7 +210,6 @@ linters-settings:
     # Default: false
     all: true
 
-
 linters:
   disable-all: true
   enable:
@@ -234,7 +234,6 @@ linters:
     - errname # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
     - errorlint # finds code that will cause problems with the error wrapping scheme introduced in Go 1.13
     - exhaustive # checks exhaustiveness of enum switch statements
-    - exportloopref # checks for pointers to enclosing loop variables
     - fatcontext # detects nested contexts in loops
     - forbidigo # forbids identifiers
     - funlen # tool for detection of long functions
@@ -323,26 +322,26 @@ linters:
     #- tagliatelle # checks the struct tags
     #- thelper # detects golang test helpers without t.Helper() call and checks the consistency of test helpers
     #- wsl # [too strict and mostly code is not more readable] whitespace linter forces you to use empty lines
-    
+
     ############################################################################
     # Kubewarden linter customization
     # The following linters are disabled because they does not make sense for
-    # the Kubewarden 
+    # the Kubewarden
     ############################################################################
 
     # We disable the testpackage linter because we have tests which is not
     # black boxed and that will not cause issues for us for now.
     # - testpackage # makes you use a separate _test package
-    
+
     # We disable the lll linter because we have long lines in many places and splitting them
     # will not make the code more readable.
-    # - lll 
+    # - lll
 
     # We use replace directives in go.mod to replace some dependencies. Dependabot updates it over time.
     # - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
-    
-    # Init functions are used in many places in the project. For instance, to registry types in the 
-    # scheme. This is a common usage in kubebuilder projects 
+
+    # Init functions are used in many places in the project. For instance, to registry types in the
+    # scheme. This is a common usage in kubebuilder projects
     # - gochecknoinits # checks that no init functions are present in Go code
 
 issues:
@@ -353,9 +352,11 @@ issues:
 
   exclude-rules:
     - source: "(noinspection|TODO)"
-      linters: [ godot ]
+      linters: [godot]
     - source: "//noinspection"
-      linters: [ gocritic ]
+      linters: [gocritic]
+    - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+      linters: [govet]
     - path: "_test\\.go"
       linters:
         - bodyclose

@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/pager"
 )
 
-// A client to get resources and namespaces from a Kubernetes cluster
+// A client to get resources and namespaces from a Kubernetes cluster.
 type Client struct {
 	// dynamicClient is used to get resource lists
 	dynamicClient dynamic.Interface
@@ -30,7 +30,7 @@ type Client struct {
 	pageSize int64
 }
 
-// NewClient returns a new client
+// NewClient returns a new client.
 func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, kubewardenNamespace string, skippedNs []string, pageSize int64) (*Client, error) {
 	skippedNs = append(skippedNs, kubewardenNamespace)
 
@@ -91,7 +91,7 @@ func (f *Client) listResources(ctx context.Context,
 	return f.dynamicClient.Resource(resourceID).Namespace(nsName).List(ctx, opts)
 }
 
-// GetAuditedNamespaces gets all namespaces besides the ones in skippedNs
+// GetAuditedNamespaces gets all namespaces besides the ones in skippedNs.
 func (f *Client) GetAuditedNamespaces(ctx context.Context) (*corev1.NamespaceList, error) {
 	// This function cannot be tested with fake client, as filtering is done server-side
 	skipNsFields := fields.Everything()

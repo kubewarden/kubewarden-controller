@@ -2,6 +2,7 @@ package policies
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -16,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// A client to get Kubewarden policies from the Kubernetes cluster
+// A client to get Kubewarden policies from the Kubernetes cluster.
 type Client struct {
 	// client is a controller-runtime client extended with the Kubewarden CRDs
 	client client.Client
@@ -28,7 +29,7 @@ type Client struct {
 	policyServerURL string
 }
 
-// Policies represents a collection of auditable policies
+// Policies represents a collection of auditable policies.
 type Policies struct {
 	// PoliciesByGVR a map of policies grouped by GVR
 	PoliciesByGVR map[schema.GroupVersionResource][]*Policy
@@ -40,13 +41,13 @@ type Policies struct {
 	ErroredNum int
 }
 
-// Policy represents a policy and the URL of the policy server where it is running
+// Policy represents a policy and the URL of the policy server where it is running.
 type Policy struct {
 	policiesv1.Policy
 	PolicyServer *url.URL
 }
 
-// NewClient returns a policy Client
+// NewClient returns a policy Client.
 func NewClient(client client.Client, kubewardenNamespace string, policyServerURL string) (*Client, error) {
 	if policyServerURL != "" {
 		log.Info().Msg(fmt.Sprintf("querying PolicyServers at %s for debugging purposes. Don't forget to start `kubectl port-forward` if needed", policyServerURL))
@@ -59,7 +60,7 @@ func NewClient(client client.Client, kubewardenNamespace string, policyServerURL
 	}, nil
 }
 
-// GetPoliciesForANamespace gets all the auditable policies for a given namespace
+// GetPoliciesForANamespace gets all the auditable policies for a given namespace.
 func (f *Client) GetPoliciesForANamespace(ctx context.Context, namespace string) (*Policies, error) {
 	namespacePolicies, err := f.findNamespacesForAllClusterAdmissionPolicies(ctx)
 	if err != nil {
@@ -70,7 +71,6 @@ func (f *Client) GetPoliciesForANamespace(ctx context.Context, namespace string)
 		return nil, fmt.Errorf("can't get AdmissionPolicies: %w", err)
 	}
 	for _, policy := range admissionPolicies {
-		policy := policy
 		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
 	}
 
@@ -86,7 +86,7 @@ func (f *Client) getClusterAdmissionPolicies(ctx context.Context) ([]policiesv1.
 	return policies.Items, nil
 }
 
-// GetClusterWidePolicies returns all the auditable cluster-wide policies
+// GetClusterWidePolicies returns all the auditable cluster-wide policies.
 func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) {
 	clusterAdmissionPolicies, err := f.getClusterAdmissionPolicies(ctx)
 	if err != nil {
@@ -94,14 +94,13 @@ func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) 
 	}
 	policies := []policiesv1.Policy{}
 	for _, policy := range clusterAdmissionPolicies {
-		policy := policy
 		policies = append(policies, &policy)
 	}
 
 	return f.groupPoliciesByGVR(ctx, policies, false)
 }
 
-// initializes map with an entry for all namespaces with an empty policies array as value
+// initializes map with an entry for all namespaces with an empty policies array as value.
 func (f *Client) initNamespacePoliciesMap(ctx context.Context) (map[string][]policiesv1.Policy, error) {
 	namespacePolicies := make(map[string][]policiesv1.Policy)
 	namespaceList := &corev1.NamespaceList{}
@@ -130,7 +129,6 @@ func (f *Client) findNamespacesForAllClusterAdmissionPolicies(ctx context.Contex
 	}
 
 	for _, policy := range policies.Items {
-		policy := policy
 		namespaces, err := f.findNamespacesForClusterAdmissionPolicy(ctx, policy)
 		if err != nil {
 			return nil, fmt.Errorf("can't find namespaces for ClusterAdmissionPolicy %s: %w", policy.Name, err)
@@ -338,7 +336,7 @@ func (f *Client) getPolicyServerURLRunningPolicy(ctx context.Context, policy pol
 		return nil, err
 	}
 	if len(service.Spec.Ports) < 1 {
-		return nil, fmt.Errorf("policy server service does not have a port")
+		return nil, errors.New("policy server service does not have a port")
 	}
 	var urlStr string
 	if f.policyServerURL != "" {
@@ -376,13 +374,13 @@ func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, name
 	}
 
 	if len(serviceList.Items) != 1 {
-		return nil, fmt.Errorf("could not find a single service for the given policy server app label")
+		return nil, errors.New("could not find a single service for the given policy server app label")
 	}
 
 	return &serviceList.Items[0], nil
 }
 
-// filterWildcardRules filters out rules that contain a wildcard in the APIGroups, APIVersions or Resources fields
+// filterWildcardRules filters out rules that contain a wildcard in the APIGroups, APIVersions or Resources fields.
 func filterWildcardRules(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
 	filteredRules := []admissionregistrationv1.RuleWithOperations{}
 	for _, rule := range rules {
@@ -397,7 +395,7 @@ func filterWildcardRules(rules []admissionregistrationv1.RuleWithOperations) []a
 	return filteredRules
 }
 
-// filterNonCreateOperations filters out rules that do not contain a CREATE operation
+// filterNonCreateOperations filters out rules that do not contain a CREATE operation.
 func filterNonCreateOperations(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
 	filteredRules := []admissionregistrationv1.RuleWithOperations{}
 	for _, rule := range rules {
