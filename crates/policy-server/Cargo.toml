@@ -72,7 +72,7 @@ tempfile = "3.12.0"
 tower = { version = "0.5", features = ["util"] }
 http-body-util = "0.1.1"
 testcontainers = { version = "0.21", features = ["watchdog"] }
-backon = "0.4.4"
+backon = "0.5.0"
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 rcgen = { version = "0.13", features = ["crypto"] }
