@@ -65,6 +65,20 @@ var (
 			},
 		},
 	}
+	templateAdmissionPolicyGroup = policiesv1.AdmissionPolicyGroup{
+		Spec: policiesv1.AdmissionPolicyGroupSpec{
+			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
+				Rules: []admissionregistrationv1.RuleWithOperations{},
+			},
+		},
+	}
+	templateClusterAdmissionPolicyGroup = policiesv1.ClusterAdmissionPolicyGroup{
+		Spec: policiesv1.ClusterAdmissionPolicyGroupSpec{
+			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
+				Rules: []admissionregistrationv1.RuleWithOperations{},
+			},
+		},
+	}
 )
 
 func policyServerVersion() string {
@@ -115,6 +129,65 @@ func admissionPolicyFactory(name, policyNamespace, policyServerName string, muta
 	return admissionPolicy
 }
 
+func admissionPolicyGroupFactory(name, policyNamespace, policyServerName string) *policiesv1.AdmissionPolicyGroup {
+	admissionPolicy := templateAdmissionPolicyGroup.DeepCopy()
+	admissionPolicy.Name = name
+	admissionPolicy.Namespace = policyNamespace
+	admissionPolicy.Spec.PolicyServer = policyServerName
+	admissionPolicy.Spec.PolicyGroupSpec.MatchConditions = []admissionregistrationv1.MatchCondition{
+		{
+			Name:       "noop",
+			Expression: "true",
+		},
+	}
+	admissionPolicy.Spec.Policies = []policiesv1.PolicyGroupMember{{
+		Name:   "pod-privileged",
+		Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+	}}
+	admissionPolicy.Finalizers = []string{
+		// On a real cluster the Kubewarden finalizer is added by our mutating
+		// webhook. This is not running now, hence we have to manually add the finalizer
+		constants.KubewardenFinalizer,
+		// By adding this finalizer automatically, we ensure that when
+		// testing removal of finalizers on deleted objects, that they will
+		// exist at all times
+		integrationTestsFinalizer,
+	}
+	return admissionPolicy
+}
+
+func clusterAdmissionPolicyGroupFactory(name, policyServerName string) *policiesv1.ClusterAdmissionPolicyGroup {
+	clusterAdmissionPolicy := templateClusterAdmissionPolicyGroup.DeepCopy()
+	clusterAdmissionPolicy.Name = name
+	clusterAdmissionPolicy.Spec.PolicyServer = policyServerName
+	clusterAdmissionPolicy.Spec.PolicyGroupSpec.MatchConditions = []admissionregistrationv1.MatchCondition{
+		{
+			Name:       "noop",
+			Expression: "true",
+		},
+	}
+	clusterAdmissionPolicy.Finalizers = []string{
+		// On a real cluster the Kubewarden finalizer is added by our mutating
+		// webhook. This is not running now, hence we have to manually add the finalizer
+		constants.KubewardenFinalizer,
+		// By adding this finalizer automatically, we ensure that when
+		// testing removal of finalizers on deleted objects, that they will
+		// exist at all times
+		integrationTestsFinalizer,
+	}
+	clusterAdmissionPolicy.Spec.Policies = []policiesv1.PolicyGroupMember{
+		{
+			Name:   "pod-privileged",
+			Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+		},
+		{
+			Name:   "user-group-psp",
+			Module: "registry://ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+		},
+	}
+	return clusterAdmissionPolicy
+}
+
 func clusterAdmissionPolicyFactory(name, policyServerName string, mutating bool) *policiesv1.ClusterAdmissionPolicy {
 	clusterAdmissionPolicy := templateClusterAdmissionPolicy.DeepCopy()
 	clusterAdmissionPolicy.Name = name
@@ -146,12 +219,28 @@ func getTestAdmissionPolicy(ctx context.Context, namespace, name string) (*polic
 	return &admissionPolicy, nil
 }
 
+func getTestAdmissionPolicyGroup(ctx context.Context, namespace, name string) (*policiesv1.AdmissionPolicyGroup, error) {
+	admissionPolicyGroup := policiesv1.AdmissionPolicyGroup{}
+	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &admissionPolicyGroup); err != nil {
+		return nil, errors.Join(errors.New("could not find AdmissionPolicyGroup"), err)
+	}
+	return &admissionPolicyGroup, nil
+}
+
 func getTestClusterAdmissionPolicy(ctx context.Context, name string) (*policiesv1.ClusterAdmissionPolicy, error) {
 	clusterAdmissionPolicy := policiesv1.ClusterAdmissionPolicy{}
 	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &clusterAdmissionPolicy); err != nil {
 		return nil, errors.Join(errors.New("could not find ClusterAdmissionPolicy"), err)
 	}
 	return &clusterAdmissionPolicy, nil
+}
+
+func getTestClusterAdmissionPolicyGroup(ctx context.Context, name string) (*policiesv1.ClusterAdmissionPolicyGroup, error) {
+	clusterAdmissionPolicyGroup := policiesv1.ClusterAdmissionPolicyGroup{}
+	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &clusterAdmissionPolicyGroup); err != nil {
+		return nil, errors.Join(errors.New("could not find ClusterAdmissionPolicyGroup"), err)
+	}
+	return &clusterAdmissionPolicyGroup, nil
 }
 
 func getTestPolicyServer(ctx context.Context, name string) (*policiesv1.PolicyServer, error) {

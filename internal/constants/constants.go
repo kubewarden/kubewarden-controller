@@ -67,4 +67,7 @@ const (
 
 	// Certs.
 	CertExpirationYears = 10
+
+	// Feature flags.
+	EnablePolicyGroupsFlag = "KUBEWARDEN_ENABLE_POLICY_GROUPS"
 )

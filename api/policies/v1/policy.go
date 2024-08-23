@@ -111,4 +111,8 @@ type Policy interface {
 	GetCategory() (string, bool)
 	GetTitle() (string, bool)
 	GetDescription() (string, bool)
+	IsPolicyGroup() bool
+	GetPolicyMembers() []PolicyGroupMember
+	GetExpression() string
+	GetMessage() string
 }

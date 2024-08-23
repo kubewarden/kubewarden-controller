@@ -22,18 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// ContextAwareResource identifies a Kubernetes resource.
-type ContextAwareResource struct {
-	// apiVersion of the resource (v1 for core group, groupName/groupVersions for other).
-	APIVersion string `json:"apiVersion"`
-
-	// Singular PascalCase name of the resource
-	Kind string `json:"kind"`
-}
-
-// ClusterAdmissionPolicySpec defines the desired state of ClusterAdmissionPolicy.
-type ClusterAdmissionPolicySpec struct {
-	PolicySpec `json:""`
+// ClusterAdmissionPolicyGroupSpec defines the desired state of ClusterAdmissionPolicyGroup.
+type ClusterAdmissionPolicyGroupSpec struct {
+	PolicyGroupSpec `json:""`
 
 	// NamespaceSelector decides whether to run the webhook on an object based
 	// on whether the namespace for that object matches the selector. If the
@@ -82,15 +73,9 @@ type ClusterAdmissionPolicySpec struct {
 	// Default to the empty LabelSelector, which matches everything.
 	// +optional
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
-
-	// List of Kubernetes resources the policy is allowed to access at evaluation time.
-	// Access to these resources is done using the `ServiceAccount` of the PolicyServer
-	// the policy is assigned to.
-	// +optional
-	ContextAwareResources []ContextAwareResource `json:"contextAwareResources,omitempty"`
 }
 
-// ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
+// ClusterAdmissionPolicyGroup is the Schema for the clusteradmissionpolicies API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
@@ -104,99 +89,106 @@ type ClusterAdmissionPolicySpec struct {
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:printcolumn:name="Severity",type=string,JSONPath=".metadata.annotations['io\\.kubewarden\\.policy\\.severity']",priority=1
 // +kubebuilder:printcolumn:name="Category",type=string,JSONPath=".metadata.annotations['io\\.kubewarden\\.policy\\.category']",priority=1
-type ClusterAdmissionPolicy struct {
+type ClusterAdmissionPolicyGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterAdmissionPolicySpec `json:"spec,omitempty"`
-	Status PolicyStatus               `json:"status,omitempty"`
+	Spec   ClusterAdmissionPolicyGroupSpec `json:"spec,omitempty"`
+	Status PolicyStatus                    `json:"status,omitempty"`
 }
 
-// ClusterAdmissionPolicyList contains a list of ClusterAdmissionPolicy
+// ClusterAdmissionPolicyGroupList contains a list of ClusterAdmissionPolicyGroup
 // +kubebuilder:object:root=true
-type ClusterAdmissionPolicyList struct {
+type ClusterAdmissionPolicyGroupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterAdmissionPolicy `json:"items"`
+	Items           []ClusterAdmissionPolicyGroup `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ClusterAdmissionPolicy{}, &ClusterAdmissionPolicyList{})
+	SchemeBuilder.Register(&ClusterAdmissionPolicyGroup{}, &ClusterAdmissionPolicyGroupList{})
 }
 
-func (r *ClusterAdmissionPolicy) SetStatus(status PolicyStatusEnum) {
+func (r *ClusterAdmissionPolicyGroup) SetStatus(status PolicyStatusEnum) {
 	r.Status.PolicyStatus = status
 }
 
-func (r *ClusterAdmissionPolicy) GetPolicyMode() PolicyMode {
+func (r *ClusterAdmissionPolicyGroup) GetPolicyMode() PolicyMode {
 	return r.Spec.Mode
 }
 
-func (r *ClusterAdmissionPolicy) SetPolicyModeStatus(policyMode PolicyModeStatus) {
+func (r *ClusterAdmissionPolicyGroup) SetPolicyModeStatus(policyMode PolicyModeStatus) {
 	r.Status.PolicyMode = policyMode
 }
 
-func (r *ClusterAdmissionPolicy) GetModule() string {
-	return r.Spec.Module
+func (r *ClusterAdmissionPolicyGroup) GetModule() string {
+	return ""
 }
 
-func (r *ClusterAdmissionPolicy) IsMutating() bool {
-	return r.Spec.Mutating
-}
-
-func (r *ClusterAdmissionPolicy) IsContextAware() bool {
-	return len(r.Spec.ContextAwareResources) > 0
-}
-
-func (r *ClusterAdmissionPolicy) GetSettings() runtime.RawExtension {
-	return r.Spec.Settings
-}
-
-func (r *ClusterAdmissionPolicy) GetStatus() *PolicyStatus {
-	return &r.Status
-}
-
-func (r *ClusterAdmissionPolicy) GetPolicyMembers() []PolicyGroupMember {
-	return []PolicyGroupMember{}
-}
-
-func (r *ClusterAdmissionPolicy) IsPolicyGroup() bool {
+func (r *ClusterAdmissionPolicyGroup) IsMutating() bool {
+	// By design, AdmissionPolicyGroup is always non-mutating.
+	// Policy groups can be used only for validating admission requests
 	return false
 }
 
-func (r *ClusterAdmissionPolicy) GetExpression() string {
-	return ""
+func (r *ClusterAdmissionPolicyGroup) IsContextAware() bool {
+	for _, policy := range r.Spec.Policies {
+		if len(policy.ContextAwareResources) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
-func (r *ClusterAdmissionPolicy) GetMessage() string {
-	return ""
+func (r *ClusterAdmissionPolicyGroup) GetSettings() runtime.RawExtension {
+	return runtime.RawExtension{}
 }
 
-func (r *ClusterAdmissionPolicy) CopyInto(policy *Policy) {
+func (r *ClusterAdmissionPolicyGroup) GetStatus() *PolicyStatus {
+	return &r.Status
+}
+
+func (r *ClusterAdmissionPolicyGroup) GetPolicyMembers() []PolicyGroupMember {
+	return r.Spec.Policies
+}
+
+func (r *ClusterAdmissionPolicyGroup) IsPolicyGroup() bool {
+	return true
+}
+
+func (r *ClusterAdmissionPolicyGroup) GetExpression() string {
+	return r.Spec.Expression
+}
+
+func (r *ClusterAdmissionPolicyGroup) GetMessage() string {
+	return r.Spec.Message
+}
+
+func (r *ClusterAdmissionPolicyGroup) CopyInto(policy *Policy) {
 	*policy = r.DeepCopy()
 }
 
-func (r *ClusterAdmissionPolicy) GetSideEffects() *admissionregistrationv1.SideEffectClass {
+func (r *ClusterAdmissionPolicyGroup) GetSideEffects() *admissionregistrationv1.SideEffectClass {
 	return r.Spec.SideEffects
 }
 
-func (r *ClusterAdmissionPolicy) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
+func (r *ClusterAdmissionPolicyGroup) GetFailurePolicy() *admissionregistrationv1.FailurePolicyType {
 	return r.Spec.FailurePolicy
 }
 
-func (r *ClusterAdmissionPolicy) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
+func (r *ClusterAdmissionPolicyGroup) GetMatchPolicy() *admissionregistrationv1.MatchPolicyType {
 	return r.Spec.MatchPolicy
 }
 
-func (r *ClusterAdmissionPolicy) GetRules() []admissionregistrationv1.RuleWithOperations {
+func (r *ClusterAdmissionPolicyGroup) GetRules() []admissionregistrationv1.RuleWithOperations {
 	return r.Spec.Rules
 }
 
-func (r *ClusterAdmissionPolicy) GetMatchConditions() []admissionregistrationv1.MatchCondition {
+func (r *ClusterAdmissionPolicyGroup) GetMatchConditions() []admissionregistrationv1.MatchCondition {
 	return r.Spec.MatchConditions
 }
 
-func (r *ClusterAdmissionPolicy) GetUpdatedNamespaceSelector(deploymentNamespace string) *metav1.LabelSelector {
+func (r *ClusterAdmissionPolicyGroup) GetUpdatedNamespaceSelector(deploymentNamespace string) *metav1.LabelSelector {
 	// exclude namespace where kubewarden was deployed
 	if r.Spec.NamespaceSelector != nil {
 		r.Spec.NamespaceSelector.MatchExpressions = append(r.Spec.NamespaceSelector.MatchExpressions, metav1.LabelSelectorRequirement{
@@ -217,50 +209,53 @@ func (r *ClusterAdmissionPolicy) GetUpdatedNamespaceSelector(deploymentNamespace
 	return r.Spec.NamespaceSelector
 }
 
-func (r *ClusterAdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
+func (r *ClusterAdmissionPolicyGroup) GetObjectSelector() *metav1.LabelSelector {
 	return r.Spec.ObjectSelector
 }
 
-func (r *ClusterAdmissionPolicy) GetTimeoutSeconds() *int32 {
+func (r *ClusterAdmissionPolicyGroup) GetTimeoutSeconds() *int32 {
 	return r.Spec.TimeoutSeconds
 }
 
-func (r *ClusterAdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
+func (r *ClusterAdmissionPolicyGroup) GetObjectMeta() *metav1.ObjectMeta {
 	return &r.ObjectMeta
 }
 
-func (r *ClusterAdmissionPolicy) GetPolicyServer() string {
+func (r *ClusterAdmissionPolicyGroup) GetPolicyServer() string {
 	return r.Spec.PolicyServer
 }
 
-func (r *ClusterAdmissionPolicy) GetUniqueName() string {
+func (r *ClusterAdmissionPolicyGroup) GetUniqueName() string {
 	return "clusterwide-" + r.Name
 }
 
-func (r *ClusterAdmissionPolicy) GetContextAwareResources() []ContextAwareResource {
-	return r.Spec.ContextAwareResources
+func (r *ClusterAdmissionPolicyGroup) GetContextAwareResources() []ContextAwareResource {
+	// We return an empty slice here because the policy memebers have the
+	// context aware resources. Therefore, the policy group does not need
+	// to have them.
+	return []ContextAwareResource{}
 }
 
-func (r *ClusterAdmissionPolicy) GetBackgroundAudit() bool {
+func (r *ClusterAdmissionPolicyGroup) GetBackgroundAudit() bool {
 	return r.Spec.BackgroundAudit
 }
 
-func (r *ClusterAdmissionPolicy) GetSeverity() (string, bool) {
+func (r *ClusterAdmissionPolicyGroup) GetSeverity() (string, bool) {
 	severity, present := r.Annotations[AnnotationSeverity]
 	return severity, present
 }
 
-func (r *ClusterAdmissionPolicy) GetCategory() (string, bool) {
+func (r *ClusterAdmissionPolicyGroup) GetCategory() (string, bool) {
 	category, present := r.Annotations[AnnotationCategory]
 	return category, present
 }
 
-func (r *ClusterAdmissionPolicy) GetTitle() (string, bool) {
+func (r *ClusterAdmissionPolicyGroup) GetTitle() (string, bool) {
 	title, present := r.Annotations[AnnotationTitle]
 	return title, present
 }
 
-func (r *ClusterAdmissionPolicy) GetDescription() (string, bool) {
+func (r *ClusterAdmissionPolicyGroup) GetDescription() (string, bool) {
 	desc, present := r.Annotations[AnnotationDescription]
 	return desc, present
 }

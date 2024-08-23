@@ -39,6 +39,32 @@ func admissionPolicyFactory() *AdmissionPolicy {
 	}
 }
 
+func admissionPolicyGroupFactory() *AdmissionPolicyGroup {
+	return &AdmissionPolicyGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "testing-policy-group",
+			Namespace: "default",
+		},
+		Spec: AdmissionPolicyGroupSpec{
+			PolicyGroupSpec: PolicyGroupSpec{
+				PolicyServer: "",
+				Rules:        getRules(nil),
+				Mode:         "protect",
+				Expression:   "mypolicy()",
+				Message:      "This is a test policy",
+				Policies: []PolicyGroupMember{
+					{
+						Name:                  "testing-policy",
+						Module:                "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+						Settings:              runtime.RawExtension{},
+						ContextAwareResources: []ContextAwareResource{},
+					},
+				},
+			},
+		},
+	}
+}
+
 func clusterAdmissionPolicyFactory(customRules []admissionregistrationv1.RuleWithOperations, matchConds []admissionregistrationv1.MatchCondition, policyServer string, policyMode PolicyMode) *ClusterAdmissionPolicy {
 	return &ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -54,6 +80,33 @@ func clusterAdmissionPolicyFactory(customRules []admissionregistrationv1.RuleWit
 				Rules:           getRules(customRules),
 				Mode:            policyMode,
 				MatchConditions: matchConds,
+			},
+		},
+	}
+}
+
+func clusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroup {
+	return &ClusterAdmissionPolicyGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "testing-cluster-policy-group",
+			Namespace: "default",
+		},
+		Spec: ClusterAdmissionPolicyGroupSpec{
+			PolicyGroupSpec: PolicyGroupSpec{
+				PolicyServer:    "",
+				Rules:           getRules(nil),
+				Mode:            "protect",
+				MatchConditions: []admissionregistrationv1.MatchCondition{},
+				Expression:      "mypolicy()",
+				Message:         "This is a test policy",
+				Policies: []PolicyGroupMember{
+					{
+						Name:                  "testing-policy",
+						Module:                "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+						Settings:              runtime.RawExtension{},
+						ContextAwareResources: []ContextAwareResource{},
+					},
+				},
 			},
 		},
 	}

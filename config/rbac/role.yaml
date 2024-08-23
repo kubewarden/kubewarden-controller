@@ -53,6 +53,32 @@ rules:
 - apiGroups:
   - policies.kubewarden.io
   resources:
+  - admissionpolicygroups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - admissionpolicygroups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - admissionpolicygroups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
   - clusteradmissionpolicies
   verbs:
   - create
@@ -72,6 +98,32 @@ rules:
   - policies.kubewarden.io
   resources:
   - clusteradmissionpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - clusteradmissionpolicygroups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - clusteradmissionpolicygroups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - clusteradmissionpolicygroups/status
   verbs:
   - get
   - patch
