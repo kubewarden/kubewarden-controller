@@ -74,7 +74,7 @@ const (
 	OldCARootCert    = "old-ca.crt"
 
 	// Certs.
-	CertExpirationYears = 10
+	CertExpirationYears  = 10
 	CACertExpiration     = 10 * 365 * 24 * time.Hour
 	ServerCertExpiration = 1 * 365 * 24 * time.Hour
 	CertLookahead        = 60 * 24 * time.Hour
