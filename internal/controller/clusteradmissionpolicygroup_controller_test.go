@@ -68,7 +68,7 @@ var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster")
 					return err
 				}
 
-				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
+				Expect(validatingWebhookConfiguration.Labels[constants.PartOfLabelKey]).To(Equal(constants.PartOfLabelValue))
 				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.ClusterPolicyScope))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
@@ -78,7 +78,7 @@ var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster")
 
 				caSecret, err := getTestCASecret(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
+				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.CARootCert]))
 
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
@@ -98,7 +98,7 @@ var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster")
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
 
-			delete(validatingWebhookConfiguration.Labels, "kubewarden")
+			delete(validatingWebhookConfiguration.Labels, constants.PartOfLabelKey)
 			validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
 			delete(validatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 			validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")

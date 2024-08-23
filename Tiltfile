@@ -9,10 +9,6 @@ kubectl_cmd = "kubectl"
 if str(local("command -v " + kubectl_cmd + " || true", quiet = True)) == "":
     fail("Required command '" + kubectl_cmd + "' not found in PATH")
 
-# Install cert manager
-load('ext://cert_manager', 'deploy_cert_manager')
-deploy_cert_manager()
-
 # Create the kubewarden namespace
 # This is required since the helm() function doesn't support the create_namespace flag
 load('ext://namespace', 'namespace_create')

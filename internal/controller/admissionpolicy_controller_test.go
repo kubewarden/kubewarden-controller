@@ -82,7 +82,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 					return err
 				}
 
-				Expect(validatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
+				Expect(validatingWebhookConfiguration.Labels[constants.PartOfLabelKey]).To(Equal(constants.PartOfLabelValue))
 				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.NamespacePolicyScope))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
@@ -92,7 +92,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 
 				caSecret, err := getTestCASecret(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
+				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.CARootCert]))
 
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
@@ -112,7 +112,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 			}, timeout, pollInterval).Should(Succeed())
 
 			By("changing the ValidatingWebhookConfiguration")
-			delete(validatingWebhookConfiguration.Labels, "kubewarden")
+			delete(validatingWebhookConfiguration.Labels, constants.PartOfLabelKey)
 			validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
 			delete(validatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 			validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
@@ -194,7 +194,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 					return err
 				}
 
-				Expect(mutatingWebhookConfiguration.Labels["kubewarden"]).To(Equal("true"))
+				Expect(mutatingWebhookConfiguration.Labels[constants.PartOfLabelKey]).To(Equal(constants.PartOfLabelValue))
 				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.NamespacePolicyScope))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(Equal(policyNamespace))
@@ -204,7 +204,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 
 				caSecret, err := getTestCASecret(ctx)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.PolicyServerCARootPemName]))
+				Expect(mutatingWebhookConfiguration.Webhooks[0].ClientConfig.CABundle).To(Equal(caSecret.Data[constants.CARootCert]))
 
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
@@ -224,7 +224,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 			}, timeout, pollInterval).Should(Succeed())
 
 			By("changing the MutatingWebhookConfiguration")
-			delete(mutatingWebhookConfiguration.Labels, "kubewarden")
+			delete(mutatingWebhookConfiguration.Labels, constants.PartOfLabelKey)
 			mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
 			delete(mutatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 			mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")

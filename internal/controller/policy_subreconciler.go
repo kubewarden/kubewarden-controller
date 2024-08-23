@@ -126,7 +126,7 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 	)
 
 	secret := corev1.Secret{}
-	if err = r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: constants.PolicyServerCARootSecretName}, &secret); err != nil {
+	if err = r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: constants.CARootSecretName}, &secret); err != nil {
 		return ctrl.Result{}, errors.Join(errors.New("cannot find policy server secret"), err)
 	}
 
@@ -367,7 +367,11 @@ func findClusterPoliciesForPolicyServer(ctx context.Context, k8sClient client.Cl
 }
 
 func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object, log logr.Logger) []reconcile.Request {
-	if _, found := webhookConfiguration.GetLabels()["kubewarden"]; !found {
+	// Pre v1.16.0
+	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
+	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
+	partOfLabel := webhookConfiguration.GetLabels()["app.kubernetes.io/part-of"]
+	if !kubwardenLabelExists && partOfLabel != "kubewarden" {
 		return []reconcile.Request{}
 	}
 
@@ -417,7 +421,11 @@ func findPoliciesForPolicyServer(ctx context.Context, k8sClient client.Client, o
 }
 
 func findPolicyForWebhookConfiguration(webhookConfiguration client.Object, log logr.Logger) []reconcile.Request {
-	if _, found := webhookConfiguration.GetLabels()["kubewarden"]; !found {
+	// Pre v1.16.0
+	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
+	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
+	partOfLabel := webhookConfiguration.GetLabels()[constants.PartOfLabelKey]
+	if !kubwardenLabelExists && partOfLabel != constants.PartOfLabelValue {
 		return []reconcile.Request{}
 	}
 

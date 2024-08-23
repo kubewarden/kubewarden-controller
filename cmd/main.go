@@ -72,6 +72,7 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var deploymentsNamespace string
+	var webhookServiceName string
 	var alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool
 	var probeAddr string
 	var enableMetrics bool
@@ -91,6 +92,10 @@ func main() {
 		"deployments-namespace",
 		"",
 		"The namespace where the kubewarden resources will be created.")
+	flag.StringVar(&webhookServiceName,
+		"webhook-service-name",
+		"kubewarden-controller-webhook-service",
+		"The name of the service that will be used to expose controller webhooks.")
 	flag.BoolVar(&alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
 		"always-accept-admission-reviews-on-deployments-namespace",
 		false,
@@ -138,7 +143,7 @@ func main() {
 		return
 	}
 
-	if err = setupReconcilers(mgr, deploymentsNamespace, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions); err != nil {
+	if err = setupReconcilers(mgr, deploymentsNamespace, webhookServiceName, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions); err != nil {
 		setupLog.Error(err, "unable to create controllers")
 		retcode = 1
 		return
@@ -226,7 +231,7 @@ func setupProbes(mgr ctrl.Manager) error {
 	return nil
 }
 
-func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool, featureGateAdmissionWebhookMatchConditions bool) error {
+func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace, webhookServiceName string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions bool) error {
 	if err := (&controller.PolicyServerReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
@@ -259,6 +264,17 @@ func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetri
 		return errors.Join(errors.New("unable to create ClusterAdmissionPolicy controller"), err)
 	}
 
+	if err := (&controller.CertReconciler{
+		Client:                      mgr.GetClient(),
+		Log:                         ctrl.Log.WithName("cert-recociler"),
+		DeploymentsNamespace:        deploymentsNamespace,
+		WebhookServiceName:          webhookServiceName,
+		CARootSecretName:            constants.CARootSecretName,
+		WebhookServerCertSecretName: constants.WebhookServerCertSecretName,
+	}).SetupWithManager(mgr); err != nil {
+		return errors.Join(errors.New("unable to create Cert controller"), err)
+	}
+
 	if isPolicyGroupEnabled() {
 		if err := (&controller.AdmissionPolicyGroupReconciler{
 			Client:               mgr.GetClient(),
@@ -280,7 +296,6 @@ func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace string, enableMetri
 			return errors.Join(errors.New("unable to create ClusterAdmissionPolicyGroup controller"), err)
 		}
 	}
-
 	return nil
 }
 
