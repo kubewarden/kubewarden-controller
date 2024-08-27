@@ -763,7 +763,7 @@ async fn test_otel() {
 
     let metrics_output_json =
         (|| async { parse_exporter_output(metrics_output_file.as_file()).await })
-            .retry(&exponential_backoff)
+            .retry(exponential_backoff)
             .await
             .unwrap();
     let metrics = &metrics_output_json["resourceMetrics"][0]["scopeMetrics"][0];
@@ -781,7 +781,7 @@ async fn test_otel() {
 
     let traces_output_json =
         (|| async { parse_exporter_output(traces_output_file.as_file()).await })
-            .retry(&exponential_backoff)
+            .retry(exponential_backoff)
             .await
             .unwrap();
     let spans = &traces_output_json["resourceSpans"][0]["scopeSpans"][0];
