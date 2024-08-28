@@ -8,15 +8,6 @@ rules:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
-  verbs:
-  - create
-  - delete
-  - list
-  - patch
-  - watch
-- apiGroups:
-  - admissionregistration.k8s.io
-  resources:
   - validatingwebhookconfigurations
   verbs:
   - create
@@ -28,109 +19,9 @@ rules:
   - policies.kubewarden.io
   resources:
   - admissionpolicies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - admissionpolicies/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - admissionpolicies/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
   - admissionpolicygroups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - admissionpolicygroups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - admissionpolicygroups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
   - clusteradmissionpolicies
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - clusteradmissionpolicies/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - clusteradmissionpolicies/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
   - clusteradmissionpolicygroups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - clusteradmissionpolicygroups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
-  - clusteradmissionpolicygroups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - policies.kubewarden.io
-  resources:
   - policyservers
   verbs:
   - create
@@ -143,12 +34,20 @@ rules:
 - apiGroups:
   - policies.kubewarden.io
   resources:
+  - admissionpolicies/finalizers
+  - admissionpolicygroups/finalizers
+  - clusteradmissionpolicies/finalizers
+  - clusteradmissionpolicygroups/finalizers
   - policyservers/finalizers
   verbs:
   - update
 - apiGroups:
   - policies.kubewarden.io
   resources:
+  - admissionpolicies/status
+  - admissionpolicygroups/status
+  - clusteradmissionpolicies/status
+  - clusteradmissionpolicygroups/status
   - policyservers/status
   verbs:
   - get

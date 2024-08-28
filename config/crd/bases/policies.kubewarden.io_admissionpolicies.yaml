@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.16.1
   name: admissionpolicies.policies.kubewarden.io
 spec:
   group: policies.kubewarden.io
@@ -116,7 +116,6 @@ spec:
                         Expression represents the expression which will be evaluated by CEL. Must evaluate to bool.
                         CEL expressions have access to the contents of the AdmissionRequest and Authorizer, organized into CEL variables:
 
-
                         'object' - The object from the incoming request. The value is null for DELETE requests.
                         'oldObject' - The existing object. The value is null for CREATE requests.
                         'request' - Attributes of the admission request(/pkg/apis/admission/types.go#AdmissionRequest).
@@ -125,7 +124,6 @@ spec:
                         'authorizer.requestResource' - A CEL ResourceCheck constructed from the 'authorizer' and configured with the
                           request resource.
                         Documentation on CEL: https://kubernetes.io/docs/reference/using-api/cel/
-
 
                         Required.
                       type: string
@@ -138,7 +136,6 @@ spec:
                         must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or
                         '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]') with an
                         optional DNS subdomain prefix and '/' (e.g. 'example.com/MyName')
-
 
                         Required.
                       type: string
@@ -298,7 +295,6 @@ spec:
                       description: |-
                         Resources is a list of resources this rule applies to.
 
-
                         For example:
                         'pods' means pods.
                         'pods/log' means the log subresource of pods.
@@ -307,10 +303,8 @@ spec:
                         '*/scale' means all scale subresources.
                         '*/*' means all resources and their subresources.
 
-
                         If wildcard is present, the validation rule will ensure resources do not
                         overlap with each other.
-
 
                         Depending on the enclosing object, subresources might not be allowed.
                         Required.
@@ -377,16 +371,8 @@ spec:
                   "PolicyServerServiceReconciled" and
                   "AdmissionPolicyActive"
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -427,12 +413,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        ---
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                        useful (see .node.status.conditions), the ability to deconflict is important.
-                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -677,7 +658,6 @@ spec:
                       description: |-
                         Resources is a list of resources this rule applies to.
 
-
                         For example:
                         'pods' means pods.
                         'pods/log' means the log subresource of pods.
@@ -686,10 +666,8 @@ spec:
                         '*/scale' means all scale subresources.
                         '*/*' means all resources and their subresources.
 
-
                         If wildcard is present, the validation rule will ensure resources do not
                         overlap with each other.
-
 
                         Depending on the enclosing object, subresources might not be allowed.
                         Required.
@@ -756,16 +734,8 @@ spec:
                   "PolicyServerServiceReconciled" and
                   "AdmissionPolicyActive"
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -806,12 +776,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        ---
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                        useful (see .node.status.conditions), the ability to deconflict is important.
-                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
