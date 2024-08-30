@@ -381,11 +381,12 @@ dependencies = [
 
 [[package]]
 name = "backon"
-version = "1.0.2"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2caf634d05fe0642d0fb1ab43497fa627088ecd93f84b2d0f2a5d7b91f7730db"
+checksum = "82adeb1361d27e002e8ad1074e079860e9b5ef937e8453aa6a56d9b10e31e8d5"
 dependencies = [
  "fastrand",
+ "gloo-timers",
  "tokio",
 ]
 
@@ -1922,6 +1923,18 @@ dependencies = [
  "log",
  "regex-automata 0.4.7",
  "regex-syntax 0.8.4",
+]
+
+[[package]]
+name = "gloo-timers"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbb143cf96099802033e0d4f4963b19fd2e0b728bcf076cd9cf7f6634f092994"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]
