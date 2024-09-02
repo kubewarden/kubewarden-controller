@@ -2,8 +2,9 @@ package certs
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -14,20 +15,21 @@ import (
 )
 
 const (
-	bitSize = 4096
-	base    = 2
-	exp     = 159
+	base         = 1
+	exp          = 128
+	caCommonName = "kubewarden-controller-ca"
 )
 
 // GenerateCA generates a self-signed CA root certificate and private key in PEM format.
 // It accepts validity bounds as parameters.
 func GenerateCA(notBefore, notAfter time.Time) ([]byte, []byte, error) {
-	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(base), big.NewInt(exp), nil))
+	serialNumberUpperBound := new(big.Int).Lsh(big.NewInt(base), exp)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberUpperBound)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot init serial number: %w", err)
 	}
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot create private key: %w", err)
 	}
@@ -35,18 +37,13 @@ func GenerateCA(notBefore, notAfter time.Time) ([]byte, []byte, error) {
 	caCert := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization:  []string{""},
-			Country:       []string{""},
-			Province:      []string{""},
-			Locality:      []string{""},
-			StreetAddress: []string{""},
-			PostalCode:    []string{""},
+			CommonName: caCommonName,
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
 
@@ -88,39 +85,32 @@ func GenerateCert(caCertPEM []byte,
 	}
 
 	caPrivateKeyBlock, _ := pem.Decode(caPrivateKeyPEM)
-	caPrivateKey, err := x509.ParsePKCS1PrivateKey(caPrivateKeyBlock.Bytes)
+	caPrivateKey, err := x509.ParseECPrivateKey(caPrivateKeyBlock.Bytes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error parsing ca root private key: %w", err)
 	}
 
-	serialNumber, err := rand.Int(rand.Reader, (&big.Int{}).Exp(big.NewInt(base), big.NewInt(exp), nil))
+	serialNumberUpperBound := new(big.Int).Lsh(big.NewInt(base), exp)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberUpperBound)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot generate serialNumber for certificate: %w", err)
 	}
 
-	// key size must be higher than 1024, otherwise the PolicyServer
-	// TLS acceptor will refuse to start
-	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot generate private key: %w", err)
+		return nil, nil, fmt.Errorf("cannot create private key: %w", err)
 	}
 
 	cert := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName:    dnsName,
-			Organization:  []string{""},
-			Country:       []string{""},
-			Province:      []string{""},
-			Locality:      []string{""},
-			StreetAddress: []string{""},
-			PostalCode:    []string{""},
+			CommonName: dnsName,
 		},
 		DNSNames:    []string{dnsName},
 		NotBefore:   notBefore,
 		NotAfter:    notAfter,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:    x509.KeyUsageDigitalSignature,
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 	}
 
 	certBytes, err := x509.CreateCertificate(
@@ -162,11 +152,14 @@ func pemEncodeCertificate(certificate []byte) ([]byte, error) {
 }
 
 // pemEncodePrivateKey encodes a private key to PEM format.
-func pemEncodePrivateKey(privateKey *rsa.PrivateKey) ([]byte, error) {
-	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+func pemEncodePrivateKey(privateKey *ecdsa.PrivateKey) ([]byte, error) {
+	privateKeyBytes, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("cannot marshalprivate key: %w", err)
+	}
 	privateKeyPEM := new(bytes.Buffer)
 
-	err := pem.Encode(privateKeyPEM, &pem.Block{
+	err = pem.Encode(privateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: privateKeyBytes,
 	})
