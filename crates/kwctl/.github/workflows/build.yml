@@ -56,7 +56,7 @@ jobs:
           path: kwctl-linux-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@d46a496c181864fe6b6443cb576ecaaf2a572056 # v3.3.2
+        uses: kubewarden/github-actions/syft-installer@cc9e5cedccd286c6f9f9ffe59a121f72478a4f26 # v3.3.3
 
       - name: Create SBOM file
         shell: bash
@@ -140,7 +140,7 @@ jobs:
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@d46a496c181864fe6b6443cb576ecaaf2a572056 # v3.3.2
+        uses: kubewarden/github-actions/syft-installer@cc9e5cedccd286c6f9f9ffe59a121f72478a4f26 # v3.3.3
         with:
           arch: darwin_amd64
 
@@ -221,7 +221,7 @@ jobs:
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@d46a496c181864fe6b6443cb576ecaaf2a572056 # v3.3.2
+        uses: kubewarden/github-actions/syft-installer@cc9e5cedccd286c6f9f9ffe59a121f72478a4f26 # v3.3.3
         with:
           arch: windows_amd64
 
