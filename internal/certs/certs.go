@@ -15,15 +15,15 @@ import (
 )
 
 const (
-	base         = 1
-	exp          = 128
+	startValue   = 1
+	maxBitLength = 128
 	caCommonName = "kubewarden-controller-ca"
 )
 
 // GenerateCA generates a self-signed CA root certificate and private key in PEM format.
 // It accepts validity bounds as parameters.
 func GenerateCA(notBefore, notAfter time.Time) ([]byte, []byte, error) {
-	serialNumberUpperBound := new(big.Int).Lsh(big.NewInt(base), exp)
+	serialNumberUpperBound := new(big.Int).Lsh(big.NewInt(startValue), maxBitLength)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberUpperBound)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot init serial number: %w", err)
@@ -90,7 +90,7 @@ func GenerateCert(caCertPEM []byte,
 		return nil, nil, fmt.Errorf("error parsing ca root private key: %w", err)
 	}
 
-	serialNumberUpperBound := new(big.Int).Lsh(big.NewInt(base), exp)
+	serialNumberUpperBound := new(big.Int).Lsh(big.NewInt(startValue), maxBitLength)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberUpperBound)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot generate serialNumber for certificate: %w", err)
