@@ -1,6 +1,6 @@
 [package]
 name = "policy-fetcher"
-version = "0.8.9"
+version = "0.8.10"
 authors = [
   "Kubewarden Developers <kubewarden@suse.de>",
   "Flavio Castelli <fcastelli@suse.com>",
@@ -35,7 +35,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
-sigstore = { git = "https://github.com/flavio/sigstore-rs.git", branch = "kubewarden", default-features = false, features = [
+sigstore = { git = "https://github.com/flavio/sigstore-rs.git", tag = "v0.10.0-rc1+kw1", default-features = false, features = [
   "sigstore-trust-root",
   "cosign-rustls-tls",
   "cached-client",
