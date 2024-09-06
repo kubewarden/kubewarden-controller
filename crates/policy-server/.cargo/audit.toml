@@ -17,4 +17,6 @@ ignore = [
   "RUSTSEC-2023-0071", # "Classic" RSA timing sidechannel attack from non-constant-time implementation.
   # Okay for local use.
   # https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+  "RUSTSEC-2024-0370", # This is a warning about `proc-macro-errors` being unmaintained. It's a transitive dependency of `sigstore` and `oci-spec`.
+  "RUSTSEC-2023-0055", # This is a warning about `lexical` having multiple soundness issues. It's a transitive dependency of `sigstore`.
 ]
