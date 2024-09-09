@@ -19,7 +19,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -51,6 +50,7 @@ var _ webhook.Defaulter = &AdmissionPolicyGroup{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *AdmissionPolicyGroup) Default() {
 	admissionpolicygrouplog.Info("default", "name", r.Name)
+
 	if r.Spec.PolicyServer == "" {
 		r.Spec.PolicyServer = constants.DefaultPolicyServer
 	}
@@ -66,20 +66,13 @@ var _ webhook.Validator = &AdmissionPolicyGroup{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *AdmissionPolicyGroup) ValidateCreate() (admission.Warnings, error) {
 	admissionpolicygrouplog.Info("validate create", "name", r.Name)
-	errList := field.ErrorList{}
 
-	if errs := validateRulesField(r); len(errs) != 0 {
-		errList = append(errList, errs...)
+	allErrors := validatePolicyGroupCreate(r)
+
+	if len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(r, allErrors)
 	}
-	if errs := validateMatchConditionsField(r); len(errs) != 0 {
-		errList = append(errList, errs...)
-	}
-	if err := validatePolicyGroupMembers(r); err != nil {
-		errList = append(errList, err)
-	}
-	if len(errList) != 0 {
-		return nil, prepareInvalidAPIError(r, errList)
-	}
+
 	return nil, nil
 }
 
@@ -92,7 +85,12 @@ func (r *AdmissionPolicyGroup) ValidateUpdate(old runtime.Object) (admission.War
 		return admission.Warnings{}, apierrors.NewInternalError(
 			fmt.Errorf("object is not of type AdmissionPolicyGroup: %#v", old))
 	}
-	return nil, validatePolicyUpdate(oldPolicy, r)
+
+	if allErrors := validatePolicyGroupUpdate(oldPolicy, r); len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(r, allErrors)
+	}
+
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.

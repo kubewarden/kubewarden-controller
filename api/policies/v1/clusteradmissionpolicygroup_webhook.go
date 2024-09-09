@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -68,21 +67,12 @@ var _ webhook.Validator = &ClusterAdmissionPolicyGroup{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicyGroup) ValidateCreate() (admission.Warnings, error) {
 	clusteradmissionpolicygrouplog.Info("validate create", "name", r.Name)
-	errList := field.ErrorList{}
 
-	if errs := validateRulesField(r); len(errs) != 0 {
-		errList = append(errList, errs...)
-	}
-	if errs := validateMatchConditionsField(r); len(errs) != 0 {
-		errList = append(errList, errs...)
-	}
-	if err := validatePolicyGroupMembers(r); err != nil {
-		errList = append(errList, err)
+	allErrors := validatePolicyGroupCreate(r)
+	if len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(r, allErrors)
 	}
 
-	if len(errList) != 0 {
-		return nil, prepareInvalidAPIError(r, errList)
-	}
 	return nil, nil
 }
 
@@ -96,7 +86,11 @@ func (r *ClusterAdmissionPolicyGroup) ValidateUpdate(old runtime.Object) (admiss
 			fmt.Errorf("object is not of type ClusterAdmissionPolicyGroup: %#v", old))
 	}
 
-	return nil, validatePolicyUpdate(oldPolicy, r)
+	if allErrors := validatePolicyGroupUpdate(oldPolicy, r); len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(r, allErrors)
+	}
+
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
