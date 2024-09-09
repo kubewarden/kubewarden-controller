@@ -78,7 +78,4 @@ const (
 	CACertExpiration     = 10 * 365 * 24 * time.Hour
 	ServerCertExpiration = 1 * 365 * 24 * time.Hour
 	CertLookahead        = 60 * 24 * time.Hour
-
-	// Feature flags.
-	EnablePolicyGroupsFlag = "KUBEWARDEN_ENABLE_POLICY_GROUPS"
 )

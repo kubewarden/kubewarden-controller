@@ -55,10 +55,6 @@ for o in objects:
         o['spec']['template']['spec']['securityContext']['runAsNonRoot'] = False
         # Disable the leader election to speed up the startup time.
         o['spec']['template']['spec']['containers'][0]['args'].remove('--leader-elect')
-	# Enable policy groups feature
-	envvars = o['spec']['template']['spec']['containers'][0].get('env', [])
-	envvars.append({'name': 'KUBEWARDEN_ENABLE_POLICY_GROUPS', 'value': 'true'})
-	o['spec']['template']['spec']['containers'][0]['env']  = envvars
 
     # Update the cluster and namespace roles used by the controller. This ensures
     # that always we have the latest roles applied to the cluster.
