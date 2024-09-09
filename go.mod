@@ -2,7 +2,7 @@ module github.com/kubewarden/kubewarden-controller
 
 go 1.22.0
 
-toolchain go1.23.0
+toolchain go1.23.1
 
 require (
 	github.com/go-logr/logr v1.4.2
@@ -18,7 +18,7 @@ require (
 	k8s.io/apimachinery v0.31.0
 	k8s.io/apiserver v0.31.0
 	k8s.io/client-go v0.31.0
-	k8s.io/utils v0.0.0-20240821151609-f90d01438635
+	k8s.io/utils v0.0.0-20240902221715-702e33fdd3c3
 	sigs.k8s.io/controller-runtime v0.19.0
 )
 
@@ -138,4 +138,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.13
+replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.1.14
