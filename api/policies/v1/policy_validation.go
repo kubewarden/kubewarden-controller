@@ -24,70 +24,84 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
+func validatePolicyCreate(policy Policy) field.ErrorList {
+	var allErrors field.ErrorList
+
+	allErrors = append(allErrors, validateRulesField(policy)...)
+	allErrors = append(allErrors, validateMatchConditionsField(policy)...)
+
+	return allErrors
+}
+
+func validatePolicyUpdate(oldPolicy, newPolicy Policy) field.ErrorList {
+	var allErrors field.ErrorList
+
+	allErrors = append(allErrors, validateRulesField(newPolicy)...)
+	allErrors = append(allErrors, validateMatchConditionsField(newPolicy)...)
+	if err := validatePolicyServerField(oldPolicy, newPolicy); err != nil {
+		allErrors = append(allErrors, err)
+	}
+	if err := validatePolicyModeField(oldPolicy, newPolicy); err != nil {
+		allErrors = append(allErrors, err)
+	}
+
+	return allErrors
+}
+
 // Validates the spec.Rules field for non-empty, webhook-valid rules.
 func validateRulesField(policy Policy) field.ErrorList {
-	errs := field.ErrorList{}
+	var allErrors field.ErrorList
 	rulesField := field.NewPath("spec", "rules")
 
 	if len(policy.GetRules()) == 0 {
-		errs = append(errs, field.Required(rulesField, "a value must be specified"))
+		allErrors = append(allErrors, field.Required(rulesField, "a value must be specified"))
 
-		return errs
+		return allErrors
 	}
 
 	for _, rule := range policy.GetRules() {
 		switch {
 		case len(rule.Operations) == 0:
 			opField := rulesField.Child("operations")
-			errs = append(errs, field.Required(opField, "a value must be specified"))
+			allErrors = append(allErrors, field.Required(opField, "a value must be specified"))
 		case len(rule.Rule.APIVersions) == 0 || len(rule.Rule.Resources) == 0:
-			errs = append(errs, field.Required(rulesField, "apiVersions and resources must have specified values"))
+			allErrors = append(allErrors, field.Required(rulesField, "apiVersions and resources must have specified values"))
 		default:
-			if err := checkOperationsArrayForEmptyString(rule.Operations, rulesField); err != nil {
-				errs = append(errs, err)
-			}
-
-			if err := checkRulesArrayForEmptyString(rule.Rule.APIVersions, "rule.apiVersions", rulesField); err != nil {
-				errs = append(errs, err)
-			}
-
-			if err := checkRulesArrayForEmptyString(rule.Rule.Resources, "rule.resources", rulesField); err != nil {
-				errs = append(errs, err)
-			}
+			allErrors = append(allErrors, checkOperationsArrayForEmptyString(rule.Operations, rulesField)...)
+			allErrors = append(allErrors, checkRulesArrayForEmptyString(rule.Rule.APIVersions, rulesField.Child("rule.apiVersions"))...)
+			allErrors = append(allErrors, checkRulesArrayForEmptyString(rule.Rule.Resources, rulesField.Child("rule.resources"))...)
 		}
 	}
 
-	if len(errs) != 0 {
-		return errs
-	}
-
-	return nil
+	return allErrors
 }
 
 // checkOperationsArrayForEmptyString checks if any of the values in the operations array is the empty string and returns
 // an error if this is true.
-func checkOperationsArrayForEmptyString(operationsArray []admissionregistrationv1.OperationType, rulesField *field.Path) *field.Error {
-	for _, operation := range operationsArray {
+func checkOperationsArrayForEmptyString(operationsArray []admissionregistrationv1.OperationType, rulesField *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+
+	for i, operation := range operationsArray {
 		if operation == "" {
-			return field.Invalid(rulesField.Child("operations"), "", "field value cannot contain the empty string")
+			allErrors = append(allErrors, field.Required(rulesField.Child("operations").Index(i), "must be non-empty"))
 		}
 	}
 
-	return nil
+	return allErrors
 }
 
 // checkRulesArrayForEmptyString checks if any of the values specified is the empty string and returns an error if this
 // is true.
-func checkRulesArrayForEmptyString(rulesArray []string, fieldName string, parentField *field.Path) *field.Error {
-	for _, apiVersion := range rulesArray {
-		if apiVersion == "" {
-			apiVersionField := parentField.Child(fieldName)
+func checkRulesArrayForEmptyString(rulesArray []string, rulesField *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
 
-			return field.Invalid(apiVersionField, "", fieldName+" value cannot contain the empty string")
+	for i, apiVersion := range rulesArray {
+		if apiVersion == "" {
+			allErrors = append(allErrors, field.Required(rulesField.Index(i), "must be non-empty"))
 		}
 	}
 
-	return nil
+	return allErrors
 }
 
 func validateMatchConditionsField(policy Policy) field.ErrorList {
@@ -108,16 +122,22 @@ func validateMatchConditionsField(policy Policy) field.ErrorList {
 		strictCostEnforcement: false,
 	}
 
-	if errs := validateMatchConditions(policy.GetMatchConditions(), opts, field.NewPath("spec").Child("matchConditions")); len(errs) != 0 {
-		return errs
+	return validateMatchConditions(policy.GetMatchConditions(), opts, field.NewPath("spec").Child("matchConditions"))
+}
+
+func validatePolicyServerField(oldPolicy, newPolicy Policy) *field.Error {
+	if oldPolicy.GetPolicyServer() != newPolicy.GetPolicyServer() {
+		return field.Forbidden(field.NewPath("spec").Child("policyServer"), "the field is immutable")
 	}
+
 	return nil
 }
 
-func validatePolicyGroupMembers(policy Policy) *field.Error {
-	if policy.IsPolicyGroup() && len(policy.GetPolicyMembers()) == 0 {
-		return field.Invalid(field.NewPath("spec").Child("policies"), "", "policy groups must have at least one policy member")
+func validatePolicyModeField(oldPolicy, newPolicy Policy) *field.Error {
+	if oldPolicy.GetPolicyMode() != newPolicy.GetPolicyMode() {
+		return field.Forbidden(field.NewPath("spec").Child("mode"), "field cannot transition from protect to monitor. Recreate instead.")
 	}
+
 	return nil
 }
 
@@ -128,41 +148,4 @@ func prepareInvalidAPIError(policy Policy, errorList field.ErrorList) *apierrors
 		policy.GetName(),
 		errorList,
 	)
-}
-
-func validatePolicyUpdate(oldPolicy, newPolicy Policy) error {
-	errList := field.ErrorList{}
-
-	if errs := validateRulesField(newPolicy); len(errs) != 0 {
-		errList = append(errList, errs...)
-	}
-
-	if errs := validateMatchConditionsField(newPolicy); len(errs) != 0 {
-		errList = append(errList, errs...)
-	}
-
-	if newPolicy.GetPolicyServer() != oldPolicy.GetPolicyServer() {
-		var errs field.ErrorList
-		p := field.NewPath("spec")
-		pp := p.Child("policyServer")
-		errs = append(errs, field.Forbidden(pp, "the field is immutable"))
-		errList = append(errList, errs...)
-	}
-
-	if newPolicy.GetPolicyMode() == "monitor" && oldPolicy.GetPolicyMode() == "protect" {
-		var errs field.ErrorList
-		p := field.NewPath("spec")
-		pp := p.Child("mode")
-		errs = append(errs, field.Forbidden(pp, "field cannot transition from protect to monitor. Recreate instead."))
-		errList = append(errList, errs...)
-	}
-
-	if err := validatePolicyGroupMembers(newPolicy); err != nil {
-		errList = append(errList, err)
-	}
-
-	if len(errList) != 0 {
-		return prepareInvalidAPIError(newPolicy, errList)
-	}
-	return nil
 }
