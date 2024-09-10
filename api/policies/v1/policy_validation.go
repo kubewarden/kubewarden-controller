@@ -134,7 +134,7 @@ func validatePolicyServerField(oldPolicy, newPolicy Policy) *field.Error {
 }
 
 func validatePolicyModeField(oldPolicy, newPolicy Policy) *field.Error {
-	if oldPolicy.GetPolicyMode() != newPolicy.GetPolicyMode() {
+	if oldPolicy.GetPolicyMode() == "protect" && newPolicy.GetPolicyMode() == "monitor" {
 		return field.Forbidden(field.NewPath("spec").Child("mode"), "field cannot transition from protect to monitor. Recreate instead.")
 	}
 

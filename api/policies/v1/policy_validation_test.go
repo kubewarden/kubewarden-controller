@@ -297,7 +297,7 @@ func TestValidatePolicyServerField(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validatePolicyServerField(test.newPolicy, test.oldPolicy)
+			err := validatePolicyServerField(test.oldPolicy, test.newPolicy)
 
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, err, test.expectedErrorMessage)
@@ -336,6 +336,26 @@ func TestValidatePolicyModeField(t *testing.T) {
 			"",
 		},
 		{
+			"policy mode changed from monitor to protect",
+			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"apps"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"deployments"},
+				},
+			}}, nil, "default", "monitor"),
+			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"apps"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"deployments"},
+				},
+			}}, nil, "default", "protect"),
+			"",
+		},
+		{
 			"policy mode changed from protect to monitor",
 			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
 				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
@@ -359,7 +379,7 @@ func TestValidatePolicyModeField(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validatePolicyModeField(test.newPolicy, test.oldPolicy)
+			err := validatePolicyModeField(test.oldPolicy, test.newPolicy)
 
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, err, test.expectedErrorMessage)
