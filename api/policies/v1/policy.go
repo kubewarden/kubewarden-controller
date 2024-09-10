@@ -112,7 +112,7 @@ type Policy interface {
 	GetTitle() (string, bool)
 	GetDescription() (string, bool)
 	IsPolicyGroup() bool
-	GetPolicyMembers() []PolicyGroupMember
+	GetPolicyGroupMembers() PolicyGroupMembers
 	GetExpression() string
 	GetMessage() string
 }

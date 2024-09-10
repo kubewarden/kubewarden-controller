@@ -91,7 +91,7 @@ func (r *AdmissionPolicyGroup) GetModule() string {
 	return ""
 }
 
-func (r *AdmissionPolicyGroup) GetPolicyMembers() []PolicyGroupMember {
+func (r *AdmissionPolicyGroup) GetPolicyGroupMembers() PolicyGroupMembers {
 	return r.Spec.Policies
 }
 

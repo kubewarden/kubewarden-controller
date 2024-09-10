@@ -41,7 +41,7 @@ func validatePolicyGroupUpdate(oldPolicy, newPolicy Policy) field.ErrorList {
 
 // validatePolicyGroupMembers validates that a policy group has at least one policy member.
 func validatePolicyGroupMembers(policy Policy) *field.Error {
-	if len(policy.GetPolicyMembers()) == 0 {
+	if len(policy.GetPolicyGroupMembers()) == 0 {
 		return field.Required(field.NewPath("spec").Child("policies"), "policy groups must have at least one policy member")
 	}
 
@@ -60,8 +60,8 @@ func validatePolicyGroupExpressionField(policy Policy) *field.Error {
 
 	// Create a CEL environment with custom functions for each policy member
 	var opts []cel.EnvOption
-	for _, p := range policy.GetPolicyMembers() {
-		fn := cel.Function(p.Name, cel.Overload(p.Name, []*cel.Type{}, types.BoolType))
+	for policyName := range policy.GetPolicyGroupMembers() {
+		fn := cel.Function(policyName, cel.Overload(policyName, []*cel.Type{}, types.BoolType))
 		opts = append(opts, fn)
 	}
 

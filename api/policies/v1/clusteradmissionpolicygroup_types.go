@@ -148,7 +148,7 @@ func (r *ClusterAdmissionPolicyGroup) GetStatus() *PolicyStatus {
 	return &r.Status
 }
 
-func (r *ClusterAdmissionPolicyGroup) GetPolicyMembers() []PolicyGroupMember {
+func (r *ClusterAdmissionPolicyGroup) GetPolicyGroupMembers() PolicyGroupMembers {
 	return r.Spec.Policies
 }
 

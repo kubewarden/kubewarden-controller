@@ -156,8 +156,8 @@ func (r *ClusterAdmissionPolicy) GetStatus() *PolicyStatus {
 	return &r.Status
 }
 
-func (r *ClusterAdmissionPolicy) GetPolicyMembers() []PolicyGroupMember {
-	return []PolicyGroupMember{}
+func (r *ClusterAdmissionPolicy) GetPolicyGroupMembers() PolicyGroupMembers {
+	return nil
 }
 
 func (r *ClusterAdmissionPolicy) IsPolicyGroup() bool {
