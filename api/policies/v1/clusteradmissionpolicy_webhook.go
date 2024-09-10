@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -43,6 +42,7 @@ func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error
 	if err != nil {
 		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
 	}
+
 	return nil
 }
 
@@ -53,6 +53,7 @@ var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicy) Default() {
 	clusteradmissionpolicylog.Info("default", "name", r.Name)
+
 	if r.Spec.PolicyServer == "" {
 		r.Spec.PolicyServer = constants.DefaultPolicyServer
 	}
@@ -68,17 +69,12 @@ var _ webhook.Validator = &ClusterAdmissionPolicy{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicy) ValidateCreate() (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate create", "name", r.Name)
-	errList := field.ErrorList{}
 
-	if errs := validateRulesField(r); len(errs) != 0 {
-		errList = append(errList, errs...)
+	allErrors := validatePolicyCreate(r)
+	if len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(r, allErrors)
 	}
-	if errs := validateMatchConditionsField(r); len(errs) != 0 {
-		errList = append(errList, errs...)
-	}
-	if len(errList) != 0 {
-		return nil, prepareInvalidAPIError(r, errList)
-	}
+
 	return nil, nil
 }
 
@@ -92,11 +88,17 @@ func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.W
 			fmt.Errorf("object is not of type ClusterAdmissionPolicy: %#v", old))
 	}
 
-	return nil, validatePolicyUpdate(oldPolicy, r)
+	allErrors := validatePolicyUpdate(oldPolicy, r)
+	if len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(r, allErrors)
+	}
+
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *ClusterAdmissionPolicy) ValidateDelete() (admission.Warnings, error) {
 	clusteradmissionpolicylog.Info("validate delete", "name", r.Name)
+
 	return nil, nil
 }
