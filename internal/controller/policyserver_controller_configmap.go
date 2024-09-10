@@ -174,16 +174,16 @@ func (r *PolicyServerReconciler) policyServerConfigMapVersion(ctx context.Contex
 	return unstructuredObj.GetResourceVersion(), nil
 }
 
-func buildPoliciesMembers(policies []policiesv1.PolicyGroupMember) map[string]policyGroupMember {
-	policiesMembers := map[string]policyGroupMember{}
-	for _, policy := range policies {
-		policiesMembers[policy.Name] = policyGroupMember{
+func buildPolicyGroupMembers(policies policiesv1.PolicyGroupMembers) map[string]policyGroupMember {
+	policyGroupMembers := map[string]policyGroupMember{}
+	for name, policy := range policies {
+		policyGroupMembers[name] = policyGroupMember{
 			URL:                   policy.Module,
 			Settings:              policy.Settings,
 			ContextAwareResources: policy.ContextAwareResources,
 		}
 	}
-	return policiesMembers
+	return policyGroupMembers
 }
 
 func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMap {
@@ -199,7 +199,7 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMa
 			AllowedToMutate:       admissionPolicy.IsMutating(),
 			Settings:              admissionPolicy.GetSettings(),
 			ContextAwareResources: admissionPolicy.GetContextAwareResources(),
-			Policies:              buildPoliciesMembers(admissionPolicy.GetPolicyMembers()),
+			Policies:              buildPolicyGroupMembers(admissionPolicy.GetPolicyGroupMembers()),
 			Expression:            admissionPolicy.GetExpression(),
 			Message:               admissionPolicy.GetMessage(),
 		}
