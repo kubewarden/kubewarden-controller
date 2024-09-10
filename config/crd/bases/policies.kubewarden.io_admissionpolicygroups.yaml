@@ -257,11 +257,7 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               policies:
-                description: |-
-                  Policies is a list of policies that are part of the group that will
-                  be available to be called in the evaluation expression field.
-                  Each policy in the group should be a Kubewarden policy.
-                items:
+                additionalProperties:
                   properties:
                     contextAwareResources:
                       description: |-
@@ -284,7 +280,14 @@ spec:
                         - kind
                         type: object
                       type: array
-                    name:
+                    module:
+                      description: |-
+                        Module is the location of the WASM module to be loaded. Can be a
+                        local file (file://), a remote file served by an HTTP server
+                        (http://, https://), or an artifact served by an OCI-compatible
+                        registry (registry://).
+                        If prefix is missing, it will default to registry:// and use that
+                        internally.
                       type: string
                     settings:
                       description: |-
@@ -294,20 +297,14 @@ spec:
                       nullable: true
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
-                    url:
-                      description: |-
-                        Module is the location of the WASM module to be loaded. Can be a
-                        local file (file://), a remote file served by an HTTP server
-                        (http://, https://), or an artifact served by an OCI-compatible
-                        registry (registry://).
-                        If prefix is missing, it will default to registry:// and use that
-                        internally.
-                      type: string
                   required:
-                  - name
-                  - url
+                  - module
                   type: object
-                type: array
+                description: |-
+                  Policies is a list of policies that are part of the group that will
+                  be available to be called in the evaluation expression field.
+                  Each policy in the group should be a Kubewarden policy.
+                type: object
               policyServer:
                 default: default
                 description: PolicyServer identifies an existing PolicyServer resource.
