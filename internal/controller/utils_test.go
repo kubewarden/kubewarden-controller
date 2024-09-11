@@ -140,10 +140,11 @@ func admissionPolicyGroupFactory(name, policyNamespace, policyServerName string)
 			Expression: "true",
 		},
 	}
-	admissionPolicy.Spec.Policies = []policiesv1.PolicyGroupMember{{
-		Name:   "pod-privileged",
-		Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
-	}}
+	admissionPolicy.Spec.Policies = policiesv1.PolicyGroupMembers{
+		"pod-privileged": {
+			Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+		},
+	}
 	admissionPolicy.Finalizers = []string{
 		// On a real cluster the Kubewarden finalizer is added by our mutating
 		// webhook. This is not running now, hence we have to manually add the finalizer
@@ -175,13 +176,11 @@ func clusterAdmissionPolicyGroupFactory(name, policyServerName string) *policies
 		// exist at all times
 		integrationTestsFinalizer,
 	}
-	clusterAdmissionPolicy.Spec.Policies = []policiesv1.PolicyGroupMember{
-		{
-			Name:   "pod-privileged",
+	clusterAdmissionPolicy.Spec.Policies = policiesv1.PolicyGroupMembers{
+		"pod-privileged": {
 			Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
 		},
-		{
-			Name:   "user-group-psp",
+		"user-group-psp": {
 			Module: "registry://ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
 		},
 	}

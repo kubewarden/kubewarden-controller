@@ -52,9 +52,8 @@ func admissionPolicyGroupFactory() *AdmissionPolicyGroup {
 				Mode:         "protect",
 				Expression:   "mypolicy()",
 				Message:      "This is a test policy",
-				Policies: []PolicyGroupMember{
-					{
-						Name:                  "mypolicy",
+				Policies: map[string]PolicyGroupMember{
+					"mypolicy": {
 						Module:                "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
 						Settings:              runtime.RawExtension{},
 						ContextAwareResources: []ContextAwareResource{},
@@ -99,9 +98,8 @@ func clusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroup {
 				MatchConditions: []admissionregistrationv1.MatchCondition{},
 				Expression:      "mypolicy()",
 				Message:         "This is a test policy",
-				Policies: []PolicyGroupMember{
-					{
-						Name:                  "mypolicy",
+				Policies: map[string]PolicyGroupMember{
+					"mypolicy": {
 						Module:                "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
 						Settings:              runtime.RawExtension{},
 						ContextAwareResources: []ContextAwareResource{},

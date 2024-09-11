@@ -151,10 +151,9 @@ type PolicySpec struct {
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
-type PolicyGroupMember struct {
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
+type PolicyGroupMembers map[string]PolicyGroupMember
 
+type PolicyGroupMember struct {
 	// Module is the location of the WASM module to be loaded. Can be a
 	// local file (file://), a remote file served by an HTTP server
 	// (http://, https://), or an artifact served by an OCI-compatible
@@ -162,7 +161,7 @@ type PolicyGroupMember struct {
 	// If prefix is missing, it will default to registry:// and use that
 	// internally.
 	// +kubebuilder:validation:Required
-	Module string `json:"url"`
+	Module string `json:"module"`
 
 	// Settings is a free-form object that contains the policy configuration
 	// values.
@@ -308,5 +307,5 @@ type PolicyGroupSpec struct {
 	// be available to be called in the evaluation expression field.
 	// Each policy in the group should be a Kubewarden policy.
 	// +kubebuilder:validation:Required
-	Policies []PolicyGroupMember `json:"policies"`
+	Policies PolicyGroupMembers `json:"policies"`
 }

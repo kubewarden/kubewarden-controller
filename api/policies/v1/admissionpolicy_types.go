@@ -94,8 +94,8 @@ func (r *AdmissionPolicy) GetStatus() *PolicyStatus {
 	return &r.Status
 }
 
-func (r *AdmissionPolicy) GetPolicyMembers() []PolicyGroupMember {
-	return []PolicyGroupMember{}
+func (r *AdmissionPolicy) GetPolicyGroupMembers() PolicyGroupMembers {
+	return nil
 }
 
 func (r *AdmissionPolicy) IsPolicyGroup() bool {
