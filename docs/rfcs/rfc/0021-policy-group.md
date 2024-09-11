@@ -60,7 +60,7 @@ spec:
         - UPDATE
   backgroundAudit: true
   policies:
-    - name: sigstore_pgp
+    sigstore_pgp:
       module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
       settings:
         signatures:
@@ -68,14 +68,14 @@ spec:
             pubKeys:
               - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
               - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
-    - name: sigstore_gh_action
+    sigstore_gh_action:
       module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
       settings:
         signatures:
           - image: "*"
             githubActions:
               owner: "kubewarden"
-    - name: reject_latest_tag
+    reject_latest_tag:
       module: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
       settings:
         tags:
@@ -110,14 +110,14 @@ spec:
         - CREATE
         - UPDATE
   policies:
-    - name: policy_1
+    policy_1:
       module: ghcr.io/kubewarden/policies/policy_1:v0.1.0
       contextAwareResources:
         - apiVersion: "v1"
           kind: "Pod"
       settings:
         foo: "bar"
-    - name: policy_2
+    policy_2:
       module: ghcr.io/kubewarden/policies/policy_2:v0.1.0
       contextAwareResources:
         - apiVersion: "v1"
