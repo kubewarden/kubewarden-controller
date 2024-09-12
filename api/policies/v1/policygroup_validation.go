@@ -2,22 +2,38 @@ package v1
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/decls"
 	"github.com/google/cel-go/common/operators"
 	"github.com/google/cel-go/common/stdlib"
 	"github.com/google/cel-go/common/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+)
+
+// Regex to validate the policy members names.
+// For more information about the CEL grammar, see
+// https://github.com/google/cel-spec/blob/master/doc/langdef.md#syntax
+var idenRegex = regexp.MustCompile(`^[_a-zA-Z][_a-zA-Z0-9]*$`)
+
+// Reserved symbols in CEL that cannot be used as policy member names.
+//
+//nolint:gochecknoglobals // Using a global variable to avoid recreating it every evaluation
+var celReservedSymbols = sets.NewString(
+	"true", "false", "null", "in",
+	"as", "break", "const", "continue", "else",
+	"for", "function", "if", "import", "let",
+	"loop", "package", "namespace", "return",
+	"var", "void", "while",
 )
 
 func validatePolicyGroupCreate(policy Policy) field.ErrorList {
 	var allErrors field.ErrorList
 
 	allErrors = append(allErrors, validatePolicyCreate(policy)...)
-	if err := validatePolicyGroupMembers(policy); err != nil {
-		allErrors = append(allErrors, err)
-	}
+	allErrors = append(allErrors, validatePolicyGroupMembers(policy)...)
 	if err := validatePolicyGroupExpressionField(policy); err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -29,9 +45,7 @@ func validatePolicyGroupUpdate(oldPolicy, newPolicy Policy) field.ErrorList {
 	var allErrors field.ErrorList
 
 	allErrors = append(allErrors, validatePolicyUpdate(oldPolicy, newPolicy)...)
-	if err := validatePolicyGroupMembers(newPolicy); err != nil {
-		allErrors = append(allErrors, err)
-	}
+	allErrors = append(allErrors, validatePolicyGroupMembers(newPolicy)...)
 	if err := validatePolicyGroupExpressionField(newPolicy); err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -40,12 +54,19 @@ func validatePolicyGroupUpdate(oldPolicy, newPolicy Policy) field.ErrorList {
 }
 
 // validatePolicyGroupMembers validates that a policy group has at least one policy member.
-func validatePolicyGroupMembers(policy Policy) *field.Error {
+func validatePolicyGroupMembers(policy Policy) field.ErrorList {
+	var allErrors field.ErrorList
 	if len(policy.GetPolicyGroupMembers()) == 0 {
-		return field.Required(field.NewPath("spec").Child("policies"), "policy groups must have at least one policy member")
+		allErrors = append(allErrors, field.Required(field.NewPath("spec").Child("policies"), "policy groups must have at least one policy member"))
+	}
+	for memberName := range policy.GetPolicyGroupMembers() {
+		_, matchReservedSymbol := celReservedSymbols[memberName]
+		if len(memberName) == 0 || matchReservedSymbol || !idenRegex.MatchString(memberName) {
+			allErrors = append(allErrors, field.Invalid(field.NewPath("spec").Child("policies"), memberName, "policy group member name is invalid"))
+		}
 	}
 
-	return nil
+	return allErrors
 }
 
 // validatePolicyGroupExpressionField validates that the expression is a valid CEL expression that evaluates to a boolean.

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -163,16 +164,133 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 			},
 			`spec.policies: Required value: policy groups must have at least one policy member`,
 		},
+		{
+			"policy member with empty name",
+			&ClusterAdmissionPolicyGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testing-cluster-policy-group",
+				},
+				Spec: ClusterAdmissionPolicyGroupSpec{
+					PolicyGroupSpec: PolicyGroupSpec{
+						Policies: PolicyGroupMembers{
+							"": {
+								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+							},
+						},
+					},
+				},
+			},
+			`spec.policies: Invalid value: "": policy group member name is invalid`,
+		},
+		{
+			"policy member with reserved keyword",
+			&ClusterAdmissionPolicyGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testing-cluster-policy-group",
+				},
+				Spec: ClusterAdmissionPolicyGroupSpec{
+					PolicyGroupSpec: PolicyGroupSpec{
+						Policies: PolicyGroupMembers{
+							"in": {
+								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+							},
+						},
+					},
+				},
+			},
+			`spec.policies: Invalid value: "in": policy group member name is invalid`,
+		},
+		{
+			"policy member name cannot start with digits",
+			&ClusterAdmissionPolicyGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testing-cluster-policy-group",
+				},
+				Spec: ClusterAdmissionPolicyGroupSpec{
+					PolicyGroupSpec: PolicyGroupSpec{
+						Policies: PolicyGroupMembers{
+							"0policy1": {
+								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+							},
+						},
+					},
+				},
+			},
+			`spec.policies: Invalid value: "0policy1": policy group member name is invalid`,
+		},
+		{
+			"policy member name cannot have special chars",
+			&ClusterAdmissionPolicyGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testing-cluster-policy-group",
+				},
+				Spec: ClusterAdmissionPolicyGroupSpec{
+					PolicyGroupSpec: PolicyGroupSpec{
+						Policies: PolicyGroupMembers{
+							"p!ol.ic?y1": {
+								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+							},
+						},
+					},
+				},
+			},
+			`spec.policies: Invalid value: "p!ol.ic?y1": policy group member name is invalid`,
+		},
+		{
+			"policy member names allow underscores",
+			&ClusterAdmissionPolicyGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testing-cluster-policy-group",
+				},
+				Spec: ClusterAdmissionPolicyGroupSpec{
+					PolicyGroupSpec: PolicyGroupSpec{
+						Policies: PolicyGroupMembers{
+							"_policy1": {
+								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+							},
+							"pol_icy2": {
+								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+							},
+						},
+					},
+				},
+			},
+			"",
+		},
+		{
+			"policy member names allow digits in the middle",
+			&ClusterAdmissionPolicyGroup{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testing-cluster-policy-group",
+				},
+				Spec: ClusterAdmissionPolicyGroupSpec{
+					PolicyGroupSpec: PolicyGroupSpec{
+						Policies: PolicyGroupMembers{
+							"po0licy1": {
+								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+							},
+							"policy21": {
+								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+							},
+						},
+					},
+				},
+			},
+			"",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validatePolicyGroupMembers(test.policy)
+			errors := validatePolicyGroupMembers(test.policy)
 
 			if test.expectedErrorMessage != "" {
-				require.ErrorContains(t, err, test.expectedErrorMessage)
+				errors = errors.Filter(func(e error) bool {
+					return !strings.Contains(e.Error(), test.expectedErrorMessage)
+				})
+				require.NotEmpty(t, errors)
 			} else {
-				require.Nil(t, err)
+				require.Empty(t, errors)
 			}
 		})
 	}
