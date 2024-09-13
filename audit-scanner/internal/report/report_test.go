@@ -51,22 +51,72 @@ func TestNewPolicyReport(t *testing.T) {
 }
 
 func TestAddResultToPolicyReport(t *testing.T) {
-	policy := &policiesv1.AdmissionPolicy{}
-	admissionReview := &admissionv1.AdmissionReview{
-		Response: &admissionv1.AdmissionResponse{
-			Allowed: true,
-			Result:  &metav1.Status{Message: "The request was allowed"},
+	tests := []struct {
+		name            string
+		admissionReview *admissionv1.AdmissionReview
+		errored         bool
+		expectedPass    int
+		expectedFail    int
+		expectedWarn    int
+		expectedError   int
+	}{
+		{
+			name: "Allowed",
+			admissionReview: &admissionv1.AdmissionReview{
+				Response: &admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result:  &metav1.Status{Message: "The request was allowed"},
+				},
+			},
+			errored:       false,
+			expectedPass:  1,
+			expectedFail:  0,
+			expectedWarn:  0,
+			expectedError: 0,
+		},
+		{
+			name: "Errored",
+			admissionReview: &admissionv1.AdmissionReview{
+				Response: &admissionv1.AdmissionResponse{
+					Allowed: false,
+					Result:  &metav1.Status{Message: "Something went wrong"},
+				},
+			},
+			errored:       true,
+			expectedPass:  0,
+			expectedFail:  0,
+			expectedWarn:  0,
+			expectedError: 1,
+		},
+		{
+			name:            "Errored no AdmissionReview",
+			admissionReview: nil,
+			errored:         true,
+			expectedPass:    0,
+			expectedFail:    0,
+			expectedWarn:    0,
+			expectedError:   1,
 		},
 	}
 
-	policyReport := NewPolicyReport("runUID", unstructured.Unstructured{})
-	AddResultToPolicyReport(policyReport, policy, admissionReview, false)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			policy := &policiesv1.AdmissionPolicy{}
+			policyReport := NewPolicyReport("runUID", unstructured.Unstructured{})
 
-	assert.Len(t, policyReport.Results, 1)
-	assert.Equal(t, 1, policyReport.Summary.Pass)
-	assert.Equal(t, 0, policyReport.Summary.Fail)
-	assert.Equal(t, 0, policyReport.Summary.Warn)
-	assert.Equal(t, 0, policyReport.Summary.Error)
+			AddResultToPolicyReport(policyReport, policy, test.admissionReview, test.errored)
+
+			assert.Len(t, policyReport.Results, 1)
+
+			if test.admissionReview != nil {
+				assert.Equal(t, test.admissionReview.Response.Result.Message, policyReport.Results[0].Description)
+			}
+			assert.Equal(t, test.expectedPass, policyReport.Summary.Pass)
+			assert.Equal(t, test.expectedFail, policyReport.Summary.Fail)
+			assert.Equal(t, test.expectedWarn, policyReport.Summary.Warn)
+			assert.Equal(t, test.expectedError, policyReport.Summary.Error)
+		})
+	}
 }
 
 func TestNewClusterPolicyReport(t *testing.T) {

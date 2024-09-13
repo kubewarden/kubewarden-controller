@@ -352,9 +352,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 					Str("policy", policy.GetName()).
 					Str("resource", resource.GetName()),
 				).Msg("error sending AdmissionReview to PolicyServer")
-			}
-
-			if admissionReviewResponse.Response.Result != nil &&
+			} else if admissionReviewResponse.Response.Result != nil &&
 				admissionReviewResponse.Response.Result.Code == 500 {
 				errored = true
 				// log Result.Message, will end in PolicyReportResult too
@@ -446,9 +444,7 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 				Str("resource", resource.GetName()),
 			).
 				Msg("error sending AdmissionReview to PolicyServer")
-		}
-
-		if admissionReviewResponse.Response.Result != nil &&
+		} else if admissionReviewResponse.Response.Result != nil &&
 			admissionReviewResponse.Response.Result.Code == 500 {
 			errored = true
 			// log Result.Message, will end in PolicyReportResult too
