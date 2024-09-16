@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
@@ -73,6 +74,12 @@ var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster")
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
+				Expect(validatingWebhookConfiguration.Webhooks[0].NamespaceSelector.MatchExpressions).To(ContainElement(MatchFields(IgnoreExtras,
+					Fields{
+						"Key":      Equal("kubernetes.io/metadata.name"),
+						"Operator": BeEquivalentTo("NotIn"),
+						"Values":   ConsistOf(deploymentsNamespace),
+					})))
 				Expect(validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name).To(Equal("policy-server-" + policyServerName))
 				Expect(validatingWebhookConfiguration.Webhooks[0].MatchConditions).To(HaveLen(1))
 
