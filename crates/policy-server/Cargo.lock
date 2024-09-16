@@ -2744,6 +2744,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "k8s-openapi"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c8847402328d8301354c94d605481f25a6bdc1ed65471fd96af8eca71141b13"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "serde",
+ "serde-value",
+ "serde_json",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2758,7 +2771,7 @@ version = "0.93.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0365920075af1a2d23619c1ca801c492f2400157de42627f041a061716e76416"
 dependencies = [
- "k8s-openapi",
+ "k8s-openapi 0.22.0",
  "kube-client",
  "kube-core",
  "kube-runtime",
@@ -2785,7 +2798,7 @@ dependencies = [
  "hyper-timeout",
  "hyper-util",
  "jsonpath-rust",
- "k8s-openapi",
+ "k8s-openapi 0.22.0",
  "kube-core",
  "pem",
  "rustls",
@@ -2812,7 +2825,7 @@ dependencies = [
  "form_urlencoded",
  "http",
  "json-patch",
- "k8s-openapi",
+ "k8s-openapi 0.22.0",
  "serde",
  "serde_json",
  "thiserror",
@@ -2834,7 +2847,7 @@ dependencies = [
  "hashbrown 0.14.5",
  "json-patch",
  "jsonptr",
- "k8s-openapi",
+ "k8s-openapi 0.22.0",
  "kube-client",
  "parking_lot",
  "pin-project",
@@ -2855,7 +2868,7 @@ dependencies = [
  "anyhow",
  "cfg-if",
  "chrono",
- "k8s-openapi",
+ "k8s-openapi 0.22.0",
  "num",
  "num-derive",
  "num-traits",
@@ -4056,7 +4069,7 @@ dependencies = [
  "futures",
  "itertools 0.13.0",
  "json-patch",
- "k8s-openapi",
+ "k8s-openapi 0.22.0",
  "kube",
  "kubewarden-policy-sdk",
  "lazy_static",
@@ -4128,7 +4141,7 @@ dependencies = [
  "inotify",
  "itertools 0.13.0",
  "jemalloc_pprof",
- "k8s-openapi",
+ "k8s-openapi 0.23.0",
  "lazy_static",
  "mime",
  "mockall",
