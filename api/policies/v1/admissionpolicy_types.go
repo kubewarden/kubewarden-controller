@@ -143,7 +143,7 @@ func (r *AdmissionPolicy) GetMatchConditions() []admissionregistrationv1.MatchCo
 }
 
 // GetNamespaceSelector returns the namespace of the AdmissionPolicy since it is the only namespace we want the policy to be applied to.
-func (r *AdmissionPolicy) GetUpdatedNamespaceSelector(string) *metav1.LabelSelector {
+func (r *AdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
 	return &metav1.LabelSelector{
 		MatchLabels: map[string]string{"kubernetes.io/metadata.name": r.ObjectMeta.Namespace},
 	}

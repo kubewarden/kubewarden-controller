@@ -70,7 +70,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
 				MatchPolicy:             policy.GetMatchPolicy(),
-				NamespaceSelector:       policy.GetUpdatedNamespaceSelector(r.deploymentsNamespace),
+				NamespaceSelector:       r.namespaceSelector(policy),
 				ObjectSelector:          policy.GetObjectSelector(),
 				SideEffects:             sideEffects,
 				TimeoutSeconds:          policy.GetTimeoutSeconds(),
@@ -161,7 +161,7 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
 				MatchPolicy:             policy.GetMatchPolicy(),
-				NamespaceSelector:       policy.GetUpdatedNamespaceSelector(r.deploymentsNamespace),
+				NamespaceSelector:       r.namespaceSelector(policy),
 				ObjectSelector:          policy.GetObjectSelector(),
 				SideEffects:             sideEffects,
 				TimeoutSeconds:          policy.GetTimeoutSeconds(),
@@ -195,4 +195,28 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfigurationDeletion(ctx 
 	}
 
 	return nil
+}
+
+func (r *policySubReconciler) namespaceSelector(policy policiesv1.Policy) *metav1.LabelSelector {
+	switch policy.(type) {
+	case *policiesv1.ClusterAdmissionPolicyGroup, *policiesv1.ClusterAdmissionPolicy:
+		namespaceSelector := &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      "kubernetes.io/metadata.name",
+					Operator: "NotIn",
+					Values:   []string{r.deploymentsNamespace},
+				},
+			},
+		}
+
+		if policy.GetNamespaceSelector() != nil {
+			namespaceSelector.MatchExpressions = append(namespaceSelector.MatchExpressions, policy.GetNamespaceSelector().MatchExpressions...)
+		}
+
+		return namespaceSelector
+
+	default:
+		return policy.GetNamespaceSelector()
+	}
 }
