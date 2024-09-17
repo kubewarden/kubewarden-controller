@@ -49,7 +49,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// a ClusterAdmissionPolicy
 	clusterAdmissionPolicy1 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy1").
+		Name("clusterAdmissionPolicy1").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -65,7 +65,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// a ClusterAdmissionPolicy with a namespaceSelector that does not match the namespace
 	clusterAdmissionPolicy2 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy2").
+		Name("clusterAdmissionPolicy2").
 		NamespaceSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}}).
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -82,7 +82,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// a ClusterAdmissionPolicy with status pending, it should be skipped
 	clusterAdmissionPolicy3 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy3").
+		Name("clusterAdmissionPolicy3").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -100,7 +100,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// it should not count as a skipped policy
 	clusterAdmissionPolicy4 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy4").
+		Name("clusterAdmissionPolicy4").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -109,10 +109,38 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 		BackgroundAudit(false).
 		Build()
 
+	// a ClusterAdmissionPolicyGroup
+	clusterAdmissionPolicyGroup1 := testutils.
+		NewClusterAdmissionPolicyGroupFactory().
+		Name("clusterAdmissionPolicyGroup1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"deployments"},
+		}).
+		Build()
+
+	// a ClusterAdmissionPolicyGroup with a namespaceSelector that does not match the namespace
+	clusterAdmissionPolicyGroup2 := testutils.
+		NewClusterAdmissionPolicyGroupFactory().
+		Name("clusterAdmissionPolicyGroup2").
+		NamespaceSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}}).
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods", "namespaces"},
+		}).
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"deployments"},
+		}).
+		Build()
+
 	// an AdmissionPolicy
 	admissionPolicy1 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy5").
+		Name("admissionPolicy1").
 		Namespace("test").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -129,7 +157,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// an AdmissionPolicy with background audit set to false, it should be skipped
 	admissionPolicy2 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy6").
+		Name("admissionPolicy2").
 		Namespace("test").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -147,7 +175,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// an AdmissionPolicy in another namespace, it should not be considered
 	admissionPolicy3 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy7").
+		Name("admissionPolicy3").
 		Namespace("prod").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -164,7 +192,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// an AdmissionPolicy in targeting wildcard resources, it should be skipped
 	admissionPolicy4 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy8").
+		Name("admissionPolicy4").
 		Namespace("test").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{"*"},
@@ -176,12 +204,36 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	// an AdmissionPolicy with unknown GVR, it should be errored and skipped
 	admissionPolicy5 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy9").
+		Name("admissionPolicy5").
 		Namespace("test").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{"apps"},
 			APIVersions: []string{"v1"},
 			Resources:   []string{"foo"},
+		}).
+		Build()
+
+	// an AdmissionPolicyGroup
+	admissionPolicyGroup1 := testutils.
+		NewAdmissionPolicyGroupFactory().
+		Name("admissionPolicyGroup1").
+		Namespace("test").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods"},
+		}).
+		Build()
+
+	// an AdmissionPolicyGroup targeting another namespace, it should not be considered
+	admissionPolicyGroup2 := testutils.
+		NewAdmissionPolicyGroupFactory().
+		Name("admissionPolicyGroup2").
+		Namespace("default").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods"},
 		}).
 		Build()
 
@@ -193,18 +245,22 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 		clusterAdmissionPolicy2,
 		clusterAdmissionPolicy3,
 		clusterAdmissionPolicy4,
+		clusterAdmissionPolicyGroup1,
+		clusterAdmissionPolicyGroup2,
 		admissionPolicy1,
 		admissionPolicy2,
 		admissionPolicy3,
 		admissionPolicy4,
 		admissionPolicy5,
+		admissionPolicyGroup1,
+		admissionPolicyGroup2,
 	)
 	require.NoError(t, err)
 
 	policiesClient, err := NewClient(client, "kubewarden", "")
 	require.NoError(t, err)
 
-	policies, err := policiesClient.GetPoliciesByNamespace(context.Background(), "test")
+	policies, err := policiesClient.GetPoliciesByNamespace(context.Background(), namespace)
 	require.NoError(t, err)
 
 	expectedPolicies := &Policies{
@@ -216,11 +272,15 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 			}: {
 				{
 					Policy:       clusterAdmissionPolicy1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-policy1"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicy1"},
 				},
 				{
 					Policy:       admissionPolicy1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/namespaced-test-policy5"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/namespaced-test-admissionPolicy1"},
+				},
+				{
+					Policy:       admissionPolicyGroup1,
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/namespacedpolicygroup-test-admissionPolicyGroup1"},
 				},
 			},
 			{
@@ -230,20 +290,24 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 			}: {
 				{
 					Policy:       clusterAdmissionPolicy1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-policy1"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicy1"},
+				},
+				{
+					Policy:       clusterAdmissionPolicyGroup1,
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicyGroup1"},
 				},
 				{
 					Policy:       admissionPolicy1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/namespaced-test-policy5"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/namespaced-test-admissionPolicy1"},
 				},
 			},
 		},
-		PolicyNum:  2,
+		PolicyNum:  4,
 		SkippedNum: 3,
 		ErroredNum: 1,
 	}
 
-	assert.Equal(t, expectedPolicies, policies)
+	assert.EqualValues(t, expectedPolicies, policies)
 }
 
 func TestGetClusterWidePolicies(t *testing.T) {
@@ -280,7 +344,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	// a ClusterAdmissionPolicy
 	clusterAdmissionPolicy1 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy1").
+		Name("clusterAdmissionPolicy1").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -291,7 +355,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	// a ClusterAdmissionPolicy with a namespaceSelector
 	clusterAdmissionPolicy2 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy2").
+		Name("clusterAdmissionPolicy2").
 		NamespaceSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}}).
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -303,7 +367,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	// a ClusterAdmissionPolicy with an objectSelector
 	clusterAdmissionPolicy3 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy3").
+		Name("clusterAdmissionPolicy3").
 		ObjectSelector(&metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}}).
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -315,7 +379,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	// a ClusterAdmissionPolicy with background audit set to false, it should be skipped
 	clusterAdmissionPolicy4 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy4").
+		Name("clusterAdmissionPolicy4").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -327,7 +391,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	// a ClusterAdmissionPolicy targeting pods, it should not be considered as it is targeting namespaced resources
 	clusterAdmissionPolicy5 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy5").
+		Name("clusterAdmissionPolicy5").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -338,19 +402,12 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	// a ClusterAdmissionPolicy with no CREATE operation, it should be skipped
 	clusterAdmissionPolicy6 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy6").
+		Name("clusterAdmissionPolicy6").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
 			Resources:   []string{"namespaces"},
 		}, admissionregistrationv1.Update, admissionregistrationv1.Delete).
-		Build()
-
-	// an AdmissionPolicy, it should not be considered
-	admissionPolicy1 := testutils.
-		NewAdmissionPolicyFactory().
-		Name("policy7").
-		Namespace("test").
 		Build()
 
 	// a ClusterAdmissionPolicy targeting unknown GVR, it should be errored and skipped
@@ -364,6 +421,35 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		}).
 		Build()
 
+	// a CLusterAdmissionPolicyGroup
+	clusterAdmissionPolicyGroup1 := testutils.
+		NewClusterAdmissionPolicyGroupFactory().
+		Name("clusterAdmissionPolicyGroup1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"namespaces"},
+		}).
+		Build()
+
+	// a ClusterAdmissionPolicyGroup targeting pods, it should not be considered as it is targeting namespaced resources
+	clusterAdmissionPolicyGroup2 := testutils.
+		NewClusterAdmissionPolicyGroupFactory().
+		Name("clusterAdmissionPolicyGroup2").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods"},
+		}).
+		Build()
+
+	// an AdmissionPolicy, it should not be considered
+	admissionPolicy1 := testutils.
+		NewAdmissionPolicyFactory().
+		Name("admissionPolicy1").
+		Namespace("test").
+		Build()
+
 	client, err := testutils.NewFakeClient(
 		namespace,
 		policyServer,
@@ -374,8 +460,10 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		clusterAdmissionPolicy4,
 		clusterAdmissionPolicy5,
 		clusterAdmissionPolicy6,
-		admissionPolicy1,
 		clusterAdmissionPolicy7,
+		clusterAdmissionPolicyGroup1,
+		clusterAdmissionPolicyGroup2,
+		admissionPolicy1,
 	)
 	require.NoError(t, err)
 
@@ -394,22 +482,26 @@ func TestGetClusterWidePolicies(t *testing.T) {
 			}: {
 				{
 					Policy:       clusterAdmissionPolicy1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-policy1"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicy1"},
 				},
 				{
 					Policy:       clusterAdmissionPolicy2,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-policy2"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicy2"},
 				},
 				{
 					Policy:       clusterAdmissionPolicy3,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-policy3"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicy3"},
+				},
+				{
+					Policy:       clusterAdmissionPolicyGroup1,
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicyGroup1"},
 				},
 			},
 		},
-		PolicyNum:  3,
+		PolicyNum:  4,
 		SkippedNum: 2,
 		ErroredNum: 1,
 	}
 
-	assert.Equal(t, expectedPolicies, policies)
+	assert.EqualValues(t, expectedPolicies, policies)
 }
