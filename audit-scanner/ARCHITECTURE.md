@@ -58,7 +58,7 @@ For each namespace, the code invokes the `ScanNamespace` method.
 
 > **Important:** this part of the code is parallelized. The number of parallel policies to be evaluated is configured with the `--parallel-namespaces` flag.
 
-The code uses the `GetPoliciesForANamespace` method
+The code uses the `GetPoliciesByNamespace` method
 to build a map with the Kubernetes resource as key, and the policies targeting that resource as value.
 This map is similar to the one created for the cluster-wide resources. However, in this case, the types of policies associated with a Kubernetes
 resource could be both `ClusterAdmissionPolicy` and `NamespaceAdmissionPolicy`.

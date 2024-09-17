@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func TestGetPoliciesForANamespace(t *testing.T) {
+func TestGetPoliciesByNamespace(t *testing.T) {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -204,7 +204,7 @@ func TestGetPoliciesForANamespace(t *testing.T) {
 	policiesClient, err := NewClient(client, "kubewarden", "")
 	require.NoError(t, err)
 
-	policies, err := policiesClient.GetPoliciesForANamespace(context.Background(), "test")
+	policies, err := policiesClient.GetPoliciesByNamespace(context.Background(), "test")
 	require.NoError(t, err)
 
 	expectedPolicies := &Policies{
