@@ -100,6 +100,7 @@ func (factory *ClusterPolicyReportFactory) RunUID(runUID string) *ClusterPolicyR
 
 	return factory
 }
+
 func (factory *ClusterPolicyReportFactory) WithAppLabel() *ClusterPolicyReportFactory {
 	factory.labels["app.kubernetes.io/managed-by"] = "kubewarden"
 
@@ -200,6 +201,91 @@ func (factory *AdmissionPolicyFactory) Build() *policiesv1.AdmissionPolicy {
 	return policy
 }
 
+type AdmissionPolicyGroupFactory struct {
+	name            string
+	namespace       string
+	objectSelector  *metav1.LabelSelector
+	rules           []admissionregistrationv1.RuleWithOperations
+	backgroundAudit bool
+	status          policiesv1.PolicyStatusEnum
+}
+
+func NewAdmissionPolicyGroupFactory() *AdmissionPolicyGroupFactory {
+	return &AdmissionPolicyGroupFactory{
+		backgroundAudit: true,
+		status:          policiesv1.PolicyStatusActive,
+	}
+}
+
+func (factory *AdmissionPolicyGroupFactory) Name(name string) *AdmissionPolicyGroupFactory {
+	factory.name = name
+
+	return factory
+}
+
+func (factory *AdmissionPolicyGroupFactory) Namespace(namespace string) *AdmissionPolicyGroupFactory {
+	factory.namespace = namespace
+
+	return factory
+}
+
+func (factory *AdmissionPolicyGroupFactory) ObjectSelector(selector *metav1.LabelSelector) *AdmissionPolicyGroupFactory {
+	factory.objectSelector = selector
+
+	return factory
+}
+
+func (factory *AdmissionPolicyGroupFactory) Rule(rule admissionregistrationv1.Rule, operations ...admissionregistrationv1.OperationType) *AdmissionPolicyGroupFactory {
+	if len(operations) == 0 {
+		operations = []admissionregistrationv1.OperationType{admissionregistrationv1.Create}
+	}
+
+	factory.rules = append(factory.rules, admissionregistrationv1.RuleWithOperations{
+		Operations: operations, Rule: rule,
+	})
+
+	return factory
+}
+
+func (factory *AdmissionPolicyGroupFactory) BackgroundAudit(backgroundAudit bool) *AdmissionPolicyGroupFactory {
+	factory.backgroundAudit = backgroundAudit
+
+	return factory
+}
+
+func (factory *AdmissionPolicyGroupFactory) Status(status policiesv1.PolicyStatusEnum) *AdmissionPolicyGroupFactory {
+	factory.status = status
+
+	return factory
+}
+
+func (factory *AdmissionPolicyGroupFactory) Build() *policiesv1.AdmissionPolicyGroup {
+	policy := &policiesv1.AdmissionPolicyGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      factory.name,
+			Namespace: factory.namespace,
+		},
+		Spec: policiesv1.AdmissionPolicyGroupSpec{
+			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
+				ObjectSelector:  factory.objectSelector,
+				PolicyServer:    "default",
+				Rules:           factory.rules,
+				BackgroundAudit: factory.backgroundAudit,
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: factory.status,
+		},
+	}
+	policy.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   constants.KubewardenPoliciesGroup,
+		Version: constants.KubewardenPoliciesVersion,
+		Kind:    constants.KubewardenKindAdmissionPolicyGroup,
+	})
+
+	return policy
+}
+
 type ClusterAdmissionPolicyFactory struct {
 	name              string
 	namespaceSelector *metav1.LabelSelector
@@ -284,6 +370,95 @@ func (factory *ClusterAdmissionPolicyFactory) Build() *policiesv1.ClusterAdmissi
 		Group:   constants.KubewardenPoliciesGroup,
 		Version: constants.KubewardenPoliciesVersion,
 		Kind:    constants.KubewardenKindClusterAdmissionPolicy,
+	})
+
+	return policy
+}
+
+type ClusterAdmissionPolicyGroupFactory struct {
+	name              string
+	namespaceSelector *metav1.LabelSelector
+	objectSelector    *metav1.LabelSelector
+	rules             []admissionregistrationv1.RuleWithOperations
+	backgroundAudit   bool
+	status            policiesv1.PolicyStatusEnum
+}
+
+func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory {
+	return &ClusterAdmissionPolicyGroupFactory{
+		backgroundAudit: true,
+		status:          policiesv1.PolicyStatusActive,
+	}
+}
+
+func (factory *ClusterAdmissionPolicyGroupFactory) Name(name string) *ClusterAdmissionPolicyGroupFactory {
+	factory.name = name
+
+	return factory
+}
+
+func (factory *ClusterAdmissionPolicyGroupFactory) NamespaceSelector(selector *metav1.LabelSelector) *ClusterAdmissionPolicyGroupFactory {
+	factory.namespaceSelector = selector
+
+	return factory
+}
+
+func (factory *ClusterAdmissionPolicyGroupFactory) ObjectSelector(selector *metav1.LabelSelector) *ClusterAdmissionPolicyGroupFactory {
+	factory.objectSelector = selector
+
+	return factory
+}
+
+func (factory *ClusterAdmissionPolicyGroupFactory) Rule(rule admissionregistrationv1.Rule, operations ...admissionregistrationv1.OperationType) *ClusterAdmissionPolicyGroupFactory {
+	if len(operations) == 0 {
+		operations = []admissionregistrationv1.OperationType{admissionregistrationv1.Create}
+	}
+
+	factory.rules = append(factory.rules, admissionregistrationv1.RuleWithOperations{
+		Operations: operations, Rule: rule,
+	})
+
+	return factory
+}
+
+func (factory *ClusterAdmissionPolicyGroupFactory) BackgroundAudit(backgroundAudit bool) *ClusterAdmissionPolicyGroupFactory {
+	factory.backgroundAudit = backgroundAudit
+
+	return factory
+}
+
+func (factory *ClusterAdmissionPolicyGroupFactory) Status(status policiesv1.PolicyStatusEnum) *ClusterAdmissionPolicyGroupFactory {
+	factory.status = status
+
+	return factory
+}
+
+func (factory *ClusterAdmissionPolicyGroupFactory) Build() *policiesv1.ClusterAdmissionPolicyGroup {
+	policy := &policiesv1.ClusterAdmissionPolicyGroup{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       constants.KubewardenKindClusterAdmissionPolicy,
+			APIVersion: constants.KubewardenPoliciesVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: factory.name,
+		},
+		Spec: policiesv1.ClusterAdmissionPolicyGroupSpec{
+			NamespaceSelector: factory.namespaceSelector,
+			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
+				ObjectSelector:  factory.objectSelector,
+				PolicyServer:    "default",
+				Rules:           factory.rules,
+				BackgroundAudit: factory.backgroundAudit,
+			},
+		},
+		Status: policiesv1.PolicyStatus{
+			PolicyStatus: factory.status,
+		},
+	}
+	policy.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   constants.KubewardenPoliciesGroup,
+		Version: constants.KubewardenPoliciesVersion,
+		Kind:    constants.KubewardenKindClusterAdmissionPolicyGroup,
 	})
 
 	return policy
