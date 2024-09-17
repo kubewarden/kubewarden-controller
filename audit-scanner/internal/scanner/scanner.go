@@ -134,11 +134,11 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	semaphore := semaphore.NewWeighted(int64(s.parallelResourcesAudits))
 	var workers sync.WaitGroup
 
-	_, err := s.k8sClient.GetNamespace(ctx, nsName)
+	namespace, err := s.k8sClient.GetNamespace(ctx, nsName)
 	if err != nil {
 		return err
 	}
-	policies, err := s.policiesClient.GetPoliciesByNamespace(ctx, nsName)
+	policies, err := s.policiesClient.GetPoliciesByNamespace(ctx, namespace)
 	if err != nil {
 		log.Error().Err(err).Str("namespace", nsName).Msg("failed to obtain auditable policies")
 		return err
