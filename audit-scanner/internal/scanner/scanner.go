@@ -138,7 +138,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	if err != nil {
 		return err
 	}
-	policies, err := s.policiesClient.GetPoliciesForANamespace(ctx, nsName)
+	policies, err := s.policiesClient.GetPoliciesByNamespace(ctx, nsName)
 	if err != nil {
 		log.Error().Err(err).Str("namespace", nsName).Msg("failed to obtain auditable policies")
 		return err

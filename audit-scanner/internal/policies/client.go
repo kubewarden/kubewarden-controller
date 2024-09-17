@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -60,39 +61,37 @@ func NewClient(client client.Client, kubewardenNamespace string, policyServerURL
 	}, nil
 }
 
-// GetPoliciesForANamespace gets all the auditable policies for a given namespace.
-func (f *Client) GetPoliciesForANamespace(ctx context.Context, namespace string) (*Policies, error) {
-	namespacePolicies, err := f.findNamespacesForAllClusterAdmissionPolicies(ctx)
+// GetPoliciesByNamespace gets all the auditable policies for a given namespace.
+func (f *Client) GetPoliciesByNamespace(ctx context.Context, namespace string) (*Policies, error) {
+	var policies []policiesv1.Policy
+
+	clusterAdmissionPolicies, err := f.findClusterAdmissionPoliciesByNamespace(ctx, namespace)
 	if err != nil {
-		return nil, fmt.Errorf("can't get ClusterAdmissionPolicies: %w", err)
+		return nil, fmt.Errorf("cannot get ClusterAdmissionPolicies: %w", err)
 	}
-	admissionPolicies, err := f.getAdmissionPolicies(ctx, namespace)
+	for _, policy := range clusterAdmissionPolicies {
+		policies = append(policies, &policy)
+	}
+
+	admissionPolicies, err := f.listAdmissionPolicies(ctx, namespace)
 	if err != nil {
-		return nil, fmt.Errorf("can't get AdmissionPolicies: %w", err)
+		return nil, fmt.Errorf("cannot get AdmissionPolicies: %w", err)
 	}
 	for _, policy := range admissionPolicies {
-		namespacePolicies[namespace] = append(namespacePolicies[namespace], &policy)
+		policies = append(policies, &policy)
 	}
 
-	return f.groupPoliciesByGVR(ctx, namespacePolicies[namespace], true)
-}
-
-func (f *Client) getClusterAdmissionPolicies(ctx context.Context) ([]policiesv1.ClusterAdmissionPolicy, error) {
-	policies := &policiesv1.ClusterAdmissionPolicyList{}
-	err := f.client.List(ctx, policies)
-	if err != nil {
-		return []policiesv1.ClusterAdmissionPolicy{}, err
-	}
-	return policies.Items, nil
+	return f.groupPoliciesByGVR(ctx, policies, true)
 }
 
 // GetClusterWidePolicies returns all the auditable cluster-wide policies.
 func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) {
-	clusterAdmissionPolicies, err := f.getClusterAdmissionPolicies(ctx)
+	var policies []policiesv1.Policy
+
+	clusterAdmissionPolicies, err := f.listClusterAdmissionPolicies(ctx)
 	if err != nil {
 		return nil, err
 	}
-	policies := []policiesv1.Policy{}
 	for _, policy := range clusterAdmissionPolicies {
 		policies = append(policies, &policy)
 	}
@@ -100,73 +99,59 @@ func (f *Client) GetClusterWidePolicies(ctx context.Context) (*Policies, error) 
 	return f.groupPoliciesByGVR(ctx, policies, false)
 }
 
-// initializes map with an entry for all namespaces with an empty policies array as value.
-func (f *Client) initNamespacePoliciesMap(ctx context.Context) (map[string][]policiesv1.Policy, error) {
-	namespacePolicies := make(map[string][]policiesv1.Policy)
-	namespaceList := &corev1.NamespaceList{}
-	err := f.client.List(ctx, namespaceList, &client.ListOptions{})
+// findNamespacesForAllClusterAdmissionPolicies returns all the ClusterAdmissionPolicies that evaluate resources in the given namespace.
+func (f *Client) findClusterAdmissionPoliciesByNamespace(ctx context.Context, namespace string) ([]policiesv1.ClusterAdmissionPolicy, error) {
+	var namespaceObj corev1.Namespace
+	err := f.client.Get(ctx, client.ObjectKey{Name: namespace}, &namespaceObj)
 	if err != nil {
-		return nil, fmt.Errorf("can't list namespaces: %w", err)
-	}
-	for _, namespace := range namespaceList.Items {
-		namespacePolicies[namespace.Name] = []policiesv1.Policy{}
+		return nil, fmt.Errorf("cannot get namespace %s: %w", namespace, err)
 	}
 
-	return namespacePolicies, nil
-}
-
-// returns a map with an entry per each namespace. Key is the namespace name, and value is an array of ClusterAdmissionPolicies
-// that will evaluate resources within this namespace.
-func (f *Client) findNamespacesForAllClusterAdmissionPolicies(ctx context.Context) (map[string][]policiesv1.Policy, error) {
-	namespacePolicies, err := f.initNamespacePoliciesMap(ctx)
+	clusterAdmissionPolicies, err := f.listClusterAdmissionPolicies(ctx)
 	if err != nil {
 		return nil, err
 	}
-	policies := &policiesv1.ClusterAdmissionPolicyList{}
-	err = f.client.List(ctx, policies, &client.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("can't list ClusterAdmissionPolicies: %w", err)
-	}
 
-	for _, policy := range policies.Items {
-		namespaces, err := f.findNamespacesForClusterAdmissionPolicy(ctx, policy)
-		if err != nil {
-			return nil, fmt.Errorf("can't find namespaces for ClusterAdmissionPolicy %s: %w", policy.Name, err)
-		}
-		for _, namespace := range namespaces {
-			namespacePolicies[namespace.Name] = append(namespacePolicies[namespace.Name], &policy)
+	var result []policiesv1.ClusterAdmissionPolicy
+
+	for _, policy := range clusterAdmissionPolicies {
+		if policy.GetNamespaceSelector() != nil {
+			labelSelector, err := metav1.LabelSelectorAsSelector(policy.GetNamespaceSelector())
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse label selector, ClusterAdmissionPolicy %s: %w", policy.Name, err)
+			}
+			if labelSelector.Matches(labels.Set(namespaceObj.Labels)) {
+				result = append(result, policy)
+			}
+		} else {
+			result = append(result, policy)
 		}
 	}
 
-	return namespacePolicies, nil
+	return result, nil
 }
 
-// finds all namespaces where this ClusterAdmissionPolicy will evaluate resources. It uses the namespaceSelector field to filter the namespaces.
-func (f *Client) findNamespacesForClusterAdmissionPolicy(ctx context.Context, policy policiesv1.ClusterAdmissionPolicy) ([]corev1.Namespace, error) {
-	namespaceList := &corev1.NamespaceList{}
-	labelSelector, err := metav1.LabelSelectorAsSelector(policy.GetUpdatedNamespaceSelector(f.kubewardenNamespace))
+// listClusterAdmissionPolicies returns all the ClusterAdmissionPolicies in the cluster.
+func (f *Client) listClusterAdmissionPolicies(ctx context.Context) ([]policiesv1.ClusterAdmissionPolicy, error) {
+	var clusterAdmissionPolicyList policiesv1.ClusterAdmissionPolicyList
+
+	err := f.client.List(ctx, &clusterAdmissionPolicyList)
 	if err != nil {
-		return nil, err
-	}
-	opts := client.ListOptions{
-		LabelSelector: labelSelector,
-	}
-	err = f.client.List(ctx, namespaceList, &opts)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot list ClusterAdmissionPolicies: %w", err)
 	}
 
-	return namespaceList.Items, nil
+	return clusterAdmissionPolicyList.Items, nil
 }
 
-func (f *Client) getAdmissionPolicies(ctx context.Context, namespace string) ([]policiesv1.AdmissionPolicy, error) {
-	policies := &policiesv1.AdmissionPolicyList{}
-	err := f.client.List(ctx, policies, &client.ListOptions{Namespace: namespace})
+// listAdmissionPolicies returns all the AdmissionPolicies in the given namespace.
+func (f *Client) listAdmissionPolicies(ctx context.Context, namespace string) ([]policiesv1.AdmissionPolicy, error) {
+	var admissionPolicyList policiesv1.AdmissionPolicyList
+	err := f.client.List(ctx, &admissionPolicyList, &client.ListOptions{Namespace: namespace})
 	if err != nil {
 		return nil, err
 	}
 
-	return policies.Items, nil
+	return admissionPolicyList.Items, nil
 }
 
 // groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
