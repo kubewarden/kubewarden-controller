@@ -173,7 +173,7 @@ func (r *AdmissionPolicyGroup) GetPolicyServer() string {
 }
 
 func (r *AdmissionPolicyGroup) GetUniqueName() string {
-	return "namespacedpolicygroup-" + r.Namespace + "-" + r.Name
+	return "namespaced-group-" + r.Namespace + "-" + r.Name
 }
 
 func (r *AdmissionPolicyGroup) GetContextAwareResources() []ContextAwareResource {
