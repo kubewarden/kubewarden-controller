@@ -209,7 +209,7 @@ func (r *ClusterAdmissionPolicyGroup) GetPolicyServer() string {
 }
 
 func (r *ClusterAdmissionPolicyGroup) GetUniqueName() string {
-	return "clusterwide-" + r.Name
+	return "clusterwide-group-" + r.Name
 }
 
 func (r *ClusterAdmissionPolicyGroup) GetContextAwareResources() []ContextAwareResource {
