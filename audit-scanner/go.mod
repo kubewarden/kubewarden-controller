@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/kubewarden/kubewarden-controller v1.17.0-rc2.0.20240917061215-5c7cf92af031
+	github.com/kubewarden/kubewarden-controller v1.17.0-rc2.0.20240918153524-8237b777bc70
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
