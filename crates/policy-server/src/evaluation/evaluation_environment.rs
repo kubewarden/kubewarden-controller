@@ -602,6 +602,8 @@ impl EvaluationEnvironment {
             Mutex<HashMap<String, PolicyGroupMemberEvaluationResult>>,
         > = Arc::new(Mutex::new(HashMap::new()));
 
+        let policy_ids = policies.clone();
+
         for sub_policy_name in policies {
             let sub_policy_id = PolicyID::PolicyGroupPolicy {
                 group: policy_id.to_string(),
@@ -668,9 +670,15 @@ impl EvaluationEnvironment {
 
         // Provide some feedback to the end user about the single policy evaluation results
         let evaluation_results = policies_evaluation_results.lock().unwrap();
-        let warnings: Vec<String> = evaluation_results
+        let warnings: Vec<String> = policy_ids
             .iter()
-            .map(|(policy, result)| format!("{}: {}", policy, result))
+            .map(|policy_id| {
+                let result = evaluation_results
+                    .get(policy_id)
+                    .map(|result| result.to_string())
+                    .unwrap_or_else(|| "[NOT EVALUATED]".to_string());
+                format!("{}: {}", policy_id, result)
+            })
             .collect();
 
         Ok(AdmissionResponse {
@@ -728,31 +736,67 @@ fn create_policy_evaluator_pre(
 mod tests {
     use policy_evaluator::policy_evaluator::ValidateRequest;
     use rstest::*;
+    use sha2::{Digest, Sha256};
     use std::collections::BTreeSet;
 
     use super::*;
     use crate::config::{PolicyGroupMember, PolicyOrPolicyGroup};
     use crate::test_utils::build_admission_review_request;
 
-    fn build_evaluation_environment() -> EvaluationEnvironment {
-        let engine = wasmtime::Engine::default();
-        let policy_ids = vec!["policy_1", "policy_2"];
-        let module_bytes = include_bytes!("../../tests/data/gatekeeper_always_happy_policy.wasm");
-
-        let module = wasmtime::Module::new(&engine, module_bytes)
+    /// build a precompiled policy of the given wasm module. Assumes this is a OPA Gatekeeper policy
+    fn build_precompiled_policy(
+        engine: &wasmtime::Engine,
+        module_bytes: &[u8],
+    ) -> PrecompiledPolicy {
+        let module = wasmtime::Module::new(engine, module_bytes)
             .expect("should be able to build the smallest wasm module ever");
-        let (callback_handler_tx, _) = mpsc::channel(10);
 
-        let precompiled_policy = PrecompiledPolicy {
+        // calculate the digest of the module using sha256
+        let mut hasher = Sha256::new();
+        hasher.update(module_bytes);
+        let digest = hasher.finalize();
+
+        PrecompiledPolicy {
             precompiled_module: module.serialize().unwrap(),
             execution_mode: policy_evaluator::policy_evaluator::PolicyExecutionMode::OpaGatekeeper,
-            digest: "unique-digest".to_string(),
-        };
+            digest: format!("{digest:x}"),
+        }
+    }
+
+    fn build_evaluation_environment() -> EvaluationEnvironment {
+        let engine = wasmtime::Engine::default();
+        let module_bytes_always_happy =
+            include_bytes!("../../tests/data/gatekeeper_always_happy_policy.wasm");
+        let module_bytes_always_unhappy =
+            include_bytes!("../../tests/data/gatekeeper_always_unhappy_policy.wasm");
+
+        let (callback_handler_tx, _) = mpsc::channel(10);
+
+        let precompiled_policy_happy = build_precompiled_policy(&engine, module_bytes_always_happy);
+        let precompiled_policy_unhappy =
+            build_precompiled_policy(&engine, module_bytes_always_unhappy);
+
+        let test_policies: HashMap<String, PrecompiledPolicy> = vec![
+            (
+                "happy_policy_1".to_string(),
+                precompiled_policy_happy.clone(),
+            ),
+            (
+                "happy_policy_2".to_string(),
+                precompiled_policy_happy.clone(),
+            ),
+            (
+                "unhappy_policy_1".to_string(),
+                precompiled_policy_unhappy.clone(),
+            ),
+        ]
+        .into_iter()
+        .collect();
 
         let mut policies: HashMap<String, crate::config::PolicyOrPolicyGroup> = HashMap::new();
         let mut precompiled_policies: PrecompiledPolicies = PrecompiledPolicies::new();
 
-        for policy_id in &policy_ids {
+        for (policy_id, precompiled_policy) in &test_policies {
             let policy_url = format!("file:///tmp/{policy_id}.wasm");
             policies.insert(
                 policy_id.to_string(),
@@ -773,16 +817,16 @@ mod tests {
             PolicyOrPolicyGroup::PolicyGroup {
                 policy_mode: PolicyMode::Protect,
                 policies: vec![(
-                    "policy_1".to_string(),
+                    "happy_policy_1".to_string(),
                     PolicyGroupMember {
-                        url: "file:///tmp/policy_1.wasm".to_string(),
+                        url: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                     },
                 )]
                 .into_iter()
                 .collect(),
-                expression: "true || policy_1()".to_string(),
+                expression: "true || happy_policy_1()".to_string(),
                 message: "something went wrong".to_string(),
             },
         );
@@ -800,16 +844,16 @@ mod tests {
             PolicyOrPolicyGroup::PolicyGroup {
                 policy_mode: PolicyMode::Protect,
                 policies: vec![(
-                    "policy_1".to_string(),
+                    "happy_policy_1".to_string(),
                     PolicyGroupMember {
-                        url: "file:///tmp/policy_1.wasm".to_string(),
+                        url: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                     },
                 )]
                 .into_iter()
                 .collect(),
-                expression: "not_a_known_policy() || policy_1()".to_string(),
+                expression: "unknown_policy() || happy_policy_1()".to_string(),
                 message: "something went wrong".to_string(),
             },
         );
@@ -837,16 +881,91 @@ mod tests {
             PolicyOrPolicyGroup::PolicyGroup {
                 policy_mode: PolicyMode::Protect,
                 policies: vec![(
-                    "policy_1".to_string(),
+                    "happy_policy_1".to_string(),
                     PolicyGroupMember {
-                        url: "file:///tmp/policy_1.wasm".to_string(),
+                        url: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                     },
                 )]
                 .into_iter()
                 .collect(),
-                expression: "policy_1() + 1".to_string(),
+                expression: "happy_policy_1() + 1".to_string(),
+                message: "something went wrong".to_string(),
+            },
+        );
+        policies.insert(
+            "group_policy_with_unhappy_or_bracket_happy_and_unhappy_bracket".to_string(),
+            PolicyOrPolicyGroup::PolicyGroup {
+                policy_mode: PolicyMode::Protect,
+                policies: vec![
+                    (
+                        "happy_policy_1".to_string(),
+                        PolicyGroupMember {
+                            url: "file:///tmp/happy_policy_1.wasm".to_string(),
+                            settings: None,
+                            context_aware_resources: BTreeSet::new(),
+                        },
+                    ),
+                    (
+                        "unhappy_policy_1".to_string(),
+                        PolicyGroupMember {
+                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            settings: None,
+                            context_aware_resources: BTreeSet::new(),
+                        },
+                    ),
+                    (
+                        "unhappy_policy_2".to_string(),
+                        PolicyGroupMember {
+                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            settings: None,
+                            context_aware_resources: BTreeSet::new(),
+                        },
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+                expression: "unhappy_policy_1() || (happy_policy_1() && unhappy_policy_2())"
+                    .to_string(),
+                message: "something went wrong".to_string(),
+            },
+        );
+
+        policies.insert(
+            "group_policy_with_unhappy_or_happy_or_unhappy".to_string(),
+            PolicyOrPolicyGroup::PolicyGroup {
+                policy_mode: PolicyMode::Protect,
+                policies: vec![
+                    (
+                        "happy_policy_1".to_string(),
+                        PolicyGroupMember {
+                            url: "file:///tmp/happy_policy_1.wasm".to_string(),
+                            settings: None,
+                            context_aware_resources: BTreeSet::new(),
+                        },
+                    ),
+                    (
+                        "unhappy_policy_1".to_string(),
+                        PolicyGroupMember {
+                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            settings: None,
+                            context_aware_resources: BTreeSet::new(),
+                        },
+                    ),
+                    (
+                        "unhappy_policy_2".to_string(),
+                        PolicyGroupMember {
+                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            settings: None,
+                            context_aware_resources: BTreeSet::new(),
+                        },
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+                expression: "unhappy_policy_1() || happy_policy_1() || unhappy_policy_2()"
+                    .to_string(),
                 message: "something went wrong".to_string(),
             },
         );
@@ -860,7 +979,7 @@ mod tests {
 
     #[rstest]
     #[case::policy_not_defined("policy_not_defined", true)]
-    #[case::policy_known("policy_1", false)]
+    #[case::policy_known("happy_policy_1", false)]
     fn lookup_policy(#[case] policy_id: &str, #[case] expect_error: bool) {
         let policy_id = PolicyID::Policy(policy_id.to_string());
         let evaluation_environment = Arc::new(build_evaluation_environment());
@@ -892,23 +1011,75 @@ mod tests {
             assert!(evaluation_environment
                 .get_policy_settings(&policy_id)
                 .is_ok());
-            // note: we do not test `validate` with a known policy because this would
-            // cause another error. The test policy we're using is just an empty Wasm
-            // module
+            assert!(evaluation_environment
+                .validate(&policy_id, &validate_request)
+                .is_ok());
+        }
+    }
+
+    #[rstest]
+    #[case::all_policies_are_evaluated(
+        "group_policy_with_unhappy_or_bracket_happy_and_unhappy_bracket",
+        false,
+        vec![
+            "unhappy_policy_2: [DENIED] - failing as expected",
+            "unhappy_policy_1: [DENIED] - failing as expected",
+            "happy_policy_1: [ALLOWED]",
+        ],
+    )]
+    #[case::not_all_policies_are_evaluated(
+        "group_policy_with_unhappy_or_happy_or_unhappy",
+        true,
+        vec![
+            "unhappy_policy_1: [DENIED] - failing as expected",
+            "unhappy_policy_2: [NOT EVALUATED]",
+            "happy_policy_1: [ALLOWED]",
+        ],
+    )]
+    fn group_policy_warning_assignments(
+        #[case] policy_id: &str,
+        #[case] admission_accepted: bool,
+        #[case] expected_warnings: Vec<&str>,
+    ) {
+        let policy_id = PolicyID::Policy(policy_id.to_string());
+        let evaluation_environment = Arc::new(build_evaluation_environment());
+        let validate_request =
+            ValidateRequest::AdmissionRequest(build_admission_review_request().request);
+
+        assert!(evaluation_environment.get_policy_mode(&policy_id).is_ok());
+        assert!(evaluation_environment
+            .get_policy_allowed_to_mutate(&policy_id)
+            .is_ok());
+        assert!(evaluation_environment
+            .get_policy_settings(&policy_id)
+            .is_ok());
+
+        let response = evaluation_environment
+            .validate(&policy_id, &validate_request)
+            .expect("should not have errored");
+        assert_eq!(response.allowed, admission_accepted);
+
+        let warnings = response.warnings.expect("should have warnings");
+        for expected in expected_warnings {
+            assert!(
+                warnings.iter().any(|w| w.contains(expected)),
+                "could not find {}",
+                expected
+            );
         }
     }
 
     /// Given to identical wasm modules, only one instance of PolicyEvaluator is going to be
     /// created
     #[test]
-    fn avoid_duplicated_instaces_of_policy_evaluator() {
+    fn avoid_duplicated_instances_of_policy_evaluator() {
         let evaluation_environment = build_evaluation_environment();
 
         assert_eq!(
             evaluation_environment
                 .module_digest_to_policy_evaluator_pre
                 .len(),
-            1
+            2
         );
     }
 
