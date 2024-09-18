@@ -140,7 +140,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	// an AdmissionPolicy targeting pods in namespace1
 	admissionPolicy1 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy1").
+		Name("admissionPolicy1").
 		Namespace("namespace1").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
@@ -153,7 +153,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	// an AdmissionPolicy targeting deployments in namespace2
 	admissionPolicy2 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy2").
+		Name("admissionPolicy2").
 		Namespace("namespace2").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{"apps"},
@@ -166,7 +166,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	// an AdmissionPolicy with an object selector that matches deployment1 in namespace1
 	admissionPolicy3 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy3").
+		Name("admissionPolicy3").
 		Namespace("namespace1").
 		ObjectSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{"env": "test"},
@@ -182,7 +182,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	// an AdmissionPolicy with an object selector that does not match any deployment in namespace2
 	admissionPolicy4 := testutils.
 		NewAdmissionPolicyFactory().
-		Name("policy4").
+		Name("admissionPolicy4").
 		Namespace("namespace2").
 		ObjectSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{"env": "prod"},
@@ -195,10 +195,36 @@ func TestScanAllNamespaces(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 
+	// an AdmissionPolicy targeting an unknown GVR, should be counted as error
+	admissionPolicy5 := testutils.
+		NewAdmissionPolicyFactory().
+		Name("admissionPolicy5").
+		Namespace("namespace1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	// an AdmissionPolicy targeting a GVR with *, should be skipped
+	admissionPolicy6 := testutils.
+		NewAdmissionPolicyFactory().
+		Name("admissionPolicy6").
+		Namespace("namespace1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"*"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
 	// a ClusterAdmissionPolicy targeting pods and deployments in all namespaces
 	clusterAdmissionPolicy := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy5").
+		Name("clusterAdmissionPolicy1").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -212,28 +238,27 @@ func TestScanAllNamespaces(t *testing.T) {
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 
-	// an AdmissionPolicy targeting an unknown GVR, should be counted as error
-	admissionPolicyUnknownGVR := testutils.
-		NewAdmissionPolicyFactory().
-		Name("policy6").
-		Namespace("namespace1").
+	// a ClusterAdmissionPolicyGroup targeting pods
+	clusterAdmissionPolicyGroup := testutils.
+		NewClusterAdmissionPolicyGroupFactory().
+		Name("clusterAdmissionPolicyGroup").
 		Rule(admissionregistrationv1.Rule{
-			APIGroups:   []string{"apps"},
+			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
 			Resources:   []string{"pods"},
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
 
-	// an AdmissionPolicy targeting a GVR with *, should be skipped
-	admissionPolicyAsteriskGVR := testutils.
-		NewAdmissionPolicyFactory().
-		Name("policy7").
-		Namespace("namespace1").
+	// an AdmissionPolicyGroup targeting deployments in namespace2
+	admissionPolicyGroup := testutils.
+		NewAdmissionPolicyGroupFactory().
+		Name("clusterAdmissionPolicyGroup").
+		Namespace("namespace2").
 		Rule(admissionregistrationv1.Rule{
-			APIGroups:   []string{"apps"},
+			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
-			Resources:   []string{"*"},
+			Resources:   []string{"pods"},
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
@@ -272,9 +297,11 @@ func TestScanAllNamespaces(t *testing.T) {
 		admissionPolicy2,
 		admissionPolicy3,
 		admissionPolicy4,
-		admissionPolicyUnknownGVR,
-		admissionPolicyAsteriskGVR,
+		admissionPolicy5,
+		admissionPolicy6,
 		clusterAdmissionPolicy,
+		clusterAdmissionPolicyGroup,
+		admissionPolicyGroup,
 		oldPolicyReport,
 	)
 	require.NoError(t, err)
@@ -301,16 +328,16 @@ func TestScanAllNamespaces(t *testing.T) {
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod1.GetUID()), Namespace: "namespace1"}, &policyReport)
 	require.NoError(t, err)
-	assert.Equal(t, 2, policyReport.Summary.Pass)
+	assert.Equal(t, 3, policyReport.Summary.Pass)
 	assert.Equal(t, 1, policyReport.Summary.Error)
 	assert.Equal(t, 1, policyReport.Summary.Skip)
-	assert.Len(t, policyReport.Results, 2)
+	assert.Len(t, policyReport.Results, 3)
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod2.GetUID()), Namespace: "namespace2"}, &policyReport)
 	require.NoError(t, err)
-	assert.Equal(t, 1, policyReport.Summary.Pass)
-	assert.Len(t, policyReport.Results, 1)
+	assert.Equal(t, 3, policyReport.Summary.Pass)
+	assert.Len(t, policyReport.Results, 3)
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment1.GetUID()), Namespace: "namespace1"}, &policyReport)
@@ -376,7 +403,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	// a ClusterAdmissionPolicy targeting namespaces
 	clusterAdmissionPolicy1 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy1").
+		Name("clusterAdmissionPolicy1").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -388,7 +415,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	// a ClusterAdmissionPolicy targeting namespaces with an object selector that matches namespace2
 	clusterAdmissionPolicy2 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy2").
+		Name("clusterAdmissionPolicy2").
 		ObjectSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{"env": "test"},
 		}).
@@ -403,7 +430,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	// a ClusterAdmissionPolicy targeting namespaces with an object selector that does not match any namespace
 	clusterAdmissionPolicy3 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy3").
+		Name("clusterAdmissionPolicy3").
 		ObjectSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{"env": "prod"},
 		}).
@@ -416,9 +443,9 @@ func TestScanClusterWideResources(t *testing.T) {
 		Build()
 
 	// a ClusterAdmissionPolicy targeting an unknown GVR, should be counted as error
-	clusterAdmissionPolicyUnknownGVR := testutils.
+	clusterAdmissionPolicy4 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy4").
+		Name("clusterAdmissionPolicy4").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -428,13 +455,25 @@ func TestScanClusterWideResources(t *testing.T) {
 		Build()
 
 	// a ClusterAdmissionPolicy targeting a GVR with *, should be counted as skipped
-	clusterAdmissionPolicyAsteriskGVR := testutils.
+	clusterAdmissionPolicy5 := testutils.
 		NewClusterAdmissionPolicyFactory().
-		Name("policy5").
+		Name("clusterAdmissionPolicy5").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
 			Resources:   []string{"*"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	// a ClusterAdmissionPolicyGroup targeting namespaces
+	clusterAdmissionPolicyGroup := testutils.
+		NewClusterAdmissionPolicyGroupFactory().
+		Name("policy1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"namespaces"},
 		}).
 		Status(policiesv1.PolicyStatusActive).
 		Build()
@@ -465,8 +504,9 @@ func TestScanClusterWideResources(t *testing.T) {
 		clusterAdmissionPolicy1,
 		clusterAdmissionPolicy2,
 		clusterAdmissionPolicy3,
-		clusterAdmissionPolicyUnknownGVR,
-		clusterAdmissionPolicyAsteriskGVR,
+		clusterAdmissionPolicy4,
+		clusterAdmissionPolicy5,
+		clusterAdmissionPolicyGroup,
 		oldClusterPolicyReport,
 	)
 	require.NoError(t, err)
@@ -493,15 +533,15 @@ func TestScanClusterWideResources(t *testing.T) {
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace1.GetUID())}, &clusterPolicyReport)
 	require.NoError(t, err)
-	assert.Equal(t, 1, clusterPolicyReport.Summary.Pass)
+	assert.Equal(t, 2, clusterPolicyReport.Summary.Pass)
 	assert.Equal(t, 1, clusterPolicyReport.Summary.Error)
 	assert.Equal(t, 1, clusterPolicyReport.Summary.Skip)
-	assert.Len(t, clusterPolicyReport.Results, 1)
+	assert.Len(t, clusterPolicyReport.Results, 2)
 	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
 	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace2.GetUID())}, &clusterPolicyReport)
 	require.NoError(t, err)
-	assert.Equal(t, 2, clusterPolicyReport.Summary.Pass)
-	assert.Len(t, clusterPolicyReport.Results, 2)
+	assert.Equal(t, 3, clusterPolicyReport.Summary.Pass)
+	assert.Len(t, clusterPolicyReport.Results, 3)
 	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 }
