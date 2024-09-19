@@ -83,35 +83,74 @@ type PolicyStatus struct {
 }
 
 // +kubebuilder:object:generate:=false
-type Policy interface {
-	client.Object
+type PolicySettings interface {
 	GetPolicyMode() PolicyMode
-	SetPolicyModeStatus(policyMode PolicyModeStatus)
 	GetModule() string
-	IsMutating() bool
-	IsContextAware() bool
 	GetSettings() runtime.RawExtension
-	GetStatus() *PolicyStatus
-	SetStatus(status PolicyStatusEnum)
-	CopyInto(object *Policy)
-	GetSideEffects() *admissionregistrationv1.SideEffectClass
-	GetRules() []admissionregistrationv1.RuleWithOperations
-	GetFailurePolicy() *admissionregistrationv1.FailurePolicyType
-	GetMatchPolicy() *admissionregistrationv1.MatchPolicyType
-	GetMatchConditions() []admissionregistrationv1.MatchCondition
-	GetNamespaceSelector() *metav1.LabelSelector
-	GetObjectSelector() *metav1.LabelSelector
-	GetTimeoutSeconds() *int32
-	GetObjectMeta() *metav1.ObjectMeta
-	GetPolicyServer() string
-	GetUniqueName() string
 	GetContextAwareResources() []ContextAwareResource
 	GetBackgroundAudit() bool
 	GetSeverity() (string, bool)
 	GetCategory() (string, bool)
 	GetTitle() (string, bool)
 	GetDescription() (string, bool)
-	IsPolicyGroup() bool
+	GetTimeoutSeconds() *int32
+}
+
+// +kubebuilder:object:generate:=false
+type PolicyIdentifier interface {
+	GetPolicyServer() string
+	GetUniqueName() string
+}
+
+// +kubebuilder:object:generate:=false
+type PolicyAdmissionRegistrationSettings interface {
+	GetRules() []admissionregistrationv1.RuleWithOperations
+	GetSideEffects() *admissionregistrationv1.SideEffectClass
+	GetFailurePolicy() *admissionregistrationv1.FailurePolicyType
+	GetMatchPolicy() *admissionregistrationv1.MatchPolicyType
+	GetMatchConditions() []admissionregistrationv1.MatchCondition
+}
+
+// +kubebuilder:object:generate:=false
+type PolicySelectors interface {
+	GetNamespaceSelector() *metav1.LabelSelector
+	GetObjectSelector() *metav1.LabelSelector
+	GetObjectMeta() *metav1.ObjectMeta
+}
+
+// +kubebuilder:object:generate:=false
+type PolicyBehavior interface {
+	IsMutating() bool
+	IsContextAware() bool
+}
+
+// +kubebuilder:object:generate:=false
+type PolicyLifecycle interface {
+	SetPolicyModeStatus(policyMode PolicyModeStatus)
+	GetStatus() *PolicyStatus
+	SetStatus(status PolicyStatusEnum)
+}
+
+// +kubebuilder:object:generate:=false
+type PolicyCopyable interface {
+	CopyInto(object *Policy)
+}
+
+// +kubebuilder:object:generate:=false
+type Policy interface {
+	client.Object
+	PolicySettings
+	PolicyIdentifier
+	PolicyAdmissionRegistrationSettings
+	PolicySelectors
+	PolicyBehavior
+	PolicyLifecycle
+	PolicyCopyable
+}
+
+// +kubebuilder:object:generate:=false
+type PolicyGroup interface {
+	Policy
 	GetPolicyGroupMembers() PolicyGroupMembers
 	GetExpression() string
 	GetMessage() string
