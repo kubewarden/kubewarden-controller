@@ -156,22 +156,6 @@ func (r *ClusterAdmissionPolicy) GetStatus() *PolicyStatus {
 	return &r.Status
 }
 
-func (r *ClusterAdmissionPolicy) GetPolicyGroupMembers() PolicyGroupMembers {
-	return nil
-}
-
-func (r *ClusterAdmissionPolicy) IsPolicyGroup() bool {
-	return false
-}
-
-func (r *ClusterAdmissionPolicy) GetExpression() string {
-	return ""
-}
-
-func (r *ClusterAdmissionPolicy) GetMessage() string {
-	return ""
-}
-
 func (r *ClusterAdmissionPolicy) CopyInto(policy *Policy) {
 	*policy = r.DeepCopy()
 }
