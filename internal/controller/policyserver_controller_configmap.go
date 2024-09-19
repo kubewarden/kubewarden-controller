@@ -189,7 +189,7 @@ func buildPolicyGroupMembers(policies policiesv1.PolicyGroupMembers) map[string]
 func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMap {
 	policies := policyConfigEntryMap{}
 	for _, admissionPolicy := range admissionPolicies {
-		policies[admissionPolicy.GetUniqueName()] = policyServerConfigEntry{
+		configEntry := policyServerConfigEntry{
 			NamespacedName: types.NamespacedName{
 				Namespace: admissionPolicy.GetNamespace(),
 				Name:      admissionPolicy.GetName(),
@@ -199,10 +199,15 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMa
 			AllowedToMutate:       admissionPolicy.IsMutating(),
 			Settings:              admissionPolicy.GetSettings(),
 			ContextAwareResources: admissionPolicy.GetContextAwareResources(),
-			Policies:              buildPolicyGroupMembers(admissionPolicy.GetPolicyGroupMembers()),
-			Expression:            admissionPolicy.GetExpression(),
-			Message:               admissionPolicy.GetMessage(),
 		}
+
+		if policyGroup, ok := admissionPolicy.(policiesv1.PolicyGroup); ok {
+			configEntry.Policies = buildPolicyGroupMembers(policyGroup.GetPolicyGroupMembers())
+			configEntry.Expression = policyGroup.GetExpression()
+			configEntry.Message = policyGroup.GetMessage()
+		}
+
+		policies[admissionPolicy.GetUniqueName()] = configEntry
 	}
 	return policies
 }
