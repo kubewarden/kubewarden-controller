@@ -280,7 +280,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 				},
 				{
 					Policy:       admissionPolicyGroup1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/namespacedpolicygroup-test-admissionPolicyGroup1"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/namespaced-group-test-admissionPolicyGroup1"},
 				},
 			},
 			{
@@ -294,7 +294,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 				},
 				{
 					Policy:       clusterAdmissionPolicyGroup1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicyGroup1"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-group-clusterAdmissionPolicyGroup1"},
 				},
 				{
 					Policy:       admissionPolicy1,
@@ -494,7 +494,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 				},
 				{
 					Policy:       clusterAdmissionPolicyGroup1,
-					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-clusterAdmissionPolicyGroup1"},
+					PolicyServer: &url.URL{Scheme: "https", Host: "policy-server-default.kubewarden.svc:443", Path: "/audit/clusterwide-group-clusterAdmissionPolicyGroup1"},
 				},
 			},
 		},
