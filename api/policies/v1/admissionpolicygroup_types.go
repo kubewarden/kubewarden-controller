@@ -95,10 +95,6 @@ func (r *AdmissionPolicyGroup) GetPolicyGroupMembers() PolicyGroupMembers {
 	return r.Spec.Policies
 }
 
-func (r *AdmissionPolicyGroup) IsPolicyGroup() bool {
-	return true
-}
-
 func (r *AdmissionPolicyGroup) GetSettings() runtime.RawExtension {
 	return runtime.RawExtension{}
 }
