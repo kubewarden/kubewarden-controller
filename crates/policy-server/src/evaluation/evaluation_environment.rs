@@ -1,5 +1,5 @@
 use policy_evaluator::{
-    admission_response::{AdmissionResponse, AdmissionResponseStatus},
+    admission_response::{self, AdmissionResponse, AdmissionResponseStatus},
     callback_requests::CallbackRequest,
     evaluation_context::EvaluationContext,
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
@@ -659,27 +659,66 @@ impl EvaluationEnvironment {
         // to define inside of the expression
         let allowed = rhai_engine.eval_expression::<bool>(expression.as_str())?;
 
+        // The API Server puts some limitations on the warnings:
+        // - they cannot exceed 256 characters
+        // - the size of all the warnings cannot exceed 4096 characters
+        // - they are returned as HTTP headers, hence not all characters are allowed
+        //
+        // Because of these reasons, we use the warning struct only to
+        // tell the user whether a member policy was evaluated or not. When it was
+        // evaluated we just tell the outcome (allow/reject).
+        let mut warnings = vec![];
+
+        // The details of each policy evaluation are returned as part of the
+        // AdmissionResponse.status.details.causes
+        let mut status_causes = vec![];
+
+        let evaluation_results = policies_evaluation_results.lock().unwrap();
+
+        for policy_id in &policy_ids {
+            if let Some(result) = evaluation_results.get(policy_id) {
+                let outcome = if result.allowed {
+                    "allowed"
+                } else {
+                    "rejected"
+                };
+                warnings.push(format!("{policy_id}: {outcome}",));
+
+                if !result.allowed {
+                    let cause = admission_response::StatusCause {
+                        field: Some(format!("spec.policies.{}", policy_id)),
+                        message: result.message.clone(),
+                        ..Default::default()
+                    };
+                    status_causes.push(cause);
+                }
+            } else {
+                warnings.push(format!("{}: not evaluated", policy_id));
+            }
+        }
+        debug!(
+            ?policy_id,
+            ?allowed,
+            ?warnings,
+            ?status_causes,
+            "policy group evaluation result"
+        );
+
         let status = if allowed {
+            // The status field is discarded by the Kubernetes API server when the
+            // request is allowed.
             None
         } else {
             Some(AdmissionResponseStatus {
                 message: Some(message),
                 code: None,
+                details: Some(admission_response::StatusDetails {
+                    causes: status_causes,
+                    ..Default::default()
+                }),
+                ..Default::default()
             })
         };
-
-        // Provide some feedback to the end user about the single policy evaluation results
-        let evaluation_results = policies_evaluation_results.lock().unwrap();
-        let warnings: Vec<String> = policy_ids
-            .iter()
-            .map(|policy_id| {
-                let result = evaluation_results
-                    .get(policy_id)
-                    .map(|result| result.to_string())
-                    .unwrap_or_else(|| "[NOT EVALUATED]".to_string());
-                format!("{}: {}", policy_id, result)
-            })
-            .collect();
 
         Ok(AdmissionResponse {
             uid: req.uid().to_string(),
@@ -1022,24 +1061,38 @@ mod tests {
         "group_policy_with_unhappy_or_bracket_happy_and_unhappy_bracket",
         false,
         vec![
-            "unhappy_policy_2: [DENIED] - failing as expected",
-            "unhappy_policy_1: [DENIED] - failing as expected",
-            "happy_policy_1: [ALLOWED]",
+            "unhappy_policy_2: rejected",
+            "unhappy_policy_1: rejected",
+            "happy_policy_1: allowed",
         ],
+        vec![
+            admission_response::StatusCause {
+                field: Some("spec.policies.unhappy_policy_1".to_string()),
+                message: Some("failing as expected".to_string()),
+                ..Default::default()
+            },
+            admission_response::StatusCause {
+                field: Some("spec.policies.unhappy_policy_2".to_string()),
+                message: Some("failing as expected".to_string()),
+                ..Default::default()
+            },
+        ]
     )]
     #[case::not_all_policies_are_evaluated(
         "group_policy_with_unhappy_or_happy_or_unhappy",
         true,
         vec![
-            "unhappy_policy_1: [DENIED] - failing as expected",
-            "unhappy_policy_2: [NOT EVALUATED]",
-            "happy_policy_1: [ALLOWED]",
+            "unhappy_policy_1: rejected",
+            "unhappy_policy_2: not evaluated",
+            "happy_policy_1: allowed",
         ],
+        Vec::new(), // no expected causes, since the request is accepted
     )]
     fn group_policy_warning_assignments(
         #[case] policy_id: &str,
         #[case] admission_accepted: bool,
         #[case] expected_warnings: Vec<&str>,
+        #[case] expected_status_causes: Vec<admission_response::StatusCause>,
     ) {
         let policy_id = PolicyID::Policy(policy_id.to_string());
         let evaluation_environment = Arc::new(build_evaluation_environment());
@@ -1063,9 +1116,27 @@ mod tests {
         for expected in expected_warnings {
             assert!(
                 warnings.iter().any(|w| w.contains(expected)),
-                "could not find {}",
+                "could not find warning {}",
                 expected
             );
+        }
+
+        if admission_accepted {
+            assert!(response.status.is_none());
+        } else {
+            let causes = response
+                .status
+                .expect("should have status")
+                .details
+                .expect("should have details")
+                .causes;
+            for expected in expected_status_causes {
+                assert!(
+                    causes.iter().any(|c| *c == expected),
+                    "could not find cause {:?}",
+                    expected
+                );
+            }
         }
     }
 
