@@ -7,6 +7,7 @@ use core::panic;
 use hyper::{Request, Response};
 use kube::client::Body;
 use kube::Client;
+use policy_evaluator::admission_response::PatchType;
 use policy_fetcher::oci_client::manifest::OciImageManifest;
 use rstest::*;
 use serde_json::json;
@@ -225,13 +226,17 @@ async fn test_policy_evaluator(
         assert!(admission_response.status.is_none());
     } else {
         assert_eq!(
-            Some(AdmissionResponseStatus { message, code }),
+            Some(AdmissionResponseStatus {
+                message,
+                code,
+                ..Default::default()
+            }),
             admission_response.status
         );
     }
 
     if mutating {
-        assert_eq!(Some("JSONPatch".to_owned()), admission_response.patch_type);
+        assert_eq!(Some(PatchType::JSONPatch), admission_response.patch_type);
         assert!(admission_response.patch.is_some());
     } else {
         assert!(admission_response.patch.is_none());
