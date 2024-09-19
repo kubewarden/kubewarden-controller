@@ -298,9 +298,6 @@ var _ = Describe("PolicyServer controller", func() {
 				AllowedToMutate:       admissionPolicy.IsMutating(),
 				Settings:              admissionPolicy.GetSettings(),
 				ContextAwareResources: admissionPolicy.GetContextAwareResources(),
-				Policies:              buildPolicyGroupMembers(admissionPolicy.GetPolicyGroupMembers()),
-				Expression:            admissionPolicy.GetExpression(),
-				Message:               admissionPolicy.GetMessage(),
 			}
 			policiesMap[clusterAdmissionPolicy.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -312,9 +309,6 @@ var _ = Describe("PolicyServer controller", func() {
 				AllowedToMutate:       clusterAdmissionPolicy.IsMutating(),
 				Settings:              clusterAdmissionPolicy.GetSettings(),
 				ContextAwareResources: clusterAdmissionPolicy.GetContextAwareResources(),
-				Policies:              buildPolicyGroupMembers(clusterAdmissionPolicy.GetPolicyGroupMembers()),
-				Expression:            clusterAdmissionPolicy.GetExpression(),
-				Message:               clusterAdmissionPolicy.GetMessage(),
 			}
 			policiesMap[admissionPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{

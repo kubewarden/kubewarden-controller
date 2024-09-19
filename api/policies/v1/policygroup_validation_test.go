@@ -11,7 +11,7 @@ import (
 func TestValidatePolicyGroupExpressionField(t *testing.T) {
 	tests := []struct {
 		name                 string
-		policy               Policy
+		policyGroup          PolicyGroup
 		expectedErrorMessage string
 	}{
 		{
@@ -110,7 +110,7 @@ func TestValidatePolicyGroupExpressionField(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := validatePolicyGroupExpressionField(test.policy)
+			err := validatePolicyGroupExpressionField(test.policyGroup)
 
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, err, test.expectedErrorMessage)
@@ -124,7 +124,7 @@ func TestValidatePolicyGroupExpressionField(t *testing.T) {
 func TestValidatePolicyGroupMembers(t *testing.T) {
 	tests := []struct {
 		name                 string
-		policy               Policy
+		policyGroup          PolicyGroup
 		expectedErrorMessage string
 	}{
 		{
@@ -282,7 +282,7 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			errors := validatePolicyGroupMembers(test.policy)
+			errors := validatePolicyGroupMembers(test.policyGroup)
 
 			if test.expectedErrorMessage != "" {
 				errors = errors.Filter(func(e error) bool {

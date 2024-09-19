@@ -152,10 +152,6 @@ func (r *ClusterAdmissionPolicyGroup) GetPolicyGroupMembers() PolicyGroupMembers
 	return r.Spec.Policies
 }
 
-func (r *ClusterAdmissionPolicyGroup) IsPolicyGroup() bool {
-	return true
-}
-
 func (r *ClusterAdmissionPolicyGroup) GetExpression() string {
 	return r.Spec.Expression
 }

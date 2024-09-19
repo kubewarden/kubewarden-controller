@@ -94,22 +94,6 @@ func (r *AdmissionPolicy) GetStatus() *PolicyStatus {
 	return &r.Status
 }
 
-func (r *AdmissionPolicy) GetPolicyGroupMembers() PolicyGroupMembers {
-	return nil
-}
-
-func (r *AdmissionPolicy) IsPolicyGroup() bool {
-	return false
-}
-
-func (r *AdmissionPolicy) GetExpression() string {
-	return ""
-}
-
-func (r *AdmissionPolicy) GetMessage() string {
-	return ""
-}
-
 func (r *AdmissionPolicy) CopyInto(policy *Policy) {
 	*policy = r.DeepCopy()
 }

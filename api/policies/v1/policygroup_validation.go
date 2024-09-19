@@ -29,24 +29,24 @@ var celReservedSymbols = sets.NewString(
 	"var", "void", "while",
 )
 
-func validatePolicyGroupCreate(policy Policy) field.ErrorList {
+func validatePolicyGroupCreate(policyGroup PolicyGroup) field.ErrorList {
 	var allErrors field.ErrorList
 
-	allErrors = append(allErrors, validatePolicyCreate(policy)...)
-	allErrors = append(allErrors, validatePolicyGroupMembers(policy)...)
-	if err := validatePolicyGroupExpressionField(policy); err != nil {
+	allErrors = append(allErrors, validatePolicyCreate(policyGroup)...)
+	allErrors = append(allErrors, validatePolicyGroupMembers(policyGroup)...)
+	if err := validatePolicyGroupExpressionField(policyGroup); err != nil {
 		allErrors = append(allErrors, err)
 	}
 
 	return allErrors
 }
 
-func validatePolicyGroupUpdate(oldPolicy, newPolicy Policy) field.ErrorList {
+func validatePolicyGroupUpdate(oldPolicyGroup, newPolicyGroup PolicyGroup) field.ErrorList {
 	var allErrors field.ErrorList
 
-	allErrors = append(allErrors, validatePolicyUpdate(oldPolicy, newPolicy)...)
-	allErrors = append(allErrors, validatePolicyGroupMembers(newPolicy)...)
-	if err := validatePolicyGroupExpressionField(newPolicy); err != nil {
+	allErrors = append(allErrors, validatePolicyUpdate(oldPolicyGroup, newPolicyGroup)...)
+	allErrors = append(allErrors, validatePolicyGroupMembers(newPolicyGroup)...)
+	if err := validatePolicyGroupExpressionField(newPolicyGroup); err != nil {
 		allErrors = append(allErrors, err)
 	}
 
@@ -54,12 +54,12 @@ func validatePolicyGroupUpdate(oldPolicy, newPolicy Policy) field.ErrorList {
 }
 
 // validatePolicyGroupMembers validates that a policy group has at least one policy member.
-func validatePolicyGroupMembers(policy Policy) field.ErrorList {
+func validatePolicyGroupMembers(policyGroup PolicyGroup) field.ErrorList {
 	var allErrors field.ErrorList
-	if len(policy.GetPolicyGroupMembers()) == 0 {
+	if len(policyGroup.GetPolicyGroupMembers()) == 0 {
 		allErrors = append(allErrors, field.Required(field.NewPath("spec").Child("policies"), "policy groups must have at least one policy member"))
 	}
-	for memberName := range policy.GetPolicyGroupMembers() {
+	for memberName := range policyGroup.GetPolicyGroupMembers() {
 		_, matchReservedSymbol := celReservedSymbols[memberName]
 		if len(memberName) == 0 || matchReservedSymbol || !idenRegex.MatchString(memberName) {
 			allErrors = append(allErrors, field.Invalid(field.NewPath("spec").Child("policies"), memberName, "policy group member name is invalid"))
@@ -72,16 +72,16 @@ func validatePolicyGroupMembers(policy Policy) field.ErrorList {
 // validatePolicyGroupExpressionField validates that the expression is a valid CEL expression that evaluates to a boolean.
 // Only the following operators are allowed: equals, not equals, logical or, logical and, and logical not.
 // Policy members are imported as custom functions that take no arguments and return a boolean.
-func validatePolicyGroupExpressionField(policy Policy) *field.Error {
+func validatePolicyGroupExpressionField(policyGroup PolicyGroup) *field.Error {
 	expressionField := field.NewPath("spec").Child("expression")
 
-	if policy.GetExpression() == "" {
+	if policyGroup.GetExpression() == "" {
 		return field.Required(expressionField, "must be non-empty")
 	}
 
 	// Create a CEL environment with custom functions for each policy member
 	var opts []cel.EnvOption
-	for policyName := range policy.GetPolicyGroupMembers() {
+	for policyName := range policyGroup.GetPolicyGroupMembers() {
 		fn := cel.Function(policyName, cel.Overload(policyName, []*cel.Type{}, types.BoolType))
 		opts = append(opts, fn)
 	}
@@ -113,12 +113,12 @@ func validatePolicyGroupExpressionField(policy Policy) *field.Error {
 		return field.InternalError(expressionField, fmt.Errorf("error creating CEL environment: %w", err))
 	}
 
-	ast, issues := env.Compile(policy.GetExpression())
+	ast, issues := env.Compile(policyGroup.GetExpression())
 	if issues != nil && issues.Err() != nil {
-		return field.Invalid(expressionField, policy.GetExpression(), fmt.Sprintf("compilation failed: %v", issues.Err()))
+		return field.Invalid(expressionField, policyGroup.GetExpression(), fmt.Sprintf("compilation failed: %v", issues.Err()))
 	}
 	if ast.OutputType() != types.BoolType {
-		return field.Invalid(expressionField, policy.GetExpression(), "must evaluate to bool")
+		return field.Invalid(expressionField, policyGroup.GetExpression(), "must evaluate to bool")
 	}
 
 	return nil
