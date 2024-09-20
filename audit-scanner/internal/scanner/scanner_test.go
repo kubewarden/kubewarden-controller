@@ -59,6 +59,12 @@ func newMockPolicyServer() *httptest.Server {
 	}))
 }
 
+func newMockPolicyServerWithErrors() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusBadGateway)
+	}))
+}
+
 func TestScanAllNamespaces(t *testing.T) {
 	mockPolicyServer := newMockPolicyServer()
 	defer mockPolicyServer.Close()
@@ -266,7 +272,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	// add a policy report that should be deleted by the scanner
 	oldPolicyReportRunUID := uuid.New().String()
 	oldPolicyReport := testutils.NewPolicyReportFactory().
-		Name("report1").
+		Name("oldPolicyReport").
 		Namespace(namespace1.GetName()).
 		WithAppLabel().
 		RunUID(oldPolicyReportRunUID).
@@ -469,7 +475,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	// a ClusterAdmissionPolicyGroup targeting namespaces
 	clusterAdmissionPolicyGroup := testutils.
 		NewClusterAdmissionPolicyGroupFactory().
-		Name("policy1").
+		Name("clusterAdmissionPolicyGroup").
 		Rule(admissionregistrationv1.Rule{
 			APIGroups:   []string{""},
 			APIVersions: []string{"v1"},
@@ -481,7 +487,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	// add a policy report that should be deleted by the scanner
 	oldClusterPolicyReportRunUID := uuid.New().String()
 	oldClusterPolicyReport := testutils.NewClusterPolicyReportFactory().
-		Name("report1").
+		Name("oldClusterPolicyReport").
 		WithAppLabel().
 		RunUID(oldClusterPolicyReportRunUID).
 		Build()
@@ -544,4 +550,113 @@ func TestScanClusterWideResources(t *testing.T) {
 	assert.Equal(t, 3, clusterPolicyReport.Summary.Pass)
 	assert.Len(t, clusterPolicyReport.Results, 3)
 	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
+}
+
+func TestScanWithHTTPErrors(t *testing.T) {
+	mockPolicyServerWithErrors := newMockPolicyServerWithErrors()
+	defer mockPolicyServerWithErrors.Close()
+
+	policyServer := &policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}
+
+	policyServerService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"app": "kubewarden-policy-server-default",
+			},
+			Name:      "policy-server-default",
+			Namespace: "kubewarden",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name: "http",
+					Port: 443,
+				},
+			},
+		},
+	}
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespace",
+			UID:  "namespace-uid",
+		},
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod",
+			Namespace: "namespace",
+			UID:       "pod-uid",
+		},
+	}
+
+	// an AdmissionPolicy targeting pods
+	clusterAdmissionPolicy := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("clusterAdmissionPolicy").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods", "namespaces"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	auditScheme, err := auditscheme.NewScheme()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dynamicClient := dynamicFake.NewSimpleDynamicClient(
+		auditScheme,
+		namespace,
+		pod,
+	)
+	clientset := fake.NewSimpleClientset(
+		namespace,
+	)
+	client, err := testutils.NewFakeClient(
+		namespace,
+		policyServer,
+		policyServerService,
+		clusterAdmissionPolicy,
+	)
+	require.NoError(t, err)
+
+	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
+	require.NoError(t, err)
+
+	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServerWithErrors.URL)
+	require.NoError(t, err)
+
+	policyReportStore := report.NewPolicyReportStore(client)
+
+	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelResourcesAudits, parallelPoliciesAudits)
+	require.NoError(t, err)
+
+	runUID := uuid.New().String()
+	err = scanner.ScanAllNamespaces(context.Background(), runUID)
+	require.NoError(t, err)
+	err = scanner.ScanClusterWideResources(context.Background(), runUID)
+	require.NoError(t, err)
+
+	podPolicyReport := wgpolicy.PolicyReport{}
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod.GetUID()), Namespace: "namespace"}, &podPolicyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 0, podPolicyReport.Summary.Pass)
+	assert.Equal(t, 1, podPolicyReport.Summary.Error)
+	assert.Equal(t, 0, podPolicyReport.Summary.Skip)
+	assert.Len(t, podPolicyReport.Results, 1)
+
+	namespacePolicyReport := wgpolicy.ClusterPolicyReport{}
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace.GetUID())}, &namespacePolicyReport)
+	require.NoError(t, err)
+	assert.Equal(t, 0, namespacePolicyReport.Summary.Pass)
+	assert.Equal(t, 1, namespacePolicyReport.Summary.Error)
+	assert.Equal(t, 0, namespacePolicyReport.Summary.Skip)
+	assert.Len(t, namespacePolicyReport.Results, 1)
 }
