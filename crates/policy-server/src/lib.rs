@@ -302,11 +302,11 @@ async fn create_tls_config_and_watch_certificate_changes(
         inotify::Inotify::init().map_err(|e| anyhow!("Cannot initialize inotify: {e}"))?;
     let cert_watch = inotify
         .watches()
-        .add(cert_file.clone(), inotify::WatchMask::MODIFY)
+        .add(cert_file.clone(), inotify::WatchMask::CLOSE_WRITE)
         .map_err(|e| anyhow!("Cannot watch certificate file: {e}"))?;
     let key_watch = inotify
         .watches()
-        .add(key_file.clone(), inotify::WatchMask::MODIFY)
+        .add(key_file.clone(), inotify::WatchMask::CLOSE_WRITE)
         .map_err(|e| anyhow!("Cannot watch key file: {e}"))?;
 
     let buffer = [0; 1024];
