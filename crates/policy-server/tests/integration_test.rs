@@ -567,9 +567,12 @@ async fn test_policy_with_wrong_url() {
 // helper functions for certificate rotation test, which is a feature supported only on Linux
 #[cfg(target_os = "linux")]
 mod certificate_reload_helpers {
+    use std::net::TcpStream;
+
+    use anyhow::anyhow;
     use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
     use rcgen::{generate_simple_self_signed, CertifiedKey};
-    use std::net::TcpStream;
+    use reqwest::StatusCode;
 
     pub struct TlsData {
         pub key: String,
@@ -614,48 +617,34 @@ mod certificate_reload_helpers {
         .unwrap()
     }
 
-    pub async fn check_tls_san_name(domain_ip: &str, domain_port: &str, hostname: &str) -> bool {
-        let sleep_interval = std::time::Duration::from_secs(1);
-        let max_retries = 10;
-        let mut failed_retries = 0;
+    pub async fn check_tls_san_name(
+        domain_ip: &str,
+        domain_port: &str,
+        hostname: &str,
+    ) -> anyhow::Result<()> {
         let hostname = hostname.to_string();
-        loop {
-            let san_names = get_tls_san_names(domain_ip, domain_port).await;
-            if san_names.contains(&hostname) {
-                return true;
-            }
-            failed_retries += 1;
-            if failed_retries >= max_retries {
-                return false;
-            }
-            tokio::time::sleep(sleep_interval).await;
+        let san_names = get_tls_san_names(domain_ip, domain_port).await;
+        if san_names.contains(&hostname) {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "SAN names do not contain the expected hostname ({}): {:?}",
+                hostname,
+                san_names
+            ))
         }
     }
 
-    pub async fn wait_for_policy_server_to_be_ready(address: &str) {
-        let sleep_interval = std::time::Duration::from_secs(1);
-        let max_retries = 5;
-        let mut failed_retries = 0;
-
+    pub async fn policy_server_is_ready(address: &str) -> anyhow::Result<StatusCode> {
         // wait for the server to start
         let client = reqwest::Client::builder()
             .danger_accept_invalid_certs(true)
             .build()
             .unwrap();
 
-        loop {
-            let url = reqwest::Url::parse(&format!("https://{address}/readiness")).unwrap();
-            match client.get(url).send().await {
-                Ok(_) => break,
-                Err(e) => {
-                    failed_retries += 1;
-                    if failed_retries >= max_retries {
-                        panic!("failed to start the server: {:?}", e);
-                    }
-                    tokio::time::sleep(sleep_interval).await;
-                }
-            }
-        }
+        let url = reqwest::Url::parse(&format!("https://{address}/readiness")).unwrap();
+        let response = client.get(url).send().await?;
+        Ok(response.status())
     }
 }
 
@@ -699,9 +688,22 @@ async fn test_detect_certificate_rotation() {
             .unwrap();
         api_server.run().await.unwrap();
     });
-    wait_for_policy_server_to_be_ready(format!("{domain_ip}:{domain_port}").as_str()).await;
 
-    assert!(check_tls_san_name(&domain_ip, &domain_port, hostname1).await);
+    let exponential_backoff = ExponentialBuilder::default()
+        .with_min_delay(Duration::from_secs(10))
+        .with_max_delay(Duration::from_secs(30))
+        .with_max_times(5);
+
+    let status_code =
+        (|| async { policy_server_is_ready(format!("{domain_ip}:{domain_port}").as_str()).await })
+            .retry(exponential_backoff)
+            .await
+            .unwrap();
+    assert_eq!(status_code, reqwest::StatusCode::OK);
+
+    check_tls_san_name(&domain_ip, &domain_port, hostname1)
+        .await
+        .expect("certificate served doesn't use the expected SAN name");
 
     // Generate a new certificate and key, and switch to them
 
@@ -715,16 +717,19 @@ async fn test_detect_certificate_rotation() {
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
 
     // the old certificate should still be in use, since we didn't change also the key
-    assert!(check_tls_san_name(&domain_ip, &domain_port, hostname1).await);
+    check_tls_san_name(&domain_ip, &domain_port, hostname1)
+        .await
+        .expect("certificate should not have been changed");
 
     // write only the key file
     std::fs::write(&key_file, tls_data2.key).unwrap();
 
-    // give inotify some time to ensure it detected the cert change
+    // give inotify some time to ensure it detected the cert change,
+    // also give axum some time to complete the certificate reload
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
-
-    // the new certificate should be in use
-    assert!(check_tls_san_name(&domain_ip, &domain_port, hostname2).await);
+    check_tls_san_name(&domain_ip, &domain_port, hostname2)
+        .await
+        .expect("certificate hasn't been reloaded");
 }
 
 #[tokio::test]
