@@ -18,6 +18,7 @@ use axum::{
 };
 use backon::{ExponentialBuilder, Retryable};
 use http_body_util::BodyExt;
+use policy_evaluator::admission_response;
 use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     policy_fetcher::verify::config::VerificationConfigV1,
@@ -67,7 +68,8 @@ async fn test_validate() {
         Some(
             policy_evaluator::admission_response::AdmissionResponseStatus {
                 message: Some("Privileged container is not allowed".to_owned()),
-                code: None
+                code: None,
+                ..Default::default()
             }
         )
     )
@@ -107,13 +109,13 @@ async fn test_validate_policy_group(#[case] payload: &str, #[case] expected_allo
         assert_eq!(admission_review_response.response.status, None);
     } else {
         assert_eq!(
-            admission_review_response.response.status,
-            Some(
-                policy_evaluator::admission_response::AdmissionResponseStatus {
-                    message: Some("The group policy rejected your request".to_owned()),
-                    code: None
-                }
-            )
+            Some("The group policy rejected your request".to_string()),
+            admission_review_response
+                .response
+                .status
+                .clone()
+                .expect("status should be filled")
+                .message,
         );
     }
 
@@ -125,10 +127,21 @@ async fn test_validate_policy_group(#[case] payload: &str, #[case] expected_allo
 
     let warning_msg = &warning_messages[0];
     if expected_allowed {
-        assert!(warning_msg.contains("ALLOWED"));
+        assert!(warning_msg.contains("allowed"));
     } else {
-        assert!(warning_msg.contains("DENIED"));
-        assert!(warning_msg.contains("Privileged container is not allowed"));
+        assert!(warning_msg.contains("rejected"));
+        let causes = admission_review_response
+            .response
+            .status
+            .expect("status should be filled")
+            .details
+            .expect("details should be filled")
+            .causes;
+        assert_eq!(1, causes.len());
+        assert_eq!(
+            Some("Privileged container is not allowed".to_string()),
+            causes[0].message,
+        );
     }
 }
 
@@ -191,7 +204,7 @@ async fn test_validate_raw() {
     assert_eq!(admission_review_response.response.status, None);
     assert!(admission_review_response.response.patch.is_some());
     assert_eq!(
-        Some("JSONPatch".to_owned()),
+        Some(admission_response::PatchType::JSONPatch),
         admission_review_response.response.patch_type
     );
 }
@@ -217,13 +230,13 @@ async fn test_validate_policy_group_does_not_do_mutation() {
 
     assert!(!admission_review_response.response.allowed);
     assert_eq!(
-        admission_review_response.response.status,
-        Some(
-            policy_evaluator::admission_response::AdmissionResponseStatus {
-                message: Some("The group policy rejected your request".to_owned()),
-                code: None
-            }
-        )
+        Some("The group policy rejected your request".to_string()),
+        admission_review_response
+            .response
+            .status
+            .clone()
+            .expect("status should be filled")
+            .message,
     );
     assert!(admission_review_response.response.patch.is_none());
 
@@ -233,8 +246,20 @@ async fn test_validate_policy_group_does_not_do_mutation() {
         .expect("warning messages should always be filled by policy groups");
     assert_eq!(1, warning_messages.len());
     let warning_msg = &warning_messages[0];
-    assert!(warning_msg.contains("DENIED"));
-    assert!(warning_msg.contains("mutation is not allowed inside of policy group"));
+    assert!(warning_msg.contains("rejected"));
+
+    let causes = admission_review_response
+        .response
+        .status
+        .expect("status should be filled")
+        .details
+        .expect("details should be filled")
+        .causes;
+    assert_eq!(1, causes.len());
+    assert_eq!(
+        Some("mutation is not allowed inside of policy group".to_string()),
+        causes[0].message,
+    );
 }
 
 #[tokio::test]
@@ -299,7 +324,8 @@ async fn test_audit() {
         admission_review_response.response.status,
         Some(AdmissionResponseStatus {
             message: Some("Privileged container is not allowed".to_owned()),
-            code: None
+            code: None,
+            ..Default::default()
         })
     );
 }
@@ -387,7 +413,8 @@ async fn test_timeout_protection_reject() {
         Some(
             AdmissionResponseStatus {
                 message: Some("internal server error: Guest call failure: guest code interrupted, execution deadline exceeded".to_owned()),
-                code: Some(500)
+                code: Some(500),
+                ..Default::default()
             }
         )
     );

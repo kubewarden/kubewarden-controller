@@ -160,6 +160,7 @@ fn validation_response_with_constraints(
                         status: Some(AdmissionResponseStatus {
                             message: Some(format!("Request rejected by policy {policy_id}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.")),
                             code: None,
+                            ..Default::default()
                         }),
                         // if `allowed_to_mutate` is false, we are in a validating webhook. If we send a patch, k8s will fail because validating webhook do not expect this field
                         patch: None,
@@ -197,11 +198,13 @@ fn validation_response_with_constraints(
 
 #[cfg(test)]
 mod tests {
-    use crate::test_utils::build_admission_review_request;
-    use lazy_static::lazy_static;
-    use rstest::*;
-
     use super::*;
+
+    use crate::test_utils::build_admission_review_request;
+
+    use lazy_static::lazy_static;
+    use policy_evaluator::admission_response;
+    use rstest::*;
 
     lazy_static! {
         static ref POLICY_ID: PolicyID = PolicyID::Policy("policy-id".to_string());
@@ -293,7 +296,7 @@ mod tests {
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
-                    patch_type: Some("application/json-patch+json".to_string()),
+                    patch_type: Some(admission_response::PatchType::JSONPatch),
                     ..Default::default()
                 },
             ),
@@ -308,7 +311,7 @@ mod tests {
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
-                    patch_type: Some("application/json-patch+json".to_string()),
+                    patch_type: Some(admission_response::PatchType::JSONPatch),
                     ..Default::default()
                 },
             ),
@@ -331,7 +334,7 @@ mod tests {
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
-                    patch_type: Some("application/json-patch+json".to_string()),
+                    patch_type: Some(admission_response::PatchType::JSONPatch),
                     ..Default::default()
                 },
             ),
@@ -347,7 +350,7 @@ mod tests {
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
-                    patch_type: Some("application/json-patch+json".to_string()),
+                    patch_type: Some(admission_response::PatchType::JSONPatch),
                     ..Default::default()
                 },
             ),
@@ -378,6 +381,7 @@ mod tests {
                     status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 },
@@ -408,6 +412,7 @@ mod tests {
                     status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 },
@@ -431,14 +436,14 @@ mod tests {
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
-                    patch_type: Some("application/json-patch+json".to_string()),
+                    patch_type: Some(admission_response::PatchType::JSONPatch),
                     ..Default::default()
                 },
             ),
             AdmissionResponse {
                 allowed: true,
                 patch: Some("patch".to_string()),
-                patch_type: Some("application/json-patch+json".to_string()),
+                patch_type: Some(admission_response::PatchType::JSONPatch),
                 ..Default::default()
             },
             "Mutated request from a policy allowed to mutate should be accepted in protect mode"
@@ -452,7 +457,7 @@ mod tests {
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
-                    patch_type: Some("application/json-patch+json".to_string()),
+                    patch_type: Some(admission_response::PatchType::JSONPatch),
                     ..Default::default()
                 },
             ),
@@ -493,6 +498,7 @@ mod tests {
                     status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 },
@@ -502,6 +508,7 @@ mod tests {
                     status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 }, "Not accepted request from a policy allowed to mutate should be rejected in protect mode"
@@ -530,6 +537,7 @@ mod tests {
                     status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 },
@@ -539,6 +547,7 @@ mod tests {
                     status: Some(AdmissionResponseStatus {
                         message: Some("some rejection message".to_string()),
                         code: Some(500),
+                        ..Default::default()
                     }),
                     ..Default::default()
                 }, "Not accepted request from a policy not allowed to mutate should be rejected in protect mode"
