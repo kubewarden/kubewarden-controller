@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
@@ -126,6 +127,20 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 				),
 			)
 		})
+
+		It("should delete the ValidatingWebhookConfiguration when the ClusterAdmissionPolicy is deleted", func() {
+			By("deleting the ClusterAdmissionPolicy")
+			Expect(
+				k8sClient.Delete(ctx, policy),
+			).To(Succeed())
+
+			By("waiting for the ValidatingWebhookConfiguration to be deleted")
+			Eventually(func(g Gomega) {
+				_, err := getTestValidatingWebhookConfiguration(ctx, policy.GetUniqueName())
+
+				g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			}, timeout, pollInterval).Should(Succeed())
+		})
 	})
 
 	When("creating a mutating ClusterAdmissionPolicy", Ordered, func() {
@@ -220,6 +235,20 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 					HaveField("Webhooks", Equal(originalMutatingWebhookConfiguration.Webhooks)),
 				),
 			)
+		})
+
+		It("should delete the MutatingWebhookConfiguration when the ClusterAdmissionPolicy is deleted", func() {
+			By("deleting the ClusterAdmissionPolicy")
+			Expect(
+				k8sClient.Delete(ctx, policy),
+			).To(Succeed())
+
+			By("waiting for the MutatingWebhookConfiguration to be deleted")
+			Eventually(func(g Gomega) {
+				_, err := getTestMutatingWebhookConfiguration(ctx, policy.GetUniqueName())
+
+				g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			}, timeout, pollInterval).Should(Succeed())
 		})
 	})
 

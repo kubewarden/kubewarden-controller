@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
@@ -125,6 +126,20 @@ var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster")
 					HaveField("Webhooks", Equal(originalValidatingWebhookConfiguration.Webhooks)),
 				),
 			)
+		})
+
+		It("should delete the ValidatingWebhookConfiguration when the ClusterAdmissionPolicyGroup is deleted", func() {
+			By("deleting the ClusterAdmissionPolicyGroup")
+			Expect(
+				k8sClient.Delete(ctx, policy),
+			).To(Succeed())
+
+			By("waiting for the ValidatingWebhookConfiguration to be deleted")
+			Eventually(func(g Gomega) {
+				_, err := getTestValidatingWebhookConfiguration(ctx, policy.GetUniqueName())
+
+				g.Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			}, timeout, pollInterval).Should(Succeed())
 		})
 	})
 
