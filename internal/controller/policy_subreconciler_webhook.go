@@ -60,6 +60,9 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 			constants.WebhookConfigurationPolicyNameAnnotationKey:      policy.GetName(),
 			constants.WebhookConfigurationPolicyNamespaceAnnotationKey: policy.GetNamespace(),
 		}
+		if _, ok := policy.(policiesv1.PolicyGroup); ok {
+			webhook.Annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] = "true"
+		}
 		webhook.Webhooks = []admissionregistrationv1.ValidatingWebhook{
 			{
 				Name: policy.GetUniqueName() + ".kubewarden.admission",

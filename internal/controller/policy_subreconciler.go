@@ -349,13 +349,20 @@ func findClusterPoliciesForPod(ctx context.Context, k8sClient client.Client, obj
 	return findClusterPoliciesForConfigMap(&configMap)
 }
 
-func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object, log logr.Logger) []reconcile.Request {
+func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object, isGroup bool, log logr.Logger) []reconcile.Request {
 	// Pre v1.16.0
 	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
 	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
 	partOfLabel := webhookConfiguration.GetLabels()["app.kubernetes.io/part-of"]
 	if !kubwardenLabelExists && partOfLabel != "kubewarden" {
 		return []reconcile.Request{}
+	}
+
+	if isGroup {
+		policyGroupAnnotation := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyGroupAnnotationKey]
+		if policyGroupAnnotation != "true" {
+			return []reconcile.Request{}
+		}
 	}
 
 	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
@@ -386,13 +393,20 @@ func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object
 	}
 }
 
-func findPolicyForWebhookConfiguration(webhookConfiguration client.Object, log logr.Logger) []reconcile.Request {
+func findPolicyForWebhookConfiguration(webhookConfiguration client.Object, isGroup bool, log logr.Logger) []reconcile.Request {
 	// Pre v1.16.0
 	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
 	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
 	partOfLabel := webhookConfiguration.GetLabels()[constants.PartOfLabelKey]
 	if !kubwardenLabelExists && partOfLabel != constants.PartOfLabelValue {
 		return []reconcile.Request{}
+	}
+
+	if isGroup {
+		policyGroupAnnotation := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyGroupAnnotationKey]
+		if policyGroupAnnotation != "true" {
+			return []reconcile.Request{}
+		}
 	}
 
 	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]

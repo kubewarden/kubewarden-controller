@@ -98,5 +98,5 @@ func (r *AdmissionPolicyGroupReconciler) findAdmissionPoliciesForPod(ctx context
 }
 
 func (r *AdmissionPolicyGroupReconciler) findAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	return findPolicyForWebhookConfiguration(webhookConfiguration, r.Log)
+	return findPolicyForWebhookConfiguration(webhookConfiguration, true, r.Log)
 }
