@@ -303,17 +303,17 @@ func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *
 		return nil, err
 	}
 
-	var admissionPoliciesGroup policiesv1.AdmissionPolicyGroupList
-	err = r.Client.List(ctx, &admissionPoliciesGroup, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
+	var admissionPolicyGroupList policiesv1.AdmissionPolicyGroupList
+	err = r.Client.List(ctx, &admissionPolicyGroupList, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed obtaining AdmissionPoliciesGroups: %w", err)
+		err = fmt.Errorf("failed obtaining AdmissionPolicyGroups: %w", err)
 		return nil, err
 	}
 
-	var clusterAdmissionPoliciesGroup policiesv1.ClusterAdmissionPolicyGroupList
-	err = r.Client.List(ctx, &clusterAdmissionPoliciesGroup, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
+	var clusterAdmissionPolicyGroupList policiesv1.ClusterAdmissionPolicyGroupList
+	err = r.Client.List(ctx, &clusterAdmissionPolicyGroupList, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
 	if err != nil && apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed obtaining ClusterAdmissionPoliciesGroup: %w", err)
+		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicyGroups: %w", err)
 		return nil, err
 	}
 
@@ -324,10 +324,10 @@ func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *
 	for _, admissionPolicy := range admissionPolicies.Items {
 		policies = append(policies, admissionPolicy.DeepCopy())
 	}
-	for _, admissionPolicyGroup := range admissionPoliciesGroup.Items {
+	for _, admissionPolicyGroup := range admissionPolicyGroupList.Items {
 		policies = append(policies, admissionPolicyGroup.DeepCopy())
 	}
-	for _, clusterAdmissionPolicyGroup := range clusterAdmissionPoliciesGroup.Items {
+	for _, clusterAdmissionPolicyGroup := range clusterAdmissionPolicyGroupList.Items {
 		policies = append(policies, clusterAdmissionPolicyGroup.DeepCopy())
 	}
 	return policies, nil
