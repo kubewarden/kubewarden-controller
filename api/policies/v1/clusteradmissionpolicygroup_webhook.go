@@ -45,7 +45,7 @@ func (r *ClusterAdmissionPolicyGroup) SetupWebhookWithManager(mgr ctrl.Manager) 
 	return nil
 }
 
-//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-clusteradmissionpolicygroup,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpoliciesgroup,verbs=create;update,versions=v1,name=mclusteradmissionpolicygroup.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-clusteradmissionpolicygroup,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicygroups,verbs=create;update,versions=v1,name=mclusteradmissionpolicygroup.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &ClusterAdmissionPolicyGroup{}
 
@@ -60,7 +60,7 @@ func (r *ClusterAdmissionPolicyGroup) Default() {
 	}
 }
 
-//+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-clusteradmissionpolicygroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpoliciesgroup,verbs=create;update,versions=v1,name=vclusteradmissionpolicygroup.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-clusteradmissionpolicygroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicygroups,verbs=create;update,versions=v1,name=vclusteradmissionpolicygroup.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &ClusterAdmissionPolicyGroup{}
 

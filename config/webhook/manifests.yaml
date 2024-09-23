@@ -44,7 +44,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - admissionpoliciesgroup
+    - admissionpolicygroups
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -86,7 +86,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - clusteradmissionpoliciesgroup
+    - clusteradmissionpolicygroups
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -155,7 +155,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - admissionpoliciesgroup
+    - admissionpolicygroups
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -197,7 +197,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - clusteradmissionpoliciesgroup
+    - clusteradmissionpolicygroups
   sideEffects: None
 - admissionReviewVersions:
   - v1
