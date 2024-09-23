@@ -18,7 +18,6 @@ import (
 
 //+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;delete;list;patch;watch
 
-//nolint:dupl // This function is similar to the other reconcileMutatingWebhookConfiguration
 func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 	ctx context.Context,
 	policy policiesv1.Policy,
@@ -111,7 +110,6 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfigurationDeletion(ct
 
 //+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;delete;list;patch;watch
 
-//nolint:dupl // This function is similar to the other reconcileValidatingWebhookConfiguration
 func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 	ctx context.Context,
 	policy policiesv1.Policy,
