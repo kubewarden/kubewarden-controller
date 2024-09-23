@@ -81,14 +81,6 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&corev1.Pod{},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPod),
 		).
-		// Despite this policy server watch is not strictly necessary, we
-		// include it for the integration tests, so that we identify
-		// policy server creations even when the controller-manager is not
-		// present (so no pods end up being created)
-		Watches(
-			&policiesv1.PolicyServer{},
-			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPolicyServer),
-		).
 		Watches(
 			&admissionregistrationv1.ValidatingWebhookConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyForWebhookConfiguration),
@@ -108,9 +100,7 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
 	return findPoliciesForPod(ctx, r.Client, object)
 }
-func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
-	return findPoliciesForPolicyServer(ctx, r.Client, object, r.DeploymentsNamespace)
-}
+
 func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
 	return findPolicyForWebhookConfiguration(webhookConfiguration, r.Log)
 }

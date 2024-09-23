@@ -81,14 +81,6 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 			&corev1.Pod{},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
 		).
-		// Despite this policy server watch is not strictly necessary, we
-		// include it for the integration tests, so that we identify
-		// policy server creations even when the controller-manager is not
-		// present (so no pods end up being created)
-		Watches(
-			&policiesv1.PolicyServer{},
-			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPolicyServer),
-		).
 		Watches(
 			&admissionregistrationv1.ValidatingWebhookConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPolicyForWebhookConfiguration),
@@ -107,9 +99,7 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
 	return findClusterPoliciesForPod(ctx, r.Client, object)
 }
-func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
-	return findClusterPoliciesForPolicyServer(ctx, r.Client, object, r.DeploymentsNamespace)
-}
+
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
 	return findClusterPolicyForWebhookConfiguration(webhookConfiguration, r.Log)
 }
