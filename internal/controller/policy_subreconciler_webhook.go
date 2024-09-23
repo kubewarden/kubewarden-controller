@@ -60,7 +60,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 			constants.WebhookConfigurationPolicyNamespaceAnnotationKey: policy.GetNamespace(),
 		}
 		if _, ok := policy.(policiesv1.PolicyGroup); ok {
-			webhook.Annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] = "true"
+			webhook.Annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] = constants.True
 		}
 		webhook.Webhooks = []admissionregistrationv1.ValidatingWebhook{
 			{

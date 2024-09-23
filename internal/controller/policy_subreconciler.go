@@ -434,11 +434,11 @@ func hasKubewardenLabel(labels map[string]string) bool {
 	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
 	partOfLabel := labels[constants.PartOfLabelKey]
 
-	return kubewardenLabel == "true" || partOfLabel == constants.PartOfLabelValue
+	return kubewardenLabel == constants.True || partOfLabel == constants.PartOfLabelValue
 }
 
 func hasGroupAnnotation(annotations map[string]string) bool {
-	return annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] == "true"
+	return annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] == constants.True
 }
 
 func getPolicyMapFromConfigMap(configMap *corev1.ConfigMap) (policyConfigEntryMap, error) {
