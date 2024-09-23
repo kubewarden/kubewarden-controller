@@ -350,19 +350,12 @@ func findClusterPoliciesForPod(ctx context.Context, k8sClient client.Client, obj
 }
 
 func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object, isGroup bool, log logr.Logger) []reconcile.Request {
-	// Pre v1.16.0
-	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
-	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
-	partOfLabel := webhookConfiguration.GetLabels()["app.kubernetes.io/part-of"]
-	if !kubwardenLabelExists && partOfLabel != "kubewarden" {
+	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
 		return []reconcile.Request{}
 	}
 
-	if isGroup {
-		policyGroupAnnotation := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyGroupAnnotationKey]
-		if policyGroupAnnotation != "true" {
-			return []reconcile.Request{}
-		}
+	if isGroup && !hasGroupAnnotation(webhookConfiguration.GetAnnotations()) {
+		return []reconcile.Request{}
 	}
 
 	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
@@ -394,19 +387,12 @@ func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object
 }
 
 func findPolicyForWebhookConfiguration(webhookConfiguration client.Object, isGroup bool, log logr.Logger) []reconcile.Request {
-	// Pre v1.16.0
-	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
-	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
-	partOfLabel := webhookConfiguration.GetLabels()[constants.PartOfLabelKey]
-	if !kubwardenLabelExists && partOfLabel != constants.PartOfLabelValue {
+	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
 		return []reconcile.Request{}
 	}
 
-	if isGroup {
-		policyGroupAnnotation := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyGroupAnnotationKey]
-		if policyGroupAnnotation != "true" {
-			return []reconcile.Request{}
-		}
+	if isGroup && !hasGroupAnnotation(webhookConfiguration.GetAnnotations()) {
+		return []reconcile.Request{}
 	}
 
 	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
@@ -440,6 +426,19 @@ func findPolicyForWebhookConfiguration(webhookConfiguration client.Object, isGro
 			},
 		},
 	}
+}
+
+func hasKubewardenLabel(labels map[string]string) bool {
+	// Pre v1.16.0
+	kubewardenLabel := labels["kubewarden"]
+	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
+	partOfLabel := labels[constants.PartOfLabelKey]
+
+	return kubewardenLabel == "true" || partOfLabel == constants.PartOfLabelValue
+}
+
+func hasGroupAnnotation(annotations map[string]string) bool {
+	return annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] == "true"
 }
 
 func getPolicyMapFromConfigMap(configMap *corev1.ConfigMap) (policyConfigEntryMap, error) {
