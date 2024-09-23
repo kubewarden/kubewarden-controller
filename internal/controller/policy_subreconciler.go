@@ -349,23 +349,6 @@ func findClusterPoliciesForPod(ctx context.Context, k8sClient client.Client, obj
 	return findClusterPoliciesForConfigMap(&configMap)
 }
 
-func findClusterPoliciesForPolicyServer(ctx context.Context, k8sClient client.Client, object client.Object, namespace string) []reconcile.Request {
-	policyServer, ok := object.(*policiesv1.PolicyServer)
-	if !ok {
-		return []reconcile.Request{}
-	}
-	policyServerDeploymentName := policyServerDeploymentName(policyServer.Name)
-	configMap := corev1.ConfigMap{}
-	err := k8sClient.Get(ctx, client.ObjectKey{
-		Namespace: namespace,
-		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
-	}, &configMap)
-	if err != nil {
-		return []reconcile.Request{}
-	}
-	return findClusterPoliciesForConfigMap(&configMap)
-}
-
 func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object, log logr.Logger) []reconcile.Request {
 	// Pre v1.16.0
 	_, kubwardenLabelExists := webhookConfiguration.GetLabels()["kubewarden"]
@@ -401,23 +384,6 @@ func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object
 			},
 		},
 	}
-}
-
-func findPoliciesForPolicyServer(ctx context.Context, k8sClient client.Client, object client.Object, namespace string) []reconcile.Request {
-	policyServer, ok := object.(*policiesv1.PolicyServer)
-	if !ok {
-		return []reconcile.Request{}
-	}
-	policyServerDeploymentName := policyServerDeploymentName(policyServer.Name)
-	configMap := corev1.ConfigMap{}
-	err := k8sClient.Get(ctx, client.ObjectKey{
-		Namespace: namespace,
-		Name:      policyServerDeploymentName, // As the deployment name matches the name of the ConfigMap
-	}, &configMap)
-	if err != nil {
-		return []reconcile.Request{}
-	}
-	return findPoliciesForConfigMap(&configMap)
 }
 
 func findPolicyForWebhookConfiguration(webhookConfiguration client.Object, log logr.Logger) []reconcile.Request {
