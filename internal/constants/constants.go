@@ -52,6 +52,8 @@ const (
 	WebhookConfigurationPolicyScopeLabelKey          = "kubewardenPolicyScope"
 	WebhookConfigurationPolicyNameAnnotationKey      = "kubewardenPolicyName"
 	WebhookConfigurationPolicyNamespaceAnnotationKey = "kubewardenPolicyNamespace"
+	WebhookConfigurationPolicyGroupAnnotationKey     = "kubewardenPolicyGroup"
+	True                                             = "true"
 
 	// Scope.
 	NamespacePolicyScope = "namespace"

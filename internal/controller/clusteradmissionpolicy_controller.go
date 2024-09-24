@@ -101,5 +101,5 @@ func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ct
 }
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	return findClusterPolicyForWebhookConfiguration(webhookConfiguration, r.Log)
+	return findClusterPolicyForWebhookConfiguration(webhookConfiguration, false, r.Log)
 }
