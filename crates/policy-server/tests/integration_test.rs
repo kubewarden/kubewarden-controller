@@ -827,16 +827,24 @@ async fn test_otel() {
             .unwrap();
     let metrics = &metrics_output_json["resourceMetrics"][0]["scopeMetrics"][0];
     assert_eq!(metrics["scope"]["name"], "kubewarden");
-    assert!(metrics["metrics"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|m| { m["name"] == "kubewarden_policy_evaluation_latency_milliseconds" }));
-    assert!(metrics["metrics"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|m| { m["name"] == "kubewarden_policy_evaluations_total" }));
+    assert!(
+        metrics["metrics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| { m["name"] == "kubewarden_policy_evaluation_latency_milliseconds" }),
+        "metrics_output_json: {}",
+        serde_json::to_string_pretty(&metrics_output_json).unwrap()
+    );
+    assert!(
+        metrics["metrics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| { m["name"] == "kubewarden_policy_evaluations_total" }),
+        "metrics_output_json: {}",
+        serde_json::to_string_pretty(&metrics_output_json).unwrap()
+    );
 
     let traces_output_json =
         (|| async { parse_exporter_output(traces_output_file.as_file()).await })
