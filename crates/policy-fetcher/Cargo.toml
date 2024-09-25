@@ -53,5 +53,5 @@ cfg-if = "1.0"
 rstest = "0.22"
 tempfile = "3.2"
 textwrap = "0.16"
-testcontainers = { version = "0.22", features = ["http_wait"] }
+testcontainers = { version = "0.23", features = ["http_wait"] }
 anyhow = "1.0.83"
