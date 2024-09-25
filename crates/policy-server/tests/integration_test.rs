@@ -10,7 +10,7 @@ use std::{
     time::Duration,
 };
 
-use common::app;
+use common::{app, setup};
 
 use axum::{
     body::Body,
@@ -43,6 +43,8 @@ use crate::common::default_test_config;
 
 #[tokio::test]
 async fn test_validate() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -86,6 +88,8 @@ async fn test_validate() {
     true,
 )]
 async fn test_validate_policy_group(#[case] payload: &str, #[case] expected_allowed: bool) {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -147,6 +151,8 @@ async fn test_validate_policy_group(#[case] payload: &str, #[case] expected_allo
 
 #[tokio::test]
 async fn test_validate_policy_not_found() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -166,6 +172,8 @@ async fn test_validate_policy_not_found() {
 
 #[tokio::test]
 async fn test_validate_invalid_payload() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -183,6 +191,8 @@ async fn test_validate_invalid_payload() {
 
 #[tokio::test]
 async fn test_validate_raw() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -211,6 +221,8 @@ async fn test_validate_raw() {
 
 #[tokio::test]
 async fn test_validate_policy_group_does_not_do_mutation() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -264,6 +276,8 @@ async fn test_validate_policy_group_does_not_do_mutation() {
 
 #[tokio::test]
 async fn test_validate_raw_policy_not_found() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -283,6 +297,8 @@ async fn test_validate_raw_policy_not_found() {
 
 #[tokio::test]
 async fn test_validate_raw_invalid_payload() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -300,6 +316,8 @@ async fn test_validate_raw_invalid_payload() {
 
 #[tokio::test]
 async fn test_audit() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -332,6 +350,8 @@ async fn test_audit() {
 
 #[tokio::test]
 async fn test_audit_policy_not_found() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -351,6 +371,8 @@ async fn test_audit_policy_not_found() {
 
 #[tokio::test]
 async fn test_audit_invalid_payload() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -368,6 +390,8 @@ async fn test_audit_invalid_payload() {
 
 #[tokio::test]
 async fn test_timeout_protection_accept() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -390,6 +414,8 @@ async fn test_timeout_protection_accept() {
 
 #[tokio::test]
 async fn test_timeout_protection_reject() {
+    setup();
+
     let config = default_test_config();
     let app = app(config).await;
 
@@ -422,6 +448,8 @@ async fn test_timeout_protection_reject() {
 
 #[tokio::test]
 async fn test_verified_policy() {
+    setup();
+
     let verification_cfg_yml = r#"---
     allOf:
       - kind: pubKey
@@ -477,6 +505,8 @@ async fn test_verified_policy() {
 
 #[tokio::test]
 async fn test_policy_with_invalid_settings() {
+    setup();
+
     let mut config = default_test_config();
     config.policies.insert(
         "invalid_settings".to_owned(),
@@ -523,6 +553,8 @@ async fn test_policy_with_invalid_settings() {
 
 #[tokio::test]
 async fn test_policy_with_wrong_url() {
+    setup();
+
     let mut config = default_test_config();
     config.policies.insert(
         "wrong_url".to_owned(),
@@ -653,14 +685,7 @@ mod certificate_reload_helpers {
 async fn test_detect_certificate_rotation() {
     use certificate_reload_helpers::*;
 
-    // Starting from rustls 0.22, each application must set its default crypto provider.
-    // This setup is done inside of the `main` function of the policy server,
-    // which is not called in this test.
-    // Hence we have to setup the crypto provider here.
-    let crypto_provider = rustls::crypto::ring::default_provider();
-    crypto_provider
-        .install_default()
-        .expect("Failed to install crypto provider");
+    setup();
 
     let certs_dir = tempfile::tempdir().unwrap();
     let cert_file = certs_dir.path().join("policy-server.pem");
@@ -734,6 +759,8 @@ async fn test_detect_certificate_rotation() {
 
 #[tokio::test]
 async fn test_otel() {
+    setup();
+
     let mut otelc_config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     otelc_config_path.push("tests/data/otel-collector-config.yaml");
 
