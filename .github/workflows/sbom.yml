@@ -8,8 +8,7 @@ on:
         type: string
         required: true
 
-permissions:
-  contents: read
+permissions: read-all
 
 jobs:
   sbom:
