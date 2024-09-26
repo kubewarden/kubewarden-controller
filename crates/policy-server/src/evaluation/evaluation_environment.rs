@@ -659,16 +659,6 @@ impl EvaluationEnvironment {
         // to define inside of the expression
         let allowed = rhai_engine.eval_expression::<bool>(expression.as_str())?;
 
-        // The API Server puts some limitations on the warnings:
-        // - they cannot exceed 256 characters
-        // - the size of all the warnings cannot exceed 4096 characters
-        // - they are returned as HTTP headers, hence not all characters are allowed
-        //
-        // Because of these reasons, we use the warning struct only to
-        // tell the user whether a member policy was evaluated or not. When it was
-        // evaluated we just tell the outcome (allow/reject).
-        let mut warnings = vec![];
-
         // The details of each policy evaluation are returned as part of the
         // AdmissionResponse.status.details.causes
         let mut status_causes = vec![];
@@ -677,13 +667,6 @@ impl EvaluationEnvironment {
 
         for policy_id in &policy_ids {
             if let Some(result) = evaluation_results.get(policy_id) {
-                let outcome = if result.allowed {
-                    "allowed"
-                } else {
-                    "rejected"
-                };
-                warnings.push(format!("{policy_id}: {outcome}",));
-
                 if !result.allowed {
                     let cause = admission_response::StatusCause {
                         field: Some(format!("spec.policies.{}", policy_id)),
@@ -692,14 +675,11 @@ impl EvaluationEnvironment {
                     };
                     status_causes.push(cause);
                 }
-            } else {
-                warnings.push(format!("{}: not evaluated", policy_id));
             }
         }
         debug!(
             ?policy_id,
             ?allowed,
-            ?warnings,
             ?status_causes,
             "policy group evaluation result"
         );
@@ -727,7 +707,7 @@ impl EvaluationEnvironment {
             patch: None,
             status,
             audit_annotations: None,
-            warnings: Some(warnings),
+            warnings: None,
         })
     }
 }
@@ -1061,11 +1041,6 @@ mod tests {
         "group_policy_with_unhappy_or_bracket_happy_and_unhappy_bracket",
         false,
         vec![
-            "unhappy_policy_2: rejected",
-            "unhappy_policy_1: rejected",
-            "happy_policy_1: allowed",
-        ],
-        vec![
             admission_response::StatusCause {
                 field: Some("spec.policies.unhappy_policy_1".to_string()),
                 message: Some("failing as expected".to_string()),
@@ -1081,17 +1056,11 @@ mod tests {
     #[case::not_all_policies_are_evaluated(
         "group_policy_with_unhappy_or_happy_or_unhappy",
         true,
-        vec![
-            "unhappy_policy_1: rejected",
-            "unhappy_policy_2: not evaluated",
-            "happy_policy_1: allowed",
-        ],
         Vec::new(), // no expected causes, since the request is accepted
     )]
     fn group_policy_warning_assignments(
         #[case] policy_id: &str,
         #[case] admission_accepted: bool,
-        #[case] expected_warnings: Vec<&str>,
         #[case] expected_status_causes: Vec<admission_response::StatusCause>,
     ) {
         let policy_id = PolicyID::Policy(policy_id.to_string());
@@ -1111,15 +1080,7 @@ mod tests {
             .validate(&policy_id, &validate_request)
             .expect("should not have errored");
         assert_eq!(response.allowed, admission_accepted);
-
-        let warnings = response.warnings.expect("should have warnings");
-        for expected in expected_warnings {
-            assert!(
-                warnings.iter().any(|w| w.contains(expected)),
-                "could not find warning {}",
-                expected
-            );
-        }
+        assert_eq!(response.warnings, None);
 
         if admission_accepted {
             assert!(response.status.is_none());
