@@ -11,6 +11,8 @@ spec:
     kind: ClusterAdmissionPolicyGroup
     listKind: ClusterAdmissionPolicyGroupList
     plural: clusteradmissionpolicygroups
+    shortNames:
+    - capg
     singular: clusteradmissionpolicygroup
   scope: Cluster
   versions:

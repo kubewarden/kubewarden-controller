@@ -118,9 +118,10 @@ type PolicyServerStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:scope=Cluster,shortName=ps
 //+kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.spec.replicas`,description="Policy Server replicas"
 //+kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`,description="Policy Server image"
+// +kubebuilder:deprecatedversion:warning="This version is deprecated. Please, consider using v1"
 
 // PolicyServer is the Schema for the policyservers API.
 type PolicyServer struct {

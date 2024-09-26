@@ -30,7 +30,7 @@ type AdmissionPolicyGroupSpec struct {
 // AdmissionPolicyGroup is the Schema for the AdmissionPolicyGroups API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,shortName=apg
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Policy Server",type=string,JSONPath=`.spec.policyServer`,description="Bound to Policy Server"
 // +kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"

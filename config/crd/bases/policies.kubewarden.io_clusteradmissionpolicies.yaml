@@ -11,6 +11,8 @@ spec:
     kind: ClusterAdmissionPolicy
     listKind: ClusterAdmissionPolicyList
     plural: clusteradmissionpolicies
+    shortNames:
+    - cap
     singular: clusteradmissionpolicy
   scope: Cluster
   versions:
@@ -586,6 +588,8 @@ spec:
       jsonPath: .status.policyStatus
       name: Status
       type: string
+    deprecated: true
+    deprecationWarning: This version is deprecated. Please, consider using v1
     name: v1alpha2
     schema:
       openAPIV3Schema:

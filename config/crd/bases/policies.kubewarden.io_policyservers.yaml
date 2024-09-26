@@ -11,6 +11,8 @@ spec:
     kind: PolicyServer
     listKind: PolicyServerList
     plural: policyservers
+    shortNames:
+    - ps
     singular: policyserver
   scope: Cluster
   versions:
@@ -1719,6 +1721,8 @@ spec:
       jsonPath: .spec.image
       name: Image
       type: string
+    deprecated: true
+    deprecationWarning: This version is deprecated. Please, consider using v1
     name: v1alpha2
     schema:
       openAPIV3Schema:
