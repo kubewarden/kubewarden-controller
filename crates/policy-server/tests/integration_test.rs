@@ -122,18 +122,9 @@ async fn test_validate_policy_group(#[case] payload: &str, #[case] expected_allo
                 .message,
         );
     }
+    assert_eq!(admission_review_response.response.warnings, None);
 
-    let warning_messages = &admission_review_response
-        .response
-        .warnings
-        .expect("warning messages should always be filled by policy groups");
-    assert_eq!(1, warning_messages.len());
-
-    let warning_msg = &warning_messages[0];
-    if expected_allowed {
-        assert!(warning_msg.contains("allowed"));
-    } else {
-        assert!(warning_msg.contains("rejected"));
+    if !expected_allowed {
         let causes = admission_review_response
             .response
             .status
@@ -252,13 +243,7 @@ async fn test_validate_policy_group_does_not_do_mutation() {
     );
     assert!(admission_review_response.response.patch.is_none());
 
-    let warning_messages = &admission_review_response
-        .response
-        .warnings
-        .expect("warning messages should always be filled by policy groups");
-    assert_eq!(1, warning_messages.len());
-    let warning_msg = &warning_messages[0];
-    assert!(warning_msg.contains("rejected"));
+    assert_eq!(admission_review_response.response.warnings, None);
 
     let causes = admission_review_response
         .response
