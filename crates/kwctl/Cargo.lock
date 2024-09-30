@@ -435,7 +435,7 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.1#3fb07c52f50618f4908a21510f1cf9830349720c"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.2#076c1444ea87b2dcbf59e89f6e95ddc92193d18c"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -3607,8 +3607,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.19.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.1#3fb07c52f50618f4908a21510f1cf9830349720c"
+version = "0.19.2"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.2#076c1444ea87b2dcbf59e89f6e95ddc92193d18c"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -5891,13 +5891,15 @@ dependencies = [
 
 [[package]]
 name = "wapc"
-version = "1.1.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b27ae434134e725e4d7d2d41e52e4c70f974d312dd96392c443875385d85a6c"
+checksum = "6efc8001745e96dd47ed9bf1f652d0bde7faddde3fdde33674e90356669cc5fa"
 dependencies = [
+ "async-trait",
  "log",
  "parking_lot",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -5936,6 +5938,7 @@ dependencies = [
  "rustix",
  "system-interface",
  "thiserror",
+ "tokio",
  "tracing",
  "wasmtime",
  "wiggle",
@@ -6278,16 +6281,19 @@ dependencies = [
 
 [[package]]
 name = "wasmtime-provider"
-version = "1.21.0"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad5b414159fe6efd0b8211d379b8eaae07c8128c5e49ca2bcbb186352be4b1dc"
+checksum = "8a7524bd8a59e29d4e8ec117289af6a4d1490cc15a93f2a927f86c442e409d34"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "cap-std",
  "cfg-if",
  "log",
  "parking_lot",
  "serde",
  "thiserror",
+ "tokio",
  "wapc",
  "wasi-common",
  "wasmtime",
