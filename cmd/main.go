@@ -138,8 +138,6 @@ func main() {
 	featureGateAdmissionWebhookMatchConditions, err := featuregates.CheckAdmissionWebhookMatchConditions(ctrl.GetConfigOrDie())
 	if err != nil {
 		setupLog.Error(err, "unable to check for feature gate AdmissionWebhookMatchConditions")
-		retcode = 1
-		return
 	}
 
 	if err = setupReconcilers(mgr, deploymentsNamespace, webhookServiceName, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions); err != nil {
