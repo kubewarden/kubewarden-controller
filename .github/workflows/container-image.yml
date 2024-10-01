@@ -65,6 +65,8 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64, linux/arm64
           push: true
+          sbom: true
+          provenance: mode=max
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
       - # Only build amd64 because buildx does not allow multiple platforms when
@@ -77,6 +79,8 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64
+          sbom: true
+          provenance: mode=max
           outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
