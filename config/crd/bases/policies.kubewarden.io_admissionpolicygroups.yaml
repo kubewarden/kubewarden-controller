@@ -11,6 +11,8 @@ spec:
     kind: AdmissionPolicyGroup
     listKind: AdmissionPolicyGroupList
     plural: admissionpolicygroups
+    shortNames:
+    - apg
     singular: admissionpolicygroup
   scope: Namespaced
   versions:

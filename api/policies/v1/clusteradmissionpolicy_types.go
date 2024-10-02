@@ -93,7 +93,7 @@ type ClusterAdmissionPolicySpec struct {
 // ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Cluster,shortName=cap
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Policy Server",type=string,JSONPath=`.spec.policyServer`,description="Bound to Policy Server"
 // +kubebuilder:printcolumn:name="Mutating",type=boolean,JSONPath=`.spec.mutating`,description="Whether the policy is mutating"
