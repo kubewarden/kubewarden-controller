@@ -103,6 +103,7 @@ func (r *AdmissionPolicyReconciler) findAdmissionPoliciesForPod(ctx context.Cont
 	return findPoliciesForPod(ctx, r.Client, object)
 }
 
+//nolint:dupl // This function is similar to the one for AdmissionPolicyGroup
 func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(ctx context.Context, webhookConfiguration client.Object) []reconcile.Request {
 	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
 		return []reconcile.Request{}
