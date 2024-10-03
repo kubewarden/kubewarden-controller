@@ -71,8 +71,6 @@ var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster")
 				}
 
 				Expect(validatingWebhookConfiguration.Labels[constants.PartOfLabelKey]).To(Equal(constants.PartOfLabelValue))
-				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.ClusterPolicyScope))
-				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey]).To(Equal(constants.True))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
@@ -108,8 +106,6 @@ var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster")
 			}, timeout, pollInterval).Should(Succeed())
 
 			delete(validatingWebhookConfiguration.Labels, constants.PartOfLabelKey)
-			validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
-			validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] = "false"
 			delete(validatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 			validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 			validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")

@@ -46,22 +46,15 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 			sideEffects = &noneSideEffects
 		}
 
-		policyScope := constants.NamespacePolicyScope
-		if policy.GetNamespace() == "" {
-			policyScope = constants.ClusterPolicyScope
-		}
 		webhook.Name = policy.GetUniqueName()
 		webhook.Labels = map[string]string{
-			constants.PartOfLabelKey:                          constants.PartOfLabelValue,
-			constants.WebhookConfigurationPolicyScopeLabelKey: policyScope,
+			constants.PartOfLabelKey: constants.PartOfLabelValue,
 		}
 		webhook.Annotations = map[string]string{
 			constants.WebhookConfigurationPolicyNameAnnotationKey:      policy.GetName(),
 			constants.WebhookConfigurationPolicyNamespaceAnnotationKey: policy.GetNamespace(),
 		}
-		if _, ok := policy.(policiesv1.PolicyGroup); ok {
-			webhook.Annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] = constants.True
-		}
+
 		webhook.Webhooks = []admissionregistrationv1.ValidatingWebhook{
 			{
 				Name: policy.GetUniqueName() + ".kubewarden.admission",
@@ -79,12 +72,14 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 				AdmissionReviewVersions: []string{"v1"},
 			},
 		}
+
 		if r.featureGateAdmissionWebhookMatchConditions {
 			webhook.Webhooks[0].MatchConditions = policy.GetMatchConditions()
 		} else if len(policy.GetMatchConditions()) > 0 {
 			r.Log.Info("Skipping matchConditions for policy as the feature gate AdmissionWebhookMatchConditions is disabled",
 				"policy", policy.GetName())
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -137,16 +132,9 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 			noneSideEffects := admissionregistrationv1.SideEffectClassNone
 			sideEffects = &noneSideEffects
 		}
-
-		policyScope := constants.NamespacePolicyScope
-		if policy.GetNamespace() == "" {
-			policyScope = constants.ClusterPolicyScope
-		}
-
 		webhook.Name = policy.GetUniqueName()
 		webhook.Labels = map[string]string{
-			constants.PartOfLabelKey:                          constants.PartOfLabelValue,
-			constants.WebhookConfigurationPolicyScopeLabelKey: policyScope,
+			constants.PartOfLabelKey: constants.PartOfLabelValue,
 		}
 		webhook.Annotations = map[string]string{
 			constants.WebhookConfigurationPolicyNameAnnotationKey:      policy.GetName(),
@@ -169,12 +157,14 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 				AdmissionReviewVersions: []string{"v1"},
 			},
 		}
+
 		if r.featureGateAdmissionWebhookMatchConditions {
 			webhook.Webhooks[0].MatchConditions = policy.GetMatchConditions()
 		} else if len(policy.GetMatchConditions()) > 0 {
 			r.Log.Info("Skipping matchConditions for policy as the feature gate AdmissionWebhookMatchConditions is disabled",
 				"policy", policy.GetName())
 		}
+
 		return nil
 	})
 	if err != nil {
