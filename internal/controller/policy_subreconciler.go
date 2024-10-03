@@ -349,96 +349,14 @@ func findClusterPoliciesForPod(ctx context.Context, k8sClient client.Client, obj
 	return findClusterPoliciesForConfigMap(&configMap)
 }
 
-func findClusterPolicyForWebhookConfiguration(webhookConfiguration client.Object, isGroup bool, log logr.Logger) []reconcile.Request {
-	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
-		return []reconcile.Request{}
-	}
-
-	if isGroup && !hasGroupAnnotation(webhookConfiguration.GetAnnotations()) {
-		return []reconcile.Request{}
-	}
-
-	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
-	if !found {
-		log.Info("Found a webhook configuration without a scope label, reconciling it",
-			"name", webhookConfiguration.GetName())
-		return []reconcile.Request{}
-	}
-
-	// Filter out AdmissionPolicies
-	if policyScope != constants.ClusterPolicyScope {
-		return []reconcile.Request{}
-	}
-
-	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
-	if !found {
-		log.Info("Found a webhook configuration without a policy name annotation, reconciling it",
-			"name", webhookConfiguration.GetName())
-		return []reconcile.Request{}
-	}
-
-	return []reconcile.Request{
-		{
-			NamespacedName: client.ObjectKey{
-				Name: policyName,
-			},
-		},
-	}
-}
-
-func findPolicyForWebhookConfiguration(webhookConfiguration client.Object, isGroup bool, log logr.Logger) []reconcile.Request {
-	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
-		return []reconcile.Request{}
-	}
-
-	if isGroup && !hasGroupAnnotation(webhookConfiguration.GetAnnotations()) {
-		return []reconcile.Request{}
-	}
-
-	policyScope, found := webhookConfiguration.GetLabels()[constants.WebhookConfigurationPolicyScopeLabelKey]
-	if !found {
-		log.Info("Found a webhook configuration without a scope label, reconciling it", "name", webhookConfiguration.GetName())
-		return []reconcile.Request{}
-	}
-
-	// Filter out ClusterAdmissionPolicies
-	if policyScope != constants.NamespacePolicyScope {
-		return []reconcile.Request{}
-	}
-
-	policyNamespace, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]
-	if !found {
-		log.Info("Found a webhook configuration without a namespace annotation, reconciling it", "name", webhookConfiguration.GetName())
-		return []reconcile.Request{}
-	}
-
-	policyName, found := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
-	if !found {
-		log.Info("Found a webhook configuration without a policy name annotation, reconciling it", "name", webhookConfiguration.GetName())
-		return []reconcile.Request{}
-	}
-
-	return []reconcile.Request{
-		{
-			NamespacedName: client.ObjectKey{
-				Name:      policyName,
-				Namespace: policyNamespace,
-			},
-		},
-	}
-}
-
+//nolint:goconst // we don't want to use a constant for "true"
 func hasKubewardenLabel(labels map[string]string) bool {
 	// Pre v1.16.0
 	kubewardenLabel := labels["kubewarden"]
 	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
 	partOfLabel := labels[constants.PartOfLabelKey]
 
-	return kubewardenLabel == constants.True || partOfLabel == constants.PartOfLabelValue
-}
-
-func hasGroupAnnotation(annotations map[string]string) bool {
-	return annotations[constants.WebhookConfigurationPolicyGroupAnnotationKey] == constants.True
+	return kubewardenLabel == "true" || partOfLabel == constants.PartOfLabelValue
 }
 
 func getPolicyMapFromConfigMap(configMap *corev1.ConfigMap) (policyConfigEntryMap, error) {
