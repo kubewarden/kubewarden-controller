@@ -31,7 +31,7 @@ jobs:
 
   sbom:
     needs: build
-    uses: ./.github/workflows/sbom.yml
+    uses: ./.github/workflows/attestation.yml
     permissions:
       packages: write
       id-token: write
