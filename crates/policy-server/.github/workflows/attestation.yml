@@ -1,0 +1,102 @@
+name: Sign attestation files
+
+on:
+  workflow_call:
+    inputs:
+      image-digest:
+        type: string
+        required: true
+
+jobs:
+  sbom:
+    name: Fetch, sign and verify SBOM and provenance files
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    permissions:
+      packages: write
+      id-token: write
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+
+      - name: Install the crane command
+        uses: kubewarden/github-actions/crane-installer@d94509d260ee11a92b4f65bc0acd297feec24d7f # v3.3.5
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify container image signature
+        run: |
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/policy-server/.github/workflows/container-image.yml@${{ github.ref }}" \
+            ghcr.io/${{ github.repository_owner }}/policy-server@${{ inputs.image-digest }}
+
+      - name: Find platform digest
+        shell: bash
+        run: |
+          set -e
+          DIGEST=$(crane digest \
+            --platform "linux/${{ matrix.arch }}" \
+            ghcr.io/${{ github.repository_owner }}/policy-server@${{ inputs.image-digest }})
+          echo "PLATFORM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Find attestation digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/policy-server@${{ inputs.image-digest }} \
+            | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest") | select(.annotations["vnd.docker.reference.digest"]=="${{ env.PLATFORM_DIGEST }}") | .digest'
+          )
+          echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Find provenance manifest digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/policy-server@${{ env.ATTESTATION_MANIFEST_DIGEST}} | \
+            jq '.layers[] | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2") | .digest')
+          echo "PROVENANCE_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Find SBOM manifest layers digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/policy-server@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
+            jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
+          echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Download provenance and SBOM files
+        run: |
+          set -e
+          crane blob ghcr.io/${{github.repository_owner}}/policy-server@${{ env.PROVENANCE_DIGEST}} > policy-server-attestation-${{ matrix.arch }}-provenance.json
+          sha256sum policy-server-attestation-${{ matrix.arch }}-provenance.json >> policy-server-attestation-${{ matrix.arch }}-checksum.txt
+
+
+          for sbom_digest in "${{ env.SBOM_DIGEST }}"; do
+            crane blob ghcr.io/${{github.repository_owner}}/policy-server@$sbom_digest > policy-server-attestation-${{ matrix.arch }}-sbom-${sbom_digest#"sha256:"}.json
+            sha256sum policy-server-attestation-${{ matrix.arch }}-sbom-${sbom_digest#"sha256:"}.json >> policy-server-attestation-${{ matrix.arch }}-checksum.txt
+          done
+            
+      - name: Sign checksum file
+        run: |
+          cosign sign-blob --yes \
+            --bundle policy-server-attestation-${{ matrix.arch }}-checksum-cosign.bundle \
+            policy-server-attestation-${{ matrix.arch }}-checksum.txt
+            
+          cosign verify-blob \
+            --bundle policy-server-attestation-${{ matrix.arch }}-checksum-cosign.bundle \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/policy-server/.github/workflows/attestation.yml@${{ github.ref }}" \
+            policy-server-attestation-${{ matrix.arch }}-checksum.txt
+
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        with:
+          name: attestation-${{ matrix.arch }}
+          path: policy-server-attestation-${{ matrix.arch }}*

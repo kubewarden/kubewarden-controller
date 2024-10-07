@@ -20,19 +20,12 @@ jobs:
     uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
-
-  sign:
-    needs: build
-    uses: ./.github/workflows/sign-image.yml
-    permissions:
-      packages: write
       id-token: write
-    with:
-      image-digest: ${{ needs.build.outputs.digest }}
 
   sbom:
-    needs: build
-    uses: ./.github/workflows/sbom.yml
+    needs: 
+      - build
+    uses: ./.github/workflows/attestation.yml
     permissions:
       packages: write
       id-token: write
