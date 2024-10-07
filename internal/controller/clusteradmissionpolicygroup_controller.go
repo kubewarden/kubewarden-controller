@@ -24,6 +24,7 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 // Warning: this controller is deployed by a helm chart which has its own
@@ -96,6 +98,32 @@ func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPoliciesForP
 	return findClusterPoliciesForPod(ctx, r.Client, object)
 }
 
-func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	return findClusterPolicyForWebhookConfiguration(webhookConfiguration, true, r.Log)
+func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPolicyForWebhookConfiguration(ctx context.Context, webhookConfiguration client.Object) []reconcile.Request {
+	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
+		return []reconcile.Request{}
+	}
+
+	policyName, policyNameExists := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
+	if !policyNameExists {
+		return []reconcile.Request{}
+	}
+
+	var clusterAdmissionPolicyGroup policiesv1.ClusterAdmissionPolicyGroup
+	err := r.Get(ctx, client.ObjectKey{
+		Name: policyName,
+	}, &clusterAdmissionPolicyGroup)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.Log.Error(err, "cannot retrieve ClusterAdmissionPolicyGroup")
+		}
+		return []reconcile.Request{}
+	}
+
+	return []reconcile.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name: clusterAdmissionPolicyGroup.GetName(),
+			},
+		},
+	}
 }

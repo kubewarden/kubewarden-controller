@@ -24,6 +24,7 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 // Warning: this controller is deployed by a helm chart which has its own
@@ -97,6 +99,40 @@ func (r *AdmissionPolicyGroupReconciler) findAdmissionPoliciesForPod(ctx context
 	return findPoliciesForPod(ctx, r.Client, object)
 }
 
-func (r *AdmissionPolicyGroupReconciler) findAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	return findPolicyForWebhookConfiguration(webhookConfiguration, true, r.Log)
+//nolint:dupl // This function is similar to the one for AdmissionPolicy
+func (r *AdmissionPolicyGroupReconciler) findAdmissionPolicyForWebhookConfiguration(ctx context.Context, webhookConfiguration client.Object) []reconcile.Request {
+	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
+		return []reconcile.Request{}
+	}
+
+	policyName, policyNameExists := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
+	if !policyNameExists {
+		return []reconcile.Request{}
+	}
+
+	policyNamespace, policyNamespaceExists := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]
+	if !policyNamespaceExists {
+		return []reconcile.Request{}
+	}
+
+	var admissionPolicyGroup policiesv1.AdmissionPolicyGroup
+	err := r.Get(ctx, client.ObjectKey{
+		Name:      policyName,
+		Namespace: policyNamespace,
+	}, &admissionPolicyGroup)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.Log.Error(err, "cannot retrieve AdmissionPolicyGroup")
+		}
+		return []reconcile.Request{}
+	}
+
+	return []reconcile.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name:      admissionPolicyGroup.GetName(),
+				Namespace: admissionPolicyGroup.GetNamespace(),
+			},
+		},
+	}
 }

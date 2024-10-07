@@ -71,7 +71,6 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 				}
 
 				Expect(validatingWebhookConfiguration.Labels[constants.PartOfLabelKey]).To(Equal(constants.PartOfLabelValue))
-				Expect(validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.ClusterPolicyScope))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(validatingWebhookConfiguration.Webhooks).To(HaveLen(1))
@@ -107,7 +106,6 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 			}, timeout, pollInterval).Should(Succeed())
 
 			delete(validatingWebhookConfiguration.Labels, constants.PartOfLabelKey)
-			validatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
 			delete(validatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 			validatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 			validatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
@@ -180,7 +178,6 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 					return err
 				}
 				Expect(mutatingWebhookConfiguration.Labels[constants.PartOfLabelKey]).To(Equal(constants.PartOfLabelValue))
-				Expect(mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey]).To(Equal(constants.ClusterPolicyScope))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNameAnnotationKey]).To(Equal(policyName))
 				Expect(mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey]).To(BeEmpty())
 				Expect(mutatingWebhookConfiguration.Webhooks).To(HaveLen(1))
@@ -216,7 +213,6 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 			By("changing the MutatingWebhookConfiguration")
 
 			delete(mutatingWebhookConfiguration.Labels, constants.PartOfLabelKey)
-			mutatingWebhookConfiguration.Labels[constants.WebhookConfigurationPolicyScopeLabelKey] = newName("scope")
 			delete(mutatingWebhookConfiguration.Annotations, constants.WebhookConfigurationPolicyNameAnnotationKey)
 			mutatingWebhookConfiguration.Annotations[constants.WebhookConfigurationPolicyNamespaceAnnotationKey] = newName("namespace")
 			mutatingWebhookConfiguration.Webhooks[0].ClientConfig.Service.Name = newName("service")
