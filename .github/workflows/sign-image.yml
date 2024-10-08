@@ -30,3 +30,8 @@ jobs:
         run: |
           cosign sign --yes \
             ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ inputs.image-digest }}
+
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/sign-image.yml@${{ github.ref }}" \
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ inputs.image-digest }}
