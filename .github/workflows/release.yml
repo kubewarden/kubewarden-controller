@@ -93,10 +93,10 @@ jobs:
             }
             core.setFailed(`Draft release not found`)
 
-      - name: Download SBOM artifact
+      - name: Download attestation artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          pattern: sbom-*
+          pattern: attestation-*
           merge-multiple: true
 
       - name: Download CRDs artifact
@@ -107,6 +107,12 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
 
+      - name: Create tarball for the attestation files
+        run: |
+          for arch in "amd64" "arm64"; do
+            tar -czf attestation-$arch.tar.gz $(ls kubewarden-controller-attestation-$arch-*)
+          done
+
       - name: Upload release assets
         id: upload_release_assets
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
@@ -116,12 +122,8 @@ jobs:
             let path = require('path');
 
             let files = [
-              'kubewarden-controller-sbom-amd64.spdx',
-              'kubewarden-controller-sbom-amd64.spdx.cert',
-              'kubewarden-controller-sbom-amd64.spdx.sig',
-              'kubewarden-controller-sbom-arm64.spdx',
-              'kubewarden-controller-sbom-arm64.spdx.cert',
-              'kubewarden-controller-sbom-arm64.spdx.sig',
+              'attestation-amd64.tar.gz',
+              'attestation-arm64.tar.gz',
               "CRDS.tar.gz"]
             const {RELEASE_ID} = process.env
 
