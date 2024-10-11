@@ -81,7 +81,7 @@ jobs:
 
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/container-image.yml@${{ github.ref }}" \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/container-image.yml@${{ github.ref }}" \
             ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
 
       - # Only build amd64 because buildx does not allow multiple platforms when
