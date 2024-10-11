@@ -79,12 +79,12 @@ jobs:
           set -e
           crane blob ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ env.PROVENANCE_DIGEST}} \
             > kubewarden-controller-attestation-${{ matrix.arch }}-provenance.json
-          md5sum kubewarden-controller-attestation-${{ matrix.arch }}-provenance.json \
+          sha256sum kubewarden-controller-attestation-${{ matrix.arch }}-provenance.json \
             >> kubewarden-controller-attestation-${{ matrix.arch }}-checksum.txt
 
           crane blob ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ env.SBOM_DIGEST}} \
             > kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json
-          md5sum kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json \
+          sha256sum kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json \
             >> kubewarden-controller-attestation-${{ matrix.arch }}-checksum.txt
 
       - name: Sign checksum file
