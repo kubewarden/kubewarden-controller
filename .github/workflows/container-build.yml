@@ -17,17 +17,9 @@ jobs:
     uses: ./.github/workflows/container-image.yml
     permissions:
       packages: write
-    with:
-      push-image: true
-
-  sign:
-    needs: build
-    uses: ./.github/workflows/sign-image.yml
-    permissions:
-      packages: write
       id-token: write
     with:
-      image-digest: ${{ needs.build.outputs.digest }}
+      push-image: true
 
   sbom:
     needs: build
