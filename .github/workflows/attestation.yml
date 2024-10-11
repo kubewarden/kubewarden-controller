@@ -64,7 +64,7 @@ jobs:
 
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
             ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ env.PROVENANCE_DIGEST}}
 
       - name: Find SBOM manifest layer digest
@@ -96,7 +96,7 @@ jobs:
           cosign verify-blob \
             --bundle kubewarden-controller-attestation-${{ matrix.arch }}-checksum-cosign.bundle \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
             kubewarden-controller-attestation-${{ matrix.arch }}-checksum.txt
 
       - name: Upload SBOMs as artifacts

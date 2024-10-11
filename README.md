@@ -113,7 +113,7 @@ You can verify the container image with:
 
 ```shell
 cosign verify-blob --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     --bundle kubewarden-controller-attestation-amd64-provenance-cosign.bundle \
     kubewarden-controller-attestation-amd64-provenance.json
 ```
@@ -122,7 +122,7 @@ To verify the attestation manifest and its layer signatures:
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     ghcr.io/kubewarden/kubewarden-controller@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
 ```
 
@@ -166,7 +166,7 @@ layers signatures.
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
 
 crane manifest  ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
@@ -223,7 +223,7 @@ crane manifest  ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeff
 }
 
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity-regexp="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     ghcr.io/kubewarden/kubewarden-controller@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
 ```
 
