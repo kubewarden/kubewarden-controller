@@ -221,7 +221,7 @@ you can verify the checksum file signature using the following command:
 
 ```shell
 cosign verify-blob --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-    --certificate-identity-regexp="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0" \
+    --certificate-identity="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0" \
     --bundle audit-scanner-attestation-arm64-checksum-cosign.bundle \
     audit-scanner-attestation-arm64-checksum.txt
 ```
@@ -231,7 +231,7 @@ can use the following command:
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity-regexp="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0 \
+    --certificate-identity="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0 \
     ghcr.io/kubewarden/audit-scanner@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
 ```
 
@@ -275,7 +275,7 @@ layers signatures.
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity-regexp="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0 \
+    --certificate-identity="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0 \
     ghcr.io/kubewarden/audit-scanner@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
 
 crane manifest  ghcr.io/kubewarden/audit-scanner@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
@@ -332,7 +332,7 @@ crane manifest  ghcr.io/kubewarden/audit-scanner@sha256:fc01fa6c82cffeffd23b737c
 }
 
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity-regexp="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0 \
+    --certificate-identity="https://github.com/kubewarden/audit-scanner/.github/workflows/attestation.yml@refs/tags/v1.17.0 \
     ghcr.io/kubewarden/audit-scanner@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
 ```
 
