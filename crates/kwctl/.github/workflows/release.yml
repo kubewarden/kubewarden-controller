@@ -21,6 +21,9 @@ jobs:
     permissions:
       id-token: write
       packages: write
+      actions: read
+      contents: write
+      attestations: write
 
   release:
     name: Create release
@@ -111,6 +114,11 @@ jobs:
               './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx',
               './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx.cert',
               './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx.sig',
+              './kwctl-linux-x86_64.attestation.sigstore.json//kwctl-linux-x86_64.attestation.sigstore.json',
+              './kwctl-linux-aarch64.attestation.sigstore.json/kwctl-linux-aarch64.attestation.sigstore.json',
+              './kwctl-darwin-x86_64.attestation.sigstore.json/kwctl-darwin-x86_64.attestation.sigstore.json',
+              './kwctl-darwin-aarch64.attestation.sigstore.json/kwctl-darwin-aarch64.attestation.sigstore.json',
+              './kwctl-windows-x86_64.exe.attestation.sigstore.json/kwctl-windows-x86_64.exe.attestation.sigstore.json',
               ]
             const {RELEASE_ID} = process.env
 
