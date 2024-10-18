@@ -2,6 +2,8 @@ SHELL := /bin/bash
 IMG ?= policy-server:latest
 BINDIR ?= bin
 SBOM_GENERATOR_TOOL_VERSION ?= v0.0.15
+CONTAINER_PLATFORM?=linux/amd64 # or linux/arm64
+
 
 SOURCE_FILES := $(shell test -e src/ && find src -type f)
 
@@ -58,7 +60,7 @@ tag:
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build --platform $(CONTAINER_PLATFORM) -t ${IMG} .
 
 bin:
 	mkdir $(BINDIR)
