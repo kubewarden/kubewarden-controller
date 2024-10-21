@@ -25,6 +25,7 @@ jobs:
     name: Build container image
     permissions:
       packages: write
+      id-token: write # to mint the OIDC token for Sigstore signatures
     runs-on: ubuntu-latest
     outputs:
       repository: ${{ steps.setoutput.outputs.repository }}
@@ -34,6 +35,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - name: Install cosign
+        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
       - name: Set up Docker Buildx
@@ -65,8 +68,21 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64, linux/arm64
           push: true
+          sbom: true
+          provenance: mode=max
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
+      - name: Sign container image
+        if: ${{ inputs.push-image }}
+        run: |
+          cosign sign --yes \
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
+
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/container-image.yml@${{ github.ref }}" \
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
+
       - # Only build amd64 because buildx does not allow multiple platforms when
         # exporting the image to a tarball. As we use this only for end-to-end tests
         # and they run on amd64 arch, let's skip the arm64 build for now.
@@ -77,6 +93,8 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64
+          sbom: true
+          provenance: mode=max
           outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
