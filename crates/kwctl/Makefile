@@ -30,7 +30,7 @@ coverage-unit-tests:
 .PHONY: coverage-e2e-tests
 coverage-e2e-tests:
 	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--all-features --test e2e --follow-exec \
+		--all-features --implicit-test-threads --test e2e \
 		--out xml --out html --output-dir coverage/e2e-tests
 
 .PHONY: clean
