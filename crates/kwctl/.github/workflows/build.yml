@@ -52,17 +52,6 @@ jobs:
         with:
           subject-path: kwctl-linux-${{ matrix.targetarch }}
 
-      - run: |
-          mv \
-            ${{ steps.attestations.outputs.bundle-path }} \
-            kwctl-linux-${{ matrix.targetarch }}.attestation.sigstore.json
-
-      - name: Upload attestations
-        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4.4.1
-        with:
-          path: kwctl-linux-${{ matrix.targetarch }}.attestation.sigstore.json
-          name: kwctl-linux-${{ matrix.targetarch }}.attestation.sigstore.json
-
       - name: Sign kwctl
         run: |
           cosign sign-blob --yes kwctl-linux-${{ matrix.targetarch }} --output-certificate kwctl-linux-${{ matrix.targetarch}}.pem --output-signature kwctl-linux-${{ matrix.targetarch }}.sig
@@ -155,17 +144,6 @@ jobs:
         with:
           subject-path: kwctl-darwin-${{ matrix.targetarch }}
 
-      - run: |
-          mv \
-            ${{ steps.attestations.outputs.bundle-path }} \
-            kwctl-darwin-${{ matrix.targetarch }}.attestation.sigstore.json
-
-      - name: Upload attestations
-        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4.4.1
-        with:
-          path: kwctl-darwin-${{ matrix.targetarch }}.attestation.sigstore.json
-          name: kwctl-darwin-${{ matrix.targetarch }}.attestation.sigstore.json
-
       - name: Sign kwctl
         run: cosign sign-blob --yes kwctl-darwin-${{ matrix.targetarch }} --output-certificate kwctl-darwin-${{ matrix.targetarch }}.pem --output-signature kwctl-darwin-${{ matrix.targetarch }}.sig
 
@@ -251,15 +229,6 @@ jobs:
         id: attestations
         with:
           subject-path: kwctl-windows-${{ matrix.targetarch }}.exe
-
-      - run: |
-          move ${{ steps.attestations.outputs.bundle-path }} kwctl-windows-${{ matrix.targetarch }}.exe.attestation.sigstore.json
-
-      - name: Upload attestations
-        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4.4.1
-        with:
-          path: kwctl-windows-${{ matrix.targetarch }}.exe.attestation.sigstore.json
-          name: kwctl-windows-${{ matrix.targetarch }}.exe.attestation.sigstore.json
 
       - name: Sign kwctl
         run: cosign sign-blob --yes kwctl-windows-x86_64.exe --output-certificate kwctl-windows-x86_64.pem --output-signature kwctl-windows-x86_64.sig

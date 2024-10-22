@@ -335,14 +335,17 @@ Verified OK
 
 # Software bill of materials & provenance
 
-Kwctl has its software bill of materials (SBOM) and build
-[Provenance](https://slsa.dev/spec/v1.0/provenance) information published every
-release. It follows the [SPDX](https://spdx.dev/) format and
-[SLSA](https://slsa.dev/provenance/v0.2#schema) provenance schema. You can find them together with the signature and certificate used to sign it
-in the [releases assets](https://github.com/kubewarden/kwctl/releases).
+Kwctl has its software bill of materials (SBOM) published every release. They
+follow the [SPDX](https://spdx.dev/) format, you can find them together with
+the signature and certificate used to sign it in the [releases
+assets](https://github.com/kubewarden/kwctl/releases).
 
-The provenance files are also accesible at the GitHub Actions' [provenance](https://github.com/kubewarden/kwctl/attestations) tab.
-For information on their format and how to verify them, see the [GitHub documentation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/verifying-attestations-offline).
+The build [Provenance](https://slsa.dev/spec/v1.0/provenance) files are
+following the [SLSA](https://slsa.dev/provenance/v0.2#schema) provenance schema
+and are accesible at the GitHub Actions'
+[provenance](https://github.com/kubewarden/kwctl/attestations) tab. For
+information on their format and how to verify them, see the [GitHub
+documentation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/verifying-attestations-offline).
 
 ## Security disclosure
 
