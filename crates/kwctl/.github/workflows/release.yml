@@ -23,6 +23,7 @@ jobs:
       packages: write
       actions: read
       contents: write
+      attestations: write
 
   release:
     name: Create release
