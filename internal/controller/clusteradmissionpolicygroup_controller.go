@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 // Warning: this controller is deployed by a helm chart which has its own
@@ -97,5 +98,20 @@ func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPoliciesForP
 }
 
 func (r *ClusterAdmissionPolicyGroupReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
-	return findClusterPolicyForWebhookConfiguration(webhookConfiguration, true, r.Log)
+	if !hasKubewardenLabel(webhookConfiguration.GetLabels()) {
+		return []reconcile.Request{}
+	}
+
+	policyName := webhookConfiguration.GetAnnotations()[constants.WebhookConfigurationPolicyNameAnnotationKey]
+	if policyName == "" {
+		return []reconcile.Request{}
+	}
+
+	return []reconcile.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name: policyName,
+			},
+		},
+	}
 }
