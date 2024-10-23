@@ -92,7 +92,6 @@ jobs:
           directory: coverage/unit-tests
           flags: unit-tests
           verbose: true
-      - uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
 
       - name: Generate e2e-tests coverage
         run: make coverage-e2e-tests
