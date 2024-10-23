@@ -19,19 +19,8 @@ e2e-tests:
 	cargo test --test '*'
 	
 .PHONY: coverage
-coverage: coverage-unit-tests coverage-e2e-tests
-	
-.PHONY: coverage-unit-tests
-coverage-unit-tests:
-	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--all-features --implicit-test-threads --bins \
-		--out xml --out html --output-dir coverage/unit-tests
-	
-.PHONY: coverage-e2e-tests
-coverage-e2e-tests:
-	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--all-features --implicit-test-threads --test e2e \
-		--out xml --out html --output-dir coverage/e2e-tests
+coverage:
+	cargo llvm-cov --html
 
 .PHONY: clean
 clean:
