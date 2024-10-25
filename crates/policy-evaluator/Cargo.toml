@@ -6,7 +6,7 @@ authors = [
 ]
 edition = "2021"
 name = "policy-evaluator"
-version = "0.19.2"
+version = "0.19.3"
 
 [workspace]
 members = ["crates/burrego"]
@@ -51,13 +51,13 @@ wapc = "2.0"
 wasi-common = { workspace = true }
 wasmparser = "0.219"
 wasmtime = { workspace = true }
-wasmtime-provider = { version = "2.0.0", features = ["cache"] }
+wasmtime-provider = { version = "2.1.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
-wasi-common = "25.0"
-wasmtime = "25.0"
-wasmtime-wasi = "25.0"
+wasi-common = "26.0"
+wasmtime = "26.0"
+wasmtime-wasi = "26.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
