@@ -79,7 +79,7 @@ jobs:
           override: true
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@a533731dca077df9a3f937b9dcafcf679010d002 # v2.44.50
+        uses: taiki-e/install-action@278aeeb6e331c1bd610bffe45862e09452854b1a # v2.44.53
         with:
           tool: cargo-llvm-cov
 
