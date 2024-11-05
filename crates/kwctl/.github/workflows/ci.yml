@@ -80,7 +80,7 @@ jobs:
           override: true
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@278aeeb6e331c1bd610bffe45862e09452854b1a # v2.44.53
+        uses: taiki-e/install-action@678b06b887cdbf44fa0601e5915f865e17c2241d # v2.44.60
         with:
           tool: cargo-llvm-cov
 
@@ -92,13 +92,12 @@ jobs:
 
       - name: Upload unit-tests coverage to Codecov
         uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
         with:
           files: lcov.info
           fail_ci_if_error: true
           name: unit-tests and e2e-tests
           verbose: true
+          token: ${{ secrets.CODECOV_ORG_TOKEN }}
 
   fmt:
     name: Rustfmt
