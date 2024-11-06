@@ -36,7 +36,7 @@ syntect = { version = "5.2", default-features = false, features = [
   "parsing",
 ] }
 tar = "0.4.40"
-thiserror = "1.0"
+thiserror = "2.0"
 tiny-bench = "0.4"
 tokio = { version = "^1.41.0", features = ["full"] }
 tracing = "0.1"
