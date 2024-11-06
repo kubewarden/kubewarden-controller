@@ -40,7 +40,7 @@ sigstore = { version = "0.10", default-features = false, features = [
   "cosign-rustls-tls",
   "cached-client",
 ] }
-thiserror = "1.0"
+thiserror = "2.0"
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
 walkdir = "2"
