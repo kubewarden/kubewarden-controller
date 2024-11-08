@@ -60,6 +60,6 @@ assert_cmd = "2.0.14"
 hyper = { version = "1.5.0" }
 predicates = "3.1"
 rstest = "0.23.0"
-tempfile = "3.12"
+tempfile = "3.14"
 testcontainers = { version = "0.23", features = ["blocking"] }
 tower-test = "0.4"
