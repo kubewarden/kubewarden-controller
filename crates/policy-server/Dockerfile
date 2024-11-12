@@ -13,7 +13,8 @@ RUN mkdir /usr/src/policy-server
 WORKDIR /usr/src/policy-server
 COPY ./ ./
 
-RUN cargo install --target aarch64-unknown-linux-musl --path .
+RUN cargo install cargo-auditable
+RUN cargo auditable install --target aarch64-unknown-linux-musl --path .
 
 FROM --platform=${BUILDPLATFORM} ghcr.io/cross-rs/x86_64-unknown-linux-musl:0.2.5 AS build-amd64
 ARG BUILDPLATFORM
@@ -30,7 +31,8 @@ RUN mkdir /usr/src/policy-server
 WORKDIR /usr/src/policy-server
 COPY ./ ./
 
-RUN cargo install --target x86_64-unknown-linux-musl --path .
+RUN cargo install cargo-auditable
+RUN cargo auditable install --target x86_64-unknown-linux-musl --path .
 
 FROM --platform=$BUILDPLATFORM alpine AS cfg
 RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd
