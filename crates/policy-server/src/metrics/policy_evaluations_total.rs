@@ -7,7 +7,7 @@ lazy_static! {
     static ref POLICY_EVALUATIONS_TOTAL: Counter<u64> =
         opentelemetry::global::meter(super::METER_NAME)
             .u64_counter("kubewarden_policy_evaluations_total")
-            .init();
+            .build();
 }
 
 pub fn add_policy_evaluation(policy_evaluation: impl PolicyEvaluationMetric) {

@@ -9,7 +9,7 @@ lazy_static! {
     static ref POLICY_EVALUATION_LATENCY: Histogram<u64> =
         opentelemetry::global::meter(super::METER_NAME)
             .u64_histogram("kubewarden_policy_evaluation_latency_milliseconds")
-            .init();
+            .build();
 }
 
 pub fn record_policy_latency(latency: Duration, policy_evaluation: impl PolicyEvaluationMetric) {
