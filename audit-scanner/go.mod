@@ -7,7 +7,7 @@ require (
 	github.com/kubewarden/kubewarden-controller v1.19.0-beta1
 	github.com/rs/zerolog v1.33.0
 	github.com/spf13/cobra v1.8.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/sync v0.9.0
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
