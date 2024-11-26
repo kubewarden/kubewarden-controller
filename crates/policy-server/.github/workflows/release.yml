@@ -13,25 +13,170 @@ jobs:
     permissions: read-all
 
   build:
-    name: Build container image, sign it, and generate SBOMs
-    uses: ./.github/workflows/container-build.yml
+    name: Build container image
     permissions:
-      id-token: write
       packages: write
-      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    outputs:
+      repository: ${{ steps.setoutput.outputs.repository }}
+      tag: ${{ steps.setoutput.outputs.tag }}
+      artifact: ${{ steps.setoutput.outputs.artifact }}
+      digest: ${{ steps.setoutput.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Retrieve tag name (tag)
+        run: |
+          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+
+      - name: Push and push container image
+        id: build-image
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64, linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ghcr.io/${{github.repository_owner}}/policy-server:${{ env.TAG_NAME }}
+
+      - name: Sign container image
+        run: |
+          cosign sign --yes ghcr.io/${{github.repository_owner}}/policy-server@${{ steps.build-image.outputs.digest }}
+            
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/policy-server/.github/workflows/release.yml@${{ github.ref }}" \
+            ghcr.io/${{github.repository_owner}}/policy-server@${{ steps.build-image.outputs.digest }}
+
+      - id: setoutput
+        name: Set output parameters
+        run: |
+          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
+
+  sbom:
+    name: Fetch, sign and verify SBOM and provenance files
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    permissions:
+      packages: write
+      id-token: write
+    needs:
+      - build
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+
+      - name: Install the crane command
+        uses: kubewarden/github-actions/crane-installer@d94509d260ee11a92b4f65bc0acd297feec24d7f # v3.3.5
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify container image signature
+        run: |
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/policy-server/.github/workflows/release.yml@${{ github.ref }}" \
+            ghcr.io/${{ github.repository_owner }}/policy-server@${{ needs.build.outputs.digest }}
+
+      - name: Find platform digest
+        shell: bash
+        run: |
+          set -e
+          DIGEST=$(crane digest \
+            --platform "linux/${{ matrix.arch }}" \
+            ghcr.io/${{ github.repository_owner }}/policy-server@${{ needs.build.outputs.digest }})
+          echo "PLATFORM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Find attestation digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/policy-server@${{ needs.build.outputs.digest }} \
+            | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest") | select(.annotations["vnd.docker.reference.digest"]=="${{ env.PLATFORM_DIGEST }}") | .digest'
+          )
+          echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Find provenance manifest digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/policy-server@${{ env.ATTESTATION_MANIFEST_DIGEST}} | \
+            jq '.layers[] | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2") | .digest')
+          echo "PROVENANCE_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Find SBOM manifest layers digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/policy-server@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
+            jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
+          echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      - name: Download provenance and SBOM files
+        run: |
+          set -e
+          crane blob ghcr.io/${{github.repository_owner}}/policy-server@${{ env.PROVENANCE_DIGEST}} > policy-server-attestation-${{ matrix.arch }}-provenance.json
+          sha256sum policy-server-attestation-${{ matrix.arch }}-provenance.json >> policy-server-attestation-${{ matrix.arch }}-checksum.txt
+
+
+          for sbom_digest in "${{ env.SBOM_DIGEST }}"; do
+            crane blob ghcr.io/${{github.repository_owner}}/policy-server@$sbom_digest > policy-server-attestation-${{ matrix.arch }}-sbom-${sbom_digest#"sha256:"}.json
+            sha256sum policy-server-attestation-${{ matrix.arch }}-sbom-${sbom_digest#"sha256:"}.json >> policy-server-attestation-${{ matrix.arch }}-checksum.txt
+          done
+            
+      - name: Sign checksum file
+        run: |
+          cosign sign-blob --yes \
+            --bundle policy-server-attestation-${{ matrix.arch }}-checksum-cosign.bundle \
+            policy-server-attestation-${{ matrix.arch }}-checksum.txt
+            
+          cosign verify-blob \
+            --bundle policy-server-attestation-${{ matrix.arch }}-checksum-cosign.bundle \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/policy-server/.github/workflows/release.yml@${{ github.ref }}" \
+            policy-server-attestation-${{ matrix.arch }}-checksum.txt
+
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: attestation-${{ matrix.arch }}
+          path: policy-server-attestation-${{ matrix.arch }}*
 
   release:
     name: Create release
-
     needs:
       - ci
       - build
-
+      - sbom
     permissions:
       contents: write
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
