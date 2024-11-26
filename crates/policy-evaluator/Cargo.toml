@@ -47,17 +47,17 @@ tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
 validator = { version = "0.19", features = ["derive"] }
-wapc = "2.0"
+wapc = "2.1"
 wasi-common = { workspace = true }
 wasmparser = "0.220"
 wasmtime = { workspace = true }
-wasmtime-provider = { version = "2.1.0", features = ["cache"] }
+wasmtime-provider = { version = "2.2.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
-wasi-common = "26.0"
-wasmtime = "26.0"
-wasmtime-wasi = "26.0"
+wasi-common = "27.0"
+wasmtime = "27.0"
+wasmtime-wasi = "27.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
