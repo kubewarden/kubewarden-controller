@@ -1,24 +1,34 @@
 {
   "extends": [
-    "config:base",
+    "config:recommended",
     "schedule:earlyMondays",
     "helpers:pinGitHubActionDigests"
   ],
-  "labels": ["dependencies"],
-  "lockFileMaintenance": { "enabled": true },
-  "major": { "enabled": false },
-  "minor": { "enabled": false },
-  "patch": { "enabled": true },
+  "labels": [
+    "dependencies"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "major": {
+    "enabled": false
+  },
+  "minor": {
+    "enabled": false
+  },
+  "patch": {
+    "enabled": true
+  },
   "packageRules": [
     {
-      "matchPackagePatterns": [
-        "*"
-      ],
       "matchUpdateTypes": [
         "patch"
       ],
       "groupName": "all patchlevel dependencies",
-      "groupSlug": "all-patch"
+      "groupSlug": "all-patch",
+      "matchPackageNames": [
+        "*"
+      ]
     }
   ],
   "rebaseWhen": "behind-base-branch"
