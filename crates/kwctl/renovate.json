@@ -1,35 +1,40 @@
 {
   "extends": [
     "config:recommended",
-    "schedule:earlyMondays",
-    "helpers:pinGitHubActionDigests"
+    "helpers:pinGitHubActionDigests",
+    "schedule:nonOfficeHours"
   ],
   "labels": [
-    "dependencies"
+    "area/dependencies"
   ],
   "lockFileMaintenance": {
-    "enabled": true
+    "enabled": true,
+    "schedule": ["before 4am on monday"],
+    "automerge": true
   },
   "major": {
-    "enabled": false
+    "automerge": false
   },
   "minor": {
-    "enabled": false
-  },
-  "patch": {
-    "enabled": true
+    "automerge": false
   },
   "packageRules": [
     {
       "matchUpdateTypes": [
         "patch"
       ],
-      "groupName": "all patchlevel dependencies",
+      "groupName": "all patch level dependencies",
       "groupSlug": "all-patch",
       "matchPackageNames": [
         "*"
-      ]
+      ],
+      "automerge": true,
+      "schedule": ["* 0-3 * * *"]
     }
   ],
-  "rebaseWhen": "behind-base-branch"
+  "rebaseWhen": "behind-base-branch",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore"
 }
