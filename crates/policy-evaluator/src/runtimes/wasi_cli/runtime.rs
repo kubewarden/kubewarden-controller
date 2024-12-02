@@ -9,7 +9,7 @@ use crate::runtimes::wasi_cli::stack::{RunResult, Stack};
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a Stack);
 
-impl<'a> Runtime<'a> {
+impl Runtime<'_> {
     pub fn validate(
         &self,
         settings: &PolicySettings,

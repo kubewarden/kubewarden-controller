@@ -19,7 +19,7 @@ pub(crate) struct Runtime<'a>(pub(crate) &'a mut WapcStack);
 /// to look for this text
 const WAPC_EPOCH_INTERRUPTION_ERR_MSG: &str = "guest code interrupted, execution deadline exceeded";
 
-impl<'a> Runtime<'a> {
+impl Runtime<'_> {
     pub fn validate(
         &mut self,
         settings: &PolicySettings,
