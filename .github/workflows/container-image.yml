@@ -62,7 +62,7 @@ jobs:
       - name: Build and push container image
         if: ${{ inputs.push-image }}
         id: build-image
-        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
         with:
           context: .
           file: ./Dockerfile
@@ -88,7 +88,7 @@ jobs:
         # and they run on amd64 arch, let's skip the arm64 build for now.
         name: Build linux/amd64 container image
         if: ${{ inputs.push-image == false }}
-        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
         with:
           context: .
           file: ./Dockerfile
