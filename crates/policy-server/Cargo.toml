@@ -1,12 +1,13 @@
 [package]
 name = "policy-server"
-version = "1.19.0-rc1"
+version = "1.19.0"
 authors = [
   "Kubewarden Developers <kubewarden@suse.de>",
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
   "Víctor Cuadrado Juan <vcuadradojuan@suse.de>",
   "José Guilherme Vanz <jguilhermevanz@suse.com>",
+  "Fabrizio Sestito <fabrizio.sestito@suse.com>",
 ]
 edition = "2021"
 
