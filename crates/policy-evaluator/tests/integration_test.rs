@@ -7,6 +7,7 @@ use core::panic;
 use hyper::{Request, Response};
 use kube::client::Body;
 use kube::Client;
+use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
 use policy_evaluator::admission_response::PatchType;
 use policy_fetcher::oci_client::manifest::OciImageManifest;
 use rstest::*;
@@ -483,6 +484,48 @@ async fn test_oci_manifest_and_config_capability(
         manifest.config.to_string(),
         expected_manifest.config.to_string()
     );
+    callback_handler_shutdown_channel_tx
+        .send(())
+        .expect("cannot send shutdown signal");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_oci_digest_capability() {
+    let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
+        setup_callback_handler(None).await;
+
+    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+    let req = CallbackRequest {
+        request: CallbackRequestType::OciManifestDigest {
+            image: "ghcr.io/kubewarden/tests/policy-server:v1.13.0".to_owned(),
+        },
+        response_channel: tx,
+    };
+
+    let eval_ctx = EvaluationContext {
+        policy_id: "test".to_owned(),
+        callback_channel: Some(callback_handler_channel),
+        ctx_aware_resources_allow_list: Default::default(),
+    };
+
+    let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
+        .callback_channel
+        .clone()
+        .expect("missing callback channel");
+    assert!(cb_channel.try_send(req).is_ok());
+
+    // wait for the response
+    let response_raw = rx
+        .await
+        .expect("cannot receive response")
+        .expect("cannot get response");
+    let response: ManifestDigestResponse = serde_json::from_slice(&response_raw.payload).unwrap();
+
+    assert_eq!(
+        "sha256:0fe3cda88f30bdfacca7dc357f5671ea6ae9e6bafd3aef5e8a68541b53ea67b5", response.digest,
+        "unexpected digest"
+    );
+
     callback_handler_shutdown_channel_tx
         .send(())
         .expect("cannot send shutdown signal");
