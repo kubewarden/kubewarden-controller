@@ -15,7 +15,7 @@ use crate::{
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut Stack);
 
-impl<'a> Runtime<'a> {
+impl Runtime<'_> {
     pub fn validate(
         &mut self,
         settings: &PolicySettings,

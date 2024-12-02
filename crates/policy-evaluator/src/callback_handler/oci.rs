@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use cached::proc_macro::cached;
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
 use policy_fetcher::{
@@ -41,8 +41,8 @@ impl Client {
             .registry
             .manifest_digest(&image_with_proto, self.sources.as_ref())
             .await?;
-        serde_json::to_string(&image_digest)
-            .map_err(|e| anyhow!("Cannot serialize response to json: {}", e))
+
+        Ok(image_digest)
     }
 
     pub async fn manifest(&self, image: &str) -> Result<OciManifest> {
