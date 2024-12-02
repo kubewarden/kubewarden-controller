@@ -3,10 +3,11 @@ authors = [
   "Flavio Castelli <fcastelli@suse.com>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
   "Víctor Cuadrado Juan <vcuadradojuan@suse.com>",
+  "Fabrizio Sestito <fabrizio.sestito@suse.com>",
 ]
 edition = "2021"
 name = "policy-evaluator"
-version = "0.19.4"
+version = "0.19.5"
 
 [workspace]
 members = ["crates/burrego"]
