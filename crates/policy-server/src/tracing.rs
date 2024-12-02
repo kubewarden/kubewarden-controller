@@ -43,15 +43,10 @@ pub fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Resu
                 .with_tonic()
                 .build()?;
 
-            let tracer_config = opentelemetry_sdk::trace::Config::default().with_resource(
-                opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
-                    "service.name",
-                    config::SERVICE_NAME,
-                )]),
-            );
-
             let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
-                .with_config(tracer_config)
+                .with_resource(opentelemetry_sdk::Resource::new(vec![
+                    opentelemetry::KeyValue::new("service.name", config::SERVICE_NAME),
+                ]))
                 .with_batch_exporter(otlp_exporter, opentelemetry_sdk::runtime::Tokio)
                 .build();
 
