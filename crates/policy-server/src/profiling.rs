@@ -160,7 +160,7 @@ impl<I, T> Future for ProfileRunner<I, T> {
 pub(crate) async fn activate_memory_profiling() -> Result<(), ReportGenerationError> {
     let mut prof_ctl = jemalloc_pprof::PROF_CTL
         .as_ref()
-        .ok_or_else(|| ReportGenerationError::CannotGetJemallocControlHandle)?
+        .ok_or(ReportGenerationError::CannotGetJemallocControlHandle)?
         .lock()
         .await;
 
