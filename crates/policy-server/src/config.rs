@@ -41,6 +41,7 @@ pub struct Config {
     pub log_level: String,
     pub log_fmt: String,
     pub log_no_color: bool,
+    pub otlp_endpoint: Option<String>,
     pub daemon: bool,
     pub enable_pprof: bool,
     pub daemon_pid_file: String,
@@ -125,6 +126,9 @@ impl Config {
             .get_one::<bool>("log-no-color")
             .expect("clap should have assigned a default value")
             .to_owned();
+
+        let otlp_endpoint = matches.get_one::<String>("otlp-endpoint").cloned();
+
         let (cert_file, key_file) = tls_files(matches)?;
         let tls_config = if cert_file.is_empty() {
             None
@@ -160,6 +164,7 @@ impl Config {
             log_level,
             log_fmt,
             log_no_color,
+            otlp_endpoint,
             daemon,
             daemon_pid_file,
             daemon_stdout_file,
