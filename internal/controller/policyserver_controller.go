@@ -62,6 +62,8 @@ type PolicyServerReconciler struct {
 	AlwaysAcceptAdmissionReviewsInDeploymentsNamespace bool
 	MetricsEnabled                                     bool
 	TracingEnabled                                     bool
+	OtelSidecarEnabled                                 bool
+	OtelCollectorEndpoint                              string
 }
 
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

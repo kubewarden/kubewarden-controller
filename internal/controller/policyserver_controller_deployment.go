@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -222,8 +223,6 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 
 func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations map[string]string, admissionContainer *corev1.Container) {
 	if r.MetricsEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
-
 		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
 			admissionContainer.Env[index] = envvar
@@ -231,16 +230,64 @@ func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguratio
 			admissionContainer.Env = append(admissionContainer.Env, envvar)
 		}
 	}
-
 	if r.TracingEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
-
 		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
 			admissionContainer.Env[index] = logFmtEnvVar
 		} else {
 			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
 		}
+	}
+
+	if (r.MetricsEnabled || r.TracingEnabled) && !r.OtelSidecarEnabled {
+		// As the controller is sending data to remote otel collector, we need
+		// to replicate the env vars to the policy server deployment. Thus, it
+		// will be able to send data to the same collector.
+		otelEnvVarToReplicate := []string{
+			"OTEL_EXPORTER_OTLP_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_CLIENT_KEY",
+			"OTEL_EXPORTER_OTLP_COMPRESSION",
+			"OTEL_EXPORTER_OTLP_HEADERS",
+			"OTEL_EXPORTER_OTLP_INSECURE",
+			"OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY",
+			"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION",
+			"OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION",
+			"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+			"OTEL_EXPORTER_OTLP_METRICS_HEADERS",
+			"OTEL_EXPORTER_OTLP_METRICS_INSECURE",
+			"OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE",
+			"OTEL_EXPORTER_OTLP_METRICS_TIMEOUT",
+			"OTEL_EXPORTER_OTLP_TIMEOUT",
+			"OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE",
+			"OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY",
+			"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION",
+			"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+			"OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+			"OTEL_EXPORTER_OTLP_TRACES_INSECURE",
+			"OTEL_EXPORTER_OTLP_TRACES_TIMEOUT",
+		}
+		// "OTEL_EXPORTER_OTLP_ENDPOINT" is not replicated because the endpoint is passed using CLI flag.
+		for _, envVar := range otelEnvVarToReplicate {
+			if value := os.Getenv(envVar); value != "" {
+				envvar := corev1.EnvVar{Name: envVar, Value: value}
+				if index := envVarsContainVariable(admissionContainer.Env, envVar); index >= 0 {
+					admissionContainer.Env[index] = envvar
+				} else {
+					admissionContainer.Env = append(admissionContainer.Env, envvar)
+				}
+			}
+		}
+		// The rust library needs to have the scheme while the go one fails.
+		policyServerEndpoint := "http://" + r.OtelCollectorEndpoint
+		admissionContainer.Args = append(admissionContainer.Args, "--otlp-endpoint="+policyServerEndpoint)
+	}
+
+	if (r.MetricsEnabled || r.TracingEnabled) && r.OtelSidecarEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
 	}
 }
 

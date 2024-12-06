@@ -44,6 +44,7 @@ install = helm(
     settings.get('helm_charts_path') + '/charts/kubewarden-controller/', 
     name='kubewarden-controller', 
     namespace='kubewarden', 
+    values=settings.get("controller_values_file"),
     set=['image.repository=' + settings.get('image'), 'global.cattle.systemDefaultRegistry=' + settings.get('registry')]
 )
 
