@@ -39,12 +39,20 @@ for role in roles:
 if len(roles_rules_mapping["ClusterRole"]) == 0 or len(roles_rules_mapping["Role"]) == 0:
     fail("Failed to load cluster and namespace roles")
 
+additional_helm_installation_args = {}
+# If the user provided a values file, use it in the helm installation
+userProvidedValues = settings.get("controller_values_file")
+if userProvidedValues:
+	if not os.path.exists(userProvidedValues):
+		fail("The provided values file does not exist")
+	additional_helm_installation_args["values"] = userProvidedValues
 # Install kubewarden-controller helm chart
 install = helm(
     settings.get('helm_charts_path') + '/charts/kubewarden-controller/', 
     name='kubewarden-controller', 
     namespace='kubewarden', 
     set=['image.repository=' + settings.get('image'), 'global.cattle.systemDefaultRegistry=' + settings.get('registry')]
+    , **additional_helm_installation_args
 )
 
 objects = decode_yaml_stream(install)

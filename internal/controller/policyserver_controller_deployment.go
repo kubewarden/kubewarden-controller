@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -32,6 +33,9 @@ const (
 	policyStoreVolume                = "policy-store"
 	policyStoreVolumePath            = "/tmp"
 	sigstoreCacheDirPath             = "/tmp/sigstore-data"
+	otelClientCertificateVolumeName  = "otel-collector-client-certificate"
+	otelCertificateVolumeName        = "otel-collector-certificate"
+	defaultOtelCertificateMountMode  = 420
 )
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer.
@@ -147,7 +151,6 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 		templateAnnotations = make(map[string]string)
 	}
 
-	r.adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations, &admissionContainer)
 	configureLabelsAndAnnotations(policyServerDeployment, policyServer, configMapVersion)
 
 	policyServerDeployment.Spec = appsv1.DeploymentSpec{
@@ -211,6 +214,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 		},
 	}
 
+	r.adaptDeploymentForMetricsAndTracingConfiguration(policyServerDeployment, templateAnnotations)
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
 
 	if err := controllerutil.SetOwnerReference(policyServer, policyServerDeployment, r.Client.Scheme()); err != nil {
@@ -220,10 +224,13 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 	return nil
 }
 
-func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguration(templateAnnotations map[string]string, admissionContainer *corev1.Container) {
+// / Adapts the policy server deployment to support metrics and tracing
+// configuration. It's possible to use Otel collector as a sidecar or send
+// data to a remote collector. This function is responsible to configure the
+// policy server deployment for both.
+func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguration(policyServerDeployment *appsv1.Deployment, templateAnnotations map[string]string) {
+	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
 	if r.MetricsEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
-
 		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
 			admissionContainer.Env[index] = envvar
@@ -231,15 +238,49 @@ func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguratio
 			admissionContainer.Env = append(admissionContainer.Env, envvar)
 		}
 	}
-
 	if r.TracingEnabled {
-		templateAnnotations[constants.OptelInjectAnnotation] = "true"
-
 		logFmtEnvVar := corev1.EnvVar{Name: constants.PolicyServerLogFmtEnvVar, Value: "otlp"}
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerLogFmtEnvVar); index >= 0 {
 			admissionContainer.Env[index] = logFmtEnvVar
 		} else {
 			admissionContainer.Env = append(admissionContainer.Env, logFmtEnvVar)
+		}
+	}
+
+	// If the otel sidecar is disabled, we  need to configure the policy
+	// server to send data to the remote collector. To keep the
+	// configuration simple, we are replicating the same OTEL configuration
+	// from the controller to the policy server. Therefore, it's not
+	// necessary to change in the `PolicyServer` CRD.
+	//
+	// To allow a secure communication (including mTLS), it's necessary to
+	// mount in the policy server deployment the same secrets containing
+	// the certificates used by the controller. It's expected that the
+	// secret has the tls.crt, tls.key and ca.crt keys in its data fields.
+	// The default field names for the secrets of type kubernetes.io/tls.
+
+	// Therefore, the mount path used in the policy server is the same used
+	// in the controller. The base directory is extracted from the OTEL
+	// environment variables. Allow us to use the same envvar values in the
+	// policy server deployment.
+	if (r.MetricsEnabled || r.TracingEnabled) && !r.OtelSidecarEnabled {
+		setOtelCertificateMounts(policyServerDeployment, r.OtelCertificateSecret, r.OtelClientCertificateSecret)
+		// As the controller is sending data to remote otel collector, we need
+		// to replicate the env vars to the policy server deployment. Thus, it
+		// will be able to send data to the same collector.
+		replicateOtelEnvVars(policyServerDeployment)
+	}
+
+	// If the otel sidecar is enabled, we need to inject the sidecar in the
+	// policy server deployment. The exporter will communicate with the sidecar
+	// using the localhost address.
+	if (r.MetricsEnabled || r.TracingEnabled) && r.OtelSidecarEnabled {
+		templateAnnotations[constants.OptelInjectAnnotation] = "true"
+		envvar := corev1.EnvVar{Name: "OTEL_EXPORTER_OTLP_ENDPOINT", Value: "http://localhost:4317"}
+		if index := envVarsContainVariable(admissionContainer.Env, "OTEL_EXPORTER_OTLP_ENDPOINT"); index >= 0 {
+			admissionContainer.Env[index] = envvar
+		} else {
+			admissionContainer.Env = append(admissionContainer.Env, envvar)
 		}
 	}
 }
@@ -301,6 +342,88 @@ func (r *PolicyServerReconciler) adaptDeploymentSettingsForPolicyServer(policySe
 				},
 			},
 		)
+	}
+}
+
+func setOtelCertificateMounts(policyServerDeployment *appsv1.Deployment, otelCertificateSecret, otelClientCertificateSecret string) {
+	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
+	defaultCertificateMountMode := int32(defaultOtelCertificateMountMode)
+
+	certificatePath := filepath.Dir(os.Getenv("OTEL_EXPORTER_OTLP_CERTIFICATE"))
+	if otelCertificateSecret != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(policyServerDeployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: otelCertificateVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  otelCertificateSecret,
+					DefaultMode: &defaultCertificateMountMode,
+				},
+			},
+		})
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts, corev1.VolumeMount{
+			Name:      otelCertificateVolumeName,
+			ReadOnly:  true,
+			MountPath: certificatePath,
+		})
+	}
+	clientCertificatePath := filepath.Dir(os.Getenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE"))
+	if otelClientCertificateSecret != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(policyServerDeployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: otelClientCertificateVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  otelClientCertificateSecret,
+					DefaultMode: &defaultCertificateMountMode,
+				},
+			},
+		})
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts, corev1.VolumeMount{
+			Name:      otelClientCertificateVolumeName,
+			ReadOnly:  true,
+			MountPath: clientCertificatePath,
+		})
+	}
+}
+
+func replicateOtelEnvVars(policyServerDeployment *appsv1.Deployment) {
+	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
+	otelEnvVarToReplicate := []string{
+		"OTEL_EXPORTER_OTLP_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_CLIENT_KEY",
+		"OTEL_EXPORTER_OTLP_COMPRESSION",
+		"OTEL_EXPORTER_OTLP_ENDPOINT",
+		"OTEL_EXPORTER_OTLP_HEADERS",
+		"OTEL_EXPORTER_OTLP_INSECURE",
+		"OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_METRICS_CLIENT_KEY",
+		"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION",
+		"OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION",
+		"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+		"OTEL_EXPORTER_OTLP_METRICS_HEADERS",
+		"OTEL_EXPORTER_OTLP_METRICS_INSECURE",
+		"OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE",
+		"OTEL_EXPORTER_OTLP_METRICS_TIMEOUT",
+		"OTEL_EXPORTER_OTLP_TIMEOUT",
+		"OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_TRACES_CLIENT_KEY",
+		"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION",
+		"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+		"OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+		"OTEL_EXPORTER_OTLP_TRACES_INSECURE",
+		"OTEL_EXPORTER_OTLP_TRACES_TIMEOUT",
+	}
+	for _, envVar := range otelEnvVarToReplicate {
+		if value := os.Getenv(envVar); value != "" {
+			envvar := corev1.EnvVar{Name: envVar, Value: value}
+			if index := envVarsContainVariable(admissionContainer.Env, envVar); index >= 0 {
+				admissionContainer.Env[index] = envvar
+			} else {
+				admissionContainer.Env = append(admissionContainer.Env, envvar)
+			}
+		}
 	}
 }
 

@@ -56,12 +56,27 @@ import (
 // PolicyServerReconciler reconciles a PolicyServer object.
 type PolicyServerReconciler struct {
 	client.Client
+	TelemetryConfiguration
 	Log                                                logr.Logger
 	Scheme                                             *runtime.Scheme
 	DeploymentsNamespace                               string
 	AlwaysAcceptAdmissionReviewsInDeploymentsNamespace bool
-	MetricsEnabled                                     bool
-	TracingEnabled                                     bool
+}
+
+// TelemetryConfiguration is a struct that contains the configuration for the
+// Telemetry configuration. Now, it only contains the configuration for the
+// OpenTelemetry.
+type TelemetryConfiguration struct {
+	MetricsEnabled bool
+	TracingEnabled bool
+	// OpenTelemetry configuration.
+	// OtelSidecarEnabled is a flag that enables the OpenTelemetry sidecar.
+	OtelSidecarEnabled bool
+	// OtelCertificateSecret and OtelClientCertificateSecret are the names of the
+	// secrets that contain the certificates used with the communication between
+	// controller and policy server with the remote OpenTelemetry collector.
+	OtelCertificateSecret       string
+	OtelClientCertificateSecret string
 }
 
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
