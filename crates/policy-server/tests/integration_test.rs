@@ -773,7 +773,7 @@ async fn test_otel() {
             traces_output_file_path.to_str().unwrap(),
             "/tmp/traces.json",
         ))
-        .with_mapped_port(4317, 4317.into())
+        .with_mapped_port(1337, 4317.into())
         .with_cmd(vec!["--config=/etc/otel-collector-config.yaml"])
         .with_startup_timeout(Duration::from_secs(30))
         .start()
@@ -783,8 +783,15 @@ async fn test_otel() {
     let mut config = default_test_config();
     config.metrics_enabled = true;
     config.log_fmt = "otlp".to_string();
-    setup_metrics().unwrap();
-    setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color).unwrap();
+    config.otlp_endpoint = Some("http://localhost:1337".to_string());
+    setup_metrics(config.otlp_endpoint.as_deref()).unwrap();
+    setup_tracing(
+        &config.log_level,
+        &config.log_fmt,
+        config.log_no_color,
+        config.otlp_endpoint.as_deref(),
+    )
+    .unwrap();
 
     let app = app(config).await;
 

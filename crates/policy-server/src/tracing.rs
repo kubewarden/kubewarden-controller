@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use opentelemetry::trace::TracerProvider;
+use opentelemetry_otlp::WithExportConfig;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -7,7 +8,12 @@ use crate::config;
 
 // Setup the tracing system. This MUST be done inside of a tokio Runtime
 // because some collectors rely on it and would panic otherwise.
-pub fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Result<()> {
+pub fn setup_tracing(
+    log_level: &str,
+    log_fmt: &str,
+    log_no_color: bool,
+    otlp_endpoint: Option<&str>,
+) -> Result<()> {
     // setup logging
     let filter_layer = EnvFilter::new(log_level)
         // some of our dependencies generate trace events too, but we don't care about them ->
@@ -37,11 +43,16 @@ pub fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Resu
         "otlp" => {
             // Create a new OpenTelemetry pipeline sending events to a
             // OpenTelemetry collector using the OTLP format.
-            // The collector must run on localhost (eg: use a sidecar inside of k8s)
-            // using GRPC
-            let otlp_exporter = opentelemetry_otlp::SpanExporter::builder()
-                .with_tonic()
-                .build()?;
+            // If no endpoint is provided, the default one is used.
+            // The default endpoint is "http://localhost:4317".
+            let mut otlp_exporter_builder =
+                opentelemetry_otlp::SpanExporter::builder().with_tonic();
+
+            if let Some(endpoint) = otlp_endpoint {
+                otlp_exporter_builder = otlp_exporter_builder.with_endpoint(endpoint);
+            }
+
+            let otlp_exporter = otlp_exporter_builder.build()?;
 
             let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
                 .with_resource(opentelemetry_sdk::Resource::new(vec![

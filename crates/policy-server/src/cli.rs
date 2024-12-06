@@ -169,7 +169,12 @@ pub(crate) fn build_cli() -> Command {
                 .long("continue-on-errors")
                 .env("KUBEWARDEN_CONTINUE_ON_ERRORS")
                 .action(ArgAction::SetTrue)
-                .hide(true)
+                .hide(true),
+            Arg::new("otlp-endpoint")
+                .long("otlp-endpoint")
+                .env("OTEL_EXPORTER_OTLP_ENDPOINT")
+                .default_value("http://localhost:4317")
+                .help("The OTLP gRPC endpoint for exporting traces and metrics.")
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 

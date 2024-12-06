@@ -21,10 +21,15 @@ async fn main() -> Result<()> {
     let matches = cli::build_cli().get_matches();
     let config = policy_server::config::Config::from_args(&matches)?;
 
-    setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color)?;
+    setup_tracing(
+        &config.log_level,
+        &config.log_fmt,
+        config.log_no_color,
+        config.otlp_endpoint.as_deref(),
+    )?;
 
     if config.metrics_enabled {
-        setup_metrics()?;
+        setup_metrics(config.otlp_endpoint.as_deref())?;
     };
 
     if config.daemon {

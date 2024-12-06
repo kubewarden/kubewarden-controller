@@ -10,18 +10,20 @@ pub use policy_evaluations_latency::record_policy_latency;
 
 const METER_NAME: &str = "kubewarden";
 
-pub fn setup_metrics() -> Result<()> {
-    let meter_reader = opentelemetry_sdk::metrics::PeriodicReader::builder(
-        opentelemetry_otlp::MetricExporter::builder()
-            .with_tonic()
-            .with_export_config(ExportConfig::default())
-            .build()?,
-        runtime::Tokio,
-    )
-    .build();
+pub fn setup_metrics(otlp_endpoint: Option<&str>) -> Result<()> {
+    let mut metric_exporter_builder = opentelemetry_otlp::MetricExporter::builder()
+        .with_tonic()
+        .with_export_config(ExportConfig::default());
+    if let Some(endpoint) = otlp_endpoint {
+        metric_exporter_builder = metric_exporter_builder.with_endpoint(endpoint);
+    }
+    let meter_reader = metric_exporter_builder.build()?;
+    let periodic_reader =
+        opentelemetry_sdk::metrics::PeriodicReader::builder(meter_reader, runtime::Tokio).build();
     let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
-        .with_reader(meter_reader)
+        .with_reader(periodic_reader)
         .build();
+
     global::set_meter_provider(meter_provider);
     Ok(())
 }
