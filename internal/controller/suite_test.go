@@ -97,6 +97,10 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		testEnv.Config = kubeConfig
 	}
 
+	if isTelemetryEnabled() {
+		By("Policy server controller telemetry is enabled")
+	}
+
 	restConfig, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(restConfig).NotTo(BeNil())
@@ -151,6 +155,9 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		Client:               k8sManager.GetClient(),
 		Scheme:               k8sManager.GetScheme(),
 		DeploymentsNamespace: deploymentsNamespace,
+		MetricsEnabled:       isTelemetryEnabled(),
+		TracingEnabled:       isTelemetryEnabled(),
+		OtelSidecarEnabled:   isTelemetryEnabled(),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

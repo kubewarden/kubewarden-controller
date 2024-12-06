@@ -893,6 +893,20 @@ var _ = Describe("PolicyServer controller", func() {
 				return k8sClient.Update(ctx, policyServer)
 			}).Should(Succeed())
 
+			if isTelemetryEnabled() {
+				Eventually(func() map[string]string {
+					deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+					if err != nil {
+						return nil
+					}
+					return deployment.Spec.Template.Annotations
+				}).Should(And(Not(Equal(oldAnnotations)), MatchAllKeys(Keys{
+					"new-annotation":                Equal("new-value"),
+					constants.OptelInjectAnnotation: Equal("true"),
+				})))
+				return
+			}
+
 			Eventually(func() map[string]string {
 				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
 				if err != nil {

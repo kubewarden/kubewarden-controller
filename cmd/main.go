@@ -76,7 +76,13 @@ func main() {
 	var probeAddr string
 	var enableMetrics bool
 	var enableTracing bool
+	var enableOtelSidecar bool
 	var openTelemetryEndpoint string
+	var openTelemetryCertificate string
+	var openTelemetryClientCertificateKey string
+	var openTelemetryClientCertificate string
+	var openTelemetryClientCertificateSecret string
+	var openTelemetryCertificateSecret string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -86,7 +92,16 @@ func main() {
 		"Enable metrics collection for all Policy Servers and the Kubewarden Controller")
 	flag.BoolVar(&enableTracing, "enable-tracing", false,
 		"Enable tracing collection for all Policy Servers")
+	flag.BoolVar(&enableOtelSidecar, "enable-otel-sidecar", false,
+		"Enable OpenTelemetry sidecar in Policy Servers")
+
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
+	flag.StringVar(&openTelemetryCertificate, "opentelemetry-certificate", "", "")
+	flag.StringVar(&openTelemetryClientCertificateKey, "opentelemetry-client-certificate-key", "", "")
+	flag.StringVar(&openTelemetryClientCertificate, "opentelemetry-client-certificate", "", "")
+	flag.StringVar(&openTelemetryClientCertificateSecret, "opentelemetry-client-certificate-secret", "", "")
+	flag.StringVar(&openTelemetryCertificateSecret, "opentelemetry-certificate-secret", "", "")
+
 	flag.StringVar(&deploymentsNamespace,
 		"deployments-namespace",
 		"",
@@ -106,7 +121,13 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	if enableMetrics {
-		shutdown, err := metrics.New(openTelemetryEndpoint)
+		if ok, err := checkOtelConfiguration(openTelemetryEndpoint, openTelemetryCertificate, openTelemetryClientCertificateKey, openTelemetryClientCertificate); !ok {
+			setupLog.Error(err, "invalid OpenTelemetry configuration")
+			retcode = 1
+			return
+
+		}
+		shutdown, err := metrics.New(openTelemetryEndpoint, openTelemetryCertificate, openTelemetryClientCertificateKey, openTelemetryClientCertificate)
 		if err != nil {
 			setupLog.Error(err, "unable to initialize metrics provider")
 			retcode = 1
@@ -140,7 +161,7 @@ func main() {
 		setupLog.Error(err, "unable to check for feature gate AdmissionWebhookMatchConditions")
 	}
 
-	if err = setupReconcilers(mgr, deploymentsNamespace, webhookServiceName, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions); err != nil {
+	if err = setupReconcilers(mgr, deploymentsNamespace, webhookServiceName, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions, enableOtelSidecar, openTelemetryEndpoint, openTelemetryCertificateSecret, openTelemetryClientCertificateSecret); err != nil {
 		setupLog.Error(err, "unable to create controllers")
 		retcode = 1
 		return
@@ -166,6 +187,14 @@ func main() {
 		retcode = 1
 		return
 	}
+}
+
+func checkOtelConfiguration(openTelemetryEndpoint, openTelemetryCertificate, openTelemetryClientCertificateKey, openTelemetryClientCertificate string) (bool, error) {
+	if len(openTelemetryEndpoint) == 0 {
+		return false, errors.New("OpenTelemetry endpoint is required")
+	}
+	// TODO validate TLS configuration if INSECURE is not set
+	return true, nil
 }
 
 func setupManager(deploymentsNamespace string, metricsAddr string, probeAddr string, enableLeaderElection bool) (ctrl.Manager, error) {
@@ -228,15 +257,20 @@ func setupProbes(mgr ctrl.Manager) error {
 	return nil
 }
 
-func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace, webhookServiceName string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions bool) error {
+func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace, webhookServiceName string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions, enableOtelSidecar bool, otelCollectorEndpoint, openTelemetryCertificateSecret, openTelemetryClientCertificateSecret string) error {
+
 	if err := (&controller.PolicyServerReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("policy-server-reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
 		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
-		MetricsEnabled: enableMetrics,
-		TracingEnabled: enableTracing,
+		MetricsEnabled:              enableMetrics,
+		TracingEnabled:              enableTracing,
+		OtelSidecarEnabled:          enableOtelSidecar,
+		OtelCollectorEndpoint:       otelCollectorEndpoint,
+		OtelCertificateSecret:       openTelemetryCertificateSecret,
+		OtelClientCertificateSecret: openTelemetryClientCertificateSecret,
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create PolicyServer controller"), err)
 	}
