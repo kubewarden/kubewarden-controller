@@ -76,6 +76,7 @@ func main() {
 	var probeAddr string
 	var enableMetrics bool
 	var enableTracing bool
+	var enableOtelSidecar bool
 	var openTelemetryEndpoint string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -86,6 +87,8 @@ func main() {
 		"Enable metrics collection for all Policy Servers and the Kubewarden Controller")
 	flag.BoolVar(&enableTracing, "enable-tracing", false,
 		"Enable tracing collection for all Policy Servers")
+	flag.BoolVar(&enableOtelSidecar, "enable-otel-sidecar", false,
+		"Enable OpenTelemetry sidecar in Policy Servers")
 	flag.StringVar(&openTelemetryEndpoint, "opentelemetry-endpoint", "127.0.0.1:4317", "The OpenTelemetry connection endpoint")
 	flag.StringVar(&deploymentsNamespace,
 		"deployments-namespace",
@@ -140,7 +143,7 @@ func main() {
 		setupLog.Error(err, "unable to check for feature gate AdmissionWebhookMatchConditions")
 	}
 
-	if err = setupReconcilers(mgr, deploymentsNamespace, webhookServiceName, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions); err != nil {
+	if err = setupReconcilers(mgr, deploymentsNamespace, webhookServiceName, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions, enableOtelSidecar, openTelemetryEndpoint); err != nil {
 		setupLog.Error(err, "unable to create controllers")
 		retcode = 1
 		return
@@ -228,15 +231,17 @@ func setupProbes(mgr ctrl.Manager) error {
 	return nil
 }
 
-func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace, webhookServiceName string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions bool) error {
+func setupReconcilers(mgr ctrl.Manager, deploymentsNamespace, webhookServiceName string, enableMetrics, enableTracing, alwaysAcceptAdmissionReviewsOnDeploymentsNamespace, featureGateAdmissionWebhookMatchConditions, enableOtelSidecar bool, otelCollectorEndpoint string) error {
 	if err := (&controller.PolicyServerReconciler{
 		Client:               mgr.GetClient(),
 		Scheme:               mgr.GetScheme(),
 		Log:                  ctrl.Log.WithName("policy-server-reconciler"),
 		DeploymentsNamespace: deploymentsNamespace,
 		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
-		MetricsEnabled: enableMetrics,
-		TracingEnabled: enableTracing,
+		MetricsEnabled:        enableMetrics,
+		TracingEnabled:        enableTracing,
+		OtelSidecarEnabled:    enableOtelSidecar,
+		OtelCollectorEndpoint: otelCollectorEndpoint,
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create PolicyServer controller"), err)
 	}

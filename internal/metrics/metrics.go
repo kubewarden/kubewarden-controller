@@ -24,9 +24,11 @@ const (
 func New(openTelemetryEndpoint string) (func(context.Context) error, error) {
 	ctx := context.Background()
 
+	// Create the OTLP exporter to export metrics to the specified endpoint.
+	// All the Otel exporter configuration is set by environment variables.
+	// Keep the usage of the openTelemetryEndpoint to keep back compatibility.
 	exporter, err := otlpmetricgrpc.New(
 		ctx,
-		otlpmetricgrpc.WithInsecure(),
 		otlpmetricgrpc.WithEndpoint(openTelemetryEndpoint),
 	)
 	if err != nil {
