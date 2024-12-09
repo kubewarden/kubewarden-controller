@@ -1,6 +1,6 @@
 use anyhow::Result;
 use opentelemetry::{global, KeyValue};
-use opentelemetry_otlp::{ExportConfig, WithExportConfig};
+use opentelemetry_otlp::{ExportConfig, WithExportConfig, WithTonicConfig};
 use opentelemetry_sdk::runtime;
 
 mod policy_evaluations_total;
@@ -8,11 +8,14 @@ pub use policy_evaluations_total::add_policy_evaluation;
 mod policy_evaluations_latency;
 pub use policy_evaluations_latency::record_policy_latency;
 
+use crate::config::OtlpTlsConfig;
+
 const METER_NAME: &str = "kubewarden";
 
-pub fn setup_metrics(otlp_endpoint: Option<&str>) -> Result<()> {
+pub fn setup_metrics(otlp_endpoint: Option<&str>, otlp_tls_config: OtlpTlsConfig) -> Result<()> {
     let mut metric_exporter_builder = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
+        .with_tls_config(otlp_tls_config.try_into()?)
         .with_export_config(ExportConfig::default());
     if let Some(endpoint) = otlp_endpoint {
         metric_exporter_builder = metric_exporter_builder.with_endpoint(endpoint);

@@ -1,10 +1,13 @@
+use std::convert::TryInto;
+
 use anyhow::{anyhow, Result};
 use opentelemetry::trace::TracerProvider;
-use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_otlp::{WithExportConfig, WithTonicConfig};
+
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
-use crate::config;
+use crate::config::{self, OtlpTlsConfig};
 
 // Setup the tracing system. This MUST be done inside of a tokio Runtime
 // because some collectors rely on it and would panic otherwise.
@@ -13,6 +16,7 @@ pub fn setup_tracing(
     log_fmt: &str,
     log_no_color: bool,
     otlp_endpoint: Option<&str>,
+    otlp_tls_config: OtlpTlsConfig,
 ) -> Result<()> {
     // setup logging
     let filter_layer = EnvFilter::new(log_level)
@@ -45,8 +49,10 @@ pub fn setup_tracing(
             // OpenTelemetry collector using the OTLP format.
             // If no endpoint is provided, the default one is used.
             // The default endpoint is "http://localhost:4317".
-            let mut otlp_exporter_builder =
-                opentelemetry_otlp::SpanExporter::builder().with_tonic();
+            //
+            let mut otlp_exporter_builder = opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .with_tls_config(otlp_tls_config.try_into()?);
 
             if let Some(endpoint) = otlp_endpoint {
                 otlp_exporter_builder = otlp_exporter_builder.with_endpoint(endpoint);

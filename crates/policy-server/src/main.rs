@@ -26,10 +26,14 @@ async fn main() -> Result<()> {
         &config.log_fmt,
         config.log_no_color,
         config.otlp_endpoint.as_deref(),
+        config.otlp_tls_config.clone(),
     )?;
 
     if config.metrics_enabled {
-        setup_metrics(config.otlp_endpoint.as_deref())?;
+        setup_metrics(
+            config.otlp_endpoint.as_deref(),
+            config.otlp_tls_config.clone(),
+        )?;
     };
 
     if config.daemon {
