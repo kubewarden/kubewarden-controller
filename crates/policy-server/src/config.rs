@@ -42,6 +42,7 @@ pub struct Config {
     pub log_fmt: String,
     pub log_no_color: bool,
     pub otlp_endpoint: Option<String>,
+    pub otlp_tls_config: OtlpTlsConfig,
     pub daemon: bool,
     pub enable_pprof: bool,
     pub daemon_pid_file: String,
@@ -53,6 +54,44 @@ pub struct Config {
 pub struct TlsConfig {
     pub cert_file: String,
     pub key_file: String,
+}
+
+#[derive(Clone, Default)]
+pub struct OtlpTlsConfig {
+    pub ca_file: Option<PathBuf>,
+    pub cert_file: Option<PathBuf>,
+    pub key_file: Option<PathBuf>,
+}
+
+impl TryFrom<OtlpTlsConfig> for tonic::transport::ClientTlsConfig {
+    type Error = anyhow::Error;
+
+    fn try_from(value: OtlpTlsConfig) -> Result<tonic::transport::ClientTlsConfig, Self::Error> {
+        use std::fs;
+        use tonic::transport::{Certificate, ClientTlsConfig, Identity};
+
+        let mut tls = ClientTlsConfig::new();
+
+        if let Some(ca) = value.ca_file {
+            let ca_cert = fs::read(ca)?;
+            tls = tls.ca_certificate(Certificate::from_pem(ca_cert))
+        }
+
+        if let Some(cert) = value.cert_file {
+            let cert = fs::read(cert)?;
+
+            let key = value
+                .key_file
+                .map(fs::read)
+                .transpose()?
+                .unwrap_or_default();
+
+            let identity = Identity::from_pem(cert, key);
+            tls = tls.identity(identity);
+        }
+
+        Ok(tls)
+    }
 }
 
 impl Config {
@@ -128,6 +167,17 @@ impl Config {
             .to_owned();
 
         let otlp_endpoint = matches.get_one::<String>("otlp-endpoint").cloned();
+        let otlp_ca_file = matches.get_one::<PathBuf>("otlp-certificate").cloned();
+        let otlp_cert_file = matches
+            .get_one::<PathBuf>("otlp-client-certificate")
+            .cloned();
+        let otlp_key_file = matches.get_one::<PathBuf>("otlp-client-key").cloned();
+
+        let otlp_tls_config = OtlpTlsConfig {
+            ca_file: otlp_ca_file,
+            cert_file: otlp_cert_file,
+            key_file: otlp_key_file,
+        };
 
         let (cert_file, key_file) = tls_files(matches)?;
         let tls_config = if cert_file.is_empty() {
@@ -165,6 +215,7 @@ impl Config {
             log_fmt,
             log_no_color,
             otlp_endpoint,
+            otlp_tls_config,
             daemon,
             daemon_pid_file,
             daemon_stdout_file,
