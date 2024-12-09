@@ -121,6 +121,7 @@ pub(crate) fn default_test_config() -> Config {
         log_fmt: "json".to_owned(),
         log_no_color: false,
         otlp_endpoint: None,
+        otlp_tls_config: Default::default(),
         daemon: false,
         daemon_pid_file: "policy_server.pid".to_owned(),
         daemon_stdout_file: None,

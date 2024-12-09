@@ -23,12 +23,14 @@ use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     policy_fetcher::verify::config::VerificationConfigV1,
 };
+use policy_server::config::OtlpTlsConfig;
 use policy_server::{
     api::admission_review::AdmissionReviewResponse,
     config::{PolicyMode, PolicyOrPolicyGroup},
     metrics::setup_metrics,
     tracing::setup_tracing,
 };
+use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
 use regex::Regex;
 use rstest::*;
 use tempfile::NamedTempFile;
@@ -37,6 +39,7 @@ use testcontainers::{
     runners::AsyncRunner,
     GenericImage, ImageExt,
 };
+use tokio::fs;
 use tower::ServiceExt;
 
 use crate::common::default_test_config;
@@ -746,18 +749,51 @@ async fn test_detect_certificate_rotation() {
 async fn test_otel() {
     setup();
 
-    let mut otelc_config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    otelc_config_path.push("tests/data/otel-collector-config.yaml");
+    let otelc_config_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/otel-collector-config.yaml");
+
+    let (server_ca, server_cert, server_key) = generate_tls_certs();
+    let (client_ca, client_cert, client_key) = generate_tls_certs();
+
+    let server_ca_file = NamedTempFile::new().unwrap();
+    let server_cert_file = NamedTempFile::new().unwrap();
+    let server_key_file = NamedTempFile::new().unwrap();
+
+    let client_ca_file = NamedTempFile::new().unwrap();
+    let client_cert_file = NamedTempFile::new().unwrap();
+    let client_key_file = NamedTempFile::new().unwrap();
+
+    let files_and_contents = [
+        (server_ca_file.path(), &server_ca),
+        (server_cert_file.path(), &server_cert),
+        (server_key_file.path(), &server_key),
+        (client_ca_file.path(), &client_ca),
+        (client_cert_file.path(), &client_cert),
+        (client_key_file.path(), &client_key),
+    ];
+
+    for (file_path, content) in &files_and_contents {
+        fs::write(file_path, content).await.unwrap();
+    }
 
     let metrics_output_file = NamedTempFile::new().unwrap();
-    let metrics_output_file_path = metrics_output_file.path();
-
     let traces_output_file = NamedTempFile::new().unwrap();
-    let traces_output_file_path = traces_output_file.path();
 
     let permissions = Permissions::from_mode(0o666);
-    set_permissions(metrics_output_file_path, permissions.clone()).unwrap();
-    set_permissions(traces_output_file_path, permissions).unwrap();
+    let files_to_set_permissions = [
+        metrics_output_file.path(),
+        traces_output_file.path(),
+        server_ca_file.path(),
+        server_cert_file.path(),
+        server_key_file.path(),
+        client_ca_file.path(),
+        client_cert_file.path(),
+        client_key_file.path(),
+    ];
+
+    for file_path in &files_to_set_permissions {
+        set_permissions(file_path, permissions.clone()).unwrap();
+    }
 
     let otelc = GenericImage::new("otel/opentelemetry-collector", "0.98.0")
         .with_wait_for(WaitFor::message_on_stderr("Everything is ready"))
@@ -766,12 +802,28 @@ async fn test_otel() {
             "/etc/otel-collector-config.yaml",
         ))
         .with_mount(Mount::bind_mount(
-            metrics_output_file_path.to_str().unwrap(),
+            metrics_output_file.path().to_str().unwrap(),
             "/tmp/metrics.json",
         ))
         .with_mount(Mount::bind_mount(
-            traces_output_file_path.to_str().unwrap(),
+            traces_output_file.path().to_str().unwrap(),
             "/tmp/traces.json",
+        ))
+        .with_mount(Mount::bind_mount(
+            server_ca_file.path().to_str().unwrap(),
+            "/certs/server-ca.pem",
+        ))
+        .with_mount(Mount::bind_mount(
+            server_cert_file.path().to_str().unwrap(),
+            "/certs/server-cert.pem",
+        ))
+        .with_mount(Mount::bind_mount(
+            server_key_file.path().to_str().unwrap(),
+            "/certs/server-key.pem",
+        ))
+        .with_mount(Mount::bind_mount(
+            client_ca_file.path().to_str().unwrap(),
+            "/certs/client-ca.pem",
         ))
         .with_mapped_port(1337, 4317.into())
         .with_cmd(vec!["--config=/etc/otel-collector-config.yaml"])
@@ -783,13 +835,24 @@ async fn test_otel() {
     let mut config = default_test_config();
     config.metrics_enabled = true;
     config.log_fmt = "otlp".to_string();
-    config.otlp_endpoint = Some("http://localhost:1337".to_string());
-    setup_metrics(config.otlp_endpoint.as_deref()).unwrap();
+    config.otlp_endpoint = Some("https://localhost:1337".to_string());
+    config.otlp_tls_config = OtlpTlsConfig {
+        ca_file: Some(server_ca_file.path().to_owned()),
+        cert_file: Some(client_cert_file.path().to_owned()),
+        key_file: Some(client_key_file.path().to_owned()),
+    };
+
+    setup_metrics(
+        config.otlp_endpoint.as_deref(),
+        config.otlp_tls_config.clone(),
+    )
+    .unwrap();
     setup_tracing(
         &config.log_level,
         &config.log_fmt,
         config.log_no_color,
         config.otlp_endpoint.as_deref(),
+        config.otlp_tls_config.clone(),
     )
     .unwrap();
 
@@ -861,4 +924,26 @@ async fn parse_exporter_output(
         .expect("failed to read exporter output");
 
     serde_json::from_str(&exporter_output)
+}
+
+fn generate_tls_certs() -> (String, String, String) {
+    let ca_key = KeyPair::generate().unwrap();
+    let mut params = CertificateParams::new(vec!["My Test CA".to_string()]).unwrap();
+    params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    let ca_cert = params.self_signed(&ca_key).unwrap();
+    let ca_cert_pem = ca_cert.pem();
+
+    let mut params = CertificateParams::new(vec!["localhost".to_string()]).unwrap();
+    params
+        .distinguished_name
+        .push(DnType::OrganizationName, "Kubewarden");
+    params
+        .distinguished_name
+        .push(DnType::CommonName, "kubewarden.io");
+
+    let cert_key = KeyPair::generate().unwrap();
+    let cert = params.signed_by(&cert_key, &ca_cert, &ca_key).unwrap();
+    let key = cert_key.serialize_pem();
+
+    (ca_cert_pem, cert.pem(), key)
 }
