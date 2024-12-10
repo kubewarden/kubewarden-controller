@@ -410,3 +410,8 @@ func createPolicyServerAndWaitForItsService(ctx context.Context, policyServer *p
 		return err
 	}, timeout, pollInterval).Should(Succeed())
 }
+
+func isTelemetryEnabled() bool {
+	telemetry, ok := os.LookupEnv("KUBEWARDEN_TESTING_TELEMETRY")
+	return ok && telemetry == "true"
+}
