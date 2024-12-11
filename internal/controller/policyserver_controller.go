@@ -62,6 +62,14 @@ type PolicyServerReconciler struct {
 	AlwaysAcceptAdmissionReviewsInDeploymentsNamespace bool
 	MetricsEnabled                                     bool
 	TracingEnabled                                     bool
+	// OpenTelemetry configuration.
+	// OtelSidecarEnabled is a flag that enables the OpenTelemetry sidecar.
+	OtelSidecarEnabled bool
+	// OtelCertificateSecret and OtelClientCertificateSecret are the names of the
+	// secrets that contain the certificates used with the communication between
+	// controller and policy server with the remote OpenTelemetry collector.
+	OtelCertificateSecret       string
+	OtelClientCertificateSecret string
 }
 
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
