@@ -120,7 +120,6 @@ pub(crate) fn default_test_config() -> Config {
         log_level: "info".to_owned(),
         log_fmt: "json".to_owned(),
         log_no_color: false,
-        otlp_endpoint: None,
         daemon: false,
         daemon_pid_file: "policy_server.pid".to_owned(),
         daemon_stdout_file: None,

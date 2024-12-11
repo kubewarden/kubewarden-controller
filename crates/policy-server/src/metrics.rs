@@ -1,6 +1,6 @@
 use anyhow::Result;
 use opentelemetry::{global, KeyValue};
-use opentelemetry_otlp::{ExportConfig, WithExportConfig};
+use opentelemetry_otlp::{ExportConfig, WithExportConfig, WithTonicConfig};
 use opentelemetry_sdk::runtime;
 
 mod policy_evaluations_total;
@@ -8,18 +8,20 @@ pub use policy_evaluations_total::add_policy_evaluation;
 mod policy_evaluations_latency;
 pub use policy_evaluations_latency::record_policy_latency;
 
+use crate::config::build_client_tls_config_from_env;
+
 const METER_NAME: &str = "kubewarden";
 
-pub fn setup_metrics(otlp_endpoint: Option<&str>) -> Result<()> {
-    let mut metric_exporter_builder = opentelemetry_otlp::MetricExporter::builder()
+pub fn setup_metrics() -> Result<()> {
+    let metric_exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
-        .with_export_config(ExportConfig::default());
-    if let Some(endpoint) = otlp_endpoint {
-        metric_exporter_builder = metric_exporter_builder.with_endpoint(endpoint);
-    }
-    let meter_reader = metric_exporter_builder.build()?;
+        .with_tls_config(build_client_tls_config_from_env("METRICS")?)
+        .with_export_config(ExportConfig::default())
+        .build()?;
+
     let periodic_reader =
-        opentelemetry_sdk::metrics::PeriodicReader::builder(meter_reader, runtime::Tokio).build();
+        opentelemetry_sdk::metrics::PeriodicReader::builder(metric_exporter, runtime::Tokio)
+            .build();
     let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
         .with_reader(periodic_reader)
         .build();
