@@ -194,26 +194,6 @@ pub(crate) fn build_cli() -> Command {
             .env("KUBEWARDEN_CONTINUE_ON_ERRORS")
             .action(ArgAction::SetTrue)
             .hide(true),
-
-        Arg::new("otlp-endpoint")
-            .long("otlp-endpoint")
-            .env("OTEL_EXPORTER_OTLP_ENDPOINT")
-            .help("The OTLP gRPC endpoint for exporting traces and metrics."),
-
-        Arg::new("otlp-certificate")
-            .long("otlp-certificate")
-            .env("OTEL_EXPORTER_OTLP_CERTIFICATE")
-            .help("Path to the trusted certificate in PEM format used for verifying the TLS credentials of the OTLP gRPC endpoint."),
-
-        Arg::new("otlp-client-certificate")
-            .long("otlp-client-certificate")
-            .env("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE")
-            .help("Path to the certificate in PEM format to use in mTLS communication."),
-
-        Arg::new("otlp-client-key")
-            .long("otlp-client-key")
-            .env("OTEL_EXPORTER_OTLP_CLIENT_KEY")
-            .help("Path to the client private key in PEM format to use in mTLS communication."),
     ];
 
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));

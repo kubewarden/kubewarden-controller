@@ -12,10 +12,11 @@ use serde::Deserialize;
 use std::{
     collections::{BTreeSet, HashMap},
     env,
-    fs::File,
+    fs::{self, File},
     net::SocketAddr,
     path::{Path, PathBuf},
 };
+use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 pub static SERVICE_NAME: &str = "kubewarden-policy-server";
 const DOCKER_CONFIG_ENV_VAR: &str = "DOCKER_CONFIG";
@@ -41,8 +42,6 @@ pub struct Config {
     pub log_level: String,
     pub log_fmt: String,
     pub log_no_color: bool,
-    pub otlp_endpoint: Option<String>,
-    pub otlp_tls_config: OtlpTlsConfig,
     pub daemon: bool,
     pub enable_pprof: bool,
     pub daemon_pid_file: String,
@@ -54,44 +53,6 @@ pub struct Config {
 pub struct TlsConfig {
     pub cert_file: String,
     pub key_file: String,
-}
-
-#[derive(Clone, Default)]
-pub struct OtlpTlsConfig {
-    pub ca_file: Option<PathBuf>,
-    pub cert_file: Option<PathBuf>,
-    pub key_file: Option<PathBuf>,
-}
-
-impl TryFrom<OtlpTlsConfig> for tonic::transport::ClientTlsConfig {
-    type Error = anyhow::Error;
-
-    fn try_from(value: OtlpTlsConfig) -> Result<tonic::transport::ClientTlsConfig, Self::Error> {
-        use std::fs;
-        use tonic::transport::{Certificate, ClientTlsConfig, Identity};
-
-        let mut tls = ClientTlsConfig::new();
-
-        if let Some(ca) = value.ca_file {
-            let ca_cert = fs::read(ca)?;
-            tls = tls.ca_certificate(Certificate::from_pem(ca_cert))
-        }
-
-        if let Some(cert) = value.cert_file {
-            let cert = fs::read(cert)?;
-
-            let key = value
-                .key_file
-                .map(fs::read)
-                .transpose()?
-                .unwrap_or_default();
-
-            let identity = Identity::from_pem(cert, key);
-            tls = tls.identity(identity);
-        }
-
-        Ok(tls)
-    }
 }
 
 impl Config {
@@ -166,19 +127,6 @@ impl Config {
             .expect("clap should have assigned a default value")
             .to_owned();
 
-        let otlp_endpoint = matches.get_one::<String>("otlp-endpoint").cloned();
-        let otlp_ca_file = matches.get_one::<PathBuf>("otlp-certificate").cloned();
-        let otlp_cert_file = matches
-            .get_one::<PathBuf>("otlp-client-certificate")
-            .cloned();
-        let otlp_key_file = matches.get_one::<PathBuf>("otlp-client-key").cloned();
-
-        let otlp_tls_config = OtlpTlsConfig {
-            ca_file: otlp_ca_file,
-            cert_file: otlp_cert_file,
-            key_file: otlp_key_file,
-        };
-
         let (cert_file, key_file) = tls_files(matches)?;
         let tls_config = if cert_file.is_empty() {
             None
@@ -214,8 +162,6 @@ impl Config {
             log_level,
             log_fmt,
             log_no_color,
-            otlp_endpoint,
-            otlp_tls_config,
             daemon,
             daemon_pid_file,
             daemon_stdout_file,
@@ -480,6 +426,49 @@ fn read_policies_file(path: &Path) -> Result<HashMap<String, PolicyOrPolicyGroup
     let settings_file = File::open(path)?;
     let ps: HashMap<String, PolicyOrPolicyGroup> = serde_yaml::from_reader(&settings_file)?;
     Ok(ps)
+}
+
+/// Creates a `ClientTlsConfig` used by OTLP exporters based on the environment variables.
+/// TODO: this function will be removed once this issue is resolved upstream:
+/// https://github.com/open-telemetry/opentelemetry-rust/issues/984
+pub fn build_client_tls_config_from_env(prefix: &str) -> Result<ClientTlsConfig> {
+    let mut client_tls_config = ClientTlsConfig::new();
+
+    let ca_env = format!("OTEL_EXPORTER_OTLP_{}CERTIFICATE", prefix);
+    let fallback_ca_env = "OTEL_EXPORTER_OTLP_CERTIFICATE";
+
+    let ca_file = env::var(&ca_env)
+        .or_else(|_| env::var(fallback_ca_env))
+        .ok();
+
+    if let Some(ca_path) = ca_file {
+        let ca_cert = std::fs::read(ca_path)?;
+        client_tls_config = client_tls_config.ca_certificate(Certificate::from_pem(ca_cert));
+    }
+
+    let client_cert_env = format!("OTEL_EXPORTER_OTLP_{}CLIENT_CERTIFICATE", prefix);
+    let fallback_client_cert_env = "OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE";
+
+    let client_cert_file = std::env::var(&client_cert_env)
+        .or_else(|_| std::env::var(fallback_client_cert_env))
+        .ok();
+
+    let client_key_env = format!("OTEL_EXPORTER_OTLP_{}CLIENT_KEY", prefix);
+    let fallback_client_key_env = "OTEL_EXPORTER_OTLP_CLIENT_KEY";
+
+    let client_key_file = std::env::var(&client_key_env)
+        .or_else(|_| std::env::var(fallback_client_key_env))
+        .ok();
+
+    if let (Some(cert_path), Some(key_path)) = (client_cert_file, client_key_file) {
+        let cert = fs::read(cert_path)?;
+        let key = fs::read(key_path)?;
+
+        let identity = Identity::from_pem(cert, key);
+        client_tls_config = client_tls_config.identity(identity);
+    }
+
+    Ok(client_tls_config)
 }
 
 #[cfg(test)]

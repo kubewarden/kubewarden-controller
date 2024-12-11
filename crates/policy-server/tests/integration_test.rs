@@ -23,7 +23,6 @@ use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     policy_fetcher::verify::config::VerificationConfigV1,
 };
-use policy_server::config::OtlpTlsConfig;
 use policy_server::{
     api::admission_review::AdmissionReviewResponse,
     config::{PolicyMode, PolicyOrPolicyGroup},
@@ -832,29 +831,26 @@ async fn test_otel() {
         .await
         .unwrap();
 
+    std::env::set_var("OTEL_EXPORTER_OTLP_ENDPOINT", "https://localhost:1337");
+    std::env::set_var(
+        "OTEL_EXPORTER_OTLP_CERTIFICATE",
+        server_ca_file.path().to_str().unwrap(),
+    );
+    std::env::set_var(
+        "OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+        client_cert_file.path().to_str().unwrap(),
+    );
+    std::env::set_var(
+        "OTEL_EXPORTER_OTLP_CLIENT_KEY",
+        client_key_file.path().to_str().unwrap(),
+    );
+
     let mut config = default_test_config();
     config.metrics_enabled = true;
     config.log_fmt = "otlp".to_string();
-    config.otlp_endpoint = Some("https://localhost:1337".to_string());
-    config.otlp_tls_config = OtlpTlsConfig {
-        ca_file: Some(server_ca_file.path().to_owned()),
-        cert_file: Some(client_cert_file.path().to_owned()),
-        key_file: Some(client_key_file.path().to_owned()),
-    };
 
-    setup_metrics(
-        config.otlp_endpoint.as_deref(),
-        config.otlp_tls_config.clone(),
-    )
-    .unwrap();
-    setup_tracing(
-        &config.log_level,
-        &config.log_fmt,
-        config.log_no_color,
-        config.otlp_endpoint.as_deref(),
-        config.otlp_tls_config.clone(),
-    )
-    .unwrap();
+    setup_metrics().unwrap();
+    setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color).unwrap();
 
     let app = app(config).await;
 
