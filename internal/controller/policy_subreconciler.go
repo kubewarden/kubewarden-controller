@@ -349,7 +349,6 @@ func findClusterPoliciesForPod(ctx context.Context, k8sClient client.Client, obj
 	return findClusterPoliciesForConfigMap(&configMap)
 }
 
-//nolint:goconst // we don't want to use a constant for "true"
 func hasKubewardenLabel(labels map[string]string) bool {
 	// Pre v1.16.0
 	kubewardenLabel := labels["kubewarden"]

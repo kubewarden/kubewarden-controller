@@ -21,13 +21,13 @@ const (
 	timeBetweenExports             = 2 * time.Second
 )
 
-func New(openTelemetryEndpoint string) (func(context.Context) error, error) {
+func New() (func(context.Context) error, error) {
 	ctx := context.Background()
 
+	// Create the OTLP exporter to export metrics to the specified endpoint.
+	// All the Otel exporter configuration is set by environment variables.
 	exporter, err := otlpmetricgrpc.New(
 		ctx,
-		otlpmetricgrpc.WithInsecure(),
-		otlpmetricgrpc.WithEndpoint(openTelemetryEndpoint),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot start metric exporter: %w", err)
