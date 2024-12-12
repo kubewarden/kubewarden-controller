@@ -152,7 +152,7 @@ impl From<&Certificate> for sigstore::registry::Certificate {
     }
 }
 
-impl<'a> TryFrom<&Certificate> for rustls_pki_types::CertificateDer<'a> {
+impl TryFrom<&Certificate> for rustls_pki_types::CertificateDer<'_> {
     type Error = &'static str;
 
     fn try_from(cert: &Certificate) -> std::result::Result<Self, Self::Error> {
