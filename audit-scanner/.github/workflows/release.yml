@@ -72,6 +72,7 @@ jobs:
 
   attestation:
     name: Fetch, sign and verify SBOM and provenance files
+    needs: build
     strategy:
       matrix:
         arch: [amd64, arm64]
