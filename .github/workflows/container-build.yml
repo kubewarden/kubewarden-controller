@@ -19,10 +19,6 @@ jobs:
       packages: write
       id-token: write # to mint the OIDC token for Sigstore signatures
     runs-on: ubuntu-latest
-    outputs:
-      repository: ${{ steps.setoutput.outputs.repository }}
-      tag: ${{ steps.setoutput.outputs.tag }}
-      digest: ${{ steps.setoutput.outputs.digest }}
     steps:
       - name: Checkout code
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
@@ -63,9 +59,3 @@ jobs:
           provenance: mode=max
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      - id: setoutput
-        name: Set output parameters
-        run: |
-          echo "repository=ghcr.io/${{github.repository_owner}}/kubewarden-controller" >> $GITHUB_OUTPUT
-          echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
-          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
