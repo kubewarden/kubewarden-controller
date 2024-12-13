@@ -69,6 +69,12 @@ fn test_read_sources_file_with_file_path() {
         .join("test_data")
         .join("cert.der");
 
+    #[cfg(not(windows))]
+    let path = cert_file.to_str().unwrap();
+
+    #[cfg(windows)]
+    let path = cert_file.to_str().unwrap().escape_default();
+
     let expected_contents = format!(
         r#"
 insecure_sources:
@@ -78,7 +84,7 @@ source_authorities:
     - type: Path
       path: "{}"
 "#,
-        cert_file.to_str().unwrap()
+        path
     );
 
     write!(sources_file, "{}", expected_contents).unwrap();
