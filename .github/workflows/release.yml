@@ -80,8 +80,6 @@ jobs:
   attestation:
     name: Sign attestations and upload as artifacts
     needs: build
-    with:
-      image-digest: ${{ needs.build.outputs.digest }}
     strategy:
       matrix:
         arch: [amd64, arm64]
@@ -111,13 +109,14 @@ jobs:
           set -e
           DIGEST=$(crane digest \
             --platform "linux/${{ matrix.arch }}" \
-            ghcr.io/${{ github.repository_owner }}/kubewarden-controller@${{ inputs.image-digest }})
+            ghcr.io/${{ github.repository_owner }}/kubewarden-controller@${{ needs.build.outputs.digest }})
+
           echo "PLATFORM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
 
       - name: Find attestation digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ inputs.image-digest }} \
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ needs.build.outputs.digest }} \
             | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest") | select(.annotations["vnd.docker.reference.digest"]=="${{ env.PLATFORM_DIGEST }}") | .digest'
           )
           echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
