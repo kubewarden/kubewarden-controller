@@ -63,28 +63,9 @@ jobs:
           provenance: mode=max
           tags: |
             ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      - name: Sign container image
-        if: ${{ inputs.push-image }}
-        run: |
-          cosign sign --yes \
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
-
-          cosign verify \
-            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/container-image.yml@${{ github.ref }}" \
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
       - id: setoutput
         name: Set output parameters
         run: |
           echo "repository=ghcr.io/${{github.repository_owner}}/kubewarden-controller" >> $GITHUB_OUTPUT
           echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
           echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
-
-  sbom:
-    needs: build
-    uses: ./.github/workflows/attestation.yml
-    permissions:
-      packages: write
-      id-token: write
-    with:
-      image-digest: ${{ needs.build.outputs.digest }}
