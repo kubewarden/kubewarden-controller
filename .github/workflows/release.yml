@@ -13,7 +13,7 @@ jobs:
     permissions: read-all
 
   build:
-    name: Build container image, sign it, and generate SBOMs
+    name: Build container image, sign it
     permissions:
       packages: write
       id-token: write # to mint the OIDC token for Sigstore signatures
