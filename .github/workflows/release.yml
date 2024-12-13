@@ -21,7 +21,6 @@ jobs:
     outputs:
       repository: ${{ steps.setoutput.outputs.repository }}
       tag: ${{ steps.setoutput.outputs.tag }}
-      artifact: ${{ steps.setoutput.outputs.artifact }}
       digest: ${{ steps.setoutput.outputs.digest }}
     steps:
       - name: Checkout code
@@ -73,34 +72,11 @@ jobs:
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
             --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/container-image.yml@${{ github.ref }}" \
             ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
-
-      - # Only build amd64 because buildx does not allow multiple platforms when
-        # exporting the image to a tarball. As we use this only for end-to-end tests
-        # and they run on amd64 arch, let's skip the arm64 build for now.
-        name: Build linux/amd64 container image
-        if: ${{ inputs.push-image == false }}
-        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          sbom: true
-          provenance: mode=max
-          outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
-          tags: |
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      - name: Upload container image to use in other jobs
-        if: ${{ inputs.push-image == false }}
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        with:
-          name: kubewarden-controller-image-${{ env.TAG_NAME }}
-          path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
       - id: setoutput
         name: Set output parameters
         run: |
           echo "repository=ghcr.io/${{github.repository_owner}}/kubewarden-controller" >> $GITHUB_OUTPUT
           echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
-          echo "artifact=kubewarden-controller-image-${{env.TAG_NAME}}" >> $GITHUB_OUTPUT
           echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
 
   sbom:
