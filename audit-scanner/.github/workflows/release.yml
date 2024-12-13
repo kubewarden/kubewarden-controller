@@ -192,6 +192,7 @@ jobs:
       - ci
       - crds
       - build
+      - attestation
 
     permissions:
       contents: write
