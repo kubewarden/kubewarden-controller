@@ -1,11 +1,15 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::errors::FailedToParseYamlDataError;
 use std::collections::{HashMap, HashSet};
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
 use std::{fs, fs::File};
+
+use x509_parser::pem::parse_x509_pem;
+use x509_parser::prelude::*;
+
+use crate::errors::FailedToParseYamlDataError;
 
 pub type SourceResult<T> = std::result::Result<T, SourceError>;
 
@@ -59,7 +63,7 @@ impl TryFrom<RawSourceAuthority> for RawCertificate {
             RawSourceAuthority::Path { path } => {
                 let file_data =
                     fs::read(path.clone()).map_err(SourceError::CannotReadCertificateError)?;
-                Ok(RawCertificate(String::from_utf8(file_data).unwrap()))
+                Ok(RawCertificate(file_data))
             }
         }
     }
@@ -73,7 +77,7 @@ struct RawSources {
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
-struct RawCertificate(String);
+struct RawCertificate(#[serde(with = "serde_bytes")] Vec<u8>);
 
 #[derive(Clone, Debug, Default)]
 struct SourceAuthorities(HashMap<String, Vec<Certificate>>);
@@ -91,6 +95,7 @@ impl TryFrom<RawSourceAuthorities> for SourceAuthorities {
                 let cert: Certificate = raw_cert.try_into()?;
                 certs.push(cert);
             }
+
             sa.0.insert(host.clone(), certs);
         }
 
@@ -125,13 +130,18 @@ impl TryFrom<RawCertificate> for Certificate {
     type Error = SourceError;
 
     fn try_from(raw_certificate: RawCertificate) -> SourceResult<Certificate> {
-        if reqwest::Certificate::from_pem(raw_certificate.0.as_bytes()).is_ok() {
-            Ok(Certificate::Pem(raw_certificate.0.as_bytes().to_vec()))
-        } else if reqwest::Certificate::from_der(raw_certificate.0.as_bytes()).is_ok() {
-            Ok(Certificate::Der(raw_certificate.0.as_bytes().to_vec()))
+        let cert_data = raw_certificate.0;
+
+        if parse_x509_pem(&cert_data).is_ok() {
+            // It's a valid PEM certificate
+            Ok(Certificate::Pem(cert_data))
+        } else if X509Certificate::from_der(&cert_data).is_ok() {
+            // It's a valid DER certificate
+            Ok(Certificate::Der(cert_data))
         } else {
+            // Neither PEM nor DER format
             Err(SourceError::InvalidCertificateError(
-                "raw certificate is not in PEM nor in DER encoding".to_owned(),
+                "Raw certificate is not in PEM nor in DER encoding".to_owned(),
             ))
         }
     }
@@ -344,7 +354,9 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
         };
 
         let expected: SourceResult<RawCertificate> = auth.try_into();
-        assert!(matches!(expected, Ok(RawCertificate(data)) if data == expected_contents));
+        assert!(
+            matches!(expected, Ok(RawCertificate(data)) if data == expected_contents.as_bytes())
+        );
     }
 
     #[test]
