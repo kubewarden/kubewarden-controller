@@ -61,7 +61,7 @@ jobs:
 
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/container-image.yml@${{ github.ref }}" \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/release.yml@${{ github.ref }}" \
             ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
       - id: setoutput
         name: Set output parameters
@@ -99,8 +99,8 @@ jobs:
         run: |
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/container-image.yml@${{ github.ref }}" \
-            ghcr.io/${{ github.repository_owner }}/audit-scanner@${{ inputs.image-digest }}
+            --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/release.yml@${{ github.ref }}" \
+            ghcr.io/${{ github.repository_owner }}/audit-scanner@${{ steps.build-image.outputs.digest }}
 
       - name: Find platform digest
         shell: bash
@@ -108,13 +108,13 @@ jobs:
           set -e
           DIGEST=$(crane digest \
             --platform "linux/${{ matrix.arch }}" \
-            ghcr.io/${{ github.repository_owner }}/audit-scanner@${{ inputs.image-digest }})
+            ghcr.io/${{ github.repository_owner }}/audit-scanner@${{ steps.build-image.outputs.digest }})
           echo "PLATFORM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
 
       - name: Find attestation digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/audit-scanner@${{ inputs.image-digest }} \
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }} \
             | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest") | select(.annotations["vnd.docker.reference.digest"]=="${{ env.PLATFORM_DIGEST }}") | .digest'
           )
           echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
@@ -154,7 +154,7 @@ jobs:
           cosign verify-blob \
             --bundle audit-scanner-attestation-${{ matrix.arch }}-checksum-cosign.bundle \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/attestation.yml@${{ github.ref }}" \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/release.yml@${{ github.ref }}" \
             audit-scanner-attestation-${{ matrix.arch }}-checksum.txt
 
       - name: Upload SBOMs as artifacts
