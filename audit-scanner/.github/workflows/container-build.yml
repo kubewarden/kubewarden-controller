@@ -80,12 +80,3 @@ jobs:
           echo "repository=ghcr.io/${{github.repository_owner}}/audit-scanner" >> $GITHUB_OUTPUT
           echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
           echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
-
-  sbom:
-    needs: build
-    uses: ./.github/workflows/attestation.yml
-    permissions:
-      packages: write
-      id-token: write
-    with:
-      image-digest: ${{ needs.build.outputs.digest }}
