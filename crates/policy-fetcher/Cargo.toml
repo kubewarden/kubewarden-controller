@@ -20,7 +20,6 @@ oci-client = { version = "0.14", default-features = false, features = [
   "rustls-tls",
 ] }
 path-slash = "0.2"
-pem = "3"
 regex = "1.5"
 reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
@@ -34,6 +33,7 @@ rustls-pki-types = "1.0.1" # stick to the same version used by sigstore
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+serde_bytes = "0.11"
 sha2 = "0.10"
 sigstore = { version = "0.10", default-features = false, features = [
   "sigstore-trust-root-rustls-tls",
@@ -43,15 +43,16 @@ sigstore = { version = "0.10", default-features = false, features = [
 thiserror = "2.0"
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
-walkdir = "2"
+walkdir = "2.5"
 rayon = "1.5"
 docker_credential = "1.2"
 tokio = { version = "1", default-features = false }
 cfg-if = "1.0"
+x509-parser = "0.16"
 
 [dev-dependencies]
 rstest = "0.23"
 tempfile = "3.2"
 textwrap = "0.16"
 testcontainers = { version = "0.23", features = ["http_wait"] }
-anyhow = "1.0.83"
+anyhow = "1.0"
