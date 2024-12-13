@@ -57,18 +57,18 @@ jobs:
       - name: Sign container image
         run: |
           cosign sign --yes \
-            ghcr.io/${{github.repository_owner}}/audit-scanner@${{ needs.build.outputs.digest }}
+            ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
 
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
             --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/release.yml@${{ github.ref }}" \
-            ghcr.io/${{github.repository_owner}}/audit-scanner@${{ needs.build.outputs.digest }}
+            ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
       - id: setoutput
         name: Set output parameters
         run: |
           echo "repository=ghcr.io/${{github.repository_owner}}/audit-scanner" >> $GITHUB_OUTPUT
           echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
-          echo "digest=${{ needs.build.outputs.digest }}" >> $GITHUB_OUTPUT
+          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
 
   attestation:
     name: Fetch, sign and verify SBOM and provenance files
