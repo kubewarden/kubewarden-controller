@@ -1,11 +1,26 @@
-mod common;
-
 use policy_fetcher::sources::SourceResult;
 use policy_fetcher::sources::{read_sources_file, Certificate, Sources};
 use std::io::Write;
 use std::path::Path;
 use tempfile::NamedTempFile;
 use textwrap::indent;
+
+const CERT_DATA: &str = r#"-----BEGIN CERTIFICATE-----
+MIICUTCCAfugAwIBAgIBADANBgkqhkiG9w0BAQQFADBXMQswCQYDVQQGEwJDTjEL
+MAkGA1UECBMCUE4xCzAJBgNVBAcTAkNOMQswCQYDVQQKEwJPTjELMAkGA1UECxMC
+VU4xFDASBgNVBAMTC0hlcm9uZyBZYW5nMB4XDTA1MDcxNTIxMTk0N1oXDTA1MDgx
+NDIxMTk0N1owVzELMAkGA1UEBhMCQ04xCzAJBgNVBAgTAlBOMQswCQYDVQQHEwJD
+TjELMAkGA1UEChMCT04xCzAJBgNVBAsTAlVOMRQwEgYDVQQDEwtIZXJvbmcgWWFu
+ZzBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQCp5hnG7ogBhtlynpOS21cBewKE/B7j
+V14qeyslnr26xZUsSVko36ZnhiaO/zbMOoRcKK9vEcgMtcLFuQTWDl3RAgMBAAGj
+gbEwga4wHQYDVR0OBBYEFFXI70krXeQDxZgbaCQoR4jUDncEMH8GA1UdIwR4MHaA
+FFXI70krXeQDxZgbaCQoR4jUDncEoVukWTBXMQswCQYDVQQGEwJDTjELMAkGA1UE
+CBMCUE4xCzAJBgNVBAcTAkNOMQswCQYDVQQKEwJPTjELMAkGA1UECxMCVU4xFDAS
+BgNVBAMTC0hlcm9uZyBZYW5nggEAMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEE
+BQADQQA/ugzBrjjK9jcWnDVfGHlk3icNRq0oV7Ri32z/+HQX67aRfgZu7KWdI+Ju
+Wm7DCfrPNGVwFWUQOmsPue9rZBgO
+-----END CERTIFICATE-----
+"#;
 
 #[test]
 fn test_read_sources_file_with_data() {
@@ -20,14 +35,9 @@ source_authorities:
       data: |
 "#;
     write!(sources_file, "{}", expected_contents).unwrap();
-    write!(
-        sources_file,
-        "{}",
-        indent(common::CERT_DATA, "            ")
-    )
-    .unwrap();
+    write!(sources_file, "{}", indent(CERT_DATA, "            ")).unwrap();
 
-    let expected_cert = Certificate::Pem(common::CERT_DATA.into());
+    let expected_cert = Certificate::Pem(CERT_DATA.into());
     let path = sources_file.path();
     let actual: SourceResult<Sources> = read_sources_file(path);
 
