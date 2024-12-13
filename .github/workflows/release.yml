@@ -14,10 +14,104 @@ jobs:
 
   build:
     name: Build container image, sign it, and generate SBOMs
-    uses: ./.github/workflows/container-build.yml
     permissions:
-      id-token: write
       packages: write
+      id-token: write # to mint the OIDC token for Sigstore signatures
+    runs-on: ubuntu-latest
+    outputs:
+      repository: ${{ steps.setoutput.outputs.repository }}
+      tag: ${{ steps.setoutput.outputs.tag }}
+      artifact: ${{ steps.setoutput.outputs.artifact }}
+      digest: ${{ steps.setoutput.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - name: Install cosign
+        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retrieve tag name (main branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/main') }}
+        run: |
+          echo TAG_NAME=latest >> $GITHUB_ENV
+      - name: Retrieve tag name (feat branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/feat') }}
+        run: |
+          echo "TAG_NAME=latest-$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+      - name: Retrieve tag name (tag)
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+      - name: Build and push container image
+        if: ${{ inputs.push-image }}
+        id: build-image
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64, linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
+      - name: Sign container image
+        if: ${{ inputs.push-image }}
+        run: |
+          cosign sign --yes \
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
+
+          cosign verify \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/container-image.yml@${{ github.ref }}" \
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
+
+      - # Only build amd64 because buildx does not allow multiple platforms when
+        # exporting the image to a tarball. As we use this only for end-to-end tests
+        # and they run on amd64 arch, let's skip the arm64 build for now.
+        name: Build linux/amd64 container image
+        if: ${{ inputs.push-image == false }}
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          sbom: true
+          provenance: mode=max
+          outputs: type=docker,dest=/tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
+          tags: |
+            ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
+      - name: Upload container image to use in other jobs
+        if: ${{ inputs.push-image == false }}
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: kubewarden-controller-image-${{ env.TAG_NAME }}
+          path: /tmp/kubewarden-controller-image-${{ env.TAG_NAME }}.tar
+      - id: setoutput
+        name: Set output parameters
+        run: |
+          echo "repository=ghcr.io/${{github.repository_owner}}/kubewarden-controller" >> $GITHUB_OUTPUT
+          echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
+          echo "artifact=kubewarden-controller-image-${{env.TAG_NAME}}" >> $GITHUB_OUTPUT
+          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
+
+  sbom:
+    needs: build
+    uses: ./.github/workflows/attestation.yml
+    permissions:
+      packages: write
+      id-token: write
+    with:
+      image-digest: ${{ needs.build.outputs.digest }}
+    if triggered by tag
 
   crds:
     name: Build CRDs
