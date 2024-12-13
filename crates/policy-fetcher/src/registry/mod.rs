@@ -13,7 +13,7 @@ use oci_client::{
 use regex::Regex;
 use std::convert::TryFrom;
 use std::str::FromStr;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 use url::Url;
 
 use crate::{
@@ -183,10 +183,8 @@ impl Registry {
             .strip_prefix("registry://")
             .ok_or_else(|| RegistryError::InvalidDestinationError)?;
 
-        match self
-            .do_push(policy, &url, crate::client_protocol(&url, &sources)?)
-            .await
-        {
+        let client_protocol = crate::client_protocol(&url, &sources)?;
+        match self.do_push(policy, &url, client_protocol.clone()).await {
             Ok(manifest_url) => {
                 return build_immutable_ref(destination, &manifest_url);
             }
@@ -194,18 +192,16 @@ impl Registry {
                 if !sources.is_insecure_source(&crate::host_and_port(&url)?) {
                     return Err(err);
                 }
+                info!(%err, %client_protocol, insecure_source = true, "push failed");
             }
         }
 
-        if let Ok(manifest_url) = self
-            .do_push(
-                policy,
-                &url,
-                ClientProtocol::Https(TlsVerificationMode::NoTlsVerification),
-            )
-            .await
-        {
-            return build_immutable_ref(destination, &manifest_url);
+        let client_protocol = ClientProtocol::Https(TlsVerificationMode::NoTlsVerification);
+        match self.do_push(policy, &url, client_protocol.clone()).await {
+            Ok(manifest_url) => return build_immutable_ref(destination, &manifest_url),
+            Err(err) => {
+                info!(%err, %client_protocol, insecure_source = true, "push failed");
+            }
         }
 
         let manifest_url = self.do_push(policy, &url, ClientProtocol::Http).await?;
@@ -219,6 +215,7 @@ impl Registry {
         url: &Url,
         client_protocol: ClientProtocol,
     ) -> RegistryResult<String> {
+        warn!(client_protocol = ?client_protocol, "pushing policy");
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
 

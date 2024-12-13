@@ -1,3 +1,5 @@
+use std::fmt;
+
 use async_trait::async_trait;
 use url::Url;
 
@@ -9,11 +11,30 @@ pub(crate) enum ClientProtocol {
     Https(TlsVerificationMode),
 }
 
+impl fmt::Display for ClientProtocol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ClientProtocol::Http => write!(f, "HTTP"),
+            ClientProtocol::Https(mode) => write!(f, "HTTPS({})", mode),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum TlsVerificationMode {
     CustomCaCertificates(Vec<Certificate>),
     SystemCa,
     NoTlsVerification,
+}
+
+impl fmt::Display for TlsVerificationMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TlsVerificationMode::CustomCaCertificates(_) => write!(f, "CustomCaCertificates"),
+            TlsVerificationMode::SystemCa => write!(f, "SystemCa"),
+            TlsVerificationMode::NoTlsVerification => write!(f, "NoTlsVerification"),
+        }
+    }
 }
 
 // Generic interface for all the operations related with obtaining
