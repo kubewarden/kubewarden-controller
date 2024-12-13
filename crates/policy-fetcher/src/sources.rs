@@ -171,10 +171,8 @@ impl TryFrom<&Certificate> for rustls_pki_types::CertificateDer<'_> {
                 data.as_slice().to_owned(),
             )),
             Certificate::Pem(data) => {
-                let pem = pem::parse(data).map_err(|_| "Failed to parse PEM data")?;
-                Ok(rustls_pki_types::CertificateDer::from(
-                    pem.contents().to_owned(),
-                ))
+                let pem = parse_x509_pem(data).map_err(|_| "Failed to parse PEM data")?;
+                Ok(rustls_pki_types::CertificateDer::from(pem.0.to_owned()))
             }
         }
     }
