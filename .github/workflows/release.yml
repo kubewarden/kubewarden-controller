@@ -83,19 +83,15 @@ jobs:
     strategy:
       matrix:
         arch: [amd64, arm64]
-
     permissions:
       packages: write
       id-token: write
-
     runs-on: ubuntu-latest
     steps:
       - name: Install cosign
         uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
-
       - name: Install the crane command
         uses: kubewarden/github-actions/crane-installer@d94509d260ee11a92b4f65bc0acd297feec24d7f # v3.3.5
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
