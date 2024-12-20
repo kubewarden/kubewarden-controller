@@ -1,9 +1,29 @@
-## Generating CRD docs for the kubewarden/docs
+The CRDs documentation is generated automatically by using https://github.com/elastic/crd-ref-docs
+using the `config.yml` file shipped within this directory.
 
-Make sure that crd-ref-docs is installed from
-https://github.com/elastic/crd-ref-docs/releases
+## Documentation generation
 
-Then running `make generate` should generate `CRD-docs-for-docs-repo.md`.
-This entire file should be inserted in the kubewarden/docs repository in docs/reference/CRDs.md
+### Markdown
 
-Bit yucky, but it will do for now.
+To generate markdown documentation:
+
+```shell
+$ make markdown
+```
+
+The result will be save to the `CRD-docs-for-docs-repo.md` file.
+
+### ASCIIDoc
+
+To generate asciidoc documentation:
+
+```shell
+$ make asciidoc
+```
+
+The result will be save to the `CRD-docs-for-docs-repo.adoc` file.
+
+## Development notes
+
+Ensure the contents of the `templates` directory match the version of
+`crd-ref-docs` being used.
