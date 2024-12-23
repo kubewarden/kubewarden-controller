@@ -95,7 +95,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: kubewarden/github-actions/tarpaulin-install@d94509d260ee11a92b4f65bc0acd297feec24d7f # v3.3.5
+      - uses: kubewarden/github-actions/tarpaulin-install@23f81f83e6392c869faacd8bfe86a8053d213d99 # v3.4.2
       - name: Generate unit-tests coverage
         run: make coverage-unit-tests
       - name: Upload unit-tests coverage to Codecov
