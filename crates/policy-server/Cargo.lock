@@ -475,7 +475,7 @@ dependencies = [
  "bitflags 2.6.0",
  "cexpr",
  "clang-sys",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "lazy_static",
  "lazycell",
  "log",
@@ -3161,7 +3161,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -3617,7 +3617,7 @@ dependencies = [
  "oci-spec",
  "olpc-cjson",
  "regex",
- "reqwest 0.12.9",
+ "reqwest 0.12.11",
  "serde",
  "serde_json",
  "sha2",
@@ -3642,7 +3642,7 @@ dependencies = [
  "lazy_static",
  "olpc-cjson",
  "regex",
- "reqwest 0.12.9",
+ "reqwest 0.12.11",
  "serde",
  "serde_json",
  "sha2",
@@ -4297,7 +4297,7 @@ dependencies = [
  "path-slash",
  "rayon",
  "regex",
- "reqwest 0.12.9",
+ "reqwest 0.12.11",
  "rustls 0.23.20",
  "rustls-pki-types",
  "serde",
@@ -4344,7 +4344,7 @@ dependencies = [
  "rayon",
  "rcgen",
  "regex",
- "reqwest 0.12.9",
+ "reqwest 0.12.11",
  "rhai",
  "rstest",
  "rustls 0.23.20",
@@ -4598,7 +4598,7 @@ checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
  "heck",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "log",
  "multimap",
  "once_cell",
@@ -4631,7 +4631,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.12.1",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.91",
@@ -4976,9 +4976,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.9"
+version = "0.12.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a77c62af46e79de0a562e1a9849205ffcb7fc1238876e9bd743357570e04046f"
+checksum = "7fe060fe50f524be480214aba758c71f99f90ee8c83c5a36b5e9e1d568eb4eb3"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -5010,6 +5010,7 @@ dependencies = [
  "tokio",
  "tokio-rustls 0.26.1",
  "tokio-util",
+ "tower 0.5.2",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -5420,9 +5421,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
+checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
 ]
@@ -5448,9 +5449,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46f859dbbf73865c6627ed570e78961cd3ac92407a2d117204c49232485da55e"
+checksum = "5a9bf7cf98d04a2b28aead066b7496853d4779c9cc183c440dbac457641e19a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -7459,7 +7460,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
