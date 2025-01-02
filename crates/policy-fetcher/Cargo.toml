@@ -52,7 +52,7 @@ cfg-if = "1.0"
 x509-parser = "0.16"
 
 [dev-dependencies]
-rstest = "0.23"
+rstest = "0.24"
 tempfile = "3.2"
 textwrap = "0.16"
 testcontainers = { version = "0.23", features = ["http_wait"] }
