@@ -20,9 +20,7 @@ k8s-openapi = { version = "0.24.0", default-features = false, features = [
 ] }
 lazy_static = "1.4.0"
 pem = "3"
-pulldown-cmark-mdcat = { version = "2.5.0", default-features = false, features = [
-  "regex-fancy",
-] }
+pulldown-cmark-mdcat = { version = "2.7.1", default-features = false }
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.19.7" }
 rustls-pki-types = { version = "1", features = ["alloc"] }
 prettytable-rs = "^0.10"
