@@ -203,9 +203,9 @@ impl PolicyServer {
         };
 
         let mut router = Router::new()
-            .route("/audit/:policy_id", post(audit_handler))
-            .route("/validate/:policy_id", post(validate_handler))
-            .route("/validate_raw/:policy_id", post(validate_raw_handler))
+            .route("/audit/{policy_id}", post(audit_handler))
+            .route("/validate/{policy_id}", post(validate_handler))
+            .route("/validate_raw/{policy_id}", post(validate_raw_handler))
             .with_state(state.clone())
             .layer(
                 TraceLayer::new_for_http()

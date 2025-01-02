@@ -55,7 +55,7 @@ tracing-opentelemetry = "0.28.0"
 tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 semver = { version = "1.0.22", features = ["serde"] }
 mockall_double = "0.3"
-axum = { version = "0.7.5", features = ["macros", "query"] }
+axum = { version = "0.8.1", features = ["macros", "query"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 tower-http = { version = "0.6.1", features = ["trace"] }
 tikv-jemallocator = { version = "0.5.4", features = [
