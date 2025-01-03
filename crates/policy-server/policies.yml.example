@@ -1,7 +1,7 @@
 psp-apparmor:
-  url: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.7
+  module: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.7
 psp-capabilities:
-  url: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.7
+  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.7
   allowedToMutate: true
   settings:
     allowed_capabilities: ["*"]
@@ -9,7 +9,7 @@ psp-capabilities:
 pod-image-signatures: # policy group
   policies:
     sigstore_pgp:
-      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
       settings:
         signatures:
           - image: "*"
@@ -17,14 +17,14 @@ pod-image-signatures: # policy group
               - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
               - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
     sigstore_gh_action:
-      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
       settings:
         signatures:
           - image: "*"
             githubActions:
             owner: "kubewarden"
     reject_latest_tag:
-      url: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
+      module: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
       settings:
         tags:
           reject:

@@ -31,7 +31,7 @@ pub(crate) fn default_test_config() -> Config {
         (
             "pod-privileged".to_owned(),
             PolicyOrPolicyGroup::Policy {
-                url: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+                module: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: None,
                 settings: None,
@@ -41,7 +41,7 @@ pub(crate) fn default_test_config() -> Config {
         (
             "raw-mutation".to_owned(),
             PolicyOrPolicyGroup::Policy {
-                url: "ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0".to_owned(),
+                module: "ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0".to_owned(),
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: Some(true),
                 settings: Some(HashMap::from([
@@ -57,7 +57,7 @@ pub(crate) fn default_test_config() -> Config {
         (
             "sleep".to_owned(),
             PolicyOrPolicyGroup::Policy {
-                url: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
+                module: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: None,
                 settings: Some(HashMap::from([("sleepMilliseconds".to_owned(), 2.into())])),
@@ -73,7 +73,7 @@ pub(crate) fn default_test_config() -> Config {
                 policies: HashMap::from([(
                     "pod_privileged".to_string(),
                     PolicyGroupMember {
-                        url: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+                        module: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                     },
@@ -89,7 +89,7 @@ pub(crate) fn default_test_config() -> Config {
                 policies: HashMap::from([(
                     "raw_mutation".to_string(),
                     PolicyGroupMember {
-                        url: "ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0".to_owned(),
+                        module: "ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0".to_owned(),
                         settings: Some(HashMap::from([
                             (
                                 "forbiddenResources".to_owned(),

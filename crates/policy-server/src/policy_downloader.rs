@@ -238,14 +238,14 @@ fn policies_to_download(
 
     for (name, policy) in policies {
         match policy {
-            PolicyOrPolicyGroup::Policy { url, .. } => {
+            PolicyOrPolicyGroup::Policy { module: url, .. } => {
                 flattened_policies.insert(name.to_owned(), url.to_owned());
             }
             PolicyOrPolicyGroup::PolicyGroup { policies, .. } => {
                 for (sub_policy_name, sub_policy) in policies {
                     flattened_policies.insert(
                         format!("{name}/#{sub_policy_name}"),
-                        sub_policy.url.to_owned(),
+                        sub_policy.module.to_owned(),
                     );
                 }
             }
@@ -291,9 +291,9 @@ mod tests {
 
         let policies_cfg = r#"
     pod-privileged:
-      url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+      module: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     another-pod-privileged:
-      url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+      module: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     "#;
 
         let policies: HashMap<String, PolicyOrPolicyGroup> =
@@ -335,7 +335,7 @@ mod tests {
 
         let policies_cfg = r#"
     pod-privileged:
-      url: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+      module: registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
     "#;
 
         let policies: HashMap<String, PolicyOrPolicyGroup> =

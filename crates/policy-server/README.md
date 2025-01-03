@@ -37,11 +37,11 @@ This is an example of the policies file:
 
 ```yml
 psp-apparmor:
-  url: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.3
+  module: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.3
 psp-capabilities:
-  url: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.3
+  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.3
 namespace_simple:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings:
     valid_namespace: kubewarden-approved
 ```
@@ -98,7 +98,7 @@ This is an example of the policies file with a policy group:
 pod-image-signatures: # policy group
   policies:
     - name: sigstore_pgp
-      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
       settings:
         signatures:
           - image: "*"
@@ -106,14 +106,14 @@ pod-image-signatures: # policy group
               - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
               - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
     - name: sigstore_gh_action
-      url: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
       settings:
         signatures:
           - image: "*"
             githubActions:
             owner: "kubewarden"
     - name: reject_latest_tag
-      url: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
+      module: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
       settings:
         tags:
           reject:
@@ -133,7 +133,7 @@ that is allowed to access:
 strict-ingress-checks:
   policies:
     - name: unique_ingress
-      url: ghcr.io/kubewarden/policies/cel-policy:latest
+      module: ghcr.io/kubewarden/policies/cel-policy:latest
       contextAwareResources:
         - apiVersion: networking.k8s.io/v1
           kind: Ingress
@@ -154,13 +154,13 @@ strict-ingress-checks:
               !variables.knownHost.exists_one(hosts, sets.intersects(hosts, variables.desiredHosts))
             message: "Cannot reuse a host across multiple ingresses"
     - name: https_only
-      url: ghcr.io/kubewarden/policies/ingress:latest
+      module: ghcr.io/kubewarden/policies/ingress:latest
       settings:
         requireTLS: true
         allowPorts: [443]
         denyPorts: [80]
     - name: http_only
-      url: ghcr.io/kubewarden/policies/ingress:latest
+      module: ghcr.io/kubewarden/policies/ingress:latest
       settings:
         requireTLS: false
         allowPorts: [80]

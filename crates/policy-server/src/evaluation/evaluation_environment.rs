@@ -214,7 +214,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
 
             match policy {
                 PolicyOrPolicyGroup::Policy {
-                    url,
+                    module: url,
                     policy_mode,
                     allowed_to_mutate,
                     context_aware_resources,
@@ -297,7 +297,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                         if let Err(e) = self.bootstrap_policy(
                             &mut eval_env,
                             policy_id.clone(),
-                            &policy.url,
+                            &policy.module,
                             policy_evaluation_settings,
                             eval_ctx,
                         ) {
@@ -820,7 +820,7 @@ mod tests {
             policies.insert(
                 policy_id.to_string(),
                 PolicyOrPolicyGroup::Policy {
-                    url: policy_url.clone(),
+                    module: policy_url.clone(),
                     policy_mode: PolicyMode::Protect,
                     allowed_to_mutate: None,
                     settings: None,
@@ -838,7 +838,7 @@ mod tests {
                 policies: vec![(
                     "happy_policy_1".to_string(),
                     PolicyGroupMember {
-                        url: "file:///tmp/happy_policy_1.wasm".to_string(),
+                        module: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                     },
@@ -865,7 +865,7 @@ mod tests {
                 policies: vec![(
                     "happy_policy_1".to_string(),
                     PolicyGroupMember {
-                        url: "file:///tmp/happy_policy_1.wasm".to_string(),
+                        module: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                     },
@@ -902,7 +902,7 @@ mod tests {
                 policies: vec![(
                     "happy_policy_1".to_string(),
                     PolicyGroupMember {
-                        url: "file:///tmp/happy_policy_1.wasm".to_string(),
+                        module: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                     },
@@ -921,7 +921,7 @@ mod tests {
                     (
                         "happy_policy_1".to_string(),
                         PolicyGroupMember {
-                            url: "file:///tmp/happy_policy_1.wasm".to_string(),
+                            module: "file:///tmp/happy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                         },
@@ -929,7 +929,7 @@ mod tests {
                     (
                         "unhappy_policy_1".to_string(),
                         PolicyGroupMember {
-                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                         },
@@ -937,7 +937,7 @@ mod tests {
                     (
                         "unhappy_policy_2".to_string(),
                         PolicyGroupMember {
-                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                         },
@@ -959,7 +959,7 @@ mod tests {
                     (
                         "happy_policy_1".to_string(),
                         PolicyGroupMember {
-                            url: "file:///tmp/happy_policy_1.wasm".to_string(),
+                            module: "file:///tmp/happy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                         },
@@ -967,7 +967,7 @@ mod tests {
                     (
                         "unhappy_policy_1".to_string(),
                         PolicyGroupMember {
-                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                         },
@@ -975,7 +975,7 @@ mod tests {
                     (
                         "unhappy_policy_2".to_string(),
                         PolicyGroupMember {
-                            url: "file:///tmp/unhappy_policy_1.wasm".to_string(),
+                            module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                         },

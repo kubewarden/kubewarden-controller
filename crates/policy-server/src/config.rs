@@ -318,7 +318,7 @@ pub enum PolicyOrPolicyGroupSettings {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct PolicyGroupMember {
     /// Thge URL where the policy is located
-    pub url: String,
+    pub module: String,
     /// The settings for the policy
     pub settings: Option<HashMap<String, serde_yaml::Value>>,
     /// The list of Kubernetes resources the policy is allowed to access
@@ -341,7 +341,7 @@ pub enum PolicyOrPolicyGroup {
     #[serde(rename_all = "camelCase")]
     Policy {
         /// The URL where the policy is located
-        url: String,
+        module: String,
         #[serde(default)]
         /// The mode of the policy
         policy_mode: PolicyMode,
@@ -485,7 +485,7 @@ mod tests {
         let policies_yaml = r#"
 ---
 example:
-    url: ghcr.io/kubewarden/policies/context-aware-policy:0.1.0
+    module: ghcr.io/kubewarden/policies/context-aware-policy:0.1.0
     settings: {}
     allowedToMutate: true
     contextAwareResources:
@@ -499,10 +499,10 @@ group_policy:
     message: "group policy message"
     policies:
         policy1:
-            url: ghcr.io/kubewarden/policies/policy1:0.1.0
+            module: ghcr.io/kubewarden/policies/policy1:0.1.0
             settings: {}
         policy2:
-            url: ghcr.io/kubewarden/policies/policy2:0.1.0
+            module: ghcr.io/kubewarden/policies/policy2:0.1.0
             settings: {}
 "#;
 
@@ -516,7 +516,7 @@ group_policy:
             (
                 "example".to_owned(),
                 PolicyOrPolicyGroup::Policy {
-                    url: "ghcr.io/kubewarden/policies/context-aware-policy:0.1.0".to_owned(),
+                    module: "ghcr.io/kubewarden/policies/context-aware-policy:0.1.0".to_owned(),
                     policy_mode: PolicyMode::Protect,
                     allowed_to_mutate: Some(true),
                     settings: Some(HashMap::new()),
@@ -542,7 +542,7 @@ group_policy:
                         (
                             "policy1".to_owned(),
                             PolicyGroupMember {
-                                url: "ghcr.io/kubewarden/policies/policy1:0.1.0".to_owned(),
+                                module: "ghcr.io/kubewarden/policies/policy1:0.1.0".to_owned(),
                                 settings: Some(HashMap::new()),
                                 context_aware_resources: BTreeSet::new(),
                             },
@@ -550,7 +550,7 @@ group_policy:
                         (
                             "policy2".to_string(),
                             PolicyGroupMember {
-                                url: "ghcr.io/kubewarden/policies/policy2:0.1.0".to_owned(),
+                                module: "ghcr.io/kubewarden/policies/policy2:0.1.0".to_owned(),
                                 settings: Some(HashMap::new()),
                                 context_aware_resources: BTreeSet::new(),
                             },
@@ -568,7 +568,7 @@ group_policy:
         r#"
 ---
 example:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings: {}
 "#, json!({})
     )]
@@ -576,14 +576,14 @@ example:
         r#"
 ---
 example:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
 "#, json!({})
     )]
     #[case::settings_null(
         r#"
 ---
 example:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings: null
 "#, json!({})
     )]
@@ -591,7 +591,7 @@ example:
         r#"
 ---
 example:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings:
     "counter": 1
     "items": ["a", "b"]
@@ -617,7 +617,7 @@ example:
         let policies_yaml = r#"
 ---
 example:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings: {}
 "#;
         let mut temp_file = NamedTempFile::new().unwrap();
@@ -654,17 +654,17 @@ example:
         r#"
 ---
 example:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings: {}
 group_policy:
   expression: "true"
   message: "group policy message"
   policies:
     policy1:
-      url: file:///tmp/namespace-validate-policy.wasm
+      module: file:///tmp/namespace-validate-policy.wasm
       settings: {}
     policy2:
-      url: file:///tmp/namespace-validate-policy.wasm
+      module: file:///tmp/namespace-validate-policy.wasm
       settings: {}
 "#,
         true
@@ -673,7 +673,7 @@ group_policy:
         r#"
 ---
 example/invalid:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings: {}
 "#,
         false
@@ -682,17 +682,17 @@ example/invalid:
         r#"
 ---
 example:
-  url: file:///tmp/namespace-validate-policy.wasm
+  module: file:///tmp/namespace-validate-policy.wasm
   settings: {}
 group_policy:
   expression: "true"
   message: "group policy message"
   policies:
     policy1/a:
-      url: file:///tmp/namespace-validate-policy.wasm
+      module: file:///tmp/namespace-validate-policy.wasm
       settings: {}
     policy2:
-      url: file:///tmp/namespace-validate-policy.wasm
+      module: file:///tmp/namespace-validate-policy.wasm
       settings: {}
 "#,
         false
