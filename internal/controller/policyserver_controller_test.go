@@ -293,7 +293,7 @@ var _ = Describe("PolicyServer controller", func() {
 					Namespace: admissionPolicy.GetNamespace(),
 					Name:      admissionPolicy.GetName(),
 				},
-				URL:                   admissionPolicy.GetModule(),
+				Module:                admissionPolicy.GetModule(),
 				PolicyMode:            string(admissionPolicy.GetPolicyMode()),
 				AllowedToMutate:       admissionPolicy.IsMutating(),
 				Settings:              admissionPolicy.GetSettings(),
@@ -304,7 +304,7 @@ var _ = Describe("PolicyServer controller", func() {
 					Namespace: clusterAdmissionPolicy.GetNamespace(),
 					Name:      clusterAdmissionPolicy.GetName(),
 				},
-				URL:                   clusterAdmissionPolicy.GetModule(),
+				Module:                clusterAdmissionPolicy.GetModule(),
 				PolicyMode:            string(clusterAdmissionPolicy.GetPolicyMode()),
 				AllowedToMutate:       clusterAdmissionPolicy.IsMutating(),
 				Settings:              clusterAdmissionPolicy.GetSettings(),
@@ -315,7 +315,7 @@ var _ = Describe("PolicyServer controller", func() {
 					Namespace: admissionPolicyGroup.GetNamespace(),
 					Name:      admissionPolicyGroup.GetName(),
 				},
-				URL:                   admissionPolicyGroup.GetModule(),
+				Module:                admissionPolicyGroup.GetModule(),
 				PolicyMode:            string(admissionPolicyGroup.GetPolicyMode()),
 				AllowedToMutate:       admissionPolicyGroup.IsMutating(),
 				Settings:              admissionPolicyGroup.GetSettings(),
@@ -329,7 +329,7 @@ var _ = Describe("PolicyServer controller", func() {
 					Namespace: clusterPolicyGroup.GetNamespace(),
 					Name:      clusterPolicyGroup.GetName(),
 				},
-				URL:                   clusterPolicyGroup.GetModule(),
+				Module:                clusterPolicyGroup.GetModule(),
 				AllowedToMutate:       clusterPolicyGroup.IsMutating(),
 				Settings:              clusterPolicyGroup.GetSettings(),
 				ContextAwareResources: clusterPolicyGroup.GetContextAwareResources(),
@@ -363,7 +363,7 @@ var _ = Describe("PolicyServer controller", func() {
 									"Namespace": Equal(admissionPolicy.GetNamespace()),
 									"Name":      Equal(admissionPolicy.GetName()),
 								}),
-								"url":        Equal(admissionPolicy.GetModule()),
+								"module":     Equal(admissionPolicy.GetModule()),
 								"policyMode": Equal(string(admissionPolicy.GetPolicyMode())),
 							}),
 							clusterAdmissionPolicy.GetUniqueName(): And(MatchAllKeys(Keys{
@@ -371,7 +371,7 @@ var _ = Describe("PolicyServer controller", func() {
 									"Namespace": Equal(clusterAdmissionPolicy.GetNamespace()),
 									"Name":      Equal(clusterAdmissionPolicy.GetName()),
 								}),
-								"url":             Equal(clusterAdmissionPolicy.GetModule()),
+								"module":          Equal(clusterAdmissionPolicy.GetModule()),
 								"policyMode":      Equal(string(clusterAdmissionPolicy.GetPolicyMode())),
 								"allowedToMutate": Equal(clusterAdmissionPolicy.IsMutating()),
 								"settings":        BeNil(),
@@ -394,7 +394,7 @@ var _ = Describe("PolicyServer controller", func() {
 								}),
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod-privileged": MatchKeys(IgnoreExtras, Keys{
-										"url": Equal(admissionPolicyGroup.GetPolicyGroupMembers()["pod-privileged"].Module),
+										"module": Equal(admissionPolicyGroup.GetPolicyGroupMembers()["pod-privileged"].Module),
 									}),
 								}),
 								"policyMode": Equal(string(admissionPolicyGroup.GetPolicyMode())),
@@ -408,7 +408,7 @@ var _ = Describe("PolicyServer controller", func() {
 								}),
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod-privileged": MatchAllKeys(Keys{
-										"url":      Equal(clusterPolicyGroup.GetPolicyGroupMembers()["pod-privileged"].Module),
+										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembers()["pod-privileged"].Module),
 										"settings": Ignore(),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
@@ -416,7 +416,7 @@ var _ = Describe("PolicyServer controller", func() {
 										})), HaveLen(1)),
 									}),
 									"user-group-psp": MatchAllKeys(Keys{
-										"url":      Equal(clusterPolicyGroup.GetPolicyGroupMembers()["user-group-psp"].Module),
+										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembers()["user-group-psp"].Module),
 										"settings": Ignore(),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),

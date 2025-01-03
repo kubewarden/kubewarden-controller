@@ -45,7 +45,7 @@ const integrationTestsFinalizer = "integration-tests-safety-net-finalizer"
 var (
 	templatePolicyServer = policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
-			Image:    "ghcr.io/kubewarden/policy-server:" + policyServerVersion(),
+			Image:    policyServerRepository() + ":" + policyServerVersion(),
 			Replicas: 1,
 		},
 	}
@@ -80,6 +80,14 @@ var (
 		},
 	}
 )
+
+func policyServerRepository() string {
+	repository, ok := os.LookupEnv("POLICY_SERVER_REPOSITORY")
+	if !ok {
+		return "ghcr.io/kubewarden/policy-server"
+	}
+	return repository
+}
 
 func policyServerVersion() string {
 	version, ok := os.LookupEnv("POLICY_SERVER_VERSION")
