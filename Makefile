@@ -6,7 +6,10 @@ ENVTEST_K8S_VERSION = 1.30.0
 K3S_TESTCONTAINER_VERSION = v1.30.0-k3s1
 # POLICY_SERVER_VERSION refers to the version of the policy server to be used by integration tests.
 # FIXME This should be updated to the latest stable version when the policy server is updated.
-POLICY_SERVER_VERSION = latest
+POLICY_SERVER_VERSION ?= latest
+# POLICY_SERVER_REPOSITORY refers to the repository where the policy server image is hosted.
+# This is useful when you need to test the controller with a different policy server image.
+POLICY_SERVER_REPOSITORY ?= ghcr.io/kubewarden/policy-server
 
 # Let's use a generous timeout for integration tests because GitHub workers can
 # be slow
@@ -92,9 +95,9 @@ integration-tests-envtest: manifests generate fmt vet ginkgo envtest ## Run inte
 .PHONY: integration-tests-real-cluster
 integration-tests-real-cluster: manifests generate fmt ginkgo vet ## Run integration tests that require a real cluster only.
 	K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" POLICY_SERVER_VERSION="$(POLICY_SERVER_VERSION)" \
-	$(GINKGO) -p -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="real-cluster" \
-	-output-dir=./coverage/integration-tests/ -coverprofile=coverage-real-cluster.txt -covermode=atomic -coverpkg=all \
-	./internal/controller/
+	POLICY_SERVER_REPOSITORY="$(POLICY_SERVER_REPOSITORY)" $(GINKGO) -p -v -github-output -timeout=$(TEST_TIMEOUT) \
+	-label-filter="real-cluster" -output-dir=./coverage/integration-tests/ -coverprofile=coverage-real-cluster.txt \
+	-covermode=atomic -coverpkg=all ./internal/controller/
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter

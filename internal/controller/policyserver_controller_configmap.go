@@ -23,14 +23,14 @@ import (
 const dataType string = "Data" // only data type is supported
 
 type policyGroupMember struct {
-	URL                   string                            `json:"url"`
+	Module                string                            `json:"module"`
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 }
 
 type policyServerConfigEntry struct {
 	NamespacedName        types.NamespacedName              `json:"namespacedName"`
-	URL                   string                            `json:"url,omitempty"`
+	Module                string                            `json:"module,omitempty"`
 	PolicyMode            string                            `json:"policyMode"`
 	AllowedToMutate       bool                              `json:"allowedToMutate,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
@@ -52,10 +52,10 @@ func (p *policyServerConfigEntry) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, entry); err != nil {
 		return errors.Join(errors.New("failed to unmarshal policy server config entry"), err)
 	}
-	if len(p.Policies) == 0 && len(p.URL) == 0 {
+	if len(p.Policies) == 0 && len(p.Module) == 0 {
 		return errors.New("policies JSON should have an URL or a list of policies to be evaluated")
 	}
-	if len(p.Policies) != 0 && len(p.URL) != 0 {
+	if len(p.Policies) != 0 && len(p.Module) != 0 {
 		return errors.New("policies JSON should not have an URL and a list of policies to be evaluated at the same time")
 	}
 	return nil
@@ -80,14 +80,14 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(struct {
 		NamespacedName        types.NamespacedName              `json:"namespacedName"`
-		URL                   string                            `json:"url"`
+		Module                string                            `json:"module"`
 		PolicyMode            string                            `json:"policyMode"`
 		AllowedToMutate       bool                              `json:"allowedToMutate"`
 		ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 		Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	}{
 		NamespacedName:        p.NamespacedName,
-		URL:                   p.URL,
+		Module:                p.Module,
 		PolicyMode:            p.PolicyMode,
 		AllowedToMutate:       p.AllowedToMutate,
 		ContextAwareResources: p.ContextAwareResources,
@@ -178,7 +178,7 @@ func buildPolicyGroupMembers(policies policiesv1.PolicyGroupMembers) map[string]
 	policyGroupMembers := map[string]policyGroupMember{}
 	for name, policy := range policies {
 		policyGroupMembers[name] = policyGroupMember{
-			URL:                   policy.Module,
+			Module:                policy.Module,
 			Settings:              policy.Settings,
 			ContextAwareResources: policy.ContextAwareResources,
 		}
@@ -194,7 +194,7 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMa
 				Namespace: admissionPolicy.GetNamespace(),
 				Name:      admissionPolicy.GetName(),
 			},
-			URL:                   admissionPolicy.GetModule(),
+			Module:                admissionPolicy.GetModule(),
 			PolicyMode:            string(admissionPolicy.GetPolicyMode()),
 			AllowedToMutate:       admissionPolicy.IsMutating(),
 			Settings:              admissionPolicy.GetSettings(),

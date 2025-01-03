@@ -40,12 +40,15 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-const integrationTestsFinalizer = "integration-tests-safety-net-finalizer"
+const (
+	integrationTestsFinalizer   = "integration-tests-safety-net-finalizer"
+	defaultKubewardenRepository = "ghcr.io/kubewarden/policy-server"
+)
 
 var (
 	templatePolicyServer = policiesv1.PolicyServer{
 		Spec: policiesv1.PolicyServerSpec{
-			Image:    "ghcr.io/kubewarden/policy-server:" + policyServerVersion(),
+			Image:    policyServerRepository() + ":" + policyServerVersion(),
 			Replicas: 1,
 		},
 	}
@@ -80,6 +83,14 @@ var (
 		},
 	}
 )
+
+func policyServerRepository() string {
+	repository, ok := os.LookupEnv("POLICY_SERVER_REPOSITORY")
+	if !ok {
+		return defaultKubewardenRepository
+	}
+	return repository
+}
 
 func policyServerVersion() string {
 	version, ok := os.LookupEnv("POLICY_SERVER_VERSION")
