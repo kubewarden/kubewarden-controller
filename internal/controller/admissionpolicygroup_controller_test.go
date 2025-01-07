@@ -52,10 +52,10 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 
 		BeforeAll(func() {
 			policyServerName = newName("policy-server")
-			createPolicyServerAndWaitForItsService(ctx, policyServerFactory(policyServerName))
+			createPolicyServerAndWaitForItsService(ctx, newPolicyServerFactory().withName(policyServerName).build())
 
 			policyName = newName("validating-policy")
-			policy = admissionPolicyGroupFactory(policyName, policyNamespace, policyServerName)
+			policy = newAdmissionPolicyGroupFactory().withName(policyName).withNamespace(policyNamespace).withPolicyServer(policyServerName).build()
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 		})
 
@@ -172,7 +172,7 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 	It("should set policy status to unscheduled when creating an AdmissionPolicyGroup without a PolicyServer assigned", func() {
 		policyName := newName("unscheduled-policy")
 		Expect(
-			k8sClient.Create(ctx, admissionPolicyGroupFactory(policyName, policyNamespace, "")),
+			k8sClient.Create(ctx, newAdmissionPolicyGroupFactory().withName(policyName).withNamespace(policyNamespace).withPolicyServer("").build()),
 		).To(haveSucceededOrAlreadyExisted())
 
 		Eventually(func() (*policiesv1.AdmissionPolicyGroup, error) {
@@ -188,7 +188,7 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 
 		BeforeAll(func() {
 			Expect(
-				k8sClient.Create(ctx, admissionPolicyGroupFactory(policyName, policyNamespace, policyServerName)),
+				k8sClient.Create(ctx, newAdmissionPolicyGroupFactory().withName(policyName).withNamespace(policyNamespace).withPolicyServer(policyServerName).build()),
 			).To(haveSucceededOrAlreadyExisted())
 		})
 
@@ -203,7 +203,7 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 		It("should set the policy status to active when the PolicyServer is created", func() {
 			By("creating the PolicyServer")
 			Expect(
-				k8sClient.Create(ctx, policyServerFactory(policyServerName)),
+				k8sClient.Create(ctx, newPolicyServerFactory().withName(policyServerName).build()),
 			).To(haveSucceededOrAlreadyExisted())
 
 			By("changing the policy status to pending")

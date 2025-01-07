@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"os"
 
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -44,182 +43,6 @@ const (
 	integrationTestsFinalizer   = "integration-tests-safety-net-finalizer"
 	defaultKubewardenRepository = "ghcr.io/kubewarden/policy-server"
 )
-
-var (
-	templatePolicyServer = policiesv1.PolicyServer{
-		Spec: policiesv1.PolicyServerSpec{
-			Image:    policyServerRepository() + ":" + policyServerVersion(),
-			Replicas: 1,
-		},
-	}
-	templateClusterAdmissionPolicy = policiesv1.ClusterAdmissionPolicy{
-		Spec: policiesv1.ClusterAdmissionPolicySpec{
-			PolicySpec: policiesv1.PolicySpec{
-				Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
-				Rules:  []admissionregistrationv1.RuleWithOperations{},
-			},
-		},
-	}
-	templateAdmissionPolicy = policiesv1.AdmissionPolicy{
-		Spec: policiesv1.AdmissionPolicySpec{
-			PolicySpec: policiesv1.PolicySpec{
-				Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
-				Rules:  []admissionregistrationv1.RuleWithOperations{},
-			},
-		},
-	}
-	templateAdmissionPolicyGroup = policiesv1.AdmissionPolicyGroup{
-		Spec: policiesv1.AdmissionPolicyGroupSpec{
-			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
-				Rules: []admissionregistrationv1.RuleWithOperations{},
-			},
-		},
-	}
-	templateClusterAdmissionPolicyGroup = policiesv1.ClusterAdmissionPolicyGroup{
-		Spec: policiesv1.ClusterAdmissionPolicyGroupSpec{
-			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
-				Rules: []admissionregistrationv1.RuleWithOperations{},
-			},
-		},
-	}
-)
-
-func policyServerRepository() string {
-	repository, ok := os.LookupEnv("POLICY_SERVER_REPOSITORY")
-	if !ok {
-		return defaultKubewardenRepository
-	}
-	return repository
-}
-
-func policyServerVersion() string {
-	version, ok := os.LookupEnv("POLICY_SERVER_VERSION")
-	if !ok {
-		return "latest"
-	}
-
-	return version
-}
-
-func policyServerFactory(name string) *policiesv1.PolicyServer {
-	policyServer := templatePolicyServer.DeepCopy()
-	policyServer.Name = name
-	policyServer.Finalizers = []string{
-		// On a real cluster the Kubewarden finalizer is added by our mutating
-		// webhook. This is not running now, hence we have to manually add the finalizer
-		constants.KubewardenFinalizer,
-		// By adding this finalizer automatically, we ensure that when
-		// testing removal of finalizers on deleted objects, that they will
-		// exist at all times
-		integrationTestsFinalizer,
-	}
-	return policyServer
-}
-
-func admissionPolicyFactory(name, policyNamespace, policyServerName string, mutating bool) *policiesv1.AdmissionPolicy {
-	admissionPolicy := templateAdmissionPolicy.DeepCopy()
-	admissionPolicy.Name = name
-	admissionPolicy.Namespace = policyNamespace
-	admissionPolicy.Spec.PolicyServer = policyServerName
-	admissionPolicy.Spec.PolicySpec.Mutating = mutating
-	admissionPolicy.Spec.PolicySpec.MatchConditions = []admissionregistrationv1.MatchCondition{
-		{
-			Name:       "noop",
-			Expression: "true",
-		},
-	}
-	admissionPolicy.Finalizers = []string{
-		// On a real cluster the Kubewarden finalizer is added by our mutating
-		// webhook. This is not running now, hence we have to manually add the finalizer
-		constants.KubewardenFinalizer,
-		// By adding this finalizer automatically, we ensure that when
-		// testing removal of finalizers on deleted objects, that they will
-		// exist at all times
-		integrationTestsFinalizer,
-	}
-	return admissionPolicy
-}
-
-func admissionPolicyGroupFactory(name, policyNamespace, policyServerName string) *policiesv1.AdmissionPolicyGroup {
-	admissionPolicy := templateAdmissionPolicyGroup.DeepCopy()
-	admissionPolicy.Name = name
-	admissionPolicy.Namespace = policyNamespace
-	admissionPolicy.Spec.PolicyServer = policyServerName
-	admissionPolicy.Spec.PolicyGroupSpec.MatchConditions = []admissionregistrationv1.MatchCondition{
-		{
-			Name:       "noop",
-			Expression: "true",
-		},
-	}
-	admissionPolicy.Spec.Policies = policiesv1.PolicyGroupMembers{
-		"pod-privileged": {
-			Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
-		},
-	}
-	admissionPolicy.Finalizers = []string{
-		// On a real cluster the Kubewarden finalizer is added by our mutating
-		// webhook. This is not running now, hence we have to manually add the finalizer
-		constants.KubewardenFinalizer,
-		// By adding this finalizer automatically, we ensure that when
-		// testing removal of finalizers on deleted objects, that they will
-		// exist at all times
-		integrationTestsFinalizer,
-	}
-	return admissionPolicy
-}
-
-func clusterAdmissionPolicyGroupFactory(name, policyServerName string) *policiesv1.ClusterAdmissionPolicyGroup {
-	clusterAdmissionPolicy := templateClusterAdmissionPolicyGroup.DeepCopy()
-	clusterAdmissionPolicy.Name = name
-	clusterAdmissionPolicy.Spec.PolicyServer = policyServerName
-	clusterAdmissionPolicy.Spec.PolicyGroupSpec.MatchConditions = []admissionregistrationv1.MatchCondition{
-		{
-			Name:       "noop",
-			Expression: "true",
-		},
-	}
-	clusterAdmissionPolicy.Finalizers = []string{
-		// On a real cluster the Kubewarden finalizer is added by our mutating
-		// webhook. This is not running now, hence we have to manually add the finalizer
-		constants.KubewardenFinalizer,
-		// By adding this finalizer automatically, we ensure that when
-		// testing removal of finalizers on deleted objects, that they will
-		// exist at all times
-		integrationTestsFinalizer,
-	}
-	clusterAdmissionPolicy.Spec.Policies = policiesv1.PolicyGroupMembers{
-		"pod-privileged": {
-			Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
-		},
-		"user-group-psp": {
-			Module: "registry://ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
-		},
-	}
-	return clusterAdmissionPolicy
-}
-
-func clusterAdmissionPolicyFactory(name, policyServerName string, mutating bool) *policiesv1.ClusterAdmissionPolicy {
-	clusterAdmissionPolicy := templateClusterAdmissionPolicy.DeepCopy()
-	clusterAdmissionPolicy.Name = name
-	clusterAdmissionPolicy.Spec.PolicyServer = policyServerName
-	clusterAdmissionPolicy.Spec.PolicySpec.Mutating = mutating
-	clusterAdmissionPolicy.Spec.PolicySpec.MatchConditions = []admissionregistrationv1.MatchCondition{
-		{
-			Name:       "noop",
-			Expression: "true",
-		},
-	}
-	clusterAdmissionPolicy.Finalizers = []string{
-		// On a real cluster the Kubewarden finalizer is added by our mutating
-		// webhook. This is not running now, hence we have to manually add the finalizer
-		constants.KubewardenFinalizer,
-		// By adding this finalizer automatically, we ensure that when
-		// testing removal of finalizers on deleted objects, that they will
-		// exist at all times
-		integrationTestsFinalizer,
-	}
-	return clusterAdmissionPolicy
-}
 
 func getTestAdmissionPolicy(ctx context.Context, namespace, name string) (*policiesv1.AdmissionPolicy, error) {
 	admissionPolicy := policiesv1.AdmissionPolicy{}
@@ -412,9 +235,7 @@ func newName(prefix string) string {
 }
 
 func createPolicyServerAndWaitForItsService(ctx context.Context, policyServer *policiesv1.PolicyServer) {
-	Expect(
-		k8sClient.Create(ctx, policyServer),
-	).To(haveSucceededOrAlreadyExisted())
+	Expect(k8sClient.Create(ctx, policyServer)).To(haveSucceededOrAlreadyExisted())
 	// Wait for the Service associated with the PolicyServer to be created
 	Eventually(func() error {
 		_, err := getTestPolicyServerService(ctx, policyServer.GetName())

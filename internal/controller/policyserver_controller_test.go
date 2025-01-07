@@ -48,7 +48,7 @@ var _ = Describe("PolicyServer controller", func() {
 	When("creating a PolicyServer", func() {
 		It("should use the policy server tolerations configuration in the policy server deployment", func() {
 			tolerationSeconds := int64(10)
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			policyServer.Spec.Tolerations = []corev1.Toleration{{
 				Key:               "key1",
 				Operator:          corev1.TolerationOpEqual,
@@ -89,7 +89,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should use the policy server affinity configuration in the policy server deployment", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			policyServer.Spec.Affinity = corev1.Affinity{
 				NodeAffinity: &corev1.NodeAffinity{
 					RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
@@ -128,7 +128,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create policy server deployment with some default configuration", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
@@ -178,7 +178,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create the policy server deployment and use the user defined security contexts", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			runAsUser := int64(1000)
 			privileged := true
 			runAsNonRoot := false
@@ -229,7 +229,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create the policy server configmap empty if no policies are assigned ", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			configmap, err := getTestPolicyServerConfigMap(ctx, policyServerName)
@@ -244,13 +244,13 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create the policy server configmap with the assigned policies", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
-			admissionPolicy := admissionPolicyFactory(newName("admission-policy"), "default", policyServerName, false)
+			admissionPolicy := newAdmissionPolicyFactory().withName(newName("admission-policy")).withNamespace("default").withPolicyServer(policyServerName).build()
 			Expect(k8sClient.Create(ctx, admissionPolicy)).To(Succeed())
 
-			clusterAdmissionPolicy := clusterAdmissionPolicyFactory(newName("cluster-admission"), policyServerName, false)
+			clusterAdmissionPolicy := newClusterAdmissionPolicyFactory().withName(newName("cluster-admission")).withPolicyServer(policyServerName).withMutating(false).build()
 			clusterAdmissionPolicy.Spec.ContextAwareResources = []policiesv1.ContextAwareResource{
 				{
 					APIVersion: "v1",
@@ -263,10 +263,10 @@ var _ = Describe("PolicyServer controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, clusterAdmissionPolicy)).To(Succeed())
 
-			admissionPolicyGroup := admissionPolicyGroupFactory(newName("admissing-policy-group"), "default", policyServerName)
+			admissionPolicyGroup := newAdmissionPolicyGroupFactory().withName(newName("admissing-policy-group")).withNamespace("default").withPolicyServer(policyServerName).build()
 			Expect(k8sClient.Create(ctx, admissionPolicyGroup)).To(Succeed())
 
-			clusterPolicyGroup := clusterAdmissionPolicyGroupFactory(newName("cluster-admission-policy-group"), policyServerName)
+			clusterPolicyGroup := newClusterAdmissionPolicyGroupFactory().withName(newName("cluster-admission-policy-group")).withPolicyServer(policyServerName).build()
 			podPrivilegedPolicy := clusterPolicyGroup.Spec.Policies["pod-privileged"]
 			podPrivilegedPolicy.ContextAwareResources = []policiesv1.ContextAwareResource{
 				{
@@ -441,7 +441,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create the policy server configmap with the sources authorities", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			policyServer.Spec.InsecureSources = []string{"localhost:5000"}
 			policyServer.Spec.SourceAuthorities = map[string][]string{
 				"myprivateregistry:5000": {"cert1", "cert2"},
@@ -481,7 +481,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create PodDisruptionBudget when policy server has MinAvailable configuration set", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			minAvailable := intstr.FromInt(2)
 			policyServer.Spec.MinAvailable = &minAvailable
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
@@ -493,7 +493,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create PodDisruptionBudget when policy server has MaxUnavailable configuration set", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			maxUnavailable := intstr.FromInt(2)
 			policyServer.Spec.MaxUnavailable = &maxUnavailable
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
@@ -505,7 +505,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should not create PodDisruptionBudget when policy server has no PDB configuration", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			Consistently(func() error {
@@ -515,7 +515,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create the PolicyServer deployment with the limits and the requests", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			policyServer.Spec.Limits = corev1.ResourceList{
 				"cpu":    resource.MustParse("100m"),
 				"memory": resource.MustParse("1Gi"),
@@ -534,7 +534,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create deployment with owner reference", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			Eventually(func() error {
@@ -561,7 +561,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create configmap with owner reference", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			Eventually(func() error {
@@ -587,7 +587,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create service with owner reference", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			Eventually(func() error {
@@ -613,7 +613,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create the policy server secrets", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			Eventually(func() error {
@@ -645,7 +645,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should set the configMap version as a deployment annotation", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			configmap, err := getTestPolicyServerConfigMap(ctx, policyServerName)
@@ -667,7 +667,7 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should update the configMap version after adding a policy", func() {
-			policyServer := policyServerFactory(policyServerName)
+			policyServer := newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			initalConfigMap, err := getTestPolicyServerConfigMap(ctx, policyServerName)
@@ -688,7 +688,7 @@ var _ = Describe("PolicyServer controller", func() {
 			}, timeout, pollInterval).Should(Succeed())
 
 			policyName := newName("validating-policy")
-			policy := clusterAdmissionPolicyFactory(policyName, policyServerName, false)
+			policy := newClusterAdmissionPolicyFactory().withName(policyName).withPolicyServer(policyServerName).withMutating(false).build()
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 
 			Eventually(func() error {
@@ -718,7 +718,7 @@ var _ = Describe("PolicyServer controller", func() {
 		var policyServer *policiesv1.PolicyServer
 
 		BeforeEach(func() {
-			policyServer = policyServerFactory(policyServerName)
+			policyServer = newPolicyServerFactory().withName(policyServerName).build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 		})
 
@@ -998,13 +998,13 @@ var _ = Describe("PolicyServer controller", func() {
 
 	When("deleting a PolicyServer", func() {
 		BeforeEach(func() {
-			createPolicyServerAndWaitForItsService(ctx, policyServerFactory(policyServerName))
+			createPolicyServerAndWaitForItsService(ctx, newPolicyServerFactory().withName(policyServerName).build())
 		})
 
 		Context("with no assigned policies", func() {
 			It("should get its finalizer removed", func() {
 				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+					k8sClient.Delete(ctx, newPolicyServerFactory().withName(policyServerName).build()),
 				).To(Succeed())
 
 				Eventually(func() (*policiesv1.PolicyServer, error) {
@@ -1036,7 +1036,7 @@ var _ = Describe("PolicyServer controller", func() {
 				}, timeout, pollInterval).Should(Succeed())
 
 				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+					k8sClient.Delete(ctx, newPolicyServerFactory().withName(policyServerName).build()),
 				).To(Succeed())
 
 				Eventually(func() (*policiesv1.PolicyServer, error) {
@@ -1053,7 +1053,7 @@ var _ = Describe("PolicyServer controller", func() {
 			BeforeEach(func() {
 				policyName = newName("policy")
 				Expect(
-					k8sClient.Create(ctx, clusterAdmissionPolicyFactory(policyName, policyServerName, false)),
+					k8sClient.Create(ctx, newClusterAdmissionPolicyFactory().withName(policyName).withPolicyServer(policyServerName).withMutating(false).build()),
 				).To(Succeed())
 				Eventually(func() error {
 					_, err := getTestClusterAdmissionPolicy(ctx, policyName)
@@ -1068,7 +1068,7 @@ var _ = Describe("PolicyServer controller", func() {
 
 			It("should delete assigned policies", func() {
 				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+					k8sClient.Delete(ctx, newPolicyServerFactory().withName(policyServerName).build()),
 				).To(Succeed())
 
 				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
@@ -1099,7 +1099,7 @@ var _ = Describe("PolicyServer controller", func() {
 				}, timeout, pollInterval).Should(Succeed())
 
 				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+					k8sClient.Delete(ctx, newPolicyServerFactory().withName(policyServerName).build()),
 				).To(Succeed())
 
 				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
@@ -1114,7 +1114,7 @@ var _ = Describe("PolicyServer controller", func() {
 
 			It("should not delete its managed resources until all the scheduled policies are gone", func() {
 				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+					k8sClient.Delete(ctx, newPolicyServerFactory().withName(policyServerName).build()),
 				).To(Succeed())
 
 				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
@@ -1142,7 +1142,7 @@ var _ = Describe("PolicyServer controller", func() {
 				}).Should(Succeed())
 
 				Expect(
-					k8sClient.Delete(ctx, policyServerFactory(policyServerName)),
+					k8sClient.Delete(ctx, newPolicyServerFactory().withName(policyServerName).build()),
 				).To(Succeed())
 
 				// wait for the reconciliation loop of the ClusterAdmissionPolicy to remove the resource
