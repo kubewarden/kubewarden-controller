@@ -466,7 +466,7 @@ async fn test_verified_policy() {
     config.policies = HashMap::from([(
         "pod-privileged".to_owned(),
         PolicyOrPolicyGroup::Policy {
-            url: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+            module: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
             policy_mode: PolicyMode::Protect,
             allowed_to_mutate: None,
             settings: None,
@@ -498,7 +498,7 @@ async fn test_policy_with_invalid_settings() {
     config.policies.insert(
         "invalid_settings".to_owned(),
         PolicyOrPolicyGroup::Policy {
-            url: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
+            module: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
             policy_mode: PolicyMode::Protect,
             allowed_to_mutate: None,
             settings: Some(HashMap::from([(
@@ -546,7 +546,7 @@ async fn test_policy_with_wrong_url() {
     config.policies.insert(
         "wrong_url".to_owned(),
         PolicyOrPolicyGroup::Policy {
-            url: "ghcr.io/kubewarden/tests/not_existing:v0.1.0".to_owned(),
+            module: "ghcr.io/kubewarden/tests/not_existing:v0.1.0".to_owned(),
             policy_mode: PolicyMode::Protect,
             allowed_to_mutate: None,
             settings: None,
