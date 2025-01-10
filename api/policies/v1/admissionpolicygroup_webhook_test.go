@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
@@ -54,6 +55,37 @@ func TestAdmissionPolicyGroupValidateUpdate(t *testing.T) {
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.NoError(t, err)
 	require.Empty(t, warnings)
+
+	oldPolicy = NewAdmissionPolicyGroupFactory().
+		WithMode("monitor").
+		Build()
+	newPolicy = NewAdmissionPolicyGroupFactory().
+		WithMode("protect").
+		Build()
+	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+}
+
+func TestInvalidAdmissionPolicyGroupValidateUpdate(t *testing.T) {
+	oldPolicy := NewAdmissionPolicyFactory().
+		WithPolicyServer("old").
+		Build()
+	newPolicy := NewAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		Build()
+	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
+	require.Error(t, err)
+	require.Empty(t, warnings)
+
+	newPolicy = NewAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		WithMode("monitor").
+		Build()
+
+	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
+	require.Error(t, err)
+	require.Empty(t, warnings)
 }
 
 func TestAdmissionPolicyGroupValidateUpdateWithInvalidOldPolicy(t *testing.T) {
@@ -62,4 +94,89 @@ func TestAdmissionPolicyGroupValidateUpdateWithInvalidOldPolicy(t *testing.T) {
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.Empty(t, warnings)
 	require.ErrorContains(t, err, "object is not of type AdmissionPolicyGroup")
+}
+
+func TestInvalidAdmissionPolicyGroupCreation(t *testing.T) {
+	policy := NewAdmissionPolicyGroupFactory().
+		WithPolicyServer("").
+		WithRules([]admissionregistrationv1.RuleWithOperations{
+			{},
+			{
+				Operations: []admissionregistrationv1.OperationType{},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				}},
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{""},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{""},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{""},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"", "pods"},
+				},
+			},
+		}).
+		WithMatchConditions([]admissionregistrationv1.MatchCondition{
+			{
+				Name:       "foo",
+				Expression: "1 + 1",
+			},
+			{
+				Name:       "foo",
+				Expression: "invalid expression",
+			},
+		}).
+		Build()
+	warnings, err := policy.ValidateCreate()
+	require.Error(t, err)
+	require.Empty(t, warnings)
 }

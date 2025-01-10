@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
@@ -45,6 +46,37 @@ func TestClusterAdmissionPolicyValidateUpdate(t *testing.T) {
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.NoError(t, err)
 	require.Empty(t, warnings)
+
+	oldPolicy = NewClusterAdmissionPolicyFactory().
+		WithMode("monitor").
+		Build()
+	newPolicy = NewClusterAdmissionPolicyFactory().
+		WithMode("protect").
+		Build()
+	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+}
+
+func TestInvalidClusterAdmissionPolicyValidateUpdate(t *testing.T) {
+	oldPolicy := NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("old").
+		Build()
+	newPolicy := NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		Build()
+	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
+	require.Error(t, err)
+	require.Empty(t, warnings)
+
+	newPolicy = NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		WithMode("monitor").
+		Build()
+
+	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
+	require.Error(t, err)
+	require.Empty(t, warnings)
 }
 
 func TestClusterAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
@@ -53,4 +85,89 @@ func TestClusterAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) 
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.Empty(t, warnings)
 	require.ErrorContains(t, err, "object is not of type ClusterAdmissionPolicy")
+}
+
+func TestInvalidClusterAdmissionPolicyCreation(t *testing.T) {
+	policy := NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("").
+		WithRules([]admissionregistrationv1.RuleWithOperations{
+			{},
+			{
+				Operations: []admissionregistrationv1.OperationType{},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				}},
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{""},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{""},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{""},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"", "pods"},
+				},
+			},
+		}).
+		WithMatchConditions([]admissionregistrationv1.MatchCondition{
+			{
+				Name:       "foo",
+				Expression: "1 + 1",
+			},
+			{
+				Name:       "foo",
+				Expression: "invalid expression",
+			},
+		}).
+		Build()
+	warnings, err := policy.ValidateCreate()
+	require.Error(t, err)
+	require.Empty(t, warnings)
 }

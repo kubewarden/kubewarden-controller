@@ -27,6 +27,7 @@ type AdmissionPolicyFactory struct {
 	rules        []admissionregistrationv1.RuleWithOperations
 	module       string
 	matchConds   []admissionregistrationv1.MatchCondition
+	mode         PolicyMode
 }
 
 func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
@@ -52,6 +53,7 @@ func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
 		matchConds: []admissionregistrationv1.MatchCondition{
 			{Name: "noop", Expression: "true"},
 		},
+		mode: "protect",
 	}
 }
 
@@ -85,6 +87,11 @@ func (fac *AdmissionPolicyFactory) WithMatchConditions(matchConditions []admissi
 	return fac
 }
 
+func (fac *AdmissionPolicyFactory) WithMode(mode PolicyMode) *AdmissionPolicyFactory {
+	fac.mode = mode
+	return fac
+}
+
 func (fac *AdmissionPolicyFactory) Build() *AdmissionPolicy {
 	policy := AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -107,6 +114,7 @@ func (fac *AdmissionPolicyFactory) Build() *AdmissionPolicy {
 				Rules:           fac.rules,
 				Mutating:        fac.mutating,
 				MatchConditions: fac.matchConds,
+				Mode:            fac.mode,
 			},
 		},
 	}
@@ -259,6 +267,7 @@ type AdmissionPolicyGroupFactory struct {
 	expression    string
 	policyMembers PolicyGroupMembers
 	matchConds    []admissionregistrationv1.MatchCondition
+	mode          PolicyMode
 }
 
 func NewAdmissionPolicyGroupFactory() *AdmissionPolicyGroupFactory {
@@ -288,6 +297,7 @@ func NewAdmissionPolicyGroupFactory() *AdmissionPolicyGroupFactory {
 		matchConds: []admissionregistrationv1.MatchCondition{
 			{Name: "noop", Expression: "true"},
 		},
+		mode: "protect",
 	}
 }
 
@@ -316,6 +326,11 @@ func (fac *AdmissionPolicyGroupFactory) WithMatchConditions(matchContions []admi
 	return fac
 }
 
+func (fac *AdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *AdmissionPolicyGroupFactory {
+	fac.mode = mode
+	return fac
+}
+
 func (fac *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
 	return &AdmissionPolicyGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -338,6 +353,7 @@ func (fac *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
 				Expression:      fac.expression,
 				Rules:           fac.rules,
 				MatchConditions: fac.matchConds,
+				Mode:            fac.mode,
 			},
 		},
 	}
@@ -350,6 +366,7 @@ type ClusterAdmissionPolicyGroupFactory struct {
 	expression    string
 	policyMembers PolicyGroupMembers
 	matchConds    []admissionregistrationv1.MatchCondition
+	mode          PolicyMode
 }
 
 func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory {
@@ -381,6 +398,7 @@ func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory
 		matchConds: []admissionregistrationv1.MatchCondition{
 			{Name: "noop", Expression: "true"},
 		},
+		mode: "protect",
 	}
 }
 
@@ -409,6 +427,11 @@ func (fac *ClusterAdmissionPolicyGroupFactory) WithMatchConditions(matchConditio
 	return fac
 }
 
+func (fac *ClusterAdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *ClusterAdmissionPolicyGroupFactory {
+	fac.mode = mode
+	return fac
+}
+
 func (fac *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGroup {
 	clusterAdmissionPolicy := ClusterAdmissionPolicyGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -430,6 +453,7 @@ func (fac *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGr
 				Expression:      fac.expression,
 				Rules:           fac.rules,
 				MatchConditions: fac.matchConds,
+				Mode:            fac.mode,
 			},
 		},
 	}
