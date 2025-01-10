@@ -1,3 +1,5 @@
+//go:build testing
+
 /*
 Copyright 2022.
 
@@ -52,10 +54,16 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 
 		BeforeAll(func() {
 			policyServerName = newName("policy-server")
-			createPolicyServerAndWaitForItsService(ctx, newPolicyServerFactory().withName(policyServerName).build())
+			createPolicyServerAndWaitForItsService(ctx, policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				Build())
 
 			policyName = newName("validating-policy")
-			policy = newAdmissionPolicyGroupFactory().withName(policyName).withNamespace(policyNamespace).withPolicyServer(policyServerName).build()
+			policy = policiesv1.NewAdmissionPolicyGroupFactory().
+				WithName(policyName).
+				WithNamespace(policyNamespace).
+				WithPolicyServer(policyServerName).
+				Build()
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 		})
 
@@ -172,7 +180,11 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 	It("should set policy status to unscheduled when creating an AdmissionPolicyGroup without a PolicyServer assigned", func() {
 		policyName := newName("unscheduled-policy")
 		Expect(
-			k8sClient.Create(ctx, newAdmissionPolicyGroupFactory().withName(policyName).withNamespace(policyNamespace).withPolicyServer("").build()),
+			k8sClient.Create(ctx, policiesv1.NewAdmissionPolicyGroupFactory().
+				WithName(policyName).
+				WithNamespace(policyNamespace).
+				WithPolicyServer("").
+				Build()),
 		).To(haveSucceededOrAlreadyExisted())
 
 		Eventually(func() (*policiesv1.AdmissionPolicyGroup, error) {
@@ -188,7 +200,11 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 
 		BeforeAll(func() {
 			Expect(
-				k8sClient.Create(ctx, newAdmissionPolicyGroupFactory().withName(policyName).withNamespace(policyNamespace).withPolicyServer(policyServerName).build()),
+				k8sClient.Create(ctx, policiesv1.NewAdmissionPolicyGroupFactory().
+					WithName(policyName).
+					WithNamespace(policyNamespace).
+					WithPolicyServer(policyServerName).
+					Build()),
 			).To(haveSucceededOrAlreadyExisted())
 		})
 
@@ -203,7 +219,9 @@ var _ = Describe("AdmissionPolicyGroup controller", Label("real-cluster"), func(
 		It("should set the policy status to active when the PolicyServer is created", func() {
 			By("creating the PolicyServer")
 			Expect(
-				k8sClient.Create(ctx, newPolicyServerFactory().withName(policyServerName).build()),
+				k8sClient.Create(ctx, policiesv1.NewPolicyServerFactory().
+					WithName(policyServerName).
+					Build()),
 			).To(haveSucceededOrAlreadyExisted())
 
 			By("changing the policy status to pending")

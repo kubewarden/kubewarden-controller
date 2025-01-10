@@ -1,3 +1,5 @@
+//go:build testing
+
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,7 +25,7 @@ import (
 )
 
 func TestClusterClusterAdmissionPolicyDefault(t *testing.T) {
-	policy := clusterAdmissionPolicyGroupFactory()
+	policy := ClusterAdmissionPolicyGroup{}
 	policy.Default()
 
 	require.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
@@ -31,14 +33,14 @@ func TestClusterClusterAdmissionPolicyDefault(t *testing.T) {
 }
 
 func TestClusterClusterAdmissionPolicyValidateCreate(t *testing.T) {
-	policy := clusterAdmissionPolicyGroupFactory()
+	policy := NewClusterAdmissionPolicyGroupFactory().Build()
 	warnings, err := policy.ValidateCreate()
 	require.NoError(t, err)
 	require.Empty(t, warnings)
 }
 
 func TestClusterClusterAdmissionPolicyValidateCreateWithNoMembers(t *testing.T) {
-	policy := clusterAdmissionPolicyGroupFactory()
+	policy := NewClusterAdmissionPolicyGroupFactory().Build()
 	policy.Spec.Policies = nil
 	warnings, err := policy.ValidateCreate()
 	require.Error(t, err)
@@ -47,16 +49,16 @@ func TestClusterClusterAdmissionPolicyValidateCreateWithNoMembers(t *testing.T) 
 }
 
 func TestClusterClusterAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := clusterAdmissionPolicyGroupFactory()
-	newPolicy := clusterAdmissionPolicyGroupFactory()
+	oldPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.NoError(t, err)
 	require.Empty(t, warnings)
 }
 
 func TestClusterClusterAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
-	oldPolicy := admissionPolicyGroupFactory()
-	newPolicy := clusterAdmissionPolicyGroupFactory()
+	oldPolicy := NewAdmissionPolicyGroupFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.Empty(t, warnings)
 	require.ErrorContains(t, err, "object is not of type ClusterAdmissionPolicyGroup")

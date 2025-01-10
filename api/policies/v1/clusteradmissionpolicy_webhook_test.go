@@ -1,3 +1,5 @@
+//go:build testing
+
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,7 +25,7 @@ import (
 )
 
 func TestClusterAdmissionPolicyDefault(t *testing.T) {
-	policy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
+	policy := ClusterAdmissionPolicy{}
 	policy.Default()
 
 	require.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
@@ -31,23 +33,23 @@ func TestClusterAdmissionPolicyDefault(t *testing.T) {
 }
 
 func TestClusterAdmissionPolicyValidateCreate(t *testing.T) {
-	policy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
+	policy := NewClusterAdmissionPolicyFactory().Build()
 	warnings, err := policy.ValidateCreate()
 	require.NoError(t, err)
 	require.Empty(t, warnings)
 }
 
 func TestClusterAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
-	newPolicy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
+	oldPolicy := NewClusterAdmissionPolicyFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyFactory().Build()
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.NoError(t, err)
 	require.Empty(t, warnings)
 }
 
 func TestClusterAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
-	oldPolicy := admissionPolicyFactory()
-	newPolicy := clusterAdmissionPolicyFactory(nil, nil, "", "protect")
+	oldPolicy := NewAdmissionPolicyFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyFactory().Build()
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.Empty(t, warnings)
 	require.ErrorContains(t, err, "object is not of type ClusterAdmissionPolicy")
