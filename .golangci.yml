@@ -373,9 +373,3 @@ issues:
     - path: 'api/policies/v1/(.+)_webhook.go'
       linters:
         - dupl
-    - path: "api/policies/v1/policy_validation_matchconditions.go"
-      # this file is imported from k8s.io/kubernetes, ignore lint errors
-      linters:
-        - errorlint
-        - gochecknoglobals
-        - mnd

@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 func TestValidateRulesField(t *testing.T) {
@@ -282,7 +283,7 @@ func TestValidateMatchConditionsField(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			allErrors := validateMatchConditionsField(test.policy)
+			allErrors := validateMatchConditions(test.policy.GetMatchConditions(), field.NewPath("spec").Child("matchConditions"))
 
 			if test.expectedErrorMessage != "" {
 				err := prepareInvalidAPIError(test.policy, allErrors)
