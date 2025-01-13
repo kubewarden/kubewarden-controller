@@ -139,3 +139,18 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - run: shellcheck $(find scripts/ -name '*.sh')
+
+  docs:
+    name: Update documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - run: |
+          make build-docs
+          if ! git diff --quiet cli-docs.md; then
+            echo "Changes detected in cli-docs.md. Please run `make build-docs` and commit the changes."
+            gh run cancel ${{ github.run_id }}
+          fi
+
