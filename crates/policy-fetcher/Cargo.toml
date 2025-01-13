@@ -15,7 +15,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1"
 base64 = "0.22"
-directories = "5.0"
+directories = "6.0"
 lazy_static = "1.4"
 oci-client = { version = "0.14", default-features = false, features = [
   "rustls-tls",
