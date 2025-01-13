@@ -46,6 +46,7 @@ use policy_evaluator::{
         PullDestination,
     },
 };
+use std::io::prelude::*;
 
 use crate::utils::new_policy_execution_mode_from_str;
 
@@ -407,6 +408,17 @@ async fn main() -> Result<()> {
             if let Some(matches) = matches.subcommand_matches("load") {
                 let input = matches.get_one::<String>("input").unwrap();
                 load(input)?;
+            }
+            Ok(())
+        }
+        Some("docs") => {
+            if let Some(matches) = matches.subcommand_matches("docs") {
+                let output = matches.get_one::<String>("output").unwrap();
+                let mut file = std::fs::File::create(output)
+                    .map_err(|e| anyhow!("cannot create file {}: {}", output, e))?;
+                let docs_content = clap_markdown::help_markdown_command(&cli::build_cli());
+                file.write_all(docs_content.as_bytes())
+                    .map_err(|e| anyhow!("cannot write to file {}: {}", output, e))?;
             }
             Ok(())
         }

@@ -61,6 +61,9 @@ There is also:
 
 These are the commands currently supported by kwctl.
 
+If you want a complete list of the available commands, you can read the 
+[cli-docs.md](./cli-docs.md) file.
+
 ### List policies
 
 The list of policies downloaded on the local machine can be

@@ -1,6 +1,7 @@
 .PHONY: build
 build:
 	cargo build --release
+	cargo run --release -- docs --output cli-docs.md
 
 .PHONY: fmt
 fmt:
