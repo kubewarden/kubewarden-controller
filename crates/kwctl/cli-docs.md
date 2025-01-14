@@ -108,11 +108,11 @@ Benchmarks a Kubewarden policy
 * `--raw <RAW>` — Validate a raw request
 
   Default value: `false`
-* `--record-host-capabilities-interactions <FILE>` — Record all the policy <-> host capabilities
+* `--record-host-capabilities-interactions <FILE>` — Record all the policy and host capabilities
    communications to the given file.
    Useful to be combined later with '--replay-host-capabilities-interactions' flag
 * `--rekor-public-key-path <PATH>` — Path to the Rekor public key
-* `--replay-host-capabilities-interactions <FILE>` — During policy <-> host capabilities exchanges
+* `--replay-host-capabilities-interactions <FILE>` — During policy and host capabilities exchanges
    the host replays back the answers found inside of the provided file.
    This is useful to test policies in a reproducible way, given no external
    interactions with OCI registries, DNS, Kubernetes are performed.
@@ -312,11 +312,11 @@ Runs a Kubewarden policy from a given URI
 * `--raw <RAW>` — Validate a raw request
 
   Default value: `false`
-* `--record-host-capabilities-interactions <FILE>` — Record all the policy <-> host capabilities
+* `--record-host-capabilities-interactions <FILE>` — Record all the policy and host capabilities
    communications to the given file.
    Useful to be combined later with '--replay-host-capabilities-interactions' flag
 * `--rekor-public-key-path <PATH>` — Path to the Rekor public key
-* `--replay-host-capabilities-interactions <FILE>` — During policy <-> host capabilities exchanges
+* `--replay-host-capabilities-interactions <FILE>` — During policy and host capabilities exchanges
    the host replays back the answers found inside of the provided file.
    This is useful to test policies in a reproducible way, given no external
    interactions with OCI registries, DNS, Kubernetes are performed.
