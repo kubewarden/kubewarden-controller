@@ -306,13 +306,13 @@ fn run_args() -> Vec<Arg> {
         Arg::new("record-host-capabilities-interactions")
             .long("record-host-capabilities-interactions")
             .value_name("FILE")
-            .long_help(r#"Record all the policy <-> host capabilities
+            .long_help(r#"Record all the policy and host capabilities
 communications to the given file.
 Useful to be combined later with '--replay-host-capabilities-interactions' flag"#),
         Arg::new("replay-host-capabilities-interactions")
             .long("replay-host-capabilities-interactions")
             .value_name("FILE")
-            .long_help(r#"During policy <-> host capabilities exchanges
+            .long_help(r#"During policy and host capabilities exchanges
 the host replays back the answers found inside of the provided file.
 This is useful to test policies in a reproducible way, given no external
 interactions with OCI registries, DNS, Kubernetes are performed."#),
