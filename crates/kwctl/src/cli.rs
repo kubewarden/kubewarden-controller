@@ -623,6 +623,19 @@ fn subcommand_save() -> Command {
         )
 }
 
+fn subcommand_docs() -> Command {
+    Command::new("docs")
+        .about("Generates the markdown documentation for kwctl commands")
+        .arg(
+            Arg::new("output")
+                .long("output")
+                .short('o')
+                .required(true)
+                .value_name("FILE")
+                .help("path where the documentation file will be stored"),
+        )
+}
+
 pub fn build_cli() -> Command {
     let mut subcommands = vec![
         Command::new("policies").about("Lists all downloaded policies"),
@@ -670,6 +683,7 @@ pub fn build_cli() -> Command {
         subcommand_digest(),
         subcommand_bench(),
         subcommand_save(),
+        subcommand_docs(),
     ];
     subcommands.sort_by(|a, b| a.get_name().cmp(b.get_name()));
 

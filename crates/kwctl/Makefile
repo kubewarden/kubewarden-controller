@@ -1,6 +1,13 @@
 .PHONY: build
-build:
+build: build-release build-docs
+
+.PHONY: build-release
+build-release:
 	cargo build --release
+
+.PHONY:build-docs
+build-docs:
+	cargo run --release -- docs --output cli-docs.md
 
 .PHONY: fmt
 fmt:
