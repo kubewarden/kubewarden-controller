@@ -76,7 +76,7 @@ test: unit-tests integration-tests ## Run tests.
 
 .PHONY: unit-tests
 unit-tests: manifests generate fmt vet ## Run unit tests.
-	go test $$(go list ./... | grep -v /internal/controller) -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic
+	go test $$(go list ./... | grep -v /internal/controller) -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic  -tags=testing
 
 # Integration tests are split into two targets to allow for running tests 
 # that require a real cluster to be run separately from those that can be run using envtest.
@@ -88,7 +88,7 @@ integration-tests: integration-tests-envtest integration-tests-real-cluster ## R
 .PHONY: integration-tests-envtest
 integration-tests-envtest: manifests generate fmt vet ginkgo envtest ## Run integration tests that do not require a real cluster only (using envtest).
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-	$(GINKGO) -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="!real-cluster" \
+	$(GINKGO) -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="!real-cluster"  -tags=testing \
 	-output-dir=./coverage/integration-tests/ -coverprofile=coverage-envtest.txt -covermode=atomic -coverpkg=all \
 	./internal/controller/ 
 
@@ -97,7 +97,7 @@ integration-tests-real-cluster: manifests generate fmt ginkgo vet ## Run integra
 	K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" POLICY_SERVER_VERSION="$(POLICY_SERVER_VERSION)" \
 	POLICY_SERVER_REPOSITORY="$(POLICY_SERVER_REPOSITORY)" $(GINKGO) -p -v -github-output -timeout=$(TEST_TIMEOUT) \
 	-label-filter="real-cluster" -output-dir=./coverage/integration-tests/ -coverprofile=coverage-real-cluster.txt \
-	-covermode=atomic -coverpkg=all ./internal/controller/
+  	-tags=testing -covermode=atomic -coverpkg=all ./internal/controller/
 
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint linter

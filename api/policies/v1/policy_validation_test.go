@@ -1,3 +1,5 @@
+//go:build testing
+
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 func TestValidateRulesField(t *testing.T) {
@@ -29,137 +32,172 @@ func TestValidateRulesField(t *testing.T) {
 		expectedErrorMessage string // use empty string when no error is expected
 	}{
 		{
-			"with valid APIVersion and resources. But with empty APIGroup", clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{""},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"pods"},
-				},
-			}}, nil, "default", "protect"),
+			"with valid APIVersion and resources. But with empty APIGroup",
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
+					},
+				}).
+				WithPolicyServer("default").Build(),
 			"",
 		},
 		{
 			"with valid APIVersion, Resources and APIGroup",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"apps"},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"deployments"},
+						},
+					},
+				}).
+				WithPolicyServer("default").Build(),
 			"",
 		},
 		{
 			"with no operations and API groups and resources",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{}).
+				WithPolicyServer("default").Build(),
 			"spec.rules: Required value: a value must be specified",
 		},
 		{
 			"with empty objects",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{}}).
+				WithPolicyServer("default").Build(),
 			"spec.rules.operations: Required value: a value must be specified",
 		},
 		{
 			"with no operations",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{"*"},
-					Resources:   []string{"*/*"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"*"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"*/*"},
+						}},
+				}).
+				WithPolicyServer("default").Build(),
 			"spec.rules.operations: Required value: a value must be specified",
 		},
 		{
 			"with null operations",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: nil,
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{"*"},
-					Resources:   []string{"*/*"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{
+					Operations: nil,
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{"*"},
+						Resources:   []string{"*/*"},
+					},
+				}}).
+				WithPolicyServer("default").Build(),
 			"spec.rules.operations: Required value: a value must be specified",
 		},
 		{
 			"with empty operations string",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{""},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{"*"},
-					Resources:   []string{"*/*"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{""},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{"*"},
+						Resources:   []string{"*/*"},
+					},
+				}}).
+				WithPolicyServer("default").Build(),
 			"spec.rules.operations[0]: Required value: must be non-empty",
 		},
 		{
 			"with no apiVersion",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{},
-					Resources:   []string{"*/*"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{},
+						Resources:   []string{"*/*"},
+					},
+				}}).
+				WithPolicyServer("default").Build(),
 			"spec.rules: Required value: apiVersions and resources must have specified values",
 		},
 		{
 			"with no resources",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{"*"},
-					Resources:   []string{},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{"*"},
+						Resources:   []string{},
+					},
+				}}).WithPolicyServer("default").Build(),
 			"spec.rules: Required value: apiVersions and resources must have specified values",
 		},
 		{
 			"with empty apiVersion string",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{""},
-					Resources:   []string{"*/*"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{""},
+						Resources:   []string{"*/*"},
+					},
+				}}).WithPolicyServer("defaule").Build(),
 			"spec.rules.rule.apiVersions[0]: Required value: must be non-empty",
 		},
 		{
 			"with empty resources string",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"*"},
-					APIVersions: []string{"*"},
-					Resources:   []string{""},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{"*"},
+						APIVersions: []string{"*"},
+						Resources:   []string{""},
+					},
+				}}).WithPolicyServer("default").Build(),
 			"spec.rules.rule.resources[0]: Required value: must be non-empty",
 		},
 		{
 			"with some of the resources are empty strings",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{""},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"", "pods"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{{
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{""},
+						APIVersions: []string{"v1"},
+						Resources:   []string{"", "pods"},
+					},
+				}}).WithPolicyServer("default").Build(),
 			"spec.rules.rule.resources[0]: Required value: must be non-empty",
 		},
 		{
 			"with all operations and API groups and resources",
-			clusterAdmissionPolicyFactory(nil, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"*"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"*/*"},
+						},
+					}}).Build(),
 			"",
 		},
 	}
@@ -179,6 +217,12 @@ func TestValidateRulesField(t *testing.T) {
 }
 
 func TestValidateMatchConditionsField(t *testing.T) {
+	defaultRules := []admissionregistrationv1.RuleWithOperations{
+		{
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+			Rule:       admissionregistrationv1.Rule{APIGroups: []string{"apps"}, APIVersions: []string{"v1"}, Resources: []string{"deployments"}},
+		},
+	}
 	tests := []struct {
 		name                 string
 		policy               Policy
@@ -186,55 +230,60 @@ func TestValidateMatchConditionsField(t *testing.T) {
 	}{
 		{
 			"with empty MatchConditions",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule:       admissionregistrationv1.Rule{APIGroups: []string{"apps"}, APIVersions: []string{"v1"}, Resources: []string{"deployments"}},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("default").
+				Build(),
 			"",
 		},
 		{
 			"with valid MatchConditions",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule:       admissionregistrationv1.Rule{APIGroups: []string{"apps"}, APIVersions: []string{"v1"}, Resources: []string{"deployments"}},
-			}}, []admissionregistrationv1.MatchCondition{
-				{
-					Name:       "foo",
-					Expression: "true",
-				},
-			}, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions([]admissionregistrationv1.MatchCondition{
+					{
+						Name:       "foo",
+						Expression: "true",
+					},
+				}).
+				WithPolicyServer("default").
+				Build(),
 			"",
 		},
 		{
 			"with non-boolean MatchConditions",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule:       admissionregistrationv1.Rule{APIGroups: []string{"apps"}, APIVersions: []string{"v1"}, Resources: []string{"deployments"}},
-			}}, []admissionregistrationv1.MatchCondition{
-				{
-					Name:       "foo",
-					Expression: "1 + 1",
-				},
-			}, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions([]admissionregistrationv1.MatchCondition{
+					{
+						Name:       "foo",
+						Expression: "1 + 1",
+					},
+				}).
+				WithPolicyServer("default").
+				Build(),
 			"Invalid value: \"1 + 1\": must evaluate to bool",
 		},
 		{
 			"with invalid expression in MatchConditions",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule:       admissionregistrationv1.Rule{APIGroups: []string{"apps"}, APIVersions: []string{"v1"}, Resources: []string{"deployments"}},
-			}}, []admissionregistrationv1.MatchCondition{
-				{
-					Name:       "foo",
-					Expression: "invalid expression",
-				},
-			}, "default", "protect"), "Syntax error: extraneous input 'expression'",
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions([]admissionregistrationv1.MatchCondition{
+					{
+						Name:       "foo",
+						Expression: "invalid expression",
+					},
+				}).
+				WithPolicyServer("default").
+				Build(),
+			"Syntax error: extraneous input 'expression'",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			allErrors := validateMatchConditionsField(test.policy)
+			allErrors := validateMatchConditions(test.policy.GetMatchConditions(), field.NewPath("spec").Child("matchConditions"))
 
 			if test.expectedErrorMessage != "" {
 				err := prepareInvalidAPIError(test.policy, allErrors)
@@ -247,6 +296,14 @@ func TestValidateMatchConditionsField(t *testing.T) {
 }
 
 func TestValidatePolicyServerField(t *testing.T) {
+	defaultRules := []admissionregistrationv1.RuleWithOperations{{
+		Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+		Rule: admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"deployments"},
+		},
+	}}
 	tests := []struct {
 		name                 string
 		oldPolicy            Policy
@@ -255,42 +312,34 @@ func TestValidatePolicyServerField(t *testing.T) {
 	}{
 		{
 			"policy server unchanged",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "old-policy-server", "monitor"),
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "old-policy-server", "monitor"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("old-policy-server").
+				WithMode("monitor").
+				Build(),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("old-policy-server").
+				WithMode("monitor").
+				Build(),
 			"",
 		},
 		{
 			"policy server changed",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "old-policy-server", "monitor"),
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "new-policy-server", "monitor"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("old-policy-server").
+				WithMode("monitor").
+				Build(),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("new-policy-server").
+				WithMode("monitor").
+				Build(),
 			"spec.policyServer: Forbidden: the field is immutable",
 		},
 	}
@@ -309,6 +358,14 @@ func TestValidatePolicyServerField(t *testing.T) {
 }
 
 func TestValidatePolicyModeField(t *testing.T) {
+	defaultRules := []admissionregistrationv1.RuleWithOperations{{
+		Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+		Rule: admissionregistrationv1.Rule{
+			APIGroups:   []string{"apps"},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"deployments"},
+		},
+	}}
 	tests := []struct {
 		name                 string
 		oldPolicy            Policy
@@ -317,62 +374,50 @@ func TestValidatePolicyModeField(t *testing.T) {
 	}{
 		{
 			"policy mode unchanged",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "default", "protect"),
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("default").
+				WithMode("protect").
+				Build(),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("default").
+				WithMode("protect").
+				Build(),
 			"",
 		},
 		{
 			"policy mode changed from monitor to protect",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "default", "monitor"),
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "default", "protect"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("default").
+				WithMode("monitor").
+				Build(),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("default").
+				WithMode("protect").
+				Build(),
 			"",
 		},
 		{
 			"policy mode changed from protect to monitor",
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "default", "protect"),
-			clusterAdmissionPolicyFactory([]admissionregistrationv1.RuleWithOperations{{
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{"apps"},
-					APIVersions: []string{"v1"},
-					Resources:   []string{"deployments"},
-				},
-			}}, nil, "default", "monitor"),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("default").
+				WithMode("protect").
+				Build(),
+			NewClusterAdmissionPolicyFactory().
+				WithRules(defaultRules).
+				WithMatchConditions(nil).
+				WithPolicyServer("default").
+				WithMode("monitor").
+				Build(),
 			"spec.mode: Forbidden: field cannot transition from protect to monitor. Recreate instead.",
 		},
 	}

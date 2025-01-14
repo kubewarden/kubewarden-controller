@@ -1,3 +1,5 @@
+//go:build testing
+
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,12 +20,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 func TestClusterClusterAdmissionPolicyDefault(t *testing.T) {
-	policy := clusterAdmissionPolicyGroupFactory()
+	policy := ClusterAdmissionPolicyGroup{}
 	policy.Default()
 
 	require.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
@@ -31,14 +34,14 @@ func TestClusterClusterAdmissionPolicyDefault(t *testing.T) {
 }
 
 func TestClusterClusterAdmissionPolicyValidateCreate(t *testing.T) {
-	policy := clusterAdmissionPolicyGroupFactory()
+	policy := NewClusterAdmissionPolicyGroupFactory().Build()
 	warnings, err := policy.ValidateCreate()
 	require.NoError(t, err)
 	require.Empty(t, warnings)
 }
 
 func TestClusterClusterAdmissionPolicyValidateCreateWithNoMembers(t *testing.T) {
-	policy := clusterAdmissionPolicyGroupFactory()
+	policy := NewClusterAdmissionPolicyGroupFactory().Build()
 	policy.Spec.Policies = nil
 	warnings, err := policy.ValidateCreate()
 	require.Error(t, err)
@@ -47,17 +50,133 @@ func TestClusterClusterAdmissionPolicyValidateCreateWithNoMembers(t *testing.T) 
 }
 
 func TestClusterClusterAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := clusterAdmissionPolicyGroupFactory()
-	newPolicy := clusterAdmissionPolicyGroupFactory()
+	oldPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
+	require.NoError(t, err)
+	require.Empty(t, warnings)
+
+	oldPolicy = NewClusterAdmissionPolicyGroupFactory().
+		WithMode("monitor").
+		Build()
+	newPolicy = NewClusterAdmissionPolicyGroupFactory().
+		WithMode("protect").
+		Build()
+	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
 	require.NoError(t, err)
 	require.Empty(t, warnings)
 }
 
+func TestInvalidClusterAdmissionPolicyGroupValidateUpdate(t *testing.T) {
+	oldPolicy := NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("old").
+		Build()
+	newPolicy := NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		Build()
+	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
+	require.Error(t, err)
+	require.Empty(t, warnings)
+
+	newPolicy = NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		WithMode("monitor").
+		Build()
+
+	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
+	require.Error(t, err)
+	require.Empty(t, warnings)
+}
+
 func TestClusterClusterAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
-	oldPolicy := admissionPolicyGroupFactory()
-	newPolicy := clusterAdmissionPolicyGroupFactory()
+	oldPolicy := NewAdmissionPolicyGroupFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
 	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
 	require.Empty(t, warnings)
 	require.ErrorContains(t, err, "object is not of type ClusterAdmissionPolicyGroup")
+}
+
+func TestInvalidClusterAdmissionPolicyGroupCreation(t *testing.T) {
+	policy := NewClusterAdmissionPolicyGroupFactory().
+		WithPolicyServer("").
+		WithRules([]admissionregistrationv1.RuleWithOperations{
+			{},
+			{
+				Operations: []admissionregistrationv1.OperationType{},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				}},
+			{
+				Operations: nil,
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{""},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{""},
+					Resources:   []string{"*/*"},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{"*"},
+					APIVersions: []string{"*"},
+					Resources:   []string{""},
+				},
+			},
+			{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"", "pods"},
+				},
+			},
+		}).
+		WithMatchConditions([]admissionregistrationv1.MatchCondition{
+			{
+				Name:       "foo",
+				Expression: "1 + 1",
+			},
+			{
+				Name:       "foo",
+				Expression: "invalid expression",
+			},
+		}).
+		Build()
+	warnings, err := policy.ValidateCreate()
+	require.Error(t, err)
+	require.Empty(t, warnings)
 }

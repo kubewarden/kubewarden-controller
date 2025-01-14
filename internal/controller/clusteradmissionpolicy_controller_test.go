@@ -1,3 +1,5 @@
+//go:build testing
+
 /*
 Copyright 2022.
 
@@ -40,10 +42,16 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 
 		BeforeAll(func() {
 			policyServerName = newName("policy-server")
-			createPolicyServerAndWaitForItsService(ctx, newPolicyServerFactory().withName(policyServerName).build())
+			createPolicyServerAndWaitForItsService(ctx, policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				Build())
 
 			policyName = newName("validating-policy")
-			policy = newClusterAdmissionPolicyFactory().withName(policyName).withPolicyServer(policyServerName).withMutating(false).build()
+			policy = policiesv1.NewClusterAdmissionPolicyFactory().
+				WithName(policyName).
+				WithPolicyServer(policyServerName).
+				WithMutating(false).
+				Build()
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 		})
 
@@ -148,10 +156,16 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 
 		BeforeAll(func() {
 			policyServerName = newName("policy-server")
-			createPolicyServerAndWaitForItsService(ctx, newPolicyServerFactory().withName(policyServerName).build())
+			createPolicyServerAndWaitForItsService(ctx, policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				Build())
 
 			policyName = newName("mutating-policy")
-			policy = newClusterAdmissionPolicyFactory().withName(policyName).withPolicyServer(policyServerName).withMutating(true).build()
+			policy = policiesv1.NewClusterAdmissionPolicyFactory().
+				WithName(policyName).
+				WithPolicyServer(policyServerName).
+				WithMutating(true).
+				Build()
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 		})
 
@@ -251,7 +265,9 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 	It("should set policy status to unscheduled when creating an ClusterAdmissionPolicy without a PolicyServer assigned", func() {
 		policyName := newName("unscheduled-policy")
 		Expect(
-			k8sClient.Create(ctx, newClusterAdmissionPolicyFactory().withName(policyName).withPolicyServer("").withMutating(false).build()),
+			k8sClient.Create(ctx, policiesv1.NewClusterAdmissionPolicyFactory().
+				WithName(policyName).
+				Build()),
 		).To(haveSucceededOrAlreadyExisted())
 
 		Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
@@ -267,13 +283,19 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 
 		BeforeAll(func() {
 			Expect(
-				k8sClient.Create(ctx, newClusterAdmissionPolicyFactory().withName(policyName).withPolicyServer(policyServerName).withMutating(false).build()),
+				k8sClient.Create(ctx, policiesv1.NewClusterAdmissionPolicyFactory().
+					WithName(policyName).
+					WithPolicyServer(policyServerName).
+					Build()),
 			).To(haveSucceededOrAlreadyExisted())
 		})
 
 		It("should set the policy status to scheduled", func() {
 			Expect(
-				k8sClient.Create(ctx, newClusterAdmissionPolicyFactory().withName(policyName).withPolicyServer(policyServerName).withMutating(false).build()),
+				k8sClient.Create(ctx, policiesv1.NewClusterAdmissionPolicyFactory().
+					WithName(policyName).
+					WithPolicyServer(policyServerName).
+					Build()),
 			).To(haveSucceededOrAlreadyExisted())
 
 			Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
@@ -286,7 +308,9 @@ var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), fun
 		It("should set the policy status to active when the PolicyServer is created", func() {
 			By("creating the PolicyServer")
 			Expect(
-				k8sClient.Create(ctx, newPolicyServerFactory().withName(policyServerName).build()),
+				k8sClient.Create(ctx, policiesv1.NewPolicyServerFactory().
+					WithName(policyServerName).
+					Build()),
 			).To(haveSucceededOrAlreadyExisted())
 
 			By("changing the policy status to pending")

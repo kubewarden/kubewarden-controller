@@ -17,19 +17,34 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+	"strings"
+
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	plugincel "k8s.io/apiserver/pkg/admission/plugin/cel"
+	"k8s.io/apiserver/pkg/admission/plugin/webhook/matchconditions"
+	"k8s.io/apiserver/pkg/cel"
+	"k8s.io/apiserver/pkg/cel/environment"
 )
+
+// nonStrictStatelessCELCompiler is a cel Compiler that does not enforce strict cost enforcement.
+//
+//nolint:gochecknoglobals // lets keep the compiler available for the how module
+var (
+	nonStrictStatelessCELCompiler = plugincel.NewCompiler(environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion(), false))
+)
+
+const maxMatchConditionsCount = 64
 
 func validatePolicyCreate(policy Policy) field.ErrorList {
 	var allErrors field.ErrorList
 
 	allErrors = append(allErrors, validateRulesField(policy)...)
-	allErrors = append(allErrors, validateMatchConditionsField(policy)...)
-
+	allErrors = append(allErrors, validateMatchConditions(policy.GetMatchConditions(), field.NewPath("spec").Child("matchConditions"))...)
 	return allErrors
 }
 
@@ -37,7 +52,7 @@ func validatePolicyUpdate(oldPolicy, newPolicy Policy) field.ErrorList {
 	var allErrors field.ErrorList
 
 	allErrors = append(allErrors, validateRulesField(newPolicy)...)
-	allErrors = append(allErrors, validateMatchConditionsField(newPolicy)...)
+	allErrors = append(allErrors, validateMatchConditions(newPolicy.GetMatchConditions(), field.NewPath("spec").Child("matchConditions"))...)
 	if err := validatePolicyServerField(oldPolicy, newPolicy); err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -104,27 +119,6 @@ func checkRulesArrayForEmptyString(rulesArray []string, rulesField *field.Path) 
 	return allErrors
 }
 
-func validateMatchConditionsField(policy Policy) field.ErrorList {
-	// taken from the configuration for validating MutatingWebhookConfiguration:
-	// https://github.com/kubernetes/kubernetes/blob/c052f64689ee26aace4689f2433c5c7dcf1931ad/pkg/apis/admissionregistration/validation/validation.go#L257
-	opts := validationOptions{
-		ignoreMatchConditions:                   false,
-		allowParamsInMatchConditions:            false,
-		requireNoSideEffects:                    true,
-		requireRecognizedAdmissionReviewVersion: true,
-		requireUniqueWebhookNames:               true,
-		allowInvalidLabelValueInSelector:        false,
-		// strictCostEnforcement enables cost enforcement for CEL.
-		//	 This is enabled with the StrictCostEnforcementForWebhooks feature gate
-		//	 (alpha on v1.30). Don't check it for now. Nevertheless, will get
-		//	 checked by the k8s API on WebhookConfiguration creation if the feature
-		//   gate is enabled.
-		strictCostEnforcement: false,
-	}
-
-	return validateMatchConditions(policy.GetMatchConditions(), opts, field.NewPath("spec").Child("matchConditions"))
-}
-
 func validatePolicyServerField(oldPolicy, newPolicy Policy) *field.Error {
 	if oldPolicy.GetPolicyServer() != newPolicy.GetPolicyServer() {
 		return field.Forbidden(field.NewPath("spec").Child("policyServer"), "the field is immutable")
@@ -148,4 +142,72 @@ func prepareInvalidAPIError(policy Policy, errorList field.ErrorList) *apierrors
 		policy.GetName(),
 		errorList,
 	)
+}
+
+func validateMatchConditions(m []admissionregistrationv1.MatchCondition, fldPath *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+	conditionNames := sets.NewString()
+	if len(m) > maxMatchConditionsCount {
+		allErrors = append(allErrors, field.TooMany(fldPath, len(m), maxMatchConditionsCount))
+	}
+	for i, matchCondition := range m {
+		allErrors = append(allErrors, validateMatchCondition(&matchCondition, fldPath.Index(i))...)
+		if len(matchCondition.Name) > 0 {
+			if conditionNames.Has(matchCondition.Name) {
+				allErrors = append(allErrors, field.Duplicate(fldPath.Index(i).Child("name"), matchCondition.Name))
+			} else {
+				conditionNames.Insert(matchCondition.Name)
+			}
+		}
+	}
+	return allErrors
+}
+
+func validateMatchCondition(v *admissionregistrationv1.MatchCondition, fldPath *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+	trimmedExpression := strings.TrimSpace(v.Expression)
+	if len(trimmedExpression) == 0 {
+		allErrors = append(allErrors, field.Required(fldPath.Child("expression"), ""))
+	} else {
+		allErrors = append(allErrors, validateMatchConditionsExpression(trimmedExpression, fldPath.Child("expression"))...)
+	}
+	if len(v.Name) == 0 {
+		allErrors = append(allErrors, field.Required(fldPath.Child("name"), ""))
+	} else {
+		for _, msg := range validation.IsQualifiedName(v.Name) {
+			allErrors = append(allErrors, field.Invalid(fldPath, v.Name, msg))
+		}
+	}
+	return allErrors
+}
+
+func convertCELErrorToValidationError(fldPath *field.Path, expression plugincel.ExpressionAccessor, err error) *field.Error {
+	//nolint:errorlint // The code is not only checking the type. It is also using the errors fields.
+	if celErr, ok := err.(*cel.Error); ok {
+		switch celErr.Type {
+		case cel.ErrorTypeRequired:
+			return field.Required(fldPath, celErr.Detail)
+		case cel.ErrorTypeInvalid:
+			return field.Invalid(fldPath, expression.GetExpression(), celErr.Detail)
+		case cel.ErrorTypeInternal:
+			return field.InternalError(fldPath, celErr)
+		}
+	}
+	return field.InternalError(fldPath, fmt.Errorf("unsupported error type: %w", err))
+}
+
+func validateMatchConditionsExpression(expressionStr string, fldPath *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+	expression := &matchconditions.MatchCondition{
+		Expression: expressionStr,
+	}
+	result := nonStrictStatelessCELCompiler.CompileCELExpression(expression, plugincel.OptionalVariableDeclarations{
+		HasParams:     false,
+		HasAuthorizer: true,
+		StrictCost:    false,
+	}, environment.NewExpressions)
+	if result.Error != nil {
+		allErrors = append(allErrors, convertCELErrorToValidationError(fldPath, expression, result.Error))
+	}
+	return allErrors
 }
