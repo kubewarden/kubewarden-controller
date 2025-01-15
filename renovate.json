@@ -1,15 +1,11 @@
 {
   "extends": [
-    "config:base",
-    "group:allNonMajor",
-    "schedule:earlyMondays",
-    "helpers:pinGitHubActionDigests"
+    "github>kubewarden/github-actions//renovate-config/default"
   ],
   "packageRules": [
     {
       "matchPackageNames": ["k8s.io/client-go"],
       "allowedVersions": "/^0\\.[0-9]+\\.[0-9]+$/"
     }
-  ],
-  "labels": ["dependencies"]
+  ]
 }
