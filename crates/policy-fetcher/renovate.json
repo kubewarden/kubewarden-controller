@@ -1,35 +1,5 @@
 {
   "extends": [
-    "config:recommended",
-    "schedule:earlyMondays",
-    "helpers:pinGitHubActionDigests"
-  ],
-  "labels": [
-    "dependencies"
-  ],
-  "lockFileMaintenance": {
-    "enabled": true
-  },
-  "major": {
-    "enabled": false
-  },
-  "minor": {
-    "enabled": false
-  },
-  "patch": {
-    "enabled": true
-  },
-  "packageRules": [
-    {
-      "matchUpdateTypes": [
-        "patch"
-      ],
-      "groupName": "all patchlevel dependencies",
-      "groupSlug": "all-patch",
-      "matchPackageNames": [
-        "*"
-      ]
-    }
-  ],
-  "rebaseWhen": "behind-base-branch"
+    "github>kubewarden/github-actions//renovate-config/default"
+  ]
 }
