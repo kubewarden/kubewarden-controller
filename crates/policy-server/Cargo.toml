@@ -58,12 +58,12 @@ mockall_double = "0.3"
 axum = { version = "0.8.1", features = ["macros", "query"] }
 axum-server = { version = "0.7.1", features = ["tls-rustls"] }
 tower-http = { version = "0.6.1", features = ["trace"] }
-tikv-jemallocator = { version = "0.5.4", features = [
+tikv-jemallocator = { version = "0.6.0", features = [
   "profiling",
   "unprefixed_malloc_on_supported_platforms",
 ] }
-jemalloc_pprof = "0.4.1"
-tikv-jemalloc-ctl = "0.5.4"
+jemalloc_pprof = "0.6.0"
+tikv-jemalloc-ctl = "0.6.0"
 rhai = { version = "1.19.0", features = ["sync"] }
 tonic = { version = "0.12.3" }
 
