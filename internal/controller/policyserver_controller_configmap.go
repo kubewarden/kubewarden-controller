@@ -22,7 +22,7 @@ import (
 
 const dataType string = "Data" // only data type is supported
 
-type policyGroupMember struct {
+type policyGroupMemberWithContext struct {
 	Module                string                            `json:"module"`
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
@@ -36,9 +36,9 @@ type policyServerConfigEntry struct {
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	// The following fields are used by policy groups only.
-	Policies   map[string]policyGroupMember `json:"policies,omitempty"`
-	Expression string                       `json:"expression,omitempty"`
-	Message    string                       `json:"message,omitempty"`
+	Policies   map[string]policyGroupMemberWithContext `json:"policies,omitempty"`
+	Expression string                                  `json:"expression,omitempty"`
+	Message    string                                  `json:"message,omitempty"`
 }
 
 // The following MarshalJSON and UnmarshalJSON methods are used to serialize
@@ -64,11 +64,11 @@ func (p *policyServerConfigEntry) UnmarshalJSON(b []byte) error {
 func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 	if len(p.Policies) > 0 {
 		return json.Marshal(struct {
-			NamespacedName types.NamespacedName         `json:"namespacedName"`
-			PolicyMode     string                       `json:"policyMode"`
-			Policies       map[string]policyGroupMember `json:"policies"`
-			Expression     string                       `json:"expression"`
-			Message        string                       `json:"message"`
+			NamespacedName types.NamespacedName                    `json:"namespacedName"`
+			PolicyMode     string                                  `json:"policyMode"`
+			Policies       map[string]policyGroupMemberWithContext `json:"policies"`
+			Expression     string                                  `json:"expression"`
+			Message        string                                  `json:"message"`
 		}{
 			NamespacedName: p.NamespacedName,
 			PolicyMode:     p.PolicyMode,
@@ -174,10 +174,10 @@ func (r *PolicyServerReconciler) policyServerConfigMapVersion(ctx context.Contex
 	return unstructuredObj.GetResourceVersion(), nil
 }
 
-func buildPolicyGroupMembers(policies policiesv1.PolicyGroupMembers) map[string]policyGroupMember {
-	policyGroupMembers := map[string]policyGroupMember{}
+func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWithContext) map[string]policyGroupMemberWithContext {
+	policyGroupMembers := map[string]policyGroupMemberWithContext{}
 	for name, policy := range policies {
-		policyGroupMembers[name] = policyGroupMember{
+		policyGroupMembers[name] = policyGroupMemberWithContext{
 			Module:                policy.Module,
 			Settings:              policy.Settings,
 			ContextAwareResources: policy.ContextAwareResources,
@@ -202,7 +202,7 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMa
 		}
 
 		if policyGroup, ok := admissionPolicy.(policiesv1.PolicyGroup); ok {
-			configEntry.Policies = buildPolicyGroupMembers(policyGroup.GetPolicyGroupMembers())
+			configEntry.Policies = buildPolicyGroupMembersWithContext(policyGroup.GetPolicyGroupMembersWithContext())
 			configEntry.Expression = policyGroup.GetExpression()
 			configEntry.Message = policyGroup.GetMessage()
 		}

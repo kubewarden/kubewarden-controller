@@ -170,6 +170,12 @@ type PolicyGroupMember struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// x-kubernetes-embedded-resource: false
 	Settings runtime.RawExtension `json:"settings,omitempty"`
+}
+
+type PolicyGroupMembersWithContext map[string]PolicyGroupMemberWithContext
+
+type PolicyGroupMemberWithContext struct {
+	PolicyGroupMember `json:""`
 
 	// List of Kubernetes resources the policy is allowed to access at evaluation time.
 	// Access to these resources is done using the `ServiceAccount` of the PolicyServer
@@ -178,7 +184,7 @@ type PolicyGroupMember struct {
 	ContextAwareResources []ContextAwareResource `json:"contextAwareResources,omitempty"`
 }
 
-type PolicyGroupSpec struct {
+type GroupSpec struct {
 	// PolicyServer identifies an existing PolicyServer resource.
 	// +kubebuilder:default:=default
 	// +optional
@@ -302,6 +308,10 @@ type PolicyGroupSpec struct {
 	// returned in the warning field of the response.
 	// +kubebuilder:validation:Required
 	Message string `json:"message"`
+}
+
+type PolicyGroupSpec struct {
+	GroupSpec `json:""`
 
 	// Policies is a list of policies that are part of the group that will
 	// be available to be called in the evaluation expression field.

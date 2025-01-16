@@ -314,12 +314,14 @@ func (f *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
 		},
 		Spec: AdmissionPolicyGroupSpec{
 			PolicyGroupSpec: PolicyGroupSpec{
-				PolicyServer:    f.policyServer,
-				Policies:        f.policyMembers,
-				Expression:      f.expression,
-				Rules:           f.rules,
-				MatchConditions: f.matchConds,
-				Mode:            f.mode,
+				GroupSpec: GroupSpec{
+					PolicyServer:    f.policyServer,
+					Expression:      f.expression,
+					Rules:           f.rules,
+					MatchConditions: f.matchConds,
+					Mode:            f.mode,
+				},
+				Policies: f.policyMembers,
 			},
 		},
 	}
@@ -330,7 +332,7 @@ type ClusterAdmissionPolicyGroupFactory struct {
 	policyServer  string
 	rules         []admissionregistrationv1.RuleWithOperations
 	expression    string
-	policyMembers PolicyGroupMembers
+	policyMembers PolicyGroupMembersWithContext
 	matchConds    []admissionregistrationv1.MatchCondition
 	mode          PolicyMode
 }
@@ -353,12 +355,16 @@ func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory
 			},
 		},
 		expression: "pod_privileged() && user_group_psp()",
-		policyMembers: PolicyGroupMembers{
+		policyMembers: PolicyGroupMembersWithContext{
 			"pod_privileged": {
-				Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+				PolicyGroupMember: PolicyGroupMember{
+					Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+				},
 			},
 			"user_group_psp": {
-				Module: "registry://ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+				PolicyGroupMember: PolicyGroupMember{
+					Module: "registry://ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+				},
 			},
 		},
 		matchConds: []admissionregistrationv1.MatchCondition{
@@ -378,7 +384,7 @@ func (f *ClusterAdmissionPolicyGroupFactory) WithPolicyServer(policyServer strin
 	return f
 }
 
-func (f *ClusterAdmissionPolicyGroupFactory) WithMembers(members PolicyGroupMembers) *ClusterAdmissionPolicyGroupFactory {
+func (f *ClusterAdmissionPolicyGroupFactory) WithMembers(members PolicyGroupMembersWithContext) *ClusterAdmissionPolicyGroupFactory {
 	f.policyMembers = members
 	return f
 }
@@ -413,13 +419,15 @@ func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGrou
 			},
 		},
 		Spec: ClusterAdmissionPolicyGroupSpec{
-			PolicyGroupSpec: PolicyGroupSpec{
-				PolicyServer:    f.policyServer,
-				Policies:        f.policyMembers,
-				Expression:      f.expression,
-				Rules:           f.rules,
-				MatchConditions: f.matchConds,
-				Mode:            f.mode,
+			ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+				GroupSpec: GroupSpec{
+					PolicyServer:    f.policyServer,
+					Expression:      f.expression,
+					Rules:           f.rules,
+					MatchConditions: f.matchConds,
+					Mode:            f.mode,
+				},
+				Policies: f.policyMembers,
 			},
 		},
 	}

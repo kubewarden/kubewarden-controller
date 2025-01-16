@@ -253,7 +253,7 @@ ClusterAdmissionPolicyGroupSpec defines the desired state of ClusterAdmissionPol
 [cols="20a,50a,15a,15a", options="header"]
 |===
 | Field | Description | Default | Validation
-| *`PolicyGroupSpec`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupspec[$$PolicyGroupSpec$$]__ |  |  | 
+| *`ClusterPolicyGroupSpec`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-clusterpolicygroupspec[$$ClusterPolicyGroupSpec$$]__ |  |  | 
 | *`namespaceSelector`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta[$$LabelSelector$$]__ | NamespaceSelector decides whether to run the webhook on an object based +
 on whether the namespace for that object matches the selector. If the +
 object itself is a namespace, the matching is performed on +
@@ -393,6 +393,31 @@ the policy is assigned to. + |  |
 |===
 
 
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-clusterpolicygroupspec"]
+==== ClusterPolicyGroupSpec
+
+
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-clusteradmissionpolicygroupspec[$$ClusterAdmissionPolicyGroupSpec$$]
+****
+
+[cols="20a,50a,15a,15a", options="header"]
+|===
+| Field | Description | Default | Validation
+| *`GroupSpec`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-groupspec[$$GroupSpec$$]__ |  |  | 
+| *`policies`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmemberswithcontext[$$PolicyGroupMembersWithContext$$]__ | Policies is a list of policies that are part of the group that will +
+be available to be called in the evaluation expression field. +
+Each policy in the group should be a Kubewarden policy. + |  | Required: {} +
+
+|===
+
+
 [id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-contextawareresource"]
 ==== ContextAwareResource
 
@@ -405,7 +430,7 @@ ContextAwareResource identifies a Kubernetes resource.
 .Appears In:
 ****
 - xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-clusteradmissionpolicyspec[$$ClusterAdmissionPolicySpec$$]
-- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmember[$$PolicyGroupMember$$]
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmemberwithcontext[$$PolicyGroupMemberWithContext$$]
 ****
 
 [cols="20a,50a,15a,15a", options="header"]
@@ -416,20 +441,8 @@ ContextAwareResource identifies a Kubernetes resource.
 |===
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmember"]
-==== PolicyGroupMember
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-groupspec"]
+==== GroupSpec
 
 
 
@@ -439,57 +452,8 @@ ContextAwareResource identifies a Kubernetes resource.
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmembers[$$PolicyGroupMembers$$]
-****
-
-[cols="20a,50a,15a,15a", options="header"]
-|===
-| Field | Description | Default | Validation
-| *`module`* __string__ | Module is the location of the WASM module to be loaded. Can be a +
-local file (file://), a remote file served by an HTTP server +
-(http://, https://), or an artifact served by an OCI-compatible +
-registry (registry://). +
-If prefix is missing, it will default to registry:// and use that +
-internally. + |  | Required: {} +
-
-| *`settings`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#rawextension-runtime-pkg[$$RawExtension$$]__ | Settings is a free-form object that contains the policy configuration +
-values. +
-x-kubernetes-embedded-resource: false + |  | 
-| *`contextAwareResources`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-contextawareresource[$$ContextAwareResource$$] array__ | List of Kubernetes resources the policy is allowed to access at evaluation time. +
-Access to these resources is done using the `ServiceAccount` of the PolicyServer +
-the policy is assigned to. + |  | 
-|===
-
-
-[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmembers"]
-==== PolicyGroupMembers
-
-_Underlying type:_ _xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-map-string-policygroupmember[$$map[string]PolicyGroupMember$$]_
-
-
-
-
-
-.Appears In:
-****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-clusterpolicygroupspec[$$ClusterPolicyGroupSpec$$]
 - xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupspec[$$PolicyGroupSpec$$]
-****
-
-
-
-[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupspec"]
-==== PolicyGroupSpec
-
-
-
-
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-admissionpolicygroupspec[$$AdmissionPolicyGroupSpec$$]
-- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-clusteradmissionpolicygroupspec[$$ClusterAdmissionPolicyGroupSpec$$]
 ****
 
 [cols="20a,50a,15a,15a", options="header"]
@@ -584,6 +548,126 @@ documentation to learn about all the features available. + |  | Required: {} +
 the policy group is rejected. The specific policy results will be +
 returned in the warning field of the response. + |  | Required: {} +
 
+|===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmember"]
+==== PolicyGroupMember
+
+
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmemberwithcontext[$$PolicyGroupMemberWithContext$$]
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmembers[$$PolicyGroupMembers$$]
+****
+
+[cols="20a,50a,15a,15a", options="header"]
+|===
+| Field | Description | Default | Validation
+| *`module`* __string__ | Module is the location of the WASM module to be loaded. Can be a +
+local file (file://), a remote file served by an HTTP server +
+(http://, https://), or an artifact served by an OCI-compatible +
+registry (registry://). +
+If prefix is missing, it will default to registry:// and use that +
+internally. + |  | Required: {} +
+
+| *`settings`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#rawextension-runtime-pkg[$$RawExtension$$]__ | Settings is a free-form object that contains the policy configuration +
+values. +
+x-kubernetes-embedded-resource: false + |  | 
+|===
+
+
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmemberwithcontext"]
+==== PolicyGroupMemberWithContext
+
+
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmemberswithcontext[$$PolicyGroupMembersWithContext$$]
+****
+
+[cols="20a,50a,15a,15a", options="header"]
+|===
+| Field | Description | Default | Validation
+| *`PolicyGroupMember`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmember[$$PolicyGroupMember$$]__ |  |  | 
+| *`contextAwareResources`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-contextawareresource[$$ContextAwareResource$$] array__ | List of Kubernetes resources the policy is allowed to access at evaluation time. +
+Access to these resources is done using the `ServiceAccount` of the PolicyServer +
+the policy is assigned to. + |  | 
+|===
+
+
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmembers"]
+==== PolicyGroupMembers
+
+_Underlying type:_ _xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-map-string-policygroupmember[$$map[string]PolicyGroupMember$$]_
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupspec[$$PolicyGroupSpec$$]
+****
+
+
+
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmemberswithcontext"]
+==== PolicyGroupMembersWithContext
+
+_Underlying type:_ _xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-map-string-policygroupmemberwithcontext[$$map[string]PolicyGroupMemberWithContext$$]_
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-clusterpolicygroupspec[$$ClusterPolicyGroupSpec$$]
+****
+
+
+
+[id="{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupspec"]
+==== PolicyGroupSpec
+
+
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-admissionpolicygroupspec[$$AdmissionPolicyGroupSpec$$]
+****
+
+[cols="20a,50a,15a,15a", options="header"]
+|===
+| Field | Description | Default | Validation
+| *`GroupSpec`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-groupspec[$$GroupSpec$$]__ |  |  | 
 | *`policies`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupmembers[$$PolicyGroupMembers$$]__ | Policies is a list of policies that are part of the group that will +
 be available to be called in the evaluation expression field. +
 Each policy in the group should be a Kubewarden policy. + |  | Required: {} +
@@ -607,7 +691,7 @@ _Underlying type:_ _string_
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policygroupspec[$$PolicyGroupSpec$$]
+- xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-groupspec[$$GroupSpec$$]
 - xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-policyspec[$$PolicySpec$$]
 ****
 
