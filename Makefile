@@ -69,14 +69,14 @@ fmt: ## Run go fmt against code.
 
 .PHONY: vet
 vet: ## Run go vet against code.
-	go vet ./...
+	go vet -tags=testing ./...
 
 .PHONY: test
 test: unit-tests integration-tests ## Run tests.
 
 .PHONY: unit-tests
 unit-tests: manifests generate fmt vet ## Run unit tests.
-	go test $$(go list ./... | grep -v /internal/controller) -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic  -tags=testing
+	go test $$(go list ./... | grep -v /internal/controller) -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic -tags=testing
 
 # Integration tests are split into two targets to allow for running tests 
 # that require a real cluster to be run separately from those that can be run using envtest.
