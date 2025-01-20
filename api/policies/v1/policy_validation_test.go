@@ -1,5 +1,3 @@
-//go:build testing
-
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -87,7 +85,8 @@ func TestValidateRulesField(t *testing.T) {
 							APIGroups:   []string{"*"},
 							APIVersions: []string{"*"},
 							Resources:   []string{"*/*"},
-						}},
+						},
+					},
 				}).
 				WithPolicyServer("default").Build(),
 			"spec.rules.operations: Required value: a value must be specified",
@@ -197,7 +196,8 @@ func TestValidateRulesField(t *testing.T) {
 							APIVersions: []string{"*"},
 							Resources:   []string{"*/*"},
 						},
-					}}).Build(),
+					},
+				}).Build(),
 			"",
 		},
 	}

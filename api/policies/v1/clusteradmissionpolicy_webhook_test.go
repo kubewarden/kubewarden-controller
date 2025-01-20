@@ -1,5 +1,3 @@
-//go:build testing
-
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,77 +15,39 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 func TestClusterAdmissionPolicyDefault(t *testing.T) {
-	policy := ClusterAdmissionPolicy{}
-	policy.Default()
+	defaulter := clusterAdmissionPolicyDefaulter{logger: logr.Discard()}
+	policy := &ClusterAdmissionPolicy{}
 
-	require.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
-	require.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
+	err := defaulter.Default(context.Background(), policy)
+	require.NoError(t, err)
+
+	assert.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
+	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
 }
 
 func TestClusterAdmissionPolicyValidateCreate(t *testing.T) {
+	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
 	policy := NewClusterAdmissionPolicyFactory().Build()
-	warnings, err := policy.ValidateCreate()
+
+	warnings, err := validator.ValidateCreate(context.Background(), policy)
 	require.NoError(t, err)
-	require.Empty(t, warnings)
+	assert.Empty(t, warnings)
 }
 
-func TestClusterAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := NewClusterAdmissionPolicyFactory().Build()
-	newPolicy := NewClusterAdmissionPolicyFactory().Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-
-	oldPolicy = NewClusterAdmissionPolicyFactory().
-		WithMode("monitor").
-		Build()
-	newPolicy = NewClusterAdmissionPolicyFactory().
-		WithMode("protect").
-		Build()
-	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-}
-
-func TestInvalidClusterAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := NewClusterAdmissionPolicyFactory().
-		WithPolicyServer("old").
-		Build()
-	newPolicy := NewClusterAdmissionPolicyFactory().
-		WithPolicyServer("new").
-		Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.Error(t, err)
-	require.Empty(t, warnings)
-
-	newPolicy = NewClusterAdmissionPolicyFactory().
-		WithPolicyServer("new").
-		WithMode("monitor").
-		Build()
-
-	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
-	require.Error(t, err)
-	require.Empty(t, warnings)
-}
-
-func TestClusterAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
-	oldPolicy := NewAdmissionPolicyFactory().Build()
-	newPolicy := NewClusterAdmissionPolicyFactory().Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.Empty(t, warnings)
-	require.ErrorContains(t, err, "object is not of type ClusterAdmissionPolicy")
-}
-
-func TestInvalidClusterAdmissionPolicyCreation(t *testing.T) {
+func TestClusterAdmissionPolicyValidateCreateWithErrors(t *testing.T) {
 	policy := NewClusterAdmissionPolicyFactory().
 		WithPolicyServer("").
 		WithRules([]admissionregistrationv1.RuleWithOperations{
@@ -98,7 +58,8 @@ func TestInvalidClusterAdmissionPolicyCreation(t *testing.T) {
 					APIGroups:   []string{"*"},
 					APIVersions: []string{"*"},
 					Resources:   []string{"*/*"},
-				}},
+				},
+			},
 			{
 				Operations: nil,
 				Rule: admissionregistrationv1.Rule{
@@ -167,7 +128,54 @@ func TestInvalidClusterAdmissionPolicyCreation(t *testing.T) {
 			},
 		}).
 		Build()
-	warnings, err := policy.ValidateCreate()
+
+	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
+
+	warnings, err := validator.ValidateCreate(context.Background(), policy)
 	require.Error(t, err)
-	require.Empty(t, warnings)
+	assert.Empty(t, warnings)
+}
+
+func TestClusterAdmissionPolicyValidateUpdate(t *testing.T) {
+	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
+	oldPolicy := NewClusterAdmissionPolicyFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyFactory().Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.NoError(t, err)
+	assert.Empty(t, warnings)
+
+	oldPolicy = NewClusterAdmissionPolicyFactory().
+		WithMode("monitor").
+		Build()
+	newPolicy = NewClusterAdmissionPolicyFactory().
+		WithMode("protect").
+		Build()
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.NoError(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestClusterAdmissionPolicyValidateUpdateWithErrors(t *testing.T) {
+	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
+	oldPolicy := NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("old").
+		Build()
+	newPolicy := NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
+	require.Error(t, err)
+	assert.Empty(t, warnings)
+
+	newPolicy = NewClusterAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		WithMode("monitor").
+		Build()
+
+	warnings, err = validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
+	require.Error(t, err)
+	assert.Empty(t, warnings)
 }

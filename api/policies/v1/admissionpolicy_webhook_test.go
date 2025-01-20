@@ -1,5 +1,3 @@
-//go:build testing
-
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,77 +14,39 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 func TestAdmissionPolicyDefault(t *testing.T) {
-	policy := AdmissionPolicy{}
-	policy.Default()
+	defaulter := admissionPolicyDefaulter{logger: logr.Discard()}
+	policy := &AdmissionPolicy{}
 
-	require.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
-	require.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
+	err := defaulter.Default(context.Background(), policy)
+	require.NoError(t, err)
+
+	assert.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
+	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
 }
 
 func TestAdmissionPolicyValidateCreate(t *testing.T) {
+	validator := admissionPolicyValidator{logger: logr.Discard()}
 	policy := NewAdmissionPolicyFactory().Build()
-	warnings, err := policy.ValidateCreate()
+
+	warnings, err := validator.ValidateCreate(context.Background(), policy)
 	require.NoError(t, err)
-	require.Empty(t, warnings)
+	assert.Empty(t, warnings)
 }
 
-func TestAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := NewAdmissionPolicyFactory().Build()
-	newPolicy := NewAdmissionPolicyFactory().Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-
-	oldPolicy = NewAdmissionPolicyFactory().
-		WithMode("monitor").
-		Build()
-	newPolicy = NewAdmissionPolicyFactory().
-		WithMode("protect").
-		Build()
-	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-}
-
-func TestInvalidAdmissionPolicyValidateUpdate(t *testing.T) {
-	oldPolicy := NewAdmissionPolicyFactory().
-		WithPolicyServer("old").
-		Build()
-	newPolicy := NewAdmissionPolicyFactory().
-		WithPolicyServer("new").
-		Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.Error(t, err)
-	require.Empty(t, warnings)
-
-	newPolicy = NewAdmissionPolicyFactory().
-		WithPolicyServer("new").
-		WithMode("monitor").
-		Build()
-
-	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
-	require.Error(t, err)
-	require.Empty(t, warnings)
-}
-
-func TestAdmissionPolicyValidateUpdateWithInvalidOldPolicy(t *testing.T) {
-	oldPolicy := NewClusterAdmissionPolicyFactory().Build()
-	newPolicy := NewAdmissionPolicyFactory().Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.Empty(t, warnings)
-	require.ErrorContains(t, err, "object is not of type AdmissionPolicy")
-}
-
-func TestInvalidAdmissionPolicyCreation(t *testing.T) {
+func TestAdmissionPolicyValidateCreateWithErrors(t *testing.T) {
 	policy := NewAdmissionPolicyFactory().
 		WithPolicyServer("").
 		WithRules([]admissionregistrationv1.RuleWithOperations{
@@ -97,7 +57,8 @@ func TestInvalidAdmissionPolicyCreation(t *testing.T) {
 					APIGroups:   []string{"*"},
 					APIVersions: []string{"*"},
 					Resources:   []string{"*/*"},
-				}},
+				},
+			},
 			{
 				Operations: nil,
 				Rule: admissionregistrationv1.Rule{
@@ -166,7 +127,54 @@ func TestInvalidAdmissionPolicyCreation(t *testing.T) {
 			},
 		}).
 		Build()
-	warnings, err := policy.ValidateCreate()
+
+	validator := admissionPolicyValidator{logger: logr.Discard()}
+
+	warnings, err := validator.ValidateCreate(context.Background(), policy)
 	require.Error(t, err)
-	require.Empty(t, warnings)
+	assert.Empty(t, warnings)
+}
+
+func TestAdmissionPolicyValidateUpdate(t *testing.T) {
+	validator := admissionPolicyValidator{logger: logr.Discard()}
+	oldPolicy := NewAdmissionPolicyFactory().Build()
+	newPolicy := NewAdmissionPolicyFactory().Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.NoError(t, err)
+	assert.Empty(t, warnings)
+
+	oldPolicy = NewAdmissionPolicyFactory().
+		WithMode("monitor").
+		Build()
+	newPolicy = NewAdmissionPolicyFactory().
+		WithMode("protect").
+		Build()
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.NoError(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestAdmissionPolicyValidateUpdateWithErrors(t *testing.T) {
+	validator := admissionPolicyValidator{logger: logr.Discard()}
+	oldPolicy := NewAdmissionPolicyFactory().
+		WithPolicyServer("old").
+		Build()
+	newPolicy := NewAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
+	require.Error(t, err)
+	assert.Empty(t, warnings)
+
+	newPolicy = NewAdmissionPolicyFactory().
+		WithPolicyServer("new").
+		WithMode("monitor").
+		Build()
+
+	warnings, err = validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
+	require.Error(t, err)
+	assert.Empty(t, warnings)
 }

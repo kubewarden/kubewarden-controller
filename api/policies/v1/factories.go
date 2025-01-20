@@ -206,7 +206,8 @@ func (fac *ClusterAdmissionPolicyFactory) Build() *ClusterAdmissionPolicy {
 				// testing removal of finalizers on deleted objects, that they will
 				// exist at all times
 				integrationTestsFinalizer,
-			}},
+			},
+		},
 		Spec: ClusterAdmissionPolicySpec{
 			ContextAwareResources: fac.contextAwareResources,
 			PolicySpec: PolicySpec{

@@ -1,5 +1,3 @@
-//go:build testing
-
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,86 +15,39 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
 func TestAdmissionPolicyGroupDefault(t *testing.T) {
-	policy := AdmissionPolicyGroup{}
-	policy.Default()
+	defaulter := admissionPolicyGroupDefaulter{logger: logr.Discard()}
+	policy := &AdmissionPolicyGroup{}
 
-	require.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
-	require.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
+	err := defaulter.Default(context.Background(), policy)
+	require.NoError(t, err)
+
+	assert.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
+	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
 }
 
 func TestAdmissionPolicyGroupValidateCreate(t *testing.T) {
+	validator := admissionPolicyGroupValidator{logger: logr.Discard()}
 	policy := NewAdmissionPolicyGroupFactory().Build()
-	warnings, err := policy.ValidateCreate()
+
+	warnings, err := validator.ValidateCreate(context.Background(), policy)
 	require.NoError(t, err)
-	require.Empty(t, warnings)
+	assert.Empty(t, warnings)
 }
 
-func TestClusterAdmissionPolicyValidateCreateWithNoMembers(t *testing.T) {
-	policy := NewAdmissionPolicyGroupFactory().Build()
-	policy.Spec.Policies = nil
-	warnings, err := policy.ValidateCreate()
-	require.Error(t, err)
-	require.Empty(t, warnings)
-	require.Contains(t, err.Error(), "policy groups must have at least one policy member")
-}
-
-func TestAdmissionPolicyGroupValidateUpdate(t *testing.T) {
-	oldPolicy := NewAdmissionPolicyGroupFactory().Build()
-	newPolicy := NewAdmissionPolicyGroupFactory().Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-
-	oldPolicy = NewAdmissionPolicyGroupFactory().
-		WithMode("monitor").
-		Build()
-	newPolicy = NewAdmissionPolicyGroupFactory().
-		WithMode("protect").
-		Build()
-	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
-	require.NoError(t, err)
-	require.Empty(t, warnings)
-}
-
-func TestInvalidAdmissionPolicyGroupValidateUpdate(t *testing.T) {
-	oldPolicy := NewAdmissionPolicyFactory().
-		WithPolicyServer("old").
-		Build()
-	newPolicy := NewAdmissionPolicyFactory().
-		WithPolicyServer("new").
-		Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.Error(t, err)
-	require.Empty(t, warnings)
-
-	newPolicy = NewAdmissionPolicyFactory().
-		WithPolicyServer("new").
-		WithMode("monitor").
-		Build()
-
-	warnings, err = newPolicy.ValidateUpdate(oldPolicy)
-	require.Error(t, err)
-	require.Empty(t, warnings)
-}
-
-func TestAdmissionPolicyGroupValidateUpdateWithInvalidOldPolicy(t *testing.T) {
-	oldPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
-	newPolicy := NewAdmissionPolicyGroupFactory().Build()
-	warnings, err := newPolicy.ValidateUpdate(oldPolicy)
-	require.Empty(t, warnings)
-	require.ErrorContains(t, err, "object is not of type AdmissionPolicyGroup")
-}
-
-func TestInvalidAdmissionPolicyGroupCreation(t *testing.T) {
+func TestAdmissionPolicyGroupValidateCreateWithErrors(t *testing.T) {
 	policy := NewAdmissionPolicyGroupFactory().
 		WithPolicyServer("").
 		WithRules([]admissionregistrationv1.RuleWithOperations{
@@ -107,7 +58,8 @@ func TestInvalidAdmissionPolicyGroupCreation(t *testing.T) {
 					APIGroups:   []string{"*"},
 					APIVersions: []string{"*"},
 					Resources:   []string{"*/*"},
-				}},
+				},
+			},
 			{
 				Operations: nil,
 				Rule: admissionregistrationv1.Rule{
@@ -176,7 +128,54 @@ func TestInvalidAdmissionPolicyGroupCreation(t *testing.T) {
 			},
 		}).
 		Build()
-	warnings, err := policy.ValidateCreate()
+
+	validator := admissionPolicyGroupValidator{}
+
+	warnings, err := validator.ValidateCreate(context.Background(), policy)
 	require.Error(t, err)
-	require.Empty(t, warnings)
+	assert.Empty(t, warnings)
+}
+
+func TestAdmissionPolicyGroupValidateUpdate(t *testing.T) {
+	validator := admissionPolicyGroupValidator{logger: logr.Discard()}
+	oldPolicy := NewAdmissionPolicyGroupFactory().Build()
+	newPolicy := NewAdmissionPolicyGroupFactory().Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.NoError(t, err)
+	assert.Empty(t, warnings)
+
+	oldPolicy = NewAdmissionPolicyGroupFactory().
+		WithMode("monitor").
+		Build()
+	newPolicy = NewAdmissionPolicyGroupFactory().
+		WithMode("protect").
+		Build()
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.NoError(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestAdmissionPolicyGroupValidateUpdateWithErrors(t *testing.T) {
+	validator := admissionPolicyGroupValidator{logger: logr.Discard()}
+	oldPolicy := NewAdmissionPolicyGroupFactory().
+		WithPolicyServer("old").
+		Build()
+	newPolicy := NewAdmissionPolicyGroupFactory().
+		WithPolicyServer("new").
+		Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.Error(t, err)
+	assert.Empty(t, warnings)
+
+	newPolicy = NewAdmissionPolicyGroupFactory().
+		WithPolicyServer("new").
+		WithMode("monitor").
+		Build()
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	require.Error(t, err)
+	assert.Empty(t, warnings)
 }

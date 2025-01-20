@@ -43,7 +43,9 @@ func TestDefault(t *testing.T) {
 		},
 	}
 
-	policyServer.Default()
+	policyServerDefaulter := policyServerDefaulter{}
+	err := policyServerDefaulter.Default(context.Background(), policyServer)
+	require.NoError(t, err)
 
 	assert.Contains(t, policyServer.Finalizers, constants.KubewardenFinalizer)
 }
