@@ -6,6 +6,7 @@ use crate::runtimes::{rego, wapc, wasi_cli};
 /// using on-demand PolicyEvaluator instances; where on-demand means that
 /// each validation request has a brand new PolicyEvaluator that is discarded
 /// once  the evaluation is done.
+#[derive(Clone)]
 pub(crate) enum StackPre {
     Wapc(crate::runtimes::wapc::StackPre),
     Wasi(crate::runtimes::wasi_cli::StackPre),

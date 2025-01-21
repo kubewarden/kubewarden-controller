@@ -10,6 +10,7 @@ pub mod errors;
 pub mod evaluation_context;
 pub mod policy_artifacthub;
 pub mod policy_evaluator;
+pub mod policy_group_evaluator;
 pub mod policy_metadata;
 mod policy_tracing;
 pub mod runtimes;

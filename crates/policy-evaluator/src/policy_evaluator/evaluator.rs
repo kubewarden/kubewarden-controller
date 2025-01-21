@@ -1,5 +1,4 @@
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
-use kubewarden_policy_sdk::settings::SettingsValidationResponse;
+use kubewarden_policy_sdk::{metadata::ProtocolVersion, settings::SettingsValidationResponse};
 use std::fmt;
 
 use crate::admission_response::AdmissionResponse;
