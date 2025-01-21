@@ -1,5 +1,11 @@
 {
   "extends": [
     "github>kubewarden/github-actions//renovate-config/default"
+  ],
+    "packageRules": [
+    {
+      "description": "Update all wasmtime packages together",
+      "matchPackageNames": ["wasmtime-wasi", "wasmtime", "wasi-common"]
+    }
   ]
 }
