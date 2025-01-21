@@ -15,86 +15,122 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-// log is for logging in this package.
-//
-//nolint:gochecknoglobals // let's keep the log variable here for now
-var admissionpolicygrouplog = logf.Log.WithName("admissionpolicygroup-resource")
-
+// SetupWebhookWithManager registers the AdmissionPolicyGroup webhook with the controller manager.
 func (r *AdmissionPolicyGroup) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger().WithName("admissionpolicygroup-webhook")
+
 	err := ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&admissionPolicyGroupDefaulter{
+			logger: logger,
+		}).
+		WithValidator(&admissionPolicyGroupValidator{
+			logger: logger,
+		}).
 		Complete()
 	if err != nil {
 		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
 	}
+
 	return nil
 }
 
 //+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-admissionpolicygroup,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicygroups,verbs=create;update,versions=v1,name=madmissionpolicygroup.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Defaulter = &AdmissionPolicyGroup{}
+// admissionPolicyGroupDefaulter sets default values of AdmissionPolicyGroup objects when they are created or updated.
+type admissionPolicyGroupDefaulter struct {
+	logger logr.Logger
+}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (r *AdmissionPolicyGroup) Default() {
-	admissionpolicygrouplog.Info("default", "name", r.Name)
+var _ webhook.CustomDefaulter = &admissionPolicyGroupDefaulter{}
 
-	if r.Spec.PolicyServer == "" {
-		r.Spec.PolicyServer = constants.DefaultPolicyServer
+// Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
+func (d *admissionPolicyGroupDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	admissionPolicyGroup, ok := obj.(*AdmissionPolicyGroup)
+	if !ok {
+		return fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", obj)
 	}
-	if r.ObjectMeta.DeletionTimestamp == nil {
-		controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
+
+	d.logger.Info("Defaulting AdmissionPolicyGroup", "name", admissionPolicyGroup.GetName())
+
+	if admissionPolicyGroup.Spec.PolicyServer == "" {
+		admissionPolicyGroup.Spec.PolicyServer = constants.DefaultPolicyServer
 	}
+	if admissionPolicyGroup.ObjectMeta.DeletionTimestamp == nil {
+		controllerutil.AddFinalizer(admissionPolicyGroup, constants.KubewardenFinalizer)
+	}
+
+	return nil
 }
 
 //+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-admissionpolicygroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=admissionpolicygroups,verbs=create;update,versions=v1,name=vadmissionpolicygroup.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Validator = &AdmissionPolicyGroup{}
+// admissionPolicyGroupValidator validates AdmissionPolicyGroup objects when they are created, updated, or deleted.
+type admissionPolicyGroupValidator struct {
+	logger logr.Logger
+}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *AdmissionPolicyGroup) ValidateCreate() (admission.Warnings, error) {
-	admissionpolicygrouplog.Info("validate create", "name", r.Name)
+var _ webhook.CustomValidator = &admissionPolicyGroupValidator{}
 
-	allErrors := validatePolicyGroupCreate(r)
+// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
+func (v *admissionPolicyGroupValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	admissionPolicyGroup, ok := obj.(*AdmissionPolicyGroup)
+	if !ok {
+		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", obj)
+	}
+
+	v.logger.Info("Validating AdmissionPolicyGroup creation", "name", admissionPolicyGroup.GetName())
+
+	allErrors := validatePolicyGroupCreate(admissionPolicyGroup)
 
 	if len(allErrors) != 0 {
-		return nil, prepareInvalidAPIError(r, allErrors)
+		return nil, prepareInvalidAPIError(admissionPolicyGroup, allErrors)
 	}
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *AdmissionPolicyGroup) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	admissionpolicygrouplog.Info("validate update", "name", r.Name)
-
-	oldPolicy, ok := old.(*AdmissionPolicyGroup)
+func (v *admissionPolicyGroupValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	oldAdmissionPolicyGroup, ok := oldObj.(*AdmissionPolicyGroup)
 	if !ok {
-		return admission.Warnings{}, apierrors.NewInternalError(
-			fmt.Errorf("object is not of type AdmissionPolicyGroup: %#v", old))
+		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", oldObj)
+	}
+	newAdmissionPolicyGroup, ok := newObj.(*AdmissionPolicyGroup)
+	if !ok {
+		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", newObj)
 	}
 
-	if allErrors := validatePolicyGroupUpdate(oldPolicy, r); len(allErrors) != 0 {
-		return nil, prepareInvalidAPIError(r, allErrors)
+	v.logger.Info("Validating AdmissionPolicyGroup update", "name", newAdmissionPolicyGroup.GetName())
+
+	if allErrors := validatePolicyGroupUpdate(oldAdmissionPolicyGroup, newAdmissionPolicyGroup); len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(newAdmissionPolicyGroup, allErrors)
 	}
 
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *AdmissionPolicyGroup) ValidateDelete() (admission.Warnings, error) {
-	admissionpolicygrouplog.Info("validate delete", "name", r.Name)
+// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
+func (v *admissionPolicyGroupValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	admissionPolicyGroup, ok := obj.(*AdmissionPolicyGroup)
+	if !ok {
+		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", obj)
+	}
+
+	v.logger.Info("Validating AdmissionPolicyGroup delete", "name", admissionPolicyGroup.GetName())
+
 	return nil, nil
 }

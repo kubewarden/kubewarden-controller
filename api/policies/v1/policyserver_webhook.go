@@ -30,50 +30,109 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
+// SetupWebhookWithManager registers the PolicyServer webhook with the controller manager.
 func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager, deploymentsNamespace string) error {
+	logger := mgr.GetLogger().WithName("policyserver-webhook")
+
 	err := ctrl.NewWebhookManagedBy(mgr).
 		For(ps).
-		WithValidator(&policyServerValidator{k8sClient: mgr.GetClient(), deploymentsNamespace: deploymentsNamespace}).
+		WithDefaulter(&policyServerDefaulter{
+			logger: logger,
+		}).
+		WithValidator(&policyServerValidator{
+			deploymentsNamespace: deploymentsNamespace,
+			k8sClient:            mgr.GetClient(),
+			logger:               logger,
+		}).
 		Complete()
 	if err != nil {
 		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
 	}
+
 	return nil
 }
 
 // +kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-policyserver,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=mpolicyserver.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Defaulter = &PolicyServer{}
-
-// Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (ps *PolicyServer) Default() {
-	logf.Log.WithName("policyserver-resource").Info("default", "name", ps.Name)
-	if ps.ObjectMeta.DeletionTimestamp == nil {
-		controllerutil.AddFinalizer(ps, constants.KubewardenFinalizer)
-	}
+// policyServerDefaulter sets defaults of PolicyServer objects when they are created or updated.
+type policyServerDefaulter struct {
+	logger logr.Logger
 }
 
-// +kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-policyserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=vpolicyserver.kb.io,admissionReviewVersions=v1
+var _ webhook.CustomDefaulter = &policyServerDefaulter{}
 
-// polyServerValidator validates PolicyServers.
-type policyServerValidator struct {
-	k8sClient            client.Client
-	deploymentsNamespace string
-}
-
-func (v *policyServerValidator) validate(ctx context.Context, obj runtime.Object) error {
+// Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
+func (d *policyServerDefaulter) Default(_ context.Context, obj runtime.Object) error {
 	policyServer, ok := obj.(*PolicyServer)
 	if !ok {
 		return fmt.Errorf("expected a PolicyServer object, got %T", obj)
 	}
 
+	d.logger.Info("Defaulting PolicyServer", "name", policyServer.GetName())
+
+	if policyServer.ObjectMeta.DeletionTimestamp == nil {
+		controllerutil.AddFinalizer(policyServer, constants.KubewardenFinalizer)
+	}
+
+	return nil
+}
+
+// +kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-policyserver,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=policyservers,verbs=create;update,versions=v1,name=vpolicyserver.kb.io,admissionReviewVersions=v1
+
+// polyServerCustomValidator validates PolicyServers when they are created, updated, or deleted.
+type policyServerValidator struct {
+	deploymentsNamespace string
+	k8sClient            client.Client
+	logger               logr.Logger
+}
+
+var _ webhook.CustomValidator = &policyServerValidator{}
+
+// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
+func (v *policyServerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	policyServer, ok := obj.(*PolicyServer)
+	if !ok {
+		return nil, fmt.Errorf("expected a PolicyServer object, got %T", obj)
+	}
+
+	v.logger.Info("Validating PolicyServer create", "name", policyServer.GetName())
+
+	return nil, v.validate(ctx, policyServer)
+}
+
+// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.)
+func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
+	policyServer, ok := newObj.(*PolicyServer)
+	if !ok {
+		return nil, fmt.Errorf("expected a PolicyServer object, got %T", newObj)
+	}
+
+	v.logger.Info("Validating PolicyServer update", "name", policyServer.GetName())
+
+	return nil, v.validate(ctx, policyServer)
+}
+
+// ValdidaeDelete implements webhook.CustomValidator so a webhook will be registered for the type.
+func (v *policyServerValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	policyServer, ok := obj.(*PolicyServer)
+	if !ok {
+		return nil, fmt.Errorf("expected a PolicyServer object, got %T", obj)
+	}
+
+	v.logger.Info("Validating PolicyServer delete", "name", policyServer.GetName())
+
+	return nil, nil
+}
+
+// validate validates a the fields PolicyServer object.
+func (v *policyServerValidator) validate(ctx context.Context, policyServer *PolicyServer) error {
 	var allErrs field.ErrorList
 
 	// The PolicyServer name must be maximum 63 like all Kubernetes objects to fit in a DNS subdomain name
@@ -99,18 +158,6 @@ func (v *policyServerValidator) validate(ctx context.Context, obj runtime.Object
 	}
 
 	return apierrors.NewInvalid(GroupVersion.WithKind("PolicyServer").GroupKind(), policyServer.Name, allErrs)
-}
-
-func (v *policyServerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	return nil, v.validate(ctx, obj)
-}
-
-func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, obj runtime.Object) (admission.Warnings, error) {
-	return nil, v.validate(ctx, obj)
-}
-
-func (v *policyServerValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
-	return nil, nil
 }
 
 // validateImagePullSecret validates that the specified PolicyServer imagePullSecret exists and is of type kubernetes.io/dockerconfigjson.

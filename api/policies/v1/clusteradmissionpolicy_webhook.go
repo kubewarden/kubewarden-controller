@@ -15,6 +15,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,21 +24,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-// log is for logging in this package.
-//
-//nolint:gochecknoglobals // let's keep the log variable here for now
-var clusteradmissionpolicylog = logf.Log.WithName("clusteradmissionpolicy-resource")
-
+// SetupWebhookWithManager registers the ClusterAdmissionPolicy webhook with the controller manager.
 func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	logger := mgr.GetLogger().WithName("clusteradmissionpolicy-webhook")
+
 	err := ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithDefaulter(&clusterAdmissionPolicyDefaulter{
+			logger: logger,
+		}).
+		WithValidator(&clusterAdmissionPolicyValidator{
+			logger: logger,
+		}).
 		Complete()
 	if err != nil {
 		return fmt.Errorf("failed enrolling webhook with manager: %w", err)
@@ -48,57 +52,87 @@ func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error
 
 //+kubebuilder:webhook:path=/mutate-policies-kubewarden-io-v1-clusteradmissionpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create;update,versions=v1,name=mclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Defaulter = &ClusterAdmissionPolicy{}
+// clusterAdmissionPolicyDefaulter sets default values of ClusterAdmissionPolicy objects when they are created or updated.
+type clusterAdmissionPolicyDefaulter struct {
+	logger logr.Logger
+}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (r *ClusterAdmissionPolicy) Default() {
-	clusteradmissionpolicylog.Info("default", "name", r.Name)
+var _ webhook.CustomDefaulter = &clusterAdmissionPolicyDefaulter{}
 
-	if r.Spec.PolicyServer == "" {
-		r.Spec.PolicyServer = constants.DefaultPolicyServer
+// Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
+func (d *clusterAdmissionPolicyDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	clusterAdmissionPolicy, ok := obj.(*ClusterAdmissionPolicy)
+	if !ok {
+		return fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", obj)
 	}
-	if r.ObjectMeta.DeletionTimestamp == nil {
-		controllerutil.AddFinalizer(r, constants.KubewardenFinalizer)
+
+	d.logger.Info("Defaulting ClusterAdmissionPolicy", "name", clusterAdmissionPolicy.GetName())
+
+	if clusterAdmissionPolicy.Spec.PolicyServer == "" {
+		clusterAdmissionPolicy.Spec.PolicyServer = constants.DefaultPolicyServer
 	}
+	if clusterAdmissionPolicy.ObjectMeta.DeletionTimestamp == nil {
+		controllerutil.AddFinalizer(clusterAdmissionPolicy, constants.KubewardenFinalizer)
+	}
+
+	return nil
 }
 
 //+kubebuilder:webhook:path=/validate-policies-kubewarden-io-v1-clusteradmissionpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=policies.kubewarden.io,resources=clusteradmissionpolicies,verbs=create;update,versions=v1,name=vclusteradmissionpolicy.kb.io,admissionReviewVersions={v1,v1beta1}
 
-var _ webhook.Validator = &ClusterAdmissionPolicy{}
-
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *ClusterAdmissionPolicy) ValidateCreate() (admission.Warnings, error) {
-	clusteradmissionpolicylog.Info("validate create", "name", r.Name)
-
-	allErrors := validatePolicyCreate(r)
-	if len(allErrors) != 0 {
-		return nil, prepareInvalidAPIError(r, allErrors)
-	}
-
-	return nil, nil
+// clusterAdmissionPolicyValidator validates ClusterAdmissionPolicy objects when they are created, updated, or deleted.
+type clusterAdmissionPolicyValidator struct {
+	logger logr.Logger
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *ClusterAdmissionPolicy) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	clusteradmissionpolicylog.Info("validate update", "name", r.Name)
+var _ webhook.CustomValidator = &clusterAdmissionPolicyValidator{}
 
-	oldPolicy, ok := old.(*ClusterAdmissionPolicy)
+// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
+func (v *clusterAdmissionPolicyValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	clusterAdmissionPolicy, ok := obj.(*ClusterAdmissionPolicy)
 	if !ok {
-		return admission.Warnings{}, apierrors.NewInternalError(
-			fmt.Errorf("object is not of type ClusterAdmissionPolicy: %#v", old))
+		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", obj)
 	}
 
-	allErrors := validatePolicyUpdate(oldPolicy, r)
+	v.logger.Info("Validating ClusterAdmissionPolicy creation", "name", clusterAdmissionPolicy.GetName())
+
+	allErrors := validatePolicyCreate(clusterAdmissionPolicy)
 	if len(allErrors) != 0 {
-		return nil, prepareInvalidAPIError(r, allErrors)
+		return nil, prepareInvalidAPIError(clusterAdmissionPolicy, allErrors)
 	}
 
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *ClusterAdmissionPolicy) ValidateDelete() (admission.Warnings, error) {
-	clusteradmissionpolicylog.Info("validate delete", "name", r.Name)
+// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
+func (v *clusterAdmissionPolicyValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	oldClusterAdmissionPolicy, ok := oldObj.(*ClusterAdmissionPolicy)
+	if !ok {
+		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", oldObj)
+	}
+	newClusterAdmissionPolicy, ok := newObj.(*ClusterAdmissionPolicy)
+	if !ok {
+		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", newObj)
+	}
+
+	v.logger.Info("Validating ClusterAdmissionPolicy update", "name", newClusterAdmissionPolicy.GetName())
+
+	allErrors := validatePolicyUpdate(oldClusterAdmissionPolicy, newClusterAdmissionPolicy)
+	if len(allErrors) != 0 {
+		return nil, prepareInvalidAPIError(newClusterAdmissionPolicy, allErrors)
+	}
+
+	return nil, nil
+}
+
+// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
+func (v *clusterAdmissionPolicyValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	clusterAdmissionPolicy, ok := obj.(*ClusterAdmissionPolicy)
+	if !ok {
+		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", obj)
+	}
+
+	v.logger.Info("Validating ClusterAdmissionPolicy delete", "name", clusterAdmissionPolicy.GetName())
 
 	return nil, nil
 }

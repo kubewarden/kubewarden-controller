@@ -8,7 +8,9 @@ import (
 	"os"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
@@ -57,46 +59,46 @@ func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
 	}
 }
 
-func (fac *AdmissionPolicyFactory) WithName(name string) *AdmissionPolicyFactory {
-	fac.name = name
-	return fac
+func (f *AdmissionPolicyFactory) WithName(name string) *AdmissionPolicyFactory {
+	f.name = name
+	return f
 }
 
-func (fac *AdmissionPolicyFactory) WithNamespace(namespace string) *AdmissionPolicyFactory {
-	fac.namespace = namespace
-	return fac
+func (f *AdmissionPolicyFactory) WithNamespace(namespace string) *AdmissionPolicyFactory {
+	f.namespace = namespace
+	return f
 }
 
-func (fac *AdmissionPolicyFactory) WithPolicyServer(policyServer string) *AdmissionPolicyFactory {
-	fac.policyServer = policyServer
-	return fac
+func (f *AdmissionPolicyFactory) WithPolicyServer(policyServer string) *AdmissionPolicyFactory {
+	f.policyServer = policyServer
+	return f
 }
 
-func (fac *AdmissionPolicyFactory) WithMutating(mutating bool) *AdmissionPolicyFactory {
-	fac.mutating = mutating
-	return fac
+func (f *AdmissionPolicyFactory) WithMutating(mutating bool) *AdmissionPolicyFactory {
+	f.mutating = mutating
+	return f
 }
 
-func (fac *AdmissionPolicyFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *AdmissionPolicyFactory {
-	fac.rules = rules
-	return fac
+func (f *AdmissionPolicyFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *AdmissionPolicyFactory {
+	f.rules = rules
+	return f
 }
 
-func (fac *AdmissionPolicyFactory) WithMatchConditions(matchConditions []admissionregistrationv1.MatchCondition) *AdmissionPolicyFactory {
-	fac.matchConds = matchConditions
-	return fac
+func (f *AdmissionPolicyFactory) WithMatchConditions(matchConditions []admissionregistrationv1.MatchCondition) *AdmissionPolicyFactory {
+	f.matchConds = matchConditions
+	return f
 }
 
-func (fac *AdmissionPolicyFactory) WithMode(mode PolicyMode) *AdmissionPolicyFactory {
-	fac.mode = mode
-	return fac
+func (f *AdmissionPolicyFactory) WithMode(mode PolicyMode) *AdmissionPolicyFactory {
+	f.mode = mode
+	return f
 }
 
-func (fac *AdmissionPolicyFactory) Build() *AdmissionPolicy {
+func (f *AdmissionPolicyFactory) Build() *AdmissionPolicy {
 	policy := AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fac.name,
-			Namespace: fac.namespace,
+			Name:      f.name,
+			Namespace: f.namespace,
 			Finalizers: []string{
 				// On a real cluster the Kubewarden finalizer is added by our mutating
 				// webhook. This is not running now, hence we have to manually add the finalizer
@@ -109,12 +111,12 @@ func (fac *AdmissionPolicyFactory) Build() *AdmissionPolicy {
 		},
 		Spec: AdmissionPolicySpec{
 			PolicySpec: PolicySpec{
-				PolicyServer:    fac.policyServer,
-				Module:          fac.module,
-				Rules:           fac.rules,
-				Mutating:        fac.mutating,
-				MatchConditions: fac.matchConds,
-				Mode:            fac.mode,
+				PolicyServer:    f.policyServer,
+				Module:          f.module,
+				Rules:           f.rules,
+				Mutating:        f.mutating,
+				MatchConditions: f.matchConds,
+				Mode:            f.mode,
 			},
 		},
 	}
@@ -159,45 +161,45 @@ func NewClusterAdmissionPolicyFactory() *ClusterAdmissionPolicyFactory {
 	}
 }
 
-func (fac *ClusterAdmissionPolicyFactory) WithName(name string) *ClusterAdmissionPolicyFactory {
-	fac.name = name
-	return fac
+func (f *ClusterAdmissionPolicyFactory) WithName(name string) *ClusterAdmissionPolicyFactory {
+	f.name = name
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyFactory) WithPolicyServer(policyServer string) *ClusterAdmissionPolicyFactory {
-	fac.policyServer = policyServer
-	return fac
+func (f *ClusterAdmissionPolicyFactory) WithPolicyServer(policyServer string) *ClusterAdmissionPolicyFactory {
+	f.policyServer = policyServer
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyFactory) WithMutating(mutating bool) *ClusterAdmissionPolicyFactory {
-	fac.mutating = mutating
-	return fac
+func (f *ClusterAdmissionPolicyFactory) WithMutating(mutating bool) *ClusterAdmissionPolicyFactory {
+	f.mutating = mutating
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyFactory) WithContextAwareResources(resources []ContextAwareResource) *ClusterAdmissionPolicyFactory {
-	fac.contextAwareResources = resources
-	return fac
+func (f *ClusterAdmissionPolicyFactory) WithContextAwareResources(resources []ContextAwareResource) *ClusterAdmissionPolicyFactory {
+	f.contextAwareResources = resources
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *ClusterAdmissionPolicyFactory {
-	fac.rules = rules
-	return fac
+func (f *ClusterAdmissionPolicyFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *ClusterAdmissionPolicyFactory {
+	f.rules = rules
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyFactory) WithMatchConditions(matchConditions []admissionregistrationv1.MatchCondition) *ClusterAdmissionPolicyFactory {
-	fac.matchConds = matchConditions
-	return fac
+func (f *ClusterAdmissionPolicyFactory) WithMatchConditions(matchConditions []admissionregistrationv1.MatchCondition) *ClusterAdmissionPolicyFactory {
+	f.matchConds = matchConditions
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyFactory) WithMode(mode PolicyMode) *ClusterAdmissionPolicyFactory {
-	fac.mode = mode
-	return fac
+func (f *ClusterAdmissionPolicyFactory) WithMode(mode PolicyMode) *ClusterAdmissionPolicyFactory {
+	f.mode = mode
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyFactory) Build() *ClusterAdmissionPolicy {
+func (f *ClusterAdmissionPolicyFactory) Build() *ClusterAdmissionPolicy {
 	clusterAdmissionPolicy := ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fac.name,
+			Name: f.name,
 			Finalizers: []string{
 				// On a real cluster the Kubewarden finalizer is added by our mutating
 				// webhook. This is not running now, hence we have to manually add the finalizer
@@ -206,57 +208,21 @@ func (fac *ClusterAdmissionPolicyFactory) Build() *ClusterAdmissionPolicy {
 				// testing removal of finalizers on deleted objects, that they will
 				// exist at all times
 				integrationTestsFinalizer,
-			}},
+			},
+		},
 		Spec: ClusterAdmissionPolicySpec{
-			ContextAwareResources: fac.contextAwareResources,
+			ContextAwareResources: f.contextAwareResources,
 			PolicySpec: PolicySpec{
-				PolicyServer:    fac.policyServer,
-				Module:          fac.module,
-				Rules:           fac.rules,
-				Mutating:        fac.mutating,
-				MatchConditions: fac.matchConds,
-				Mode:            fac.mode,
+				PolicyServer:    f.policyServer,
+				Module:          f.module,
+				Rules:           f.rules,
+				Mutating:        f.mutating,
+				MatchConditions: f.matchConds,
+				Mode:            f.mode,
 			},
 		},
 	}
 	return &clusterAdmissionPolicy
-}
-
-type PolicyServerBuilder struct {
-	name string
-}
-
-func NewPolicyServerFactory() *PolicyServerBuilder {
-	return &PolicyServerBuilder{
-		name: newName("policy-server"),
-	}
-}
-
-func (fac *PolicyServerBuilder) WithName(name string) *PolicyServerBuilder {
-	fac.name = name
-	return fac
-}
-
-func (fac *PolicyServerBuilder) Build() *PolicyServer {
-	policyServer := PolicyServer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fac.name,
-			Finalizers: []string{
-				// On a real cluster the Kubewarden finalizer is added by our mutating
-				// webhook. This is not running now, hence we have to manually add the finalizer
-				constants.KubewardenFinalizer,
-				// By adding this finalizer automatically, we ensure that when
-				// testing removal of finalizers on deleted objects, that they will
-				// exist at all times
-				integrationTestsFinalizer,
-			},
-		},
-		Spec: PolicyServerSpec{
-			Image:    policyServerRepository() + ":" + policyServerVersion(),
-			Replicas: 1,
-		},
-	}
-	return &policyServer
 }
 
 type AdmissionPolicyGroupFactory struct {
@@ -301,41 +267,41 @@ func NewAdmissionPolicyGroupFactory() *AdmissionPolicyGroupFactory {
 	}
 }
 
-func (fac *AdmissionPolicyGroupFactory) WithName(name string) *AdmissionPolicyGroupFactory {
-	fac.name = name
-	return fac
+func (f *AdmissionPolicyGroupFactory) WithName(name string) *AdmissionPolicyGroupFactory {
+	f.name = name
+	return f
 }
 
-func (fac *AdmissionPolicyGroupFactory) WithNamespace(namespace string) *AdmissionPolicyGroupFactory {
-	fac.namespace = namespace
-	return fac
+func (f *AdmissionPolicyGroupFactory) WithNamespace(namespace string) *AdmissionPolicyGroupFactory {
+	f.namespace = namespace
+	return f
 }
 
-func (fac *AdmissionPolicyGroupFactory) WithPolicyServer(policyServer string) *AdmissionPolicyGroupFactory {
-	fac.policyServer = policyServer
-	return fac
+func (f *AdmissionPolicyGroupFactory) WithPolicyServer(policyServer string) *AdmissionPolicyGroupFactory {
+	f.policyServer = policyServer
+	return f
 }
 
-func (fac *AdmissionPolicyGroupFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *AdmissionPolicyGroupFactory {
-	fac.rules = rules
-	return fac
+func (f *AdmissionPolicyGroupFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *AdmissionPolicyGroupFactory {
+	f.rules = rules
+	return f
 }
 
-func (fac *AdmissionPolicyGroupFactory) WithMatchConditions(matchContions []admissionregistrationv1.MatchCondition) *AdmissionPolicyGroupFactory {
-	fac.matchConds = matchContions
-	return fac
+func (f *AdmissionPolicyGroupFactory) WithMatchConditions(matchContions []admissionregistrationv1.MatchCondition) *AdmissionPolicyGroupFactory {
+	f.matchConds = matchContions
+	return f
 }
 
-func (fac *AdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *AdmissionPolicyGroupFactory {
-	fac.mode = mode
-	return fac
+func (f *AdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *AdmissionPolicyGroupFactory {
+	f.mode = mode
+	return f
 }
 
-func (fac *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
+func (f *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
 	return &AdmissionPolicyGroup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fac.name,
-			Namespace: fac.namespace,
+			Name:      f.name,
+			Namespace: f.namespace,
 			Finalizers: []string{
 				// On a real cluster the Kubewarden finalizer is added by our mutating
 				// webhook. This is not running now, hence we have to manually add the finalizer
@@ -348,12 +314,12 @@ func (fac *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
 		},
 		Spec: AdmissionPolicyGroupSpec{
 			PolicyGroupSpec: PolicyGroupSpec{
-				PolicyServer:    fac.policyServer,
-				Policies:        fac.policyMembers,
-				Expression:      fac.expression,
-				Rules:           fac.rules,
-				MatchConditions: fac.matchConds,
-				Mode:            fac.mode,
+				PolicyServer:    f.policyServer,
+				Policies:        f.policyMembers,
+				Expression:      f.expression,
+				Rules:           f.rules,
+				MatchConditions: f.matchConds,
+				Mode:            f.mode,
 			},
 		},
 	}
@@ -402,40 +368,40 @@ func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory
 	}
 }
 
-func (fac *ClusterAdmissionPolicyGroupFactory) WithName(name string) *ClusterAdmissionPolicyGroupFactory {
-	fac.name = name
-	return fac
+func (f *ClusterAdmissionPolicyGroupFactory) WithName(name string) *ClusterAdmissionPolicyGroupFactory {
+	f.name = name
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyGroupFactory) WithPolicyServer(policyServer string) *ClusterAdmissionPolicyGroupFactory {
-	fac.policyServer = policyServer
-	return fac
+func (f *ClusterAdmissionPolicyGroupFactory) WithPolicyServer(policyServer string) *ClusterAdmissionPolicyGroupFactory {
+	f.policyServer = policyServer
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyGroupFactory) WithMembers(members PolicyGroupMembers) *ClusterAdmissionPolicyGroupFactory {
-	fac.policyMembers = members
-	return fac
+func (f *ClusterAdmissionPolicyGroupFactory) WithMembers(members PolicyGroupMembers) *ClusterAdmissionPolicyGroupFactory {
+	f.policyMembers = members
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyGroupFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *ClusterAdmissionPolicyGroupFactory {
-	fac.rules = rules
-	return fac
+func (f *ClusterAdmissionPolicyGroupFactory) WithRules(rules []admissionregistrationv1.RuleWithOperations) *ClusterAdmissionPolicyGroupFactory {
+	f.rules = rules
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyGroupFactory) WithMatchConditions(matchConditions []admissionregistrationv1.MatchCondition) *ClusterAdmissionPolicyGroupFactory {
-	fac.matchConds = matchConditions
-	return fac
+func (f *ClusterAdmissionPolicyGroupFactory) WithMatchConditions(matchConditions []admissionregistrationv1.MatchCondition) *ClusterAdmissionPolicyGroupFactory {
+	f.matchConds = matchConditions
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *ClusterAdmissionPolicyGroupFactory {
-	fac.mode = mode
-	return fac
+func (f *ClusterAdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *ClusterAdmissionPolicyGroupFactory {
+	f.mode = mode
+	return f
 }
 
-func (fac *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGroup {
+func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGroup {
 	clusterAdmissionPolicy := ClusterAdmissionPolicyGroup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fac.name,
+			Name: f.name,
 			Finalizers: []string{
 				// On a real cluster the Kubewarden finalizer is added by our mutating
 				// webhook. This is not running now, hence we have to manually add the finalizer
@@ -448,16 +414,89 @@ func (fac *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGr
 		},
 		Spec: ClusterAdmissionPolicyGroupSpec{
 			PolicyGroupSpec: PolicyGroupSpec{
-				PolicyServer:    fac.policyServer,
-				Policies:        fac.policyMembers,
-				Expression:      fac.expression,
-				Rules:           fac.rules,
-				MatchConditions: fac.matchConds,
-				Mode:            fac.mode,
+				PolicyServer:    f.policyServer,
+				Policies:        f.policyMembers,
+				Expression:      f.expression,
+				Rules:           f.rules,
+				MatchConditions: f.matchConds,
+				Mode:            f.mode,
 			},
 		},
 	}
 	return &clusterAdmissionPolicy
+}
+
+type PolicyServerBuilder struct {
+	name            string
+	minAvailable    *intstr.IntOrString
+	maxUnavailable  *intstr.IntOrString
+	imagePullSecret string
+	limits          corev1.ResourceList
+	requests        corev1.ResourceList
+}
+
+func NewPolicyServerFactory() *PolicyServerBuilder {
+	return &PolicyServerBuilder{
+		name: newName("policy-server"),
+	}
+}
+
+func (f *PolicyServerBuilder) WithName(name string) *PolicyServerBuilder {
+	f.name = name
+	return f
+}
+
+func (f *PolicyServerBuilder) WithMinAvailable(minAvailable *intstr.IntOrString) *PolicyServerBuilder {
+	f.minAvailable = minAvailable
+	return f
+}
+
+func (f *PolicyServerBuilder) WithMaxUnavailable(maxUnavailable *intstr.IntOrString) *PolicyServerBuilder {
+	f.maxUnavailable = maxUnavailable
+	return f
+}
+
+func (f *PolicyServerBuilder) WithImagePullSecret(secret string) *PolicyServerBuilder {
+	f.imagePullSecret = secret
+	return f
+}
+
+func (f *PolicyServerBuilder) WithLimits(limits corev1.ResourceList) *PolicyServerBuilder {
+	f.limits = limits
+	return f
+}
+
+func (f *PolicyServerBuilder) WithRequests(requests corev1.ResourceList) *PolicyServerBuilder {
+	f.requests = requests
+	return f
+}
+
+func (f *PolicyServerBuilder) Build() *PolicyServer {
+	policyServer := PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: f.name,
+			Finalizers: []string{
+				// On a real cluster the Kubewarden finalizer is added by our mutating
+				// webhook. This is not running now, hence we have to manually add the finalizer
+				constants.KubewardenFinalizer,
+				// By adding this finalizer automatically, we ensure that when
+				// testing removal of finalizers on deleted objects, that they will
+				// exist at all times
+				integrationTestsFinalizer,
+			},
+		},
+		Spec: PolicyServerSpec{
+			Image:           policyServerRepository() + ":" + policyServerVersion(),
+			Replicas:        1,
+			MinAvailable:    f.minAvailable,
+			MaxUnavailable:  f.maxUnavailable,
+			ImagePullSecret: f.imagePullSecret,
+			Limits:          f.limits,
+			Requests:        f.requests,
+		},
+	}
+
+	return &policyServer
 }
 
 func policyServerRepository() string {
