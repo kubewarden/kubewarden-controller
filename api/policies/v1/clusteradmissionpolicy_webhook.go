@@ -126,6 +126,13 @@ func (v *clusterAdmissionPolicyValidator) ValidateUpdate(_ context.Context, oldO
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *clusterAdmissionPolicyValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *clusterAdmissionPolicyValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	clusterAdmissionPolicy, ok := obj.(*ClusterAdmissionPolicy)
+	if !ok {
+		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", obj)
+	}
+
+	v.logger.Info("Validating ClusterAdmissionPolicy delete", "name", clusterAdmissionPolicy.GetName())
+
 	return nil, nil
 }

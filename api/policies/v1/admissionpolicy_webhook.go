@@ -121,6 +121,13 @@ func (v *admissionPolicyValidator) ValidateUpdate(_ context.Context, oldObj, new
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *admissionPolicyValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *admissionPolicyValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	admissionPolicy, ok := obj.(*AdmissionPolicy)
+	if !ok {
+		return nil, fmt.Errorf("expected an AdmissionPolicy object, got %T", obj)
+	}
+
+	v.logger.Info("Validating AdmissionPolicy delete", "name", admissionPolicy.GetName())
+
 	return nil, nil
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
@@ -177,5 +178,23 @@ func TestClusterAdmissionPolicyGroupValidateUpdateWithErrors(t *testing.T) {
 
 	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
 	require.Error(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestClusterAdmissionPolicyGroupValidateDelete(t *testing.T) {
+	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
+	policy := NewClusterAdmissionPolicyGroupFactory().Build()
+
+	warnings, err := validator.ValidateDelete(context.Background(), policy)
+	require.NoError(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestClusteerAdmissionPolicyGroupValidateDeleteWithInvalidType(t *testing.T) {
+	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	warnings, err := validator.ValidateDelete(context.Background(), obj)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicyGroup object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }

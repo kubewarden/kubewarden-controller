@@ -120,7 +120,14 @@ func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, newObj ru
 }
 
 // ValdidaeDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *policyServerValidator) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+func (v *policyServerValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	policyServer, ok := obj.(*PolicyServer)
+	if !ok {
+		return nil, fmt.Errorf("expected a PolicyServer object, got %T", obj)
+	}
+
+	v.logger.Info("Validating PolicyServer delete", "name", policyServer.GetName())
+
 	return nil, nil
 }
 
