@@ -39,6 +39,14 @@ func TestClusterAdmissionPolicyDefault(t *testing.T) {
 	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
 }
 
+func TestClusterAdmissionPolicyDefaultWithInvalidType(t *testing.T) {
+	defaulter := clusterAdmissionPolicyDefaulter{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	err := defaulter.Default(context.Background(), obj)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicy object, got *v1.Pod")
+}
+
 func TestClusterAdmissionPolicyValidateCreate(t *testing.T) {
 	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
 	policy := NewClusterAdmissionPolicyFactory().Build()
@@ -137,6 +145,15 @@ func TestClusterAdmissionPolicyValidateCreateWithErrors(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
+func TestClusterAdmissionPolicyValidateCreateWithInvalidType(t *testing.T) {
+	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	warnings, err := validator.ValidateCreate(context.Background(), obj)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicy object, got *v1.Pod")
+	assert.Empty(t, warnings)
+}
+
 func TestClusterAdmissionPolicyValidateUpdate(t *testing.T) {
 	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
 	oldPolicy := NewClusterAdmissionPolicyFactory().Build()
@@ -178,6 +195,21 @@ func TestClusterAdmissionPolicyValidateUpdateWithErrors(t *testing.T) {
 
 	warnings, err = validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
 	require.Error(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestClusterAdmissionPolicyValidateUpdateWithInvalidType(t *testing.T) {
+	validator := clusterAdmissionPolicyValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+	oldPolicy := NewClusterAdmissionPolicyFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyFactory().Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), obj, newPolicy)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicy object, got *v1.Pod")
+	assert.Empty(t, warnings)
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, obj)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicy object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
 

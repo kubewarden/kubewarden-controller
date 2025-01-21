@@ -39,6 +39,14 @@ func TestAdmissionPolicyGroupDefault(t *testing.T) {
 	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
 }
 
+func TestAdmissionPolicyGroupDefaultWithInvalidType(t *testing.T) {
+	defaulter := admissionPolicyGroupDefaulter{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	err := defaulter.Default(context.Background(), obj)
+	require.ErrorContains(t, err, "expected an AdmissionPolicyGroup object, got *v1.Pod")
+}
+
 func TestAdmissionPolicyGroupValidateCreate(t *testing.T) {
 	validator := admissionPolicyGroupValidator{logger: logr.Discard()}
 	policy := NewAdmissionPolicyGroupFactory().Build()
@@ -137,6 +145,15 @@ func TestAdmissionPolicyGroupValidateCreateWithErrors(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
+func TestAdmissionPolicyGroupValidateCreateWithInvalidType(t *testing.T) {
+	validator := admissionPolicyGroupValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	warnings, err := validator.ValidateCreate(context.Background(), obj)
+	require.ErrorContains(t, err, "expected an AdmissionPolicyGroup object, got *v1.Pod")
+	assert.Empty(t, warnings)
+}
+
 func TestAdmissionPolicyGroupValidateUpdate(t *testing.T) {
 	validator := admissionPolicyGroupValidator{logger: logr.Discard()}
 	oldPolicy := NewAdmissionPolicyGroupFactory().Build()
@@ -178,6 +195,21 @@ func TestAdmissionPolicyGroupValidateUpdateWithErrors(t *testing.T) {
 
 	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
 	require.Error(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestAdmissionPolicyGroupValidateUpdateWithInvalidType(t *testing.T) {
+	validator := admissionPolicyGroupValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+	oldPolicy := NewAdmissionPolicyGroupFactory().Build()
+	newPolicy := NewAdmissionPolicyGroupFactory().Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), obj, newPolicy)
+	require.ErrorContains(t, err, "expected an AdmissionPolicyGroup object, got *v1.Pod")
+	assert.Empty(t, warnings)
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, obj)
+	require.ErrorContains(t, err, "expected an AdmissionPolicyGroup object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
 

@@ -39,6 +39,14 @@ func TestClusterAdmissionPolicyGroupDefault(t *testing.T) {
 	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
 }
 
+func TestClusterAdmissionPolicyGroupDefaultWithInvalidType(t *testing.T) {
+	defaulter := clusterAdmissionPolicyGroupDefaulter{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	err := defaulter.Default(context.Background(), obj)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicyGroup object, got *v1.Pod")
+}
+
 func TestClusterAdmissionPolicyGroupValidateCreate(t *testing.T) {
 	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
 	policy := NewClusterAdmissionPolicyGroupFactory().Build()
@@ -137,6 +145,15 @@ func TestClusterAdmissionPolicyGroupValidateCreateWithErrors(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
+func TestClusterAdmissionPolicyGroupValidateCreateWithInvalidType(t *testing.T) {
+	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	warnings, err := validator.ValidateCreate(context.Background(), obj)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicyGroup object, got *v1.Pod")
+	assert.Empty(t, warnings)
+}
+
 func TestClusterAdmissionPolicyGroupValidateUpdate(t *testing.T) {
 	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
 	oldPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
@@ -181,6 +198,21 @@ func TestClusterAdmissionPolicyGroupValidateUpdateWithErrors(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
+func TestClusterAdmissionPolicyGroupValidateUpdateWithInvalidType(t *testing.T) {
+	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+	oldPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
+	newPolicy := NewClusterAdmissionPolicyGroupFactory().Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), obj, newPolicy)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicyGroup object, got *v1.Pod")
+	assert.Empty(t, warnings)
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, obj)
+	require.ErrorContains(t, err, "expected a ClusterAdmissionPolicyGroup object, got *v1.Pod")
+	assert.Empty(t, warnings)
+}
+
 func TestClusterAdmissionPolicyGroupValidateDelete(t *testing.T) {
 	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
 	policy := NewClusterAdmissionPolicyGroupFactory().Build()
@@ -190,7 +222,7 @@ func TestClusterAdmissionPolicyGroupValidateDelete(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
-func TestClusteerAdmissionPolicyGroupValidateDeleteWithInvalidType(t *testing.T) {
+func TestClusterAdmissionPolicyGroupValidateDeleteWithInvalidType(t *testing.T) {
 	validator := clusterAdmissionPolicyGroupValidator{logger: logr.Discard()}
 	obj := &corev1.Pod{}
 

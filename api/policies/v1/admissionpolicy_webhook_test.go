@@ -38,6 +38,14 @@ func TestAdmissionPolicyDefault(t *testing.T) {
 	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
 }
 
+func TestAdmissionPolicyDefaultWithInvalidType(t *testing.T) {
+	defaulter := admissionPolicyDefaulter{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	err := defaulter.Default(context.Background(), obj)
+	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
+}
+
 func TestAdmissionPolicyValidateCreate(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	policy := NewAdmissionPolicyFactory().Build()
@@ -136,6 +144,15 @@ func TestAdmissionPolicyValidateCreateWithErrors(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
+func TestAdmissionPolicyValidateCreateWithInvalidType(t *testing.T) {
+	validator := admissionPolicyValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+
+	warnings, err := validator.ValidateCreate(context.Background(), obj)
+	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
+	assert.Empty(t, warnings)
+}
+
 func TestAdmissionPolicyValidateUpdate(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	oldPolicy := NewAdmissionPolicyFactory().Build()
@@ -177,6 +194,21 @@ func TestAdmissionPolicyValidateUpdateWithErrors(t *testing.T) {
 
 	warnings, err = validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
 	require.Error(t, err)
+	assert.Empty(t, warnings)
+}
+
+func TestAdmissionPolicyValidateUpdateWithInvalidType(t *testing.T) {
+	validator := admissionPolicyValidator{logger: logr.Discard()}
+	obj := &corev1.Pod{}
+	oldPolicy := NewAdmissionPolicyFactory().Build()
+	newPolicy := NewAdmissionPolicyFactory().Build()
+
+	warnings, err := validator.ValidateUpdate(context.Background(), obj, newPolicy)
+	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
+	assert.Empty(t, warnings)
+
+	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, obj)
+	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
 
