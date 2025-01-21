@@ -1,3 +1,9 @@
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    fmt,
+    sync::{Arc, Mutex},
+};
+
 use policy_evaluator::{
     admission_response::{self, AdmissionResponse, AdmissionResponseStatus},
     callback_requests::CallbackRequest,
@@ -5,14 +11,10 @@ use policy_evaluator::{
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
     policy_evaluator::{PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
+    policy_metadata::ContextAwareResource,
     wasmtime,
 };
 use rhai::EvalAltResult;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    sync::{Arc, Mutex},
-};
 use tokio::sync::mpsc;
 use tracing::debug;
 
@@ -92,9 +94,9 @@ pub(crate) struct EvaluationEnvironment {
     /// as value
     module_digest_to_policy_evaluator_pre: HashMap<ModuleDigest, PolicyEvaluatorPre>,
 
-    /// A map with the ID of the policy as value, and the associated `EvaluationContext` as
-    /// value.
-    policy_id_to_eval_ctx: HashMap<PolicyID, EvaluationContext>,
+    /// A map with the ID of the policy as value, and the list of ContextAwareResource the
+    /// policy is allowed to access.
+    policy_id_to_ctx_aware_allowed_resources: HashMap<PolicyID, BTreeSet<ContextAwareResource>>,
 
     /// Map a `policy_id` to the module's digest.
     /// This allows us to deduplicate the Wasm modules defined by the user.
@@ -111,6 +113,12 @@ pub(crate) struct EvaluationEnvironment {
 
     /// A Set containing the IDs of the policy groups.
     policy_groups: HashSet<PolicyID>,
+
+    /// Channel used by the synchronous world (like the `host_callback` waPC function,
+    /// but also Burrego for k8s context aware data),
+    /// to request the computation of code that can only be run inside of an
+    /// asynchronous block
+    callback_handler_tx: Option<mpsc::Sender<CallbackRequest>>,
 }
 
 /// This structure is used to build the `EvaluationEnvironment` instance.
@@ -190,6 +198,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
             always_accept_admission_reviews_on_namespace: self
                 .always_accept_admission_reviews_on_namespace
                 .clone(),
+            callback_handler_tx: Some(self.callback_handler_tx.clone()),
             ..Default::default()
         };
 
@@ -411,8 +420,10 @@ impl EvaluationEnvironment {
         self.policy_id_to_settings
             .insert(policy_id.to_owned(), policy_evaluation_settings);
 
-        self.policy_id_to_eval_ctx
-            .insert(policy_id.to_owned(), eval_ctx);
+        self.policy_id_to_ctx_aware_allowed_resources.insert(
+            policy_id.to_owned(),
+            eval_ctx.ctx_aware_resources_allow_list,
+        );
 
         Ok(())
     }
@@ -528,12 +539,18 @@ impl EvaluationEnvironment {
             .get(module_digest)
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-        let eval_ctx = self
-            .policy_id_to_eval_ctx
+        let ctx_aware_resources_allow_list = self
+            .policy_id_to_ctx_aware_allowed_resources
             .get(policy_id)
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-        policy_evaluator_pre.rehydrate(eval_ctx).map_err(|e| {
+        let eval_ctx = EvaluationContext {
+            policy_id: policy_id.to_string(),
+            callback_channel: self.callback_handler_tx.clone(),
+            ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
+        };
+
+        policy_evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
             EvaluationError::WebAssemblyError(format!("cannot rehydrate PolicyEvaluatorPre: {e}"))
         })
     }
