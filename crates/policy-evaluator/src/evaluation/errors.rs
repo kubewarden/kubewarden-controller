@@ -21,7 +21,4 @@ pub enum EvaluationError {
 
     #[error("Attempted to rehydrated policy group '{0}'")]
     CannotRehydratePolicyGroup(String),
-
-    #[error("Policy group evaluation error: '{0}'")]
-    PolicyGroupRuntimeError(#[from] Box<rhai::EvalAltResult>),
 }
