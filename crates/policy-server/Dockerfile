@@ -34,7 +34,7 @@ COPY ./ ./
 RUN cargo install cargo-auditable
 RUN cargo auditable install --target x86_64-unknown-linux-musl --path .
 
-FROM --platform=$BUILDPLATFORM alpine AS cfg
+FROM --platform=$BUILDPLATFORM alpine:3.21.2 AS cfg
 RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd
 RUN echo "policy-server:x:65533:policy-server" >> /etc/group
 
@@ -48,7 +48,7 @@ COPY --from=build-arm64 --chmod=0755 /root/.cargo/bin/policy-server /policy-serv
 FROM copy-${TARGETARCH}
 COPY --from=cfg /etc/passwd /etc/passwd
 COPY --from=cfg /etc/group /etc/group
-ADD Cargo.lock /Cargo.lock
+COPY ./Cargo.lock /Cargo.lock
 USER 65533:65533
 EXPOSE 3000
 ENTRYPOINT ["/policy-server"]
