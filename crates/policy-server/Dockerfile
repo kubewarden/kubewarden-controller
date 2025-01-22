@@ -48,7 +48,7 @@ COPY --from=build-arm64 --chmod=0755 /root/.cargo/bin/policy-server /policy-serv
 FROM copy-${TARGETARCH}
 COPY --from=cfg /etc/passwd /etc/passwd
 COPY --from=cfg /etc/group /etc/group
-ADD Cargo.lock /Cargo.lock
+COPY ./Cargo.lock /Cargo.lock
 USER 65533:65533
 EXPOSE 3000
 ENTRYPOINT ["/policy-server"]
