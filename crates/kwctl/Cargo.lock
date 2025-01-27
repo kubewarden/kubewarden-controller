@@ -2852,7 +2852,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.21.0-rc1"
+version = "1.21.0-rc2"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2873,7 +2873,7 @@ dependencies = [
  "pulldown-cmark",
  "pulldown-cmark-mdcat",
  "regex",
- "reqwest 0.12.12",
+ "reqwest 0.11.27",
  "rstest",
  "rustls-pki-types",
  "semver",
@@ -4509,6 +4509,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "rustls 0.21.12",
+ "rustls-native-certs 0.6.3",
  "rustls-pemfile 1.0.4",
  "serde",
  "serde_json",
@@ -4553,7 +4554,6 @@ dependencies = [
  "pin-project-lite",
  "quinn",
  "rustls 0.23.21",
- "rustls-native-certs 0.8.1",
  "rustls-pemfile 2.2.0",
  "rustls-pki-types",
  "serde",
@@ -4719,6 +4719,18 @@ dependencies = [
  "rustls-webpki 0.102.8",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "rustls-native-certs"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9aace74cb666635c918e9c12bc0d348266037aa8eb599b5cba565709a8dff00"
+dependencies = [
+ "openssl-probe",
+ "rustls-pemfile 1.0.4",
+ "schannel",
+ "security-framework 2.11.1",
 ]
 
 [[package]]
