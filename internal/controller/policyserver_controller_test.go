@@ -276,9 +276,11 @@ var _ = Describe("PolicyServer controller", func() {
 
 			clusterPolicyGroup := policiesv1.NewClusterAdmissionPolicyGroupFactory().
 				WithPolicyServer(policyServerName).
-				WithMembers(policiesv1.PolicyGroupMembers{
+				WithMembers(policiesv1.PolicyGroupMembersWithContext{
 					"pod_privileged": {
-						Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+						PolicyGroupMember: policiesv1.PolicyGroupMember{
+							Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+						},
 						ContextAwareResources: []policiesv1.ContextAwareResource{
 							{
 								APIVersion: "v1",
@@ -287,7 +289,9 @@ var _ = Describe("PolicyServer controller", func() {
 						},
 					},
 					"user_group_psp": {
-						Module: "registry://ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+						PolicyGroupMember: policiesv1.PolicyGroupMember{
+							Module: "registry://ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+						},
 						ContextAwareResources: []policiesv1.ContextAwareResource{
 							{
 								APIVersion: "v1",
@@ -332,7 +336,7 @@ var _ = Describe("PolicyServer controller", func() {
 				AllowedToMutate:       admissionPolicyGroup.IsMutating(),
 				Settings:              admissionPolicyGroup.GetSettings(),
 				ContextAwareResources: admissionPolicyGroup.GetContextAwareResources(),
-				Policies:              buildPolicyGroupMembers(admissionPolicyGroup.GetPolicyGroupMembers()),
+				Policies:              buildPolicyGroupMembersWithContext(admissionPolicyGroup.GetPolicyGroupMembersWithContext()),
 				Expression:            admissionPolicyGroup.GetExpression(),
 				Message:               admissionPolicyGroup.GetMessage(),
 			}
@@ -346,7 +350,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Settings:              clusterPolicyGroup.GetSettings(),
 				ContextAwareResources: clusterPolicyGroup.GetContextAwareResources(),
 				PolicyMode:            string(clusterPolicyGroup.GetPolicyMode()),
-				Policies:              buildPolicyGroupMembers(clusterPolicyGroup.GetPolicyGroupMembers()),
+				Policies:              buildPolicyGroupMembersWithContext(clusterPolicyGroup.GetPolicyGroupMembersWithContext()),
 				Expression:            clusterPolicyGroup.GetExpression(),
 				Message:               clusterPolicyGroup.GetMessage(),
 			}
@@ -406,7 +410,7 @@ var _ = Describe("PolicyServer controller", func() {
 								}),
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
-										"module": Equal(admissionPolicyGroup.GetPolicyGroupMembers()["pod_privileged"].Module),
+										"module": Equal(admissionPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
 									}),
 								}),
 								"policyMode": Equal(string(admissionPolicyGroup.GetPolicyMode())),
@@ -420,7 +424,7 @@ var _ = Describe("PolicyServer controller", func() {
 								}),
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod_privileged": MatchAllKeys(Keys{
-										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembers()["pod_privileged"].Module),
+										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
 										"settings": Ignore(),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
@@ -428,7 +432,7 @@ var _ = Describe("PolicyServer controller", func() {
 										})), HaveLen(1)),
 									}),
 									"user_group_psp": MatchAllKeys(Keys{
-										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembers()["user_group_psp"].Module),
+										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["user_group_psp"].Module),
 										"settings": Ignore(),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),

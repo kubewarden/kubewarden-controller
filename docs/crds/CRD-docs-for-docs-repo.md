@@ -198,7 +198,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `PolicyGroupSpec` _[PolicyGroupSpec](#policygroupspec)_ |  |  |  |
+| `ClusterPolicyGroupSpec` _[ClusterPolicyGroupSpec](#clusterpolicygroupspec)_ |  |  |  |
 | `namespaceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | NamespaceSelector decides whether to run the webhook on an object based<br />on whether the namespace for that object matches the selector. If the<br />object itself is a namespace, the matching is performed on<br />object.metadata.labels. If the object is another cluster scoped resource,<br />it never skips the webhook.<br /><br/><br/><br />For example, to run the webhook on any objects whose namespace is not<br />associated with "runlevel" of "0" or "1";  you will set the selector as<br />follows:<br /><pre><br />"namespaceSelector": \\{<br/><br />&nbsp;&nbsp;"matchExpressions": [<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;\\{<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key": "runlevel",<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator": "NotIn",<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"0",<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"1"<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;\\}<br/><br />&nbsp;&nbsp;]<br/><br />\\}<br /></pre><br />If instead you want to only run the webhook on any objects whose<br />namespace is associated with the "environment" of "prod" or "staging";<br />you will set the selector as follows:<br /><pre><br />"namespaceSelector": \\{<br/><br />&nbsp;&nbsp;"matchExpressions": [<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;\\{<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"key": "environment",<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"operator": "In",<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"values": [<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"prod",<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"staging"<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br/><br />&nbsp;&nbsp;&nbsp;&nbsp;\\}<br/><br />&nbsp;&nbsp;]<br/><br />\\}<br /></pre><br />See<br />https://kubernetes.io/docs/concepts/overview/working-with-objects/labels<br />for more examples of label selectors.<br /><br/><br/><br />Default to the empty LabelSelector, which matches everything. |  |  |
 
 
@@ -238,6 +238,23 @@ _Appears in:_
 | `contextAwareResources` _[ContextAwareResource](#contextawareresource) array_ | List of Kubernetes resources the policy is allowed to access at evaluation time.<br />Access to these resources is done using the `ServiceAccount` of the PolicyServer<br />the policy is assigned to. |  |  |
 
 
+#### ClusterPolicyGroupSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [ClusterAdmissionPolicyGroupSpec](#clusteradmissionpolicygroupspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `GroupSpec` _[GroupSpec](#groupspec)_ |  |  |  |
+| `policies` _[PolicyGroupMembersWithContext](#policygroupmemberswithcontext)_ | Policies is a list of policies that are part of the group that will<br />be available to be called in the evaluation expression field.<br />Each policy in the group should be a Kubewarden policy. |  | Required: \{\} <br /> |
+
+
 #### ContextAwareResource
 
 
@@ -248,12 +265,40 @@ ContextAwareResource identifies a Kubernetes resource.
 
 _Appears in:_
 - [ClusterAdmissionPolicySpec](#clusteradmissionpolicyspec)
-- [PolicyGroupMember](#policygroupmember)
+- [PolicyGroupMemberWithContext](#policygroupmemberwithcontext)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | apiVersion of the resource (v1 for core group, groupName/groupVersions for other). |  |  |
 | `kind` _string_ | Singular PascalCase name of the resource |  |  |
+
+
+#### GroupSpec
+
+
+
+
+
+
+
+_Appears in:_
+- [ClusterPolicyGroupSpec](#clusterpolicygroupspec)
+- [PolicyGroupSpec](#policygroupspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `policyServer` _string_ | PolicyServer identifies an existing PolicyServer resource. | default |  |
+| `mode` _[PolicyMode](#policymode)_ | Mode defines the execution mode of this policy. Can be set to<br />either "protect" or "monitor". If it's empty, it is defaulted to<br />"protect".<br />Transitioning this setting from "monitor" to "protect" is<br />allowed, but is disallowed to transition from "protect" to<br />"monitor". To perform this transition, the policy should be<br />recreated in "monitor" mode instead. | protect | Enum: [protect monitor] <br /> |
+| `rules` _[RuleWithOperations](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#rulewithoperations-v1-admissionregistration) array_ | Rules describes what operations on what resources/subresources the webhook cares about.<br />The webhook cares about an operation if it matches _any_ Rule. |  |  |
+| `failurePolicy` _[FailurePolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#failurepolicytype-v1-admissionregistration)_ | FailurePolicy defines how unrecognized errors and timeout errors from the<br />policy are handled. Allowed values are "Ignore" or "Fail".<br />* "Ignore" means that an error calling the webhook is ignored and the API<br />  request is allowed to continue.<br />* "Fail" means that an error calling the webhook causes the admission to<br />  fail and the API request to be rejected.<br />The default behaviour is "Fail" |  |  |
+| `backgroundAudit` _boolean_ | BackgroundAudit indicates whether a policy should be used or skipped when<br />performing audit checks. If false, the policy cannot produce meaningful<br />evaluation results during audit checks and will be skipped.<br />The default is "true". | true |  |
+| `matchPolicy` _[MatchPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#matchpolicytype-v1-admissionregistration)_ | matchPolicy defines how the "rules" list is used to match incoming requests.<br />Allowed values are "Exact" or "Equivalent".<br /><ul><br /><li><br />Exact: match a request only if it exactly matches a specified rule.<br />For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,<br />but "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`,<br />a request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook.<br /></li><br /><li><br />Equivalent: match a request if modifies a resource listed in rules, even via another API group or version.<br />For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,<br />and "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`,<br />a request to apps/v1beta1 or extensions/v1beta1 would be converted to apps/v1 and sent to the webhook.<br /></li><br /></ul><br />Defaults to "Equivalent" |  |  |
+| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#matchcondition-v1-admissionregistration) array_ | MatchConditions are a list of conditions that must be met for a request to be<br />validated. Match conditions filter requests that have already been matched by<br />the rules, namespaceSelector, and objectSelector. An empty list of<br />matchConditions matches all requests. There are a maximum of 64 match<br />conditions allowed. If a parameter object is provided, it can be accessed via<br />the `params` handle in the same manner as validation expressions. The exact<br />matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE,<br />the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy<br />is evaluated. 3. If any matchCondition evaluates to an error (but none are<br />FALSE): - If failurePolicy=Fail, reject the request - If<br />failurePolicy=Ignore, the policy is skipped.<br />Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |  |  |
+| `objectSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | ObjectSelector decides whether to run the webhook based on if the<br />object has matching labels. objectSelector is evaluated against both<br />the oldObject and newObject that would be sent to the webhook, and<br />is considered to match if either object matches the selector. A null<br />object (oldObject in the case of create, or newObject in the case of<br />delete) or an object that cannot have labels (like a<br />DeploymentRollback or a PodProxyOptions object) is not considered to<br />match.<br />Use the object selector only if the webhook is opt-in, because end<br />users may skip the admission webhook by setting the labels.<br />Default to the empty LabelSelector, which matches everything. |  |  |
+| `sideEffects` _[SideEffectClass](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#sideeffectclass-v1-admissionregistration)_ | SideEffects states whether this webhook has side effects.<br />Acceptable values are: None, NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown).<br />Webhooks with side effects MUST implement a reconciliation system, since a request may be<br />rejected by a future step in the admission change and the side effects therefore need to be undone.<br />Requests with the dryRun attribute will be auto-rejected if they match a webhook with<br />sideEffects == Unknown or Some. |  |  |
+| `timeoutSeconds` _integer_ | TimeoutSeconds specifies the timeout for this webhook. After the timeout passes,<br />the webhook call will be ignored or the API call will fail based on the<br />failure policy.<br />The timeout value must be between 1 and 30 seconds.<br />Default to 10 seconds. | 10 |  |
+| `expression` _string_ | Expression is the evaluation expression to accept or reject the<br />admission request under evaluation. This field uses CEL as the<br />expression language for the policy groups. Each policy in the group<br />will be represented as a function call in the expression with the<br />same name as the policy defined in the group. The expression field<br />should be a valid CEL expression that evaluates to a boolean value.<br />If the expression evaluates to true, the group policy will be<br />considered as accepted, otherwise, it will be considered as<br />rejected. This expression allows grouping policies calls and perform<br />logical operations on the results of the policies. See Kubewarden<br />documentation to learn about all the features available. |  | Required: \{\} <br /> |
+| `message` _string_ | Message is  used to specify the message that will be returned when<br />the policy group is rejected. The specific policy results will be<br />returned in the warning field of the response. |  | Required: \{\} <br /> |
 
 
 
@@ -277,12 +322,29 @@ _Appears in:_
 
 
 _Appears in:_
+- [PolicyGroupMemberWithContext](#policygroupmemberwithcontext)
 - [PolicyGroupMembers](#policygroupmembers)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `module` _string_ | Module is the location of the WASM module to be loaded. Can be a<br />local file (file://), a remote file served by an HTTP server<br />(http://, https://), or an artifact served by an OCI-compatible<br />registry (registry://).<br />If prefix is missing, it will default to registry:// and use that<br />internally. |  | Required: \{\} <br /> |
 | `settings` _[RawExtension](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#rawextension-runtime-pkg)_ | Settings is a free-form object that contains the policy configuration<br />values.<br />x-kubernetes-embedded-resource: false |  |  |
+
+
+#### PolicyGroupMemberWithContext
+
+
+
+
+
+
+
+_Appears in:_
+- [PolicyGroupMembersWithContext](#policygroupmemberswithcontext)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `PolicyGroupMember` _[PolicyGroupMember](#policygroupmember)_ |  |  |  |
 | `contextAwareResources` _[ContextAwareResource](#contextawareresource) array_ | List of Kubernetes resources the policy is allowed to access at evaluation time.<br />Access to these resources is done using the `ServiceAccount` of the PolicyServer<br />the policy is assigned to. |  |  |
 
 
@@ -299,6 +361,19 @@ _Appears in:_
 
 
 
+#### PolicyGroupMembersWithContext
+
+_Underlying type:_ _[map[string]PolicyGroupMemberWithContext](#map[string]policygroupmemberwithcontext)_
+
+
+
+
+
+_Appears in:_
+- [ClusterPolicyGroupSpec](#clusterpolicygroupspec)
+
+
+
 #### PolicyGroupSpec
 
 
@@ -309,22 +384,10 @@ _Appears in:_
 
 _Appears in:_
 - [AdmissionPolicyGroupSpec](#admissionpolicygroupspec)
-- [ClusterAdmissionPolicyGroupSpec](#clusteradmissionpolicygroupspec)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `policyServer` _string_ | PolicyServer identifies an existing PolicyServer resource. | default |  |
-| `mode` _[PolicyMode](#policymode)_ | Mode defines the execution mode of this policy. Can be set to<br />either "protect" or "monitor". If it's empty, it is defaulted to<br />"protect".<br />Transitioning this setting from "monitor" to "protect" is<br />allowed, but is disallowed to transition from "protect" to<br />"monitor". To perform this transition, the policy should be<br />recreated in "monitor" mode instead. | protect | Enum: [protect monitor] <br /> |
-| `rules` _[RuleWithOperations](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#rulewithoperations-v1-admissionregistration) array_ | Rules describes what operations on what resources/subresources the webhook cares about.<br />The webhook cares about an operation if it matches _any_ Rule. |  |  |
-| `failurePolicy` _[FailurePolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#failurepolicytype-v1-admissionregistration)_ | FailurePolicy defines how unrecognized errors and timeout errors from the<br />policy are handled. Allowed values are "Ignore" or "Fail".<br />* "Ignore" means that an error calling the webhook is ignored and the API<br />  request is allowed to continue.<br />* "Fail" means that an error calling the webhook causes the admission to<br />  fail and the API request to be rejected.<br />The default behaviour is "Fail" |  |  |
-| `backgroundAudit` _boolean_ | BackgroundAudit indicates whether a policy should be used or skipped when<br />performing audit checks. If false, the policy cannot produce meaningful<br />evaluation results during audit checks and will be skipped.<br />The default is "true". | true |  |
-| `matchPolicy` _[MatchPolicyType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#matchpolicytype-v1-admissionregistration)_ | matchPolicy defines how the "rules" list is used to match incoming requests.<br />Allowed values are "Exact" or "Equivalent".<br /><ul><br /><li><br />Exact: match a request only if it exactly matches a specified rule.<br />For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,<br />but "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`,<br />a request to apps/v1beta1 or extensions/v1beta1 would not be sent to the webhook.<br /></li><br /><li><br />Equivalent: match a request if modifies a resource listed in rules, even via another API group or version.<br />For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1,<br />and "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`,<br />a request to apps/v1beta1 or extensions/v1beta1 would be converted to apps/v1 and sent to the webhook.<br /></li><br /></ul><br />Defaults to "Equivalent" |  |  |
-| `matchConditions` _[MatchCondition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#matchcondition-v1-admissionregistration) array_ | MatchConditions are a list of conditions that must be met for a request to be<br />validated. Match conditions filter requests that have already been matched by<br />the rules, namespaceSelector, and objectSelector. An empty list of<br />matchConditions matches all requests. There are a maximum of 64 match<br />conditions allowed. If a parameter object is provided, it can be accessed via<br />the `params` handle in the same manner as validation expressions. The exact<br />matching logic is (in order): 1. If ANY matchCondition evaluates to FALSE,<br />the policy is skipped. 2. If ALL matchConditions evaluate to TRUE, the policy<br />is evaluated. 3. If any matchCondition evaluates to an error (but none are<br />FALSE): - If failurePolicy=Fail, reject the request - If<br />failurePolicy=Ignore, the policy is skipped.<br />Only available if the feature gate AdmissionWebhookMatchConditions is enabled. |  |  |
-| `objectSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#labelselector-v1-meta)_ | ObjectSelector decides whether to run the webhook based on if the<br />object has matching labels. objectSelector is evaluated against both<br />the oldObject and newObject that would be sent to the webhook, and<br />is considered to match if either object matches the selector. A null<br />object (oldObject in the case of create, or newObject in the case of<br />delete) or an object that cannot have labels (like a<br />DeploymentRollback or a PodProxyOptions object) is not considered to<br />match.<br />Use the object selector only if the webhook is opt-in, because end<br />users may skip the admission webhook by setting the labels.<br />Default to the empty LabelSelector, which matches everything. |  |  |
-| `sideEffects` _[SideEffectClass](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#sideeffectclass-v1-admissionregistration)_ | SideEffects states whether this webhook has side effects.<br />Acceptable values are: None, NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown).<br />Webhooks with side effects MUST implement a reconciliation system, since a request may be<br />rejected by a future step in the admission change and the side effects therefore need to be undone.<br />Requests with the dryRun attribute will be auto-rejected if they match a webhook with<br />sideEffects == Unknown or Some. |  |  |
-| `timeoutSeconds` _integer_ | TimeoutSeconds specifies the timeout for this webhook. After the timeout passes,<br />the webhook call will be ignored or the API call will fail based on the<br />failure policy.<br />The timeout value must be between 1 and 30 seconds.<br />Default to 10 seconds. | 10 |  |
-| `expression` _string_ | Expression is the evaluation expression to accept or reject the<br />admission request under evaluation. This field uses CEL as the<br />expression language for the policy groups. Each policy in the group<br />will be represented as a function call in the expression with the<br />same name as the policy defined in the group. The expression field<br />should be a valid CEL expression that evaluates to a boolean value.<br />If the expression evaluates to true, the group policy will be<br />considered as accepted, otherwise, it will be considered as<br />rejected. This expression allows grouping policies calls and perform<br />logical operations on the results of the policies. See Kubewarden<br />documentation to learn about all the features available. |  | Required: \{\} <br /> |
-| `message` _string_ | Message is  used to specify the message that will be returned when<br />the policy group is rejected. The specific policy results will be<br />returned in the warning field of the response. |  | Required: \{\} <br /> |
+| `GroupSpec` _[GroupSpec](#groupspec)_ |  |  |  |
 | `policies` _[PolicyGroupMembers](#policygroupmembers)_ | Policies is a list of policies that are part of the group that will<br />be available to be called in the evaluation expression field.<br />Each policy in the group should be a Kubewarden policy. |  | Required: \{\} <br /> |
 
 
@@ -342,7 +405,7 @@ _Validation:_
 - Enum: [protect monitor]
 
 _Appears in:_
-- [PolicyGroupSpec](#policygroupspec)
+- [GroupSpec](#groupspec)
 - [PolicySpec](#policyspec)
 
 

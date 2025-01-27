@@ -22,9 +22,19 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+type ClusterPolicyGroupSpec struct {
+	GroupSpec `json:""`
+
+	// Policies is a list of policies that are part of the group that will
+	// be available to be called in the evaluation expression field.
+	// Each policy in the group should be a Kubewarden policy.
+	// +kubebuilder:validation:Required
+	Policies PolicyGroupMembersWithContext `json:"policies"`
+}
+
 // ClusterAdmissionPolicyGroupSpec defines the desired state of ClusterAdmissionPolicyGroup.
 type ClusterAdmissionPolicyGroupSpec struct {
-	PolicyGroupSpec `json:""`
+	ClusterPolicyGroupSpec `json:""`
 
 	// NamespaceSelector decides whether to run the webhook on an object based
 	// on whether the namespace for that object matches the selector. If the
@@ -148,7 +158,7 @@ func (r *ClusterAdmissionPolicyGroup) GetStatus() *PolicyStatus {
 	return &r.Status
 }
 
-func (r *ClusterAdmissionPolicyGroup) GetPolicyGroupMembers() PolicyGroupMembers {
+func (r *ClusterAdmissionPolicyGroup) GetPolicyGroupMembersWithContext() PolicyGroupMembersWithContext {
 	return r.Spec.Policies
 }
 

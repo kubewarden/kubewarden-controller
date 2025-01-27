@@ -151,7 +151,7 @@ type Policy interface {
 // +kubebuilder:object:generate:=false
 type PolicyGroup interface {
 	Policy
-	GetPolicyGroupMembers() PolicyGroupMembers
+	GetPolicyGroupMembersWithContext() PolicyGroupMembersWithContext
 	GetExpression() string
 	GetMessage() string
 }

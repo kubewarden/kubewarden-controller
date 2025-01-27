@@ -21,15 +21,21 @@ func TestValidatePolicyGroupExpressionField(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Expression: "policy1() && policy2()",
-						Message:    "This is a test policy",
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						GroupSpec: GroupSpec{
+							Expression: "policy1() && policy2()",
+							Message:    "This is a test policy",
+						},
+						Policies: PolicyGroupMembersWithContext{
 							"policy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 							"policy2": {
-								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								},
 							},
 						},
 					},
@@ -44,15 +50,21 @@ func TestValidatePolicyGroupExpressionField(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Expression: "",
-						Message:    "This is a test policy",
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						GroupSpec: GroupSpec{
+							Expression: "",
+							Message:    "This is a test policy",
+						},
+						Policies: PolicyGroupMembersWithContext{
 							"policy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 							"policy2": {
-								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								},
 							},
 						},
 					},
@@ -67,15 +79,21 @@ func TestValidatePolicyGroupExpressionField(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Expression: "123",
-						Message:    "This is a test policy",
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						GroupSpec: GroupSpec{
+							Expression: "123",
+							Message:    "This is a test policy",
+						},
+						Policies: PolicyGroupMembersWithContext{
 							"policy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 							"policy2": {
-								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								},
 							},
 						},
 					},
@@ -90,15 +108,21 @@ func TestValidatePolicyGroupExpressionField(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Expression: "2 > 1",
-						Message:    "This is a test policy",
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						GroupSpec: GroupSpec{
+							Expression: "2 > 1",
+							Message:    "This is a test policy",
+						},
+						Policies: PolicyGroupMembersWithContext{
 							"policy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 							"policy2": {
-								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								},
 							},
 						},
 					},
@@ -134,15 +158,21 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Expression: "policy1() && policy2()",
-						Message:    "This is a test policy",
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						GroupSpec: GroupSpec{
+							Expression: "policy1() && policy2()",
+							Message:    "This is a test policy",
+						},
+						Policies: PolicyGroupMembersWithContext{
 							"policy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 							"policy2": {
-								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								},
 							},
 						},
 					},
@@ -157,8 +187,8 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Policies: map[string]PolicyGroupMember{},
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						Policies: map[string]PolicyGroupMemberWithContext{},
 					},
 				},
 			},
@@ -171,10 +201,12 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						Policies: PolicyGroupMembersWithContext{
 							"": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 						},
 					},
@@ -189,10 +221,12 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						Policies: PolicyGroupMembersWithContext{
 							"in": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 						},
 					},
@@ -207,10 +241,12 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						Policies: PolicyGroupMembersWithContext{
 							"0policy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 						},
 					},
@@ -225,10 +261,12 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						Policies: PolicyGroupMembersWithContext{
 							"p!ol.ic?y1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 						},
 					},
@@ -243,13 +281,17 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						Policies: PolicyGroupMembersWithContext{
 							"_policy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 							"pol_icy2": {
-								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								},
 							},
 						},
 					},
@@ -264,13 +306,17 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 					Name: "testing-cluster-policy-group",
 				},
 				Spec: ClusterAdmissionPolicyGroupSpec{
-					PolicyGroupSpec: PolicyGroupSpec{
-						Policies: PolicyGroupMembers{
+					ClusterPolicyGroupSpec: ClusterPolicyGroupSpec{
+						Policies: PolicyGroupMembersWithContext{
 							"po0licy1": {
-								Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/user-group-psp:v0.4.9",
+								},
 							},
 							"policy21": {
-								Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								PolicyGroupMember: PolicyGroupMember{
+									Module: "ghcr.io/kubewarden/tests/safe-labels:v1.0.0",
+								},
 							},
 						},
 					},

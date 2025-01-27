@@ -75,11 +75,7 @@ func (r *AdmissionPolicyGroup) SetPolicyModeStatus(policyMode PolicyModeStatus) 
 }
 
 func (r *AdmissionPolicyGroup) IsContextAware() bool {
-	for _, policy := range r.Spec.Policies {
-		if len(policy.ContextAwareResources) > 0 {
-			return true
-		}
-	}
+	// We return false here because AdmissionPolicyGroup have no access to context aware resources.
 	return false
 }
 
@@ -91,8 +87,17 @@ func (r *AdmissionPolicyGroup) GetModule() string {
 	return ""
 }
 
-func (r *AdmissionPolicyGroup) GetPolicyGroupMembers() PolicyGroupMembers {
-	return r.Spec.Policies
+func (r *AdmissionPolicyGroup) GetPolicyGroupMembersWithContext() PolicyGroupMembersWithContext {
+	policies := make(PolicyGroupMembersWithContext)
+	for name, policy := range r.Spec.Policies {
+		policies[name] = PolicyGroupMemberWithContext{
+			PolicyGroupMember: policy,
+			// AdmissionPolicyGroup does not have access to context aware resources.
+			ContextAwareResources: []ContextAwareResource{},
+		}
+	}
+
+	return policies
 }
 
 func (r *AdmissionPolicyGroup) GetSettings() runtime.RawExtension {
