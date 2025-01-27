@@ -23,11 +23,86 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
+func TestSensitiveResourceMatchRule(t *testing.T) {
+	sr := sensitiveResource{
+		APIGroup: "apps",
+		Resource: "deployments",
+	}
+
+	tests := []struct {
+		name      string
+		apiGroups []string
+		resources []string
+		matches   bool
+	}{
+		{
+			"with matching APIGroups and Resources",
+			[]string{"apps"},
+			[]string{"statefulsets", "deployments"},
+			true,
+		},
+		{
+			"with APIGroups using wildcard and matching Resources",
+			[]string{"*"},
+			[]string{"deployments"},
+			true,
+		},
+		{
+			"with Resources using wildcards and APIGroups matching",
+			[]string{"apps"},
+			[]string{"*"},
+			true,
+		},
+		{
+			"with Resources using double wildcards and APIGroups matching",
+			[]string{"apps"},
+			[]string{"*/*"},
+			true,
+		},
+		{
+			"with sub-Resources using wildcards and APIGroups matching",
+			[]string{"apps"},
+			[]string{"deployments/*"},
+			true,
+		},
+		{
+			"with sub-Resources and APIGroups matching",
+			[]string{"apps"},
+			[]string{"deployments/status"},
+			true,
+		},
+		{
+			"with only APIGroups matching",
+			[]string{"apps"},
+			[]string{"statefulsets"},
+			false,
+		},
+		{
+			"with APIGroups not matching and a Resopurce using wildcard",
+			[]string{""},
+			[]string{"*"},
+			false,
+		},
+		{
+			"with APIGroups not matching and a Resopurce matching",
+			[]string{"argoproj.io"},
+			[]string{"deployments"},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.matches, sr.MatchesRules(test.apiGroups, test.resources))
+		})
+	}
+}
+
 func TestValidateRulesField(t *testing.T) {
 	tests := []struct {
-		name                 string
-		policy               Policy
-		expectedErrorMessage string // use empty string when no error is expected
+		name                  string
+		policy                Policy
+		expectedErrorMessages []string // use nil when no error is expected
 	}{
 		{
 			"with valid APIVersion and resources. But with empty APIGroup",
@@ -43,7 +118,7 @@ func TestValidateRulesField(t *testing.T) {
 					},
 				}).
 				WithPolicyServer("default").Build(),
-			"",
+			nil,
 		},
 		{
 			"with valid APIVersion, Resources and APIGroup",
@@ -59,21 +134,21 @@ func TestValidateRulesField(t *testing.T) {
 					},
 				}).
 				WithPolicyServer("default").Build(),
-			"",
+			nil,
 		},
 		{
 			"with no operations and API groups and resources",
 			NewClusterAdmissionPolicyFactory().
 				WithRules([]admissionregistrationv1.RuleWithOperations{}).
 				WithPolicyServer("default").Build(),
-			"spec.rules: Required value: a value must be specified",
+			[]string{"spec.rules: Required value: a value must be specified"},
 		},
 		{
 			"with empty objects",
 			NewClusterAdmissionPolicyFactory().
 				WithRules([]admissionregistrationv1.RuleWithOperations{{}}).
 				WithPolicyServer("default").Build(),
-			"spec.rules.operations: Required value: a value must be specified",
+			[]string{"spec.rules.operations: Required value: a value must be specified"},
 		},
 		{
 			"with no operations",
@@ -89,7 +164,7 @@ func TestValidateRulesField(t *testing.T) {
 					},
 				}).
 				WithPolicyServer("default").Build(),
-			"spec.rules.operations: Required value: a value must be specified",
+			[]string{"spec.rules.operations: Required value: a value must be specified"},
 		},
 		{
 			"with null operations",
@@ -103,7 +178,7 @@ func TestValidateRulesField(t *testing.T) {
 					},
 				}}).
 				WithPolicyServer("default").Build(),
-			"spec.rules.operations: Required value: a value must be specified",
+			[]string{"spec.rules.operations: Required value: a value must be specified"},
 		},
 		{
 			"with empty operations string",
@@ -117,7 +192,7 @@ func TestValidateRulesField(t *testing.T) {
 					},
 				}}).
 				WithPolicyServer("default").Build(),
-			"spec.rules.operations[0]: Required value: must be non-empty",
+			[]string{"spec.rules.operations[0]: Required value: must be non-empty"},
 		},
 		{
 			"with no apiVersion",
@@ -131,7 +206,7 @@ func TestValidateRulesField(t *testing.T) {
 					},
 				}}).
 				WithPolicyServer("default").Build(),
-			"spec.rules: Required value: apiVersions and resources must have specified values",
+			[]string{"spec.rules: Required value: apiVersions and resources must have specified values"},
 		},
 		{
 			"with no resources",
@@ -144,7 +219,7 @@ func TestValidateRulesField(t *testing.T) {
 						Resources:   []string{},
 					},
 				}}).WithPolicyServer("default").Build(),
-			"spec.rules: Required value: apiVersions and resources must have specified values",
+			[]string{"spec.rules: Required value: apiVersions and resources must have specified values"},
 		},
 		{
 			"with empty apiVersion string",
@@ -157,7 +232,7 @@ func TestValidateRulesField(t *testing.T) {
 						Resources:   []string{"*/*"},
 					},
 				}}).WithPolicyServer("defaule").Build(),
-			"spec.rules.rule.apiVersions[0]: Required value: must be non-empty",
+			[]string{"spec.rules.rule.apiVersions[0]: Required value: must be non-empty"},
 		},
 		{
 			"with empty resources string",
@@ -170,7 +245,7 @@ func TestValidateRulesField(t *testing.T) {
 						Resources:   []string{""},
 					},
 				}}).WithPolicyServer("default").Build(),
-			"spec.rules.rule.resources[0]: Required value: must be non-empty",
+			[]string{"spec.rules.rule.resources[0]: Required value: must be non-empty"},
 		},
 		{
 			"with some of the resources are empty strings",
@@ -183,7 +258,7 @@ func TestValidateRulesField(t *testing.T) {
 						Resources:   []string{"", "pods"},
 					},
 				}}).WithPolicyServer("default").Build(),
-			"spec.rules.rule.resources[0]: Required value: must be non-empty",
+			[]string{"spec.rules.rule.resources[0]: Required value: must be non-empty"},
 		},
 		{
 			"with all operations and API groups and resources",
@@ -198,7 +273,92 @@ func TestValidateRulesField(t *testing.T) {
 						},
 					},
 				}).Build(),
-			"",
+			nil,
+		},
+		{
+			"with wildcard usage. But an AdmissionPolicy",
+			NewAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"*"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"*/*"},
+						},
+					},
+				}).Build(),
+			[]string{
+				"spec.rules.apiGroups[0]: Forbidden: apiGroups cannot use wildcards when using AdmissionPolicy or AdmissionPolicyGroup",
+				"spec.rules.resources[0]: Forbidden: resources cannot use wildcards when using AdmissionPolicy or AdmissionPolicyGroup",
+			},
+		},
+		{
+			"with wildcard usage. But an AdmissionPolicyGroup",
+			NewAdmissionPolicyGroupFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"*"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"*"},
+						},
+					},
+				}).Build(),
+			[]string{
+				"spec.rules.apiGroups[0]: Forbidden: apiGroups cannot use wildcards when using AdmissionPolicy or AdmissionPolicyGroup",
+				"spec.rules.resources[0]: Forbidden: resources cannot use wildcards when using AdmissionPolicy or AdmissionPolicyGroup",
+			},
+		},
+		{
+			"targeting a PolicyReport. But a ClusterAdmissionPolicy",
+			NewClusterAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"wgpolicyk8s.io"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"policyreports"},
+						},
+					},
+				}).Build(),
+			nil,
+		},
+		{
+			"targeting a PolicyReport. But an AdmissionPolicy",
+			NewAdmissionPolicyFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"wgpolicyk8s.io"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"policyreports"},
+						},
+					},
+				}).Build(),
+			[]string{
+				"spec.rules: Forbidden: {APIGroup: wgpolicyk8s.io, Resource: policyreports} resources cannot be targeted by AdmissionPolicy or AdmissionPolicyGroup",
+			},
+		},
+		{
+			"targeting a wgpolicyk8s.io resources. But an AdmissionPolicyGroup",
+			NewAdmissionPolicyGroupFactory().
+				WithRules([]admissionregistrationv1.RuleWithOperations{
+					{
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.OperationAll},
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"wgpolicyk8s.io"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"*"},
+						},
+					},
+				}).Build(),
+			[]string{
+				"spec.rules: Forbidden: {APIGroup: wgpolicyk8s.io, Resource: policyreports} resources cannot be targeted by AdmissionPolicy or AdmissionPolicyGroup",
+			},
 		},
 	}
 
@@ -206,9 +366,11 @@ func TestValidateRulesField(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			allErrors := validateRulesField(test.policy)
 
-			if test.expectedErrorMessage != "" {
+			if len(test.expectedErrorMessages) != 0 {
 				err := prepareInvalidAPIError(test.policy, allErrors)
-				require.ErrorContains(t, err, test.expectedErrorMessage)
+				for _, expectedErrorMessage := range test.expectedErrorMessages {
+					require.ErrorContains(t, err, expectedErrorMessage)
+				}
 			} else {
 				require.Empty(t, allErrors)
 			}

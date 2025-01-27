@@ -40,6 +40,41 @@ var (
 
 const maxMatchConditionsCount = 64
 
+type sensitiveResource struct {
+	APIGroup string
+	Resource string
+}
+
+func (sr sensitiveResource) String() string {
+	return fmt.Sprintf("APIGroup: %s, Resource: %s", sr.APIGroup, sr.Resource)
+}
+
+func (sr sensitiveResource) MatchesRules(apiGroups []string, resource []string) bool {
+	apiGroupMatches := false
+	for _, apiGroup := range apiGroups {
+		if apiGroup == sr.APIGroup || apiGroup == "*" {
+			apiGroupMatches = true
+			break
+		}
+	}
+
+	resourceMatches := false
+	for _, res := range resource {
+		if res == sr.Resource || res == "*" || res == "*/*" || strings.HasPrefix(res, sr.Resource+"/") {
+			resourceMatches = true
+			break
+		}
+	}
+
+	return apiGroupMatches && resourceMatches
+}
+
+func defaultSensitiveResources() []sensitiveResource {
+	return []sensitiveResource{
+		{APIGroup: "wgpolicyk8s.io", Resource: "policyreports"},
+	}
+}
+
 func validatePolicyCreate(policy Policy) field.ErrorList {
 	var allErrors field.ErrorList
 
@@ -74,6 +109,9 @@ func validateRulesField(policy Policy) field.ErrorList {
 		return allErrors
 	}
 
+	_, isAdmissionPolicy := policy.(*AdmissionPolicy)
+	_, isAdmissionPolicyGroup := policy.(*AdmissionPolicyGroup)
+
 	for _, rule := range policy.GetRules() {
 		switch {
 		case len(rule.Operations) == 0:
@@ -85,6 +123,11 @@ func validateRulesField(policy Policy) field.ErrorList {
 			allErrors = append(allErrors, checkOperationsArrayForEmptyString(rule.Operations, rulesField)...)
 			allErrors = append(allErrors, checkRulesArrayForEmptyString(rule.Rule.APIVersions, rulesField.Child("rule.apiVersions"))...)
 			allErrors = append(allErrors, checkRulesArrayForEmptyString(rule.Rule.Resources, rulesField.Child("rule.resources"))...)
+
+			if isAdmissionPolicy || isAdmissionPolicyGroup {
+				allErrors = append(allErrors, checkRulesArrayForWildcardUsage(rule.Rule.APIVersions, rule.Rule.Resources, rulesField)...)
+				allErrors = append(allErrors, checkRulesArrayForSensitiveResourcesBeingTargeted(rule.Rule.APIVersions, rule.Rule.Resources, rulesField)...)
+			}
 		}
 	}
 
@@ -113,6 +156,57 @@ func checkRulesArrayForEmptyString(rulesArray []string, rulesField *field.Path) 
 	for i, apiVersion := range rulesArray {
 		if apiVersion == "" {
 			allErrors = append(allErrors, field.Required(rulesField.Index(i), "must be non-empty"))
+		}
+	}
+
+	return allErrors
+}
+
+// checkRulesArrayForWildcardUsage checks if the rules array contains a wildcard and returns an error if both the apiGroups
+// and resources contain wildcards.
+func checkRulesArrayForWildcardUsage(rulesAPIGroups []string, rulesResources []string, rulesField *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+
+	apiGroupHasWildcard := false
+	apiGroupWildcardIndex := -1
+
+	resourceHasWildcard := false
+	resourceWildcardIndex := -1
+
+	for i, apiGroup := range rulesAPIGroups {
+		if apiGroup == "*" {
+			apiGroupHasWildcard = true
+			apiGroupWildcardIndex = i
+			break
+		}
+	}
+
+	for i, resource := range rulesResources {
+		if resource == "*" || resource == "*/*" {
+			resourceHasWildcard = true
+			resourceWildcardIndex = i
+			break
+		}
+	}
+
+	if apiGroupHasWildcard && resourceHasWildcard {
+		allErrors = append(allErrors, field.Forbidden(rulesField.Child("apiGroups").Index(apiGroupWildcardIndex), "apiGroups cannot use wildcards when using AdmissionPolicy or AdmissionPolicyGroup"))
+		allErrors = append(allErrors, field.Forbidden(rulesField.Child("resources").Index(resourceWildcardIndex), "resources cannot use wildcards when using AdmissionPolicy or AdmissionPolicyGroup"))
+	}
+
+	return allErrors
+}
+
+// checkRulesArrayForSensitiveResourcesBeingTargeted checks if any of the sensitive resources are being targeted by the
+// rule.
+func checkRulesArrayForSensitiveResourcesBeingTargeted(rulesAPIGroups []string, rulesResources []string, rulesField *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+
+	sensitiveResources := defaultSensitiveResources()
+
+	for _, sensitiveResource := range sensitiveResources {
+		if sensitiveResource.MatchesRules(rulesAPIGroups, rulesResources) {
+			allErrors = append(allErrors, field.Forbidden(rulesField, fmt.Sprintf("{%s} resources cannot be targeted by AdmissionPolicy or AdmissionPolicyGroup", sensitiveResource)))
 		}
 	}
 
