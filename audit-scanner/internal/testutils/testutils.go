@@ -267,10 +267,12 @@ func (factory *AdmissionPolicyGroupFactory) Build() *policiesv1.AdmissionPolicyG
 		},
 		Spec: policiesv1.AdmissionPolicyGroupSpec{
 			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
-				ObjectSelector:  factory.objectSelector,
-				PolicyServer:    "default",
-				Rules:           factory.rules,
-				BackgroundAudit: factory.backgroundAudit,
+				GroupSpec: policiesv1.GroupSpec{
+					ObjectSelector:  factory.objectSelector,
+					PolicyServer:    "default",
+					Rules:           factory.rules,
+					BackgroundAudit: factory.backgroundAudit,
+				},
 			},
 		},
 		Status: policiesv1.PolicyStatus{
@@ -444,11 +446,13 @@ func (factory *ClusterAdmissionPolicyGroupFactory) Build() *policiesv1.ClusterAd
 		},
 		Spec: policiesv1.ClusterAdmissionPolicyGroupSpec{
 			NamespaceSelector: factory.namespaceSelector,
-			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
-				ObjectSelector:  factory.objectSelector,
-				PolicyServer:    "default",
-				Rules:           factory.rules,
-				BackgroundAudit: factory.backgroundAudit,
+			ClusterPolicyGroupSpec: policiesv1.ClusterPolicyGroupSpec{
+				GroupSpec: policiesv1.GroupSpec{
+					ObjectSelector:  factory.objectSelector,
+					PolicyServer:    "default",
+					Rules:           factory.rules,
+					BackgroundAudit: factory.backgroundAudit,
+				},
 			},
 		},
 		Status: policiesv1.PolicyStatus{
