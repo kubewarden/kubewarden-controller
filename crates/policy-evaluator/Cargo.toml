@@ -68,7 +68,7 @@ k8s-openapi = { version = "0.24.0", default-features = false, features = [
 ] }
 rstest = "0.24"
 serial_test = "3.1"
-test-context = "0.3"
+test-context = "0.4"
 tempfile = "3.13"
 tower-test = "0.4"
 hyper = { version = "1.2.0" }
