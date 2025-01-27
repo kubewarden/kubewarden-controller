@@ -204,4 +204,16 @@ pub(crate) fn build_cli() -> Command {
         .about(crate_description!())
         .long_version(VERSION_AND_BUILTINS.as_str())
         .args(args)
+        .subcommand(
+            Command::new("docs")
+                .about("Generates the markdown documentation for policy-server commands")
+                .arg(
+                    Arg::new("output")
+                        .long("output")
+                        .short('o')
+                        .required(true)
+                        .value_name("FILE")
+                        .help("path where the documentation file will be stored"),
+                ),
+        )
 }

@@ -66,6 +66,7 @@ jemalloc_pprof = "0.6.0"
 tikv-jemalloc-ctl = "0.6.0"
 rhai = { version = "1.19.0", features = ["sync"] }
 tonic = { version = "0.12.3" }
+clap-markdown = "0.1.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.11"
