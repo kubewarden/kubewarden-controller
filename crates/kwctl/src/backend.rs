@@ -133,6 +133,7 @@ impl BackendDetector {
 
 /// Check if policy server version is compatible with  minimum kubewarden
 /// version required by the policy
+/// TODO: this should not take an Option
 pub fn has_minimum_kubewarden_version(opt_metadata: Option<&Metadata>) -> Result<()> {
     if let Some(metadata) = opt_metadata {
         if let Some(minimum_kubewarden_version) = &metadata.minimum_kubewarden_version {

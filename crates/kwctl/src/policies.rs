@@ -3,7 +3,7 @@ use policy_evaluator::{
     policy_fetcher::{policy::Policy, store::Store},
     policy_metadata::Metadata as PolicyMetadata,
 };
-use prettytable::{format, Table};
+use prettytable::{format, row, Table};
 
 pub(crate) fn list() -> Result<()> {
     if policy_list()?.is_empty() {

@@ -4,6 +4,9 @@ use clap::{
 };
 use lazy_static::lazy_static;
 
+pub(crate) mod bench;
+pub(crate) mod run;
+
 lazy_static! {
     static ref VERSION_AND_BUILTINS: String = {
         format!(
@@ -15,6 +18,32 @@ Use the `info` command to display system information.
         )
     };
 }
+
+static RUN_AND_BENCH_COMMON_LONG_ABOUT: &str = color_print::cstr!(
+    r#"The policy can be specified in the following ways:
+- <i>URI</i>: e.g., `registry://ghcr.io/kubewarden/policies/psp-policy:latest` or `https://example.com/kubewarden/policies/main/psp-policy/psp-policy.wasm`
+- <i>SHA prefix</i>: e.g., `c3b80a10f9c3` (requires the policy to be already pulled)
+- <i>Local WASM file</i>: e.g., `file://home/tux/new-policy/psp-policy.wasm`
+- <i>Local YAML file</i>: e.g., `file://home/tux/cluster-admission-policy.yaml` (contains declarations of Kubewarden Custom Resources like `ClusterAdmissionPolicy`, `AdmissionPolicy`, etc.)
+
+<strong><u>Default Behavior</u></strong>:
+If the schema is omitted, `file://` is assumed, rooted in the current directory.
+
+<strong><u>Notes on Kubewarden Custom Resources</u></strong>:
+- Flags `--request-path`, `--settings-path`, and `--settings-json` are ignored; settings are read from the Custom Resource definition.
+- The `--execution-mode` flag applies to all policies in the YAML file.
+- The `--raw` flag cannot be used, as Kubewarden's Custom Resources do not support `raw` policies.
+
+Only the following attributes of the Custom Resource Definition (CRD) are evaluated:
+- Policy module
+- Policy settings
+- Context-aware resources the policy can access
+
+Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
+
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+"#
+);
 
 // Minimum set of flags required to pull a policy from a registry
 fn pull_shared_flags() -> Vec<Arg> {
@@ -322,21 +351,27 @@ Useful to be combined later with '--replay-host-capabilities-interactions' flag"
 the host replays back the answers found inside of the provided file.
 This is useful to test policies in a reproducible way, given no external
 interactions with OCI registries, DNS, Kubernetes are performed."#),
-    ]
+     ]
 }
 
 fn subcommand_run() -> Command {
     let mut args = run_args();
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
-        Arg::new("uri_or_sha_prefix")
+        Arg::new("uri_or_sha_prefix_or_yaml_file")
             .required(true)
             .index(1)
-            .help("Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.")
+            .help("Policy URI, SHA prefix or YAML file containing Kubewarden policy resources. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.")
     );
 
     Command::new("run")
         .about("Runs a Kubewarden policy from a given URI")
+        .long_about(format!(
+            r#"Run one or more Kubewarden policies locally.
+
+{}"#,
+            RUN_AND_BENCH_COMMON_LONG_ABOUT
+        ))
         .args(args)
         .group(
             // these flags cannot be used at the same time
@@ -422,7 +457,6 @@ fn subcommand_scaffold() -> Command {
             .value_name("PATH")
             .help("File containing the metadata of the policy"),
         Arg::new("version")
-            .required(false)
             .long("version")
             .short('v')
             .number_of_values(1)
@@ -450,7 +484,8 @@ fn subcommand_scaffold() -> Command {
         Arg::new("settings-json")
             .long("settings-json")
             .value_name("VALUE")
-            .help("JSON string containing the settings for this policy"),
+            .help("JSON string containing the settings for this policy")
+            .conflicts_with("settings-path"),
         Arg::new("type")
             .long("type")
             .short('t')
@@ -591,14 +626,20 @@ fn subcommand_bench() -> Command {
     args.append(&mut run_args);
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
-        Arg::new("uri_or_sha_prefix")
+        Arg::new("uri_or_sha_prefix_or_yaml_file")
             .required(true)
             .index(1)
-            .help("Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.")
+            .help("Policy URI, SHA prefix or YAML file containing Kubewarden policy resources. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.")
     );
 
     Command::new("bench")
         .about("Benchmarks a Kubewarden policy")
+        .long_about(format!(
+            r#"Benchmarks a Kubewarden policy.
+
+{}"#,
+            RUN_AND_BENCH_COMMON_LONG_ABOUT
+        ))
         .args(args)
         .group(
             // these flags cannot be used at the same time
