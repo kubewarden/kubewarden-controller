@@ -74,3 +74,7 @@ download-spdx-sbom-generator: bin
 .PHONY: sbom
 sbom:
 	./$(BINDIR)/spdx-sbom-generator -f json
+
+.PHONY:build-docs
+build-docs:
+	cargo run --release -- docs --output cli-docs.md

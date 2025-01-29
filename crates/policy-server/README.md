@@ -373,3 +373,8 @@ in our Kubewarden docs.
 ## Changelog
 
 See [GitHub Releases content](https://github.com/kubewarden/policy-server/releases).
+
+# CLI documentation
+
+If you want a complete list of the available commands, you can read the 
+[cli-docs.md](./cli-docs.md) file.

@@ -1,10 +1,12 @@
 mod cli;
 
 use std::fs;
+use std::io::prelude::*;
 
 use ::tracing::info;
 use anyhow::anyhow;
 use anyhow::Result;
+use clap::ArgMatches;
 use opentelemetry::global::shutdown_tracer_provider;
 use policy_server::metrics::setup_metrics;
 use policy_server::tracing::setup_tracing;
@@ -19,6 +21,10 @@ async fn main() -> Result<()> {
         .expect("Failed to install crypto provider");
 
     let matches = cli::build_cli().get_matches();
+    if matches.subcommand_name() == Some("docs") {
+        return run_docs_subcommand(matches.subcommand_matches("docs"));
+    }
+
     let config = policy_server::config::Config::from_args(&matches)?;
 
     setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color)?;
@@ -54,5 +60,18 @@ async fn main() -> Result<()> {
 
     shutdown_tracer_provider();
 
+    Ok(())
+}
+
+/// Handle the docs subcommand and generates markdown documentation for the CLI
+fn run_docs_subcommand(matches: Option<&ArgMatches>) -> Result<()> {
+    if let Some(matches) = matches {
+        let output = matches.get_one::<String>("output").unwrap();
+        let mut file = std::fs::File::create(output)
+            .map_err(|e| anyhow!("cannot create file {}: {}", output, e))?;
+        let docs_content = clap_markdown::help_markdown_command(&cli::build_cli());
+        file.write_all(docs_content.as_bytes())
+            .map_err(|e| anyhow!("cannot write to file {}: {}", output, e))?;
+    }
     Ok(())
 }
