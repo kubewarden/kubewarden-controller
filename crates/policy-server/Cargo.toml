@@ -1,6 +1,6 @@
 [package]
 name = "policy-server"
-version = "1.21.0"
+version = "1.21.1"
 authors = [
   "Kubewarden Developers <kubewarden@suse.de>",
   "Flavio Castelli <fcastelli@suse.com>",
@@ -34,7 +34,7 @@ opentelemetry = { version = "0.27.0", default-features = false, features = [
 ] }
 opentelemetry_sdk = { version = "0.27.0", features = ["rt-tokio"] }
 pprof = { version = "0.14", features = ["prost-codec"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.19.9" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.19.10" }
 rustls = { version = "0.23", default-features = false, features = [
   "ring",
   "logging",
