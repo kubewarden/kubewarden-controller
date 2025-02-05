@@ -162,9 +162,9 @@ checksum = "dde20b3d026af13f561bdd0f15edf01fc734f0dafcedbaf42bba506a9517f223"
 
 [[package]]
 name = "asn1-rs"
-version = "0.6.2"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5493c3bedbacf7fd7382c6346bbd66687d12bbaad3a89a2d2c303ee6cf20b048"
+checksum = "607495ec7113b178fbba7a6166a27f99e774359ef4823adbefd756b5b81d7970"
 dependencies = [
  "asn1-rs-derive",
  "asn1-rs-impl",
@@ -172,15 +172,15 @@ dependencies = [
  "nom",
  "num-traits",
  "rusticata-macros",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "time",
 ]
 
 [[package]]
 name = "asn1-rs-derive"
-version = "0.5.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "965c2d33e53cb6b267e148a4cb0760bc01f4904c1cd4bb4002a085bb016d1490"
+checksum = "3109e49b1e4909e9db6515a30c633684d68cdeaa252f215214cb4fa1a5bfee2c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -469,7 +469,7 @@ dependencies = [
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.9#b93a2f3ee4d88ff1c19fe7e3fd3bd1642bffb3d9"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.10#81d04d15a3fd048487979135f37871957dfaffee"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -1142,9 +1142,9 @@ dependencies = [
 
 [[package]]
 name = "der-parser"
-version = "9.0.0"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cd0a5c643689626bec213c4d8bd4d96acc8ffdb4ad4bb6bc16abf27d5f4b553"
+checksum = "07da5016415d5a3c4dd39b11ed26f915f52fc4e0dc197d87908bc916e51bc1a6"
 dependencies = [
  "asn1-rs",
  "displaydoc",
@@ -1226,15 +1226,6 @@ dependencies = [
 
 [[package]]
 name = "directories"
-version = "5.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a49173b84e034382284f27f1af4dcbbd231ffa358c0fe316541a7337f376a35"
-dependencies = [
- "dirs-sys 0.4.1",
-]
-
-[[package]]
-name = "directories"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16f5094c54661b38d03bd7e50df373292118db60b585c08a411c6d840017fe7d"
@@ -1280,18 +1271,6 @@ dependencies = [
  "libc",
  "redox_users 0.4.6",
  "winapi",
-]
-
-[[package]]
-name = "dirs-sys"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
-dependencies = [
- "libc",
- "option-ext",
- "redox_users 0.4.6",
- "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -1974,6 +1953,17 @@ dependencies = [
  "equivalent",
  "foldhash",
  "serde",
+]
+
+[[package]]
+name = "hashify"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f208758247e68e239acaa059e72e4ce1f30f2a4b6523f19c1b923d25b7e9cceb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.96",
 ]
 
 [[package]]
@@ -2842,9 +2832,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.11.3"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07b12fa5556b12e26d07b12fb258bd1f16b7d7b14a5df3998ea43125f43fc186"
+checksum = "0c8be8ac5470418e3f5505c59a98bd96fe7a4f7647d55b24eab5c56129974d38"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -2864,14 +2854,14 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.21.0"
+version = "1.21.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
  "clap",
  "clap-markdown",
  "clap_complete",
- "directories 6.0.0",
+ "directories",
  "flate2",
  "humansize",
  "hyper 1.6.0",
@@ -3076,11 +3066,12 @@ dependencies = [
 
 [[package]]
 name = "mail-parser"
-version = "0.9.4"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93c3b9e5d8b17faf573330bbc43b37d6e918c0a3bf8a88e7d0a220ebc84af9fc"
+checksum = "187a2b93c4c8c32f552ee06c2d99915e575de2fc7e04b07891c9edfee5b8edd6"
 dependencies = [
  "encoding_rs",
+ "hashify",
  "serde",
 ]
 
@@ -3363,7 +3354,7 @@ dependencies = [
  "jwt",
  "lazy_static",
  "oci-spec",
- "olpc-cjson",
+ "olpc-cjson 0.1.4",
  "regex",
  "reqwest 0.12.12",
  "serde",
@@ -3388,7 +3379,7 @@ dependencies = [
  "http-auth",
  "jwt",
  "lazy_static",
- "olpc-cjson",
+ "olpc-cjson 0.1.4",
  "regex",
  "reqwest 0.12.12",
  "serde",
@@ -3427,11 +3418,21 @@ dependencies = [
 
 [[package]]
 name = "oid-registry"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8d8034d9489cdaf79228eb9f6a3b8d7bb32ba00d6645ebd48eef4077ceb5bd9"
+checksum = "264c56d1492c13e769662197fb6b94e0a52abe52d27efac374615799a4bf453d"
 dependencies = [
  "asn1-rs",
+]
+
+[[package]]
+name = "olpc-cjson"
+version = "0.1.3"
+source = "git+https://github.com/flavio/tough.git?tag=tough-v0.18.0%2Bsigstore-keyid-patch-1#161f36ce642f38ac64c8ef9545bc9a182dacd1aa"
+dependencies = [
+ "serde",
+ "serde_json",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -3897,8 +3898,8 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.19.8"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.9#b93a2f3ee4d88ff1c19fe7e3fd3bd1642bffb3d9"
+version = "0.19.10"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.19.10#81d04d15a3fd048487979135f37871957dfaffee"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3938,13 +3939,13 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.8.13"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.8.13#c031bb4126c8be24f8f8c3e1dfe122291e4b7989"
+version = "0.8.14"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.8.14#991c3ed0b12f7b46deacf47fea2930213542f98b"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
  "cfg-if",
- "directories 5.0.1",
+ "directories",
  "docker_credential",
  "lazy_static",
  "oci-client",
@@ -5172,8 +5173,7 @@ dependencies = [
 [[package]]
 name = "sigstore"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d91d4a47a41b1bd378a6be69cbe32fc5473be6dfe900afed7a833b6c556142b"
+source = "git+https://github.com/flavio/sigstore-rs.git?tag=v0.10.0%2Btough-keyid-patch-1#61e1b630b760d989dac6a9db0eb95e4de676058f"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -5194,7 +5194,7 @@ dependencies = [
  "json-syntax",
  "lazy_static",
  "oci-distribution",
- "olpc-cjson",
+ "olpc-cjson 0.1.4",
  "p256",
  "p384",
  "pem",
@@ -5899,8 +5899,7 @@ dependencies = [
 [[package]]
 name = "tough"
 version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a11e87698820a64152f36682e12017944619631d1a4881aaad532cbd843d5dc"
+source = "git+https://github.com/flavio/tough.git?tag=tough-v0.18.0%2Bsigstore-keyid-patch-1#161f36ce642f38ac64c8ef9545bc9a182dacd1aa"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -5912,7 +5911,7 @@ dependencies = [
  "globset",
  "hex",
  "log",
- "olpc-cjson",
+ "olpc-cjson 0.1.3",
  "pem",
  "percent-encoding",
  "reqwest 0.11.27",
@@ -7393,9 +7392,9 @@ dependencies = [
 
 [[package]]
 name = "x509-parser"
-version = "0.16.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcbc162f30700d6f3f82a24bf7cc62ffe7caea42c0b2cba8bf7f3ae50cf51f69"
+checksum = "4569f339c0c402346d4a75a9e39cf8dad310e287eef1ff56d4c68e5067f53460"
 dependencies = [
  "asn1-rs",
  "data-encoding",
@@ -7404,7 +7403,7 @@ dependencies = [
  "nom",
  "oid-registry",
  "rusticata-macros",
- "thiserror 1.0.69",
+ "thiserror 2.0.11",
  "time",
 ]
 
