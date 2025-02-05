@@ -36,7 +36,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 serde_bytes = "0.11"
 sha2 = "0.10"
-sigstore = { git = "https://github.com/flavio/sigstore-rs.git", tag = "v0.10.0+tough-keyid-patch-1", default-features = false, features = [
+sigstore = { version = "0.11.0", default-features = false, features = [
   "sigstore-trust-root-rustls-tls",
   "cosign-rustls-tls",
   "cached-client",

@@ -1,12 +1,16 @@
+use std::{boxed::Box, collections::BTreeMap, fs, path::Path};
+
 use serde::{Deserialize, Deserializer, Serialize};
 use sigstore::cosign::verification_constraint::VerificationConstraint;
-use std::boxed::Box;
-use std::{collections::HashMap, fs, path::Path};
 use url::Url;
 
-use crate::{errors::FailedToParseYamlDataError, verify::verification_constraints};
-
-use super::errors::{VerifyError, VerifyResult};
+use crate::{
+    errors::FailedToParseYamlDataError,
+    verify::{
+        errors::{VerifyError, VerifyResult},
+        verification_constraints,
+    },
+};
 
 /// Alias to the type that is currently used to store the
 /// verification settings.
@@ -63,17 +67,17 @@ pub enum Signature {
     PubKey {
         owner: Option<String>,
         key: String,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
     GenericIssuer {
         issuer: String,
         subject: Subject,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
     GithubAction {
         owner: String,
         repo: Option<String>,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
 }
 

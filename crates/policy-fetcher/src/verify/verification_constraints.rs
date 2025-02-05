@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use tracing::debug;
+use std::{collections::BTreeMap, convert::TryFrom};
 
 use sigstore::cosign::signature_layers::CertificateSignature;
 use sigstore::cosign::verification_constraint::{
@@ -8,10 +6,12 @@ use sigstore::cosign::verification_constraint::{
 };
 use sigstore::cosign::{signature_layers::CertificateSubject, SignatureLayer};
 use sigstore::errors::{Result, SigstoreError};
+use tracing::debug;
 
-use super::errors::{VerifyError, VerifyResult};
-
-use super::config::Subject;
+use crate::verify::{
+    config::Subject,
+    errors::{VerifyError, VerifyResult},
+};
 
 /// Verification Constraint for public keys and annotations
 ///
@@ -28,7 +28,7 @@ impl PublicKeyAndAnnotationsVerifier {
     pub fn new(
         owner: Option<&str>,
         key: &str,
-        annotations: Option<&HashMap<String, String>>,
+        annotations: Option<&BTreeMap<String, String>>,
     ) -> VerifyResult<Self> {
         let pub_key_verifier = PublicKeyVerifier::try_from(key.as_bytes())?;
         let annotation_verifier = annotations.map(|a| AnnotationVerifier {
@@ -72,7 +72,7 @@ impl GenericIssuerSubjectVerifier {
     pub fn new(
         issuer: &str,
         subject: &Subject,
-        annotations: Option<&HashMap<String, String>>,
+        annotations: Option<&BTreeMap<String, String>>,
     ) -> Self {
         let annotation_verifier = annotations.map(|a| AnnotationVerifier {
             annotations: a.to_owned(),
@@ -189,7 +189,7 @@ impl GitHubVerifier {
     pub fn new(
         owner: &str,
         repo: Option<&str>,
-        annotations: Option<&HashMap<String, String>>,
+        annotations: Option<&BTreeMap<String, String>>,
     ) -> Self {
         let annotation_verifier = annotations.map(|a| AnnotationVerifier {
             annotations: a.to_owned(),
@@ -316,6 +316,7 @@ impl TryFrom<&str> for GitHubRepo {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use rstest::rstest;
     use sigstore::{
         cosign::payload::simple_signing::SimpleSigning,
@@ -413,7 +414,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         let is_verified = vc.verify(&sl).expect("Should have been successful");
         assert!(is_verified);
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert("key1".into(), "value2".into());
 
         let vc = PublicKeyAndAnnotationsVerifier::new(None, pub_key, Some(&annotations))
@@ -491,7 +492,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
         let sl =
             build_signature_layers_keyless(Some(issuer.to_string()), certificate_subject, None);
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert("key1".into(), "value1".into());
 
         let vc = GenericIssuerSubjectVerifier::new(issuer, &subject, Some(&annotations));
