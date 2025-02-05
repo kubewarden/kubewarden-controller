@@ -291,6 +291,8 @@ async fn create_tls_config_and_watch_certificate_changes(
 async fn create_tls_config_and_watch_certificate_changes(
     tls_config: TlsConfig,
 ) -> Result<RustlsConfig> {
+    use ::tracing::error;
+
     let cert_file = tls_config.cert_file.clone();
     let key_file = tls_config.key_file.clone();
 
@@ -342,10 +344,12 @@ async fn create_tls_config_and_watch_certificate_changes(
 
                 cert_changed = false;
                 key_changed = false;
-                reloadable_rust_config
+                if let Err(e) = reloadable_rust_config
                     .reload_from_pem_file(cert_file.clone(), key_file.clone())
                     .await
-                    .expect("Cannot reload TLS certificate"); //  we want to panic here
+                {
+                    error!("Failed to reload TLS certificate: {}", e);
+                }
             }
         }
     });
