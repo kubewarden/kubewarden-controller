@@ -12,7 +12,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use run::HostCapabilitiesMode;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     convert::TryFrom,
     env, fs,
     io::{self, Read},
@@ -507,7 +507,7 @@ fn build_verification_options_from_flags(
         match matches.get_many::<String>("verification-annotation") {
             None => None,
             Some(items) => {
-                let mut values: HashMap<String, String> = HashMap::new();
+                let mut values: BTreeMap<String, String> = BTreeMap::new();
                 for item in items {
                     let tmp: Vec<_> = item.splitn(2, '=').collect();
                     if tmp.len() == 2 {

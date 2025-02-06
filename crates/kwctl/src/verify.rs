@@ -5,11 +5,11 @@ use policy_evaluator::policy_fetcher::{
     sources::Sources,
     verify::{config::LatestVerificationConfig, Verifier},
 };
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tracing::{debug, info};
 
-pub(crate) type VerificationAnnotations = HashMap<String, String>;
+pub(crate) type VerificationAnnotations = BTreeMap<String, String>;
 
 pub(crate) async fn verify(
     url: &str,
