@@ -234,6 +234,8 @@ impl From<Sources> for sigstore::registry::ClientConfig {
             accept_invalid_certificates: false,
             protocol,
             extra_root_certificates,
+            https_proxy: None,
+            no_proxy: None,
         }
     }
 }
