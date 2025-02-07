@@ -14,7 +14,7 @@ use sigstore::cosign::verification_constraint::{
     AnnotationVerifier, CertificateVerifier, VerificationConstraintVec,
 };
 use sigstore::registry::{Certificate, CertificateEncoding};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::warn;
@@ -71,7 +71,7 @@ impl Client {
         &mut self,
         image: String,
         pub_keys: Vec<String>,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     ) -> Result<VerificationResponse> {
         if pub_keys.is_empty() {
             return Err(anyhow!("Must provide at least one pub key"));
@@ -104,7 +104,7 @@ impl Client {
         &mut self,
         image: String,
         keyless: Vec<KeylessInfo>,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     ) -> Result<VerificationResponse> {
         if keyless.is_empty() {
             return Err(anyhow!("Must provide keyless info"));
@@ -139,7 +139,7 @@ impl Client {
         &mut self,
         image: String,
         keyless_prefix: Vec<KeylessPrefixInfo>,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     ) -> Result<VerificationResponse> {
         if keyless_prefix.is_empty() {
             return Err(anyhow!("Must provide keyless info"));
@@ -176,7 +176,7 @@ impl Client {
         image: String,
         owner: String,
         repo: Option<String>,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     ) -> Result<VerificationResponse> {
         if owner.is_empty() {
             return Err(anyhow!("Must provide owner info"));
@@ -211,7 +211,7 @@ impl Client {
         certificate: &[u8],
         certificate_chain: Option<&[Vec<u8>]>,
         require_rekor_bundle: bool,
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     ) -> Result<VerificationResponse> {
         let (source_image_digest, trusted_layers) =
             fetch_sigstore_remote_data(&self.cosign_client, image).await?;
@@ -267,7 +267,7 @@ pub(crate) async fn get_sigstore_pub_key_verification_cached(
     client: &mut Client,
     image: String,
     pub_keys: Vec<String>,
-    annotations: Option<HashMap<String, String>>,
+    annotations: Option<BTreeMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
         .verify_public_key(image, pub_keys, annotations)
@@ -294,7 +294,7 @@ pub(crate) async fn get_sigstore_keyless_verification_cached(
     client: &mut Client,
     image: String,
     keyless: Vec<KeylessInfo>,
-    annotations: Option<HashMap<String, String>>,
+    annotations: Option<BTreeMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
         .verify_keyless(image, keyless, annotations)
@@ -321,7 +321,7 @@ pub(crate) async fn get_sigstore_keyless_prefix_verification_cached(
     client: &mut Client,
     image: String,
     keyless_prefix: Vec<KeylessPrefixInfo>,
-    annotations: Option<HashMap<String, String>>,
+    annotations: Option<BTreeMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
         .verify_keyless_prefix(image, keyless_prefix, annotations)
@@ -349,7 +349,7 @@ pub(crate) async fn get_sigstore_github_actions_verification_cached(
     image: String,
     owner: String,
     repo: Option<String>,
-    annotations: Option<HashMap<String, String>>,
+    annotations: Option<BTreeMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
         .verify_github_actions(image, owner, repo, annotations)
@@ -362,7 +362,7 @@ fn get_sigstore_certificate_verification_cache_key(
     certificate: &[u8],
     certificate_chain: Option<&[Vec<u8>]>,
     require_rekor_bundle: bool,
-    annotations: Option<&HashMap<String, String>>,
+    annotations: Option<&BTreeMap<String, String>>,
 ) -> String {
     let mut hasher = Sha256::new();
 
@@ -406,7 +406,7 @@ pub(crate) async fn get_sigstore_certificate_verification_cached(
     certificate: &[u8],
     certificate_chain: Option<&[Vec<u8>]>,
     require_rekor_bundle: bool,
-    annotations: Option<HashMap<String, String>>,
+    annotations: Option<BTreeMap<String, String>>,
 ) -> Result<cached::Return<VerificationResponse>> {
     client
         .verify_certificate(

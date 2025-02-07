@@ -29,14 +29,14 @@ kube = { version = "0.98.0", default-features = false, features = [
   "rustls-tls",
   "runtime",
 ] }
-kubewarden-policy-sdk = "0.12.0"
+kubewarden-policy-sdk = "0.13.0"
 lazy_static = "1.4"
 mail-parser = { version = "0.10.0", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
   "x509",
 ] }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.8.14" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.9.0" }
 semver = { version = "1.0.22", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

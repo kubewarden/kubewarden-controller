@@ -4,7 +4,7 @@ use kubewarden_policy_sdk::host_capabilities::{
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use tokio::{sync::oneshot, time::Instant};
 
 /// Holds the response to a waPC evaluation request
@@ -58,7 +58,7 @@ pub enum CallbackRequestType {
         /// List of PEM encoded keys that must have been used to sign the OCI object
         pub_keys: Vec<String>,
         /// Optional - Annotations that must have been provided by all signers when they signed the OCI artifact
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
 
     /// Require the verification of the manifest digest of an OCI object to be
@@ -69,7 +69,7 @@ pub enum CallbackRequestType {
         /// List of keyless signatures that must be found
         keyless: Vec<KeylessInfo>,
         /// Optional - Annotations that must have been provided by all signers when they signed the OCI artifact
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
 
     /// Require the verification of the manifest digest of an OCI object to be
@@ -81,7 +81,7 @@ pub enum CallbackRequestType {
         /// List of keyless signatures that must be found
         keyless_prefix: Vec<KeylessPrefixInfo>,
         /// Optional - Annotations that must have been provided by all signers when they signed the OCI artifact
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
 
     /// Require the verification of the manifest digest of an OCI object to be
@@ -94,7 +94,7 @@ pub enum CallbackRequestType {
         /// Optional - Repo of the GH Action workflow that signed the artifact. E.g: example-repo
         repo: Option<String>,
         /// Optional - Annotations that must have been provided by all signers when they signed the OCI artifact
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
 
     /// Require the verification of the manifest digest of an OCI object
@@ -116,7 +116,7 @@ pub enum CallbackRequestType {
         /// verification process.
         require_rekor_bundle: bool,
         /// Optional - Annotations that must have been provided by all signers when they signed the OCI artifact
-        annotations: Option<HashMap<String, String>>,
+        annotations: Option<BTreeMap<String, String>>,
     },
 
     /// Lookup the addresses for a given hostname via DNS
