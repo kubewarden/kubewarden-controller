@@ -271,6 +271,84 @@ impl PolicyServer {
     }
 }
 
+// Load the ServerConfig to be used by the Policy Server configuring the server
+// certificate and mTLS when necessary
+//
+// RustlsConfig does not offer a function to load the client CA certificate together with the
+// service certificates. Therefore, we need to load everything and build the ServerConfig
+async fn build_tls_server_config(tls_config: &TlsConfig) -> Result<rustls::ServerConfig> {
+    use std::{fs::File, io::BufReader};
+
+    use rustls::{server::WebPkiClientVerifier, RootCertStore, ServerConfig};
+    use rustls_pemfile::Item;
+    use rustls_pki_types::{CertificateDer, PrivateKeyDer};
+
+    let cert_file = &mut BufReader::new(File::open(tls_config.cert_file.clone())?);
+    let key_file = &mut BufReader::new(File::open(tls_config.key_file.clone())?);
+    let cert: Vec<CertificateDer> = rustls_pemfile::certs(cert_file)
+        .filter_map(|it| {
+            if let Err(ref e) = it {
+                warn!("Cannot parse certificate: {e}");
+                return None;
+            }
+            it.ok()
+        })
+        .collect();
+    if cert.len() > 1 {
+        return Err(anyhow!("Multiple certificates provided in cert file"));
+    }
+    let mut key_vec: Vec<Vec<u8>> = rustls_pemfile::read_all(key_file)
+        .filter_map(|i| match i.ok()? {
+            Item::Sec1Key(key) => Some(key.secret_sec1_der().to_vec()),
+            Item::Pkcs1Key(key) => Some(key.secret_pkcs1_der().to_vec()),
+            Item::Pkcs8Key(key) => Some(key.secret_pkcs8_der().to_vec()),
+            _ => {
+                info!("Ignoring non-key item in key file");
+                None
+            }
+        })
+        .collect();
+    if key_vec.is_empty() {
+        return Err(anyhow!("No key provided in key file"));
+    }
+    if key_vec.len() > 1 {
+        return Err(anyhow!("Multiple keys provided in key file"));
+    }
+    let key = PrivateKeyDer::try_from(key_vec.pop().unwrap())
+        .map_err(|e| anyhow!("Cannot parse server key: {e}"))?;
+
+    let config = if let Some(client_ca_cert_file_path) = tls_config.client_ca_cert_file.clone() {
+        // we have the client CA. Therefore, we should enable mTLS.
+        let client_ca_cert_file = &mut BufReader::new(File::open(client_ca_cert_file_path)?);
+
+        let mut ca_certs = RootCertStore::empty();
+        let client_ca_certs: Vec<_> = rustls_pemfile::certs(client_ca_cert_file)
+            .filter_map(|it| {
+                if let Err(ref e) = it {
+                    warn!("Cannot parse client CA certificate: {e}");
+                }
+                it.ok()
+            })
+            .collect();
+        let (cert_added, cert_ignored) = ca_certs.add_parsable_certificates(client_ca_certs);
+        info!(
+            client_ca_certs_added = cert_added,
+            client_ca_certs_ignored = cert_ignored,
+            "Loaded client CA certificates"
+        );
+        let client_verifier = WebPkiClientVerifier::builder(Arc::new(ca_certs)).build()?;
+
+        ServerConfig::builder()
+            .with_client_cert_verifier(client_verifier)
+            .with_single_cert(cert, key)?
+    } else {
+        ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(cert, key)?
+    };
+    Ok(config)
+}
+
 /// There's no watching of the certificate files on non-linux platforms
 /// since we rely on inotify to watch for changes
 #[cfg(not(target_os = "linux"))]
@@ -293,23 +371,35 @@ async fn create_tls_config_and_watch_certificate_changes(
 ) -> Result<RustlsConfig> {
     use ::tracing::error;
 
-    let cert_file = tls_config.cert_file.clone();
-    let key_file = tls_config.key_file.clone();
+    let cert_file_path = tls_config.cert_file.clone();
+    let key_file_path = tls_config.key_file.clone();
+    let client_ca_cert_path = tls_config.client_ca_cert_file.clone();
 
-    let rust_config =
-        RustlsConfig::from_pem_file(tls_config.cert_file, tls_config.key_file).await?;
+    let config = build_tls_server_config(&tls_config).await?;
+
+    let rust_config = RustlsConfig::from_config(Arc::new(config));
     let reloadable_rust_config = rust_config.clone();
 
     let inotify =
         inotify::Inotify::init().map_err(|e| anyhow!("Cannot initialize inotify: {e}"))?;
     let cert_watch = inotify
         .watches()
-        .add(cert_file.clone(), inotify::WatchMask::CLOSE_WRITE)
+        .add(cert_file_path.clone(), inotify::WatchMask::CLOSE_WRITE)
         .map_err(|e| anyhow!("Cannot watch certificate file: {e}"))?;
     let key_watch = inotify
         .watches()
-        .add(key_file.clone(), inotify::WatchMask::CLOSE_WRITE)
+        .add(key_file_path.clone(), inotify::WatchMask::CLOSE_WRITE)
         .map_err(|e| anyhow!("Cannot watch key file: {e}"))?;
+
+    let mut client_cert_watch = None;
+    if let Some(ref client_cert_file) = client_ca_cert_path {
+        client_cert_watch = Some(
+            inotify
+                .watches()
+                .add(client_cert_file.clone(), inotify::WatchMask::CLOSE_WRITE)
+                .map_err(|e| anyhow!("Cannot watch client certificate file: {e}"))?,
+        );
+    }
 
     let buffer = [0; 1024];
     let stream = inotify
@@ -320,6 +410,7 @@ async fn create_tls_config_and_watch_certificate_changes(
         tokio::pin!(stream);
         let mut cert_changed = false;
         let mut key_changed = false;
+        let mut client_cert_changed = false;
 
         while let Some(event) = stream.next().await {
             let event = match event {
@@ -338,18 +429,29 @@ async fn create_tls_config_and_watch_certificate_changes(
                 info!("TLS key file has been modified");
                 key_changed = true;
             }
+            if let Some(ref client_cert_watch) = client_cert_watch {
+                if event.wd == *client_cert_watch {
+                    info!("TLS client certificate file has been modified");
+                    client_cert_changed = true;
+                }
+            }
 
-            if key_changed && cert_changed {
-                info!("reloading TLS certificate");
+            // if both the certificate and the key have been changed or there is no change in the
+            // server cert and key, but the client cert changed, reload the certificate
+            if (key_changed && cert_changed)
+                || (client_cert_changed && (key_changed == cert_changed))
+            {
+                info!("reloading TLS certificates");
 
                 cert_changed = false;
                 key_changed = false;
-                if let Err(e) = reloadable_rust_config
-                    .reload_from_pem_file(cert_file.clone(), key_file.clone())
-                    .await
-                {
+                client_cert_changed = false;
+                let server_config = build_tls_server_config(&tls_config).await;
+                if let Err(e) = server_config {
                     error!("Failed to reload TLS certificate: {}", e);
+                    continue;
                 }
+                reloadable_rust_config.reload_from_config(Arc::new(server_config.unwrap()))
             }
         }
     });
