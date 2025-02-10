@@ -64,7 +64,7 @@ repository will contain similar CI and scripts as the kubewarden/helm-charts
 repository. The resulting policy Helm charts will get shipped into a separate
 HTTPs Helm repository along with an OCI repository in ghcr.io.
 
-Even if the charts will not be publitized to users, the repository can be consumed
+Even if the charts will not be publicized to users, the repository can be consumed
 in Rancher UI (using git URL and branch) for testing the chart itself.
 
 For policy bundles, they can be in a new chart, either in this new
