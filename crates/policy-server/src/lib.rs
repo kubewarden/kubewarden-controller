@@ -34,7 +34,7 @@ use profiling::activate_memory_profiling;
 use rayon::prelude::*;
 use std::{fs, net::SocketAddr, sync::Arc};
 use tokio::{
-    sync::{oneshot, Semaphore},
+    sync::{oneshot, Notify, Semaphore},
     time,
 };
 use tower_http::trace::{self, TraceLayer};
@@ -65,10 +65,12 @@ pub static malloc_conf: &[u8] = b"background_thread:true,tcache_max:4096,dirty_d
 
 pub struct PolicyServer {
     router: Router,
+    readiness_probe_router: Router,
     callback_handler: CallbackHandler,
     callback_handler_shutdown_channel_tx: oneshot::Sender<()>,
     addr: SocketAddr,
     tls_config: Option<RustlsConfig>,
+    readiness_probe_addr: SocketAddr,
 }
 
 impl PolicyServer {
@@ -211,10 +213,7 @@ impl PolicyServer {
                 TraceLayer::new_for_http()
                     .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
                     .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
-            )
-            // Adding the readiness probe handler after the tracing layer to avoid logging
-            // See: https://github.com/tokio-rs/axum/discussions/355
-            .route("/readiness", get(readiness_handler));
+            );
 
         if config.enable_pprof {
             activate_memory_profiling().await?;
@@ -225,17 +224,22 @@ impl PolicyServer {
             router = Router::new().merge(router).merge(pprof_router);
         }
 
+        let readiness_probe_router = Router::new().route("/readiness", get(readiness_handler));
+
         Ok(Self {
             router,
+            readiness_probe_router,
             callback_handler,
             callback_handler_shutdown_channel_tx,
             addr: config.addr,
             tls_config,
+            readiness_probe_addr: config.readiness_probe_addr,
         })
     }
 
     pub async fn run(self) -> Result<()> {
-        // Start the CallbackHandler
+        let notify = Notify::new();
+
         let mut callback_handler = self.callback_handler;
         let callback_handler = tokio::spawn(async move {
             info!(status = "init", "CallbackHandler task");
@@ -243,22 +247,33 @@ impl PolicyServer {
             info!(status = "exit", "CallbackHandler task");
         });
 
-        if let Some(tls_config) = self.tls_config {
-            axum_server::bind_rustls(self.addr, tls_config)
-                .serve(self.router.into_make_service())
-                .await?;
-        } else {
-            axum_server::bind(self.addr)
-                .serve(self.router.into_make_service())
-                .await?;
+        let api_server = async {
+            if let Some(tls_config) = self.tls_config {
+                let server_with_tls = axum_server::bind_rustls(self.addr, tls_config);
+                notify.notify_one();
+
+                server_with_tls.serve(self.router.into_make_service()).await
+            } else {
+                let server = axum_server::bind(self.addr);
+                notify.notify_one();
+
+                server.serve(self.router.into_make_service()).await
+            }
         };
 
-        // Stop the CallbackHandler
+        let readiness_probe_server = async {
+            notify.notified().await;
+
+            axum_server::bind(self.readiness_probe_addr)
+                .serve(self.readiness_probe_router.into_make_service())
+                .await
+        };
+
+        tokio::try_join!(api_server, readiness_probe_server)?;
+
         self.callback_handler_shutdown_channel_tx
             .send(())
             .expect("Cannot send shutdown signal to CallbackHandler");
-
-        // Wait for the CallbackHandler to exit
         callback_handler
             .await
             .expect("Cannot wait for CallbackHandler to exit");

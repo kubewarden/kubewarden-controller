@@ -68,6 +68,13 @@ pub(crate) fn build_cli() -> Command {
             .env("KUBEWARDEN_PORT")
             .help("Listen on PORT"),
 
+        Arg::new("readiness-probe-port")
+            .long("readiness-probe-port")
+            .value_name("READINESS_PROBE_PORT")
+            .default_value("3000")
+            .env("KUBEWARDEN_READINESS_PROBE_PORT")
+            .help("Expose readiness endpoint on READINESS_PROBE_PORT"),
+
         Arg::new("workers")
             .long("workers")
             .value_name("WORKERS_NUMBER")
