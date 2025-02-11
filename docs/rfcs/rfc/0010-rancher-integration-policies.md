@@ -150,7 +150,7 @@ module:
 clusterScoped: true # for ClusterAdmissionPolicy, or AdmissionPolicy
 spec:
   mode: "protect"
-  mutating: false
+  mutating: true # only present if it's true
   rules:
     # array as in the CRD spec
   settings:
@@ -163,10 +163,22 @@ object](https://docs.kubewarden.io/reference/CRDs#policyspec).
 
 For `spec.contextAwareResources`, it will be hardcoded on the policy chart template.
 
+Only those values that are actually configurable should be in values.yml and questions.yml.
+For example, if a policy is non mutating, it should not to have a
+`spec.mutating: false` in the values.yml nor questions.yml.
+
 ### Chart template
 
 The `templates/policy.yaml` will match the policy templates shipped in the
-`kubewarden-defaults` Helm chart. As an example:
+`kubewarden-defaults` Helm chart.
+
+- The `spec.module` will be constructed by appending
+  `.Values.global.cattle.systemDefaultRegistry` and `.Values.module.repository`.
+- The `metadata.annotations` for severity and category will be obtained from
+  the policy metadata.yml annotations `io.kubewarden.policy.severity` and
+  `io.kubewarden.policy.category`.
+
+As an example:
 
 ```
 ---
@@ -180,16 +192,20 @@ metadata:
   labels:
     app.kubernetes.io/component: policy
   annotations:
-    io.kubewarden.policy.severity: medium # taken from metadata.yml's annotation io.kubewarden.policy.severity
-    io.kubewarden.policy.category: PSP # taken from metadata.yml's annotation
-  name: {{ .Release.name }}
+    io.kubewarden.policy.severity: {{ index .Chart.Annotations "io.kubewarden.policy.severity" | quote }}
+    io.kubewarden.policy.category: {{ index .Chart.Annotations "io.kubewarden.policy.category" | quote }}
+  name: {{ .Release.Name }} # allows for deploying the same policy several times with different configs
   {{- if eq .Values.clusterScoped false }}
   namespace: {{ .Release.namespace }}
   {{- end }}
 spec:
   module: '{{ .Values.module.repository }}:{{ .Values.module.tag }}'
   mode: {{ .Values.spec.mode }}
+  {{- if eq (index .Chart.Annotations "kubewarden/mutation") "false" }}
+  mutating: false # policy doesn't support mutation
+  {{- else }}
   mutating: {{ .Values.spec.mutating }}
+  {{- end }}
   contextAwareResources: <array of GVK from metadata.yml::contextAwareResources> # optional
   rules:
     {{- toYaml .Values.spec.rules | nindent 4 }}
