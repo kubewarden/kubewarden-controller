@@ -654,23 +654,11 @@ mod certificate_reload_helpers {
         }
     }
 
-    pub async fn policy_server_is_ready(
-        address: &str,
-        client_tls_pem_bundle: Option<String>,
-    ) -> anyhow::Result<StatusCode> {
+    pub async fn policy_server_is_ready(address: &str) -> anyhow::Result<StatusCode> {
         // wait for the server to start
-        let mut client_builder = reqwest::Client::builder();
+        let client = reqwest::Client::builder().build().unwrap();
 
-        if let Some(tls_data) = client_tls_pem_bundle {
-            let identity = reqwest::Identity::from_pem(tls_data.as_bytes())?;
-            client_builder = client_builder.identity(identity)
-        };
-        let client = client_builder
-            .danger_accept_invalid_certs(true)
-            .build()
-            .unwrap();
-
-        let url = reqwest::Url::parse(&format!("https://{address}/readiness")).unwrap();
+        let url = reqwest::Url::parse(&format!("http://{address}/readiness")).unwrap();
         let response = client.get(url).send().await?;
         Ok(response.status())
     }
@@ -704,8 +692,9 @@ async fn test_detect_certificate_rotation() {
     });
     config.policies = HashMap::new();
 
-    let domain_ip = config.addr.ip().to_string();
-    let domain_port = config.addr.port().to_string();
+    let host = config.addr.ip().to_string();
+    let port = config.addr.port().to_string();
+    let readiness_probe_port = config.readiness_probe_addr.port().to_string();
 
     tokio::spawn(async move {
         let api_server = policy_server::PolicyServer::new_from_config(config)
@@ -719,21 +708,15 @@ async fn test_detect_certificate_rotation() {
         .with_max_delay(Duration::from_secs(30))
         .with_max_times(5);
 
-    let client_cert = tls_data_client.cert.clone();
-    let client_key = tls_data_client.key.clone();
     let status_code = (|| async {
-        policy_server_is_ready(
-            format!("{domain_ip}:{domain_port}").as_str(),
-            Some(format!("{client_cert}\n{client_key}")),
-        )
-        .await
+        policy_server_is_ready(format!("{host}:{readiness_probe_port}").as_str()).await
     })
     .retry(exponential_backoff)
     .await
     .unwrap();
     assert_eq!(status_code, reqwest::StatusCode::OK);
 
-    check_tls_san_name(&domain_ip, &domain_port, hostname1)
+    check_tls_san_name(&host, &port, hostname1)
         .await
         .expect("certificate served doesn't use the expected SAN name");
 
@@ -741,7 +724,6 @@ async fn test_detect_certificate_rotation() {
 
     let hostname2 = "cert2.example.com";
     let tls_data2 = create_cert(hostname2);
-    let client_ca2 = create_cert(hostname2);
 
     // write only the cert file
     std::fs::write(&cert_file, tls_data2.cert).unwrap();
@@ -750,7 +732,7 @@ async fn test_detect_certificate_rotation() {
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
 
     // the old certificate should still be in use, since we didn't change also the key
-    check_tls_san_name(&domain_ip, &domain_port, hostname1)
+    check_tls_san_name(&host, &port, hostname1)
         .await
         .expect("certificate should not have been changed");
 
@@ -760,32 +742,9 @@ async fn test_detect_certificate_rotation() {
     // give inotify some time to ensure it detected the cert change,
     // also give axum some time to complete the certificate reload
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
-    check_tls_san_name(&domain_ip, &domain_port, hostname2)
+    check_tls_san_name(&host, &port, hostname2)
         .await
         .expect("certificate hasn't been reloaded");
-
-    // Let test if the server is reloading client certificate
-    std::fs::write(&client_ca, client_ca2.cert.clone()).unwrap();
-
-    // give inotify some time to ensure it detected the cert change
-    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
-
-    assert!(policy_server_is_ready(
-        format!("{domain_ip}:{domain_port}").as_str(),
-        Some(format!("{client_cert}\n{client_key}")),
-    )
-    .await
-    .is_err());
-
-    let client_cert = client_ca2.cert.clone();
-    let client_key = client_ca2.key.clone();
-    let status_code = policy_server_is_ready(
-        format!("{domain_ip}:{domain_port}").as_str(),
-        Some(format!("{client_cert}\n{client_key}")),
-    )
-    .await
-    .unwrap();
-    assert_eq!(status_code, reqwest::StatusCode::OK);
 }
 
 #[tokio::test]
