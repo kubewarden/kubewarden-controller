@@ -23,6 +23,9 @@ require (
 	sigs.k8s.io/controller-runtime v0.20.1
 )
 
+// CEL needs to be pinned to the same version as the one used by the k8s.io/apiserver package
+replace github.com/google/cel-go => github.com/google/cel-go v0.22.0
+
 require (
 	cel.dev/expr v0.18.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
