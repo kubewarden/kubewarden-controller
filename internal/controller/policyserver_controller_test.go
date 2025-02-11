@@ -673,12 +673,27 @@ var _ = Describe("PolicyServer controller", func() {
 				"Value": Equal(fmt.Sprintf("%s,%s", constants.CARootCert, constants.ClientCACert)),
 			})))
 
+			By("mounting the kubewarden CA Secret")
+			Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Name": Equal(kubewardenCAVolumeName),
+				"VolumeSource": MatchFields(IgnoreExtras, Fields{
+					"Secret": PointTo(MatchFields(IgnoreExtras, Fields{
+						"SecretName": Equal(constants.CARootSecretName),
+						"Items": ConsistOf(MatchFields(IgnoreExtras, Fields{
+							"Key":  Equal(constants.CARootCert),
+							"Path": Equal(constants.CARootCert),
+						})),
+					})),
+				}),
+			})))
+
+			By("mounting the client CA ConfigMap")
 			Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Name": Equal(clientCAVolumeName),
 				"VolumeSource": MatchFields(IgnoreExtras, Fields{
 					"ConfigMap": PointTo(MatchFields(IgnoreExtras, Fields{
 						"LocalObjectReference": MatchFields(IgnoreExtras, Fields{
-							"Name": Equal("client-ca"),
+							"Name": Equal(clientCAConfigMapName),
 						}),
 						"Items": ConsistOf(MatchFields(IgnoreExtras, Fields{
 							"Key":  Equal(constants.ClientCACert),
