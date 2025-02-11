@@ -51,6 +51,22 @@ Problems to solve:
 
 [design]: #detailed-design
 
+## For 3rd party artifacts
+
+Use the provided [artifacthub.io public API](https://artifacthub.io/docs/api/).
+Currently, the Artifact Hub API provides [`GET
+/packages/search`](https://artifacthub.io/docs/api/#/Packages/searchPackages),
+where one can set the `repository kind` to `Kubewarden policies`. With this call
+one can obtain the list of Kubewarden policies. One would then query for each of
+the policies with [GET
+/packages/kubewarden/{repoName}/{packageName}](https://artifacthub.io/docs/api/#/Packages/getKubewardenPoliciesDetails),
+and obtain its `name`, `version`, `signed` status, and `data/kubewarden-*`
+information.
+
+Artifacts owned by the Kubewarden team are also present in Artifact Hub. Still,
+they have different provenance, therefore, different support assurances. Hence,
+they should be able to coexist.
+
 ## For policies owned by the Kubewarden team
 
 Follow the process listed in [RFC-9, Rancher integration of Kubewarden
@@ -238,21 +254,15 @@ analogous to usual Kubewarden Helm charts. For that we must retouch the `make
 generate-policies-file` target and the `extract-policies.sh` script. This
 enforces SLSA and helps in verification of signed Helm charts.
 
-## For 3rd party artifacts
+### Updating the Helm policy chart repository
 
-Use the provided [artifacthub.io public API](https://artifacthub.io/docs/api/).
-Currently, the Artifact Hub API provides [`GET
-/packages/search`](https://artifacthub.io/docs/api/#/Packages/searchPackages),
-where one can set the `repository kind` to `Kubewarden policies`. With this call
-one can obtain the list of Kubewarden policies. One would then query for each of
-the policies with [GET
-/packages/kubewarden/{repoName}/{packageName}](https://artifacthub.io/docs/api/#/Packages/getKubewardenPoliciesDetails),
-and obtain its `name`, `version`, `signed` status, and `data/kubewarden-*`
-information.
+To create a new policy chart from a newly released policy version, one needs to
+uniquely relate the policy and the policy chart. This is regardless of the
+policy being a normal one or a monorepo one.
 
-Artifacts owned by the Kubewarden team are also present in Artifact Hub. Still,
-they have different provenance, therefore, different support assurances. Hence,
-they should be able to coexist.
+For that, one needs the name of the policy.
+
+Once a new policy release happens,
 
 # Drawbacks
 
