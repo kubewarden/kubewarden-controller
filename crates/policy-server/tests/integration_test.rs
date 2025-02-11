@@ -674,23 +674,25 @@ async fn test_detect_certificate_rotation() {
     let certs_dir = tempfile::tempdir().unwrap();
     let cert_file = certs_dir.path().join("policy-server.pem");
     let key_file = certs_dir.path().join("policy-server-key.pem");
-    let client_ca = certs_dir.path().join("client_cert.pem");
+    let first_client_ca = certs_dir.path().join("client_cert1.pem");
+    let second_client_ca = certs_dir.path().join("client_cert2.pem");
 
     let hostname1 = "cert1.example.com";
     let tls_data1 = create_cert(hostname1);
-    let tls_data_client = create_cert(hostname1);
+    let first_tls_data_client = create_cert(hostname1);
+    let second_tls_data_client = create_cert(hostname1);
 
     std::fs::write(&cert_file, tls_data1.cert).unwrap();
     std::fs::write(&key_file, tls_data1.key).unwrap();
-    std::fs::write(&client_ca, tls_data_client.cert.clone()).unwrap();
+    std::fs::write(&first_client_ca, first_tls_data_client.cert.clone()).unwrap();
+    std::fs::write(&second_client_ca, second_tls_data_client.cert.clone()).unwrap();
 
     let mut config = default_test_config();
     config.tls_config = Some(policy_server::config::TlsConfig {
         cert_file: cert_file.to_str().unwrap().to_owned(),
         key_file: key_file.to_str().unwrap().to_owned(),
-        client_ca_file: Some(client_ca.to_str().unwrap().to_owned()),
+        client_ca_file: vec![first_client_ca.clone(), second_client_ca.clone()],
     });
-    config.policies = HashMap::new();
 
     let host = config.addr.ip().to_string();
     let port = config.addr.port().to_string();
@@ -726,7 +728,7 @@ async fn test_detect_certificate_rotation() {
     let tls_data2 = create_cert(hostname2);
 
     // write only the cert file
-    std::fs::write(&cert_file, tls_data2.cert).unwrap();
+    std::fs::write(&cert_file, tls_data2.cert.clone()).unwrap();
 
     // give inotify some time to ensure it detected the cert change
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -737,7 +739,7 @@ async fn test_detect_certificate_rotation() {
         .expect("certificate should not have been changed");
 
     // write only the key file
-    std::fs::write(&key_file, tls_data2.key).unwrap();
+    std::fs::write(&key_file, tls_data2.key.clone()).unwrap();
 
     // give inotify some time to ensure it detected the cert change,
     // also give axum some time to complete the certificate reload
@@ -745,6 +747,53 @@ async fn test_detect_certificate_rotation() {
     check_tls_san_name(&host, &port, hostname2)
         .await
         .expect("certificate hasn't been reloaded");
+
+    // Validate the client CA reload
+    let first_tls_data_client2 = create_cert(hostname2);
+
+    // write only the cert file
+    std::fs::write(&first_client_ca, first_tls_data_client2.cert.clone()).unwrap();
+
+    // give inotify some time to ensure it detected the cert change
+    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+
+    let second_tls_data_client2 = create_cert(hostname2);
+
+    // write only the cert file
+    std::fs::write(&second_client_ca, second_tls_data_client2.cert.clone()).unwrap();
+
+    // give inotify some time to ensure it detected the cert change
+    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+
+    let exponential_backoff = ExponentialBuilder::default()
+        .with_min_delay(Duration::from_secs(10))
+        .with_max_delay(Duration::from_secs(30))
+        .with_max_times(5);
+
+    let status_code = (|| async {
+        policy_server_is_ready(format!("{host}:{readiness_probe_port}").as_str()).await
+    })
+    .retry(exponential_backoff)
+    .await
+    .unwrap();
+    assert_eq!(status_code, reqwest::StatusCode::OK);
+
+    for tls_data_client in vec![&first_tls_data_client2, &second_tls_data_client2] {
+        let client = build_request_client(
+            Some(&tls_data2),
+            Some(tls_data_client.cert.clone()),
+            Some(tls_data_client.key.clone()),
+            true,
+        );
+
+        let status_code = (|| async {
+            send_validate_request(&client, format!("{host}:{port}"), Some(&tls_data2)).await
+        })
+        .retry(exponential_backoff)
+        .await
+        .expect("failed to send validation request");
+        assert_eq!(status_code, reqwest::StatusCode::OK);
+    }
 }
 
 #[tokio::test]
@@ -954,11 +1003,11 @@ fn generate_tls_certs() -> (String, String, String) {
 #[case::with_server_tls_config(Some(certificate_reload_helpers::create_cert("127.0.0.1")), None)]
 #[case::mtls_config(
     Some(certificate_reload_helpers::create_cert("127.0.0.1")),
-    Some(certificate_reload_helpers::create_cert("127.0.0.1"))
+    Some(vec![certificate_reload_helpers::create_cert("127.0.0.1"),certificate_reload_helpers::create_cert("127.0.0.1"),certificate_reload_helpers::create_cert("127.0.0.1")])
 )]
 async fn test_tls(
     #[case] server_tls_data: Option<certificate_reload_helpers::TlsData>,
-    #[case] client_tls_data: Option<certificate_reload_helpers::TlsData>,
+    #[case] client_tls_data: Option<Vec<certificate_reload_helpers::TlsData>>,
 ) {
     use certificate_reload_helpers::*;
 
@@ -967,22 +1016,32 @@ async fn test_tls(
     let certs_dir = tempfile::tempdir().unwrap();
     let cert_file = certs_dir.path().join("policy-server.pem");
     let key_file = certs_dir.path().join("policy-server-key.pem");
-    let client_ca = certs_dir.path().join("client_cert.pem");
 
-    let server_cert = if let Some(ref tls_data) = server_tls_data {
+    if let Some(ref tls_data) = server_tls_data {
         std::fs::write(&cert_file, tls_data.cert.clone()).unwrap();
         std::fs::write(&key_file, tls_data.key.clone()).unwrap();
-        tls_data.cert.clone()
-    } else {
-        String::new()
-    };
+    }
 
-    let (client_cert, client_key) = if let Some(ref tls_data) = client_tls_data {
-        std::fs::write(&client_ca, tls_data.cert.clone()).unwrap();
-        (tls_data.cert.clone(), tls_data.key.clone())
-    } else {
-        (String::new(), String::new())
-    };
+    // Client CA pem file, cert data and key data
+    let clients_cas_info: Vec<(PathBuf, String, String)> =
+        if let Some(ref tls_data) = client_tls_data {
+            tls_data
+                .iter()
+                .enumerate()
+                .into_iter()
+                .map(|(i, tls_data)| {
+                    let client_ca = certs_dir
+                        .path()
+                        .join(format!("client_cert_{}.pem", i))
+                        .to_owned();
+                    std::fs::write(&client_ca, tls_data.cert.clone())
+                        .expect("failed to write client CA file");
+                    (client_ca, tls_data.cert.clone(), tls_data.key.clone())
+                })
+                .collect()
+        } else {
+            vec![]
+        };
 
     let mut config = default_test_config();
     config.tls_config = match (server_tls_data.as_ref(), client_tls_data.as_ref()) {
@@ -990,12 +1049,16 @@ async fn test_tls(
         (Some(_), Some(_)) => Some(policy_server::config::TlsConfig {
             cert_file: cert_file.to_str().unwrap().to_owned(),
             key_file: key_file.to_str().unwrap().to_owned(),
-            client_ca_file: Some(client_ca.to_str().unwrap().to_owned()),
+            client_ca_file: clients_cas_info
+                .clone()
+                .into_iter()
+                .map(|it| it.0)
+                .collect(),
         }),
         (Some(_), None) => Some(policy_server::config::TlsConfig {
             cert_file: cert_file.to_str().unwrap().to_owned(),
             key_file: key_file.to_str().unwrap().to_owned(),
-            client_ca_file: None,
+            client_ca_file: vec![],
         }),
         _ => {
             panic!("Invalid test case")
@@ -1028,38 +1091,81 @@ async fn test_tls(
     .expect("policy server is not ready");
     assert_eq!(status_code, reqwest::StatusCode::OK);
 
-    // Validate TLS communication
-    let mut builder = reqwest::Client::builder();
-
-    if server_tls_data.is_some() {
-        let certificate = reqwest::Certificate::from_pem(server_cert.as_bytes())
-            .expect("Invalid policy server certificate");
-        builder = builder.add_root_certificate(certificate);
-    }
-
-    if client_tls_data.is_some() {
-        let identity =
-            reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
-                .expect("successfull pem parsing");
-        builder = builder.identity(identity);
+    // Test sending request to policy server using each of the client CA certificates
+    let client_to_test = match client_tls_data {
+        Some(_) => clients_cas_info
+            .iter()
+            .map(|(_, client_cert, client_key)| {
+                build_request_client(
+                    server_tls_data.as_ref(),
+                    Some(client_cert.to_owned()),
+                    Some(client_key.to_owned()),
+                    false,
+                )
+            })
+            .collect(),
+        _ => vec![build_request_client(
+            server_tls_data.as_ref(),
+            None,
+            None,
+            false,
+        )],
     };
-    let client = builder.build().unwrap();
 
+    for client in client_to_test {
+        let response =
+            send_validate_request(&client, format!("{host}:{port}"), server_tls_data.as_ref())
+                .await
+                .expect("failed to get response status");
+        assert_eq!(response, reqwest::StatusCode::OK);
+    }
+}
+
+async fn send_validate_request(
+    client: &reqwest::Client,
+    address: String,
+    server_tls_data: Option<&certificate_reload_helpers::TlsData>,
+) -> anyhow::Result<reqwest::StatusCode> {
     let prefix = if server_tls_data.is_some() {
         "https"
     } else {
         "http"
     };
-    let url =
-        reqwest::Url::parse(&format!("{prefix}://{host}:{port}/validate/pod-privileged")).unwrap();
-    let response = client
-        .post(url)
+    let url = reqwest::Url::parse(&format!("{prefix}://{address}/validate/pod-privileged"))
+        .expect("failed to format url");
+    Ok(client
+        .post(url.clone())
         .header(header::CONTENT_TYPE, "application/json")
         .body(include_str!("data/pod_without_privileged_containers.json"))
         .send()
-        .await;
-    assert_eq!(
-        response.expect("successfull request").status(),
-        reqwest::StatusCode::OK
-    );
+        .await
+        .expect("successfull request")
+        .status())
+}
+
+fn build_request_client(
+    server_tls_data: Option<&certificate_reload_helpers::TlsData>,
+    client_cert: Option<String>,
+    client_key: Option<String>,
+    ignore_hostname: bool,
+) -> reqwest::Client {
+    // Validate TLS communication
+    let mut builder = reqwest::Client::builder().danger_accept_invalid_hostnames(ignore_hostname);
+
+    if let Some(server_tls_data) = server_tls_data {
+        let certificate = reqwest::Certificate::from_pem(server_tls_data.cert.clone().as_bytes())
+            .expect("Invalid policy server certificate");
+        builder = builder.add_root_certificate(certificate);
+    }
+
+    match (client_cert, client_key) {
+        (Some(client_cert), Some(client_key)) => {
+            let identity =
+                reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
+                    .expect("successfull pem parsing");
+            builder = builder.identity(identity)
+        }
+        _ => {}
+    }
+    builder.build().expect("failed to build client")
 }
