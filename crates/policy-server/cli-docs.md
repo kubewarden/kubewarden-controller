@@ -26,6 +26,9 @@ This document contains the help content for the `policy-server` command-line pro
 * `--cert-file <CERT_FILE>` — Path to an X.509 certificate file for HTTPS
 
   Default value: ``
+* `--client-ca-file <CLIENT_CA_FILE>` — Path to an CA certificate file that issued the client certificate. Required to enable mTLS
+
+  Default value: ``
 * `--daemon` — If set, runs policy-server in detached mode as a daemon
 * `--daemon-pid-file <DAEMON-PID-FILE>` — Path to the PID file, used only when running in daemon mode
 

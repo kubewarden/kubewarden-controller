@@ -654,9 +654,18 @@ mod certificate_reload_helpers {
         }
     }
 
-    pub async fn policy_server_is_ready(address: &str) -> anyhow::Result<StatusCode> {
+    pub async fn policy_server_is_ready(
+        address: &str,
+        client_tls_pem_bundle: Option<String>,
+    ) -> anyhow::Result<StatusCode> {
         // wait for the server to start
-        let client = reqwest::Client::builder()
+        let mut client_builder = reqwest::Client::builder();
+
+        if let Some(tls_data) = client_tls_pem_bundle {
+            let identity = reqwest::Identity::from_pem(tls_data.as_bytes())?;
+            client_builder = client_builder.identity(identity)
+        };
+        let client = client_builder
             .danger_accept_invalid_certs(true)
             .build()
             .unwrap();
@@ -677,17 +686,21 @@ async fn test_detect_certificate_rotation() {
     let certs_dir = tempfile::tempdir().unwrap();
     let cert_file = certs_dir.path().join("policy-server.pem");
     let key_file = certs_dir.path().join("policy-server-key.pem");
+    let client_ca = certs_dir.path().join("client_cert.pem");
 
     let hostname1 = "cert1.example.com";
     let tls_data1 = create_cert(hostname1);
+    let tls_data_client = create_cert(hostname1);
 
     std::fs::write(&cert_file, tls_data1.cert).unwrap();
     std::fs::write(&key_file, tls_data1.key).unwrap();
+    std::fs::write(&client_ca, tls_data_client.cert.clone()).unwrap();
 
     let mut config = default_test_config();
     config.tls_config = Some(policy_server::config::TlsConfig {
-        cert_file: cert_file.to_str().unwrap().to_string(),
-        key_file: key_file.to_str().unwrap().to_string(),
+        cert_file: cert_file.to_str().unwrap().to_owned(),
+        key_file: key_file.to_str().unwrap().to_owned(),
+        client_ca_cert_file: Some(client_ca.to_str().unwrap().to_owned()),
     });
     config.policies = HashMap::new();
 
@@ -706,11 +719,18 @@ async fn test_detect_certificate_rotation() {
         .with_max_delay(Duration::from_secs(30))
         .with_max_times(5);
 
-    let status_code =
-        (|| async { policy_server_is_ready(format!("{domain_ip}:{domain_port}").as_str()).await })
-            .retry(exponential_backoff)
-            .await
-            .unwrap();
+    let client_cert = tls_data_client.cert.clone();
+    let client_key = tls_data_client.key.clone();
+    let status_code = (|| async {
+        policy_server_is_ready(
+            format!("{domain_ip}:{domain_port}").as_str(),
+            Some(format!("{client_cert}\n{client_key}")),
+        )
+        .await
+    })
+    .retry(exponential_backoff)
+    .await
+    .unwrap();
     assert_eq!(status_code, reqwest::StatusCode::OK);
 
     check_tls_san_name(&domain_ip, &domain_port, hostname1)
@@ -721,6 +741,7 @@ async fn test_detect_certificate_rotation() {
 
     let hostname2 = "cert2.example.com";
     let tls_data2 = create_cert(hostname2);
+    let client_ca2 = create_cert(hostname2);
 
     // write only the cert file
     std::fs::write(&cert_file, tls_data2.cert).unwrap();
@@ -742,6 +763,29 @@ async fn test_detect_certificate_rotation() {
     check_tls_san_name(&domain_ip, &domain_port, hostname2)
         .await
         .expect("certificate hasn't been reloaded");
+
+    // Let test if the server is reloading client certificate
+    std::fs::write(&client_ca, client_ca2.cert.clone()).unwrap();
+
+    // give inotify some time to ensure it detected the cert change
+    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+
+    assert!(policy_server_is_ready(
+        format!("{domain_ip}:{domain_port}").as_str(),
+        Some(format!("{client_cert}\n{client_key}")),
+    )
+    .await
+    .is_err());
+
+    let client_cert = client_ca2.cert.clone();
+    let client_key = client_ca2.key.clone();
+    let status_code = policy_server_is_ready(
+        format!("{domain_ip}:{domain_port}").as_str(),
+        Some(format!("{client_cert}\n{client_key}")),
+    )
+    .await
+    .unwrap();
+    assert_eq!(status_code, reqwest::StatusCode::OK);
 }
 
 #[tokio::test]

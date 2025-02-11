@@ -53,6 +53,7 @@ pub struct Config {
 pub struct TlsConfig {
     pub cert_file: String,
     pub key_file: String,
+    pub client_ca_cert_file: Option<String>,
 }
 
 impl Config {
@@ -127,15 +128,8 @@ impl Config {
             .expect("clap should have assigned a default value")
             .to_owned();
 
-        let (cert_file, key_file) = tls_files(matches)?;
-        let tls_config = if cert_file.is_empty() {
-            None
-        } else {
-            Some(TlsConfig {
-                cert_file,
-                key_file,
-            })
-        };
+        let tls_config = Some(build_tls_config(matches)?);
+
         let enable_pprof = matches
             .get_one::<bool>("enable-pprof")
             .expect("clap should have assigned a default value")
@@ -182,14 +176,18 @@ fn api_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr> {
     .map_err(|e| anyhow!("error parsing arguments: {}", e))
 }
 
-fn tls_files(matches: &clap::ArgMatches) -> Result<(String, String)> {
+fn build_tls_config(matches: &clap::ArgMatches) -> Result<TlsConfig> {
     let cert_file = matches.get_one::<String>("cert-file").unwrap().to_owned();
     let key_file = matches.get_one::<String>("key-file").unwrap().to_owned();
+    let client_ca_cert_file = matches.get_one::<String>("client-ca-file").cloned();
     if cert_file.is_empty() != key_file.is_empty() {
-        Err(anyhow!("error parsing arguments: either both --cert-file and --key-file must be provided, or neither"))
-    } else {
-        Ok((cert_file, key_file))
+        return Err(anyhow!("error parsing arguments: either both --cert-file and --key-file must be provided, or neither"));
     }
+    Ok(TlsConfig {
+        cert_file,
+        key_file,
+        client_ca_cert_file,
+    })
 }
 
 fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, PolicyOrPolicyGroup>> {
