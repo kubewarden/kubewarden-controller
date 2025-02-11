@@ -113,6 +113,13 @@ there.
 
 The following Rancher Helm chart annotations must be present:
 
+- `catalog.cattle.io/certified`: rancher
+- `catalog.cattle.io/ui-component` to `kubewarden`: This is added for custom UI deployment of a chart
+- `catalog.cattle.io/os` to `linux`.
+- `catalog.cattle.io/permits-os` to `linux,windows`
+- `catalog.cattle.io/upstream-version` to `"<version of policy chart>"`: The version
+  of the upstream chart or app. It prevents the unexpected "downgrade" when
+  upgrading an installed chart that uses our 100.x.x+upVersion version schema.
 - `catalog.cattle.io/ui-component: kubewarden`. Added for custom UI deployment of a chart.
 - `catalog.cattle.io/hidden` to `"true"`.
 - `catalog.cattle.io/type` to a new type, `kubewarden-policy`.
@@ -123,8 +130,8 @@ The following Rancher Helm chart annotations must be present:
 
 And the following must be missing:
 
-- `catalog.cattle.io/scope`. Given that we are setting
-  `catalog.cattle.io/hidden` to true, it is not relevant.
+- `catalog.cattle.io/scope`. Given that we are setting `catalog.cattle.io/hidden`
+  to true, it is not relevant.
 
 ### Chart values
 
