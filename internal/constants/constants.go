@@ -14,6 +14,7 @@ const (
 	PolicyServerPort                                = 8443
 	PolicyServerMetricsPortEnvVar                   = "KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT"
 	PolicyServerMetricsPort                         = 8080
+	PolicyServerReadinessProbePort                  = 8081
 	PolicyServerReadinessProbe                      = "/readiness"
 	PolicyServerLogFmtEnvVar                        = "KUBEWARDEN_LOG_FMT"
 
