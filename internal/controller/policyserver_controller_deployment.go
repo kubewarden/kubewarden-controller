@@ -571,6 +571,10 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 				Value: strconv.Itoa(constants.PolicyServerPort),
 			},
 			{
+				Name:  "KUBEWARDEN_READINESS_PROBE_PORT",
+				Value: strconv.Itoa(constants.PolicyServerReadinessProbePort),
+			},
+			{
 				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
 				Value: policyStoreVolumePath,
 			},
@@ -587,8 +591,8 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   constants.PolicyServerReadinessProbe,
-					Port:   intstr.FromInt(constants.PolicyServerPort),
-					Scheme: corev1.URISchemeHTTPS,
+					Port:   intstr.FromInt(constants.PolicyServerReadinessProbePort),
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
 		},
