@@ -225,6 +225,12 @@ As listed in RFC-9, the chart will ship a `questions.yaml` whose content is
 just the already existing `questions-ui.yml` that is being used for
 `artifacthub-pkg.yml`.
 
+### Chart changelog
+
+Each policy chart will ship a `CHANGELOG.md` file just like the usual Kubewarden charts do.
+The contents of this file are created via the `make generate-changelog-file` target,
+which use the URL listed in the metadata.yml annotation `io.kubewarden.policy.source`.
+
 ### Chart artifacts
 
 The policy Helm charts must contain a `policylist.txt` file in the shipped tgz chart,
