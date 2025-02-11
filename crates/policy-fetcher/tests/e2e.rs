@@ -4,19 +4,31 @@
 // the tests on macOS.
 #[cfg(not(target_os = "macos"))]
 mod e2e {
+    use std::{
+        collections::{HashMap, HashSet},
+        fs, path,
+        str::FromStr,
+        sync::Arc,
+    };
 
     use base64::prelude::{Engine as _, BASE64_STANDARD_NO_PAD};
     use oci_client::{client::ImageData, manifest, secrets::RegistryAuth, Client, Reference};
-    use policy_fetcher::registry::Registry;
-    use policy_fetcher::verify::fetch_sigstore_remote_data;
-    use sigstore::cosign::{
-        constraint::PrivateKeySigner,
-        verification_constraint::{PublicKeyVerifier, VerificationConstraint},
-        {self, ClientBuilder, Constraint, CosignCapabilities, SignatureLayer},
+    use policy_fetcher::{
+        registry::Registry,
+        sources::{Certificate, SourceAuthorities, Sources},
+        verify::fetch_sigstore_remote_data,
     };
-    use sigstore::crypto::SigningScheme;
-    use sigstore::registry::{Auth, ClientConfig, ClientProtocol, OciReference};
-    use std::{fs, path, str::FromStr, sync::Arc};
+    use rcgen::{generate_simple_self_signed, CertifiedKey};
+    use sigstore::{
+        cosign::{
+            self,
+            constraint::PrivateKeySigner,
+            verification_constraint::{PublicKeyVerifier, VerificationConstraint},
+            ClientBuilder, Constraint, CosignCapabilities, SignatureLayer,
+        },
+        crypto::SigningScheme,
+        registry::{Auth, ClientConfig, ClientProtocol, OciReference},
+    };
     use tempfile::TempDir;
     use testcontainers::{
         core::Mount, core::WaitFor, runners::AsyncRunner, ContainerRequest, GenericImage, ImageExt,
@@ -31,10 +43,7 @@ mod e2e {
     const REGISTRY_PORT: u16 = 5000;
 
     /// Signs the given image reference and pushes the signature to the registry on the given port
-    async fn sign_image<'a>(
-        port: u16,
-        image_reference: &Reference,
-    ) -> Box<dyn VerificationConstraint> {
+    async fn sign_image(port: u16, image_reference: &Reference) -> Box<dyn VerificationConstraint> {
         let auth = Auth::Basic(REGISTRY_USER.to_string(), REGISTRY_PASSWORD.to_string());
         let mut client = ClientBuilder::default()
             .with_oci_client_config(ClientConfig {
@@ -81,21 +90,78 @@ mod e2e {
         )
     }
 
-    fn setup_registry_image() -> (ContainerRequest<GenericImage>, TempDir) {
-        let auth_dir = TempDir::new().expect("cannot create tmp directory");
-        let htpasswd_path = path::Path::join(auth_dir.path(), "htpasswd");
-        fs::write(htpasswd_path, REGISTRY_CREDENTIALS_BCRYPT).expect("cannot write htpasswd file");
+    #[derive(Default)]
+    struct RegistryConfiguration {
+        enable_auth: bool,
+        enable_tls: bool,
+    }
 
-        let mount = Mount::bind_mount(auth_dir.path().to_string_lossy().to_string(), "/auth");
-        (
-            GenericImage::new("docker.io/library/registry", "2")
-                .with_wait_for(WaitFor::message_on_stderr("listening on "))
-                .with_env_var("REGISTRY_AUTH", "htpasswd")
-                .with_env_var("REGISTRY_AUTH_HTPASSWD_REALM", "Registry Realm")
-                .with_env_var("REGISTRY_AUTH_HTPASSWD_PATH", "/auth/htpasswd")
-                .with_mount(mount),
-            auth_dir,
-        )
+    struct RegistryDetails {
+        container_request: ContainerRequest<GenericImage>,
+        config_dir: Option<TempDir>,
+        certificate: Option<Vec<u8>>,
+    }
+
+    fn setup_registry_image(config: RegistryConfiguration) -> RegistryDetails {
+        let mut env_vars = HashMap::new();
+
+        let config_dir = if config.enable_tls || config.enable_auth {
+            Some(TempDir::new().expect("cannot create temp dir"))
+        } else {
+            None
+        };
+
+        // create the directory, regardless of the auth configuration
+        if config.enable_auth {
+            let auth_dir = config_dir.as_ref().unwrap();
+            let htpasswd_path = path::Path::join(auth_dir.path(), "htpasswd");
+            fs::write(htpasswd_path, REGISTRY_CREDENTIALS_BCRYPT)
+                .expect("cannot write htpasswd file");
+
+            env_vars.insert("REGISTRY_AUTH", "htpasswd");
+            env_vars.insert("REGISTRY_AUTH_HTPASSWD_REALM", "Registry Realm");
+            env_vars.insert("REGISTRY_AUTH_HTPASSWD_PATH", "/config/htpasswd");
+        };
+
+        let certificate = if config.enable_tls {
+            let config_dir = config_dir.as_ref().unwrap();
+            let subject_alt_names = vec!["localhost".to_string()];
+
+            let CertifiedKey { cert, key_pair } =
+                generate_simple_self_signed(subject_alt_names).unwrap();
+
+            fs::write(config_dir.path().join("key.pem"), key_pair.serialize_pem())
+                .expect("cannot write key.pem");
+            fs::write(config_dir.path().join("cert.pem"), cert.pem())
+                .expect("cannot write cert.pem");
+
+            env_vars.insert("REGISTRY_HTTP_TLS_CERTIFICATE", "/config/cert.pem");
+            env_vars.insert("REGISTRY_HTTP_TLS_KEY", "/config/key.pem");
+
+            Some(cert.pem().as_bytes().to_vec())
+        } else {
+            None
+        };
+
+        let mut container_request = GenericImage::new("docker.io/library/registry", "2")
+            .with_wait_for(WaitFor::message_on_stderr("listening on "))
+            .with_env_var("REGISTRY_LOG_LEVEL", "debug");
+
+        if let Some(config_dir) = &config_dir {
+            let mount =
+                Mount::bind_mount(config_dir.path().to_string_lossy().to_string(), "/config");
+            container_request = container_request.with_mount(mount);
+        }
+
+        for (key, value) in env_vars {
+            container_request = container_request.with_env_var(key, value);
+        }
+
+        RegistryDetails {
+            container_request,
+            config_dir,
+            certificate,
+        }
     }
 
     async fn pull_image_from_internet(client: Client) -> ImageData {
@@ -183,11 +249,16 @@ mod e2e {
     #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_fetch_sigstore_data_from_registry_with_authentication() {
-        let (registry_image, auth_dir) = setup_registry_image();
-        let container = registry_image
+        let registry_details = setup_registry_image(RegistryConfiguration {
+            enable_auth: true,
+            enable_tls: false,
+        });
+        let container = registry_details
+            .container_request
             .start()
             .await
             .expect("failed to start registry container");
+        let auth_dir = registry_details.config_dir.expect("auth dir not found");
 
         let port = container
             .get_host_port_ipv4(REGISTRY_PORT)
@@ -245,5 +316,137 @@ mod e2e {
             manifest.config.digest,
             "sha256:bc3511804cb29da6333f0187a333eba13a43a3a0a1737e9b50227a5cf057af74"
         );
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[tokio::test]
+    async fn test_operations_against_http_registry() {
+        use std::collections::HashSet;
+
+        let registry_details = setup_registry_image(RegistryConfiguration {
+            enable_auth: false,
+            enable_tls: false,
+        });
+        let container = registry_details
+            .container_request
+            .start()
+            .await
+            .expect("failed to start registry container");
+
+        let registry_fqdn = format!(
+            "localhost:{}",
+            container.get_host_port_ipv4(REGISTRY_PORT).await.unwrap()
+        );
+        let destination = format!("registry://{}/test-policy:v1", registry_fqdn,);
+
+        let policy = b"\xCA\xFE";
+        let registry = Registry::new();
+
+        // By default we enforce https
+        let sources = Sources::default();
+
+        let result = registry
+            .push(policy, &destination, Some(&sources), None)
+            .await;
+        assert!(result.is_err());
+
+        // configure the registry to be insecure
+        let sources = Sources {
+            insecure_sources: HashSet::from([registry_fqdn]),
+            ..Default::default()
+        };
+
+        push_to_registry_and_perform_common_operations(policy, &registry, &destination, &sources)
+            .await;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[tokio::test]
+    async fn test_operations_against_https_registry() {
+        let registry_details = setup_registry_image(RegistryConfiguration {
+            enable_auth: false,
+            enable_tls: true,
+        });
+        let container = registry_details
+            .container_request
+            .start()
+            .await
+            .expect("failed to start registry container");
+
+        let registry_fqdn = format!(
+            "localhost:{}",
+            container.get_host_port_ipv4(REGISTRY_PORT).await.unwrap()
+        );
+        let destination = format!("registry://{}/test-policy:v1", registry_fqdn,);
+
+        // registry is using self-signed certificate, pushing without having trusted the CA
+        // should fail
+        let policy = b"\xCA\xFE";
+
+        let registry = Registry::new();
+        let sources = Sources::default();
+
+        let result = registry
+            .push(policy, &destination, Some(&sources), None)
+            .await;
+
+        assert!(result.is_err());
+
+        // add the self-signed certificate to the trusted certificates
+        let source_authorities = SourceAuthorities(
+            [(
+                registry_fqdn.clone(),
+                vec![Certificate::Pem(
+                    registry_details.certificate.as_ref().unwrap().clone(),
+                )],
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+        );
+        let sources = Sources {
+            source_authorities,
+            ..Default::default()
+        };
+
+        push_to_registry_and_perform_common_operations(policy, &registry, &destination, &sources)
+            .await;
+
+        // configure the client to ignore certificate errors for the registry
+        let sources = Sources {
+            insecure_sources: HashSet::from([registry_fqdn]),
+            ..Default::default()
+        };
+
+        let result = registry
+            .push(policy, &destination, Some(&sources), None)
+            .await;
+        assert!(result.is_ok(), "did not expect this error: {:?}", result);
+
+        push_to_registry_and_perform_common_operations(policy, &registry, &destination, &sources)
+            .await;
+    }
+
+    async fn push_to_registry_and_perform_common_operations(
+        policy: &[u8],
+        registry: &Registry,
+        destination: &str,
+        sources: &Sources,
+    ) {
+        let result = registry
+            .push(policy, destination, Some(sources), None)
+            .await;
+        assert!(result.is_ok(), "did not expect this error: {:?}", result);
+
+        let result = registry.manifest(destination, Some(sources)).await;
+        assert!(result.is_ok(), "did not expect this error: {:?}", result);
+
+        let result = registry.manifest_digest(destination, Some(sources)).await;
+        assert!(result.is_ok(), "did not expect this error: {:?}", result);
+
+        let result = registry
+            .manifest_and_config(destination, Some(sources))
+            .await;
+        assert!(result.is_ok(), "did not expect this error: {:?}", result);
     }
 }

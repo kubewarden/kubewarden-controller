@@ -80,7 +80,7 @@ struct RawSources {
 struct RawCertificate(#[serde(with = "serde_bytes")] Vec<u8>);
 
 #[derive(Clone, Debug, Default)]
-struct SourceAuthorities(HashMap<String, Vec<Certificate>>);
+pub struct SourceAuthorities(pub HashMap<String, Vec<Certificate>>);
 
 impl TryFrom<RawSourceAuthorities> for SourceAuthorities {
     type Error = SourceError;
@@ -105,8 +105,8 @@ impl TryFrom<RawSourceAuthorities> for SourceAuthorities {
 
 #[derive(Clone, Debug, Default)]
 pub struct Sources {
-    insecure_sources: HashSet<String>,
-    source_authorities: SourceAuthorities,
+    pub insecure_sources: HashSet<String>,
+    pub source_authorities: SourceAuthorities,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
