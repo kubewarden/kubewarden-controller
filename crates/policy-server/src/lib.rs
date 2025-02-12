@@ -33,11 +33,16 @@ use policy_evaluator::{
 use profiling::activate_memory_profiling;
 use rayon::prelude::*;
 use std::{fs, net::SocketAddr, sync::Arc};
+use std::{fs::File, io::BufReader};
 use tokio::{
     sync::{oneshot, Notify, Semaphore},
     time,
 };
 use tower_http::trace::{self, TraceLayer};
+
+use rustls::{server::WebPkiClientVerifier, RootCertStore, ServerConfig};
+use rustls_pemfile::Item;
+use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 
 // This is required by certificate hot reload when using inotify, which is available only on linux
 #[cfg(target_os = "linux")]
@@ -286,21 +291,14 @@ impl PolicyServer {
     }
 }
 
-// Load the ServerConfig to be used by the Policy Server configuring the server
-// certificate and mTLS when necessary
-//
-// RustlsConfig does not offer a function to load the client CA certificate together with the
-// service certificates. Therefore, we need to load everything and build the ServerConfig
+/// Load the ServerConfig to be used by the Policy Server configuring the server
+/// certificate and mTLS when necessary
+///
+/// RustlsConfig does not offer a function to load the client CA certificate together with the
+/// service certificates. Therefore, we need to load everything and build the ServerConfig
 async fn build_tls_server_config(tls_config: &TlsConfig) -> Result<rustls::ServerConfig> {
-    use std::{fs::File, io::BufReader};
-
-    use rustls::{server::WebPkiClientVerifier, RootCertStore, ServerConfig};
-    use rustls_pemfile::Item;
-    use rustls_pki_types::{CertificateDer, PrivateKeyDer};
-
-    let cert_file = &mut BufReader::new(File::open(tls_config.cert_file.clone())?);
-    let key_file = &mut BufReader::new(File::open(tls_config.key_file.clone())?);
-    let cert: Vec<CertificateDer> = rustls_pemfile::certs(cert_file)
+    let cert_reader = &mut BufReader::new(File::open(tls_config.cert_file.clone())?);
+    let cert: Vec<CertificateDer> = rustls_pemfile::certs(cert_reader)
         .filter_map(|it| {
             if let Err(ref e) = it {
                 warn!("Cannot parse certificate: {e}");
@@ -312,7 +310,9 @@ async fn build_tls_server_config(tls_config: &TlsConfig) -> Result<rustls::Serve
     if cert.len() > 1 {
         return Err(anyhow!("Multiple certificates provided in cert file"));
     }
-    let mut key_vec: Vec<Vec<u8>> = rustls_pemfile::read_all(key_file)
+
+    let key_file_reader = &mut BufReader::new(File::open(tls_config.key_file.clone())?);
+    let mut key_vec: Vec<Vec<u8>> = rustls_pemfile::read_all(key_file_reader)
         .filter_map(|i| match i.ok()? {
             Item::Sec1Key(key) => Some(key.secret_sec1_der().to_vec()),
             Item::Pkcs1Key(key) => Some(key.secret_pkcs1_der().to_vec()),
@@ -332,12 +332,12 @@ async fn build_tls_server_config(tls_config: &TlsConfig) -> Result<rustls::Serve
     let key = PrivateKeyDer::try_from(key_vec.pop().unwrap())
         .map_err(|e| anyhow!("Cannot parse server key: {e}"))?;
 
-    let config = if let Some(client_ca_cert_file_path) = tls_config.client_ca_cert_file.clone() {
+    if let Some(client_ca_file) = tls_config.client_ca_file.clone() {
         // we have the client CA. Therefore, we should enable mTLS.
-        let client_ca_cert_file = &mut BufReader::new(File::open(client_ca_cert_file_path)?);
+        let client_ca_reader = &mut BufReader::new(File::open(client_ca_file)?);
 
-        let mut ca_certs = RootCertStore::empty();
-        let client_ca_certs: Vec<_> = rustls_pemfile::certs(client_ca_cert_file)
+        let mut store = RootCertStore::empty();
+        let client_ca_certs: Vec<_> = rustls_pemfile::certs(client_ca_reader)
             .filter_map(|it| {
                 if let Err(ref e) = it {
                     warn!("Cannot parse client CA certificate: {e}");
@@ -345,23 +345,22 @@ async fn build_tls_server_config(tls_config: &TlsConfig) -> Result<rustls::Serve
                 it.ok()
             })
             .collect();
-        let (cert_added, cert_ignored) = ca_certs.add_parsable_certificates(client_ca_certs);
+        let (cert_added, cert_ignored) = store.add_parsable_certificates(client_ca_certs);
         info!(
             client_ca_certs_added = cert_added,
             client_ca_certs_ignored = cert_ignored,
             "Loaded client CA certificates"
         );
-        let client_verifier = WebPkiClientVerifier::builder(Arc::new(ca_certs)).build()?;
+        let client_verifier = WebPkiClientVerifier::builder(Arc::new(store)).build()?;
 
-        ServerConfig::builder()
+        return Ok(ServerConfig::builder()
             .with_client_cert_verifier(client_verifier)
-            .with_single_cert(cert, key)?
-    } else {
-        ServerConfig::builder()
-            .with_no_client_auth()
-            .with_single_cert(cert, key)?
-    };
-    Ok(config)
+            .with_single_cert(cert, key)?);
+    }
+
+    Ok(ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(cert, key)?)
 }
 
 /// There's no watching of the certificate files on non-linux platforms
@@ -386,10 +385,6 @@ async fn create_tls_config_and_watch_certificate_changes(
 ) -> Result<RustlsConfig> {
     use ::tracing::error;
 
-    let cert_file_path = tls_config.cert_file.clone();
-    let key_file_path = tls_config.key_file.clone();
-    let client_ca_cert_path = tls_config.client_ca_cert_file.clone();
-
     let config = build_tls_server_config(&tls_config).await?;
 
     let rust_config = RustlsConfig::from_config(Arc::new(config));
@@ -399,19 +394,22 @@ async fn create_tls_config_and_watch_certificate_changes(
         inotify::Inotify::init().map_err(|e| anyhow!("Cannot initialize inotify: {e}"))?;
     let cert_watch = inotify
         .watches()
-        .add(cert_file_path.clone(), inotify::WatchMask::CLOSE_WRITE)
+        .add(
+            tls_config.cert_file.clone(),
+            inotify::WatchMask::CLOSE_WRITE,
+        )
         .map_err(|e| anyhow!("Cannot watch certificate file: {e}"))?;
     let key_watch = inotify
         .watches()
-        .add(key_file_path.clone(), inotify::WatchMask::CLOSE_WRITE)
+        .add(tls_config.key_file.clone(), inotify::WatchMask::CLOSE_WRITE)
         .map_err(|e| anyhow!("Cannot watch key file: {e}"))?;
 
     let mut client_cert_watch = None;
-    if let Some(ref client_cert_file) = client_ca_cert_path {
+    if let Some(ref client_ca_file) = tls_config.client_ca_file {
         client_cert_watch = Some(
             inotify
                 .watches()
-                .add(client_cert_file.clone(), inotify::WatchMask::CLOSE_WRITE)
+                .add(client_ca_file, inotify::WatchMask::CLOSE_WRITE)
                 .map_err(|e| anyhow!("Cannot watch client certificate file: {e}"))?,
         );
     }

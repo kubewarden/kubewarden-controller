@@ -54,7 +54,7 @@ pub struct Config {
 pub struct TlsConfig {
     pub cert_file: String,
     pub key_file: String,
-    pub client_ca_cert_file: Option<String>,
+    pub client_ca_file: Option<String>,
 }
 
 impl Config {
@@ -192,13 +192,13 @@ fn readiness_probe_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr
 fn build_tls_config(matches: &clap::ArgMatches) -> Result<Option<TlsConfig>> {
     let cert_file = matches.get_one::<String>("cert-file").cloned();
     let key_file = matches.get_one::<String>("key-file").cloned();
-    let client_ca_cert_file = matches.get_one::<String>("client-ca-file").cloned();
+    let client_ca_file = matches.get_one::<String>("client-ca-file").cloned();
 
-    match (cert_file, key_file, &client_ca_cert_file) {
+    match (cert_file, key_file, &client_ca_file) {
         (Some(cert_file), Some(key_file), _) => Ok(Some(TlsConfig {
             cert_file,
             key_file,
-            client_ca_cert_file,
+            client_ca_file,
         })),
         // No TLS configuration provided
         (None, None, None) => Ok(None),
