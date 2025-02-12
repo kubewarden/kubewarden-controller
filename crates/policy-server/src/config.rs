@@ -130,7 +130,7 @@ impl Config {
             .expect("clap should have assigned a default value")
             .to_owned();
 
-        let tls_config = Some(build_tls_config(matches)?);
+        let tls_config = build_tls_config(matches)?;
 
         let enable_pprof = matches
             .get_one::<bool>("enable-pprof")
@@ -189,18 +189,28 @@ fn readiness_probe_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr
     .map_err(|e| anyhow!("error parsing arguments: {}", e))
 }
 
-fn build_tls_config(matches: &clap::ArgMatches) -> Result<TlsConfig> {
-    let cert_file = matches.get_one::<String>("cert-file").unwrap().to_owned();
-    let key_file = matches.get_one::<String>("key-file").unwrap().to_owned();
+fn build_tls_config(matches: &clap::ArgMatches) -> Result<Option<TlsConfig>> {
+    let cert_file = matches.get_one::<String>("cert-file").cloned();
+    let key_file = matches.get_one::<String>("key-file").cloned();
     let client_ca_cert_file = matches.get_one::<String>("client-ca-file").cloned();
-    if cert_file.is_empty() != key_file.is_empty() {
-        return Err(anyhow!("error parsing arguments: either both --cert-file and --key-file must be provided, or neither"));
+
+    match (cert_file, key_file, &client_ca_cert_file) {
+        (Some(cert_file), Some(key_file), _) => Ok(Some(TlsConfig {
+            cert_file,
+            key_file,
+            client_ca_cert_file,
+        })),
+        // No TLS configuration provided
+        (None, None, None) => Ok(None),
+        // Client CA certificate provided without server certificate and key
+        (None, None, Some(_)) => Err(anyhow!(
+            "client CA certificate requires server certificate and key to be specified"
+        )),
+        // Server certificate or key provided without the other
+        (Some(_), None, _) | (None, Some(_), _) => Err(anyhow!(
+            "both certificate and key must be provided together"
+        )),
     }
-    Ok(TlsConfig {
-        cert_file,
-        key_file,
-        client_ca_cert_file,
-    })
 }
 
 fn policies(matches: &clap::ArgMatches) -> Result<HashMap<String, PolicyOrPolicyGroup>> {
