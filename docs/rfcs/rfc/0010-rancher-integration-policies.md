@@ -51,6 +51,22 @@ Problems to solve:
 
 [design]: #detailed-design
 
+## For 3rd party artifacts
+
+Use the provided [artifacthub.io public API](https://artifacthub.io/docs/api/).
+Currently, the Artifact Hub API provides [`GET
+/packages/search`](https://artifacthub.io/docs/api/#/Packages/searchPackages),
+where one can set the `repository kind` to `Kubewarden policies`. With this call
+one can obtain the list of Kubewarden policies. One would then query for each of
+the policies with [GET
+/packages/kubewarden/{repoName}/{packageName}](https://artifacthub.io/docs/api/#/Packages/getKubewardenPoliciesDetails),
+and obtain its `name`, `version`, `signed` status, and `data/kubewarden-*`
+information.
+
+Artifacts owned by the Kubewarden team are also present in Artifact Hub. Still,
+they have different provenance, therefore, different support assurances. Hence,
+they should be able to coexist.
+
 ## For policies owned by the Kubewarden team
 
 Follow the process listed in [RFC-9, Rancher integration of Kubewarden
@@ -113,6 +129,13 @@ there.
 
 The following Rancher Helm chart annotations must be present:
 
+- `catalog.cattle.io/certified`: rancher
+- `catalog.cattle.io/ui-component` to `kubewarden`: This is added for custom UI deployment of a chart
+- `catalog.cattle.io/os` to `linux`.
+- `catalog.cattle.io/permits-os` to `linux,windows`
+- `catalog.cattle.io/upstream-version` to `"<version of policy chart>"`: The version
+  of the upstream chart or app. It prevents the unexpected "downgrade" when
+  upgrading an installed chart that uses our 100.x.x+upVersion version schema.
 - `catalog.cattle.io/ui-component: kubewarden`. Added for custom UI deployment of a chart.
 - `catalog.cattle.io/hidden` to `"true"`.
 - `catalog.cattle.io/type` to a new type, `kubewarden-policy`.
@@ -123,8 +146,8 @@ The following Rancher Helm chart annotations must be present:
 
 And the following must be missing:
 
-- `catalog.cattle.io/scope`. Given that we are setting
-  `catalog.cattle.io/hidden` to true, it is not relevant.
+- `catalog.cattle.io/scope`. Given that we are setting `catalog.cattle.io/hidden`
+  to true, it is not relevant.
 
 ### Chart values
 
@@ -143,7 +166,7 @@ module:
 clusterScoped: true # for ClusterAdmissionPolicy, or AdmissionPolicy
 spec:
   mode: "protect"
-  mutating: false
+  mutating: true # only present if it's true
   rules:
     # array as in the CRD spec
   settings:
@@ -156,10 +179,22 @@ object](https://docs.kubewarden.io/reference/CRDs#policyspec).
 
 For `spec.contextAwareResources`, it will be hardcoded on the policy chart template.
 
+Only those values that are actually configurable should be in values.yml and questions.yml.
+For example, if a policy is non mutating, it should not to have a
+`spec.mutating: false` in the values.yml nor questions.yml.
+
 ### Chart template
 
 The `templates/policy.yaml` will match the policy templates shipped in the
-`kubewarden-defaults` Helm chart. As an example:
+`kubewarden-defaults` Helm chart.
+
+- The `spec.module` will be constructed by appending
+  `.Values.global.cattle.systemDefaultRegistry` and `.Values.module.repository`.
+- The `metadata.annotations` for severity and category will be obtained from
+  the policy metadata.yml annotations `io.kubewarden.policy.severity` and
+  `io.kubewarden.policy.category`.
+
+As an example:
 
 ```
 ---
@@ -173,16 +208,20 @@ metadata:
   labels:
     app.kubernetes.io/component: policy
   annotations:
-    io.kubewarden.policy.severity: medium # taken from metadata.yml's annotation io.kubewarden.policy.severity
-    io.kubewarden.policy.category: PSP # taken from metadata.yml's annotation
-  name: {{ .Release.name }}
+    io.kubewarden.policy.severity: {{ index .Chart.Annotations "io.kubewarden.policy.severity" | quote }}
+    io.kubewarden.policy.category: {{ index .Chart.Annotations "io.kubewarden.policy.category" | quote }}
+  name: {{ .Release.Name }} # allows for deploying the same policy several times with different configs
   {{- if eq .Values.clusterScoped false }}
   namespace: {{ .Release.namespace }}
   {{- end }}
 spec:
   module: '{{ .Values.module.repository }}:{{ .Values.module.tag }}'
   mode: {{ .Values.spec.mode }}
+  {{- if eq (index .Chart.Annotations "kubewarden/mutation") "false" }}
+  mutating: false # policy doesn't support mutation
+  {{- else }}
   mutating: {{ .Values.spec.mutating }}
+  {{- end }}
   contextAwareResources: <array of GVK from metadata.yml::contextAwareResources> # optional
   rules:
     {{- toYaml .Values.spec.rules | nindent 4 }}
@@ -202,6 +241,12 @@ As listed in RFC-9, the chart will ship a `questions.yaml` whose content is
 just the already existing `questions-ui.yml` that is being used for
 `artifacthub-pkg.yml`.
 
+### Chart changelog
+
+Each policy chart will ship a `CHANGELOG.md` file just like the usual Kubewarden charts do.
+The contents of this file are created via the `make generate-changelog-file` target,
+which use the URL listed in the metadata.yml annotation `io.kubewarden.policy.source`.
+
 ### Chart artifacts
 
 The policy Helm charts must contain a `policylist.txt` file in the shipped tgz chart,
@@ -209,21 +254,15 @@ analogous to usual Kubewarden Helm charts. For that we must retouch the `make
 generate-policies-file` target and the `extract-policies.sh` script. This
 enforces SLSA and helps in verification of signed Helm charts.
 
-## For 3rd party artifacts
+### Updating the Helm policy chart repository
 
-Use the provided [artifacthub.io public API](https://artifacthub.io/docs/api/).
-Currently, the Artifact Hub API provides [`GET
-/packages/search`](https://artifacthub.io/docs/api/#/Packages/searchPackages),
-where one can set the `repository kind` to `Kubewarden policies`. With this call
-one can obtain the list of Kubewarden policies. One would then query for each of
-the policies with [GET
-/packages/kubewarden/{repoName}/{packageName}](https://artifacthub.io/docs/api/#/Packages/getKubewardenPoliciesDetails),
-and obtain its `name`, `version`, `signed` status, and `data/kubewarden-*`
-information.
+To create a new policy chart from a newly released policy version, one needs to
+uniquely relate the policy and the policy chart. This is regardless of the
+policy being a normal one or a monorepo one.
 
-Artifacts owned by the Kubewarden team are also present in Artifact Hub. Still,
-they have different provenance, therefore, different support assurances. Hence,
-they should be able to coexist.
+For that, one needs the name of the policy.
+
+Once a new policy release happens,
 
 # Drawbacks
 
