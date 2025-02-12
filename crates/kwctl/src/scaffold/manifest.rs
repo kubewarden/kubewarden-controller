@@ -1,3 +1,9 @@
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    convert::TryFrom,
+    str::FromStr,
+};
+
 use anyhow::{anyhow, Result};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use policy_evaluator::{
@@ -7,11 +13,6 @@ use policy_evaluator::{
     },
     policy_metadata::Metadata,
     validator::Validate,
-};
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
-    convert::TryFrom,
-    str::FromStr,
 };
 use tracing::warn;
 
@@ -159,7 +160,7 @@ fn get_policy_title_from_cli_or_metadata(
         metadata
             .annotations
             .as_ref()
-            .unwrap_or(&HashMap::new())
+            .unwrap_or(&BTreeMap::new())
             .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
             .map(|s| s.to_string())
     })
@@ -223,7 +224,7 @@ mod tests {
         Metadata {
             protocol_version: None,
             rules: vec![],
-            annotations: Some(HashMap::from([(
+            annotations: Some(BTreeMap::from([(
                 KUBEWARDEN_ANNOTATION_POLICY_TITLE.to_string(),
                 title.to_string(),
             )])),
@@ -240,7 +241,7 @@ mod tests {
         Metadata {
             protocol_version: None,
             rules: vec![],
-            annotations: Some(HashMap::from([
+            annotations: Some(BTreeMap::from([
                 (
                     KUBEWARDEN_ANNOTATION_POLICY_TITLE.to_string(),
                     String::from("test"),
