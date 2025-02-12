@@ -29,7 +29,9 @@ const (
 	sourcesVolumeName                = "sources"
 	verificationConfigVolumeName     = "verification"
 	kubewardenCAVolumeName           = "kubewarden-ca-cert"
+	kubewardenCAVolumePath           = "/ca"
 	clientCAVolumeName               = "client-ca-cert"
+	clientCAVolumePath               = "/client-ca"
 	secretsContainerPath             = "/pki"
 	imagePullSecretVolumeName        = "imagepullsecret"
 	dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
@@ -317,6 +319,16 @@ func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyS
 	)
 
 	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
+
+	admissionContainer.VolumeMounts = append(
+		admissionContainer.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      kubewardenCAVolumeName,
+			MountPath: kubewardenCAVolumePath,
+			ReadOnly:  true,
+		},
+	)
+
 	if r.ClientCAConfigMapName != "" {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.ClientCAConfigMapName, Namespace: r.DeploymentsNamespace}, &corev1.ConfigMap{}); err != nil {
 			return fmt.Errorf("failed to fetch client CA config map: %w", err)
@@ -342,19 +354,28 @@ func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyS
 			},
 		)
 
+		admissionContainer.VolumeMounts = append(
+			admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      clientCAVolumeName,
+				MountPath: clientCAVolumePath,
+				ReadOnly:  true,
+			},
+		)
+
+		kubewardenCAPath := filepath.Join(kubewardenCAVolumePath, constants.CARootCert)
+		clientCAPath := filepath.Join(clientCAVolumePath, constants.ClientCACert)
 		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
 			Name:  "KUBEWARDEN_CLIENT_CA_FILE",
-			Value: fmt.Sprintf("%s,%s", constants.CARootCert, constants.ClientCACert),
+			Value: fmt.Sprintf("%s,%s", kubewardenCAPath, clientCAPath),
 		})
-
 		return nil
 	}
 
 	admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
 		Name:  "KUBEWARDEN_CLIENT_CA_FILE",
-		Value: constants.CARootCert,
+		Value: filepath.Join(kubewardenCAVolumePath, constants.CARootCert),
 	})
-
 	return nil
 }
 

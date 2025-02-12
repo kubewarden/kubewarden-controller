@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -667,10 +668,12 @@ var _ = Describe("PolicyServer controller", func() {
 
 			container := deployment.Spec.Template.Spec.Containers[0]
 
+			kubewardenCAPath := filepath.Join(kubewardenCAVolumePath, constants.CARootCert)
+			clientCAPath := filepath.Join(clientCAVolumePath, constants.ClientCACert)
 			By("specifing the client ca certificate")
 			Expect(container.Env).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Name":  Equal("KUBEWARDEN_CLIENT_CA_FILE"),
-				"Value": Equal(fmt.Sprintf("%s,%s", constants.CARootCert, constants.ClientCACert)),
+				"Value": Equal(fmt.Sprintf("%s,%s", kubewardenCAPath, clientCAPath)),
 			})))
 
 			By("mounting the kubewarden CA Secret")
@@ -685,6 +688,10 @@ var _ = Describe("PolicyServer controller", func() {
 						})),
 					})),
 				}),
+			})))
+			Expect(container.VolumeMounts).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Name":      Equal(kubewardenCAVolumeName),
+				"MountPath": Equal(kubewardenCAVolumePath),
 			})))
 
 			By("mounting the client CA ConfigMap")
@@ -701,6 +708,10 @@ var _ = Describe("PolicyServer controller", func() {
 						})),
 					})),
 				}),
+			})))
+			Expect(container.VolumeMounts).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Name":      Equal(clientCAVolumeName),
+				"MountPath": Equal(clientCAVolumePath),
 			})))
 		})
 
