@@ -84,21 +84,18 @@ pub(crate) fn build_cli() -> Command {
         Arg::new("cert-file")
             .long("cert-file")
             .value_name("CERT_FILE")
-            .default_value("")
             .env("KUBEWARDEN_CERT_FILE")
             .help("Path to an X.509 certificate file for HTTPS"),
 
         Arg::new("key-file")
             .long("key-file")
             .value_name("KEY_FILE")
-            .default_value("")
             .env("KUBEWARDEN_KEY_FILE")
             .help("Path to an X.509 private key file for HTTPS"),
 
         Arg::new("client-ca-file")
             .long("client-ca-file")
             .value_name("CLIENT_CA_FILE")
-            .default_value("")
             .env("KUBEWARDEN_CLIENT_CA_FILE")
             .help("Path to an CA certificate file that issued the client certificate. Required to enable mTLS"),
 

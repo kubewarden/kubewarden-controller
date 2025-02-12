@@ -688,7 +688,7 @@ async fn test_detect_certificate_rotation() {
     config.tls_config = Some(policy_server::config::TlsConfig {
         cert_file: cert_file.to_str().unwrap().to_owned(),
         key_file: key_file.to_str().unwrap().to_owned(),
-        client_ca_cert_file: Some(client_ca.to_str().unwrap().to_owned()),
+        client_ca_file: Some(client_ca.to_str().unwrap().to_owned()),
     });
     config.policies = HashMap::new();
 
