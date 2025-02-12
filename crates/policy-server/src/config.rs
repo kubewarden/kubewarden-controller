@@ -28,6 +28,7 @@ lazy_static! {
 
 pub struct Config {
     pub addr: SocketAddr,
+    pub readiness_probe_addr: SocketAddr,
     pub sources: Option<Sources>,
     pub policies: HashMap<String, PolicyOrPolicyGroup>,
     pub policies_download_dir: PathBuf,
@@ -60,6 +61,7 @@ impl Config {
     pub fn from_args(matches: &ArgMatches) -> Result<Self> {
         // init some variables based on the cli parameters
         let addr = api_bind_address(matches)?;
+        let readiness_probe_addr = readiness_probe_bind_address(matches)?;
 
         let policies = policies(matches)?;
         let policies_download_dir = matches
@@ -142,6 +144,7 @@ impl Config {
 
         Ok(Self {
             addr,
+            readiness_probe_addr,
             sources,
             policies,
             policies_download_dir,
@@ -171,6 +174,16 @@ fn api_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr> {
         "{}:{}",
         matches.get_one::<String>("address").unwrap(),
         matches.get_one::<String>("port").unwrap()
+    )
+    .parse()
+    .map_err(|e| anyhow!("error parsing arguments: {}", e))
+}
+
+fn readiness_probe_bind_address(matches: &clap::ArgMatches) -> Result<SocketAddr> {
+    format!(
+        "{}:{}",
+        matches.get_one::<String>("address").unwrap(),
+        matches.get_one::<String>("readiness-probe-port").unwrap()
     )
     .parse()
     .map_err(|e| anyhow!("error parsing arguments: {}", e))

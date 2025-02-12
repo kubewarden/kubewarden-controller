@@ -106,6 +106,7 @@ pub(crate) fn default_test_config() -> Config {
 
     Config {
         addr: SocketAddr::from(([127, 0, 0, 1], 3001)),
+        readiness_probe_addr: SocketAddr::from(([127, 0, 0, 1], 3002)),
         sources: None,
         policies,
         policies_download_dir: tempdir().unwrap().into_path(),
