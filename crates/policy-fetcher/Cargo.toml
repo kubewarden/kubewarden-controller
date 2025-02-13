@@ -1,59 +1,61 @@
 [package]
-name = "policy-fetcher"
-version = "0.9.0"
 authors = [
-  "Kubewarden Developers <kubewarden@suse.de>",
+  "Fabrizio Sestito <fabrizio.sestito@suse.com>",
   "Flavio Castelli <fcastelli@suse.com>",
+  "Kubewarden Developers <kubewarden@suse.de>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
   "Víctor Cuadrado Juan <vcuadradojuan@suse.de>",
-  "Fabrizio Sestito <fabrizio.sestito@suse.com>",
 ]
 edition = "2021"
+name = "policy-fetcher"
+version = "0.10.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 async-trait = "0.1"
 base64 = "0.22"
+cfg-if = "1.0"
 directories = "6.0"
+docker_credential = "1.2"
+futures = "0.3"
 lazy_static = "1.4"
 oci-client = { version = "0.14", default-features = false, features = [
   "rustls-tls",
 ] }
 path-slash = "0.2"
+rayon = "1.5"
 regex = "1.5"
 reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
 ] }
 rustls = { version = "0.23", default-features = false, features = [
-  "std",
   "ring",
+  "std",
   "tls12",
 ] }
 rustls-pki-types = "1.0.1" # stick to the same version used by sigstore
 serde = { version = "1.0", features = ["derive"] }
+serde_bytes = "0.11"
 serde_json = "1.0"
 serde_yaml = "0.9"
-serde_bytes = "0.11"
 sha2 = "0.10"
 sigstore = { version = "0.11.0", default-features = false, features = [
-  "sigstore-trust-root-rustls-tls",
-  "cosign-rustls-tls",
   "cached-client",
+  "cosign-rustls-tls",
+  "sigstore-trust-root-rustls-tls",
 ] }
 thiserror = "2.0"
+tokio = { version = "1", default-features = false }
 tracing = "0.1"
 url = { version = "2.2", features = ["serde"] }
 walkdir = "2.5"
-rayon = "1.5"
-docker_credential = "1.2"
-tokio = { version = "1", default-features = false }
-cfg-if = "1.0"
 x509-parser = "0.17"
 
 [dev-dependencies]
-rstest = "0.24"
-tempfile = "3.2"
-textwrap = "0.16"
+anyhow         = "1.0"
+rcgen          = "0.13"
+rstest         = "0.24"
+tempfile       = "3.2"
 testcontainers = { version = "0.23", features = ["http_wait"] }
-anyhow = "1.0"
+textwrap       = "0.16"

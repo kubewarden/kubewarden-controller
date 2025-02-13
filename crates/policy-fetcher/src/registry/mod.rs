@@ -1,5 +1,9 @@
+use std::{collections::BTreeMap, convert::TryFrom, str::FromStr};
+
 use async_trait::async_trait;
 use docker_credential::DockerCredential;
+use errors::RegistryError;
+use futures::future::BoxFuture;
 use lazy_static::lazy_static;
 use oci_client::{
     client::{
@@ -11,22 +15,14 @@ use oci_client::{
     Reference,
 };
 use regex::Regex;
-use std::convert::TryFrom;
-use std::str::FromStr;
 use tracing::{debug, info, warn};
 use url::Url;
 
 use crate::{
-    fetcher::TlsVerificationMode,
-    sources::{Certificate, SourceResult, Sources},
+    fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode},
+    registry::errors::RegistryResult,
+    sources::{Certificate, SourceError, SourceResult, Sources},
 };
-use crate::{
-    fetcher::{ClientProtocol, PolicyFetcher},
-    sources::SourceError,
-};
-use errors::RegistryError;
-
-use self::errors::RegistryResult;
 
 pub mod errors;
 
@@ -93,6 +89,45 @@ impl From<ClientProtocol> for ClientConfig {
     }
 }
 
+/// Perform the given operation using different protocols. This is done because we want to use
+/// following behavior:
+/// - Try with HTTPS, using either the system CA certificates or the custom ones provided by the user
+/// - If the connection fails, check if the destination was marked as insecure. If that's the case,
+///   try again, this time disabling TLS verification
+/// - If the connection still fails, try one last time, this time using HTTP instead of HTTPS
+async fn try_with_protocols<'a, F, T>(
+    url: &'a Url,
+    sources: &'a Sources,
+    operation: F,
+) -> RegistryResult<T>
+where
+    F: Fn(ClientProtocol) -> BoxFuture<'a, RegistryResult<T>>,
+{
+    let client_protocol = crate::client_protocol(url, sources)?;
+    match operation(client_protocol.clone()).await {
+        Ok(result) => return Ok(result),
+        Err(err) => {
+            if !sources.is_insecure_source(&crate::host_and_port(url)?) {
+                return Err(err);
+            }
+            info!(%err, %client_protocol, insecure_source = true, "operation failed");
+        }
+    }
+
+    // try again, this time disabling TLS verification because this source is marked as insecure
+    let client_protocol = ClientProtocol::Https(TlsVerificationMode::NoTlsVerification);
+    match operation(client_protocol.clone()).await {
+        Ok(result) => return Ok(result),
+        Err(err) => {
+            info!(%err, %client_protocol, insecure_source = true, "operation failed");
+        }
+    }
+
+    // try one last time, this time using HTTP instead of HTTPS. That because this source is marked as insecure
+    let client_protocol = ClientProtocol::Http;
+    operation(client_protocol).await
+}
+
 impl Registry {
     pub fn new() -> Registry {
         Registry {}
@@ -137,13 +172,22 @@ impl Registry {
         let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
         let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
-        let cp = crate::client_protocol(&url, &sources)?;
 
-        let (m, _) = Registry::client(cp)
-            .pull_manifest(&reference, &registry_auth)
-            .await?;
+        let (oci_manifest, _) = try_with_protocols(&url, &sources, |client_protocol| {
+            Box::pin({
+                let reference = reference.clone();
+                let registry_auth = registry_auth.clone();
+                async move {
+                    let res = Registry::client(client_protocol)
+                        .pull_manifest(&reference, &registry_auth)
+                        .await?;
+                    Ok(res)
+                }
+            })
+        })
+        .await?;
 
-        Ok(m)
+        Ok(oci_manifest)
     }
 
     /// Fetch the manifest's digest of the OCI object referenced by the given url.
@@ -159,11 +203,22 @@ impl Registry {
         let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
         let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
-        let cp = crate::client_protocol(&url, &sources)?;
 
-        Ok(Registry::client(cp)
-            .fetch_manifest_digest(&reference, &registry_auth)
-            .await?)
+        let digest = try_with_protocols(&url, &sources, |client_protocol| {
+            Box::pin({
+                let reference = reference.clone();
+                let registry_auth = registry_auth.clone();
+                async move {
+                    let res = Registry::client(client_protocol)
+                        .fetch_manifest_digest(&reference, &registry_auth)
+                        .await?;
+                    Ok(res)
+                }
+            })
+        })
+        .await?;
+
+        Ok(digest)
     }
 
     /// Push the policy to the OCI registry specified by `url`.
@@ -175,6 +230,7 @@ impl Registry {
         policy: &[u8],
         destination: &str,
         sources: Option<&Sources>,
+        annotations: Option<BTreeMap<String, String>>,
     ) -> RegistryResult<String> {
         let url = Url::parse(destination)
             .map_err(|_| crate::errors::InvalidURLError(destination.to_owned()))?;
@@ -183,29 +239,19 @@ impl Registry {
             .strip_prefix("registry://")
             .ok_or_else(|| RegistryError::InvalidDestinationError)?;
 
-        let client_protocol = crate::client_protocol(&url, &sources)?;
-        match self.do_push(policy, &url, client_protocol.clone()).await {
-            Ok(manifest_url) => {
-                return build_immutable_ref(destination, &manifest_url);
-            }
-            Err(err) => {
-                if !sources.is_insecure_source(&crate::host_and_port(&url)?) {
-                    return Err(err);
+        let manifest_url = try_with_protocols(&url.clone(), &sources, |client_protocol| {
+            Box::pin({
+                let url = url.clone();
+                let annotations = annotations.clone();
+                async move {
+                    let res = self
+                        .do_push(policy, &url, annotations.as_ref(), client_protocol.clone())
+                        .await?;
+                    Ok(res)
                 }
-                info!(%err, %client_protocol, insecure_source = true, "push failed");
-            }
-        }
-
-        let client_protocol = ClientProtocol::Https(TlsVerificationMode::NoTlsVerification);
-        match self.do_push(policy, &url, client_protocol.clone()).await {
-            Ok(manifest_url) => return build_immutable_ref(destination, &manifest_url),
-            Err(err) => {
-                info!(%err, %client_protocol, insecure_source = true, "push failed");
-            }
-        }
-
-        let manifest_url = self.do_push(policy, &url, ClientProtocol::Http).await?;
-
+            })
+        })
+        .await?;
         build_immutable_ref(destination, &manifest_url)
     }
 
@@ -213,6 +259,7 @@ impl Registry {
         &self,
         policy: &[u8],
         url: &Url,
+        annotations: Option<&BTreeMap<String, String>>,
         client_protocol: ClientProtocol,
     ) -> RegistryResult<String> {
         warn!(client_protocol = ?client_protocol, "pushing policy");
@@ -233,7 +280,9 @@ impl Registry {
             annotations: None,
         };
 
-        let image_manifest = manifest::OciImageManifest::build(&layers, &config, None);
+        let image_manifest =
+            manifest::OciImageManifest::build(&layers, &config, annotations.cloned());
+
         Ok(Registry::client(client_protocol)
             .push(
                 &reference,
@@ -245,6 +294,7 @@ impl Registry {
             .await
             .map(|push_response| push_response.manifest_url)?)
     }
+
     /// Fetch the manifest, its digest and container image configuration of the OCI object referenced by the given url.
     pub async fn manifest_and_config(
         &self,
@@ -259,11 +309,21 @@ impl Registry {
         let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
         let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
-        let cp = crate::client_protocol(&url, &sources)?;
 
-        let (manifest, digest, config) = Registry::client(cp)
-            .pull_manifest_and_config(&reference, &registry_auth)
-            .await?;
+        let (manifest, digest, config) = try_with_protocols(&url, &sources, |client_protocol| {
+            Box::pin({
+                let reference = reference.clone();
+                let registry_auth = registry_auth.clone();
+                async move {
+                    let res = Registry::client(client_protocol)
+                        .pull_manifest_and_config(&reference, &registry_auth)
+                        .await?;
+                    Ok(res)
+                }
+            })
+        })
+        .await?;
+
         let config_json = serde_json::from_str(&config)?;
 
         Ok((manifest, digest, config_json))
