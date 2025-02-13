@@ -1,15 +1,17 @@
+use std::{
+    collections::{BTreeMap, BTreeSet, HashSet},
+    fmt::{self, Display},
+    path::Path,
+};
+
 use k8s_openapi::api::admissionregistration::v1::NamedRuleWithOperations;
 use kubewarden_policy_sdk::metadata::ProtocolVersion;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::fmt::{self, Display};
-use std::path::Path;
 use validator::{Validate, ValidationError};
 use wasmparser::{Parser, Payload};
 
-use crate::errors::MetadataError;
-use crate::policy_evaluator::PolicyExecutionMode;
+use crate::{errors::MetadataError, policy_evaluator::PolicyExecutionMode};
 
 #[derive(Deserialize, Serialize, Debug, Clone, Hash, Eq, PartialEq)]
 pub enum Operation {
@@ -191,7 +193,7 @@ pub struct Metadata {
     #[validate(nested)]
     pub rules: Vec<Rule>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<HashMap<String, String>>,
+    pub annotations: Option<BTreeMap<String, String>>,
     pub mutating: bool,
     #[serde(default = "_default_true")]
     pub background_audit: bool,
@@ -215,7 +217,7 @@ impl Default for Metadata {
         Self {
             protocol_version: None,
             rules: vec![],
-            annotations: Some(HashMap::new()),
+            annotations: Some(BTreeMap::new()),
             mutating: false,
             background_audit: true,
             execution_mode: PolicyExecutionMode::KubewardenWapc,
@@ -450,7 +452,7 @@ mod tests {
             operations: vec![Operation::Create],
         };
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -504,7 +506,7 @@ mod tests {
             operations: vec![Operation::Create],
         };
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -531,7 +533,7 @@ mod tests {
             operations: vec![Operation::Create],
         };
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -558,7 +560,7 @@ mod tests {
             operations: vec![Operation::Create],
         };
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -584,7 +586,7 @@ mod tests {
             operations: vec![Operation::Create],
         };
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -610,7 +612,7 @@ mod tests {
             operations: vec![Operation::Create],
         };
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -636,7 +638,7 @@ mod tests {
             operations: vec![Operation::Create],
         };
 
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -655,7 +657,7 @@ mod tests {
 
     #[test]
     fn validate_context_aware_resource_without_api_group() {
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),
@@ -679,7 +681,7 @@ mod tests {
 
     #[test]
     fn validate_context_aware_resource_without_kind() {
-        let mut annotations: HashMap<String, String> = HashMap::new();
+        let mut annotations: BTreeMap<String, String> = BTreeMap::new();
         annotations.insert(
             String::from("io.kubewarden.policy.author"),
             String::from("Flavio Castelli"),

@@ -2,7 +2,7 @@ use email_address::*;
 use policy_fetcher::oci_client::{ParseError, Reference};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -211,7 +211,7 @@ impl ArtifactHubPkg {
     }
 }
 
-fn parse_name(metadata_annots: &HashMap<String, String>) -> Result<String> {
+fn parse_name(metadata_annots: &BTreeMap<String, String>) -> Result<String> {
     metadata_annots
         .get(KUBEWARDEN_ANNOTATION_POLICY_TITLE)
         .ok_or_else(|| {
@@ -220,7 +220,7 @@ fn parse_name(metadata_annots: &HashMap<String, String>) -> Result<String> {
         .cloned()
 }
 
-fn parse_display_name(metadata_annots: &HashMap<String, String>) -> Result<String> {
+fn parse_display_name(metadata_annots: &BTreeMap<String, String>) -> Result<String> {
     metadata_annots
         .get(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME)
         .ok_or_else(|| {
@@ -231,7 +231,7 @@ fn parse_display_name(metadata_annots: &HashMap<String, String>) -> Result<Strin
         .cloned()
 }
 
-fn parse_description(metadata_annots: &HashMap<String, String>) -> Result<String> {
+fn parse_description(metadata_annots: &BTreeMap<String, String>) -> Result<String> {
     metadata_annots
         .get(KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION)
         .ok_or_else(|| {
@@ -242,7 +242,7 @@ fn parse_description(metadata_annots: &HashMap<String, String>) -> Result<String
         .cloned()
 }
 
-fn parse_home_url(metadata_annots: &HashMap<String, String>) -> Result<Option<Url>> {
+fn parse_home_url(metadata_annots: &BTreeMap<String, String>) -> Result<Option<Url>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_URL) {
         Some(s) => {
             let url = Url::parse(s).map_err(|e| ArtifactHubError::MalformedURL {
@@ -256,7 +256,7 @@ fn parse_home_url(metadata_annots: &HashMap<String, String>) -> Result<Option<Ur
 }
 
 fn parse_oci_url(
-    metadata_annots: &HashMap<String, String>,
+    metadata_annots: &BTreeMap<String, String>,
     version: &Version,
 ) -> Result<Option<String>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_OCIURL) {
@@ -275,7 +275,7 @@ fn parse_oci_url(
 }
 
 fn parse_containers_images(
-    metadata_annots: &HashMap<String, String>,
+    metadata_annots: &BTreeMap<String, String>,
     version: &Version,
 ) -> Result<Option<Vec<ContainerImage>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_OCIURL) {
@@ -301,7 +301,7 @@ fn parse_containers_images(
 
 /// parses the value of annotation KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS of
 /// csv of keywords into a vector of keywords, making sure is well formed
-fn parse_keywords(metadata_annots: &HashMap<String, String>) -> Result<Option<Vec<String>>> {
+fn parse_keywords(metadata_annots: &BTreeMap<String, String>) -> Result<Option<Vec<String>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS) {
         Some(s) => {
             let csv = s
@@ -325,7 +325,7 @@ fn parse_keywords(metadata_annots: &HashMap<String, String>) -> Result<Option<Ve
 /// parses the value of annotation KUBEWARDEN_ANNOTATION_POLICY_SOURCE
 /// into a vector of Link, making sure is well formed
 fn parse_links(
-    metadata_annots: &HashMap<String, String>,
+    metadata_annots: &BTreeMap<String, String>,
     version: &Version,
 ) -> Result<Option<Vec<Link>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE) {
@@ -385,7 +385,9 @@ kwctl scaffold manifest -t ClusterAdmissionPolicy registry://{oci_url}
 
 // parses the value of annotation KUBEWARDEN_ANNOTATION_POLICY_AUTHOR into a
 // vector of maintainers, making sure the csv input and emails are well formed
-fn parse_maintainers(metadata_annots: &HashMap<String, String>) -> Result<Option<Vec<Maintainer>>> {
+fn parse_maintainers(
+    metadata_annots: &BTreeMap<String, String>,
+) -> Result<Option<Vec<Maintainer>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR) {
         Some(s) => {
             // name-addr https://www.rfc-editor.org/rfc/rfc5322#section-3.4
@@ -422,7 +424,7 @@ fn parse_maintainers(metadata_annots: &HashMap<String, String>) -> Result<Option
 }
 
 fn parse_annotations(
-    metadata_annots: &HashMap<String, String>,
+    metadata_annots: &BTreeMap<String, String>,
     metadata: &Metadata,
     questions: Option<&str>,
 ) -> Result<BTreeMap<String, String>> {
@@ -477,13 +479,13 @@ mod tests {
     use crate::policy_metadata::{ContextAwareResource, PolicyType};
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
-    use std::collections::{BTreeSet, HashMap};
+    use std::collections::{BTreeMap, BTreeSet};
 
     fn mock_metadata_with_minimum_required() -> Metadata {
         Metadata {
             protocol_version: None,
             rules: vec![],
-            annotations: Some(HashMap::from([
+            annotations: Some(BTreeMap::from([
                 (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
                     String::from("verify-image-signatures"),
@@ -524,7 +526,7 @@ mod tests {
         Metadata {
             protocol_version: None,
             rules: vec![],
-            annotations: Some(HashMap::from([
+            annotations: Some(BTreeMap::from([
                 (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
                     String::from("verify-image-signatures"),
@@ -592,7 +594,7 @@ mod tests {
 
         // check annotations empty
         let metadata = Metadata {
-            annotations: Some(HashMap::from([])),
+            annotations: Some(BTreeMap::from([])),
             ..Default::default()
         };
         let arthub =
@@ -613,7 +615,7 @@ mod tests {
 
         // check questions is some and not empty
         let metadata = Metadata {
-            annotations: Some(HashMap::from([(String::from("foo"), String::from("bar"))])),
+            annotations: Some(BTreeMap::from([(String::from("foo"), String::from("bar"))])),
             ..Default::default()
         };
         let arthub =
@@ -625,15 +627,15 @@ mod tests {
 
     #[test]
     fn check_parse_keywords() -> Result<()> {
-        let keywords_annot = HashMap::from([(
+        let keywords_annot = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS),
             String::from(" foo,bar, faz fiz, baz"),
         )]);
-        let keywords_annot_empty = HashMap::from([(
+        let keywords_annot_empty = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS),
             String::from(""),
         )]);
-        let keywords_annot_commas = HashMap::from([(
+        let keywords_annot_commas = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS),
             String::from("foo,,bar"),
         )]);
@@ -665,15 +667,15 @@ mod tests {
     #[test]
     fn check_parse_links() -> Result<()> {
         let semver_version = Version::parse("0.2.1").unwrap();
-        let source_annot = HashMap::from([(
+        let source_annot = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
             String::from("https://github.com/repo"),
         )]);
-        let source_annot_not_github = HashMap::from([(
+        let source_annot_not_github = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
             String::from("https://notgithub.com/repo"),
         )]);
-        let source_annot_badurl = HashMap::from([(
+        let source_annot_badurl = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_SOURCE),
             String::from("@&*foo"),
         )]);
@@ -709,23 +711,23 @@ mod tests {
 
     #[test]
     fn check_parse_maintainers() -> Result<()> {
-        let author_annot = HashMap::from([(
+        let author_annot = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
             String::from("Tux Tuxedo <tux@example.com>, Pidgin <pidgin@example.com>"),
         )]);
-        let author_annot_empty = HashMap::from([(
+        let author_annot_empty = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
             String::from(""),
         )]);
-        let author_annot_commas = HashMap::from([(
+        let author_annot_commas = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
             String::from("Foo <foo@example.com>,,Bar <bar@example.com>"),
         )]);
-        let author_annot_nameemail = HashMap::from([(
+        let author_annot_nameemail = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
             String::from("Foo missing@chevrons.com, Bar <bar@example.com>"),
         )]);
-        let author_annot_bademail = HashMap::from([(
+        let author_annot_bademail = BTreeMap::from([(
             String::from(KUBEWARDEN_ANNOTATION_POLICY_AUTHOR),
             String::from("Bar <#$%#$%>"),
         )]);
@@ -776,7 +778,7 @@ mod tests {
     #[test]
     fn artifacthubpkg_missing_required() -> Result<()> {
         let semver_version = Version::parse("0.2.1").unwrap();
-        let invalid_annotations = HashMap::from([(String::from("foo"), String::from("bar"))]);
+        let invalid_annotations = BTreeMap::from([(String::from("foo"), String::from("bar"))]);
 
         assert!(parse_name(&invalid_annotations).is_err());
         assert!(parse_display_name(&invalid_annotations).is_err());
