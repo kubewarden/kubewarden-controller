@@ -254,6 +254,11 @@ Pushes a Kubewarden policy to an OCI registry
 
 **Usage:** `kwctl push [OPTIONS] <policy> <uri>`
 
+The annotations found inside of policy's metadata are going to be part of the OCI manifest.
+The multi-line annotations are skipped because they are not compatible with the OCI specification.
+The 'io.kubewarden.policy.source' annotation is propaged as 'org.opencontainers.image.source' to allow tools like
+renovatebot to detect policy updates.
+
 ###### **Arguments:**
 
 * `<POLICY>` — Policy to push. Can be the path to a local file, a policy URI or the SHA prefix of a policy in the store.
