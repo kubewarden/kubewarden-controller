@@ -13,7 +13,7 @@ clap = { version = "4.5", features = ["cargo", "env"] }
 clap-markdown = "0.1.4"
 clap_complete = "4.5"
 directories = "6.0.0"
-flate2 = "1.0.29"
+flate2 = "1.1"
 humansize = "2.1"
 itertools = "0.14.0"
 k8s-openapi = { version = "0.24.0", default-features = false, features = [
@@ -23,8 +23,8 @@ lazy_static = "1.4.0"
 pem = "3"
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.21.0" }
 prettytable-rs = "^0.10"
-pulldown-cmark = { version = "0.12.1", default-features = false }
-pulldown-cmark-mdcat = { version = "2.7.1", default-features = false }
+pulldown-cmark = { version = "0.12", default-features = false }
+pulldown-cmark-mdcat = { version = "2.7", default-features = false }
 regex = "1"
 rustls-pki-types = { version = "1", features = ["alloc"] }
 semver = { version = "1.0.22", features = ["serde"] }
@@ -58,7 +58,7 @@ reqwest = { version = "0", default-features = false, features = [
 assert_cmd     = "2.0.14"
 hyper          = { version = "1.5.0" }
 predicates     = "3.1"
-rstest         = "0.24.0"
-tempfile       = "3.15"
+rstest         = "0.25"
+tempfile       = "3.17"
 testcontainers = { version = "0.23", features = ["blocking"] }
 tower-test     = "0.4"
