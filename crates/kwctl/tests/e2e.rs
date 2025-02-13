@@ -1,6 +1,11 @@
-use std::path::Path;
+use std::{
+    collections::{BTreeMap, HashSet},
+    path::Path,
+};
 
+use anyhow::Result;
 use common::{setup_command, test_data};
+use policy_evaluator::{policy_fetcher, policy_metadata};
 use predicates::{prelude::*, str::contains, str::is_empty};
 use rstest::rstest;
 use tempfile::tempdir;
@@ -349,16 +354,49 @@ fn test_push() {
     );
     std::fs::write(tempdir.path().join("sources.yml"), sources_yaml).unwrap();
 
+    let target_image = format!(
+        "registry://localhost:{}/my-pod-priviliged-policy:v0.1.10",
+        port
+    );
+
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("push")
         .arg("--sources-path")
         .arg("sources.yml")
         .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5")
-        .arg(format!(
+        .arg(&target_image);
+    cmd.assert().success();
+
+    let wasm_annotations = get_wasm_annotations(
+        tempdir.path(),
+        "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+    )
+    .expect("cannot get wasm annotations");
+
+    let sources = policy_fetcher::sources::Sources {
+        insecure_sources: HashSet::from([format!("localhost:{}", port)]),
+        ..Default::default()
+    };
+    let manifest_annotations = get_manifest_annotations(
+        format!(
             "registry://localhost:{}/my-pod-priviliged-policy:v0.1.10",
             port
-        ));
-    cmd.assert().success();
+        )
+        .as_str(),
+        &sources,
+    )
+    .expect("cannot get OCI manifest annotations");
+
+    for (wasm_key, wasm_value) in &wasm_annotations {
+        if wasm_value.lines().count() > 1 {
+            continue;
+        }
+
+        let manifest_value = manifest_annotations
+            .get(wasm_key)
+            .unwrap_or_else(|| panic!("missing annotation {}", wasm_key));
+        assert_eq!(wasm_value, manifest_value,);
+    }
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("pull")
@@ -535,4 +573,31 @@ fn test_inspect_policy_yml_output(#[case] show_signatures: bool) {
     let report: serde_yaml::Mapping = serde_yaml::from_slice(&cmd.assert().get_output().stdout)
         .expect("a valid yaml document was expected");
     assert_eq!(show_signatures, report.contains_key("signatures"))
+}
+
+fn get_wasm_annotations(dir: &Path, oci_ref: &str) -> Result<BTreeMap<String, String>> {
+    let mut cmd = setup_command(dir);
+    cmd.arg("inspect").arg(oci_ref).arg("-o").arg("yaml");
+    let metadata: policy_metadata::Metadata =
+        serde_yaml::from_slice(&cmd.assert().success().get_output().stdout)
+            .expect("cannot deserialize 'kwctl inspect -o yaml'");
+
+    Ok(metadata.annotations.unwrap_or_default())
+}
+
+fn get_manifest_annotations(
+    oci_ref: &str,
+    sources: &policy_fetcher::sources::Sources,
+) -> Result<BTreeMap<String, String>> {
+    use policy_fetcher::oci_client::manifest::OciManifest;
+
+    let registry = policy_fetcher::registry::Registry::new();
+
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        match registry.manifest(oci_ref, Some(sources)).await? {
+            OciManifest::Image(manifest) => Ok(manifest.annotations.unwrap_or_default()),
+            _ => Err(anyhow::anyhow!("not an image manifest")),
+        }
+    })
 }
