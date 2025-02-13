@@ -946,3 +946,120 @@ fn generate_tls_certs() -> (String, String, String) {
 
     (ca_cert_pem, cert.pem(), key)
 }
+
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread")]
+#[rstest]
+#[case::no_tls_config(None, None)]
+#[case::with_server_tls_config(Some(certificate_reload_helpers::create_cert("127.0.0.1")), None)]
+#[case::mtls_config(
+    Some(certificate_reload_helpers::create_cert("127.0.0.1")),
+    Some(certificate_reload_helpers::create_cert("127.0.0.1"))
+)]
+async fn test_tls(
+    #[case] server_tls_data: Option<certificate_reload_helpers::TlsData>,
+    #[case] client_tls_data: Option<certificate_reload_helpers::TlsData>,
+) {
+    use certificate_reload_helpers::*;
+
+    setup();
+
+    let certs_dir = tempfile::tempdir().unwrap();
+    let cert_file = certs_dir.path().join("policy-server.pem");
+    let key_file = certs_dir.path().join("policy-server-key.pem");
+    let client_ca = certs_dir.path().join("client_cert.pem");
+
+    let server_cert = if let Some(ref tls_data) = server_tls_data {
+        std::fs::write(&cert_file, tls_data.cert.clone()).unwrap();
+        std::fs::write(&key_file, tls_data.key.clone()).unwrap();
+        tls_data.cert.clone()
+    } else {
+        String::new()
+    };
+
+    let (client_cert, client_key) = if let Some(ref tls_data) = client_tls_data {
+        std::fs::write(&client_ca, tls_data.cert.clone()).unwrap();
+        (tls_data.cert.clone(), tls_data.key.clone())
+    } else {
+        (String::new(), String::new())
+    };
+
+    let mut config = default_test_config();
+    config.tls_config = match (server_tls_data.as_ref(), client_tls_data.as_ref()) {
+        (None, None) => None,
+        (Some(_), Some(_)) => Some(policy_server::config::TlsConfig {
+            cert_file: cert_file.to_str().unwrap().to_owned(),
+            key_file: key_file.to_str().unwrap().to_owned(),
+            client_ca_file: Some(client_ca.to_str().unwrap().to_owned()),
+        }),
+        (Some(_), None) => Some(policy_server::config::TlsConfig {
+            cert_file: cert_file.to_str().unwrap().to_owned(),
+            key_file: key_file.to_str().unwrap().to_owned(),
+            client_ca_file: None,
+        }),
+        _ => {
+            panic!("Invalid test case")
+        }
+    };
+
+    let host = config.addr.ip().to_string();
+    let port = config.addr.port().to_string();
+    let readiness_probe_port = config.readiness_probe_addr.port().to_string();
+
+    tokio::spawn(async move {
+        let api_server = policy_server::PolicyServer::new_from_config(config)
+            .await
+            .unwrap();
+        api_server.run().await.unwrap();
+    });
+
+    // readiness probe should always return 200 no matter the tls configuration.
+    // The probe should run in a different server on http
+    let exponential_backoff = ExponentialBuilder::default()
+        .with_min_delay(Duration::from_secs(10))
+        .with_max_delay(Duration::from_secs(30))
+        .with_max_times(5);
+
+    let status_code = (|| async {
+        policy_server_is_ready(format!("{host}:{readiness_probe_port}").as_str()).await
+    })
+    .retry(exponential_backoff)
+    .await
+    .expect("policy server is not ready");
+    assert_eq!(status_code, reqwest::StatusCode::OK);
+
+    // Validate TLS communication
+    let mut builder = reqwest::Client::builder();
+
+    if server_tls_data.is_some() {
+        let certificate = reqwest::Certificate::from_pem(server_cert.as_bytes())
+            .expect("Invalid policy server certificate");
+        builder = builder.add_root_certificate(certificate);
+    }
+
+    if client_tls_data.is_some() {
+        let identity =
+            reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
+                .expect("successfull pem parsing");
+        builder = builder.identity(identity);
+    };
+    let client = builder.build().unwrap();
+
+    let prefix = if server_tls_data.is_some() {
+        "https"
+    } else {
+        "http"
+    };
+    let url =
+        reqwest::Url::parse(&format!("{prefix}://{host}:{port}/validate/pod-privileged")).unwrap();
+    let response = client
+        .post(url)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(include_str!("data/pod_without_privileged_containers.json"))
+        .send()
+        .await;
+    assert_eq!(
+        response.expect("successfull request").status(),
+        reqwest::StatusCode::OK
+    );
+}
