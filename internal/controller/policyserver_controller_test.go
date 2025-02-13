@@ -1,5 +1,3 @@
-//go:build testing
-
 /*
 copyright 2022.
 
@@ -659,6 +657,62 @@ var _ = Describe("PolicyServer controller", func() {
 				return nil
 			}).Should(Succeed())
 		})
+
+		// It("should enable mTLS in the policy server deployment", func() {
+		// 	policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+		// 	createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+		// 	deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+		// 	Expect(err).ToNot(HaveOccurred())
+
+		// 	container := deployment.Spec.Template.Spec.Containers[0]
+
+		// 	kubewardenCAPath := filepath.Join(kubewardenCAVolumePath, constants.CARootCert)
+		// 	clientCAPath := filepath.Join(clientCAVolumePath, constants.ClientCACert)
+		// 	By("specifing the client ca certificate")
+		// 	Expect(container.Env).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+		// 		"Name":  Equal("KUBEWARDEN_CLIENT_CA_FILE"),
+		// 		"Value": Equal(fmt.Sprintf("%s,%s", kubewardenCAPath, clientCAPath)),
+		// 	})))
+
+		// 	By("mounting the kubewarden CA Secret")
+		// 	Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+		// 		"Name": Equal(kubewardenCAVolumeName),
+		// 		"VolumeSource": MatchFields(IgnoreExtras, Fields{
+		// 			"Secret": PointTo(MatchFields(IgnoreExtras, Fields{
+		// 				"SecretName": Equal(constants.CARootSecretName),
+		// 				"Items": ConsistOf(MatchFields(IgnoreExtras, Fields{
+		// 					"Key":  Equal(constants.CARootCert),
+		// 					"Path": Equal(constants.CARootCert),
+		// 				})),
+		// 			})),
+		// 		}),
+		// 	})))
+		// 	Expect(container.VolumeMounts).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+		// 		"Name":      Equal(kubewardenCAVolumeName),
+		// 		"MountPath": Equal(kubewardenCAVolumePath),
+		// 	})))
+
+		// 	By("mounting the client CA ConfigMap")
+		// 	Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+		// 		"Name": Equal(clientCAVolumeName),
+		// 		"VolumeSource": MatchFields(IgnoreExtras, Fields{
+		// 			"ConfigMap": PointTo(MatchFields(IgnoreExtras, Fields{
+		// 				"LocalObjectReference": MatchFields(IgnoreExtras, Fields{
+		// 					"Name": Equal(clientCAConfigMapName),
+		// 				}),
+		// 				"Items": ConsistOf(MatchFields(IgnoreExtras, Fields{
+		// 					"Key":  Equal(constants.ClientCACert),
+		// 					"Path": Equal(constants.ClientCACert),
+		// 				})),
+		// 			})),
+		// 		}),
+		// 	})))
+		// 	Expect(container.VolumeMounts).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+		// 		"Name":      Equal(clientCAVolumeName),
+		// 		"MountPath": Equal(clientCAVolumePath),
+		// 	})))
+		// })
 
 		It("should set the configMap version as a deployment annotation", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()

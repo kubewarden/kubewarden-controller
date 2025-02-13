@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -27,6 +28,10 @@ const (
 	policiesVolumeName               = "policies"
 	sourcesVolumeName                = "sources"
 	verificationConfigVolumeName     = "verification"
+	kubewardenCAVolumeName           = "kubewarden-ca-cert"
+	kubewardenCAVolumePath           = "/ca"
+	clientCAVolumeName               = "client-ca-cert"
+	clientCAVolumePath               = "/client-ca"
 	secretsContainerPath             = "/pki"
 	imagePullSecretVolumeName        = "imagepullsecret"
 	dockerConfigJSONPolicyServerPath = "/home/kubewarden/.docker"
@@ -52,7 +57,7 @@ func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Con
 		},
 	}
 	_, err = controllerutil.CreateOrPatch(ctx, r.Client, policyServerDeployment, func() error {
-		return r.updatePolicyServerDeployment(policyServer, policyServerDeployment, configMapVersion)
+		return r.updatePolicyServerDeployment(ctx, policyServer, policyServerDeployment, configMapVersion)
 	})
 	if err != nil {
 		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
@@ -77,52 +82,7 @@ func configureVerificationConfig(policyServer *policiesv1.PolicyServer, admissio
 	}
 }
 
-func configureImagePullSecret(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
-	if policyServer.Spec.ImagePullSecret != "" {
-		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      imagePullSecretVolumeName,
-				ReadOnly:  true,
-				MountPath: dockerConfigJSONPolicyServerPath,
-			})
-		admissionContainer.Env = append(admissionContainer.Env,
-			corev1.EnvVar{
-				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
-				Value: dockerConfigJSONPolicyServerPath,
-			})
-	}
-}
-
-func configuresInsecureSources(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
-	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
-		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
-			corev1.VolumeMount{
-				Name:      sourcesVolumeName,
-				ReadOnly:  true,
-				MountPath: constants.PolicyServerSourcesConfigContainerPath,
-			})
-		admissionContainer.Env = append(admissionContainer.Env,
-			corev1.EnvVar{
-				Name:  "KUBEWARDEN_SOURCES_PATH",
-				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
-			})
-	}
-}
-
-func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer, configMapVersion string) {
-	if policyServerDeployment.ObjectMeta.Annotations == nil {
-		policyServerDeployment.ObjectMeta.Annotations = make(map[string]string)
-	}
-	policyServerDeployment.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
-
-	if policyServerDeployment.Labels == nil {
-		policyServerDeployment.Labels = make(map[string]string)
-	}
-	policyServerDeployment.Labels[constants.AppLabelKey] = policyServer.AppLabel()
-	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
-}
-
-func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
+func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
 	admissionContainer := getPolicyServerContainer(policyServer)
 
 	if r.AlwaysAcceptAdmissionReviewsInDeploymentsNamespace {
@@ -153,70 +113,19 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(policyServer *poli
 
 	configureLabelsAndAnnotations(policyServerDeployment, policyServer, configMapVersion)
 
-	policyServerDeployment.Spec = appsv1.DeploymentSpec{
-		Replicas: &policyServer.Spec.Replicas,
-		Selector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				constants.AppLabelKey: policyServer.AppLabel(),
-			},
-		},
-		Strategy: appsv1.DeploymentStrategy{
-			Type: appsv1.RollingUpdateDeploymentStrategyType,
-		},
-		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					constants.AppLabelKey: policyServer.AppLabel(),
-					constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
-					constants.PolicyServerLabelKey:                            policyServer.Name,
-				},
-				Annotations: templateAnnotations,
-			},
-			Spec: corev1.PodSpec{
-				SecurityContext:    podSecurityContext,
-				Containers:         []corev1.Container{admissionContainer},
-				ServiceAccountName: policyServer.Spec.ServiceAccountName,
-				Tolerations:        policyServer.Spec.Tolerations,
-				Affinity:           &policyServer.Spec.Affinity,
-				Volumes: []corev1.Volume{
-					{
-						Name: policyStoreVolume,
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
-					},
-					{
-						Name: certsVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: policyServer.NameWithPrefix(),
-							},
-						},
-					},
-					{
-						Name: policiesVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: policyServer.NameWithPrefix(),
-								},
-								Items: []corev1.KeyToPath{
-									{
-										Key:  constants.PolicyServerConfigPoliciesEntry,
-										Path: policiesFilename,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
+	policyServerDeployment.Spec = buildPolicyServerDeploymentSpec(
+		policyServer,
+		admissionContainer,
+		configMapVersion,
+		templateAnnotations,
+		podSecurityContext,
+	)
 	r.adaptDeploymentForMetricsAndTracingConfiguration(policyServerDeployment, templateAnnotations)
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
 
+	if err := r.configureMutualTLS(ctx, policyServerDeployment); err != nil {
+		return fmt.Errorf("failed to configure mutual TLS: %w", err)
+	}
 	if err := controllerutil.SetOwnerReference(policyServer, policyServerDeployment, r.Client.Scheme()); err != nil {
 		return errors.Join(errors.New("failed to set policy server deployment owner reference"), err)
 	}
@@ -342,6 +251,200 @@ func (r *PolicyServerReconciler) adaptDeploymentSettingsForPolicyServer(policySe
 				},
 			},
 		)
+	}
+}
+
+func configureImagePullSecret(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
+	if policyServer.Spec.ImagePullSecret != "" {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      imagePullSecretVolumeName,
+				ReadOnly:  true,
+				MountPath: dockerConfigJSONPolicyServerPath,
+			})
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_DOCKER_CONFIG_JSON_PATH",
+				Value: dockerConfigJSONPolicyServerPath,
+			})
+	}
+}
+
+func configuresInsecureSources(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
+	if len(policyServer.Spec.InsecureSources) > 0 || len(policyServer.Spec.SourceAuthorities) > 0 {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      sourcesVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerSourcesConfigContainerPath,
+			})
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_SOURCES_PATH",
+				Value: filepath.Join(constants.PolicyServerSourcesConfigContainerPath, sourcesFilename),
+			})
+	}
+}
+
+func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer, configMapVersion string) {
+	if policyServerDeployment.ObjectMeta.Annotations == nil {
+		policyServerDeployment.ObjectMeta.Annotations = make(map[string]string)
+	}
+	policyServerDeployment.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
+
+	if policyServerDeployment.Labels == nil {
+		policyServerDeployment.Labels = make(map[string]string)
+	}
+	policyServerDeployment.Labels[constants.AppLabelKey] = policyServer.AppLabel()
+	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
+}
+
+func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyServerDeployment *appsv1.Deployment) error {
+	policyServerDeployment.Spec.Template.Spec.Volumes = append(
+		policyServerDeployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: kubewardenCAVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: constants.CARootSecretName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  constants.CARootCert,
+							Path: constants.CARootCert,
+						},
+					},
+				},
+			},
+		},
+	)
+
+	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
+
+	admissionContainer.VolumeMounts = append(
+		admissionContainer.VolumeMounts,
+		corev1.VolumeMount{
+			Name:      kubewardenCAVolumeName,
+			MountPath: kubewardenCAVolumePath,
+			ReadOnly:  true,
+		},
+	)
+
+	if r.ClientCAConfigMapName != "" {
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.ClientCAConfigMapName, Namespace: r.DeploymentsNamespace}, &corev1.ConfigMap{}); err != nil {
+			return fmt.Errorf("failed to fetch client CA config map: %w", err)
+		}
+
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: clientCAVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: r.ClientCAConfigMapName,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.ClientCACert,
+								Path: constants.ClientCACert,
+							},
+						},
+					},
+				},
+			},
+		)
+
+		admissionContainer.VolumeMounts = append(
+			admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      clientCAVolumeName,
+				MountPath: clientCAVolumePath,
+				ReadOnly:  true,
+			},
+		)
+
+		// kubewardenCAPath := filepath.Join(kubewardenCAVolumePath, constants.CARootCert)
+		// clientCAPath := filepath.Join(clientCAVolumePath, constants.ClientCACert)
+		// admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
+		// 	Name:  "KUBEWARDEN_CLIENT_CA_FILE",
+		// 	Value: fmt.Sprintf("%s,%s", kubewardenCAPath, clientCAPath),
+		// })
+		// return nil
+	}
+
+	admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
+		Name:  "KUBEWARDEN_CLIENT_CA_FILE",
+		Value: filepath.Join(kubewardenCAVolumePath, constants.CARootCert),
+	})
+	return nil
+}
+
+func buildPolicyServerDeploymentSpec(
+	policyServer *policiesv1.PolicyServer,
+	admissionContainer corev1.Container,
+	configMapVersion string,
+	templateAnnotations map[string]string,
+	podSecurityContext *corev1.PodSecurityContext,
+) appsv1.DeploymentSpec {
+	return appsv1.DeploymentSpec{
+		Replicas: &policyServer.Spec.Replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				constants.AppLabelKey: policyServer.AppLabel(),
+			},
+		},
+		Strategy: appsv1.DeploymentStrategy{
+			Type: appsv1.RollingUpdateDeploymentStrategyType,
+		},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					constants.AppLabelKey: policyServer.AppLabel(),
+					constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
+					constants.PolicyServerLabelKey:                            policyServer.Name,
+				},
+				Annotations: templateAnnotations,
+			},
+			Spec: corev1.PodSpec{
+				SecurityContext:    podSecurityContext,
+				Containers:         []corev1.Container{admissionContainer},
+				ServiceAccountName: policyServer.Spec.ServiceAccountName,
+				Tolerations:        policyServer.Spec.Tolerations,
+				Affinity:           &policyServer.Spec.Affinity,
+				Volumes: []corev1.Volume{
+					{
+						Name: policyStoreVolume,
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					},
+					{
+						Name: certsVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: policyServer.NameWithPrefix(),
+							},
+						},
+					},
+					{
+						Name: policiesVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: policyServer.NameWithPrefix(),
+								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  constants.PolicyServerConfigPoliciesEntry,
+										Path: policiesFilename,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -489,6 +592,10 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 				Value: strconv.Itoa(constants.PolicyServerPort),
 			},
 			{
+				Name:  "KUBEWARDEN_READINESS_PROBE_PORT",
+				Value: strconv.Itoa(constants.PolicyServerReadinessProbePort),
+			},
+			{
 				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
 				Value: policyStoreVolumePath,
 			},
@@ -505,8 +612,8 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   constants.PolicyServerReadinessProbe,
-					Port:   intstr.FromInt(constants.PolicyServerPort),
-					Scheme: corev1.URISchemeHTTPS,
+					Port:   intstr.FromInt(constants.PolicyServerReadinessProbePort),
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
 		},
