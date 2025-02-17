@@ -28,7 +28,6 @@ func getMetricsPort() int32 {
 			fmt.Fprintf(os.Stderr, "port %s provided in %s envvar cannot be parsed as integer: %v. Aborting.\n", envMetricsPort, constants.PolicyServerMetricsPortEnvVar, err)
 			os.Exit(1)
 		}
-		//nolint:gosec // ParseInt(x,x,32) makes sure it will fit into int32
 		metricsPort = int32(metricsPortInt32)
 	}
 	return metricsPort
