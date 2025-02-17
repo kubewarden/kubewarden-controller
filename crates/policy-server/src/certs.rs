@@ -72,7 +72,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
             inotify
                 .watches()
                 .add(path, inotify::WatchMask::CLOSE_WRITE)
-                .map_err(|e| anyhow!("Cannot watch client certificate file: {e}"))
+                .map_err(|e| anyhow!("Cannot watch client CA file: {e}"))
         })
         .collect();
 
@@ -109,14 +109,14 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
 
             for client_ca_watch in client_ca_watches.iter() {
                 if event.wd == *client_ca_watch {
-                    info!("TLS client certificate file has been modified");
+                    info!("TLS client CA file has been modified");
                     client_ca_changed = true;
                 }
             }
 
             // Reload the client CA certificates if they have changed, keeping the current server certificates unchanged
             if client_ca_changed {
-                info!("Reloading Client CA certificates");
+                info!("Reloading client CA certificates");
 
                 client_ca_changed = false;
 
