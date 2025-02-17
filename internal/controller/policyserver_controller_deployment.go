@@ -363,13 +363,13 @@ func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyS
 			},
 		)
 
-		// kubewardenCAPath := filepath.Join(kubewardenCAVolumePath, constants.CARootCert)
-		// clientCAPath := filepath.Join(clientCAVolumePath, constants.ClientCACert)
-		// admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
-		// 	Name:  "KUBEWARDEN_CLIENT_CA_FILE",
-		// 	Value: fmt.Sprintf("%s,%s", kubewardenCAPath, clientCAPath),
-		// })
-		// return nil
+		kubewardenCAPath := filepath.Join(kubewardenCAVolumePath, constants.CARootCert)
+		clientCAPath := filepath.Join(clientCAVolumePath, constants.ClientCACert)
+		admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
+			Name:  "KUBEWARDEN_CLIENT_CA_FILE",
+			Value: fmt.Sprintf("%s,%s", kubewardenCAPath, clientCAPath),
+		})
+		return nil
 	}
 
 	admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
