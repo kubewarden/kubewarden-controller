@@ -689,8 +689,8 @@ async fn test_detect_certificate_rotation() {
 
     let mut config = default_test_config();
     config.tls_config = Some(policy_server::config::TlsConfig {
-        cert_file: cert_file.to_str().unwrap().to_owned(),
-        key_file: key_file.to_str().unwrap().to_owned(),
+        cert_file: cert_file.clone(),
+        key_file: key_file.clone(),
         client_ca_file: vec![first_client_ca.clone(), second_client_ca.clone()],
     });
 
@@ -778,7 +778,7 @@ async fn test_detect_certificate_rotation() {
     .unwrap();
     assert_eq!(status_code, reqwest::StatusCode::OK);
 
-    for tls_data_client in vec![&first_tls_data_client2, &second_tls_data_client2] {
+    for tls_data_client in [&first_tls_data_client2, &second_tls_data_client2] {
         let client = build_request_client(
             Some(&tls_data2),
             Some(tls_data_client.cert.clone()),
@@ -1028,7 +1028,6 @@ async fn test_tls(
             tls_data
                 .iter()
                 .enumerate()
-                .into_iter()
                 .map(|(i, tls_data)| {
                     let client_ca = certs_dir
                         .path()
@@ -1047,8 +1046,8 @@ async fn test_tls(
     config.tls_config = match (server_tls_data.as_ref(), client_tls_data.as_ref()) {
         (None, None) => None,
         (Some(_), Some(_)) => Some(policy_server::config::TlsConfig {
-            cert_file: cert_file.to_str().unwrap().to_owned(),
-            key_file: key_file.to_str().unwrap().to_owned(),
+            cert_file: cert_file.clone(),
+            key_file: key_file.clone(),
             client_ca_file: clients_cas_info
                 .clone()
                 .into_iter()
@@ -1056,8 +1055,8 @@ async fn test_tls(
                 .collect(),
         }),
         (Some(_), None) => Some(policy_server::config::TlsConfig {
-            cert_file: cert_file.to_str().unwrap().to_owned(),
-            key_file: key_file.to_str().unwrap().to_owned(),
+            cert_file: cert_file.clone(),
+            key_file: key_file.clone(),
             client_ca_file: vec![],
         }),
         _ => {
@@ -1158,14 +1157,11 @@ fn build_request_client(
         builder = builder.add_root_certificate(certificate);
     }
 
-    match (client_cert, client_key) {
-        (Some(client_cert), Some(client_key)) => {
-            let identity =
-                reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
-                    .expect("successfull pem parsing");
-            builder = builder.identity(identity)
-        }
-        _ => {}
+    if let (Some(client_cert), Some(client_key)) = (client_cert, client_key) {
+        let identity =
+            reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
+                .expect("successfull pem parsing");
+        builder = builder.identity(identity)
     }
     builder.build().expect("failed to build client")
 }
