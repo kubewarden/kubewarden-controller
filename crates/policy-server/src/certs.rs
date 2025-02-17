@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use rustls::{server::WebPkiClientVerifier, RootCertStore, ServerConfig};
 use rustls_pemfile::Item;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
-use std::{fs::File, io::BufReader, sync::Arc};
+use std::{fs::File, io::BufReader, path::Path, sync::Arc};
 
 // This is required by certificate hot reload when using inotify, which is available only on linux
 #[cfg(target_os = "linux")]
@@ -12,8 +12,8 @@ use tokio_stream::StreamExt;
 use crate::config::TlsConfig;
 
 async fn load_server_cert_and_key(
-    cert_file: String,
-    key_file: String,
+    cert_file: &Path,
+    key_file: &Path,
 ) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>)> {
     let cert_reader = &mut BufReader::new(File::open(cert_file)?);
     let cert: Vec<CertificateDer> = rustls_pemfile::certs(cert_reader)
@@ -88,8 +88,7 @@ async fn load_client_cas(
 /// RustlsConfig does not offer a function to load the client CA certificate together with the
 /// service certificates. Therefore, we need to load everything and build the ServerConfig
 async fn build_tls_server_config(tls_config: &TlsConfig) -> Result<rustls::ServerConfig> {
-    let (cert, key) =
-        load_server_cert_and_key(tls_config.cert_file.clone(), tls_config.key_file.clone()).await?;
+    let (cert, key) = load_server_cert_and_key(&tls_config.cert_file, &tls_config.key_file).await?;
 
     if tls_config.client_ca_file.is_empty() {
         return Ok(ServerConfig::builder()
