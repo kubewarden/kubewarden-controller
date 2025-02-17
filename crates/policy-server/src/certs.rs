@@ -23,7 +23,7 @@ async fn create_tls_config_and_watch_certificate_changes(
 
 /// Return the RustlsConfig and watch for changes in the certificate files
 /// using inotify.
-/// When a both the certificate and its key are changed, the RustlsConfig is reloaded,
+/// When both the certificate and its key are changed, the RustlsConfig is reloaded,
 /// causing the https server to use the new certificate.
 ///
 /// Relying on inotify is only available on linux
