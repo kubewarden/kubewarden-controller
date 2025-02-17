@@ -33,6 +33,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
 ) -> Result<axum_server::tls_rustls::RustlsConfig> {
     use ::tracing::error;
     use axum_server::tls_rustls::RustlsConfig;
+    use inotify::WatchDescriptor;
 
     // Build initial TLS configuration
     let (mut cert, mut key) =
@@ -63,7 +64,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
         .add(tls_config.key_file.clone(), inotify::WatchMask::CLOSE_WRITE)
         .map_err(|e| anyhow!("Cannot watch key file: {e}"))?;
 
-    let client_ca_watches = tls_config
+    let client_ca_watches: Result<Vec<WatchDescriptor>, anyhow::Error> = tls_config
         .client_ca_file
         .clone()
         .into_iter()
@@ -72,9 +73,10 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
                 .watches()
                 .add(path, inotify::WatchMask::CLOSE_WRITE)
                 .map_err(|e| anyhow!("Cannot watch client certificate file: {e}"))
-                .unwrap()
         })
-        .collect::<Vec<_>>();
+        .collect();
+
+    let client_ca_watches = client_ca_watches?;
 
     let buffer = [0; 1024];
     let stream = inotify
@@ -115,46 +117,49 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
             // Reload the client CA certificates if they have changed, keeping the current server certificates unchanged
             if client_ca_changed {
                 info!("Reloading Client CA certificates");
-                client_verifier = Some(
-                    load_client_ca_certs(tls_config.client_ca_file.clone())
-                        .await
-                        .map_err(|e| error!("Failed to reload client CA certificates: {e}"))
-                        .unwrap(),
-                );
-                let server_config =
-                    build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone());
-                if let Err(e) = server_config {
-                    error!("Failed to reload TLS certificate: {e}");
-                    continue;
-                }
-
-                reloadable_rust_config.reload_from_config(Arc::new(server_config.unwrap()));
 
                 client_ca_changed = false;
+
+                match load_client_ca_certs(tls_config.client_ca_file.clone()).await {
+                    Ok(cv) => {
+                        client_verifier = Some(cv);
+                    }
+                    Err(e) => {
+                        error!("Failed to reload TLS certificates: {e}");
+                        continue;
+                    }
+                }
             }
 
             // Reload the server certificates if they have changed keeping the current client CA certificates unchanged
             if key_changed && cert_changed {
                 info!("Reloading Server TLS certificates");
 
-                (cert, key) = load_server_cert_and_key(&tls_config.cert_file, &tls_config.key_file)
-                    .await
-                    .map_err(|e| error!("Failed to reload TLS certificates: {e}"))
-                    .unwrap();
-
-                let server_config =
-                    build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone());
-                if let Err(e) = server_config {
-                    error!("Failed to reload TLS certificate: {e}");
-                    continue;
-                }
-                reloadable_rust_config.reload_from_config(Arc::new(server_config.unwrap()));
-
                 cert_changed = false;
                 key_changed = false;
+
+                match load_server_cert_and_key(&tls_config.cert_file, &tls_config.key_file).await {
+                    Ok(ck) => {
+                        (cert, key) = ck;
+                    }
+                    Err(e) => {
+                        error!("Failed to reload TLS certificates: {e}");
+                        continue;
+                    }
+                }
+            }
+
+            match build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone()) {
+                Ok(server_config) => {
+                    reloadable_rust_config.reload_from_config(Arc::new(server_config));
+                }
+                Err(e) => {
+                    error!("Failed to reload TLS certificate: {e}");
+                }
             }
         }
     });
+
     Ok(rust_config)
 }
 
