@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use rustls::{server::WebPkiClientVerifier, RootCertStore, ServerConfig};
 use rustls_pemfile::Item;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
-use std::{fs::File, io::BufReader, path::Path, sync::Arc};
+use std::{io::BufReader, path::Path, sync::Arc};
 
 // This is required by certificate hot reload when using inotify, which is available only on linux
 #[cfg(target_os = "linux")]
@@ -43,7 +43,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
         Some(load_client_ca_certs(tls_config.client_ca_file.clone()).await?)
     };
     let initial_config =
-        build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone()).await?;
+        build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone())?;
 
     let rust_config = RustlsConfig::from_config(Arc::new(initial_config));
     let reloadable_rust_config = rust_config.clone();
@@ -122,8 +122,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
                         .unwrap(),
                 );
                 let server_config =
-                    build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone())
-                        .await;
+                    build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone());
                 if let Err(e) = server_config {
                     error!("Failed to reload TLS certificate: {e}");
                     continue;
@@ -144,8 +143,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
                     .unwrap();
 
                 let server_config =
-                    build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone())
-                        .await;
+                    build_tls_server_config(cert.clone(), key.clone_key(), client_verifier.clone());
                 if let Err(e) = server_config {
                     error!("Failed to reload TLS certificate: {e}");
                     continue;
@@ -161,7 +159,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
 }
 
 // Build the TLS server
-async fn build_tls_server_config(
+fn build_tls_server_config(
     cert: Vec<CertificateDer<'static>>,
     key: PrivateKeyDer<'static>,
     client_verifier: Option<Arc<dyn rustls::server::danger::ClientCertVerifier>>,
@@ -182,7 +180,12 @@ async fn load_server_cert_and_key(
     cert_file: &Path,
     key_file: &Path,
 ) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>)> {
-    let cert_reader = &mut BufReader::new(File::open(cert_file)?);
+    let cert_contents = tokio::fs::read(cert_file).await?;
+    let key_contents = tokio::fs::read(key_file).await?;
+
+    let cert_reader = &mut BufReader::new(&cert_contents[..]);
+    let key_reader = &mut BufReader::new(&key_contents[..]);
+
     let cert: Vec<CertificateDer> = rustls_pemfile::certs(cert_reader)
         .filter_map(|it| {
             if let Err(ref e) = it {
@@ -196,8 +199,7 @@ async fn load_server_cert_and_key(
         return Err(anyhow!("Multiple certificates provided in cert file"));
     }
 
-    let key_file_reader = &mut BufReader::new(File::open(key_file)?);
-    let mut key_vec: Vec<Vec<u8>> = rustls_pemfile::read_all(key_file_reader)
+    let mut key_vec: Vec<Vec<u8>> = rustls_pemfile::read_all(key_reader)
         .filter_map(|i| match i.ok()? {
             Item::Sec1Key(key) => Some(key.secret_sec1_der().to_vec()),
             Item::Pkcs1Key(key) => Some(key.secret_pkcs1_der().to_vec()),
@@ -226,7 +228,8 @@ async fn load_client_ca_certs(
 ) -> Result<Arc<dyn rustls::server::danger::ClientCertVerifier>> {
     let mut store = RootCertStore::empty();
     for client_ca_file in client_cas {
-        let client_ca_reader = &mut BufReader::new(File::open(client_ca_file)?);
+        let client_ca_contents = tokio::fs::read(&client_ca_file).await?;
+        let client_ca_reader = &mut BufReader::new(&client_ca_contents[..]);
 
         let client_ca_certs: Vec<_> = rustls_pemfile::certs(client_ca_reader)
             .filter_map(|it| {
