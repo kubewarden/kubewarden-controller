@@ -95,6 +95,7 @@ pub(crate) fn build_cli() -> Command {
 
         Arg::new("client-ca-file")
             .long("client-ca-file")
+            .value_delimiter(',')
             .value_name("CLIENT_CA_FILE")
             .env("KUBEWARDEN_CLIENT_CA_FILE")
             .help("Path to an CA certificate file that issued the client certificate. Required to enable mTLS"),
