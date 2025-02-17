@@ -682,15 +682,19 @@ async fn test_detect_certificate_rotation() {
     let first_tls_data_client = create_cert(hostname1);
     let second_tls_data_client = create_cert(hostname1);
 
-    std::fs::write(&cert_file, tls_data1.cert).unwrap();
-    std::fs::write(&key_file, tls_data1.key).unwrap();
-    std::fs::write(&first_client_ca, first_tls_data_client.cert.clone()).unwrap();
-    std::fs::write(&second_client_ca, second_tls_data_client.cert.clone()).unwrap();
+    fs::write(&cert_file, tls_data1.cert).await.unwrap();
+    fs::write(&key_file, tls_data1.key).await.unwrap();
+    fs::write(&first_client_ca, first_tls_data_client.cert.clone())
+        .await
+        .unwrap();
+    fs::write(&second_client_ca, second_tls_data_client.cert.clone())
+        .await
+        .unwrap();
 
     let mut config = default_test_config();
     config.tls_config = Some(policy_server::config::TlsConfig {
-        cert_file: cert_file.to_str().unwrap().to_owned(),
-        key_file: key_file.to_str().unwrap().to_owned(),
+        cert_file: cert_file.clone(),
+        key_file: key_file.clone(),
         client_ca_file: vec![first_client_ca.clone(), second_client_ca.clone()],
     });
 
@@ -728,7 +732,7 @@ async fn test_detect_certificate_rotation() {
     let tls_data2 = create_cert(hostname2);
 
     // write only the cert file
-    std::fs::write(&cert_file, tls_data2.cert.clone()).unwrap();
+    fs::write(&cert_file, tls_data2.cert.clone()).await.unwrap();
 
     // give inotify some time to ensure it detected the cert change
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -739,7 +743,7 @@ async fn test_detect_certificate_rotation() {
         .expect("certificate should not have been changed");
 
     // write only the key file
-    std::fs::write(&key_file, tls_data2.key.clone()).unwrap();
+    fs::write(&key_file, tls_data2.key.clone()).await.unwrap();
 
     // give inotify some time to ensure it detected the cert change,
     // also give axum some time to complete the certificate reload
@@ -752,7 +756,9 @@ async fn test_detect_certificate_rotation() {
     let first_tls_data_client2 = create_cert(hostname2);
 
     // write only the cert file
-    std::fs::write(&first_client_ca, first_tls_data_client2.cert.clone()).unwrap();
+    fs::write(&first_client_ca, first_tls_data_client2.cert.clone())
+        .await
+        .unwrap();
 
     // give inotify some time to ensure it detected the cert change
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -760,7 +766,9 @@ async fn test_detect_certificate_rotation() {
     let second_tls_data_client2 = create_cert(hostname2);
 
     // write only the cert file
-    std::fs::write(&second_client_ca, second_tls_data_client2.cert.clone()).unwrap();
+    fs::write(&second_client_ca, second_tls_data_client2.cert.clone())
+        .await
+        .unwrap();
 
     // give inotify some time to ensure it detected the cert change
     tokio::time::sleep(std::time::Duration::from_secs(4)).await;
@@ -778,7 +786,7 @@ async fn test_detect_certificate_rotation() {
     .unwrap();
     assert_eq!(status_code, reqwest::StatusCode::OK);
 
-    for tls_data_client in vec![&first_tls_data_client2, &second_tls_data_client2] {
+    for tls_data_client in [&first_tls_data_client2, &second_tls_data_client2] {
         let client = build_request_client(
             Some(&tls_data2),
             Some(tls_data_client.cert.clone()),
@@ -1020,27 +1028,31 @@ async fn test_tls(
     let key_file = certs_dir.path().join("policy-server-key.pem");
 
     if let Some(ref tls_data) = server_tls_data {
-        std::fs::write(&cert_file, tls_data.cert.clone()).unwrap();
-        std::fs::write(&key_file, tls_data.key.clone()).unwrap();
+        fs::write(&cert_file, tls_data.cert.clone()).await.unwrap();
+        fs::write(&key_file, tls_data.key.clone()).await.unwrap();
     }
 
     // Client CA pem file, cert data and key data
     let clients_cas_info: Vec<(PathBuf, String, String)> =
         if let Some(ref tls_data) = client_tls_data {
-            tls_data
+            let tls_data: Vec<(PathBuf, String, String)> = tls_data
                 .iter()
                 .enumerate()
-                .into_iter()
                 .map(|(i, tls_data)| {
                     let client_ca = certs_dir
                         .path()
                         .join(format!("client_cert_{}.pem", i))
                         .to_owned();
-                    std::fs::write(&client_ca, tls_data.cert.clone())
-                        .expect("failed to write client CA file");
+
                     (client_ca, tls_data.cert.clone(), tls_data.key.clone())
                 })
-                .collect()
+                .collect();
+
+            for (client_ca, cert, _) in &tls_data {
+                fs::write(&client_ca, cert.clone()).await.unwrap();
+            }
+
+            tls_data
         } else {
             vec![]
         };
@@ -1049,8 +1061,8 @@ async fn test_tls(
     config.tls_config = match (server_tls_data.as_ref(), client_tls_data.as_ref()) {
         (None, None) => None,
         (Some(_), Some(_)) => Some(policy_server::config::TlsConfig {
-            cert_file: cert_file.to_str().unwrap().to_owned(),
-            key_file: key_file.to_str().unwrap().to_owned(),
+            cert_file: cert_file.clone(),
+            key_file: key_file.clone(),
             client_ca_file: clients_cas_info
                 .clone()
                 .into_iter()
@@ -1058,8 +1070,8 @@ async fn test_tls(
                 .collect(),
         }),
         (Some(_), None) => Some(policy_server::config::TlsConfig {
-            cert_file: cert_file.to_str().unwrap().to_owned(),
-            key_file: key_file.to_str().unwrap().to_owned(),
+            cert_file: cert_file.clone(),
+            key_file: key_file.clone(),
             client_ca_file: vec![],
         }),
         _ => {
@@ -1160,14 +1172,11 @@ fn build_request_client(
         builder = builder.add_root_certificate(certificate);
     }
 
-    match (client_cert, client_key) {
-        (Some(client_cert), Some(client_key)) => {
-            let identity =
-                reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
-                    .expect("successfull pem parsing");
-            builder = builder.identity(identity)
-        }
-        _ => {}
+    if let (Some(client_cert), Some(client_key)) = (client_cert, client_key) {
+        let identity =
+            reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
+                .expect("successfull pem parsing");
+        builder = builder.identity(identity)
     }
     builder.build().expect("failed to build client")
 }
