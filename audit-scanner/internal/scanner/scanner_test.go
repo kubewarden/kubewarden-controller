@@ -2,6 +2,8 @@ package scanner
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +17,7 @@ import (
 	auditscheme "github.com/kubewarden/audit-scanner/internal/scheme"
 	"github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -36,6 +39,21 @@ const (
 	parallelPoliciesAudits   = 2
 	pageSize                 = 100
 )
+
+func newTestConfig(policiesClient *policies.Client, k8sClient *k8s.Client, policyReportStore *report.PolicyReportStore) Config {
+	return Config{
+		PoliciesClient:    policiesClient,
+		K8sClient:         k8sClient,
+		PolicyReportStore: policyReportStore,
+		Parallelization: ParallelizationConfig{
+			ParallelNamespacesAudits: parallelNamespacesAudits,
+			ParallelResourcesAudits:  parallelResourcesAudits,
+			PoliciesAudits:           parallelPoliciesAudits,
+		},
+		OutputScan:   false,
+		DisableStore: false,
+	}
+}
 
 func newMockPolicyServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
@@ -63,6 +81,56 @@ func newMockPolicyServerWithErrors() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusBadGateway)
 	}))
+}
+
+func newMockPolicyServerWithMTLS(caCert, serverCert, serverKey []byte) *httptest.Server {
+	cert, err := tls.X509KeyPair(serverCert, serverKey)
+	if err != nil {
+		panic("failed to load server certificate: " + err.Error())
+	}
+
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(caCert)
+	if !ok {
+		panic("failed to parse root certificate")
+	}
+
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, r *http.Request) {
+		if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+			writer.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		writer.WriteHeader(http.StatusOK)
+
+		admissionReview := admissionv1.AdmissionReview{
+			Response: &admissionv1.AdmissionResponse{
+				Allowed: true,
+				Result:  nil,
+			},
+		}
+		response, err := json.Marshal(admissionReview)
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+
+		_, err = writer.Write(response)
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+		}
+	}))
+
+	server.TLS = &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    caCertPool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS12,
+	}
+	server.StartTLS()
+
+	return server
 }
 
 func TestScanAllNamespaces(t *testing.T) {
@@ -320,7 +388,8 @@ func TestScanAllNamespaces(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelResourcesAudits, parallelPoliciesAudits)
+	config := newTestConfig(policiesClient, k8sClient, policyReportStore)
+	scanner, err := NewScanner(config)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
@@ -525,7 +594,8 @@ func TestScanClusterWideResources(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelNamespacesAudits, parallelPoliciesAudits)
+	config := newTestConfig(policiesClient, k8sClient, policyReportStore)
+	scanner, err := NewScanner(config)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
@@ -635,7 +705,8 @@ func TestScanWithHTTPErrors(t *testing.T) {
 
 	policyReportStore := report.NewPolicyReportStore(client)
 
-	scanner, err := NewScanner(policiesClient, k8sClient, policyReportStore, false, false, true, "", parallelNamespacesAudits, parallelResourcesAudits, parallelPoliciesAudits)
+	config := newTestConfig(policiesClient, k8sClient, policyReportStore)
+	scanner, err := NewScanner(config)
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
@@ -659,4 +730,126 @@ func TestScanWithHTTPErrors(t *testing.T) {
 	assert.Equal(t, 1, namespacePolicyReport.Summary.Error)
 	assert.Equal(t, 0, namespacePolicyReport.Summary.Skip)
 	assert.Len(t, namespacePolicyReport.Results, 1)
+}
+
+func TestScanWithMTLS(t *testing.T) {
+	caCertPEM, caKeyPEM, err := testutils.GenerateTestCA()
+	require.NoError(t, err)
+	serverCertPEM, serverKeyPEM, err := testutils.GenerateTestCert(caCertPEM, caKeyPEM, "server")
+	require.NoError(t, err)
+	clientCertPEM, clientKeyPEM, err := testutils.GenerateTestCert(caCertPEM, caKeyPEM, "client")
+	require.NoError(t, err)
+
+	caCertFile, err := testutils.WriteTempFile(caCertPEM)
+	require.NoError(t, err)
+	clientCertFile, err := testutils.WriteTempFile(clientCertPEM)
+	require.NoError(t, err)
+	clientKeyFile, err := testutils.WriteTempFile(clientKeyPEM)
+	require.NoError(t, err)
+
+	mockPolicyServer := newMockPolicyServerWithMTLS(caCertPEM, serverCertPEM, serverKeyPEM)
+	defer mockPolicyServer.Close()
+
+	policyServer := &policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}
+
+	policyServerService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"app": "kubewarden-policy-server-default",
+			},
+			Name:      "policy-server-default",
+			Namespace: "kubewarden",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name: "http",
+					Port: 443,
+				},
+			},
+		},
+	}
+
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespace",
+			UID:  "namespace-uid",
+		},
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod",
+			Namespace: "namespace",
+			UID:       "pod-uid",
+		},
+	}
+
+	// a ClusterAdmissionPolicy targeting pods
+	clusterAdmissionPolicy := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("clusterAdmissionPolicy").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"pods"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	auditScheme, err := auditscheme.NewScheme()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dynamicClient := dynamicFake.NewSimpleDynamicClient(
+		auditScheme,
+		namespace,
+		pod,
+	)
+	clientset := fake.NewSimpleClientset(
+		namespace,
+	)
+	client, err := testutils.NewFakeClient(
+		namespace,
+		policyServer,
+		policyServerService,
+		clusterAdmissionPolicy,
+	)
+	require.NoError(t, err)
+
+	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
+	require.NoError(t, err)
+
+	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL)
+	require.NoError(t, err)
+
+	policyReportStore := report.NewPolicyReportStore(client)
+
+	config := newTestConfig(policiesClient, k8sClient, policyReportStore)
+	config.TLS = TLSConfig{
+		CAFile:         caCertFile,
+		ClientCertFile: clientCertFile,
+		ClientKeyFile:  clientKeyFile,
+	}
+	scanner, err := NewScanner(config)
+	require.NoError(t, err)
+
+	runUID := uuid.New().String()
+	err = scanner.ScanAllNamespaces(context.Background(), runUID)
+	require.NoError(t, err)
+
+	podPolicyReport := wgpolicy.PolicyReport{}
+	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod.GetUID()), Namespace: "namespace"}, &podPolicyReport)
+	require.NoError(t, err)
+
+	log.Debug().Any("podPolicyReport", podPolicyReport).Msg("podPolicyReport")
+
+	assert.Equal(t, 1, podPolicyReport.Summary.Pass)
+	assert.Equal(t, 0, podPolicyReport.Summary.Error)
+	assert.Equal(t, 0, podPolicyReport.Summary.Skip)
+	assert.Len(t, podPolicyReport.Results, 1)
 }

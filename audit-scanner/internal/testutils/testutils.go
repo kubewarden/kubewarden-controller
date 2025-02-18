@@ -3,6 +3,16 @@
 package testutils
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"net"
+	"os"
+	"time"
+
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/scheme"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
@@ -466,4 +476,114 @@ func (factory *ClusterAdmissionPolicyGroupFactory) Build() *policiesv1.ClusterAd
 	})
 
 	return policy
+}
+
+// GenerateTestCA generates a test CA root and key.
+func GenerateTestCA() ([]byte, []byte, error) {
+	key, keyPEM, err := generateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: "Test CA",
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		panic(err)
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certDER,
+	})
+
+	return certPEM, keyPEM, err
+}
+
+// GenerateTestCert generates a test certificate and key signed by the given CA certificate and key.
+func GenerateTestCert(caCertPEM, caKeyPEM []byte, commonName string) ([]byte, []byte, error) {
+	key, keyPEM, err := generateKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	block, _ := pem.Decode(caCertPEM)
+	caCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	block, _ = pem.Decode(caKeyPEM)
+	caKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: commonName,
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	template.IPAddresses = []net.IP{
+		net.ParseIP("127.0.0.1"),
+		net.ParseIP("::1"),
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, template, caCert, &key.PublicKey, caKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certDER,
+	})
+
+	return certPEM, keyPEM, nil
+}
+
+func generateKey() (*rsa.PrivateKey, []byte, error) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048) //nolint:mnd // This is a test helper
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+
+	return key, keyPEM, err
+}
+
+// WriteTempFile creates a temporary file with the given content and returns the file path.
+func WriteTempFile(content []byte) (string, error) {
+	tmpfile, err := os.CreateTemp("", "test-cert-*")
+	if err != nil {
+		return "", err
+	}
+	defer tmpfile.Close()
+
+	if _, err := tmpfile.Write(content); err != nil {
+		return "", err
+	}
+
+	return tmpfile.Name(), nil
 }
