@@ -57,10 +57,16 @@ func NewScanner(
 	disableStore bool,
 	insecureClient bool,
 	caCertFile string,
+	clientCertFile string,
+	clientKeyFile string,
 	parallelNamespacesAudits int,
 	parallelResourcesAudits int,
 	parallelPoliciesAudits int,
 ) (*Scanner, error) {
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
 	// Get the SystemCertPool to build an in-app cert pool from it
 	// Continue with an empty pool on error
 	rootCAs, _ := x509.SystemCertPool()
@@ -69,16 +75,35 @@ func NewScanner(
 	}
 
 	if caCertFile != "" {
-		certs, err := os.ReadFile(caCertFile)
+		caCert, err := os.ReadFile(caCertFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", caCertFile, err)
 		}
 		// Append our cert to the in-app cert pool
-		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
 			return nil, errors.New("failed to append cert to in-app RootCAs trust store")
 		}
 		log.Debug().Str("ca-cert-file", caCertFile).
 			Msg("appended cert file to in-app RootCAs trust store")
+	}
+
+	tlsConfig.RootCAs = rootCAs
+
+	if clientCertFile != "" && clientKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("loading client certificate: %w", err)
+		}
+		log.Debug().Str("client-cert", clientCertFile).
+			Str("client-key", clientKeyFile).
+			Msg("appended cert file to in-app RootCAs trust store")
+
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	if insecureClient {
+		tlsConfig.InsecureSkipVerify = true
+		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
 	}
 
 	httpClient := *http.DefaultClient
@@ -89,6 +114,8 @@ func NewScanner(
 		return nil, errors.New("failed to build httpClient: failed http.Transport type assertion")
 	}
 
+	transport.TLSClientConfig = tlsConfig
+
 	// By dafault, the http client reuses connections. This causes
 	// scaling issues when a PolicyServer instance is backed by multiple
 	// replicas. In this scanerio, the requests are sent to the same
@@ -96,16 +123,6 @@ func NewScanner(
 	// To avoid this, we disable keep-alives, which ensures a
 	// new connection is created for each evaluation request.
 	transport.DisableKeepAlives = true
-
-	transport.TLSClientConfig = &tls.Config{
-		RootCAs:    rootCAs, // our augmented in-app cert pool
-		MinVersion: tls.VersionTLS12,
-	}
-
-	if insecureClient {
-		transport.TLSClientConfig.InsecureSkipVerify = true
-		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
-	}
 
 	return &Scanner{
 		policiesClient:           policiesClient,
