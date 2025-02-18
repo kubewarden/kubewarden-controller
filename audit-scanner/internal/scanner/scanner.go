@@ -50,18 +50,7 @@ type Scanner struct {
 // cert trust store. This gets used by the httpClient when connection to
 // PolicyServers endpoints.
 func NewScanner(
-	policiesClient *policies.Client,
-	k8sClient *k8s.Client,
-	policyReportStore *report.PolicyReportStore,
-	outputScan bool,
-	disableStore bool,
-	insecureClient bool,
-	caCertFile string,
-	clientCertFile string,
-	clientKeyFile string,
-	parallelNamespacesAudits int,
-	parallelResourcesAudits int,
-	parallelPoliciesAudits int,
+	config Config,
 ) (*Scanner, error) {
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -74,37 +63,37 @@ func NewScanner(
 		rootCAs = x509.NewCertPool()
 	}
 
-	if caCertFile != "" {
-		caCert, err := os.ReadFile(caCertFile)
+	if config.TLS.CAFile != "" {
+		caCert, err := os.ReadFile(config.TLS.CAFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", caCertFile, err)
+			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", config.TLS.CAFile, err)
 		}
 		// Append our cert to the in-app cert pool
 		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
 			return nil, errors.New("failed to append cert to in-app RootCAs trust store")
 		}
-		log.Debug().Str("ca-cert-file", caCertFile).
+		log.Debug().Str("ca-cert", config.TLS.CAFile).
 			Msg("appended cert file to in-app RootCAs trust store")
 	}
 
 	tlsConfig.RootCAs = rootCAs
 
-	if clientCertFile != "" && clientKeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(clientCertFile, clientKeyFile)
+	if config.TLS.ClientCertFile != "" && config.TLS.ClientKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(config.TLS.ClientCertFile, config.TLS.ClientKeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("loading client certificate: %w", err)
 		}
-		log.Debug().Str("client-cert", clientCertFile).
-			Str("client-key", clientKeyFile).
+		log.Debug().Str("client-cert", config.TLS.ClientCertFile).
+			Str("client-key", config.TLS.ClientCertFile).
 			Msg("appended cert file to in-app RootCAs trust store")
 
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
-	if insecureClient {
-		tlsConfig.InsecureSkipVerify = true
+	if config.TLS.Insecure {
 		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
 	}
+	tlsConfig.InsecureSkipVerify = config.TLS.Insecure
 
 	httpClient := *http.DefaultClient
 	httpClient.Timeout = httpClientTimeout
@@ -125,15 +114,15 @@ func NewScanner(
 	transport.DisableKeepAlives = true
 
 	return &Scanner{
-		policiesClient:           policiesClient,
-		k8sClient:                k8sClient,
-		policyReportStore:        policyReportStore,
+		policiesClient:           config.PoliciesClient,
+		k8sClient:                config.K8sClient,
+		policyReportStore:        config.PolicyReportStore,
 		httpClient:               httpClient,
-		outputScan:               outputScan,
-		disableStore:             disableStore,
-		parallelNamespacesAudits: parallelNamespacesAudits,
-		parallelResourcesAudits:  parallelResourcesAudits,
-		parallelPoliciesAudits:   parallelPoliciesAudits,
+		outputScan:               config.OutputScan,
+		disableStore:             config.DisableStore,
+		parallelNamespacesAudits: config.Parallelization.ParallelNamespacesAudits,
+		parallelResourcesAudits:  config.Parallelization.ParallelResourcesAudits,
+		parallelPoliciesAudits:   config.Parallelization.PoliciesAudits,
 	}, nil
 }
 

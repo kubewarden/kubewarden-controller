@@ -63,7 +63,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			caCertFile, err := cmd.Flags().GetString("extra-ca")
+			caFile, err := cmd.Flags().GetString("extra-ca")
 			if err != nil {
 				return err
 			}
@@ -113,11 +113,27 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 				return err
 			}
 			policyReportStore := report.NewPolicyReportStore(client)
-			scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL,
-				caCertFile, clientCertFile, clientKeyFile,
-				parallelNamespacesAudits,
-				parallelResourcesAudits,
-				parallelPoliciesAudit)
+
+			scannerConfig := scanner.Config{
+				PoliciesClient:    policiesClient,
+				K8sClient:         k8sClient,
+				PolicyReportStore: policyReportStore,
+				TLS: scanner.TLSConfig{
+					Insecure:       insecureSSL,
+					CAFile:         caFile,
+					ClientCertFile: clientCertFile,
+					ClientKeyFile:  clientKeyFile,
+				},
+				Parallelization: scanner.ParallelizationConfig{
+					ParallelNamespacesAudits: parallelNamespacesAudits,
+					ParallelResourcesAudits:  parallelResourcesAudits,
+					PoliciesAudits:           parallelPoliciesAudit,
+				},
+				OutputScan:   outputScan,
+				DisableStore: disableStore,
+			}
+
+			scanner, err := scanner.NewScanner(scannerConfig)
 			if err != nil {
 				return err
 			}
