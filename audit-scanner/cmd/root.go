@@ -27,7 +27,7 @@ const (
 	defaultPageSize            = 100
 )
 
-//nolint:gocognit
+//nolint:gocognit,funlen // This function is the CLI entrypoint and it's expected to be long.
 func NewRootCommand() *cobra.Command {
 	var (
 		level        logconfig.Level // log level.
@@ -63,7 +63,15 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return err
 			}
-			caCertFile, err := cmd.Flags().GetString("extra-ca")
+			caFile, err := cmd.Flags().GetString("extra-ca")
+			if err != nil {
+				return err
+			}
+			clientCertFile, err := cmd.Flags().GetString("client-cert")
+			if err != nil {
+				return err
+			}
+			clientKeyFile, err := cmd.Flags().GetString("client-key")
 			if err != nil {
 				return err
 			}
@@ -105,10 +113,27 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 				return err
 			}
 			policyReportStore := report.NewPolicyReportStore(client)
-			scanner, err := scanner.NewScanner(policiesClient, k8sClient, policyReportStore, outputScan, disableStore, insecureSSL, caCertFile,
-				parallelNamespacesAudits,
-				parallelResourcesAudits,
-				parallelPoliciesAudit)
+
+			scannerConfig := scanner.Config{
+				PoliciesClient:    policiesClient,
+				K8sClient:         k8sClient,
+				PolicyReportStore: policyReportStore,
+				TLS: scanner.TLSConfig{
+					Insecure:       insecureSSL,
+					CAFile:         caFile,
+					ClientCertFile: clientCertFile,
+					ClientKeyFile:  clientKeyFile,
+				},
+				Parallelization: scanner.ParallelizationConfig{
+					ParallelNamespacesAudits: parallelNamespacesAudits,
+					ParallelResourcesAudits:  parallelResourcesAudits,
+					PoliciesAudits:           parallelPoliciesAudit,
+				},
+				OutputScan:   outputScan,
+				DisableStore: disableStore,
+			}
+
+			scanner, err := scanner.NewScanner(scannerConfig)
 			if err != nil {
 				return err
 			}
@@ -129,6 +154,9 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 	rootCmd.Flags().StringSliceVarP(&skippedNs, "ignore-namespaces", "i", nil, "comma separated list of namespace names to be skipped from scan. This flag can be repeated")
 	rootCmd.Flags().BoolVar(&insecureSSL, "insecure-ssl", false, "skip SSL cert validation when connecting to PolicyServers endpoints. Useful for development")
 	rootCmd.Flags().StringP("extra-ca", "f", "", "File path to CA cert in PEM format of PolicyServer endpoints")
+	rootCmd.Flags().StringP("client-cert", "", "", "File path to client cert in PEM format used for mTLS communication with the PolicyServer endpoints")
+	rootCmd.Flags().StringP("client-key", "", "", "File path to client key in PEM format used for mTLS communication with the PolicyServer endpoints")
+	rootCmd.MarkFlagsRequiredTogether("client-cert", "client-key")
 	rootCmd.Flags().BoolVar(&disableStore, "disable-store", false, "disable storing the results in the k8s cluster")
 	rootCmd.Flags().IntP("parallel-namespaces", "", defaultParallelNamespaces, "number of Namespaces to scan in parallel")
 	rootCmd.Flags().IntP("parallel-resources", "", defaultParallelResources, "number of resources to scan in parallel")

@@ -50,17 +50,12 @@ type Scanner struct {
 // cert trust store. This gets used by the httpClient when connection to
 // PolicyServers endpoints.
 func NewScanner(
-	policiesClient *policies.Client,
-	k8sClient *k8s.Client,
-	policyReportStore *report.PolicyReportStore,
-	outputScan bool,
-	disableStore bool,
-	insecureClient bool,
-	caCertFile string,
-	parallelNamespacesAudits int,
-	parallelResourcesAudits int,
-	parallelPoliciesAudits int,
+	config Config,
 ) (*Scanner, error) {
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+
 	// Get the SystemCertPool to build an in-app cert pool from it
 	// Continue with an empty pool on error
 	rootCAs, _ := x509.SystemCertPool()
@@ -68,18 +63,37 @@ func NewScanner(
 		rootCAs = x509.NewCertPool()
 	}
 
-	if caCertFile != "" {
-		certs, err := os.ReadFile(caCertFile)
+	if config.TLS.CAFile != "" {
+		caCert, err := os.ReadFile(config.TLS.CAFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", caCertFile, err)
+			return nil, fmt.Errorf("failed to read file %q with CA cert: %w", config.TLS.CAFile, err)
 		}
 		// Append our cert to the in-app cert pool
-		if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
+		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
 			return nil, errors.New("failed to append cert to in-app RootCAs trust store")
 		}
-		log.Debug().Str("ca-cert-file", caCertFile).
+		log.Debug().Str("ca-cert", config.TLS.CAFile).
 			Msg("appended cert file to in-app RootCAs trust store")
 	}
+
+	tlsConfig.RootCAs = rootCAs
+
+	if config.TLS.ClientCertFile != "" && config.TLS.ClientKeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(config.TLS.ClientCertFile, config.TLS.ClientKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("loading client certificate: %w", err)
+		}
+		log.Debug().Str("client-cert", config.TLS.ClientCertFile).
+			Str("client-key", config.TLS.ClientCertFile).
+			Msg("appended cert file to in-app RootCAs trust store")
+
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	if config.TLS.Insecure {
+		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
+	}
+	tlsConfig.InsecureSkipVerify = config.TLS.Insecure
 
 	httpClient := *http.DefaultClient
 	httpClient.Timeout = httpClientTimeout
@@ -89,6 +103,8 @@ func NewScanner(
 		return nil, errors.New("failed to build httpClient: failed http.Transport type assertion")
 	}
 
+	transport.TLSClientConfig = tlsConfig
+
 	// By dafault, the http client reuses connections. This causes
 	// scaling issues when a PolicyServer instance is backed by multiple
 	// replicas. In this scanerio, the requests are sent to the same
@@ -97,26 +113,16 @@ func NewScanner(
 	// new connection is created for each evaluation request.
 	transport.DisableKeepAlives = true
 
-	transport.TLSClientConfig = &tls.Config{
-		RootCAs:    rootCAs, // our augmented in-app cert pool
-		MinVersion: tls.VersionTLS12,
-	}
-
-	if insecureClient {
-		transport.TLSClientConfig.InsecureSkipVerify = true
-		log.Warn().Msg("connecting to PolicyServers endpoints without validating TLS connection")
-	}
-
 	return &Scanner{
-		policiesClient:           policiesClient,
-		k8sClient:                k8sClient,
-		policyReportStore:        policyReportStore,
+		policiesClient:           config.PoliciesClient,
+		k8sClient:                config.K8sClient,
+		policyReportStore:        config.PolicyReportStore,
 		httpClient:               httpClient,
-		outputScan:               outputScan,
-		disableStore:             disableStore,
-		parallelNamespacesAudits: parallelNamespacesAudits,
-		parallelResourcesAudits:  parallelResourcesAudits,
-		parallelPoliciesAudits:   parallelPoliciesAudits,
+		outputScan:               config.OutputScan,
+		disableStore:             config.DisableStore,
+		parallelNamespacesAudits: config.Parallelization.ParallelNamespacesAudits,
+		parallelResourcesAudits:  config.Parallelization.ParallelResourcesAudits,
+		parallelPoliciesAudits:   config.Parallelization.PoliciesAudits,
 	}, nil
 }
 
