@@ -5,6 +5,7 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: 0.0.0.0:4317
         tls:
           ca_file: "certs/server-ca.pem"
           cert_file: "certs/server-cert.pem"

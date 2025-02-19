@@ -804,8 +804,6 @@ async fn test_detect_certificate_rotation() {
     }
 }
 
-// This test is flaky. We need to fix it. But for now, we are ignoring it.
-#[ignore]
 #[tokio::test]
 async fn test_otel() {
     setup();
@@ -856,7 +854,7 @@ async fn test_otel() {
         set_permissions(file_path, permissions.clone()).unwrap();
     }
 
-    let otelc = GenericImage::new("otel/opentelemetry-collector", "0.98.0")
+    let otelc = GenericImage::new("otel/opentelemetry-collector", "0.120.0")
         .with_wait_for(WaitFor::message_on_stderr("Everything is ready"))
         .with_mount(Mount::bind_mount(
             otelc_config_path.to_str().unwrap(),
