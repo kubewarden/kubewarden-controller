@@ -38,9 +38,23 @@ func CheckAdmissionWebhookMatchConditions(config *rest.Config) (bool, error) {
 	if err = json.Unmarshal(openAPISchemaBytes, &parsedV3Schema); err != nil {
 		return false, fmt.Errorf("failed to unmarshal openapi schema for %s: %w", resourcePath, err)
 	}
-	schemas := parsedV3Schema["components"].(map[string]interface{})["schemas"]
-	validatingWebhook := schemas.(map[string]interface{})["io.k8s.api.admissionregistration.v1.ValidatingWebhook"]
-	_, exists = validatingWebhook.(map[string]interface{})["properties"].(map[string]interface{})["matchConditions"]
+	components, ok := parsedV3Schema["components"].(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("couldn't find components in openapi schema for %s", resourcePath)
+	}
+	schemas, ok := components["schemas"].(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("couldn't find schemas in openapi schema for %s", resourcePath)
+	}
+	validatingWebhook, ok := schemas["io.k8s.api.admissionregistration.v1.ValidatingWebhook"].(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("couldn't find schema for io.k8s.api.admissionregistration.v1.ValidatingWebhook in openapi schema for %s", resourcePath)
+	}
+	properties, ok := validatingWebhook["properties"].(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("couldn't find properties in schema for io.k8s.api.admissionregistration.v1.ValidatingWebhook in openapi schema for %s", resourcePath)
+	}
+	_, exists = properties["matchConditions"]
 
 	return exists, nil
 }
