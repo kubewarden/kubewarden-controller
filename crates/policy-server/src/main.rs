@@ -7,7 +7,6 @@ use ::tracing::info;
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::ArgMatches;
-use opentelemetry::global::shutdown_tracer_provider;
 use policy_server::metrics::setup_metrics;
 use policy_server::tracing::setup_tracing;
 use policy_server::PolicyServer;
@@ -27,7 +26,7 @@ async fn main() -> Result<()> {
 
     let config = policy_server::config::Config::from_args(&matches)?;
 
-    setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color)?;
+    let tracer_provider = setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color)?;
 
     if config.metrics_enabled {
         setup_metrics()?;
@@ -58,7 +57,9 @@ async fn main() -> Result<()> {
     let api_server = PolicyServer::new_from_config(config).await?;
     api_server.run().await?;
 
-    shutdown_tracer_provider();
+    if let Some(trace_provider) = tracer_provider {
+        trace_provider.shutdown()?;
+    }
 
     Ok(())
 }
