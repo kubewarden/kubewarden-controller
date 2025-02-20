@@ -300,35 +300,6 @@ func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, po
 }
 
 func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyServerDeployment *appsv1.Deployment) error {
-	policyServerDeployment.Spec.Template.Spec.Volumes = append(
-		policyServerDeployment.Spec.Template.Spec.Volumes,
-		corev1.Volume{
-			Name: kubewardenCAVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: constants.CARootSecretName,
-					Items: []corev1.KeyToPath{
-						{
-							Key:  constants.CARootCert,
-							Path: constants.CARootCert,
-						},
-					},
-				},
-			},
-		},
-	)
-
-	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
-
-	admissionContainer.VolumeMounts = append(
-		admissionContainer.VolumeMounts,
-		corev1.VolumeMount{
-			Name:      kubewardenCAVolumeName,
-			MountPath: kubewardenCAVolumePath,
-			ReadOnly:  true,
-		},
-	)
-
 	if r.ClientCAConfigMapName != "" {
 		if err := r.Client.Get(ctx, types.NamespacedName{Name: r.ClientCAConfigMapName, Namespace: r.DeploymentsNamespace}, &corev1.ConfigMap{}); err != nil {
 			return fmt.Errorf("failed to fetch client CA config map: %w", err)
@@ -336,6 +307,20 @@ func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyS
 
 		policyServerDeployment.Spec.Template.Spec.Volumes = append(
 			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: kubewardenCAVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: constants.CARootSecretName,
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.CARootCert,
+								Path: constants.CARootCert,
+							},
+						},
+					},
+				},
+			},
 			corev1.Volume{
 				Name: clientCAVolumeName,
 				VolumeSource: corev1.VolumeSource{
@@ -354,8 +339,14 @@ func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyS
 			},
 		)
 
+		admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
 		admissionContainer.VolumeMounts = append(
 			admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      kubewardenCAVolumeName,
+				MountPath: kubewardenCAVolumePath,
+				ReadOnly:  true,
+			},
 			corev1.VolumeMount{
 				Name:      clientCAVolumeName,
 				MountPath: clientCAVolumePath,
@@ -372,10 +363,6 @@ func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyS
 		return nil
 	}
 
-	admissionContainer.Env = append(admissionContainer.Env, corev1.EnvVar{
-		Name:  "KUBEWARDEN_CLIENT_CA_FILE",
-		Value: filepath.Join(kubewardenCAVolumePath, constants.CARootCert),
-	})
 	return nil
 }
 
