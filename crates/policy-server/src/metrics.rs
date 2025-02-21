@@ -1,7 +1,6 @@
 use anyhow::Result;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig, WithTonicConfig};
-use opentelemetry_sdk::runtime;
 
 mod policy_evaluations_total;
 pub use policy_evaluations_total::add_policy_evaluation;
@@ -20,8 +19,7 @@ pub fn setup_metrics() -> Result<()> {
         .build()?;
 
     let periodic_reader =
-        opentelemetry_sdk::metrics::PeriodicReader::builder(metric_exporter, runtime::Tokio)
-            .build();
+        opentelemetry_sdk::metrics::PeriodicReader::builder(metric_exporter).build();
     let meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
         .with_reader(periodic_reader)
         .build();

@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithTonicConfig;
 
+use opentelemetry_sdk::Resource;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -9,7 +10,14 @@ use crate::config::{self, build_client_tls_config_from_env};
 
 // Setup the tracing system. This MUST be done inside of a tokio Runtime
 // because some collectors rely on it and would panic otherwise.
-pub fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Result<()> {
+//
+// The function returns an optional tracer provider that must be used to
+// shut down the tracing system.
+pub fn setup_tracing(
+    log_level: &str,
+    log_fmt: &str,
+    log_no_color: bool,
+) -> Result<Option<opentelemetry_sdk::trace::SdkTracerProvider>> {
     // setup logging
     let filter_layer = EnvFilter::new(log_level)
         // some of our dependencies generate trace events too, but we don't care about them ->
@@ -23,18 +31,22 @@ pub fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Resu
         .add_directive("wasmtime_cranelift=off".parse().unwrap())
         .add_directive("wasmtime_jit=off".parse().unwrap());
 
-    match log_fmt {
-        "json" => tracing_subscriber::registry()
-            .with(filter_layer)
-            .with(fmt::layer().json())
-            .init(),
+    let tracer = match log_fmt {
+        "json" => {
+            tracing_subscriber::registry()
+                .with(filter_layer)
+                .with(fmt::layer().json())
+                .init();
+            None
+        }
         "text" => {
             let fmt_layer = fmt::layer().with_ansi(log_no_color);
 
             tracing_subscriber::registry()
                 .with(filter_layer)
                 .with(fmt_layer)
-                .init()
+                .init();
+            None
         }
         "otlp" => {
             // Create a new OpenTelemetry pipeline sending events to a
@@ -47,26 +59,30 @@ pub fn setup_tracing(log_level: &str, log_fmt: &str, log_no_color: bool) -> Resu
                 .with_tls_config(build_client_tls_config_from_env("OTLP")?)
                 .build()?;
 
-            let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
-                .with_resource(opentelemetry_sdk::Resource::new(vec![
-                    opentelemetry::KeyValue::new("service.name", config::SERVICE_NAME),
-                ]))
-                .with_batch_exporter(otlp_exporter, opentelemetry_sdk::runtime::Tokio)
+            let tracer_provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+                .with_resource(
+                    Resource::builder()
+                        .with_service_name(config::SERVICE_NAME)
+                        .build(),
+                )
+                .with_batch_exporter(otlp_exporter)
                 .build();
 
             let tracer = tracer_provider.tracer(config::SERVICE_NAME);
 
             // Create a tracing layer with the configured tracer
             let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
             tracing_subscriber::registry()
                 .with(filter_layer)
                 .with(telemetry)
                 .with(fmt::layer())
-                .init()
+                .init();
+            Some(tracer_provider)
         }
 
         _ => return Err(anyhow!("Unknown log message format")),
     };
 
-    Ok(())
+    Ok(tracer)
 }
