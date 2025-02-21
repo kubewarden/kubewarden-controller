@@ -23,6 +23,23 @@ jobs:
         with:
           command: check
 
+  version-check:
+    name: Check Cargo.toml version
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download source code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check cargo file version
+        run: |
+          CARGO_VERSION=$(sed  -n 's,^version\s*= \"\(.*\)\",\1,p' Cargo.toml)
+          TAG_VERSION=$(echo ${{ github.ref_name }} | sed 's/v//')
+
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ];then
+              echo "::error title=Invalid Cargo.toml version::Cargo.toml version does not match the tag version"
+              exit 1
+          fi
+
   unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -132,4 +149,3 @@ jobs:
             echo "Changes detected in cli-docs.md. Please run `make build-docs` and commit the changes."
             gh run cancel ${{ github.run_id }}
           fi
-
