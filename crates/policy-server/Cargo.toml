@@ -33,10 +33,10 @@ opentelemetry = { version = "0.28.0", default-features = false, features = [
   "trace",
 ] }
 opentelemetry-otlp = { version = "0.28.0", features = [
+  "grpc-tonic",
   "metrics",
   "tls",
   "tonic",
-  "grpc-tonic"
 ] }
 opentelemetry_sdk = { version = "0.28.0", features = ["rt-tokio"] }
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.20.0" }
