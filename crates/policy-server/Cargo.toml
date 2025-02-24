@@ -39,7 +39,7 @@ opentelemetry-otlp = { version = "0.28.0", features = [
   "tonic",
 ] }
 opentelemetry_sdk = { version = "0.28.0", features = ["rt-tokio"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.20.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.20.1" }
 pprof = { version = "0.14", features = ["prost-codec"] }
 rayon = "1.10"
 regex = "1.10"
