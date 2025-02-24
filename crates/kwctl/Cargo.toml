@@ -21,7 +21,7 @@ k8s-openapi = { version = "0.24.0", default-features = false, features = [
 ] }
 lazy_static = "1.4.0"
 pem = "3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.20.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.20.1" }
 prettytable-rs = "^0.10"
 pulldown-cmark = { version = "0.12.1", default-features = false }
 pulldown-cmark-mdcat = { version = "2.7.1", default-features = false }
@@ -44,7 +44,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.5.0"
 walrus = "0.23.0"
-wasmparser = "0.225"
+wasmparser = "0.226"
 
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of kwctl
