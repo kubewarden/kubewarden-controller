@@ -32,6 +32,7 @@ unit-tests: fmt lint
 .PHONY: integration-test
 integration-tests: fmt lint
 	cargo test --test '*'
+	cargo test --features otel_tests -- test_otel
 
 .PHONY: coverage
 coverage: coverage-unit-tests coverage-integration-tests
@@ -45,8 +46,11 @@ coverage-unit-tests:
 .PHONY: coverage-integration-tests
 coverage-integration-tests:
 	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--all-features --implicit-test-threads --test integration_test \
+		--implicit-test-threads --test integration_test \
 		--out xml --out html --output-dir coverage/integration-tests
+	cargo tarpaulin --verbose --skip-clean --engine=llvm \
+		--features otel_tests --implicit-test-threads --test integration_test \
+		--out xml --out html --output-dir coverage/otel-integration-tests -- test_otel
 
 .PHONY: clean
 clean:
