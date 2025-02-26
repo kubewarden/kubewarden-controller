@@ -441,11 +441,11 @@ Convert a Kubernetes `ValidatingAdmissionPolicy` into a Kubewarden `ClusterAdmis
 
 ###### **Options:**
 
-* `-b`, `--binding <VALIDATING-ADMISSION-POLICY-BINDING.yaml>` — The file containining the ValidatingAdmissionPolicyBinding definition
+* `-b`, `--binding <VALIDATING-ADMISSION-POLICY-BINDING.yaml>` — The file containing the ValidatingAdmissionPolicyBinding definition
 * `--cel-policy <URI>` — The CEL policy module to use
 
   Default value: `ghcr.io/kubewarden/policies/cel-policy:latest`
-* `-p`, `--policy <VALIDATING-ADMISSION-POLICY.yaml>` — The file containining the ValidatingAdmissionPolicy definition
+* `-p`, `--policy <VALIDATING-ADMISSION-POLICY.yaml>` — The file containing the ValidatingAdmissionPolicy definition
 
 
 

@@ -101,7 +101,7 @@ impl BackendDetector {
                     Ok(Backend::Opa)
                 } else {
                     Err(anyhow!(
-                        "Wrong value inside of policy's metatada for 'executionMode'. The policy has not been created using Rego"
+                        "Wrong value inside of policy's metadata for 'executionMode'. The policy has not been created using Rego"
                     ))
                 }
             }
@@ -110,14 +110,14 @@ impl BackendDetector {
                     Ok(Backend::OpaGatekeeper)
                 } else {
                     Err(anyhow!(
-                        "Wrong value inside of policy's metatada for 'executionMode'. The policy has not been created using Rego"
+                        "Wrong value inside of policy's metadata for 'executionMode'. The policy has not been created using Rego"
                     ))
                 }
             }
             PolicyExecutionMode::KubewardenWapc => {
                 if is_rego_policy {
                     Err(anyhow!(
-                        "Wrong value inside of policy's metatada for 'executionMode'. This policy has been created using Rego"
+                        "Wrong value inside of policy's metadata for 'executionMode'. This policy has been created using Rego"
                     ))
                 } else {
                     let protocol_version = (self.kubewarden_protocol_detector_func)(wasm_path)

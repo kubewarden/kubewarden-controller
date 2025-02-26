@@ -489,13 +489,13 @@ fn subcommand_scaffold() -> Command {
             .short('p')
             .required(true)
             .value_name("VALIDATING-ADMISSION-POLICY.yaml")
-            .help("The file containining the ValidatingAdmissionPolicy definition"),
+            .help("The file containing the ValidatingAdmissionPolicy definition"),
         Arg::new("binding")
             .long("binding")
             .short('b')
             .required(true)
             .value_name("VALIDATING-ADMISSION-POLICY-BINDING.yaml")
-            .help("The file containining the ValidatingAdmissionPolicyBinding definition"),
+            .help("The file containing the ValidatingAdmissionPolicyBinding definition"),
     ];
     vap_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 

@@ -182,7 +182,7 @@ fn generate_yaml_resource(
                     );
                     warn!("Carefully review the contents of the `contextAwareResources` attribute for abuses.");
                 } else {
-                    warn!("Policy requires access to Kubernetes resources at evaluation time. For safety resons, the `contextAwareResources` attribute has been left empty.");
+                    warn!("Policy requires access to Kubernetes resources at evaluation time. For safety reasons, the `contextAwareResources` attribute has been left empty.");
                     warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command an populate the `contextAwareResources` accordingly.");
                     warn!("Otherwise, invoke the `scaffold` command using the `--allow-context-aware` flag.");
 

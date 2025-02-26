@@ -349,7 +349,7 @@ mod tests {
         assert!(response.is_err());
         let err = response.unwrap_err();
 
-        // we cannot return specialized errros because of the waPC contract
+        // we cannot return specialized errors because of the waPC contract
         // hence we have to unfortunately look at the error string
         assert!(err.to_string().as_str().contains("empty"));
     }
@@ -382,7 +382,7 @@ mod tests {
         assert!(response.is_err());
         let err = response.unwrap_err();
 
-        // we cannot return specialized errros because of the waPC contract
+        // we cannot return specialized errors because of the waPC contract
         // hence we have to unfortunately look at the error string
         assert!(err.to_string().as_str().contains("unexpected request"));
     }
