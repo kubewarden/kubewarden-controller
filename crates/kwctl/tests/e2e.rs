@@ -355,7 +355,7 @@ fn test_push() {
     std::fs::write(tempdir.path().join("sources.yml"), sources_yaml).unwrap();
 
     let target_image = format!(
-        "registry://localhost:{}/my-pod-priviliged-policy:v0.1.10",
+        "registry://localhost:{}/my-pod-privileged-policy:v0.1.10",
         port
     );
 
@@ -379,7 +379,7 @@ fn test_push() {
     };
     let manifest_annotations = get_manifest_annotations(
         format!(
-            "registry://localhost:{}/my-pod-priviliged-policy:v0.1.10",
+            "registry://localhost:{}/my-pod-privileged-policy:v0.1.10",
             port
         )
         .as_str(),
@@ -403,7 +403,7 @@ fn test_push() {
         .arg("--sources-path")
         .arg("sources.yml")
         .arg(format!(
-            "registry://localhost:{}/my-pod-priviliged-policy:v0.1.10",
+            "registry://localhost:{}/my-pod-privileged-policy:v0.1.10",
             port
         ));
     cmd.assert().success();
@@ -412,7 +412,7 @@ fn test_push() {
     cmd.arg("policies");
     cmd.assert().success();
     cmd.assert()
-        .stdout(contains("my-pod-priviliged-policy:v0.1.10"));
+        .stdout(contains("my-pod-privileged-policy:v0.1.10"));
 }
 
 #[rstest]
@@ -522,7 +522,7 @@ fn test_scaffold_from_vap(
 #[case::wrong(
     "rego-annotate/metadata-wrong.yml",
     false,
-    contains("Error: Wrong value inside of policy's metatada for 'executionMode'. This policy has been created using Rego")
+    contains("Error: Wrong value inside of policy's metadata for 'executionMode'. This policy has been created using Rego")
 )]
 fn test_annotate_rego(
     #[case] metadata_path: &str,

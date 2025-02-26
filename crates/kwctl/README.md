@@ -61,7 +61,7 @@ There is also:
 
 These are the commands currently supported by kwctl.
 
-If you want a complete list of the available commands, you can read the 
+If you want a complete list of the available commands, you can read the
 [cli-docs.md](./cli-docs.md) file.
 
 ### List policies
@@ -97,7 +97,7 @@ same way as with regular container images):
 kwctl pull registry://ghcr.io/kubewarden/policies/psp-capabilities@sha256:61ef63621fa5be8e422881d96d05edfef810992fbf9468e35d1fa5ae815bd97c
 ```
 
-Note well, the shasum is the digest of the OCI artifact containig the policy.
+Note well, the shasum is the digest of the OCI artifact containing the policy.
 This value can be obtained using a tool like [crane](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md):
 
 ```console
@@ -109,7 +109,7 @@ crane digest ghcr.io/kubewarden/policies/psp-capabilities:v0.1.6
 `kwctl` can be used to run a policy locally, outside of Kubernetes. This can be used
 to quickly evaluate a policy and find the right settings for it.
 
-The evalution is done against a pre-recorded [`AdmissionReview`](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#request).
+The evaluation is done against a pre-recorded [`AdmissionReview`](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#request).
 
 Running a policy locally:
 
@@ -139,7 +139,7 @@ The output of the above command can be used by the `run` command.
 ### Annotate a policy
 
 Kubewarden policies are WebAssembly module, which must contain some
-Kubewarden-spefic metadata.
+Kubewarden-specific metadata.
 
 The act of adding metadata to the policy is done by the policy author, right
 before policy distribution.
@@ -345,7 +345,7 @@ assets](https://github.com/kubewarden/kwctl/releases).
 
 The build [Provenance](https://slsa.dev/spec/v1.0/provenance) files are
 following the [SLSA](https://slsa.dev/provenance/v0.2#schema) provenance schema
-and are accesible at the GitHub Actions'
+and are accessible at the GitHub Actions'
 [provenance](https://github.com/kubewarden/kwctl/attestations) tab. For
 information on their format and how to verify them, see the [GitHub
 documentation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/verifying-attestations-offline).

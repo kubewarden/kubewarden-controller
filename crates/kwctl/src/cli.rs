@@ -211,7 +211,7 @@ fn subcommand_push() -> Command {
         .after_long_help(
             r#"The annotations found inside of policy's metadata are going to be part of the OCI manifest.
 The multi-line annotations are skipped because they are not compatible with the OCI specification.
-The 'io.kubewarden.policy.source' annotation is propaged as 'org.opencontainers.image.source' to allow tools like
+The 'io.kubewarden.policy.source' annotation is propagated as 'org.opencontainers.image.source' to allow tools like
 renovatebot to detect policy updates."#,
         )
         .args(args)
@@ -489,13 +489,13 @@ fn subcommand_scaffold() -> Command {
             .short('p')
             .required(true)
             .value_name("VALIDATING-ADMISSION-POLICY.yaml")
-            .help("The file containining the ValidatingAdmissionPolicy definition"),
+            .help("The file containing the ValidatingAdmissionPolicy definition"),
         Arg::new("binding")
             .long("binding")
             .short('b')
             .required(true)
             .value_name("VALIDATING-ADMISSION-POLICY-BINDING.yaml")
-            .help("The file containining the ValidatingAdmissionPolicyBinding definition"),
+            .help("The file containing the ValidatingAdmissionPolicyBinding definition"),
     ];
     vap_args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
 
