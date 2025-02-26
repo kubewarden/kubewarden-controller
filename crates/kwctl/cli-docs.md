@@ -256,7 +256,7 @@ Pushes a Kubewarden policy to an OCI registry
 
 The annotations found inside of policy's metadata are going to be part of the OCI manifest.
 The multi-line annotations are skipped because they are not compatible with the OCI specification.
-The 'io.kubewarden.policy.source' annotation is propaged as 'org.opencontainers.image.source' to allow tools like
+The 'io.kubewarden.policy.source' annotation is propagated as 'org.opencontainers.image.source' to allow tools like
 renovatebot to detect policy updates.
 
 ###### **Arguments:**
