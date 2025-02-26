@@ -1,14 +1,12 @@
 mod common;
 
-use std::io::BufReader;
+use std::path::PathBuf;
 use std::{
     collections::{BTreeSet, HashMap},
-    fs::{set_permissions, File, Permissions},
-    io::BufRead,
-    os::unix::fs::PermissionsExt,
-    path::PathBuf,
     time::Duration,
 };
+#[cfg(feature = "otel_tests")]
+use std::{fs::File, io::BufRead};
 
 use common::{app, setup};
 
@@ -26,18 +24,9 @@ use policy_evaluator::{
 use policy_server::{
     api::admission_review::AdmissionReviewResponse,
     config::{PolicyMode, PolicyOrPolicyGroup},
-    metrics::setup_metrics,
-    tracing::setup_tracing,
 };
-use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
 use regex::Regex;
 use rstest::*;
-use tempfile::NamedTempFile;
-use testcontainers::{
-    core::{Mount, WaitFor},
-    runners::AsyncRunner,
-    GenericImage, ImageExt,
-};
 use tokio::fs;
 use tower::ServiceExt;
 
@@ -804,10 +793,23 @@ async fn test_detect_certificate_rotation() {
     }
 }
 
-// This test is flaky, needs fix. Ignoring for release.
-#[ignore]
+// The OTEL test is behind a feature flag because it needs to ensure that the
+// global OTEL configuration is not overwritten by other concurrent tests.
 #[tokio::test]
+#[cfg(feature = "otel_tests")]
 async fn test_otel() {
+    use policy_server::{metrics::setup_metrics, tracing::setup_tracing};
+    use std::{
+        fs::{set_permissions, Permissions},
+        os::unix::fs::PermissionsExt,
+    };
+    use tempfile::NamedTempFile;
+    use testcontainers::{
+        core::{Mount, WaitFor},
+        runners::AsyncRunner,
+        GenericImage, ImageExt,
+    };
+
     setup();
 
     let otelc_config_path =
@@ -970,9 +972,12 @@ async fn test_otel() {
     otelc.stop().await.unwrap();
 }
 
+#[cfg(feature = "otel_tests")]
 async fn parse_exporter_output(
     exporter_output_file: &File,
 ) -> serde_json::Result<serde_json::Value> {
+    use std::io::BufReader;
+
     let mut reader = BufReader::new(exporter_output_file);
 
     // read only the first entry in the output file
@@ -984,7 +989,10 @@ async fn parse_exporter_output(
     serde_json::from_str(&exporter_output)
 }
 
+#[cfg(feature = "otel_tests")]
 fn generate_tls_certs() -> (String, String, String) {
+    use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
+
     let ca_key = KeyPair::generate().unwrap();
     let mut params = CertificateParams::new(vec!["My Test CA".to_string()]).unwrap();
     params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);

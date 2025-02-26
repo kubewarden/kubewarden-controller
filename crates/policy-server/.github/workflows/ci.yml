@@ -19,9 +19,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: check
+      - name: Run cargo check
+        run: cargo check
 
   version-check:
     name: Check Cargo.toml version
@@ -50,10 +49,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: test
-          args: --workspace --lib
+      - name: Run unit-tests coverage
+        run: make unit-tests
 
   integration-tests:
     name: Integration tests
@@ -65,10 +62,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: test
-          args: --test '*'
+      - name: Run integration-tests coverage
+        run: make integration-tests
 
   fmt:
     name: Rustfmt
@@ -80,11 +75,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Run Rust format check
+        run: make fmt
 
   clippy:
     name: Clippy
@@ -96,11 +88,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: clippy
-          args: -- -D warnings
+      - name: Run Clippy
+        run: make lint
 
   coverage:
     name: coverage
@@ -133,6 +122,15 @@ jobs:
         with:
           name: integration-tests
           directory: coverage/integration-tests
+          flags: integration-tests
+          verbose: true
+      - name: Upload OTEL integration-tests coverage to Codecov
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3 # v5.3.1
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: otel-integration-tests
+          directory: coverage/otel-integration-tests
           flags: integration-tests
           verbose: true
 

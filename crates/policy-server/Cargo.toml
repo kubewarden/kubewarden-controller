@@ -91,3 +91,6 @@ reqwest = { version = "0.12", default-features = false, features = [
   "http2",
   "rustls-tls-manual-roots",
 ] }
+
+[features]
+otel_tests = []
