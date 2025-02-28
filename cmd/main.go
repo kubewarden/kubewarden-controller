@@ -199,6 +199,10 @@ func setupManager(deploymentsNamespace string, metricsAddr string, probeAddr str
 
 	clientCAName := ""
 	if enableMutualTLS {
+		// The WebhookServer shares the same CertDir for both the server
+		// certificate and the client CA certificate. We expect the ClientCACert
+		// in the "client-ca"  sub-folder from the ConfigMap, since one cannot
+		// mount several Secrets/ConfigMaps under the same path.
 		clientCAName = filepath.Join("client-ca", constants.ClientCACert)
 	}
 
