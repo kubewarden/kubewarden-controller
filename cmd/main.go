@@ -21,6 +21,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"path/filepath"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -198,7 +199,11 @@ func setupManager(deploymentsNamespace string, metricsAddr string, probeAddr str
 
 	clientCAName := ""
 	if enableMutualTLS {
-		clientCAName = constants.ClientCACert
+		// The WebhookServer shares the same CertDir for both the server
+		// certificate and the client CA certificate. We expect the ClientCACert
+		// in the "client-ca"  sub-folder from the ConfigMap, since one cannot
+		// mount several Secrets/ConfigMaps under the same path.
+		clientCAName = filepath.Join("client-ca", constants.ClientCACert)
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
