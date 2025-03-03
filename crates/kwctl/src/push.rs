@@ -9,7 +9,7 @@ use policy_evaluator::{
     },
     policy_metadata::Metadata,
 };
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::backend::BackendDetector;
 
@@ -61,16 +61,16 @@ fn build_oci_annotations(annotations: BTreeMap<String, String>) -> BTreeMap<Stri
     let mut annotations: BTreeMap<String, String> = annotations
         .iter()
         .filter(|(k, v)| {
-            let filter = v.lines().count() <= 1;
-            if filter {
+            let keep = v.lines().count() <= 1;
+            if !keep {
                 warn!(
                     annotation = k,
                     "annotation is a multi-line string, it will be removed from the OCI manifest",
                 );
             }
-            filter
+            keep
         })
-        .map(|(k, v)| (k.to_owned(), v.to_owned()))
+        .map(|(k, v)| (k.to_owned(), v.trim().to_owned()))
         .collect();
 
     if let Some(source) = annotations.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE) {
@@ -82,6 +82,8 @@ fn build_oci_annotations(annotations: BTreeMap<String, String>) -> BTreeMap<Stri
         }
     }
 
+    debug!("OCI annotations: {:?}", annotations);
+
     annotations
 }
 
@@ -89,7 +91,8 @@ fn build_oci_annotations(annotations: BTreeMap<String, String>) -> BTreeMap<Stri
 mod tests {
     use super::*;
     use policy_evaluator::constants::{
-        KUBEWARDEN_ANNOTATION_POLICY_URL, KUBEWARDEN_ANNOTATION_POLICY_USAGE,
+        KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION, KUBEWARDEN_ANNOTATION_POLICY_URL,
+        KUBEWARDEN_ANNOTATION_POLICY_USAGE,
     };
 
     #[test]
@@ -110,6 +113,10 @@ mod tests {
             KUBEWARDEN_ANNOTATION_POLICY_USAGE.to_string(),
             "this is a multi-line\nstring".to_string(),
         );
+        annotations.insert(
+            KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION.to_string(),
+            "this is a line that ends with a line terminator\n".to_string(),
+        );
 
         let actual = build_oci_annotations(annotations);
 
@@ -125,6 +132,12 @@ mod tests {
         assert_eq!(
             actual.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE).unwrap(),
             policy_source
+        );
+        assert_eq!(
+            actual
+                .get(KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION)
+                .unwrap(),
+            "this is a line that ends with a line terminator",
         );
     }
 
