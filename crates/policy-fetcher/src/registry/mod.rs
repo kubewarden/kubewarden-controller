@@ -262,7 +262,7 @@ impl Registry {
         annotations: Option<&BTreeMap<String, String>>,
         client_protocol: ClientProtocol,
     ) -> RegistryResult<String> {
-        warn!(client_protocol = ?client_protocol, "pushing policy");
+        debug!(client_protocol = ?client_protocol, "pushing policy");
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
 
