@@ -55,7 +55,7 @@ x509-parser = "0.17"
 [dev-dependencies]
 anyhow         = "1.0"
 rcgen          = "0.13"
-rstest         = "0.24"
+rstest         = "0.25"
 tempfile       = "3.2"
 testcontainers = { version = "0.23", features = ["http_wait"] }
 textwrap       = "0.16"
