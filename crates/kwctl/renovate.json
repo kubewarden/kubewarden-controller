@@ -1,5 +1,13 @@
 {
   "extends": [
     "github>kubewarden/github-actions//renovate-config/default"
+  ],
+  "packageRules": [
+    {
+      "description": "Update GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "groupSlug": "github-actions"
+    }
   ]
 }
