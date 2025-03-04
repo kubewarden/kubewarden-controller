@@ -155,6 +155,7 @@ impl ArtifactHubPkg {
     pub fn from_metadata(
         metadata: &Metadata,
         version: &str,
+        gh_release_tag: Option<&str>,
         created_at: OffsetDateTime,
         questions: Option<&str>,
     ) -> Result<Self> {
@@ -182,7 +183,7 @@ impl ArtifactHubPkg {
         let home_url = parse_home_url(metadata_annots)?;
         let containers_images = parse_containers_images(metadata_annots, &semver_version)?;
         let keywords = parse_keywords(metadata_annots)?;
-        let links = parse_links(metadata_annots, &semver_version)?;
+        let links = parse_links(metadata_annots, &semver_version, gh_release_tag)?;
         let install = parse_oci_url(metadata_annots, &semver_version)?.map(compose_install);
         let maintainers = parse_maintainers(metadata_annots)?;
         let annotations = parse_annotations(metadata_annots, metadata, questions)?;
@@ -327,6 +328,7 @@ fn parse_keywords(metadata_annots: &BTreeMap<String, String>) -> Result<Option<V
 fn parse_links(
     metadata_annots: &BTreeMap<String, String>,
     version: &Version,
+    gh_release_tag: Option<&str>,
 ) -> Result<Option<Vec<Link>>> {
     match metadata_annots.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE) {
         Some(s) => {
@@ -336,11 +338,17 @@ fn parse_links(
             })?;
             match policy_source.host_str() == Some("github.com") {
                 true => {
+                    let release = if let Some(tag) = gh_release_tag {
+                        url::form_urlencoded::byte_serialize(tag.as_bytes()).collect::<String>()
+                    } else {
+                        format!("v{}", version)
+                    };
+
                     let url = Url::parse(
                         format!(
-                            "{}/releases/download/v{}/policy.wasm",
+                            "{}/releases/download/{}/policy.wasm",
                             policy_source.as_str(),
-                            version.to_string().as_str(),
+                            release
                         )
                         .as_str(),
                     )
@@ -587,6 +595,7 @@ mod tests {
         let arthub = ArtifactHubPkg::from_metadata(
             &Metadata::default(),
             "0.2.1",
+            None,
             OffsetDateTime::UNIX_EPOCH,
             None,
         );
@@ -597,14 +606,20 @@ mod tests {
             annotations: Some(BTreeMap::from([])),
             ..Default::default()
         };
-        let arthub =
-            ArtifactHubPkg::from_metadata(&metadata, "0.2.1", OffsetDateTime::UNIX_EPOCH, None);
+        let arthub = ArtifactHubPkg::from_metadata(
+            &metadata,
+            "0.2.1",
+            None,
+            OffsetDateTime::UNIX_EPOCH,
+            None,
+        );
         assert_eq!(arthub.unwrap_err(), ArtifactHubError::NoAnnotations);
 
         // check version is semver
         let arthub = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_minimum_required(),
             "not-semver",
+            None,
             OffsetDateTime::UNIX_EPOCH,
             None,
         );
@@ -618,8 +633,13 @@ mod tests {
             annotations: Some(BTreeMap::from([(String::from("foo"), String::from("bar"))])),
             ..Default::default()
         };
-        let arthub =
-            ArtifactHubPkg::from_metadata(&metadata, "0.2.1", OffsetDateTime::UNIX_EPOCH, Some(""));
+        let arthub = ArtifactHubPkg::from_metadata(
+            &metadata,
+            "0.2.1",
+            None,
+            OffsetDateTime::UNIX_EPOCH,
+            Some(""),
+        );
         assert_eq!(arthub.unwrap_err(), ArtifactHubError::EmptyQuestionsUI);
 
         Ok(())
@@ -681,7 +701,7 @@ mod tests {
         )]);
 
         assert_eq!(
-            parse_links(&source_annot, &semver_version).unwrap(),
+            parse_links(&source_annot, &semver_version, None).unwrap(),
             Some(vec![
                 Link {
                     name: ConstLinkName::Policy,
@@ -695,14 +715,30 @@ mod tests {
             ])
         );
         assert_eq!(
-            parse_links(&source_annot_not_github, &semver_version).unwrap(),
+            parse_links(&source_annot, &semver_version, Some("SomePolicy/v0.2.1")).unwrap(),
+            Some(vec![
+                Link {
+                    name: ConstLinkName::Policy,
+                    url: Url::parse(
+                        "https://github.com/repo/releases/download/SomePolicy%2Fv0.2.1/policy.wasm"
+                    )
+                    .unwrap(),
+                },
+                Link {
+                    name: ConstLinkName::Source,
+                    url: Url::parse("https://github.com/repo").unwrap(),
+                }
+            ])
+        );
+        assert_eq!(
+            parse_links(&source_annot_not_github, &semver_version, None).unwrap(),
             Some(vec![Link {
                 name: ConstLinkName::Source,
                 url: Url::parse("https://notgithub.com/repo").unwrap(),
             }])
         );
         assert!(matches!(
-            parse_links(&source_annot_badurl, &semver_version).unwrap_err(),
+            parse_links(&source_annot_badurl, &semver_version, None).unwrap_err(),
             ArtifactHubError::MalformedURL { .. }
         ));
 
@@ -795,6 +831,7 @@ mod tests {
         let artif = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_minimum_required(),
             "0.2.1",
+            None,
             OffsetDateTime::UNIX_EPOCH,
             None,
         )
@@ -845,6 +882,7 @@ kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/ocirepo/nam
         let artif = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_all(),
             "0.2.1",
+            None,
             OffsetDateTime::UNIX_EPOCH,
             Some("questions contents"),
         )
