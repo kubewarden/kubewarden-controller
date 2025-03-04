@@ -433,7 +433,7 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
     }
 
     #[test]
-    fn test_verify_config_not_maching_all_of() {
+    fn test_verify_config_not_matching_all_of() {
         // build verification config:
         let signatures_all_of: Vec<Signature> = vec![generic_issuer(
             "https://github.com/login/oauth",

@@ -5,6 +5,7 @@ use std::path::Path;
 use tempfile::NamedTempFile;
 use textwrap::indent;
 
+// spellchecker:off
 const CERT_DATA: &str = r#"-----BEGIN CERTIFICATE-----
 MIICUTCCAfugAwIBAgIBADANBgkqhkiG9w0BAQQFADBXMQswCQYDVQQGEwJDTjEL
 MAkGA1UECBMCUE4xCzAJBgNVBAcTAkNOMQswCQYDVQQKEwJPTjELMAkGA1UECxMC
@@ -21,6 +22,7 @@ BQADQQA/ugzBrjjK9jcWnDVfGHlk3icNRq0oV7Ri32z/+HQX67aRfgZu7KWdI+Ju
 Wm7DCfrPNGVwFWUQOmsPue9rZBgO
 -----END CERTIFICATE-----
 "#;
+// spellchecker:on
 
 #[test]
 fn test_read_sources_file_with_data() {
