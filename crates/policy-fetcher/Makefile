@@ -10,6 +10,10 @@ fmt:
 lint:
 	cargo clippy -- -D warnings
 
+.PHONY: typos
+typos:
+	typos # run typo checker from crate-ci/typos
+
 .PHONY: test
 test: fmt lint
 	cargo test --workspace

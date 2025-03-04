@@ -263,6 +263,7 @@ mod tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
+    // spellchecker:off
     const CERT_DATA: &str = r#"-----BEGIN CERTIFICATE-----
 MIICUTCCAfugAwIBAgIBADANBgkqhkiG9w0BAQQFADBXMQswCQYDVQQGEwJDTjEL
 MAkGA1UECBMCUE4xCzAJBgNVBAcTAkNOMQswCQYDVQQKEwJPTjELMAkGA1UECxMC
@@ -279,6 +280,7 @@ BQADQQA/ugzBrjjK9jcWnDVfGHlk3icNRq0oV7Ri32z/+HQX67aRfgZu7KWdI+Ju
 Wm7DCfrPNGVwFWUQOmsPue9rZBgO
 -----END CERTIFICATE-----
 "#;
+    // spellchecker:on
 
     #[test]
     fn test_deserialization_of_path_based_raw_source_authority() {
@@ -342,7 +344,7 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
     }
 
     #[test]
-    fn test_raw_path_based_source_authority_convertion_into_raw_certificate() {
+    fn test_raw_path_based_source_authority_conversion_into_raw_certificate() {
         let mut file = NamedTempFile::new().unwrap();
 
         let expected_contents = "hello world";

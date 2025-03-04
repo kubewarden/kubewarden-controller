@@ -6,7 +6,7 @@ pub type VerifyResult<T> = std::result::Result<T, VerifyError>;
 
 #[derive(Error, Debug)]
 pub enum VerifyError {
-    #[error("faild to read verification file: {0}")]
+    #[error("failed to read verification file: {0}")]
     VerificationFileReadError(#[from] std::io::Error),
     #[error("{0}")]
     ChecksumVerificationError(String),

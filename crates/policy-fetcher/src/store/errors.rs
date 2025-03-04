@@ -6,7 +6,7 @@ pub type StoreResult<T> = std::result::Result<T, StoreError>;
 pub enum StoreError {
     #[error(transparent)]
     UrlParserError(#[from] url::ParseError),
-    #[error("faild to read verification file: {0}")]
+    #[error("failed to read verification file: {0}")]
     VerificationFileReadError(#[from] std::io::Error),
     #[error("cannot read policy in local storage: {0}")]
     FailedToReadPolicyInLocalStorageError(#[from] walkdir::Error),
