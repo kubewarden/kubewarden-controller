@@ -177,7 +177,7 @@ fn validation_response_with_constraints(
             // have been the decision of the
             // policy. We also force mutating
             // patches to be none. Status is also
-            // overriden, as it's only taken into
+            // overridden, as it's only taken into
             // account when a request is rejected.
             info!(
                 policy_id = policy_id.to_string(),

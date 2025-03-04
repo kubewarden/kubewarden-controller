@@ -918,7 +918,7 @@ async fn test_otel() {
 
     let app = app(config).await;
 
-    // one succesful request
+    // one successful request
     let request = Request::builder()
         .method(http::Method::POST)
         .header(header::CONTENT_TYPE, "application/json")
@@ -1161,7 +1161,7 @@ async fn send_validate_request(
         .body(include_str!("data/pod_without_privileged_containers.json"))
         .send()
         .await
-        .expect("successfull request")
+        .expect("successful request")
         .status())
 }
 
@@ -1183,7 +1183,7 @@ fn build_request_client(
     if let (Some(client_cert), Some(client_key)) = (client_cert, client_key) {
         let identity =
             reqwest::Identity::from_pem(format!("{}\n{}", client_cert, client_key).as_bytes())
-                .expect("successfull pem parsing");
+                .expect("successful pem parsing");
         builder = builder.identity(identity)
     }
     builder.build().expect("failed to build client")

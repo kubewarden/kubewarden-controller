@@ -130,7 +130,7 @@ pub(crate) fn default_test_config() -> Config {
     }
 }
 
-/// Returns a random adress with an available port to use with policy server. Therefore, we can
+/// Returns a random address with an available port to use with policy server. Therefore, we can
 /// have multiple policy server running at the same time in async tests
 fn get_available_address_with_port() -> SocketAddr {
     TcpListener::bind(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0))
