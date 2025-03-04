@@ -392,6 +392,7 @@ Output an artifacthub-pkg.yml file from a metadata.yml file
 
 ###### **Options:**
 
+* `-t`, `--gh-release-tag <VALUE>` — Specifies the GitHub release tag of the policy. If set, this tag will be used for generating GitHub release links instead of the version.
 * `-m`, `--metadata-path <PATH>` — File containing the metadata of the policy
 * `-o`, `--output <FILE>` — Path where the artifact-pkg.yml file will be stored
 * `-q`, `--questions-path <PATH>` — File containing the questions-ui content of the policy
