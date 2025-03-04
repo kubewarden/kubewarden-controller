@@ -2,7 +2,7 @@
 ;;
 ;; This code cheats a little, from the outside it looks like any regular waPC module
 ;; because it exposes the two functions required by a waPC host. However, these
-;; two functions are reduced to the bare mimimum.
+;; two functions are reduced to the bare minimum.
 ;;
 ;; The most important difference is that no waPC function is registered by the
 ;; module. Calling any kind of waPC function from the host will result in an

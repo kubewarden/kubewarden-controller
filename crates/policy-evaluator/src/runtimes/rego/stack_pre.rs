@@ -9,9 +9,9 @@ use crate::runtimes::rego::errors::{RegoRuntimeError, Result};
 /// to reduce the instantiation times. That happens because all
 /// Rego WebAssembly policies import their Wasm Memory from the host.
 /// The Wasm Memory is defined inside of a `wasmtime::Store`, which is
-/// something that `wasmtime::InstnacePre` objects do not have (rightfully!).
+/// something that `wasmtime::InstancePre` objects do not have (rightfully!).
 ///
-/// However, Rego Wasm modules are so small thta instantiating them from scratch
+/// However, Rego Wasm modules are so small that instantiating them from scratch
 /// is already a cheap operation.
 #[derive(Clone)]
 pub(crate) struct StackPre {

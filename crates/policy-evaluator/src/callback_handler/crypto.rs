@@ -151,6 +151,7 @@ mod tests {
     };
     use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
 
+    // spellchecker:off
     const ROOT_CA1_PEM: &str = "-----BEGIN CERTIFICATE-----
 MIICSTCCAfCgAwIBAgIUQS1sQWI6HCOK5vsO2DDHqWZER7swCgYIKoZIzj0EAwIw
 gYIxCzAJBgNVBAYTAkRFMRAwDgYDVQQIEwdCYXZhcmlhMRIwEAYDVQQHEwlOdXJl
@@ -236,6 +237,7 @@ EHuCFAQE5thiOSoEqilZAzAfBgNVHSMEGDAWgBR1uDPhKH7EjlGO2axbPKlTgy8j
 iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
 3ka2eiMCIBIMXVLY+XGEHNdarxDj8XKQurNf6Nngs0nU+5ggyF4F
 -----END CERTIFICATE-----";
+    // spellchecker:on
 
     #[test]
     fn certificate_is_trusted() {
