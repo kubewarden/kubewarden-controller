@@ -69,7 +69,7 @@ impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
             PolicyExecutionMode::Opa => Ok(RegoPolicyExecutionMode::Opa),
             PolicyExecutionMode::OpaGatekeeper => Ok(RegoPolicyExecutionMode::Gatekeeper),
             PolicyExecutionMode::KubewardenWapc | PolicyExecutionMode::Wasi => Err(anyhow!(
-                "execution mode not convertible to a Rego based executon mode"
+                "execution mode not convertible to a Rego based execution mode"
             )),
         }
     }

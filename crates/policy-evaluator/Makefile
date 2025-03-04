@@ -16,6 +16,10 @@ lint:
 check:
 	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo check
 
+.PHONY: typos
+typos:
+	typos # run typo checker from crate-ci/typos
+
 .PHONY: test
 test: fmt lint
 	cargo test --workspace
