@@ -830,7 +830,7 @@ mod tests {
             precompiled_policies.insert(policy_url, Ok(precompiled_policy.clone()));
         }
 
-        // add poliy group policies
+        // add policy group policies
         policies.insert(
             "group_policy_valid_expression_with_single_member".to_string(),
             PolicyOrPolicyGroup::PolicyGroup {

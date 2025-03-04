@@ -341,7 +341,7 @@ pub enum PolicyOrPolicyGroupSettings {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct PolicyGroupMember {
-    /// Thge URL where the policy is located
+    /// The URL where the policy is located
     pub module: String,
     /// The settings for the policy
     pub settings: Option<HashMap<String, serde_yaml::Value>>,

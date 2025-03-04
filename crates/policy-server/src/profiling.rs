@@ -17,7 +17,7 @@ lazy_static! {
     // To normalize thread names.
     static ref THREAD_NAME_RE: Regex =
         Regex::new(r"^(?P<thread_name>[a-z-_ :]+?)(-?\d)*$").unwrap();
-    static ref THREAD_NAME_REPLACE_SEPERATOR_RE: Regex = Regex::new(r"[_ ]").unwrap();
+    static ref THREAD_NAME_REPLACE_SEPARATOR_RE: Regex = Regex::new(r"[_ ]").unwrap();
 }
 
 #[derive(Debug, Error)]
@@ -102,7 +102,7 @@ fn extract_thread_name(thread_name: &str) -> String {
         .captures(thread_name)
         .and_then(|cap| {
             cap.name("thread_name").map(|thread_name| {
-                THREAD_NAME_REPLACE_SEPERATOR_RE
+                THREAD_NAME_REPLACE_SEPARATOR_RE
                     .replace_all(thread_name.as_str(), "-")
                     .into_owned()
             })

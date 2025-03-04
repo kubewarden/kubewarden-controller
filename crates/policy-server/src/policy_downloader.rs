@@ -90,7 +90,7 @@ impl Downloader {
             if !processed_policies.insert(policy_url) {
                 debug!(
                     policy = name.as_str(),
-                    "skipping, wasm module alredy processed"
+                    "skipping, wasm module already processed"
                 );
 
                 continue;

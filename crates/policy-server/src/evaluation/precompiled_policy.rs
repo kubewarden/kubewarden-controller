@@ -128,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn no_mininum_kubewarden_version_is_valid_test() {
+    fn no_minimum_kubewarden_version_is_valid_test() {
         let metadata = Metadata {
             minimum_kubewarden_version: None,
             ..Default::default()

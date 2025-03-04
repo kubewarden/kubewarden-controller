@@ -1,0 +1,12 @@
+[default]
+extend-ignore-re = [
+  "(?Rm)^.*(#|//)\\s*spellchecker:disable-line$",
+  "(?s)(#|//)\\s*spellchecker:off.*?\\n\\s*(#|//)\\s*spellchecker:on",
+]
+
+[files]
+extend-exclude = ["*.md", "*.toml"]
+
+[type.csr]
+check-file  = false
+extend-glob = ["*.csr"]
