@@ -87,7 +87,7 @@ impl Client {
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}", img) }"#,
     with_cached_flag = true
@@ -115,7 +115,7 @@ pub(crate) async fn get_oci_digest_cached(
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}", img) }"#,
     with_cached_flag = true
@@ -130,7 +130,7 @@ pub(crate) async fn get_oci_manifest_cached(
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}", img) }"#,
     with_cached_flag = true

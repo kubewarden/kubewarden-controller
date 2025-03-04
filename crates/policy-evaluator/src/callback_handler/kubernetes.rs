@@ -81,7 +81,7 @@ pub(crate) async fn get_resource(
 #[cached(
     time = 5,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("get_resource_cached({},{}),{},{:?}", api_version, kind, name, namespace) }"#,
     with_cached_flag = true
