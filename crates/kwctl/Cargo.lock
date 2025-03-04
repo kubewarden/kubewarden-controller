@@ -521,7 +521,7 @@ dependencies = [
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.20.1#1779ab51e655f10ae130731f9640deb17150f69b"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.21.0#83a3239f0373e736567e2a74b1a2f0a4533431aa"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -529,7 +529,7 @@ dependencies = [
  "gtmpl",
  "gtmpl_value",
  "itertools 0.14.0",
- "json-patch",
+ "json-patch 4.0.0",
  "lazy_static",
  "regex",
  "semver",
@@ -562,7 +562,7 @@ checksum = "9718806c4a2fe9e8a56fd736f97b340dd10ed1be8ed733ed50449f351dc33cae"
 dependencies = [
  "ahash 0.8.11",
  "async-trait",
- "cached_proc_macro",
+ "cached_proc_macro 0.23.0",
  "cached_proc_macro_types",
  "futures",
  "hashbrown 0.14.5",
@@ -573,10 +573,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "cached"
+version = "0.55.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0839c297f8783316fcca9d90344424e968395413f0662a5481f79c6648bbc14"
+dependencies = [
+ "ahash 0.8.11",
+ "async-trait",
+ "cached_proc_macro 0.24.0",
+ "cached_proc_macro_types",
+ "futures",
+ "hashbrown 0.14.5",
+ "once_cell",
+ "thiserror 2.0.12",
+ "tokio",
+ "web-time",
+]
+
+[[package]]
 name = "cached_proc_macro"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f42a145ed2d10dce2191e1dcf30cfccfea9026660e143662ba5eec4017d5daa"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.96",
+]
+
+[[package]]
+name = "cached_proc_macro"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "673992d934f0711b68ebb3e1b79cdc4be31634b37c98f26867ced0438ca5c603"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2682,7 +2712,19 @@ version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "863726d7afb6bc2590eeff7135d923545e5e964f004c2ccf8716c25e70a86f08"
 dependencies = [
- "jsonptr",
+ "jsonptr 0.6.3",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "json-patch"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "159294d661a039f7644cea7e4d844e6b25aaf71c1ffe9d73a96d768c24b0faf4"
+dependencies = [
+ "jsonptr 0.7.1",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -2725,6 +2767,16 @@ name = "jsonptr"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5dea2b27dd239b2556ed7a25ba842fe47fd602e7fc7433c2a8d6106d4d9edd70"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "jsonptr"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5a3cc660ba5d72bce0b3bb295bf20847ccbb40fd423f3f05b61273672e561fe"
 dependencies = [
  "serde",
  "serde_json",
@@ -2826,7 +2878,7 @@ dependencies = [
  "chrono",
  "form_urlencoded",
  "http",
- "json-patch",
+ "json-patch 3.0.1",
  "k8s-openapi",
  "serde",
  "serde-value",
@@ -2849,8 +2901,8 @@ dependencies = [
  "futures",
  "hashbrown 0.15.2",
  "hostname",
- "json-patch",
- "jsonptr",
+ "json-patch 3.0.1",
+ "jsonptr 0.6.3",
  "k8s-openapi",
  "kube-client",
  "parking_lot",
@@ -3922,19 +3974,19 @@ dependencies = [
 
 [[package]]
 name = "policy-evaluator"
-version = "0.20.1"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.20.1#1779ab51e655f10ae130731f9640deb17150f69b"
+version = "0.21.0"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.21.0#83a3239f0373e736567e2a74b1a2f0a4533431aa"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "burrego",
- "cached",
+ "cached 0.55.1",
  "chrono",
  "dns-lookup",
  "email_address",
  "futures",
  "itertools 0.14.0",
- "json-patch",
+ "json-patch 4.0.0",
  "k8s-openapi",
  "kube",
  "kubewarden-policy-sdk",
@@ -3963,8 +4015,8 @@ dependencies = [
 
 [[package]]
 name = "policy-fetcher"
-version = "0.10.0"
-source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.10.0#262b50ad0dd237118c48f232e81f5748b301d719"
+version = "0.10.1"
+source = "git+https://github.com/kubewarden/policy-fetcher?tag=v0.10.1#a2dda2c772d7a46a1b1ef4aad2c4a574636e08f1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -5114,7 +5166,7 @@ checksum = "9958ac57dea620d4059784dc0df9f997a873a168828d1028c5c7b9d7a089f5f2"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
- "cached",
+ "cached 0.54.0",
  "cfg-if",
  "chrono",
  "const-oid",

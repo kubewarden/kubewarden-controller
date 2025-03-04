@@ -324,10 +324,18 @@ async fn main() -> Result<()> {
                         .map(|output| PathBuf::from_str(output).unwrap())
                         .unwrap();
                     let version = artifacthub_matches.get_one::<String>("version").unwrap();
+                    let gh_release_tag = artifacthub_matches
+                        .get_one::<String>("gh-release-tag")
+                        .cloned();
                     let questions_file = artifacthub_matches
                         .get_one::<String>("questions-path")
                         .map(|output| PathBuf::from_str(output).unwrap());
-                    let content = scaffold::artifacthub(metadata_file, version, questions_file)?;
+                    let content = scaffold::artifacthub(
+                        metadata_file,
+                        version,
+                        gh_release_tag.as_deref(),
+                        questions_file,
+                    )?;
                     if let Some(output) = artifacthub_matches.get_one::<String>("output") {
                         let output_path = PathBuf::from_str(output)?;
                         fs::write(output_path, content)?;
