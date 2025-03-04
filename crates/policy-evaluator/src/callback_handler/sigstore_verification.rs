@@ -258,7 +258,7 @@ impl Client {
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}{:?}{:?}", image, pub_keys, annotations)}"#,
     with_cached_flag = true
@@ -285,7 +285,7 @@ pub(crate) async fn get_sigstore_pub_key_verification_cached(
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}{:?}{:?}", image, keyless, annotations)}"#,
     with_cached_flag = true
@@ -312,7 +312,7 @@ pub(crate) async fn get_sigstore_keyless_verification_cached(
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}{:?}{:?}", image, keyless_prefix, annotations)}"#,
     with_cached_flag = true
@@ -339,7 +339,7 @@ pub(crate) async fn get_sigstore_keyless_prefix_verification_cached(
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}{:?}{:?}{:?}", image, owner, repo, annotations)}"#,
     with_cached_flag = true
@@ -395,7 +395,7 @@ fn get_sigstore_certificate_verification_cache_key(
 #[cached(
     time = 60,
     result = true,
-    sync_writes = true,
+    sync_writes = "default",
     key = "String",
     convert = r#"{ format!("{}", get_sigstore_certificate_verification_cache_key(image, certificate, certificate_chain, require_rekor_bundle, annotations.as_ref()))}"#,
     with_cached_flag = true
