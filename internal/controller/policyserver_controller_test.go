@@ -623,6 +623,16 @@ var _ = Describe("PolicyServer controller", func() {
 						// "APIVersion": Equal(policyServer.GetObjectKind().GroupVersionKind().GroupVersion().String()),
 					}),
 				))
+				// This is the new port used by the policy server service
+				Expect(service.Spec.Ports).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Port":       Equal(int32(constants.PolicyServerServicePort)),
+					"TargetPort": Equal(intstr.IntOrString{IntVal: int32(constants.PolicyServerPort)}),
+				})))
+				// This is the legacy port used by the policy server service
+				Expect(service.Spec.Ports).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Port":       Equal(int32(constants.PolicyServerPort)),
+					"TargetPort": Equal(intstr.IntOrString{IntVal: int32(constants.PolicyServerPort)}),
+				})))
 				return nil
 			}).Should(Succeed())
 		})

@@ -32,7 +32,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 	}
 	_, err := controllerutil.CreateOrPatch(ctx, r.Client, webhook, func() error {
 		admissionPath := filepath.Join("/validate", policy.GetUniqueName())
-		admissionPort := int32(constants.PolicyServerPort)
+		admissionPort := int32(constants.PolicyServerServicePort)
 
 		service := admissionregistrationv1.ServiceReference{
 			Namespace: r.deploymentsNamespace,
@@ -120,7 +120,7 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 	}
 	_, err := controllerutil.CreateOrPatch(ctx, r.Client, webhook, func() error {
 		admissionPath := filepath.Join("/validate", policy.GetUniqueName())
-		admissionPort := int32(constants.PolicyServerPort)
+		admissionPort := int32(constants.PolicyServerServicePort)
 
 		service := admissionregistrationv1.ServiceReference{
 			Namespace: r.deploymentsNamespace,
