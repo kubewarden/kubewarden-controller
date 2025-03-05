@@ -50,5 +50,10 @@ COPY --from=cfg /etc/passwd /etc/passwd
 COPY --from=cfg /etc/group /etc/group
 COPY ./Cargo.lock /Cargo.lock
 USER 65533:65533
+# Default port, should be used when tls is not enabled
 EXPOSE 3000
+# Readiness probe port, always http
+EXPOSE 8081
+# To be used when tls is enabled
+EXPOSE 8443
 ENTRYPOINT ["/policy-server"]
