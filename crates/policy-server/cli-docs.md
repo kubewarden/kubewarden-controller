@@ -64,7 +64,7 @@ This document contains the help content for the `policy-server` command-line pro
   Default value: `3000`
 * `--readiness-probe-port <READINESS_PROBE_PORT>` — Expose readiness endpoint on READINESS_PROBE_PORT
 
-  Default value: `3000`
+  Default value: `8081`
 * `--sigstore-cache-dir <SIGSTORE_CACHE_DIR>` — Directory used to cache sigstore data
 
   Default value: `sigstore-data`

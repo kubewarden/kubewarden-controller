@@ -71,7 +71,7 @@ pub(crate) fn build_cli() -> Command {
         Arg::new("readiness-probe-port")
             .long("readiness-probe-port")
             .value_name("READINESS_PROBE_PORT")
-            .default_value("3000")
+            .default_value("8081")
             .env("KUBEWARDEN_READINESS_PROBE_PORT")
             .help("Expose readiness endpoint on READINESS_PROBE_PORT"),
 
