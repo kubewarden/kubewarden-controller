@@ -51,11 +51,12 @@ func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Contex
 }
 
 func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) error {
+	commonLabels := policyServer.CommonLabels()
+
 	svc.Name = policyServer.NameWithPrefix()
 	svc.Namespace = r.DeploymentsNamespace
-	svc.Labels = map[string]string{
-		constants.AppLabelKey: policyServer.AppLabel(),
-	}
+	svc.Labels = commonLabels
+
 	svc.Spec = corev1.ServiceSpec{
 		Ports: []corev1.ServicePort{
 			{
@@ -75,7 +76,8 @@ func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer
 			},
 		},
 		Selector: map[string]string{
-			constants.AppLabelKey: policyServer.AppLabel(),
+			constants.InstanceLabelKey: commonLabels[constants.InstanceLabelKey],
+			constants.PartOfLabelKey:   commonLabels[constants.PartOfLabelKey],
 		},
 	}
 	if r.MetricsEnabled {
