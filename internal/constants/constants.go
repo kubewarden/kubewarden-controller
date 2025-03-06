@@ -32,10 +32,13 @@ const (
 	// Labels.
 	AppLabelKey                     = "app"
 	PolicyServerLabelKey            = "kubewarden/policy-server"
+	ComponentPolicyServerLabelValue = "policy-server"
+	NameLabelKey                    = "app.kubernetes.io/name"
+	InstanceLabelKey                = "app.kubernetes.io/instance"
+	ComponentLabelKey               = "app.kubernetes.io/component"
 	PartOfLabelKey                  = "app.kubernetes.io/part-of"
 	PartOfLabelValue                = "kubewarden"
-	ComponentLabelKey               = "app.kubernetes.io/component"
-	ComponentPolicyServerLabelValue = "policy-server"
+	ManagedByKey                    = "app.kubernetes.io/managed-by"
 
 	// Index.
 	PolicyServerIndexKey = ".spec.policyServer"

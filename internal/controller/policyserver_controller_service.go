@@ -38,6 +38,7 @@ func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Contex
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
+			Labels:    policyServer.CommonLabels(),
 		},
 	}
 	_, err := controllerutil.CreateOrPatch(ctx, r.Client, &svc, func() error {

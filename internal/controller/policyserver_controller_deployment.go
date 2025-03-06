@@ -297,6 +297,10 @@ func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, po
 	}
 	policyServerDeployment.Labels[constants.AppLabelKey] = policyServer.AppLabel()
 	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
+
+	for key, value := range policyServer.CommonLabels() {
+		policyServerDeployment.Labels[key] = value
+	}
 }
 
 func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyServerDeployment *appsv1.Deployment) error {
@@ -373,6 +377,15 @@ func buildPolicyServerDeploymentSpec(
 	templateAnnotations map[string]string,
 	podSecurityContext *corev1.PodSecurityContext,
 ) appsv1.DeploymentSpec {
+	templateLabels := map[string]string{
+		constants.AppLabelKey: policyServer.AppLabel(),
+		constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
+		constants.PolicyServerLabelKey:                            policyServer.Name,
+	}
+	for key, value := range policyServer.CommonLabels() {
+		templateLabels[key] = value
+	}
+
 	return appsv1.DeploymentSpec{
 		Replicas: &policyServer.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
@@ -385,11 +398,7 @@ func buildPolicyServerDeploymentSpec(
 		},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					constants.AppLabelKey: policyServer.AppLabel(),
-					constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
-					constants.PolicyServerLabelKey:                            policyServer.Name,
-				},
+				Labels:      templateLabels,
 				Annotations: templateAnnotations,
 			},
 			Spec: corev1.PodSpec{
