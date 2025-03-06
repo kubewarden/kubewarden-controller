@@ -50,16 +50,18 @@ func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Contex
 }
 
 func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) error {
+	commonLabels := policyServer.CommonLabels()
+
 	svc.Name = policyServer.NameWithPrefix()
 	svc.Namespace = r.DeploymentsNamespace
 	templateLabels := map[string]string{
-		constants.AppLabelKey:          policyServer.AppLabel(),
 		constants.PolicyServerLabelKey: policyServer.Name,
 	}
 	for key, value := range policyServer.CommonLabels() {
 		templateLabels[key] = value
 	}
 	svc.Labels = templateLabels
+
 	svc.Spec = corev1.ServiceSpec{
 		Ports: []corev1.ServicePort{
 			{
@@ -79,7 +81,8 @@ func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer
 			},
 		},
 		Selector: map[string]string{
-			constants.AppLabelKey: policyServer.AppLabel(),
+			constants.InstanceLabelKey: commonLabels[constants.InstanceLabelKey],
+			constants.PartOfLabelKey:   commonLabels[constants.PartOfLabelKey],
 		},
 	}
 	if r.MetricsEnabled {

@@ -37,11 +37,12 @@ func deletePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.Pol
 }
 
 func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.PolicyServer, k8s client.Client, namespace string) error {
+	commonLabels := policyServer.CommonLabels()
 	pdb := &k8spoliciesv1.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: namespace,
-			Labels:    policyServer.CommonLabels(),
+			Labels:    commonLabels,
 		},
 	}
 	_, err := controllerutil.CreateOrPatch(ctx, k8s, pdb, func() error {
@@ -53,7 +54,8 @@ func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.
 
 		pdb.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				constants.AppLabelKey:          policyServer.AppLabel(),
+				constants.InstanceLabelKey:     commonLabels[constants.InstanceLabelKey],
+				constants.PartOfLabelKey:       commonLabels[constants.PartOfLabelKey],
 				constants.PolicyServerLabelKey: policyServer.GetName(),
 			},
 		}
