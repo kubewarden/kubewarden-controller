@@ -53,6 +53,7 @@ wasmparser = "0.226"
 reqwest = { version = "0", default-features = false, features = [
   "rustls-tls-native-roots",
 ] }
+indicatif = "0.17"
 
 [dev-dependencies]
 assert_cmd     = "2.0.14"
