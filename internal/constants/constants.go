@@ -30,10 +30,8 @@ const (
 	PolicyServerVerificationConfigContainerPath = "/verification"
 
 	// Labels.
-	AppLabelKey                     = "app"
-	PolicyServerLabelKey            = "kubewarden/policy-server"
+	PolicyServerLabelKey            = "kubewarden.io/policy-server"
 	ComponentPolicyServerLabelValue = "policy-server"
-	NameLabelKey                    = "app.kubernetes.io/name"
 	InstanceLabelKey                = "app.kubernetes.io/instance"
 	ComponentLabelKey               = "app.kubernetes.io/component"
 	PartOfLabelKey                  = "app.kubernetes.io/part-of"

@@ -193,7 +193,8 @@ func policyServerPodDisruptionBudgetMatcher(policyServer *policiesv1.PolicyServe
 				"MinAvailable":   minAvailableMatcher,
 				"Selector": PointTo(MatchAllFields(Fields{
 					"MatchLabels": MatchAllKeys(Keys{
-						constants.AppLabelKey:          Equal(policyServer.AppLabel()),
+						constants.InstanceLabelKey:     Equal(policyServer.CommonLabels()[constants.InstanceLabelKey]),
+						constants.PartOfLabelKey:       Equal(policyServer.CommonLabels()[constants.PartOfLabelKey]),
 						constants.PolicyServerLabelKey: Equal(policyServer.GetName()),
 					}),
 					"MatchExpressions": Ignore(),
