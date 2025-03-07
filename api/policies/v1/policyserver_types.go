@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/kubewarden/kubewarden-controller/internal/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -188,6 +189,18 @@ func (ps *PolicyServer) NameWithPrefix() string {
 
 func (ps *PolicyServer) AppLabel() string {
 	return "kubewarden-" + ps.NameWithPrefix()
+}
+
+// CommonLabels returns the common labels to be used with the resources
+// associated to a Policy Server. The labels defined follow
+// Kubernetes guidelines: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels
+func (ps *PolicyServer) CommonLabels() map[string]string {
+	return map[string]string{
+		constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
+		constants.InstanceLabelKey:  ps.NameWithPrefix(),
+		constants.PartOfLabelKey:    constants.PartOfLabelValue,
+		constants.ManagedByKey:      "kubewarden-controller",
+	}
 }
 
 //+kubebuilder:object:root=true

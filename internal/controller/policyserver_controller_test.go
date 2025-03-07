@@ -87,6 +87,10 @@ var _ = Describe("PolicyServer controller", func() {
 					"TolerationSeconds": PointTo(Equal(tolerationSeconds)),
 				}),
 			}))
+
+			for k, v := range policyServer.CommonLabels() {
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue(k, v))
+			}
 		})
 
 		It("should use the policy server affinity configuration in the policy server deployment", func() {

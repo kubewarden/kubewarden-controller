@@ -41,6 +41,7 @@ func reconcilePodDisruptionBudget(ctx context.Context, policyServer *policiesv1.
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: namespace,
+			Labels:    policyServer.CommonLabels(),
 		},
 	}
 	_, err := controllerutil.CreateOrPatch(ctx, k8s, pdb, func() error {

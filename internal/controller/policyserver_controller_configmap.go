@@ -115,6 +115,7 @@ func (r *PolicyServerReconciler) reconcilePolicyServerConfigMap(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
+			Labels:    policyServer.CommonLabels(),
 		},
 	}
 	_, err := controllerutil.CreateOrPatch(ctx, r.Client, cfg, func() error {
