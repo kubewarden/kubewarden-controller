@@ -463,9 +463,9 @@ fn test_scaffold_manifest(#[case] pull_policies_before: bool) {
 #[case::custom_cel_policy(
     Some("vap/vap-with-variables.yml"),
     Some("vap/vap-binding.yml"),
-    Some("ghcr.io/kubewarden/policies/cel-policy:1.0.0"),
+    Some("ghcr.io/kubewarden/tests/cel-policy:1.0.0"),
     true,
-    contains("module: ghcr.io/kubewarden/policies/cel-policy:1.0.0"),
+    contains("module: ghcr.io/kubewarden/tests/cel-policy:1.0.0"),
     is_empty()
 )]
 #[case::missing_policy(
