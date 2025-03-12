@@ -1,5 +1,6 @@
 use crate::{Registry, Sources};
 use anyhow::{anyhow, Result};
+use is_terminal::IsTerminal;
 use policy_evaluator::{
     constants::*,
     policy_evaluator::PolicyExecutionMode,
@@ -16,14 +17,9 @@ use policy_evaluator::{
     policy_metadata::Metadata,
 };
 use prettytable::{format::FormatBuilder, Table};
-use pulldown_cmark::{Options, Parser};
-use pulldown_cmark_mdcat::{
-    resources::NoopResourceHandler,
-    terminal::{TerminalProgram, TerminalSize},
-    TerminalCapabilities,
-};
+use std::io::{self};
 use std::{collections::HashMap, convert::TryFrom, str::FromStr};
-use syntect::parsing::SyntaxSet;
+use termimad::{terminal_size, FmtText, MadSkin};
 
 pub(crate) async fn inspect(
     uri_or_sha_prefix: &str,
@@ -124,7 +120,8 @@ impl MetadataPrinter {
                     self.print_metadata_context_aware_resources(metadata, no_color)?;
                     println!();
                 }
-                self.print_metadata_usage(metadata, no_color)
+                self.print_metadata_usage(metadata, no_color);
+                Ok(())
             }
         }
     }
@@ -182,7 +179,6 @@ impl MetadataPrinter {
             }
         }
         table.printstd();
-
         Ok(())
     }
 
@@ -197,7 +193,8 @@ impl MetadataPrinter {
         table.printstd();
 
         let text = format!("```yaml\n{rules_yaml}```");
-        self.render_markdown(&text, no_color)
+        self.render_markdown(&text, no_color);
+        Ok(())
     }
 
     fn print_metadata_context_aware_resources(
@@ -219,13 +216,13 @@ impl MetadataPrinter {
         );
 
         let text = format!("```yaml\n{resources_yaml}```");
-        self.render_markdown(&text, no_color)?;
+        self.render_markdown(&text, no_color);
         println!("To avoid abuses, review carefully what the policy requires access to.");
 
         Ok(())
     }
 
-    fn print_metadata_usage(&self, metadata: &Metadata, no_color: bool) -> Result<()> {
+    fn print_metadata_usage(&self, metadata: &Metadata, no_color: bool) {
         let usage = match metadata.annotations.clone() {
             None => None,
             Some(annotations) => annotations
@@ -234,7 +231,7 @@ impl MetadataPrinter {
         };
 
         if usage.is_none() {
-            return Ok(());
+            return;
         }
 
         // Quick hack to print a colorized "Rules" section, with the same
@@ -244,48 +241,25 @@ impl MetadataPrinter {
         table.add_row(row![Fmbl -> "Usage"]);
         table.printstd();
 
-        self.render_markdown(&usage.unwrap(), no_color)
+        let fenced_usage = format!("---\n{}\n---", usage.unwrap());
+        self.render_markdown(&fenced_usage, no_color);
     }
 
-    fn render_markdown(&self, text: &str, no_color: bool) -> Result<()> {
-        let size = TerminalSize::detect().unwrap_or_default();
-        let columns = size.columns;
-        let terminal = TerminalProgram::detect();
-
-        let capabilities = if no_color {
-            TerminalCapabilities {
-                style: None,
-                ..terminal.capabilities()
-            }
+    fn render_markdown(&self, text: &str, no_color: bool) {
+        let mut skin: MadSkin = if no_color || !io::stdout().is_terminal() {
+            MadSkin::no_style()
         } else {
-            terminal.capabilities()
+            MadSkin::default()
         };
+        skin.headers[0].align = termimad::Alignment::Left;
 
-        let settings = pulldown_cmark_mdcat::Settings {
-            terminal_capabilities: capabilities,
-            terminal_size: TerminalSize { columns, ..size },
-            syntax_set: &SyntaxSet::load_defaults_newlines(),
-            theme: pulldown_cmark_mdcat::Theme::default(),
-        };
-        let parser = Parser::new_ext(
-            text,
-            Options::ENABLE_TASKLISTS | Options::ENABLE_STRIKETHROUGH,
-        );
-        let env =
-            pulldown_cmark_mdcat::Environment::for_local_directory(&std::env::current_dir()?)?;
-
-        let stdout = std::io::stdout();
-        let mut output = stdout.lock();
-        let resource_handler = NoopResourceHandler {};
-
-        pulldown_cmark_mdcat::push_tty(&settings, &env, &resource_handler, &mut output, parser)
-            .or_else(|error| {
-                if error.kind() == std::io::ErrorKind::BrokenPipe {
-                    Ok(())
-                } else {
-                    Err(anyhow!("Cannot render markdown to stdout: {:?}", error))
-                }
-            })
+        let (mut width, _) = terminal_size();
+        if width > 120 {
+            // limit width to print nicer rulers
+            width = 120;
+        }
+        let fmt_text = FmtText::from_text(&skin, text.into(), Some(width as usize));
+        print!("{}", fmt_text);
     }
 }
 
