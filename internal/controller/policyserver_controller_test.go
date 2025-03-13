@@ -148,7 +148,7 @@ var _ = Describe("PolicyServer controller", func() {
 					"ReadOnlyRootFilesystem":   PointTo(BeTrue()),
 					"Capabilities": PointTo(MatchAllFields(Fields{
 						"Add":  BeNil(),
-						"Drop": Equal([]corev1.Capability{"all"}),
+						"Drop": Equal([]corev1.Capability{"ALL"}),
 					})),
 					"SELinuxOptions": BeNil(),
 					"WindowsOptions": BeNil(),
@@ -172,7 +172,10 @@ var _ = Describe("PolicyServer controller", func() {
 					"FSGroup":             BeNil(),
 					"Sysctls":             BeNil(),
 					"FSGroupChangePolicy": BeNil(),
-					"SeccompProfile":      BeNil(),
+					"SeccompProfile": PointTo(MatchAllFields(Fields{
+						"Type":             Equal(corev1.SeccompProfileTypeRuntimeDefault),
+						"LocalhostProfile": BeNil(),
+					})),
 				})),
 				"Affinity": PointTo(MatchAllFields(Fields{
 					"NodeAffinity":    BeNil(),
