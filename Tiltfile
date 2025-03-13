@@ -12,7 +12,7 @@ if str(local("command -v " + kubectl_cmd + " || true", quiet = True)) == "":
 # Create the kubewarden namespace
 # This is required since the helm() function doesn't support the create_namespace flag
 load('ext://namespace', 'namespace_create')
-namespace_create('kubewarden')
+namespace_create('kubewarden', labels = settings.get('namespace_labels', []))
 
 # Install CRDs
 
