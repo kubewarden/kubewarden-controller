@@ -51,8 +51,7 @@ install = helm(
     settings.get('helm_charts_path') + '/charts/kubewarden-controller/', 
     name='kubewarden-controller', 
     namespace='kubewarden', 
-    set=['image.repository=' + settings.get('image'), 'global.cattle.systemDefaultRegistry=' + settings.get('registry')]
-    , **additional_helm_installation_args
+    **additional_helm_installation_args
 )
 
 objects = decode_yaml_stream(install)
@@ -63,6 +62,7 @@ for o in objects:
         o['spec']['template']['spec']['securityContext']['runAsNonRoot'] = False
         # Disable the leader election to speed up the startup time.
         o['spec']['template']['spec']['containers'][0]['args'].remove('--leader-elect')
+        o['spec']['template']['spec']['containers'][0]['image'] = settings.get('registry') + '/' + settings.get('image')
 
     # Update the cluster and namespace roles used by the controller. This ensures
     # that always we have the latest roles applied to the cluster.
