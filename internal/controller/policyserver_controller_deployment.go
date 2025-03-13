@@ -96,14 +96,14 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 	configureImagePullSecret(policyServer, &admissionContainer)
 	configuresInsecureSources(policyServer, &admissionContainer)
 
-	podSecurityContext := &corev1.PodSecurityContext{}
+	podSecurityContext := defaultPodSecurityContext()
 	if policyServer.Spec.SecurityContexts.Pod != nil {
 		podSecurityContext = policyServer.Spec.SecurityContexts.Pod
 	}
+
+	admissionContainer.SecurityContext = defaultContainerSecurityContext()
 	if policyServer.Spec.SecurityContexts.Container != nil {
 		admissionContainer.SecurityContext = policyServer.Spec.SecurityContexts.Container
-	} else {
-		admissionContainer.SecurityContext = defaultContainerSecurityContext()
 	}
 
 	templateAnnotations := policyServer.Spec.Annotations
@@ -542,7 +542,7 @@ func defaultContainerSecurityContext() *corev1.SecurityContext {
 	allowPrivilegeEscalation := false
 	capabilities := corev1.Capabilities{
 		Add:  []corev1.Capability{},
-		Drop: []corev1.Capability{"all"},
+		Drop: []corev1.Capability{"ALL"},
 	}
 	admissionContainerSecurityContext := corev1.SecurityContext{
 		ReadOnlyRootFilesystem:   &enableReadOnlyFilesystem,
@@ -550,6 +550,17 @@ func defaultContainerSecurityContext() *corev1.SecurityContext {
 		AllowPrivilegeEscalation: &allowPrivilegeEscalation,
 		Capabilities:             &capabilities,
 		RunAsNonRoot:             &runAsNonRoot,
+	}
+	return &admissionContainerSecurityContext
+}
+
+func defaultPodSecurityContext() *corev1.PodSecurityContext {
+	seccompProfile := &corev1.SeccompProfile{
+		Type: corev1.SeccompProfileTypeRuntimeDefault,
+	}
+
+	admissionContainerSecurityContext := corev1.PodSecurityContext{
+		SeccompProfile: seccompProfile,
 	}
 	return &admissionContainerSecurityContext
 }
