@@ -3,3 +3,9 @@ image: <your github handle>/kubewarden-controller
 helm_charts_path: ../helm-charts/
 audit_scanner_path: ../audit-scanner/
 controller_values_file: your-kubewarden-controller-helm-chart-values.yaml
+
+# This can be used to add labels to the `kubewarden` namespace.
+# It can be useful to test the effect of PSA (https://kubernetes.io/docs/concepts/security/pod-security-admission/)
+# on our stack.
+namespace_labels:
+  - pod-security.kubernetes.io/warn: restricted
