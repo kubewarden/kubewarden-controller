@@ -18,6 +18,7 @@ use crate::constants::{
     KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION, KUBEWARDEN_ANNOTATION_POLICY_LICENSE,
     KUBEWARDEN_ANNOTATION_POLICY_OCIURL, KUBEWARDEN_ANNOTATION_POLICY_SOURCE,
     KUBEWARDEN_ANNOTATION_POLICY_TITLE, KUBEWARDEN_ANNOTATION_POLICY_URL,
+    KUBEWARDEN_ANNOTATION_POLICY_VERSION,
 };
 use crate::errors::ArtifactHubError;
 use crate::policy_metadata::Metadata;
@@ -154,7 +155,6 @@ impl Default for Provider {
 impl ArtifactHubPkg {
     pub fn from_metadata(
         metadata: &Metadata,
-        version: &str,
         gh_release_tag: Option<&str>,
         created_at: OffsetDateTime,
         questions: Option<&str>,
@@ -167,6 +167,12 @@ impl ArtifactHubPkg {
         if metadata_annots.is_empty() {
             return Err(ArtifactHubError::NoAnnotations);
         }
+        let version = metadata_annots
+            .get(KUBEWARDEN_ANNOTATION_POLICY_VERSION)
+            .ok_or(ArtifactHubError::MissingAnnotation(String::from(
+                KUBEWARDEN_ANNOTATION_POLICY_VERSION,
+            )))?;
+
         let semver_version = Version::parse(version)
             .map_err(|e| ArtifactHubError::NoSemverVersion(e.to_string()))?;
         if questions
@@ -495,6 +501,10 @@ mod tests {
             rules: vec![],
             annotations: Some(BTreeMap::from([
                 (
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_VERSION),
+                    String::from("0.2.1"),
+                ),
+                (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
                     String::from("verify-image-signatures"),
                 ),
@@ -535,6 +545,10 @@ mod tests {
             protocol_version: None,
             rules: vec![],
             annotations: Some(BTreeMap::from([
+                (
+                    String::from(KUBEWARDEN_ANNOTATION_POLICY_VERSION),
+                    String::from("0.2.1"),
+                ),
                 (
                     String::from(KUBEWARDEN_ANNOTATION_POLICY_TITLE),
                     String::from("verify-image-signatures"),
@@ -594,7 +608,6 @@ mod tests {
         // check annotations None
         let arthub = ArtifactHubPkg::from_metadata(
             &Metadata::default(),
-            "0.2.1",
             None,
             OffsetDateTime::UNIX_EPOCH,
             None,
@@ -606,19 +619,36 @@ mod tests {
             annotations: Some(BTreeMap::from([])),
             ..Default::default()
         };
-        let arthub = ArtifactHubPkg::from_metadata(
-            &metadata,
-            "0.2.1",
-            None,
-            OffsetDateTime::UNIX_EPOCH,
-            None,
-        );
+        let arthub =
+            ArtifactHubPkg::from_metadata(&metadata, None, OffsetDateTime::UNIX_EPOCH, None);
         assert_eq!(arthub.unwrap_err(), ArtifactHubError::NoAnnotations);
 
+        // check version annotations is missing
+        let mut annotations = mock_metadata_with_minimum_required().annotations.unwrap();
+        annotations.remove(KUBEWARDEN_ANNOTATION_POLICY_VERSION);
+        let metadata = Metadata {
+            annotations: Some(annotations),
+            ..Default::default()
+        };
+        let arthub =
+            ArtifactHubPkg::from_metadata(&metadata, None, OffsetDateTime::UNIX_EPOCH, None);
+        assert_eq!(
+            arthub.unwrap_err(),
+            ArtifactHubError::MissingAnnotation(String::from(KUBEWARDEN_ANNOTATION_POLICY_VERSION))
+        );
+
         // check version is semver
+        let mut annotations = mock_metadata_with_minimum_required().annotations.unwrap();
+        annotations.insert(
+            KUBEWARDEN_ANNOTATION_POLICY_VERSION.to_string(),
+            "not-semver".to_string(),
+        );
+
         let arthub = ArtifactHubPkg::from_metadata(
-            &mock_metadata_with_minimum_required(),
-            "not-semver",
+            &Metadata {
+                annotations: Some(annotations),
+                ..Default::default()
+            },
             None,
             OffsetDateTime::UNIX_EPOCH,
             None,
@@ -629,13 +659,8 @@ mod tests {
         ));
 
         // check questions is some and not empty
-        let metadata = Metadata {
-            annotations: Some(BTreeMap::from([(String::from("foo"), String::from("bar"))])),
-            ..Default::default()
-        };
         let arthub = ArtifactHubPkg::from_metadata(
-            &metadata,
-            "0.2.1",
+            &mock_metadata_with_minimum_required(),
             None,
             OffsetDateTime::UNIX_EPOCH,
             Some(""),
@@ -830,7 +855,6 @@ mod tests {
     fn artifacthubpkg_with_minimum_required() -> Result<()> {
         let artif = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_minimum_required(),
-            "0.2.1",
             None,
             OffsetDateTime::UNIX_EPOCH,
             None,
@@ -881,7 +905,6 @@ kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/ocirepo/nam
     fn artifacthubpkg_with_all() -> Result<()> {
         let artif = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_all(),
-            "0.2.1",
             None,
             OffsetDateTime::UNIX_EPOCH,
             Some("questions contents"),
