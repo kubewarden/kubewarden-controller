@@ -14,11 +14,11 @@ use crate::constants::{
     ARTIFACTHUB_ANNOTATION_KUBEWARDEN_RESOURCES, ARTIFACTHUB_ANNOTATION_KUBEWARDEN_RULES,
     ARTIFACTHUB_ANNOTATION_RANCHER_HIDDENUI, KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME,
     KUBEWARDEN_ANNOTATION_ARTIFACTHUB_HIDDENUI, KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS,
-    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES, KUBEWARDEN_ANNOTATION_POLICY_AUTHOR,
-    KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION, KUBEWARDEN_ANNOTATION_POLICY_LICENSE,
-    KUBEWARDEN_ANNOTATION_POLICY_OCIURL, KUBEWARDEN_ANNOTATION_POLICY_SOURCE,
-    KUBEWARDEN_ANNOTATION_POLICY_TITLE, KUBEWARDEN_ANNOTATION_POLICY_URL,
-    KUBEWARDEN_ANNOTATION_POLICY_VERSION,
+    KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES, KUBEWARDEN_ANNOTATION_GITHUB_RELEASE_TAG,
+    KUBEWARDEN_ANNOTATION_POLICY_AUTHOR, KUBEWARDEN_ANNOTATION_POLICY_DESCRIPTION,
+    KUBEWARDEN_ANNOTATION_POLICY_LICENSE, KUBEWARDEN_ANNOTATION_POLICY_OCIURL,
+    KUBEWARDEN_ANNOTATION_POLICY_SOURCE, KUBEWARDEN_ANNOTATION_POLICY_TITLE,
+    KUBEWARDEN_ANNOTATION_POLICY_URL, KUBEWARDEN_ANNOTATION_POLICY_VERSION,
 };
 use crate::errors::ArtifactHubError;
 use crate::policy_metadata::Metadata;
@@ -155,7 +155,6 @@ impl Default for Provider {
 impl ArtifactHubPkg {
     pub fn from_metadata(
         metadata: &Metadata,
-        gh_release_tag: Option<&str>,
         created_at: OffsetDateTime,
         questions: Option<&str>,
     ) -> Result<Self> {
@@ -172,6 +171,9 @@ impl ArtifactHubPkg {
             .ok_or(ArtifactHubError::MissingAnnotation(String::from(
                 KUBEWARDEN_ANNOTATION_POLICY_VERSION,
             )))?;
+        let gh_release_tag = metadata_annots
+            .get(KUBEWARDEN_ANNOTATION_GITHUB_RELEASE_TAG)
+            .map(|annotation| annotation.as_str());
 
         let semver_version = Version::parse(version)
             .map_err(|e| ArtifactHubError::NoSemverVersion(e.to_string()))?;
@@ -606,12 +608,8 @@ mod tests {
     #[test]
     fn artifacthubpkg_validate_inputs() -> Result<()> {
         // check annotations None
-        let arthub = ArtifactHubPkg::from_metadata(
-            &Metadata::default(),
-            None,
-            OffsetDateTime::UNIX_EPOCH,
-            None,
-        );
+        let arthub =
+            ArtifactHubPkg::from_metadata(&Metadata::default(), OffsetDateTime::UNIX_EPOCH, None);
         assert_eq!(arthub.unwrap_err(), ArtifactHubError::NoAnnotations);
 
         // check annotations empty
@@ -619,8 +617,7 @@ mod tests {
             annotations: Some(BTreeMap::from([])),
             ..Default::default()
         };
-        let arthub =
-            ArtifactHubPkg::from_metadata(&metadata, None, OffsetDateTime::UNIX_EPOCH, None);
+        let arthub = ArtifactHubPkg::from_metadata(&metadata, OffsetDateTime::UNIX_EPOCH, None);
         assert_eq!(arthub.unwrap_err(), ArtifactHubError::NoAnnotations);
 
         // check version annotations is missing
@@ -630,8 +627,7 @@ mod tests {
             annotations: Some(annotations),
             ..Default::default()
         };
-        let arthub =
-            ArtifactHubPkg::from_metadata(&metadata, None, OffsetDateTime::UNIX_EPOCH, None);
+        let arthub = ArtifactHubPkg::from_metadata(&metadata, OffsetDateTime::UNIX_EPOCH, None);
         assert_eq!(
             arthub.unwrap_err(),
             ArtifactHubError::MissingAnnotation(String::from(KUBEWARDEN_ANNOTATION_POLICY_VERSION))
@@ -649,7 +645,6 @@ mod tests {
                 annotations: Some(annotations),
                 ..Default::default()
             },
-            None,
             OffsetDateTime::UNIX_EPOCH,
             None,
         );
@@ -661,7 +656,6 @@ mod tests {
         // check questions is some and not empty
         let arthub = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_minimum_required(),
-            None,
             OffsetDateTime::UNIX_EPOCH,
             Some(""),
         );
@@ -855,7 +849,6 @@ mod tests {
     fn artifacthubpkg_with_minimum_required() -> Result<()> {
         let artif = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_minimum_required(),
-            None,
             OffsetDateTime::UNIX_EPOCH,
             None,
         )
@@ -905,7 +898,6 @@ kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/ocirepo/nam
     fn artifacthubpkg_with_all() -> Result<()> {
         let artif = ArtifactHubPkg::from_metadata(
             &mock_metadata_with_all(),
-            None,
             OffsetDateTime::UNIX_EPOCH,
             Some("questions contents"),
         )

@@ -12,6 +12,8 @@ pub const KUBEWARDEN_ANNOTATION_POLICY_USAGE: &str = "io.kubewarden.policy.usage
 pub const KUBEWARDEN_ANNOTATION_POLICY_SEVERITY: &str = "io.kubewarden.policy.severity";
 pub const KUBEWARDEN_ANNOTATION_POLICY_CATEGORY: &str = "io.kubewarden.policy.category";
 
+pub const KUBEWARDEN_ANNOTATION_GITHUB_RELEASE_TAG: &str = "com.github.release.tag";
+
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_RESOURCES: &str = "io.artifacthub.resources";
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_DISPLAYNAME: &str = "io.artifacthub.displayName";
 pub const KUBEWARDEN_ANNOTATION_ARTIFACTHUB_KEYWORDS: &str = "io.artifacthub.keywords";
