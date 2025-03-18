@@ -141,4 +141,4 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.2.5
+replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.2.6
