@@ -423,19 +423,12 @@ fn subcommand_scaffold() -> Command {
             .value_name("PATH")
             .help("File containing the metadata of the policy"),
         Arg::new("version")
-            .required(true)
+            .required(false)
             .long("version")
             .short('v')
             .number_of_values(1)
             .value_name("VALUE")
             .help("Semver version of the policy"),
-        Arg::new("gh-release-tag")
-            .required(false)
-            .long("gh-release-tag")
-            .short('t')
-            .number_of_values(1)
-            .value_name("VALUE")
-            .help("Specifies the GitHub release tag of the policy. If set, this tag will be used for generating GitHub release links instead of the version."),
         Arg::new("questions-path")
             .long("questions-path")
             .short('q')

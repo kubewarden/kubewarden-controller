@@ -8,8 +8,6 @@ use time::OffsetDateTime;
 
 pub(crate) fn artifacthub(
     metadata_path: PathBuf,
-    version: &str,
-    gh_release_tag: Option<&str>,
     questions_path: Option<PathBuf>,
 ) -> Result<String> {
     let comment_header = r#"# Kubewarden Artifacthub Package config
@@ -29,13 +27,8 @@ pub(crate) fn artifacthub(
         })
         .transpose()?;
 
-    let kubewarden_artifacthub_pkg = ArtifactHubPkg::from_metadata(
-        &metadata,
-        version,
-        gh_release_tag,
-        OffsetDateTime::now_utc(),
-        questions.as_deref(),
-    )?;
+    let kubewarden_artifacthub_pkg =
+        ArtifactHubPkg::from_metadata(&metadata, OffsetDateTime::now_utc(), questions.as_deref())?;
 
     Ok(format!(
         "{}\n{}",

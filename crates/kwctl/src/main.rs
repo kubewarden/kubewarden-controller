@@ -323,19 +323,13 @@ async fn main() -> Result<()> {
                         .get_one::<String>("metadata-path")
                         .map(|output| PathBuf::from_str(output).unwrap())
                         .unwrap();
-                    let version = artifacthub_matches.get_one::<String>("version").unwrap();
-                    let gh_release_tag = artifacthub_matches
-                        .get_one::<String>("gh-release-tag")
-                        .cloned();
+                    if artifacthub_matches.get_one::<String>("version").is_some() {
+                        tracing::warn!("The 'version' flag is deprecated and will be removed in a future release. The value of the `io.kubewarden.policy.version` field in the policy metadata file is used instead.");
+                    }
                     let questions_file = artifacthub_matches
                         .get_one::<String>("questions-path")
                         .map(|output| PathBuf::from_str(output).unwrap());
-                    let content = scaffold::artifacthub(
-                        metadata_file,
-                        version,
-                        gh_release_tag.as_deref(),
-                        questions_file,
-                    )?;
+                    let content = scaffold::artifacthub(metadata_file, questions_file)?;
                     if let Some(output) = artifacthub_matches.get_one::<String>("output") {
                         let output_path = PathBuf::from_str(output)?;
                         fs::write(output_path, content)?;
