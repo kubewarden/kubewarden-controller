@@ -316,6 +316,8 @@ github.com/kubewarden/kubewarden-controller v1.23.0-beta1 h1:FoXOIQF0KINa/VB//fM
 github.com/kubewarden/kubewarden-controller v1.23.0-beta1/go.mod h1:MMMzhz+sKM52VaI1Aqgh5VXljG4kBQbBYdoI5vWgWMc=
 github.com/kubewarden/kubewarden-controller v1.23.0-beta2 h1:rcq4vJVA8PtJNDqS9B8x0B65uqEz630ozqQO/23nVzQ=
 github.com/kubewarden/kubewarden-controller v1.23.0-beta2/go.mod h1:l8/GbR0KyUBKrrHFwwJhvIazZDQgWxFOjTuV8ct49/E=
+github.com/kubewarden/kubewarden-controller v1.23.0-rc1 h1:eL4wiYhnB1GGefhyaHa4JJJbkM+x8GYSl1wQKjpYy8U=
+github.com/kubewarden/kubewarden-controller v1.23.0-rc1/go.mod h1:/kLWf3omwH4z4EaEeNWh+hlJRPydbeAsyevcAHHNLk4=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.0.0-20160728113105-d5b7844b561a/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
