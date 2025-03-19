@@ -419,7 +419,6 @@ fn subcommand_scaffold() -> Command {
         Arg::new("metadata-path")
             .long("metadata-path")
             .short('m')
-            .required(true)
             .value_name("PATH")
             .help("File containing the metadata of the policy"),
         Arg::new("version")

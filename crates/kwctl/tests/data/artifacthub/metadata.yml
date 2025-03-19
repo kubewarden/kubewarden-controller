@@ -1,0 +1,188 @@
+rules:
+  - apiGroups:
+      - admissionregistration.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - apiextensions.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - apiregistration.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - apps
+    apiVersions:
+      - v1beta1
+      - v1beta2
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - audit.k8s.io
+    apiVersions:
+      - v1alpha1
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - authentication.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - autoscaling
+    apiVersions:
+      - v2beta1
+      - v2beta2
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - batch
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - certificates.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - coordination.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - discovery.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - events.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - extensions
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - flowcontrol.apiserver.k8s.io
+    apiVersions:
+      - v1beta1
+      - v1beta2
+      - v1beta3
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - networking.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - node.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - policy
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    apiVersions:
+      - v1alpha1
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - scheduling.k8s.io
+    apiVersions:
+      - v1alpha1
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+  - apiGroups:
+      - storage.k8s.io
+    apiVersions:
+      - v1beta1
+    resources:
+      - "*"
+    operations:
+      - CREATE
+mutating: false
+contextAware: false
+executionMode: kubewarden-wapc
+backgroundAudit: false
+annotations:
+  # artifacthub specific
+  io.artifacthub.displayName: Deprecated API Versions
+  io.artifacthub.resources: "*"
+  io.artifacthub.keywords: compliance, deprecated API
+  io.kubewarden.policy.ociUrl: ghcr.io/kubewarden/policies/deprecated-api-versions
+  # kubewarden specific
+  io.kubewarden.policy.title: deprecated-api-versions
+  io.kubewarden.policy.description: Find deprecated and removed Kubernetes resources
+  io.kubewarden.policy.version: 0.2.0
+  io.kubewarden.policy.author: Kubewarden developers <cncf-kubewarden-maintainers@lists.cncf.io>
+  io.kubewarden.policy.url: https://github.com/kubewarden/deprecated-api-versions-policy
+  io.kubewarden.policy.source: https://github.com/kubewarden/deprecated-api-versions-policy
+  io.kubewarden.policy.license: Apache-2.0
+  io.kubewarden.policy.category: Kubernetes API Versions
+  io.kubewarden.policy.severity: low

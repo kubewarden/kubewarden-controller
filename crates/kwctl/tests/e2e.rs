@@ -575,6 +575,45 @@ fn test_inspect_policy_yml_output(#[case] show_signatures: bool) {
     assert_eq!(show_signatures, report.contains_key("signatures"))
 }
 
+#[test]
+fn test_artifacthub_scaffold_find_metadata_automatically() {
+    let tempdir = tempdir().unwrap();
+
+    std::fs::copy(
+        test_data("artifacthub/metadata.yml"),
+        tempdir.path().join("metadata.yml"),
+    )
+    .expect("cannot copy metadata.yml");
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold").arg("artifacthub");
+
+    cmd.assert().success();
+}
+
+#[test]
+fn test_artifacthub_scaffold_with_custom_metadata() {
+    let tempdir = tempdir().unwrap();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold")
+        .arg("artifacthub")
+        .arg("--metadata-path")
+        .arg(test_data("artifacthub/metadata.yml"));
+
+    cmd.assert().success();
+}
+
+#[test]
+fn test_artifacthub_scaffold_fail_when_metadata_not_provided_nor_found() {
+    let tempdir = tempdir().unwrap();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold").arg("artifacthub");
+
+    cmd.assert().failure();
+}
+
 fn get_wasm_annotations(dir: &Path, oci_ref: &str) -> Result<BTreeMap<String, String>> {
     let mut cmd = setup_command(dir);
     cmd.arg("inspect").arg(oci_ref).arg("-o").arg("yaml");
