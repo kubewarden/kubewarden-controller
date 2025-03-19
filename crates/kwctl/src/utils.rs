@@ -92,6 +92,13 @@ pub(crate) fn new_policy_execution_mode_from_str(name: &str) -> Result<PolicyExe
     Ok(execution_mode)
 }
 
+pub(crate) fn find_file_matching_file(possible_names: &[&str]) -> Option<PathBuf> {
+    possible_names
+        .iter()
+        .map(PathBuf::from)
+        .find(|path| path.exists())
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
