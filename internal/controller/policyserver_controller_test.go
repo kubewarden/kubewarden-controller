@@ -608,7 +608,7 @@ var _ = Describe("PolicyServer controller", func() {
 			}).Should(Succeed())
 		})
 
-		It("should create service with owner reference", func() {
+		It("should create service with owner reference and correct labels", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
@@ -640,6 +640,11 @@ var _ = Describe("PolicyServer controller", func() {
 					"Port":       Equal(int32(constants.PolicyServerPort)),
 					"TargetPort": Equal(intstr.IntOrString{IntVal: int32(constants.PolicyServerPort)}),
 				})))
+				// This checks that the service has the legacy and recommended labels
+				// TODO simplify this with a future release
+				for k, v := range policyServer.CommonLabels() {
+					Expect(service.ObjectMeta.Labels).To(HaveKeyWithValue(k, v))
+				}
 				return nil
 			}).Should(Succeed())
 		})

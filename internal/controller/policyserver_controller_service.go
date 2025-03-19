@@ -38,7 +38,6 @@ func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Contex
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
-			Labels:    policyServer.CommonLabels(),
 		},
 	}
 	_, err := controllerutil.CreateOrPatch(ctx, r.Client, &svc, func() error {
@@ -53,9 +52,14 @@ func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Contex
 func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer *policiesv1.PolicyServer) error {
 	svc.Name = policyServer.NameWithPrefix()
 	svc.Namespace = r.DeploymentsNamespace
-	svc.Labels = map[string]string{
-		constants.AppLabelKey: policyServer.AppLabel(),
+	templateLabels := map[string]string{
+		constants.AppLabelKey:          policyServer.AppLabel(),
+		constants.PolicyServerLabelKey: policyServer.Name,
 	}
+	for key, value := range policyServer.CommonLabels() {
+		templateLabels[key] = value
+	}
+	svc.Labels = templateLabels
 	svc.Spec = corev1.ServiceSpec{
 		Ports: []corev1.ServicePort{
 			{
