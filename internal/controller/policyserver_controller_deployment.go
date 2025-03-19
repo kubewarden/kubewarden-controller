@@ -295,7 +295,6 @@ func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, po
 	if policyServerDeployment.Labels == nil {
 		policyServerDeployment.Labels = make(map[string]string)
 	}
-	policyServerDeployment.Labels[constants.AppLabelKey] = policyServer.AppLabel()
 	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
 
 	for key, value := range policyServer.CommonLabels() {
@@ -378,11 +377,12 @@ func buildPolicyServerDeploymentSpec(
 	podSecurityContext *corev1.PodSecurityContext,
 ) appsv1.DeploymentSpec {
 	templateLabels := map[string]string{
-		constants.AppLabelKey: policyServer.AppLabel(),
 		constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
 		constants.PolicyServerLabelKey:                            policyServer.Name,
 	}
-	for key, value := range policyServer.CommonLabels() {
+
+	commonLabels := policyServer.CommonLabels()
+	for key, value := range commonLabels {
 		templateLabels[key] = value
 	}
 
@@ -390,7 +390,8 @@ func buildPolicyServerDeploymentSpec(
 		Replicas: &policyServer.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				constants.AppLabelKey: policyServer.AppLabel(),
+				constants.PartOfLabelKey:   commonLabels[constants.PartOfLabelKey],
+				constants.InstanceLabelKey: commonLabels[constants.InstanceLabelKey],
 			},
 		},
 		Strategy: appsv1.DeploymentStrategy{
