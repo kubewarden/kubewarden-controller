@@ -388,7 +388,7 @@ Scaffold an AdmissionRequest object
 
 Output an artifacthub-pkg.yml file from a metadata.yml file
 
-**Usage:** `kwctl scaffold artifacthub [OPTIONS] --metadata-path <PATH>`
+**Usage:** `kwctl scaffold artifacthub [OPTIONS]`
 
 ###### **Options:**
 
