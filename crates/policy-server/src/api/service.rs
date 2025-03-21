@@ -36,6 +36,40 @@ pub(crate) fn evaluate(
     let start_time = Instant::now();
     let policy_id: PolicyID = policy_id.parse()?;
 
+    // Early check for requests from special namespaces
+    if let ValidateRequest::AdmissionRequest(adm_req) = validate_request {
+        if let Some(ref req_namespace) = adm_req.namespace {
+            if evaluation_environment
+                .should_always_accept_requests_made_inside_of_namespace(req_namespace)
+            {
+                // Record metrics for requests from special namespaces
+                let policy_evaluation_metric = metrics::PolicyEvaluation {
+                    policy_name: policy_id.to_string(),
+                    policy_mode: evaluation_environment.get_policy_mode(&policy_id)?.into(),
+                    resource_namespace: adm_req.clone().namespace,
+                    resource_kind: adm_req.clone().request_kind.unwrap_or_default().kind,
+                    resource_request_operation: adm_req.clone().operation,
+                    accepted: true,
+                    mutated: false,
+                    request_origin: request_origin.to_string(),
+                    error_code: None,
+                };
+                metrics::record_policy_latency(start_time.elapsed(), &policy_evaluation_metric);
+                metrics::add_policy_evaluation(&policy_evaluation_metric);
+
+                return Ok(AdmissionResponse {
+                    uid: validate_request.uid().to_owned(),
+                    allowed: true,
+                    status: None,
+                    patch: None,
+                    audit_annotations: None,
+                    warnings: None,
+                    patch_type: None,
+                });
+            }
+        }
+    }
+
     let vanilla_validation_response = match evaluation_environment
         .clone()
         .validate(&policy_id, validate_request)
@@ -71,7 +105,7 @@ pub(crate) fn evaluate(
         None
     };
 
-    let mut validation_response = match request_origin {
+    let validation_response = match request_origin {
         RequestOrigin::Validate => validation_response_with_constraints(
             &policy_id,
             &policy_mode,
@@ -83,29 +117,6 @@ pub(crate) fn evaluate(
 
     match validate_request {
         ValidateRequest::AdmissionRequest(adm_req) => {
-            // TODO: we should check immediately if the request is coming from the "always
-            // accepted" namespace ASAP. Right now we do an evaluation and then we discard the
-            // result if the namespace is the special one.
-            // Moreover, I (flavio) don't like the fact we're using a mutable variable for
-            // `validation_response`
-            if let Some(ref req_namespace) = adm_req.namespace {
-                if evaluation_environment
-                    .should_always_accept_requests_made_inside_of_namespace(req_namespace)
-                {
-                    // given namespace, just set the `allowed`
-                    // part of the response to `true` if the
-                    // request matches this namespace. Keep
-                    // the rest of the behaviors unchanged,
-                    // such as checking if the policy is
-                    // allowed to mutate.
-
-                    validation_response = AdmissionResponse {
-                        allowed: true,
-                        status: None,
-                        ..validation_response
-                    };
-                }
-            }
             let policy_evaluation_metric = metrics::PolicyEvaluation {
                 policy_name: policy_id.to_string(),
                 policy_mode: policy_mode.into(),
