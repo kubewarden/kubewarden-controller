@@ -3,7 +3,7 @@ authors     = ["Kubewarden Developers <kubewarden@suse.de>"]
 description = "Tool to manage Kubewarden policies"
 edition     = "2021"
 name        = "kwctl"
-version     = "1.23.0-rc1"
+version     = "1.23.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -23,7 +23,7 @@ k8s-openapi = { version = "0.24.0", default-features = false, features = [
 ] }
 lazy_static = "1.4.0"
 pem = "3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.22.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.23.0" }
 prettytable-rs = "^0.10"
 regex = "1"
 rustls-pki-types = { version = "1", features = ["alloc"] }
