@@ -250,7 +250,9 @@ fn verify_signatures_against_config(
         {
             let num_satisfied_constraints =
                 signatures_any_of.signatures.len() - unsatisfied_signatures.len();
-            if num_satisfied_constraints < signatures_any_of.minimum_matches.into() {
+            let minimum_matches: usize = signatures_any_of.minimum_matches.into();
+
+            if num_satisfied_constraints < minimum_matches {
                 let mut errormsg =
                     format!("Image verification failed: minimum number of signatures not reached: needed {}, got {}", signatures_any_of.minimum_matches, num_satisfied_constraints);
                 errormsg.push_str("\nThe following constraints were not satisfied:\n");
