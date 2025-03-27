@@ -80,7 +80,7 @@ jobs:
           override: true
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@914ac1e29db2d22aef69891f032778d9adc3990d # v2.49.34
+        uses: taiki-e/install-action@63f2419bb6a642b9973690fd13cf07b750f65635 # v2.49.37
         with:
           tool: cargo-llvm-cov
 
@@ -161,4 +161,4 @@ jobs:
       - name: Checkout Actions Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - name: Spell Check Repo
-        uses: crate-ci/typos@7bc041cbb7ca9167c9e0e4ccbb26f48eb0f9d4e0 # v1.30.2
+        uses: crate-ci/typos@d08e4083f112e684fb88f6babd9ae60a1f1cd84f # v1.30.3
