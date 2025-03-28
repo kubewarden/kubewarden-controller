@@ -26,7 +26,6 @@ pub fn setup_tracing(
         .add_directive("cranelift_wasm=off".parse().unwrap())
         .add_directive("h2=off".parse().unwrap())
         .add_directive("hyper=off".parse().unwrap())
-        .add_directive("rustls=off".parse().unwrap())
         .add_directive("regalloc=off".parse().unwrap())
         .add_directive("wasmtime_cranelift=off".parse().unwrap())
         .add_directive("wasmtime_jit=off".parse().unwrap());
