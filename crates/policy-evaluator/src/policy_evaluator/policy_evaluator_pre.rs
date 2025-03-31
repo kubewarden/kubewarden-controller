@@ -9,6 +9,7 @@ use crate::runtimes::{rego, wapc, wasi_cli, Runtime};
 /// object.
 ///
 /// See the [`rehydrate`](PolicyEvaluatorPre::rehydrate) method.
+#[derive(Clone)]
 pub struct PolicyEvaluatorPre {
     stack_pre: StackPre,
 }

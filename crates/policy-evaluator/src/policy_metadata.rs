@@ -168,6 +168,17 @@ pub struct ContextAwareResource {
     pub kind: String,
 }
 
+impl From<&kubewarden_policy_sdk::crd::policies::common::ContextAwareResource>
+    for ContextAwareResource
+{
+    fn from(resource: &kubewarden_policy_sdk::crd::policies::common::ContextAwareResource) -> Self {
+        Self {
+            api_version: resource.api_version.clone(),
+            kind: resource.kind.clone(),
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Default, PartialEq)]
 pub enum PolicyType {
     #[default]
