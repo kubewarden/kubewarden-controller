@@ -59,13 +59,13 @@ jobs:
       - run: zip -j9 kwctl-linux-${{ matrix.targetarch }}.zip kwctl-linux-${{ matrix.targetarch }} kwctl-linux-${{ matrix.targetarch }}.sig kwctl-linux-${{ matrix.targetarch }}.pem
 
       - name: Upload binary
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@36f0782e949d8597c061ca0d519f7e17a2813190 # v3.4.8
+        uses: kubewarden/github-actions/syft-installer@061457443f381a6c92489003d1d89c67ac32ad51 # v4.3.0
 
       - name: Create SBOM file
         shell: bash
@@ -86,7 +86,7 @@ jobs:
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kwctl-linux-${{ matrix.targetarch }}-sbom
           path: |
@@ -95,7 +95,7 @@ jobs:
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig
 
       - name: Upload kwctl air gap scripts
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: matrix.targetarch == 'x86_64' # only upload the scripts once
         with:
           name: kwctl-airgap-scripts
@@ -150,13 +150,13 @@ jobs:
       - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.sig kwctl-darwin-${{ matrix.targetarch }}.pem
 
       - name: Upload binary
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@36f0782e949d8597c061ca0d519f7e17a2813190 # v3.4.8
+        uses: kubewarden/github-actions/syft-installer@061457443f381a6c92489003d1d89c67ac32ad51 # v4.3.0
         with:
           arch: darwin_amd64
 
@@ -179,7 +179,7 @@ jobs:
             kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}-sbom
           path: |
@@ -238,13 +238,13 @@ jobs:
         shell: bash
 
       - name: Upload binary
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kwctl-windows-x86_64
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@36f0782e949d8597c061ca0d519f7e17a2813190 # v3.4.8
+        uses: kubewarden/github-actions/syft-installer@061457443f381a6c92489003d1d89c67ac32ad51 # v4.3.0
         with:
           arch: windows_amd64
 
@@ -268,7 +268,7 @@ jobs:
           kwctl-windows-x86_64-sbom.spdx
 
       - name: Upload kwctl SBOM files
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kwctl-windows-x86_64-sbom
           path: |

@@ -102,9 +102,9 @@ Benchmarks a Kubewarden policy
 * `--fulcio-cert-path <PATH>` — Path to the Fulcio certificate. Can be repeated multiple times
 * `--github-owner <VALUE>` — GitHub owner expected in the certificates generated in CD pipelines
 * `--github-repo <VALUE>` — GitHub repository expected in the certificates generated in CD pipelines
-* `--measurement-time <SECONDS>` — How long the bench ‘should’ run, num_samples is prioritized so benching will take longer to be able to collect num_samples if the code to be benched is slower than this time limit allowed
+* `--measurement-time <SECONDS>` — How long the bench 'should' run, num_samples is prioritized so benching will take longer to be able to collect num_samples if the code to be benched is slower than this time limit allowed
 * `--num-resamples <NUM>` — How many resamples should be done
-* `--num-samples <NUM>` — How many resamples should be done. Recommended at least 50, above 100 doesn’t seem to yield a significantly different result
+* `--num-samples <NUM>` — How many resamples should be done. Recommended at least 50, above 100 doesn't seem to yield a significantly different result
 * `--raw <RAW>` — Validate a raw request
 
   Default value: `false`
@@ -388,11 +388,10 @@ Scaffold an AdmissionRequest object
 
 Output an artifacthub-pkg.yml file from a metadata.yml file
 
-**Usage:** `kwctl scaffold artifacthub [OPTIONS] --metadata-path <PATH> --version <VALUE>`
+**Usage:** `kwctl scaffold artifacthub [OPTIONS]`
 
 ###### **Options:**
 
-* `-t`, `--gh-release-tag <VALUE>` — Specifies the GitHub release tag of the policy. If set, this tag will be used for generating GitHub release links instead of the version.
 * `-m`, `--metadata-path <PATH>` — File containing the metadata of the policy
 * `-o`, `--output <FILE>` — Path where the artifact-pkg.yml file will be stored
 * `-q`, `--questions-path <PATH>` — File containing the questions-ui content of the policy

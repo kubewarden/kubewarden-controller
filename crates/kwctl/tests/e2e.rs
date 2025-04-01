@@ -463,9 +463,9 @@ fn test_scaffold_manifest(#[case] pull_policies_before: bool) {
 #[case::custom_cel_policy(
     Some("vap/vap-with-variables.yml"),
     Some("vap/vap-binding.yml"),
-    Some("ghcr.io/kubewarden/policies/cel-policy:1.0.0"),
+    Some("ghcr.io/kubewarden/tests/cel-policy:1.0.0"),
     true,
-    contains("module: ghcr.io/kubewarden/policies/cel-policy:1.0.0"),
+    contains("module: ghcr.io/kubewarden/tests/cel-policy:1.0.0"),
     is_empty()
 )]
 #[case::missing_policy(
@@ -573,6 +573,45 @@ fn test_inspect_policy_yml_output(#[case] show_signatures: bool) {
     let report: serde_yaml::Mapping = serde_yaml::from_slice(&cmd.assert().get_output().stdout)
         .expect("a valid yaml document was expected");
     assert_eq!(show_signatures, report.contains_key("signatures"))
+}
+
+#[test]
+fn test_artifacthub_scaffold_find_metadata_automatically() {
+    let tempdir = tempdir().unwrap();
+
+    std::fs::copy(
+        test_data("artifacthub/metadata.yml"),
+        tempdir.path().join("metadata.yml"),
+    )
+    .expect("cannot copy metadata.yml");
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold").arg("artifacthub");
+
+    cmd.assert().success();
+}
+
+#[test]
+fn test_artifacthub_scaffold_with_custom_metadata() {
+    let tempdir = tempdir().unwrap();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold")
+        .arg("artifacthub")
+        .arg("--metadata-path")
+        .arg(test_data("artifacthub/metadata.yml"));
+
+    cmd.assert().success();
+}
+
+#[test]
+fn test_artifacthub_scaffold_fail_when_metadata_not_provided_nor_found() {
+    let tempdir = tempdir().unwrap();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold").arg("artifacthub");
+
+    cmd.assert().failure();
 }
 
 fn get_wasm_annotations(dir: &Path, oci_ref: &str) -> Result<BTreeMap<String, String>> {

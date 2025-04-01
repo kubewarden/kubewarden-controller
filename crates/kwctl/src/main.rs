@@ -20,6 +20,7 @@ use std::{
     str::FromStr,
     sync::Arc,
 };
+use utils::find_file_matching_file;
 use verify::VerificationAnnotations;
 
 use crate::utils::LookupError;
@@ -322,20 +323,28 @@ async fn main() -> Result<()> {
                     let metadata_file = artifacthub_matches
                         .get_one::<String>("metadata-path")
                         .map(|output| PathBuf::from_str(output).unwrap())
-                        .unwrap();
-                    let version = artifacthub_matches.get_one::<String>("version").unwrap();
-                    let gh_release_tag = artifacthub_matches
-                        .get_one::<String>("gh-release-tag")
-                        .cloned();
+                        .or_else(|| find_file_matching_file(&["metadata.yml", "metadata.yaml"]))
+                        .ok_or_else(|| {
+                            anyhow!(
+                                "path to metadata file not provided, plus 'metadata.yml' not found"
+                            )
+                        })?;
+
+                    if artifacthub_matches.get_one::<String>("version").is_some() {
+                        tracing::warn!("The 'version' flag is deprecated and will be removed in a future release. The value of the `io.kubewarden.policy.version` field in the policy metadata file is used instead.");
+                    }
                     let questions_file = artifacthub_matches
                         .get_one::<String>("questions-path")
-                        .map(|output| PathBuf::from_str(output).unwrap());
-                    let content = scaffold::artifacthub(
-                        metadata_file,
-                        version,
-                        gh_release_tag.as_deref(),
-                        questions_file,
-                    )?;
+                        .map(|output| PathBuf::from_str(output).unwrap())
+                        .or_else(|| {
+                            find_file_matching_file(&[
+                                "questions-ui.yml",
+                                "questions-ui.yaml",
+                                "questions.yml",
+                                "questions.yaml",
+                            ])
+                        });
+                    let content = scaffold::artifacthub(metadata_file, questions_file)?;
                     if let Some(output) = artifacthub_matches.get_one::<String>("output") {
                         let output_path = PathBuf::from_str(output)?;
                         fs::write(output_path, content)?;

@@ -419,23 +419,15 @@ fn subcommand_scaffold() -> Command {
         Arg::new("metadata-path")
             .long("metadata-path")
             .short('m')
-            .required(true)
             .value_name("PATH")
             .help("File containing the metadata of the policy"),
         Arg::new("version")
-            .required(true)
+            .required(false)
             .long("version")
             .short('v')
             .number_of_values(1)
             .value_name("VALUE")
             .help("Semver version of the policy"),
-        Arg::new("gh-release-tag")
-            .required(false)
-            .long("gh-release-tag")
-            .short('t')
-            .number_of_values(1)
-            .value_name("VALUE")
-            .help("Specifies the GitHub release tag of the policy. If set, this tag will be used for generating GitHub release links instead of the version."),
         Arg::new("questions-path")
             .long("questions-path")
             .short('q')
@@ -575,7 +567,7 @@ fn subcommand_bench() -> Command {
             .long("measurement-time")
             .number_of_values(1)
             .value_name("SECONDS")
-            .help("How long the bench ‘should’ run, num_samples is prioritized so benching will take longer to be able to collect num_samples if the code to be benched is slower than this time limit allowed"),
+            .help("How long the bench 'should' run, num_samples is prioritized so benching will take longer to be able to collect num_samples if the code to be benched is slower than this time limit allowed"),
         Arg::new("num_resamples")
             .long("num-resamples")
             .number_of_values(1)
@@ -585,7 +577,7 @@ fn subcommand_bench() -> Command {
             .long("num-samples")
             .number_of_values(1)
             .value_name("NUM")
-            .help("How many resamples should be done. Recommended at least 50, above 100 doesn’t seem to yield a significantly different result"),
+            .help("How many resamples should be done. Recommended at least 50, above 100 doesn't seem to yield a significantly different result"),
         Arg::new("warm_up_time")
             .long("warm-up-time")
             .number_of_values(1)
