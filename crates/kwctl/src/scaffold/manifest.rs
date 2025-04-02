@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use hostname_validator::is_valid;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use policy_evaluator::{
     constants::{
@@ -116,6 +117,24 @@ fn build_objmetadata(data: ScaffoldPolicyData) -> ObjectMeta {
     }
 }
 
+// Kubernetes hostname validation RFC 1123
+fn is_valid_k8s_hostname(hostname: &str) -> bool {
+    is_valid(hostname)
+        && hostname.to_ascii_lowercase() == hostname
+        && !hostname.contains('_')
+        && hostname.len() <= 253
+}
+
+fn validate_policy_title(title: &str) -> Result<()> {
+    if !is_valid_k8s_hostname(title) {
+        return Err(anyhow!(
+            "Invalid title '{}'. Must conform to RFC 1123: use lowercase alphanumeric chars, '-' or '.', and start/end with an alphanumeric character.",
+            title
+        ));
+    }
+    Ok(())
+}
+
 pub(crate) fn manifest(
     uri_or_sha_prefix: &str,
     resource_type: ManifestType,
@@ -135,9 +154,16 @@ pub(crate) fn manifest(
 
     let settings_yml: serde_yaml::Mapping = serde_yaml::from_str(settings.unwrap_or("{}"))?;
 
+    let policy_title = get_policy_title_from_cli_or_metadata(policy_title, &metadata);
+
+    // Validate policy title if present
+    if let Some(title) = &policy_title {
+        validate_policy_title(title)?;
+    }
+
     let scaffold_data = ScaffoldPolicyData {
         uri,
-        policy_title: get_policy_title_from_cli_or_metadata(policy_title, &metadata),
+        policy_title,
         metadata,
         settings: settings_yml,
     };
@@ -458,5 +484,14 @@ mod tests {
         let spec = resource.get("spec").expect("cannot get `Spec`");
         let context_aware_resources = spec.get("contextAwareResources");
         assert!(context_aware_resources.is_none());
+    }
+
+    #[test]
+    fn test_manifest_with_invalid_policy_title() {
+        // Test the validation function directly
+        let result = validate_policy_title("My_policy");
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid title"));
     }
 }

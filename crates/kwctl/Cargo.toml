@@ -50,6 +50,7 @@ wasmparser = "0.227"
 reqwest = { version = "0", default-features = false, features = [
   "rustls-tls-native-roots",
 ] }
+hostname-validator = "1.1.1"
 
 [dev-dependencies]
 assert_cmd     = "2.0.14"
