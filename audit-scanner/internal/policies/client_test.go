@@ -307,7 +307,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 		ErroredNum: 1,
 	}
 
-	assert.EqualValues(t, expectedPolicies, policies)
+	assert.Equal(t, expectedPolicies, policies)
 }
 
 func TestGetClusterWidePolicies(t *testing.T) {
@@ -503,5 +503,5 @@ func TestGetClusterWidePolicies(t *testing.T) {
 		ErroredNum: 1,
 	}
 
-	assert.EqualValues(t, expectedPolicies, policies)
+	assert.Equal(t, expectedPolicies, policies)
 }

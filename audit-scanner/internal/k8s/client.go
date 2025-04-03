@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/tools/pager"
 )
 
-// A client to get resources and namespaces from a Kubernetes cluster.
+// Client retrieves resources and namespaces from a Kubernetes cluster.
 type Client struct {
 	// dynamicClient is used to get resource lists
 	dynamicClient dynamic.Interface
