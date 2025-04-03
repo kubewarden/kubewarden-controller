@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// A client to get Kubewarden policies from the Kubernetes cluster.
+// Client fetches Kubewarden policies from the Kubernetes cluster.
 type Client struct {
 	// client is a controller-runtime client extended with the Kubewarden CRDs
 	client client.Client
