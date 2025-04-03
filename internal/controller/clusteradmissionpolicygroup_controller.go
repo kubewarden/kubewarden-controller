@@ -47,7 +47,7 @@ import (
 // Some RBAC rules needed to access some resources used here are defined in the
 // policyserver_controller.go file.
 
-// ClusterAdmissionPolicyGroupGroupReconciler reconciles an ClusterAdmissionPolicy object.
+// ClusterAdmissionPolicyGroupReconciler reconciles an ClusterAdmissionPolicy object.
 type ClusterAdmissionPolicyGroupReconciler struct {
 	client.Client
 	Log                                        logr.Logger

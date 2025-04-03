@@ -4,7 +4,7 @@ package v1
 
 import (
 	"fmt"
-	"math/rand"
+	rand "math/rand/v2"
 	"os"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -529,7 +529,7 @@ func randStringRunes(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		//nolint:gosec // this is a test code.
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		b[i] = letterRunes[rand.IntN(len(letterRunes))]
 	}
 
 	return string(b)
