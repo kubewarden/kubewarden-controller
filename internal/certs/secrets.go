@@ -7,7 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Extract the CA certificate and private key from a secret.
+// ExtractCARootFromSecret extracts  the CA certificate and private key from a secret.
 // Both are PEM encoded.
 func ExtractCARootFromSecret(caRootSecret *corev1.Secret) ([]byte, []byte, error) {
 	caCert, found := caRootSecret.Data[constants.CARootCert]
@@ -29,7 +29,7 @@ func ExtractCARootFromSecret(caRootSecret *corev1.Secret) ([]byte, []byte, error
 	return caCert, caPrivateKey, nil
 }
 
-// Extract the server certificate and private key from a secret.
+// ExtractServerCertFromSecret extracts the server certificate and private key from a secret.
 // Both are PEM encoded.
 func ExtractServerCertFromSecret(serverCertSecret *corev1.Secret) ([]byte, []byte, error) {
 	serverCert, found := serverCertSecret.Data[constants.ServerCert]

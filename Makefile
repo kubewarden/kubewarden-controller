@@ -202,7 +202,7 @@ GINKGO ?= $(LOCALBIN)/ginkgo-$(GINKGO_VERSION)
 KUSTOMIZE_VERSION ?= v5.4.1
 CONTROLLER_TOOLS_VERSION ?= v0.16.1
 ENVTEST_VERSION ?= release-0.18
-GOLANGCI_LINT_VERSION ?= v1.64.5
+GOLANGCI_LINT_VERSION ?= v2.0.2
 GINKGO_VERSION ?= v2.23.0
 
 .PHONY: kustomize
@@ -223,7 +223,7 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
 
 .PHONY: ginkgo
 ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
