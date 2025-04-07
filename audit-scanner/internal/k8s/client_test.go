@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,8 @@ func TestGetResources(t *testing.T) {
 	dynamicClient := dynamicFake.NewSimpleDynamicClient(scheme.Scheme, pods...)
 	clientset := fake.NewSimpleClientset()
 
-	k8sClient, err := NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize)
+	logger := slog.Default()
+	k8sClient, err := NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
 	require.NoError(t, err)
 
 	pager, err := k8sClient.GetResources(schema.GroupVersionResource{

@@ -3,9 +3,8 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,10 +27,12 @@ type Client struct {
 	skippedNs []string
 	// pageSize is the number of resources to fetch when paginating
 	pageSize int64
+	// logger is used to log the messages
+	logger *slog.Logger
 }
 
 // NewClient returns a new client.
-func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, kubewardenNamespace string, skippedNs []string, pageSize int64) (*Client, error) {
+func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, kubewardenNamespace string, skippedNs []string, pageSize int64, logger *slog.Logger) (*Client, error) {
 	skippedNs = append(skippedNs, kubewardenNamespace)
 
 	return &Client{
@@ -39,6 +40,7 @@ func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, 
 		clientset,
 		skippedNs,
 		pageSize,
+		logger.With("component", "k8sclient"),
 	}, nil
 }
 
@@ -51,19 +53,15 @@ func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*
 
 		resources, err := f.listResources(ctx, gvr, nsName, opts)
 		if apimachineryerrors.IsNotFound(err) {
-			log.Warn().
-				Dict("dict", zerolog.Dict().
-					Str("resource-GVK", gvr.String()).
-					Str("ns", nsName),
-				).Msg("API resource not found")
+			f.logger.WarnContext(ctx, "API resource not found",
+				slog.String("resource-GVK", gvr.String()),
+				slog.String("ns", nsName))
 		}
 		if apimachineryerrors.IsForbidden(err) {
 			// ServiceAccount lacks permissions, GVK may not exist, or policies may be misconfigured
-			log.Warn().
-				Dict("dict", zerolog.Dict().
-					Str("resource-GVK", gvr.String()).
-					Str("ns", nsName),
-				).Msg("API resource forbidden, unknown GVK or ServiceAccount lacks permissions")
+			f.logger.WarnContext(ctx, "API resource forbidden, unknown GVK or ServiceAccount lacks permissions",
+				slog.String("resource-GVK", gvr.String()),
+				slog.String("ns", nsName))
 		}
 		if err != nil {
 			return nil, err
@@ -97,7 +95,7 @@ func (f *Client) GetAuditedNamespaces(ctx context.Context) (*corev1.NamespaceLis
 	skipNsFields := fields.Everything()
 	for _, nsName := range f.skippedNs {
 		skipNsFields = fields.AndSelectors(skipNsFields, fields.OneTermNotEqualSelector("metadata.name", nsName))
-		log.Debug().Str("ns", nsName).Msg("skipping ns")
+		f.logger.DebugContext(ctx, "skipping ns", slog.String("ns", nsName))
 	}
 
 	namespaceList, err := f.clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{FieldSelector: skipNsFields.String()})

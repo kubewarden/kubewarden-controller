@@ -3,10 +3,9 @@ package report
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	auditConstants "github.com/kubewarden/audit-scanner/internal/constants"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,12 +17,15 @@ import (
 type PolicyReportStore struct {
 	// client is a controller-runtime client that knows about PolicyReport and ClusterPolicyReport CRDs
 	client client.Client
+	// logger is used to log the messages
+	logger *slog.Logger
 }
 
 // NewPolicyReportStore creates a new PolicyReportStore.
-func NewPolicyReportStore(client client.Client) *PolicyReportStore {
+func NewPolicyReportStore(client client.Client, logger *slog.Logger) *PolicyReportStore {
 	return &PolicyReportStore{
 		client: client,
+		logger: logger.With("component", "policyreportstore"),
 	}
 }
 
@@ -47,13 +49,12 @@ func (s *PolicyReportStore) CreateOrPatchPolicyReport(ctx context.Context, polic
 		return err
 	}
 
-	log.Debug().Dict("dict", zerolog.Dict()).
-		Str("report-name", policyReport.GetName()).
-		Str("report-version", policyReport.GetResourceVersion()).
-		Str("resource-name", policyReport.Scope.Name).
-		Str("resource-namespace", policyReport.Scope.Namespace).
-		Str("resource-version", policyReport.Scope.ResourceVersion).
-		Msgf("PolicyReport %s", operation)
+	s.logger.DebugContext(ctx, fmt.Sprintf("PolicyReport %s", operation),
+		slog.String("report-name", policyReport.GetName()),
+		slog.String("report-version", policyReport.GetResourceVersion()),
+		slog.String("resource-name", policyReport.Scope.Name),
+		slog.String("resource-namespace", policyReport.Scope.Namespace),
+		slog.String("resource-version", policyReport.Scope.ResourceVersion))
 
 	return nil
 }
@@ -63,7 +64,7 @@ func (s *PolicyReportStore) DeleteOldPolicyReports(ctx context.Context, scanRunI
 	if err != nil {
 		return err
 	}
-	log.Debug().Str("labelSelector", labelSelector.String()).Msg("Deleting old PolicyReports")
+	s.logger.DebugContext(ctx, "Deleting old PolicyReports", slog.String("labelSelector", labelSelector.String()))
 
 	return s.client.DeleteAllOf(ctx, &wgpolicy.PolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,
@@ -90,13 +91,12 @@ func (s *PolicyReportStore) CreateOrPatchClusterPolicyReport(ctx context.Context
 		return err
 	}
 
-	log.Debug().Dict("dict", zerolog.Dict()).
-		Str("report-name", clusterPolicyReport.GetName()).
-		Str("report-version", clusterPolicyReport.GetResourceVersion()).
-		Str("resource-name", clusterPolicyReport.Scope.Name).
-		Str("resource-namespace", clusterPolicyReport.Scope.Namespace).
-		Str("resource-version", clusterPolicyReport.Scope.ResourceVersion).
-		Msgf("ClusterPolicyReport %s", operation)
+	s.logger.DebugContext(ctx, fmt.Sprintf("ClusterPolicyReport %s", operation),
+		slog.String("report-name", clusterPolicyReport.GetName()),
+		slog.String("report-version", clusterPolicyReport.GetResourceVersion()),
+		slog.String("resource-name", clusterPolicyReport.Scope.Name),
+		slog.String("resource-namespace", clusterPolicyReport.Scope.Namespace),
+		slog.String("resource-version", clusterPolicyReport.Scope.ResourceVersion))
 
 	return nil
 }
@@ -106,7 +106,7 @@ func (s *PolicyReportStore) DeleteOldClusterPolicyReports(ctx context.Context, s
 	if err != nil {
 		return err
 	}
-	log.Debug().Str("labelSelector", labelSelector.String()).Msg("Deleting old ClusterPolicyReports")
+	s.logger.DebugContext(ctx, "Deleting old ClusterPolicyReports", slog.String("labelSelector", labelSelector.String()))
 
 	return s.client.DeleteAllOf(ctx, &wgpolicy.ClusterPolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,

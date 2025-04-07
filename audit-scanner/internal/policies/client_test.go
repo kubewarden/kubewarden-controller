@@ -2,6 +2,7 @@ package policies
 
 import (
 	"context"
+	"log/slog"
 	"net/url"
 	"testing"
 
@@ -257,7 +258,8 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	policiesClient, err := NewClient(client, "kubewarden", "")
+	logger := slog.Default()
+	policiesClient, err := NewClient(client, "kubewarden", "", logger)
 	require.NoError(t, err)
 
 	policies, err := policiesClient.GetPoliciesByNamespace(context.Background(), namespace)
@@ -467,7 +469,8 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	policiesClient, err := NewClient(client, "kubewarden", "")
+	logger := slog.Default()
+	policiesClient, err := NewClient(client, "kubewarden", "", logger)
 	require.NoError(t, err)
 
 	policies, err := policiesClient.GetClusterWidePolicies(context.Background())

@@ -3,6 +3,7 @@ package report
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 
 	auditConstants "github.com/kubewarden/audit-scanner/internal/constants"
@@ -21,7 +22,8 @@ import (
 func TestCreatePolicyReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
-	store := NewPolicyReportStore(fakeClient)
+	logger := slog.Default()
+	store := NewPolicyReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -49,7 +51,8 @@ func TestCreatePolicyReport(t *testing.T) {
 func TestPatchPolicyReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
-	store := NewPolicyReportStore(fakeClient)
+	logger := slog.Default()
+	store := NewPolicyReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -99,7 +102,8 @@ func TestPatchPolicyReport(t *testing.T) {
 func TestCreateClusterPolicyReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
-	store := NewPolicyReportStore(fakeClient)
+	logger := slog.Default()
+	store := NewPolicyReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -126,7 +130,8 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 func TestPatchClusterPolicyReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
-	store := NewPolicyReportStore(fakeClient)
+	logger := slog.Default()
+	store := NewPolicyReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -183,7 +188,8 @@ func TestDeletePolicyReport(t *testing.T) {
 
 	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport, oldPolicyReportOtheNamespace)
 	require.NoError(t, err)
-	store := NewPolicyReportStore(fakeClient)
+	logger := slog.Default()
+	store := NewPolicyReportStore(fakeClient, logger)
 
 	err = store.DeleteOldPolicyReports(context.Background(), "new-uid", "default")
 	require.NoError(t, err)
@@ -217,7 +223,8 @@ func TestDeleteClusterPolicyReport(t *testing.T) {
 		Name("new-report").WithAppLabel().RunUID("new-uid").Build()
 	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport)
 	require.NoError(t, err)
-	store := NewPolicyReportStore(fakeClient)
+	logger := slog.Default()
+	store := NewPolicyReportStore(fakeClient, logger)
 
 	err = store.DeleteOldClusterPolicyReports(context.Background(), "new-uid")
 	require.NoError(t, err)
