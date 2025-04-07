@@ -385,12 +385,9 @@ impl EvaluationEnvironment {
     /// - `engine`: the `wasmtime::Engine` to be used when creating the `PolicyEvaluator`
     /// - `policy_id`: the unique identifier of the policy
     /// - `policy_evaluation_settings`: the settings associated with the policy
-    /// - `precompiled_policy`: the `PrecompiledPolicy` associated with the Wasm module referenced
-    ///    by the policy
-    /// - `callback_handler_tx`: the transmission end of a channel that connects the worker
-    ///   with the asynchronous world
-    /// - `policy_evaluation_limit_seconds`: when set, defines after how many seconds the
-    ///   policy evaluation is interrupted
+    /// - `precompiled_policy`: the `PrecompiledPolicy` associated with the Wasm module referenced by the policy
+    /// - `callback_handler_tx`: the transmission end of a channel that connects the worker with the asynchronous world
+    /// - `policy_evaluation_limit_seconds`: when set, defines after how many seconds the policy evaluation is interrupted
     fn register(
         &mut self,
         engine: &wasmtime::Engine,
@@ -1036,7 +1033,7 @@ mod tests {
                 .causes;
             for expected in expected_status_causes {
                 assert!(
-                    causes.iter().any(|c| *c == expected),
+                    causes.contains(&expected),
                     "could not find cause {:?}",
                     expected
                 );
