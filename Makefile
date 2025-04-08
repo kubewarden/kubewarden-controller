@@ -203,7 +203,7 @@ KUSTOMIZE_VERSION ?= v5.4.1
 CONTROLLER_TOOLS_VERSION ?= v0.16.1
 ENVTEST_VERSION ?= release-0.18
 GOLANGCI_LINT_VERSION ?= v2.0.2
-GINKGO_VERSION ?= v2.23.0
+GINKGO_VERSION ?= v2.23.4
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
