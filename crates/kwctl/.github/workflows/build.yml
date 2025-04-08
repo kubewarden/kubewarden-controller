@@ -211,7 +211,14 @@ jobs:
 
       - name: enable git long paths on Windows
         if: matrix.os == 'windows-latest'
-        run: git config --global core.longpaths true
+        run: |
+          echo 'CMAKE_POLICY_VERSION_MINIMUM="3.5"' >> $GITHUB_ENV
+
+      # aws-lc-sys CMakefile contains a directive that has been removed from
+      # cmake v4 that has just been released (march 2025). The build failure
+      # can be fixed by setting an environment variable
+      - name: fix aws-lc-sys building with cmake 4.0.0
+        run: set CMAKE_POLICY_VERSION_MINIMUM="3.5"
 
       - name: Build kwctl
         uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
