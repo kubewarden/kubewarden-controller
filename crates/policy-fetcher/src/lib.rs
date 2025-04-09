@@ -191,7 +191,7 @@ fn pull_destination(
         }
         PullDestination::LocalFile(destination) => {
             if Path::is_dir(destination) {
-                let filename = url.path().split('/').last().unwrap();
+                let filename = url.path().split('/').next_back().unwrap();
                 (None, destination.join(filename))
             } else {
                 (None, PathBuf::from(destination))
