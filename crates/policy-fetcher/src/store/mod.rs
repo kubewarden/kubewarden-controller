@@ -213,7 +213,7 @@ impl Default for Store {
 
 /// Returns the filename of the policy.
 fn policy_file_name(url: &Url) -> String {
-    let filename = url.path().split('/').last().unwrap();
+    let filename = url.path().split('/').next_back().unwrap();
 
     path::encode_filename(filename)
 }
