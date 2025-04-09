@@ -69,10 +69,45 @@ they should be able to coexist.
 
 ## For policies owned by the Kubewarden team
 
-Follow the process listed in [RFC-9, Rancher integration of Kubewarden
-charts](./0009-rancher-integration-charts.md) with the following changes.
+### Building and releasing policy Wasm modules
+
+The policies's Wasm modules are built, pushed to ghcr.io, and released via a
+GitHub release. The process is as follows:
+
+1. The policy has an annotation `io.kubewarden.policy.version` in their
+   `metadata.yml` that specifies their version in semver format.
+2. The policy has a GH workflow, `open-release-pr`, that triggers monthly. This
+   workflow consumes a reusable workflow with the same name from
+   github.com/kubewarden/github-actions >= @v4.4.0. The reusable workflow uses updatecli
+   to detect changes since last tag, and if there's some, it bumps all needed
+   metadata of the policy (the `io.kubewarden.policy.version` in `metadata.yml`,
+   `Cargo.{toml, lock}` if needed, etc), commits those changes to a branch
+   named `updatecli_main_release_pr`, and opens a PR against the policy repo.
+   It obtains the prospective version to use for bumping the metadata from the latest
+   GitHub draft release _title_ (e.g: "Release v1.2.0"), which is created by
+   release-drafter. Release-drafter keeps the title up to date with bumps by
+   evaluating conventional commits.
+   The PR has a label `TRIGGER-RELEASE`.
+3. Kubewarden devs review the PR and merge it.
+4. The policy has a second GH workflow, `release-tag`, that triggers when a PR is merged.
+   This workflow consumes a reusable workflow with the same name from
+   github.com/kubewarden/github-actions >= @v4.4.0. The reusable workflow checks
+   if the merged PR that triggered it contains a label `TRIGGER-RELEASE`. If it
+   does, it creates a git tag matching the latest version in
+   `io.kubewarden.policy-version` and pushes the tag, and deletes the
+   `updatecli_main_release_pr` branch. This will trigger the job that builds and
+   releases the policy in GitHub releases.
+
+The only action to be taken by Kubewarden devs is to merge the automated PR
+that bumps the metadata of the policy. The reviewers can amend the PR, or
+can edit the GitHub draft Release title by hand, close the PR, delete its
+branch, and dispatch the PR job manually again.
 
 ### Policy distribution
+
+Once released, the policies are consumed by following the process listed in
+[RFC-9, Rancher integration of Kubewarden
+charts](./0009-rancher-integration-charts.md) with the following changes.
 
 Submit all Helm charts of the policies to a new repository,
 https://github.com/kubewarden/policy-charts, under a `charts/policies/` folder. This
