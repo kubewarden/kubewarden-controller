@@ -392,7 +392,7 @@ func (f *Client) getPolicyServerURLRunningPolicy(ctx context.Context, policy pol
 	if err != nil {
 		return nil, err
 	}
-	service, err := f.getServiceByAppLabel(ctx, policyServer.AppLabel(), f.kubewardenNamespace)
+	service, err := f.getServiceByInstanceLabel(ctx, policyServer.NameWithPrefix(), f.kubewardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -427,15 +427,15 @@ func (f *Client) getPolicyServerByName(ctx context.Context, policyServerName str
 	return &policyServer, nil
 }
 
-func (f *Client) getServiceByAppLabel(ctx context.Context, appLabel string, namespace string) (*corev1.Service, error) {
+func (f *Client) getServiceByInstanceLabel(ctx context.Context, instanceName string, namespace string) (*corev1.Service, error) {
 	serviceList := corev1.ServiceList{}
-	err := f.client.List(ctx, &serviceList, &client.ListOptions{Namespace: namespace}, &client.MatchingLabels{"app": appLabel})
+	err := f.client.List(ctx, &serviceList, &client.ListOptions{Namespace: namespace}, &client.MatchingLabels{"app.kubernetes.io/instance": instanceName})
 	if err != nil {
 		return nil, err
 	}
 
 	if len(serviceList.Items) != 1 {
-		return nil, errors.New("could not find a single service for the given policy server app label")
+		return nil, errors.New("could not find a single service for the given policy server instance label")
 	}
 
 	return &serviceList.Items[0], nil
