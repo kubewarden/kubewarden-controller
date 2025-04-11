@@ -13,11 +13,11 @@
 This RFC explains how the Kubewarden policies, either owned by the Kubewarden
 team or 3rd party ones, can be integrated in Rancher Explorer.
 
-For policies owned by the Kubewarden team it proposes building Rancher Helm charts
-that will be published under https://github.com/rancher/charts.
+For policies owned by the Kubewarden team this RFC proposes building a catalog,
+using the [Rancher's Helm charts catalog system](https://ranchermanager.docs.rancher.com/how-to-guides/new-user-guides/helm-charts-in-rancher).
 
 For 3rd party policies not owned by the Kubewarden team,
-it proposes using the Artifact Hub API to poll for the metadata stored in
+this RFC proposes using the Artifact Hub API to poll for the metadata stored in
 `policy/artifacthub-pkg.yml`.
 
 # Motivation
@@ -40,12 +40,12 @@ Problems to solve:
    Kubewarden/Rancher team via Rancher Explorer UI.
 2. As a Kubewarden developer, I want to allow users to deploy a collection of related policies
    in a simple way. For example: "PSP best of", "Security best practices",...
-3. As a user, I want to install 3rd party Kubewarden policies via Rancher
+3. As a user, I want to install 3rd party Kubewarden policies via the Rancher
    Explorer UI.
-4. As a Kubewarden developer, I want to release a new Kubewarden chart/policy so
-   it can be installed via Rancher Explorer UI.
+4. As a Kubewarden developer, I want to release a new Kubewarden policy so
+   it can be installed via the Rancher Explorer UI.
 5. As a 3rd party developer, I want to release a policy on Artifact Hub so it can
-   be discovered and installed via Rancher Explorer UI.
+   be discovered and installed via the Rancher Explorer UI.
 
 # Detailed design
 
@@ -103,201 +103,100 @@ that bumps the metadata of the policy. The reviewers can amend the PR, or
 can edit the GitHub draft Release title by hand, close the PR, delete its
 branch, and dispatch the PR job manually again.
 
-### Policy distribution
+### Policy catalog
 
 Once released, the policies are consumed by following the process listed in
 [RFC-9, Rancher integration of Kubewarden
 charts](./0009-rancher-integration-charts.md) with the following changes.
 
-Submit all Helm charts of the policies to a new repository,
-https://github.com/kubewarden/policy-charts, under a `charts/policies/` folder. This
-repository will contain similar CI and scripts as the kubewarden/helm-charts
-repository. The resulting policy Helm charts will get shipped into a separate
-HTTPs Helm repository along with an OCI repository in ghcr.io.
+All policies will be listed in a new repository:  
+[https://github.com/kubewarden/policy-catalog](https://github.com/kubewarden/policy-catalog).  
+This repository will act as a Helm chart repository, published via GitHub Pages.
 
-Even if the charts will not be publicized to users, the repository can be consumed
-in Rancher UI (using git URL and branch) for testing the chart itself.
+Each policy release will generate a `Chart.yaml` file that includes the metadata required by the Rancher UI.
+This file will be placed at `charts/<policy-name>/Chart.yaml`.
+If the original policy contains a `questions-ui.yml` file, it will be copied to `charts/policy-name/questions.yaml`.
+The `LICENSE` and `README.md` files will also be copied into the chart directory.
 
-For policy bundles, they can be in a new chart, either in this new
-`kubewarden/policy-charts` or in `kubewarden/helm-charts`.
+This is not a functional Helm chart, as it doesn't include any templates or values.
+It only provides the metadata needed by the Rancher Explorer UI, making use of the existing Helm chart repository structure.
 
-Inclusion into rancher/charts has been discarded given:
+You can refer to the [Rancher source code](https://github.com/rancher/rancher/blob/794ebe98840e64e47664df2e28d67e76cbc37bf6/pkg/api/steve/catalog/types/rest.go#L50-L56) for more details.
 
-- We don't want to overload existing repos with hundreds of policies, for good UX
-- We want to sign and continue with SLSA support
-- The submission process to rancher/charts is complicated
+This setup also helps avoid hitting the Artifact Hub API rate limits.
+As the number of policies grows, so do the API calls, and we were starting to reach those limits quickly.
 
-### Chart annotations
+### Chart.yaml generation
 
-The policies will have Chart.yaml annotations, as these are replicated in the
-index.yaml of the Helm chart HTTPs repository.
+For each policy release the `Chart.yaml` file will be generated or updated from the `artifacthub-pkg.yml` and `artifacthub-repo.yml` files present in the policy repository.
 
-For easiness on automating the creation and maintenance of the policy Helm
-charts, we will mirror the metadata.yml annotations into the Helm chart
-annotations instead of taking them from artifacthub-pkg.yml. This simplifies
-creating charts from policies that are not slated to be released to ArtifactHub.
+The `name`, `version`, `description`, `keywords` fields will be taken from the `artifacthub-pkg.yml` file.
 
-The following Kubewarden policy annotations in `metadata.yml` must be
-replicated as-is in the Helm chart annotations in `Chart.yaml`:
+All the annotations present in `artifacthub-pkg.yml` will be copied to the `Chart.yaml` file.
+Addtionally, the following annotations will be added to the `Chart.yaml` file:
 
-- `io.artifacthub.displayName`
-- `io.artifacthub.resources`
-- `io.kubewarden.policy.description`
-- `io.artifacthub.keywords`
-- `io.kubewarden.policy.source`: Used for providing the link to the changelog.
-- `io.kubewarden.policy.severity`: Used in the resulting template.yml.
-- `io.kubewarden.policy.category`: Used in the resulting template.yml.
+- `artifacthub.io/repository`: The name of the Artifact Hub repository where the policy is published. This will be fetched by querying the Artifact Hub API using the `repositoryID` present in the `artifacthub-repo.yml` file.
+- `kubewarden/registry`: The OCI registry where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
+- `kubewarden/repository`: The OCI repository where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
+- `kubewarden/tag`: The OCI tag where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
+- `kubewarden/displayName`: The display name of the policy. This is obtained by the `displayName` field in the `artifacthub-pkg.yml` file.
+- `catalog.cattle.io/ui-component`: Always set to `kubewarden`.
+- `catalog.cattle.io/hidden`: Always set to `true`.
+- `catalog.cattle.io/type`: Always set to `kubewarden-policy`.
 
-It is valid to just duplicate all annotations present in the `metadata.yml` of
-the policy in question, for simplicity and futureproofing.
+The `kubewarden/questions-ui` annotation will be not set in the `Chart.yaml` file, since the `questions.yaml` file will be copied to the chart directory.
 
-The following Helm Chart annotations are constructed from the `metadata.yml`.
-The share the same key as their analogous on `artifacthub-pkg.yml` (since they
-are mirroring what is expected by the ArtifactHub API), but are not taken from
-there.
-
-- `kubewarden/mutation`: `'true'` or `'false'`. Value of metadata.yml `mutating` value.
-- `kubewarden/contextAwareResources`: Value of `metadata.yml`
-  `contextAwareResources`. If present, specifies a context aware policy. It is a
-  free multiline string containing an array of apiVersion kind objects
-  ([example](https://github.com/kubewarden/unique-ingress-policy/blob/7cc3136a57df1fec821714523cf9ebe215d70895/artifacthub-pkg.yml#L42-L44)).
-
-The following Rancher Helm chart annotations must be present:
-
-- `catalog.cattle.io/certified`: rancher
-- `catalog.cattle.io/ui-component` to `kubewarden`: This is added for custom UI deployment of a chart
-- `catalog.cattle.io/os` to `linux`.
-- `catalog.cattle.io/permits-os` to `linux,windows`
-- `catalog.cattle.io/upstream-version` to `"<version of policy chart>"`: The version
-  of the upstream chart or app. It prevents the unexpected "downgrade" when
-  upgrading an installed chart that uses our 100.x.x+upVersion version schema.
-- `catalog.cattle.io/ui-component: kubewarden`. Added for custom UI deployment of a chart.
-- `catalog.cattle.io/hidden` to `"true"`.
-- `catalog.cattle.io/type` to a new type, `kubewarden-policy`.
-- `catalog.cattle.io/requires-gvr: "policyservers.policies.kubewarden.io/v1"`.
-  This ensures we don't try to apply the policy template for Kubewarden's CR if
-  we don't have the CRDs or the controller (which auto-installs the CRDs)
-  present.
-
-And the following must be missing:
-
-- `catalog.cattle.io/scope`. Given that we are setting `catalog.cattle.io/hidden`
-  to true, it is not relevant.
-
-### Chart values
-
-The `values.yaml` contain the needed fields, but at the same time must have the
-same UX as the usual Kubewarden charts. We must expect the following to have
-the same schema for all policies:
+Example of a `Chart.yaml` file:
 
 ```yaml
-# values.yaml
-global: # global to all policies and charts
-  cattle:
-    systemDefaultRegistry: ghcr.io
-module:
-  repository: "kubewarden/policies/allow-privilege-escalation-psp" # not in spec.module as it doesn't include the registry
-  tag: "v0.1.11"
-clusterScoped: true # for ClusterAdmissionPolicy, or AdmissionPolicy
-spec:
-  mode: "protect"
-  mutating: true # only present if it's true
-  rules:
-    # array as in the CRD spec
-  settings:
-    # either well formed YAML or multiline string depending on policy
+annotations:
+  artifacthub.io/repository: allowed-fsgroups-psp-policy
+  catalog.cattle.io/hidden: "true"
+  catalog.cattle.io/type: kubewarden-policy
+  catalog.cattle.io/ui-component: kubewarden
+  kubewarden/displayName: Allowed Fs Groups PSP
+  kubewarden/mutation: "true"
+  kubewarden/registry: ghcr.io
+  kubewarden/repository: kubewarden/policies/allowed-fsgroups-psp
+  kubewarden/resources: Pod
+  kubewarden/rules: |
+    - apiGroups:
+      - ''
+      apiVersions:
+      - v1
+      resources:
+      - pods
+      operations:
+      - CREATE
+      - UPDATE
+  kubewarden/tag: v0.1.10
+appVersion: 0.1.10
+description:
+  Replacement for the Kubernetes Pod Security Policy that controls the
+  usage of fsGroups in the pod security context
+home: https://github.com/kubewarden/allowed-fsgroups-psp-policy
+keywords:
+  - psp
+  - container
+  - runtime
+name: allowed-fsgroups-psp
+sources:
+  - ghcr.io/kubewarden/policies/allowed-fsgroups-psp:v0.1.10
+version: 0.1.10
 ```
 
-For `spec.settings`, depending on the Helm chart it may be a well formed YAML
-object or a multiline string, since the CRD defines it as a [free form
-object](https://docs.kubewarden.io/reference/CRDs#policyspec).
+### Policy catalog release flow
 
-For `spec.contextAwareResources`, it will be hardcoded on the policy chart template.
+Every time a policy is released, the `policy-catalog` repository will be updated.
+This will be done by a GitHub Action workflow in the `policy-catalog`, triggered by the policy release job via repository dispatch.
 
-Only those values that are actually configurable should be in values.yml and questions.yml.
-For example, if a policy is non mutating, it should not to have a
-`spec.mutating: false` in the values.yml nor questions.yml.
+The workflow will:
 
-### Chart template
-
-The `templates/policy.yaml` will match the policy templates shipped in the
-`kubewarden-defaults` Helm chart.
-
-- The `spec.module` will be constructed by appending
-  `.Values.global.cattle.systemDefaultRegistry` and `.Values.module.repository`.
-- The `metadata.annotations` for severity and category will be obtained from
-  the policy metadata.yml annotations `io.kubewarden.policy.severity` and
-  `io.kubewarden.policy.category`.
-
-As an example:
-
-```
----
-apiVersion: policies.kubewarden.io/v1
-{{- if eq .Values.clusterScoped true }}
-kind: ClusterAdmissionPolicy
-{{- else }}
-kind: AdmissionPolicy
-{{- end }}
-metadata:
-  labels:
-    app.kubernetes.io/component: policy
-  annotations:
-    io.kubewarden.policy.severity: {{ index .Chart.Annotations "io.kubewarden.policy.severity" | quote }}
-    io.kubewarden.policy.category: {{ index .Chart.Annotations "io.kubewarden.policy.category" | quote }}
-  name: {{ .Release.Name }} # allows for deploying the same policy several times with different configs
-  {{- if eq .Values.clusterScoped false }}
-  namespace: {{ .Release.namespace }}
-  {{- end }}
-spec:
-  module: '{{ .Values.module.repository }}:{{ .Values.module.tag }}'
-  mode: {{ .Values.spec.mode }}
-  {{- if eq (index .Chart.Annotations "kubewarden/mutation") "false" }}
-  mutating: false # policy doesn't support mutation
-  {{- else }}
-  mutating: {{ .Values.spec.mutating }}
-  {{- end }}
-  contextAwareResources: <array of GVK from metadata.yml::contextAwareResources> # optional
-  rules:
-    {{- toYaml .Values.spec.rules | nindent 4 }}
-  settings: # either YAML object or multiline string
-  # other optional fields, such as executionMode, backgroundAudit, etc
-```
-
-### Tests and CI
-
-We will reuse the CI from kubewarden/helm-charts for bash. We will amend the
-already present helm unit tests (with `helm unittest`) to provide a simple test
-on rendering the templates with some expected variations of the `values.yml`.
-
-### Chart UI questions
-
-As listed in RFC-9, the chart will ship a `questions.yaml` whose content is
-just the already existing `questions-ui.yml` that is being used for
-`artifacthub-pkg.yml`.
-
-### Chart changelog
-
-Each policy chart will ship a `CHANGELOG.md` file just like the usual Kubewarden charts do.
-The contents of this file are created via the `make generate-changelog-file` target,
-which use the URL listed in the metadata.yml annotation `io.kubewarden.policy.source`.
-
-### Chart artifacts
-
-The policy Helm charts must contain a `policylist.txt` file in the shipped tgz chart,
-analogous to usual Kubewarden Helm charts. For that we must retouch the `make
-generate-policies-file` target and the `extract-policies.sh` script. This
-enforces SLSA and helps in verification of signed Helm charts.
-
-### Updating the Helm policy chart repository
-
-To create a new policy chart from a newly released policy version, one needs to
-uniquely relate the policy and the policy chart. This is regardless of the
-policy being a normal one or a monorepo one.
-
-For that, one needs the name of the policy.
-
-Once a new policy release happens,
+- Check out the `main` branch of the policy repository at the given tag and copy the `README.md`, `LICENSE`, and `questions.yaml` files to the chart directory.
+- Check out the `artifacthub` branch of the policy repository at the given tag.
+- Generate the `Chart.yaml` file from the `artifacthub-pkg.yml` and `artifacthub-repo.yml` files.
+- Copy the `Chart.yaml` file to the chart directory.
+- Create a PR against the `main` branch of the `policy-catalog` repository with the changes.
 
 # Drawbacks
 
