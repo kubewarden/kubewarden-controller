@@ -128,13 +128,17 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		string(policiesv1.PolicyServerPodDisruptionBudgetReconciled),
 	)
 
-	if err = r.reconcilePolicyServerDeployment(ctx, &policyServer); err != nil {
-		setFalseConditionType(
-			&policyServer.Status.Conditions,
-			string(policiesv1.PolicyServerDeploymentReconciled),
-			fmt.Sprintf("error reconciling deployment: %v", err),
-		)
-		return ctrl.Result{}, err
+	if err, requeue := r.reconcilePolicyServerDeployment(ctx, &policyServer); err != nil || requeue {
+		if err != nil {
+			setFalseConditionType(
+				&policyServer.Status.Conditions,
+				string(policiesv1.PolicyServerDeploymentReconciled),
+				fmt.Sprintf("error reconciling deployment: %v", err),
+			)
+			return ctrl.Result{Requeue: requeue}, err
+		}
+		r.Log.Info("requeueing after deployment reconciliation", "policy-server", policyServer.Name)
+		return ctrl.Result{Requeue: requeue}, nil
 	}
 
 	setTrueConditionType(

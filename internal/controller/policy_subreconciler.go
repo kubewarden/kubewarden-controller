@@ -94,13 +94,28 @@ func (r *policySubReconciler) reconcilePolicy(ctx context.Context, policy polici
 		policy.SetStatus(policiesv1.PolicyStatusPending)
 	}
 
-	policyServerDeployment := appsv1.Deployment{}
-	if err = r.Get(ctx, types.NamespacedName{Namespace: r.deploymentsNamespace, Name: policyServerDeploymentName(policy.GetPolicyServer())}, &policyServerDeployment); err != nil {
+	// In controller v1.23 we change the deployment label selector. Therefore,
+	// during the upgrade process a policy server can have two deployments. One
+	// with the old label selector and one with the new one. Thus, the policy
+	// should wait until the old deployment is removed.
+	policyServerDeploymentList := appsv1.DeploymentList{}
+	if err := r.List(ctx, &policyServerDeploymentList, client.MatchingLabels{
+		constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
+		constants.InstanceLabelKey:  fmt.Sprintf("policy-server-%s", policy.GetPolicyServer()),
+		constants.PartOfLabelKey:    constants.PartOfLabelValue,
+	}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, errors.Join(errors.New("could not read policy server Deployment"), err)
 	}
+	if len(policyServerDeploymentList.Items) > 1 {
+		return ctrl.Result{Requeue: true}, nil // errors.New(msg)
+	}
+	if len(policyServerDeploymentList.Items) == 0 {
+		return ctrl.Result{Requeue: true}, errors.New("no policy server deployment found")
+	}
+	policyServerDeployment := policyServerDeploymentList.Items[0]
 
 	if !r.isPolicyUniquelyReachable(ctx, &policyServerDeployment, policy.GetUniqueName()) {
 		apimeta.SetStatusCondition(

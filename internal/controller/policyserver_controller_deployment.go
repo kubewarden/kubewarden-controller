@@ -4,15 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
@@ -44,13 +48,145 @@ const (
 )
 
 // reconcilePolicyServerDeployment reconciles the Deployment that runs the PolicyServer.
-func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
-	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
-	if err != nil {
-		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err)
+func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer) (error, bool) {
+	// This function handle the usual deployment updates as well as the update of
+	// immutable fields. When an immutable field update is required (e.g.
+	// selector change), we create a new deployment with the new name and the old
+	// one is deleted when the new one is ready. After that, a new deployment is
+	// created to restore the deployment name to the original one. This required
+	// two new deployments to be created. But we ensure that the policy server
+	// deployment will be always available. Avoding downtime when a request is
+	// made to the policy server while the new deployment is being created and
+	// the old one is being deleted.
+
+	// The control of which deployment is the latest one is done by adding an
+	// annotation to the old deployments. Thus, if the deployment does not have
+	// the annotation it should be deleted soon.
+
+	policyServerDeploymentList := appsv1.DeploymentList{}
+	if err := r.List(ctx, &policyServerDeploymentList, client.MatchingLabels{
+		constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
+		constants.InstanceLabelKey:  policyServer.NameWithPrefix(),
+		constants.PartOfLabelKey:    constants.PartOfLabelValue,
+	}); err != nil {
+		return errors.Join(errors.New("could load policy server Deployment"), err), false
 	}
 
+	if len(policyServerDeploymentList.Items) > 1 {
+		// When there are more than one deployment, it means that the policy server is upgrading some immutable fields
+		return r.reconcileUpgradingPolicyServer(ctx, policyServer, policyServerDeploymentList)
+	}
+	return r.reconcileNonUpgradePolicyServer(ctx, policyServer, policyServerDeploymentList)
+}
+
+func (r *PolicyServerReconciler) reconcileNonUpgradePolicyServer(ctx context.Context, policyServer *policiesv1.PolicyServer, policyServerDeploymentList appsv1.DeploymentList) (error, bool) {
+	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
+	if err != nil {
+		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err), false
+	}
 	policyServerDeployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      policyServer.NameWithPrefix(),
+			Namespace: r.DeploymentsNamespace,
+		},
+	}
+	operationResult, err := controllerutil.CreateOrPatch(ctx, r.Client, policyServerDeployment, func() error {
+		if policyServerDeployment.Spec.Selector != nil && !maps.Equal(policyServerDeployment.Spec.Selector.MatchLabels, getDeploymentLabelsSelector(policyServer)) {
+			// it's necessary to change an immutable field. Let's delete the deployment later when the new deployment is ready
+			r.Log.Info("It looks like a immutable field change. Let's create another deployment", "MatchLabels", policyServerDeployment.Spec.Selector.MatchLabels, "new", getDeploymentLabelsSelector(policyServer))
+			policyServerDeployment.Annotations[constants.PolicyServerDeploymentUpgradeAnnotation] = "1"
+		}
+		originalSelector := policyServerDeployment.Spec.Selector
+		originalTemplateLabels := policyServerDeployment.Spec.Template.Labels
+		err := r.updatePolicyServerDeployment(ctx, policyServer, policyServerDeployment, configMapVersion)
+		if _, ok := policyServerDeployment.Annotations[constants.PolicyServerDeploymentUpgradeAnnotation]; ok {
+			if originalSelector != nil {
+				policyServerDeployment.Spec.Selector = originalSelector
+			}
+			policyServerDeployment.Spec.Template.Labels = originalTemplateLabels
+		}
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("error reconciling policy-server deployment: %w", err), false
+	}
+
+	if controllerutil.OperationResultCreated == operationResult && len(policyServerDeploymentList.Items) > 1 {
+		// it looks like that a new reconciliation loop happen during a deployment
+		// upgrade process (e.g. cert rotation). Let's remove all the other deployment because we
+		// already created the new one with the right name and latest configuration
+		for i := range policyServerDeploymentList.Items {
+			operationResult, err = controllerutil.CreateOrPatch(ctx, r.Client, &policyServerDeploymentList.Items[i], func() error {
+				policyServerDeploymentList.Items[i].Annotations[constants.PolicyServerDeploymentUpgradeAnnotation] = "1"
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("error reconciling policy-server deployment: %w", err), false
+			}
+		}
+		// requeue the controller to delete old deployments
+		return nil, true
+	}
+
+	if _, ok := policyServerDeployment.Annotations[constants.PolicyServerDeploymentUpgradeAnnotation]; ok {
+		policyServerDeployment.Name = fmt.Sprintf("%s-%s", policyServer.NameWithPrefix(), constants.ControllerVersionHash)
+		policyServerDeployment.ResourceVersion = ""
+		delete(policyServerDeployment.Annotations, constants.PolicyServerDeploymentUpgradeAnnotation)
+		err := r.Client.Create(ctx, policyServerDeployment)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("error reconciling policy-server deployment. trying to create the new deployment: %w", err), false
+		}
+		r.Log.Info("created future policy-server deployment", "name", policyServerDeployment.Name)
+		return nil, true
+	}
+	return nil, false
+}
+
+func (r *PolicyServerReconciler) reconcileUpgradingPolicyServer(ctx context.Context, policyServer *policiesv1.PolicyServer, policyServerDeploymentList appsv1.DeploymentList) (error, bool) {
+	// check if the latest deployment is ready.
+	readyDeploymentIndex := slices.IndexFunc(policyServerDeploymentList.Items, func(deployment appsv1.Deployment) bool {
+		_, ok := deployment.Annotations[constants.PolicyServerDeploymentUpgradeAnnotation]
+		return !ok && deployment.Status.ReadyReplicas >= 1
+	})
+	// the latest deployment is not ready yet. Let's wait for it
+	if readyDeploymentIndex < 0 {
+		r.Log.Info("latest policy server deployment is not ready yet. Waiting for it to be ready before deleting the old one")
+		return nil, true
+	}
+	// the latest deployment is ready. Let's delete all the other deployments
+	for i := range policyServerDeploymentList.Items {
+		if i != readyDeploymentIndex {
+			if err := r.Client.Delete(ctx, &policyServerDeploymentList.Items[i]); err != nil {
+				return fmt.Errorf("cannot delete old policy server deployment: %w", err), true
+			}
+			r.Log.Info("deleted old policy server deployment", "name", policyServerDeploymentList.Items[i].Name)
+		}
+	}
+	// now that we have replaced the old deployment with a new one with immutable fields updated, we can restore the deployment name
+	return r.reconcileRestoringPolicyServerName(ctx, policyServer, &policyServerDeploymentList.Items[readyDeploymentIndex])
+}
+
+func (r *PolicyServerReconciler) reconcileRestoringPolicyServerName(ctx context.Context, policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment) (error, bool) {
+	// the latest deployment already have the right name. No further change required.
+	// This can happen when some reconciliation loop happen during the deployment upgrade process. Where the
+	// only ready deployment is the one with the temporary name. This can happen during a cert rotation
+	if policyServerDeployment.Name == policyServer.NameWithPrefix() {
+		return nil, false
+	}
+	_, err := controllerutil.CreateOrPatch(ctx, r.Client, policyServerDeployment, func() error {
+		// Let's mark the temporary deployment to be deleted
+		policyServerDeployment.Annotations[constants.PolicyServerDeploymentUpgradeAnnotation] = "1"
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("error reconciling policy-server deployment: %w", err), false
+	}
+	// Create the new deployment with the right name
+	configMapVersion, err := r.policyServerConfigMapVersion(ctx, policyServer)
+	if err != nil {
+		return fmt.Errorf("cannot get policy-server ConfigMap version: %w", err), false
+	}
+	policyServerDeployment = &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      policyServer.NameWithPrefix(),
 			Namespace: r.DeploymentsNamespace,
@@ -60,10 +196,9 @@ func (r *PolicyServerReconciler) reconcilePolicyServerDeployment(ctx context.Con
 		return r.updatePolicyServerDeployment(ctx, policyServer, policyServerDeployment, configMapVersion)
 	})
 	if err != nil {
-		return fmt.Errorf("error reconciling policy-server deployment: %w", err)
+		return fmt.Errorf("error reconciling policy-server deployment: %w", err), false
 	}
-
-	return nil
+	return nil, true
 }
 
 func configureVerificationConfig(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
@@ -369,6 +504,16 @@ func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyS
 	return nil
 }
 
+func getDeploymentLabelsSelector(
+	policyServer *policiesv1.PolicyServer,
+) map[string]string {
+	commonLabels := policyServer.CommonLabels()
+	return map[string]string{
+		constants.PartOfLabelKey:   commonLabels[constants.PartOfLabelKey],
+		constants.InstanceLabelKey: commonLabels[constants.InstanceLabelKey],
+	}
+}
+
 func buildPolicyServerDeploymentSpec(
 	policyServer *policiesv1.PolicyServer,
 	admissionContainer corev1.Container,
@@ -389,10 +534,7 @@ func buildPolicyServerDeploymentSpec(
 	return appsv1.DeploymentSpec{
 		Replicas: &policyServer.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				constants.PartOfLabelKey:   commonLabels[constants.PartOfLabelKey],
-				constants.InstanceLabelKey: commonLabels[constants.InstanceLabelKey],
-			},
+			MatchLabels: getDeploymentLabelsSelector(policyServer),
 		},
 		Strategy: appsv1.DeploymentStrategy{
 			Type: appsv1.RollingUpdateDeploymentStrategyType,

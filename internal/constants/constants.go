@@ -22,6 +22,7 @@ const (
 	PolicyServerDeploymentRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
 	PolicyServerConfigSourcesEntry          = "sources.yml"
 	PolicyServerSourcesConfigContainerPath  = "/sources"
+	PolicyServerDeploymentUpgradeAnnotation = "kubewarden.io/upgrade"
 
 	PolicyServerVerificationConfigEntry         = "verification-config"
 	PolicyServerVerificationConfigContainerPath = "/verification"
@@ -70,4 +71,6 @@ const (
 	CACertExpiration     = 10 * 365 * 24 * time.Hour
 	ServerCertExpiration = 1 * 365 * 24 * time.Hour
 	CertLookahead        = 60 * 24 * time.Hour
+
+	ControllerVersionHash = "3e4df049" // v1.23 fnv hash
 )
