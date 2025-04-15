@@ -31,7 +31,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	policyServerService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				"app": "kubewarden-policy-server-default",
+				"app.kubernetes.io/instance": "policy-server-default",
 			},
 			Name:      "policy-server-default",
 			Namespace: "kubewarden",
@@ -326,7 +326,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	policyServerService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				"app": "kubewarden-policy-server-default",
+				"app.kubernetes.io/instance": "policy-server-default",
 			},
 			Name:      "policy-server-default",
 			Namespace: "kubewarden",
