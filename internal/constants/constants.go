@@ -28,6 +28,7 @@ const (
 
 	// Policy Server Labels.
 
+	AppLabelKey                     = "app"
 	PolicyServerLabelKey            = "kubewarden.io/policy-server"
 	ComponentPolicyServerLabelValue = "policy-server"
 	InstanceLabelKey                = "app.kubernetes.io/instance"
