@@ -377,6 +377,7 @@ func buildPolicyServerDeploymentSpec(
 	podSecurityContext *corev1.PodSecurityContext,
 ) appsv1.DeploymentSpec {
 	templateLabels := map[string]string{
+		//nolint:staticcheck // this label will remove soon when policy lifecycle is revisited
 		constants.AppLabelKey: policyServer.AppLabel(),
 		constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
 		constants.PolicyServerLabelKey:                            policyServer.Name,
@@ -389,6 +390,7 @@ func buildPolicyServerDeploymentSpec(
 		Replicas: &policyServer.Spec.Replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
+				//nolint:staticcheck // this label will remove soon when policy lifecycle is revisited
 				constants.AppLabelKey: policyServer.AppLabel(),
 			},
 		},
