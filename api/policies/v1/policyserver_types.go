@@ -187,6 +187,10 @@ func (ps *PolicyServer) NameWithPrefix() string {
 	return "policy-server-" + ps.Name
 }
 
+func (ps *PolicyServer) AppLabel() string {
+	return "kubewarden-" + ps.NameWithPrefix()
+}
+
 // CommonLabels returns the common labels to be used with the resources
 // associated to a Policy Server. The labels defined follow
 // Kubernetes guidelines: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels

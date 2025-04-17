@@ -28,6 +28,10 @@ const (
 
 	// Policy Server Labels.
 
+	// AppLabelKey is the label used to identify the pod template in the deployment
+	//
+	// Deprecated: use the other standard labels.
+	AppLabelKey                     = "app"
 	PolicyServerLabelKey            = "kubewarden.io/policy-server"
 	ComponentPolicyServerLabelValue = "policy-server"
 	InstanceLabelKey                = "app.kubernetes.io/instance"
