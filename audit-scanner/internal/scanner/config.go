@@ -1,6 +1,8 @@
 package scanner
 
 import (
+	"log/slog"
+
 	"github.com/kubewarden/audit-scanner/internal/k8s"
 	"github.com/kubewarden/audit-scanner/internal/policies"
 	"github.com/kubewarden/audit-scanner/internal/report"
@@ -29,4 +31,6 @@ type Config struct {
 
 	OutputScan   bool
 	DisableStore bool
+
+	Logger *slog.Logger
 }
