@@ -32,7 +32,7 @@ const (
 	//
 	// Deprecated: use the other standard labels.
 	AppLabelKey                     = "app"
-	PolicyServerLabelKey            = "kubewarden.io/policy-server"
+	PolicyServerLabelKey            = "kubewarden/policy-server"
 	ComponentPolicyServerLabelValue = "policy-server"
 	InstanceLabelKey                = "app.kubernetes.io/instance"
 	ComponentLabelKey               = "app.kubernetes.io/component"
