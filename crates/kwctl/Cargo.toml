@@ -3,7 +3,7 @@ authors     = ["Kubewarden Developers <kubewarden@suse.de>"]
 description = "Tool to manage Kubewarden policies"
 edition     = "2021"
 name        = "kwctl"
-version     = "1.24.0-rc1"
+version     = "1.24.0-rc3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -43,6 +43,7 @@ url = "2.5.0"
 walrus = "0.23.0"
 wasmparser = "0.229"
 
+hostname-validator = "1.1.1"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of kwctl
 # This is required to have kwctl use the system certificates instead of the
@@ -50,7 +51,6 @@ wasmparser = "0.229"
 reqwest = { version = "0", default-features = false, features = [
   "rustls-tls-native-roots",
 ] }
-hostname-validator = "1.1.1"
 
 [dev-dependencies]
 assert_cmd     = "2.0.14"
