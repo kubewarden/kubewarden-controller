@@ -148,9 +148,17 @@ jobs:
             });
 
       - name: Trigger chart update
-        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
-        with:
-          token: ${{ secrets.WORKFLOW_PAT }}
-          repository: "${{github.repository_owner}}/helm-charts"
-          event-type: update-chart
-          client-payload: '{"version": "${{ github.ref_name }}", "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}", "repository": "${{ github.repository }}"}'
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          echo '{
+            "event_type": "update-chart",
+            "client_payload": {
+              "version": "${{ github.ref_name }}",
+              "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}",
+              "repository": "${{ github.repository }}"
+            }
+          }' > payload.json
+          gh api repos/${{ github.repository_owner }}/helm-charts/dispatches \
+            -X POST \
+            --input payload.json
