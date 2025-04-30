@@ -2,10 +2,17 @@ use anyhow::{anyhow, Result};
 use policy_evaluator::policy_fetcher::store::{PolicyPath, Store};
 use std::path::PathBuf;
 
+use crate::utils::LookupError;
+
 pub(crate) fn rm(uri_or_sha_prefix: &str) -> Result<()> {
-    let uri = crate::utils::map_path_to_uri(uri_or_sha_prefix)?;
+    let uri = crate::utils::get_uri(&uri_or_sha_prefix.to_string())?;
 
     let store = Store::default();
+
+    if store.get_policy_by_uri(&uri)?.is_none() {
+        return Err(anyhow!(LookupError::PolicyMissing(uri)));
+    }
+
     let policy_path = store.policy_full_path(&uri, PolicyPath::PrefixAndFilename)?;
     std::fs::remove_file(&policy_path)
         .map_err(|err| anyhow!("could not delete policy {}: {}", uri, err))?;
