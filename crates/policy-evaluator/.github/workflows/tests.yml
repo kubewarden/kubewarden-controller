@@ -19,9 +19,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: check
+      - name: "Run cargo check"
+        run: cargo check
 
   test:
     name: Unit tests
@@ -33,10 +32,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: test
-          args: --workspace --lib
+      - name: "Run cargo test"
+        run: cargo test --workspace --lib
 
   integration-test:
     name: Integration tests
@@ -48,10 +45,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: test
-          args: --test '*'
+      - name: "Run cargo test"
+        run: cargo test --test '*'
 
   fmt:
     name: Rustfmt
@@ -64,10 +59,8 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: "Run cargo fmt"
+        run: cargo fmt --all -- --check
 
   clippy:
     name: Clippy
@@ -80,10 +73,8 @@ jobs:
           toolchain: stable
           override: true
           components: clippy
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: clippy
-          args: --workspace -- -D warnings
+      - name: "Run cargo clippy"
+        run: cargo clippy --workspace -- -D warnings
 
   spelling:
     name: Spell Check with Typos
