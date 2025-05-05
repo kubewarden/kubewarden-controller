@@ -58,5 +58,5 @@ hyper          = { version = "1.5.0" }
 predicates     = "3.1"
 rstest         = "0.25"
 tempfile       = "3.17"
-testcontainers = { version = "0.23", features = ["blocking"] }
+testcontainers = { version = "0.24", features = ["blocking"] }
 tower-test     = "0.4"
