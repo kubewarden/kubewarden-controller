@@ -34,11 +34,22 @@ jobs:
           target: ${{matrix.targetarch}}-unknown-linux-musl
           override: true
 
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          use-cross: true
-          command: build
-          args: --release --target ${{matrix.targetarch}}-unknown-linux-musl
+      - name: Install cross-rs
+        run: |
+          set -e
+
+          echo "$CROSS_CHECKSUM  cross-x86_64-unknown-linux-musl.tar.gz" > checksum
+          curl -L -O https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz
+          sha512sum -c checksum
+          tar -xvf cross-x86_64-unknown-linux-musl.tar.gz
+        env:
+          CROSS_CHECKSUM: "70b31b207e981aa31925a7519a0ad125c5d97b84afe0e8e81b0664df5c3a7978558d83f9fcd0c36dc2176fc2a4d0caed67f8cf9fd689f9935f84449cd4922ceb"
+          CROSS_VERSION: "v0.2.5"
+
+      - name: Build kwctl
+        shell: bash
+        run: |
+          ./cross build --release --target ${{matrix.targetarch}}-unknown-linux-musl
 
       - run: mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/kwctl kwctl-linux-${{ matrix.targetarch }}
 
@@ -127,10 +138,7 @@ jobs:
       - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
 
       - name: Build kwctl
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: build
-          args: --target=${{ matrix.targetarch }}-apple-darwin --release
+        run: cargo build --target=${{ matrix.targetarch }}-apple-darwin --release
 
       - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
 
@@ -221,10 +229,7 @@ jobs:
         run: set CMAKE_POLICY_VERSION_MINIMUM="3.5"
 
       - name: Build kwctl
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: build
-          args: --target=x86_64-pc-windows-msvc --release
+        run: cargo build --target=x86_64-pc-windows-msvc --release
 
       - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
 
