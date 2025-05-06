@@ -132,6 +132,18 @@ var _ = Describe("PolicyServer controller", func() {
 			})))
 		})
 
+		It("should use the policy server priorityClassName configuration in the policy server deployment", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			defaultSystemClusterCriticalPriorityClass := "system-cluster-critical" // one of the default highest PriorityClass
+			policyServer.Spec.PriorityClassName = defaultSystemClusterCriticalPriorityClass
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal(defaultSystemClusterCriticalPriorityClass))
+		})
+
 		It("should create policy server deployment with some default configuration", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
