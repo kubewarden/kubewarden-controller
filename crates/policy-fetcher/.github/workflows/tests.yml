@@ -8,11 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - name: Run cargo check
         run: cargo check
 
@@ -24,11 +19,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - name: enable git long paths on Windows
         if: matrix.os == 'windows-latest'
         run: git config --global core.longpaths true
@@ -40,12 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt
       - name: "Run cargo fmt"
         run: cargo fmt --all -- --check
 
@@ -54,12 +38,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: clippy
       - name: "Run cargo clippy"
         run: cargo clippy -- -D warnings
 
@@ -77,11 +55,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - uses: kubewarden/github-actions/tarpaulin-install@3455ea9c2072dcb59869705247d7c4ab7488f576 # v4.4.6
       - name: Generate unit-tests coverage
         run: make coverage-unit-tests
