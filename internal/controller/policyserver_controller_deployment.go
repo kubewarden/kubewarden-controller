@@ -408,6 +408,7 @@ func buildPolicyServerDeploymentSpec(
 				ServiceAccountName: policyServer.Spec.ServiceAccountName,
 				Tolerations:        policyServer.Spec.Tolerations,
 				Affinity:           &policyServer.Spec.Affinity,
+				PriorityClassName:  policyServer.Spec.PriorityClassName,
 				Volumes: []corev1.Volume{
 					{
 						Name: policyStoreVolume,
