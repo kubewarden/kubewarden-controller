@@ -815,7 +815,7 @@ MinAvailable or Max MaxUnavailable can be set. + |  |
 | *`annotations`* __object (keys:string, values:string)__ | Annotations is an unstructured key value map stored with a resource that may be +
 set by external tools to store and retrieve arbitrary metadata. They are not +
 queryable and should be preserved when modifying objects. +
-More info: http://kubernetes.io/docs/user-guide/annotations + |  | 
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ + |  | 
 | *`env`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core[$$EnvVar$$] array__ | List of environment variables to set in the container. + |  | 
 | *`serviceAccountName`* __string__ | Name of the service account associated with the policy server. +
 Namespace service account will be used if not specified. + |  | 
@@ -846,6 +846,12 @@ otherwise to an implementation-defined value + |  |
 | *`tolerations`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core[$$Toleration$$] array__ | Tolerations describe the policy server pod's tolerations. It can be +
 used to ensure that the policy server pod is not scheduled onto a +
 node with a taint. + |  | 
+| *`priorityClassName`* __string__ | PriorityClassName is the name of the PriorityClass to be used for the +
+policy server pods. Useful to schedule policy server pods with higher +
+priority to ensure their availability over other cluster workload +
+resources. +
+Note: If the referenced PriorityClass is deleted, existing pods +
+remain unchanged, but new pods that reference it cannot be created. + |  | 
 |===
 
 

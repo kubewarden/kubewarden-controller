@@ -504,7 +504,7 @@ _Appears in:_
 | `replicas` _integer_ | Replicas is the number of desired replicas. |  |  |
 | `minAvailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#intorstring-intstr-util)_ | Number of policy server replicas that must be still available after the<br />eviction. The value can be an absolute number or a percentage. Only one of<br />MinAvailable or Max MaxUnavailable can be set. |  |  |
 | `maxUnavailable` _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#intorstring-intstr-util)_ | Number of policy server replicas that can be unavailable after the<br />eviction. The value can be an absolute number or a percentage. Only one of<br />MinAvailable or Max MaxUnavailable can be set. |  |  |
-| `annotations` _object (keys:string, values:string)_ | Annotations is an unstructured key value map stored with a resource that may be<br />set by external tools to store and retrieve arbitrary metadata. They are not<br />queryable and should be preserved when modifying objects.<br />More info: http://kubernetes.io/docs/user-guide/annotations |  |  |
+| `annotations` _object (keys:string, values:string)_ | Annotations is an unstructured key value map stored with a resource that may be<br />set by external tools to store and retrieve arbitrary metadata. They are not<br />queryable and should be preserved when modifying objects.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ |  |  |
 | `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core) array_ | List of environment variables to set in the container. |  |  |
 | `serviceAccountName` _string_ | Name of the service account associated with the policy server.<br />Namespace service account will be used if not specified. |  |  |
 | `imagePullSecret` _string_ | Name of ImagePullSecret secret in the same namespace, used for pulling<br />policies from repositories. |  |  |
@@ -516,6 +516,7 @@ _Appears in:_
 | `limits` _[ResourceList](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcelist-v1-core)_ | Limits describes the maximum amount of compute resources allowed. |  |  |
 | `requests` _[ResourceList](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#resourcelist-v1-core)_ | Requests describes the minimum amount of compute resources required.<br />If Request is omitted for, it defaults to Limits if that is explicitly specified,<br />otherwise to an implementation-defined value |  |  |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#toleration-v1-core) array_ | Tolerations describe the policy server pod's tolerations. It can be<br />used to ensure that the policy server pod is not scheduled onto a<br />node with a taint. |  |  |
+| `priorityClassName` _string_ | PriorityClassName is the name of the PriorityClass to be used for the<br />policy server pods. Useful to schedule policy server pods with higher<br />priority to ensure their availability over other cluster workload<br />resources.<br />Note: If the referenced PriorityClass is deleted, existing pods<br />remain unchanged, but new pods that reference it cannot be created. |  |  |
 
 
 
