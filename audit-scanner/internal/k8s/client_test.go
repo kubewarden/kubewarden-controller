@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -40,7 +39,7 @@ func TestGetResources(t *testing.T) {
 	}, "default")
 	require.NoError(t, err)
 
-	list, _, err := pager.List(context.Background(), metav1.ListOptions{})
+	list, _, err := pager.List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)
 
 	unstructuredList, ok := list.(*unstructured.UnstructuredList)

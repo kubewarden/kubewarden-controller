@@ -1,7 +1,6 @@
 package report
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -34,11 +33,11 @@ func TestCreatePolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	policyReport := NewPolicyReport("runUID", resource)
-	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
+	err = store.CreateOrPatchPolicyReport(t.Context(), policyReport)
 	require.NoError(t, err)
 
 	storedPolicyReport := &wgpolicy.PolicyReport{}
-	err = fakeClient.Get(context.TODO(), types.NamespacedName{Name: policyReport.GetName(), Namespace: policyReport.GetNamespace()}, storedPolicyReport)
+	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: policyReport.GetName(), Namespace: policyReport.GetNamespace()}, storedPolicyReport)
 	require.NoError(t, err)
 
 	require.Equal(t, policyReport.ObjectMeta.Labels, storedPolicyReport.ObjectMeta.Labels)
@@ -63,7 +62,7 @@ func TestPatchPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	policyReport := NewPolicyReport("runUID", resource)
-	err = store.CreateOrPatchPolicyReport(context.TODO(), policyReport)
+	err = store.CreateOrPatchPolicyReport(t.Context(), policyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
@@ -85,11 +84,11 @@ func TestPatchPolicyReport(t *testing.T) {
 		},
 	}
 	AddResultToPolicyReport(newPolicyReport, policy, admissionReview, false)
-	err = store.CreateOrPatchPolicyReport(context.TODO(), newPolicyReport)
+	err = store.CreateOrPatchPolicyReport(t.Context(), newPolicyReport)
 	require.NoError(t, err)
 
 	storedPolicyReport := &wgpolicy.PolicyReport{}
-	err = fakeClient.Get(context.TODO(), types.NamespacedName{Name: policyReport.GetName(), Namespace: policyReport.GetNamespace()}, storedPolicyReport)
+	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: policyReport.GetName(), Namespace: policyReport.GetNamespace()}, storedPolicyReport)
 	require.NoError(t, err)
 
 	require.Equal(t, newPolicyReport.ObjectMeta.Labels, storedPolicyReport.ObjectMeta.Labels)
@@ -113,11 +112,11 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
-	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
+	err = store.CreateOrPatchClusterPolicyReport(t.Context(), clusterPolicyReport)
 	require.NoError(t, err)
 
 	storedClusterPolicyReport := &wgpolicy.ClusterPolicyReport{}
-	err = fakeClient.Get(context.TODO(), types.NamespacedName{Name: clusterPolicyReport.GetName()}, storedClusterPolicyReport)
+	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: clusterPolicyReport.GetName()}, storedClusterPolicyReport)
 	require.NoError(t, err)
 
 	require.Equal(t, clusterPolicyReport.ObjectMeta.Labels, storedClusterPolicyReport.ObjectMeta.Labels)
@@ -141,7 +140,7 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
-	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), clusterPolicyReport)
+	err = store.CreateOrPatchClusterPolicyReport(t.Context(), clusterPolicyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
@@ -162,11 +161,11 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 		},
 	}
 	AddResultToClusterPolicyReport(newClusterPolicyReport, policy, admissionReview, false)
-	err = store.CreateOrPatchClusterPolicyReport(context.TODO(), newClusterPolicyReport)
+	err = store.CreateOrPatchClusterPolicyReport(t.Context(), newClusterPolicyReport)
 	require.NoError(t, err)
 
 	storedClusterPolicyReport := &wgpolicy.ClusterPolicyReport{}
-	err = fakeClient.Get(context.TODO(), types.NamespacedName{Name: clusterPolicyReport.GetName()}, storedClusterPolicyReport)
+	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: clusterPolicyReport.GetName()}, storedClusterPolicyReport)
 	require.NoError(t, err)
 
 	require.Equal(t, newClusterPolicyReport.ObjectMeta.Labels, storedClusterPolicyReport.ObjectMeta.Labels)
@@ -191,25 +190,25 @@ func TestDeletePolicyReport(t *testing.T) {
 	logger := slog.Default()
 	store := NewPolicyReportStore(fakeClient, logger)
 
-	err = store.DeleteOldPolicyReports(context.Background(), "new-uid", "default")
+	err = store.DeleteOldPolicyReports(t.Context(), "new-uid", "default")
 	require.NoError(t, err)
 
 	storedPolicyReportList := &wgpolicy.PolicyReportList{}
 
-	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{Namespace: "other"})
+	err = fakeClient.List(t.Context(), storedPolicyReportList, &client.ListOptions{Namespace: "other"})
 	require.NoError(t, err)
 	require.Len(t, storedPolicyReportList.Items, 1)
 
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
 	require.NoError(t, err)
-	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector, Namespace: "default"})
+	err = fakeClient.List(t.Context(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector, Namespace: "default"})
 	require.NoError(t, err)
 	require.Len(t, storedPolicyReportList.Items, 1)
 	require.Equal(t, "other-old-report", storedPolicyReportList.Items[0].Name)
 
 	labelSelector, err = labels.Parse(fmt.Sprintf("%s!=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
 	require.NoError(t, err)
-	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector, Namespace: "default"})
+	err = fakeClient.List(t.Context(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector, Namespace: "default"})
 	require.NoError(t, err)
 	require.Len(t, storedPolicyReportList.Items, 1)
 }
@@ -226,14 +225,14 @@ func TestDeleteClusterPolicyReport(t *testing.T) {
 	logger := slog.Default()
 	store := NewPolicyReportStore(fakeClient, logger)
 
-	err = store.DeleteOldClusterPolicyReports(context.Background(), "new-uid")
+	err = store.DeleteOldClusterPolicyReports(t.Context(), "new-uid")
 	require.NoError(t, err)
 
 	storedPolicyReportList := &wgpolicy.ClusterPolicyReportList{}
 
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
 	require.NoError(t, err)
-	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector})
+	err = fakeClient.List(t.Context(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector})
 	require.NoError(t, err)
 	require.Len(t, storedPolicyReportList.Items, 1)
 	require.Equal(t, "old-report-with-no-app-label", storedPolicyReportList.Items[0].Name)
@@ -242,7 +241,7 @@ func TestDeleteClusterPolicyReport(t *testing.T) {
 
 	labelSelector, err = labels.Parse(fmt.Sprintf("%s!=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
 	require.NoError(t, err)
-	err = fakeClient.List(context.TODO(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector})
+	err = fakeClient.List(t.Context(), storedPolicyReportList, &client.ListOptions{LabelSelector: labelSelector})
 	require.NoError(t, err)
 	require.Len(t, storedPolicyReportList.Items, 1)
 }
