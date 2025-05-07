@@ -15,7 +15,6 @@ limitations under the License.
 package v1
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -36,7 +35,7 @@ func TestPolicyServerDefault(t *testing.T) {
 	defaulter := policyServerDefaulter{}
 	policyServer := &PolicyServer{}
 
-	err := defaulter.Default(context.Background(), policyServer)
+	err := defaulter.Default(t.Context(), policyServer)
 	require.NoError(t, err)
 
 	assert.Contains(t, policyServer.Finalizers, constants.KubewardenFinalizer)
@@ -46,7 +45,7 @@ func TestPolicyServerDefaultWithInvalidType(t *testing.T) {
 	policyServerDefaulter := policyServerDefaulter{}
 	obj := &corev1.Pod{}
 
-	err := policyServerDefaulter.Default(context.Background(), obj)
+	err := policyServerDefaulter.Default(t.Context(), obj)
 	require.ErrorContains(t, err, "expected a PolicyServer object, got *v1.Pod")
 }
 
@@ -54,7 +53,7 @@ func TestPolicyServerValidateCreate(t *testing.T) {
 	validator := policyServerValidator{logger: logr.Discard()}
 	policyServer := NewPolicyServerFactory().Build()
 
-	warnings, err := validator.ValidateCreate(context.Background(), policyServer)
+	warnings, err := validator.ValidateCreate(t.Context(), policyServer)
 	require.NoError(t, err)
 	assert.Empty(t, warnings)
 }
@@ -66,7 +65,7 @@ func TestPolicyServerValidateCreateWithErrors(t *testing.T) {
 		WithMinAvailable(ptr.To(intstr.FromInt(2))).
 		Build()
 
-	warnings, err := validator.ValidateCreate(context.Background(), policyServer)
+	warnings, err := validator.ValidateCreate(t.Context(), policyServer)
 	require.Error(t, err)
 	assert.Empty(t, warnings)
 }
@@ -75,7 +74,7 @@ func TestPolicyServerValidateCreateWithInvalidType(t *testing.T) {
 	validator := policyServerValidator{logger: logr.Discard()}
 	obj := &corev1.Pod{}
 
-	warnings, err := validator.ValidateCreate(context.Background(), obj)
+	warnings, err := validator.ValidateCreate(t.Context(), obj)
 	require.ErrorContains(t, err, "expected a PolicyServer object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
@@ -87,7 +86,7 @@ func TestPolicyServerValidateUpdate(t *testing.T) {
 		WithMaxUnavailable(ptr.To(intstr.FromInt(2))).
 		Build()
 
-	warnings, err := validator.ValidateUpdate(context.Background(), oldPolicyServer, newPolicyServer)
+	warnings, err := validator.ValidateUpdate(t.Context(), oldPolicyServer, newPolicyServer)
 	require.NoError(t, err)
 	assert.Empty(t, warnings)
 }
@@ -100,7 +99,7 @@ func TestPolicyServerValidateUpdateWithErrors(t *testing.T) {
 		WithMinAvailable(ptr.To(intstr.FromInt(2))).
 		Build()
 
-	warnings, err := validator.ValidateUpdate(context.Background(), oldPolicyServer, newPolicyServer)
+	warnings, err := validator.ValidateUpdate(t.Context(), oldPolicyServer, newPolicyServer)
 	require.Error(t, err)
 	assert.Empty(t, warnings)
 }
@@ -110,7 +109,7 @@ func TestPolicyServerValidateUpdateWithInvalidType(t *testing.T) {
 	obj := &corev1.Pod{}
 	newPolicyServer := NewPolicyServerFactory().Build()
 
-	warnings, err := validator.ValidateUpdate(context.Background(), newPolicyServer, obj)
+	warnings, err := validator.ValidateUpdate(t.Context(), newPolicyServer, obj)
 	require.ErrorContains(t, err, "expected a PolicyServer object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
@@ -123,7 +122,7 @@ func TestPolicyServerValidateName(t *testing.T) {
 	policyServer := NewPolicyServerFactory().WithName(string(name)).Build()
 
 	policyServerValidator := policyServerValidator{logger: logr.Discard()}
-	err := policyServerValidator.validate(context.Background(), policyServer)
+	err := policyServerValidator.validate(t.Context(), policyServer)
 	require.ErrorContains(t, err, "the PolicyServer name cannot be longer than 63 characters")
 }
 
@@ -135,7 +134,7 @@ func TestPolicyServerValidateMinAvailableMaxUnavailable(t *testing.T) {
 
 	policyServerValidator := policyServerValidator{logger: logr.Discard()}
 
-	err := policyServerValidator.validate(context.Background(), policyServer)
+	err := policyServerValidator.validate(t.Context(), policyServer)
 	require.ErrorContains(t, err, "minAvailable and maxUnavailable cannot be both set")
 }
 
@@ -178,7 +177,7 @@ func TestPolicyServerValidateImagePullSecret(t *testing.T) {
 			k8sClient := fake.NewClientBuilder().Build()
 
 			if test.secret != nil {
-				err := k8sClient.Create(context.Background(), test.secret)
+				err := k8sClient.Create(t.Context(), test.secret)
 				if err != nil {
 					t.Errorf("failed to create secret: %s", err.Error())
 				}
@@ -193,7 +192,7 @@ func TestPolicyServerValidateImagePullSecret(t *testing.T) {
 				k8sClient:            k8sClient,
 				logger:               logr.Discard(),
 			}
-			err := policyServerValidator.validate(context.Background(), policyServer)
+			err := policyServerValidator.validate(t.Context(), policyServer)
 
 			if test.valid {
 				require.NoError(t, err)
@@ -245,7 +244,7 @@ func TestPolicyServerValidateLimitsAndRequests(t *testing.T) {
 				Build()
 
 			policyServerValidator := policyServerValidator{logger: logr.Discard()}
-			err := policyServerValidator.validate(context.Background(), policyServer)
+			err := policyServerValidator.validate(t.Context(), policyServer)
 
 			if test.error != "" {
 				require.ErrorContains(t, err, test.error)
