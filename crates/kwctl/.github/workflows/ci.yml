@@ -38,9 +38,8 @@ jobs:
         run: |
           echo 'CMAKE_POLICY_VERSION_MINIMUM="3.5"' >> $GITHUB_ENV
 
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: check
+      - name: Run cargo check
+        run: cargo check
 
   version-check:
     name: Check Cargo.toml version
@@ -69,10 +68,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: test
-          args: --workspace --bins
+      - name: Run cargo test
+        run: cargo test --workspace --bins
 
   e2e-tests:
     name: E2E tests
@@ -126,10 +123,8 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
 
   clippy:
     name: Clippy
@@ -142,10 +137,8 @@ jobs:
           toolchain: stable
           override: true
       - run: rustup component add clippy
-      - uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # v1.0.3
-        with:
-          command: clippy
-          args: -- -D warnings
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
 
   shellcheck:
     name: Shellcheck
