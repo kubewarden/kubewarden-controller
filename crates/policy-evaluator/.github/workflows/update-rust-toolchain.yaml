@@ -1,0 +1,26 @@
+name: Update rust-toolchain
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 3 * * 1" # 3:30 on Monday
+
+jobs:
+  update-rust-toolchain:
+    name: Update Rust toolchain
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+
+      - name: Install Updatecli in the runner
+        uses: updatecli/updatecli-action@ae3030ce1710c6496214fb1f8fd3bd9437b2a69d # v2.82.0
+
+      - name: Update rust version inside of rust-toolchain file
+        id: update_rust_toolchain
+        env:
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+        run: |-
+          updatecli apply --config ./updatecli/updatecli.d/update-rust-toolchain.yaml \
+                    --values updatecli/values.yaml
