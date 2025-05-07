@@ -1,7 +1,6 @@
 package scanner
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -395,15 +394,15 @@ func TestScanAllNamespaces(t *testing.T) {
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
-	err = scanner.ScanAllNamespaces(context.Background(), runUID)
+	err = scanner.ScanAllNamespaces(t.Context(), runUID)
 	require.NoError(t, err)
 
 	policyReport := wgpolicy.PolicyReport{}
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: oldPolicyReport.GetName(), Namespace: oldPolicyReport.GetNamespace()}, oldPolicyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: oldPolicyReport.GetName(), Namespace: oldPolicyReport.GetNamespace()}, oldPolicyReport)
 	require.True(t, apimachineryErrors.IsNotFound(err))
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod1.GetUID()), Namespace: "namespace1"}, &policyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(pod1.GetUID()), Namespace: "namespace1"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 3, policyReport.Summary.Pass)
 	assert.Equal(t, 1, policyReport.Summary.Error)
@@ -411,13 +410,13 @@ func TestScanAllNamespaces(t *testing.T) {
 	assert.Len(t, policyReport.Results, 3)
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod2.GetUID()), Namespace: "namespace2"}, &policyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(pod2.GetUID()), Namespace: "namespace2"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 3, policyReport.Summary.Pass)
 	assert.Len(t, policyReport.Results, 3)
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment1.GetUID()), Namespace: "namespace1"}, &policyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(deployment1.GetUID()), Namespace: "namespace1"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, policyReport.Summary.Pass)
 	assert.Equal(t, 1, policyReport.Summary.Error)
@@ -425,7 +424,7 @@ func TestScanAllNamespaces(t *testing.T) {
 	assert.Len(t, policyReport.Results, 2)
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(deployment2.GetUID()), Namespace: "namespace2"}, &policyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(deployment2.GetUID()), Namespace: "namespace2"}, &policyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, policyReport.Summary.Pass)
 	assert.Len(t, policyReport.Results, 2)
@@ -602,15 +601,15 @@ func TestScanClusterWideResources(t *testing.T) {
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
-	err = scanner.ScanClusterWideResources(context.Background(), runUID)
+	err = scanner.ScanClusterWideResources(t.Context(), runUID)
 	require.NoError(t, err)
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: oldClusterPolicyReport.GetName()}, oldClusterPolicyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: oldClusterPolicyReport.GetName()}, oldClusterPolicyReport)
 	require.True(t, apimachineryErrors.IsNotFound(err))
 
 	clusterPolicyReport := wgpolicy.ClusterPolicyReport{}
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace1.GetUID())}, &clusterPolicyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(namespace1.GetUID())}, &clusterPolicyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 2, clusterPolicyReport.Summary.Pass)
 	assert.Equal(t, 1, clusterPolicyReport.Summary.Error)
@@ -618,7 +617,7 @@ func TestScanClusterWideResources(t *testing.T) {
 	assert.Len(t, clusterPolicyReport.Results, 2)
 	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace2.GetUID())}, &clusterPolicyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(namespace2.GetUID())}, &clusterPolicyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 3, clusterPolicyReport.Summary.Pass)
 	assert.Len(t, clusterPolicyReport.Results, 3)
@@ -714,13 +713,13 @@ func TestScanWithHTTPErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
-	err = scanner.ScanAllNamespaces(context.Background(), runUID)
+	err = scanner.ScanAllNamespaces(t.Context(), runUID)
 	require.NoError(t, err)
-	err = scanner.ScanClusterWideResources(context.Background(), runUID)
+	err = scanner.ScanClusterWideResources(t.Context(), runUID)
 	require.NoError(t, err)
 
 	podPolicyReport := wgpolicy.PolicyReport{}
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod.GetUID()), Namespace: "namespace"}, &podPolicyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(pod.GetUID()), Namespace: "namespace"}, &podPolicyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 0, podPolicyReport.Summary.Pass)
 	assert.Equal(t, 1, podPolicyReport.Summary.Error)
@@ -728,7 +727,7 @@ func TestScanWithHTTPErrors(t *testing.T) {
 	assert.Len(t, podPolicyReport.Results, 1)
 
 	namespacePolicyReport := wgpolicy.ClusterPolicyReport{}
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(namespace.GetUID())}, &namespacePolicyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(namespace.GetUID())}, &namespacePolicyReport)
 	require.NoError(t, err)
 	assert.Equal(t, 0, namespacePolicyReport.Summary.Pass)
 	assert.Equal(t, 1, namespacePolicyReport.Summary.Error)
@@ -844,11 +843,11 @@ func TestScanWithMTLS(t *testing.T) {
 	require.NoError(t, err)
 
 	runUID := uuid.New().String()
-	err = scanner.ScanAllNamespaces(context.Background(), runUID)
+	err = scanner.ScanAllNamespaces(t.Context(), runUID)
 	require.NoError(t, err)
 
 	podPolicyReport := wgpolicy.PolicyReport{}
-	err = client.Get(context.TODO(), types.NamespacedName{Name: string(pod.GetUID()), Namespace: "namespace"}, &podPolicyReport)
+	err = client.Get(t.Context(), types.NamespacedName{Name: string(pod.GetUID()), Namespace: "namespace"}, &podPolicyReport)
 	require.NoError(t, err)
 
 	logger.Debug("podPolicyReport",
