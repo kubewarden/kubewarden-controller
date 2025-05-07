@@ -119,6 +119,15 @@ type PolicyServerSpec struct {
 	// used to ensure that the policy server pod is not scheduled onto a
 	// node with a taint.
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// PriorityClassName is the name of the PriorityClass to be used for the
+	// policy server pods. Useful to schedule policy server pods with higher
+	// priority to ensure their availability over other cluster workload
+	// resources.
+	// Note: If the referenced PriorityClass is deleted, existing pods
+	// remain unchanged, but new pods that reference it cannot be created.
+	// +optional
+	PriorityClassName string `json:"priorityClassName,omitempty"`
 }
 
 type ReconciliationTransitionReason string
