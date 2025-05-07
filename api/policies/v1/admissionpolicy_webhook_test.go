@@ -14,7 +14,6 @@ limitations under the License.
 package v1
 
 import (
-	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -31,7 +30,7 @@ func TestAdmissionPolicyDefault(t *testing.T) {
 	defaulter := admissionPolicyDefaulter{logger: logr.Discard()}
 	policy := &AdmissionPolicy{}
 
-	err := defaulter.Default(context.Background(), policy)
+	err := defaulter.Default(t.Context(), policy)
 	require.NoError(t, err)
 
 	assert.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
@@ -42,7 +41,7 @@ func TestAdmissionPolicyDefaultWithInvalidType(t *testing.T) {
 	defaulter := admissionPolicyDefaulter{logger: logr.Discard()}
 	obj := &corev1.Pod{}
 
-	err := defaulter.Default(context.Background(), obj)
+	err := defaulter.Default(t.Context(), obj)
 	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 }
 
@@ -50,7 +49,7 @@ func TestAdmissionPolicyValidateCreate(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	policy := NewAdmissionPolicyFactory().Build()
 
-	warnings, err := validator.ValidateCreate(context.Background(), policy)
+	warnings, err := validator.ValidateCreate(t.Context(), policy)
 	require.NoError(t, err)
 	assert.Empty(t, warnings)
 }
@@ -139,7 +138,7 @@ func TestAdmissionPolicyValidateCreateWithErrors(t *testing.T) {
 
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 
-	warnings, err := validator.ValidateCreate(context.Background(), policy)
+	warnings, err := validator.ValidateCreate(t.Context(), policy)
 	require.Error(t, err)
 	assert.Empty(t, warnings)
 }
@@ -148,7 +147,7 @@ func TestAdmissionPolicyValidateCreateWithInvalidType(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	obj := &corev1.Pod{}
 
-	warnings, err := validator.ValidateCreate(context.Background(), obj)
+	warnings, err := validator.ValidateCreate(t.Context(), obj)
 	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
@@ -158,7 +157,7 @@ func TestAdmissionPolicyValidateUpdate(t *testing.T) {
 	oldPolicy := NewAdmissionPolicyFactory().Build()
 	newPolicy := NewAdmissionPolicyFactory().Build()
 
-	warnings, err := validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	warnings, err := validator.ValidateUpdate(t.Context(), oldPolicy, newPolicy)
 	require.NoError(t, err)
 	assert.Empty(t, warnings)
 
@@ -169,7 +168,7 @@ func TestAdmissionPolicyValidateUpdate(t *testing.T) {
 		WithMode("protect").
 		Build()
 
-	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, newPolicy)
+	warnings, err = validator.ValidateUpdate(t.Context(), oldPolicy, newPolicy)
 	require.NoError(t, err)
 	assert.Empty(t, warnings)
 }
@@ -183,7 +182,7 @@ func TestAdmissionPolicyValidateUpdateWithErrors(t *testing.T) {
 		WithPolicyServer("new").
 		Build()
 
-	warnings, err := validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
+	warnings, err := validator.ValidateUpdate(t.Context(), newPolicy, oldPolicy)
 	require.Error(t, err)
 	assert.Empty(t, warnings)
 
@@ -192,7 +191,7 @@ func TestAdmissionPolicyValidateUpdateWithErrors(t *testing.T) {
 		WithMode("monitor").
 		Build()
 
-	warnings, err = validator.ValidateUpdate(context.Background(), newPolicy, oldPolicy)
+	warnings, err = validator.ValidateUpdate(t.Context(), newPolicy, oldPolicy)
 	require.Error(t, err)
 	assert.Empty(t, warnings)
 }
@@ -203,11 +202,11 @@ func TestAdmissionPolicyValidateUpdateWithInvalidType(t *testing.T) {
 	oldPolicy := NewAdmissionPolicyFactory().Build()
 	newPolicy := NewAdmissionPolicyFactory().Build()
 
-	warnings, err := validator.ValidateUpdate(context.Background(), obj, newPolicy)
+	warnings, err := validator.ValidateUpdate(t.Context(), obj, newPolicy)
 	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 	assert.Empty(t, warnings)
 
-	warnings, err = validator.ValidateUpdate(context.Background(), oldPolicy, obj)
+	warnings, err = validator.ValidateUpdate(t.Context(), oldPolicy, obj)
 	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
@@ -216,7 +215,7 @@ func TestAdmissionPolicyValidateDelete(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	policy := NewAdmissionPolicyFactory().Build()
 
-	warnings, err := validator.ValidateDelete(context.Background(), policy)
+	warnings, err := validator.ValidateDelete(t.Context(), policy)
 	require.NoError(t, err)
 	assert.Empty(t, warnings)
 }
@@ -225,7 +224,7 @@ func TestAdmissionPolicyValidateDeleteWithInvalidType(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	obj := &corev1.Pod{}
 
-	warnings, err := validator.ValidateDelete(context.Background(), obj)
+	warnings, err := validator.ValidateDelete(t.Context(), obj)
 	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
