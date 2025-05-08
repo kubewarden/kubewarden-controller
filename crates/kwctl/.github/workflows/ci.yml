@@ -24,11 +24,6 @@ jobs:
         run: git config --global core.longpaths true
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
 
       # aws-lc-sys CMakefile contains a directive that has been removed from
       # cmake v4 that has just been released (march 2025). The build failure
@@ -63,11 +58,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - name: Run cargo test
         run: cargo test --workspace --bins
 
@@ -86,11 +76,6 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@97a83ae1347bc407f550a16fb0694d6f446eec88 # v2.50.9
@@ -117,11 +102,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - run: rustup component add rustfmt
       - name: Run cargo fmt
         run: cargo fmt --all -- --check
@@ -131,11 +111,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # v1.0.7
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
       - run: rustup component add clippy
       - name: Run cargo clippy
         run: cargo clippy -- -D warnings
