@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Updatecli in the runner
-        uses: updatecli/updatecli-action@ae3030ce1710c6496214fb1f8fd3bd9437b2a69d # v2.82.0
+        uses: updatecli/updatecli-action@cf942226b953240efac9ff60bf42df2b908c2fa0 # v2.83.0
 
       - name: Update rust version inside of rust-toolchain file
         id: update_rust_toolchain
