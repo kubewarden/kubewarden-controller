@@ -8,8 +8,10 @@ pub(crate) mod wapc;
 pub(crate) mod wasi_cli;
 
 pub(crate) enum Runtime {
-    Wapc(wapc::WapcStack),
-    Rego(rego::Stack),
+    // This enum uses the `Box` type to avoid the need for a large enum size causing memory layout
+    // problems. https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+    Wapc(Box<wapc::WapcStack>),
+    Rego(Box<rego::Stack>),
     Cli(wasi_cli::Stack),
 }
 

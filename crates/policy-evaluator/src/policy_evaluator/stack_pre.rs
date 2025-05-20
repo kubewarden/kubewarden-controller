@@ -8,14 +8,16 @@ use crate::runtimes::{rego, wapc, wasi_cli};
 /// once  the evaluation is done.
 #[derive(Clone)]
 pub(crate) enum StackPre {
-    Wapc(crate::runtimes::wapc::StackPre),
+    // This enum uses the `Box` type to avoid the need for a large enum size causing memory layout
+    // problems. https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+    Wapc(Box<crate::runtimes::wapc::StackPre>),
     Wasi(crate::runtimes::wasi_cli::StackPre),
     Rego(crate::runtimes::rego::StackPre),
 }
 
 impl From<wapc::StackPre> for StackPre {
     fn from(wapc_stack_pre: wapc::StackPre) -> Self {
-        StackPre::Wapc(wapc_stack_pre)
+        StackPre::Wapc(Box::new(wapc_stack_pre))
     }
 }
 
