@@ -1,11 +1,6 @@
+
 [toolchain]
-channel = "1.86.0"
-components = ["clippy", "rust-analyzer", "rustfmt"]
-profile = "minimal"
-targets = [
-  "aarch64-apple-darwin",
-  "aarch64-unknown-linux-musl",
-  "x86_64-apple-darwin",
-  "x86_64-pc-windows-msvc",
-  "x86_64-unknown-linux-musl",
-]
+  channel = "1.87.0"
+  components = ["clippy", "rust-analyzer", "rustfmt"]
+  profile = "minimal"
+  targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-musl", "x86_64-apple-darwin", "x86_64-pc-windows-msvc", "x86_64-unknown-linux-musl"]
