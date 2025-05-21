@@ -211,7 +211,7 @@ async fn test_policy_evaluator(
     } else {
         let admission_request: AdmissionRequest =
             serde_json::from_value(request_json).expect("cannot deserialize admission request");
-        ValidateRequest::AdmissionRequest(admission_request)
+        ValidateRequest::AdmissionRequest(Box::new(admission_request))
     };
 
     let serde_json::Value::Object(settings) = settings else {
@@ -317,7 +317,7 @@ async fn test_runtime_context_aware<F, Fut>(
     tokio::task::spawn_blocking(move || {
         let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
         let admission_response = policy_evaluator.validate(
-            ValidateRequest::AdmissionRequest(request),
+            ValidateRequest::AdmissionRequest(Box::new(request)),
             &PolicySettings::default(),
         );
 

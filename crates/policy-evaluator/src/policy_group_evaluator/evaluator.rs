@@ -411,7 +411,7 @@ mod tests {
         let admission_request: AdmissionRequest =
             serde_json::from_str(input).expect("deserialization should work");
 
-        ValidateRequest::AdmissionRequest(admission_request)
+        ValidateRequest::AdmissionRequest(Box::new(admission_request))
     }
 
     /// build a precompiled policy of the given wasm module. Assumes this is a OPA Gatekeeper policy

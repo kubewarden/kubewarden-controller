@@ -34,7 +34,7 @@ impl PolicyEvaluatorPre {
             StackPre::Wapc(stack_pre) => {
                 let wapc_stack = wapc::WapcStack::new_from_pre(stack_pre, eval_ctx)
                     .map_err(PolicyEvaluatorPreError::RehydrateWapc)?;
-                Runtime::Wapc(wapc_stack)
+                Runtime::Wapc(Box::new(wapc_stack))
             }
             StackPre::Wasi(stack_pre) => {
                 let wasi_stack = wasi_cli::Stack::new_from_pre(stack_pre, eval_ctx);
@@ -43,7 +43,7 @@ impl PolicyEvaluatorPre {
             StackPre::Rego(stack_pre) => {
                 let rego_stack = rego::Stack::new_from_pre(stack_pre)
                     .map_err(PolicyEvaluatorPreError::RehydrateRego)?;
-                Runtime::Rego(rego_stack)
+                Runtime::Rego(Box::new(rego_stack))
             }
         };
 

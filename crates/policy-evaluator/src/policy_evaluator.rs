@@ -40,7 +40,9 @@ impl fmt::Display for PolicyExecutionMode {
 #[serde(untagged)]
 pub enum ValidateRequest {
     Raw(serde_json::Value),
-    AdmissionRequest(AdmissionRequest),
+    // This enum uses the `Box` type to avoid the need for a large enum size causing memory layout
+    // problems. https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+    AdmissionRequest(Box<AdmissionRequest>),
 }
 
 impl ValidateRequest {
