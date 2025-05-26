@@ -51,7 +51,7 @@ url = { version = "2.5", features = ["serde"] }
 validator = { version = "0.20", features = ["derive"] }
 wapc = "2.1"
 wasi-common = { workspace = true }
-wasmparser = "0.230"
+wasmparser = "0.231"
 wasmtime = { workspace = true }
 wasmtime-provider = { version = "2.7.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
