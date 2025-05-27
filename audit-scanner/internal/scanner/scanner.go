@@ -143,10 +143,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	}
 	policies, err := s.policiesClient.GetPoliciesByNamespace(ctx, namespace)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "failed to obtain auditable policies",
-			slog.String("error", err.Error()),
-			slog.String("namespace", nsName))
-		return err
+		return errors.Join(err, fmt.Errorf("failed to obtain auditable policies for namespace %s: %w", nsName, err))
 	}
 
 	s.logger.InfoContext(ctx, "policy count",
@@ -162,6 +159,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 				slog.String("error", err.Error()),
 				slog.String("gvr", gvr.String()),
 				slog.String("ns", nsName))
+			continue
 		}
 
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
@@ -190,7 +188,14 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 			return nil
 		})
 		if err != nil {
-			return err
+			// If we fail to get the resources, we log the error inside the pager function
+			// and continue with the next GVR. Otherwise, the scan would stop
+			// and not audit any other resources.
+			s.logger.WarnContext(ctx, "Failed to list resources",
+				slog.String("error", err.Error()),
+				slog.String("resource-GVK", gvr.String()),
+				slog.String("ns", nsName))
+			continue
 		}
 	}
 	workers.Wait()
@@ -255,7 +260,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 
 	policies, err := s.policiesClient.GetClusterWidePolicies(ctx)
 	if err != nil {
-		return err
+		return errors.Join(err, fmt.Errorf("failed to obtain cluster auditable policies: %w", err))
 	}
 
 	s.logger.InfoContext(ctx, "cluster admission policies count",
@@ -267,7 +272,10 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 	for gvr, pols := range policies.PoliciesByGVR {
 		pager, err := s.k8sClient.GetResources(gvr, "")
 		if err != nil {
-			return err
+			s.logger.ErrorContext(ctx, "failed to get resources",
+				slog.String("error", err.Error()),
+				slog.String("gvr", gvr.String()))
+			continue
 		}
 
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
@@ -293,7 +301,14 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 			return nil
 		})
 		if err != nil {
-			return err
+			// If we fail to get the resources, we log the error inside the pager function
+			// and continue with the next GVR. Otherwise, the scan would stop
+			// and not audit any other resources.
+			s.logger.WarnContext(ctx, "Failed to list resources",
+				slog.String("error", err.Error()),
+				slog.String("resource-GVK", gvr.String()),
+				slog.String("ns", ""))
+			continue
 		}
 	}
 

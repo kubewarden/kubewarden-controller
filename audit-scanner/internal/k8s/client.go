@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	corev1 "k8s.io/api/core/v1"
-	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -48,25 +47,8 @@ func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*
 	page := 0
 
 	listPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
-		var resources *unstructured.UnstructuredList
 		page++
-
-		resources, err := f.listResources(ctx, gvr, nsName, opts)
-		if apimachineryerrors.IsNotFound(err) {
-			f.logger.WarnContext(ctx, "API resource not found",
-				slog.String("resource-GVK", gvr.String()),
-				slog.String("ns", nsName))
-		}
-		if apimachineryerrors.IsForbidden(err) {
-			// ServiceAccount lacks permissions, GVK may not exist, or policies may be misconfigured
-			f.logger.WarnContext(ctx, "API resource forbidden, unknown GVK or ServiceAccount lacks permissions",
-				slog.String("resource-GVK", gvr.String()),
-				slog.String("ns", nsName))
-		}
-		if err != nil {
-			return nil, err
-		}
-		return resources, nil
+		return f.listResources(ctx, gvr, nsName, opts)
 	})
 
 	listPager.PageSize = f.pageSize
