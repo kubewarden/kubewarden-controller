@@ -236,6 +236,7 @@ impl From<Sources> for sigstore::registry::ClientConfig {
             extra_root_certificates,
             https_proxy: None,
             no_proxy: None,
+            http_proxy: None,
         }
     }
 }
