@@ -20,7 +20,7 @@ directories = "6.0"
 docker_credential = "1.3"
 futures = "0.3"
 lazy_static = "1.5"
-oci-client = { version = "0.14", default-features = false, features = [
+oci-client = { version = "0.15", default-features = false, features = [
   "rustls-tls",
 ] }
 path-slash = "0.2"
