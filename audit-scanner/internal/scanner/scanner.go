@@ -218,9 +218,9 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 
 	for _, namespace := range nsList.Items {
 		workers.Add(1)
-		err := semaphore.Acquire(ctx, 1)
-		if err != nil {
-			return err
+		acquireErr := semaphore.Acquire(ctx, 1)
+		if acquireErr != nil {
+			return acquireErr
 		}
 		namespaceName := namespace.Name
 
@@ -229,7 +229,7 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 			defer workers.Done()
 
 			if e := s.ScanNamespace(ctx, namespaceName, runUID); e != nil {
-				s.logger.ErrorContext(ctx, "error scanning namespace", slog.String("error", err.Error()), slog.String("ns", namespaceName))
+				s.logger.ErrorContext(ctx, "error scanning namespace", slog.String("error", e.Error()), slog.String("ns", namespaceName))
 				err = errors.Join(err, e)
 			}
 		}()
