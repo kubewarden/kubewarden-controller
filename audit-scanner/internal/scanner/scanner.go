@@ -143,7 +143,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	}
 	policies, err := s.policiesClient.GetPoliciesByNamespace(ctx, namespace)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("failed to obtain auditable policies for namespace %s: %w", nsName, err))
+		return fmt.Errorf("failed to obtain auditable policies for namespace %s: %w", nsName, err)
 	}
 
 	s.logger.InfoContext(ctx, "policy count",
@@ -253,7 +253,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 
 	policies, err := s.policiesClient.GetClusterWidePolicies(ctx)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("failed to obtain cluster auditable policies: %w", err))
+		return fmt.Errorf("failed to obtain cluster auditable policies: %w", err)
 	}
 
 	s.logger.InfoContext(ctx, "cluster admission policies count",
@@ -292,8 +292,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 			// and not audit any other resources.
 			s.logger.WarnContext(ctx, "Failed to list resources",
 				slog.String("error", err.Error()),
-				slog.String("resource-GVK", gvr.String()),
-				slog.String("ns", ""))
+				slog.String("resource-GVK", gvr.String()))
 			continue
 		}
 	}

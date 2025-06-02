@@ -35,6 +35,7 @@ func NewFakeClient(objects ...runtime.Object) (client.Client, error) {
 	restMapper.Add(schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"}, meta.RESTScopeNamespace)
 	restMapper.Add(schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}, meta.RESTScopeNamespace)
 	restMapper.Add(schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}, meta.RESTScopeRoot)
+	restMapper.Add(schema.GroupVersionKind{Group: admissionregistrationv1.GroupName, Version: "v1", Kind: "ValidatingWebhookConfiguration"}, meta.RESTScopeRoot)
 
 	auditScheme, err := scheme.NewScheme()
 	if err != nil {

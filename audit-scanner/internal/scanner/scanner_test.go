@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -25,10 +26,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apimachineryErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	dynamicFake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	testingclient "k8s.io/client-go/testing"
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
@@ -857,4 +860,143 @@ func TestScanWithMTLS(t *testing.T) {
 	assert.Equal(t, 0, podPolicyReport.Summary.Error)
 	assert.Equal(t, 0, podPolicyReport.Summary.Skip)
 	assert.Len(t, podPolicyReport.Results, 1)
+}
+
+// This test has been created to ensure that the scanner can handle
+// failures when scanning resources.
+func TestScanFailureClusterWideResources(t *testing.T) {
+	mockPolicyServer := newMockPolicyServer()
+	defer mockPolicyServer.Close()
+
+	policyServer := &policiesv1.PolicyServer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+		},
+	}
+
+	policyServerService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"app.kubernetes.io/instance": "policy-server-default",
+			},
+			Name:      "policy-server-default",
+			Namespace: "kubewarden",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name: "http",
+					Port: 443,
+				},
+			},
+		},
+	}
+
+	namespace1 := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "namespace1",
+			UID:  "namespace1-uid",
+		},
+	}
+	webhook1 := &admissionregistrationv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "webhook1",
+			UID:  "webhook1-uid",
+		},
+	}
+	webhook2 := &admissionregistrationv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "webhook2",
+			UID:  "webhook2-uid",
+		},
+	}
+
+	clusterAdmissionPolicy1 := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("clusterAdmissionPolicy1").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{""},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"namespaces"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	clusterAdmissionPolicy2 := testutils.
+		NewClusterAdmissionPolicyFactory().
+		Name("clusterAdmissionPolicy2").
+		Rule(admissionregistrationv1.Rule{
+			APIGroups:   []string{admissionregistrationv1.GroupName},
+			APIVersions: []string{"v1"},
+			Resources:   []string{"validatingwebhookconfigurations"},
+		}).
+		Status(policiesv1.PolicyStatusActive).
+		Build()
+
+	// add a policy report that should be deleted by the scanner
+	oldClusterPolicyReportRunUID := uuid.New().String()
+	oldClusterPolicyReport := testutils.NewClusterPolicyReportFactory().
+		Name("oldClusterPolicyReport").
+		WithAppLabel().
+		RunUID(oldClusterPolicyReportRunUID).
+		Build()
+
+	dynamicClient := dynamicFake.NewSimpleDynamicClient(
+		scheme.Scheme,
+		namespace1,
+		webhook1,
+		webhook2,
+		oldClusterPolicyReport,
+	)
+	clientset := fake.NewSimpleClientset()
+	client, err := testutils.NewFakeClient(
+		namespace1,
+		webhook1,
+		webhook2,
+		policyServer,
+		policyServerService,
+		clusterAdmissionPolicy1,
+		clusterAdmissionPolicy2,
+		oldClusterPolicyReport,
+	)
+	require.NoError(t, err)
+
+	// Simulate a failure when listing ValidatingWebhookConfigurations
+	dynamicClient.PrependReactor("list", "validatingwebhookconfigurations", func(action testingclient.Action) (bool, runtime.Object, error) {
+		return true, nil, apimachineryErrors.NewForbidden(action.GetResource().GroupResource(), "", errors.New("reactor error"))
+	})
+
+	logger := slog.Default()
+	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, 1, logger)
+	require.NoError(t, err)
+
+	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
+	require.NoError(t, err)
+
+	policyReportStore := report.NewPolicyReportStore(client, logger)
+
+	config := newTestConfig(policiesClient, k8sClient, policyReportStore)
+	scanner, err := NewScanner(config)
+	require.NoError(t, err)
+
+	runUID := uuid.New().String()
+	err = scanner.ScanClusterWideResources(t.Context(), runUID)
+	require.NoError(t, err)
+
+	err = client.Get(t.Context(), types.NamespacedName{Name: oldClusterPolicyReport.GetName()}, oldClusterPolicyReport)
+	require.True(t, apimachineryErrors.IsNotFound(err))
+
+	clusterPolicyReportList := &wgpolicy.ClusterPolicyReportList{}
+	err = client.List(t.Context(), clusterPolicyReportList)
+	require.NoError(t, err)
+	assert.Len(t, clusterPolicyReportList.Items, 1)
+
+	clusterPolicyReport := clusterPolicyReportList.Items[0]
+	require.NoError(t, err)
+	assert.Equal(t, string(namespace1.GetUID()), clusterPolicyReport.GetName())
+	assert.Equal(t, 1, clusterPolicyReport.Summary.Pass)
+	assert.Equal(t, 0, clusterPolicyReport.Summary.Error)
+	assert.Equal(t, 0, clusterPolicyReport.Summary.Skip)
+	assert.Len(t, clusterPolicyReport.Results, 1)
+	assert.Equal(t, runUID, clusterPolicyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 }
