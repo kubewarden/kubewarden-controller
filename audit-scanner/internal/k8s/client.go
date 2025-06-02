@@ -43,16 +43,14 @@ func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, 
 	}, nil
 }
 
-func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*pager.ListPager, error) {
-	page := 0
-
+func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) *pager.ListPager {
 	listPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
-		page++
-		return f.listResources(ctx, gvr, nsName, opts)
+		list, err := f.listResources(ctx, gvr, nsName, opts)
+		return list, err
 	})
 
 	listPager.PageSize = f.pageSize
-	return listPager, nil
+	return listPager
 }
 
 func (f *Client) listResources(ctx context.Context,

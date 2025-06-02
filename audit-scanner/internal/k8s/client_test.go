@@ -32,12 +32,11 @@ func TestGetResources(t *testing.T) {
 	k8sClient, err := NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
 	require.NoError(t, err)
 
-	pager, err := k8sClient.GetResources(schema.GroupVersionResource{
+	pager := k8sClient.GetResources(schema.GroupVersionResource{
 		Group:    "",
 		Version:  "v1",
 		Resource: "pods",
 	}, "default")
-	require.NoError(t, err)
 
 	list, _, err := pager.List(t.Context(), metav1.ListOptions{})
 	require.NoError(t, err)

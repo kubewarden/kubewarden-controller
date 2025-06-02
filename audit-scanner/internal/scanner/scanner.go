@@ -153,14 +153,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 		slog.Int("policies-errored", policies.ErroredNum))
 
 	for gvr, pols := range policies.PoliciesByGVR {
-		pager, err := s.k8sClient.GetResources(gvr, nsName)
-		if err != nil {
-			s.logger.ErrorContext(ctx, "failed to get resources",
-				slog.String("error", err.Error()),
-				slog.String("gvr", gvr.String()),
-				slog.String("ns", nsName))
-			continue
-		}
+		pager := s.k8sClient.GetResources(gvr, nsName)
 
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
 			resource, ok := obj.(*unstructured.Unstructured)
@@ -270,14 +263,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 		slog.Int("parallel-resources-audits", s.parallelResourcesAudits))
 
 	for gvr, pols := range policies.PoliciesByGVR {
-		pager, err := s.k8sClient.GetResources(gvr, "")
-		if err != nil {
-			s.logger.ErrorContext(ctx, "failed to get resources",
-				slog.String("error", err.Error()),
-				slog.String("gvr", gvr.String()))
-			continue
-		}
-
+		pager := s.k8sClient.GetResources(gvr, "")
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
 			resource, ok := obj.(*unstructured.Unstructured)
 			if !ok {
