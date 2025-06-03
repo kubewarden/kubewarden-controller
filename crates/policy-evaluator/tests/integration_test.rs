@@ -334,7 +334,7 @@ async fn test_runtime_context_aware<F, Fut>(
     "ghcr.io/kubewarden/tests/context-aware-test-policy:latest",
     OciManifest::Image(Default::default())
 )]
-#[case::container_image("ghcr.io/kubewarden/policy-server:latest", OciManifest::ImageIndex(policy_fetcher::oci_client::manifest::OciImageIndex { schema_version:2, media_type: None, manifests: vec![], annotations: None }))]
+#[case::container_image("ghcr.io/kubewarden/policy-server:latest", OciManifest::ImageIndex(policy_fetcher::oci_client::manifest::OciImageIndex{schema_version:2, media_type: None, manifests: vec![], annotations: None, artifact_type: None}))]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_oci_manifest_capability(
     #[case] policy_uri: &str,
@@ -387,8 +387,7 @@ async fn test_oci_manifest_capability(
     policy_fetcher::oci_client::manifest::OciImageManifest {
         schema_version:2,
         media_type: Some("application/vnd.docker.distribution.manifest.v2+json".to_owned()),
-        annotations: None,
-        artifact_type:None,
+        annotations: None, artifact_type: None, subject: None,
         config: OciDescriptor{
             media_type:  "application/vnd.docker.container.image.v1+json".to_owned(),
             size: 1592,
@@ -396,7 +395,8 @@ async fn test_oci_manifest_capability(
             annotations: None,
             urls: None,
         },
-    layers: vec![]}, Some(serde_json::json!({
+        layers: vec![]
+    }, Some(serde_json::json!({
     "User": "65533:65533",
     "ExposedPorts": {
       "3000/tcp": {}
@@ -412,14 +412,15 @@ async fn test_oci_manifest_capability(
     "ghcr.io/kubewarden/tests/context-aware-test-policy:latest",
     policy_fetcher::oci_client::manifest::OciImageManifest {
         schema_version:2,
-        media_type: None, annotations: None, artifact_type:None,
+        media_type: None, annotations: None, artifact_type:None, subject: None,
         config: OciDescriptor{
             media_type:  "application/vnd.wasm.config.v1+json".to_owned(),
             size: 2,
             digest: "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a".to_owned(),
             annotations: None, urls: None,
         },
-    layers: vec![]},
+        layers: vec![]
+    },
     None
 )]
 #[tokio::test(flavor = "multi_thread")]
