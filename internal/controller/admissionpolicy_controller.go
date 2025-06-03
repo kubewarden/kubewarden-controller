@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-logr/logr"
 
@@ -61,7 +62,10 @@ type AdmissionPolicyReconciler struct {
 func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var admissionPolicy policiesv1.AdmissionPolicy
 	if err := r.Get(ctx, req.NamespacedName, &admissionPolicy); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		if client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get admission policy: %w", err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	return r.policySubReconciler.reconcile(ctx, &admissionPolicy)

@@ -51,7 +51,7 @@ func (r *PolicyServerReconciler) reconcilePolicyServerCertSecret(ctx context.Con
 			var caCert, caPrivateKey []byte
 			caCert, caPrivateKey, err = certs.ExtractCARootFromSecret(caSecret)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to extract the CA from secret '%s': %w", caSecret.GetName(), err)
 			}
 
 			var cert, privateKey []byte
