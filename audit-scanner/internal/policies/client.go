@@ -51,7 +51,7 @@ type Policy struct {
 }
 
 // NewClient returns a policy Client.
-func NewClient(client client.Client, kubewardenNamespace string, policyServerURL string, logger *slog.Logger) (*Client, error) {
+func NewClient(client client.Client, kubewardenNamespace string, policyServerURL string, logger *slog.Logger) *Client {
 	if policyServerURL != "" {
 		logger.Info(fmt.Sprintf("querying PolicyServers at %s for debugging purposes. Don't forget to start `kubectl port-forward` if needed", policyServerURL))
 	}
@@ -61,7 +61,7 @@ func NewClient(client client.Client, kubewardenNamespace string, policyServerURL
 		kubewardenNamespace: kubewardenNamespace,
 		policyServerURL:     policyServerURL,
 		logger:              logger.With("client", "policyclient"),
-	}, nil
+	}
 }
 
 // GetPoliciesByNamespace gets all the auditable policies for a given namespace.
@@ -227,7 +227,7 @@ func policyMatchesNamespace(policy policiesv1.Policy, namespace *corev1.Namespac
 
 	labelSelector, err := metav1.LabelSelectorAsSelector(policy.GetNamespaceSelector())
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to convert label selector from policy \"%s\" namespace selector: %w", policy.GetName(), err)
 	}
 
 	return labelSelector.Matches(labels.Set(namespace.Labels)), nil
@@ -376,12 +376,12 @@ func (f *Client) getGroupVersionResources(rules []admissionregistrationv1.RuleWi
 func (f *Client) isNamespacedResource(gvr schema.GroupVersionResource) (bool, error) {
 	gvk, err := f.client.RESTMapper().KindFor(gvr)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get GVK for GVR %s: %w", gvr.String(), err)
 	}
 
 	mapping, err := f.client.RESTMapper().RESTMapping(gvk.GroupKind(), gvr.Version)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get REST mapping for GVK %s: %w", gvk.String(), err)
 	}
 
 	return mapping.Scope.Name() == meta.RESTScopeNameNamespace, nil
@@ -403,7 +403,7 @@ func (f *Client) getPolicyServerURLRunningPolicy(ctx context.Context, policy pol
 	if f.policyServerURL != "" {
 		url, err := url.Parse(f.policyServerURL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse policy server URL %q: %w", f.policyServerURL, err)
 		}
 		urlStr = fmt.Sprintf("%s/audit/%s", url, policy.GetUniqueName())
 	} else {
@@ -411,7 +411,7 @@ func (f *Client) getPolicyServerURLRunningPolicy(ctx context.Context, policy pol
 	}
 	url, err := url.Parse(urlStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse policy server URL %q: %w", urlStr, err)
 	}
 	return url, nil
 }
@@ -421,7 +421,7 @@ func (f *Client) getPolicyServerByName(ctx context.Context, policyServerName str
 
 	err := f.client.Get(ctx, client.ObjectKey{Name: policyServerName}, &policyServer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get PolicyServer %q: %w", policyServerName, err)
 	}
 
 	return &policyServer, nil
@@ -431,7 +431,7 @@ func (f *Client) getServiceByInstanceLabel(ctx context.Context, instanceName str
 	serviceList := corev1.ServiceList{}
 	err := f.client.List(ctx, &serviceList, &client.ListOptions{Namespace: namespace}, &client.MatchingLabels{"app.kubernetes.io/instance": instanceName})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list services for policy server instance %q in namespace %q: %w", instanceName, namespace, err)
 	}
 
 	if len(serviceList.Items) != 1 {

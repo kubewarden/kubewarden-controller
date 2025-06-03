@@ -131,7 +131,6 @@ linters:
     #- prealloc # [premature optimization, but can be used in some cases] finds slice declarations that could potentially be preallocated
     #- tagalign # checks that struct tags are well aligned
     #- varnamelen # [great idea, but too many false positives] checks that the length of a variable's name matches its scope
-    #- wrapcheck # checks that errors returned from external packages are wrapped
     #- zerologlint # detects the wrong usage of zerolog that a user forgets to dispatch zerolog.Event
 
     ## disabled
@@ -157,10 +156,14 @@ linters:
 
     ############################################################################
     # Kubewarden linter customization
-    # The following linters are disabled because they does not make sense for
-    # the Kubewarden
     ############################################################################
 
+    # Kubewarden team wants the wrapcheck linter enable.
+    - wrapcheck # checks that errors returned from external packages are wrapped
+
+    # The following linters are disabled because they does not make sense for
+    # the Kubewarden
+    #
     # We disable the testpackage linter because we have tests which is not
     # black boxed and that will not cause issues for us for now.
     # - testpackage # makes you use a separate _test package
@@ -447,6 +450,17 @@ linters:
           - govet
         text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
       - path: '_test\.go'
+        linters:
+          - bodyclose
+          - dupl
+          - errcheck
+          - funlen
+          - goconst
+          - gosec
+          - noctx
+          - wrapcheck
+          - typecheck # tests files use a package which is built only in testing mode
+      - path: "internal/testutils/"
         linters:
           - bodyclose
           - dupl

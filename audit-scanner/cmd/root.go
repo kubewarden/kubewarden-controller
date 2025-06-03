@@ -48,47 +48,47 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			namespace, err := cmd.Flags().GetString("namespace")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get namespace flag %w", err)
 			}
 			kubewardenNamespace, err := cmd.Flags().GetString("kubewarden-namespace")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get kubewarden-namespace flag: %w", err)
 			}
 			clusterWide, err := cmd.Flags().GetBool("cluster")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get cluster flag: %w", err)
 			}
 			policyServerURL, err := cmd.Flags().GetString("policy-server-url")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get policy-server-url flag: %w", err)
 			}
 			caFile, err := cmd.Flags().GetString("extra-ca")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get extra-ca flag: %w", err)
 			}
 			clientCertFile, err := cmd.Flags().GetString("client-cert")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get client-cert flag: %w", err)
 			}
 			clientKeyFile, err := cmd.Flags().GetString("client-key")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get client-key flag: %w", err)
 			}
 			parallelNamespacesAudits, err := cmd.Flags().GetInt("parallel-namespaces")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get parallel-namespaces flag: %w", err)
 			}
 			parallelResourcesAudits, err := cmd.Flags().GetInt("parallel-resources")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get parallel-resources flag: %w", err)
 			}
 			parallelPoliciesAudit, err := cmd.Flags().GetInt("parallel-policies")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get parallel-policies flag: %w", err)
 			}
 			pageSize, err := cmd.Flags().GetInt("page-size")
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get page-size flag: %w", err)
 			}
 
 			config := ctrl.GetConfigOrDie()
@@ -97,21 +97,16 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 
 			auditScheme, err := scheme.NewScheme()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create scheme: %w", err)
 			}
 			client, err := client.New(config, client.Options{Scheme: auditScheme})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create kubernetes client: %w", err)
 			}
 			logger := slog.New(NewHandler(os.Stdout, level))
-			policiesClient, err := policies.NewClient(client, kubewardenNamespace, policyServerURL, logger)
-			if err != nil {
-				return err
-			}
-			k8sClient, err := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs, int64(pageSize), logger)
-			if err != nil {
-				return err
-			}
+			policiesClient := policies.NewClient(client, kubewardenNamespace, policyServerURL, logger)
+
+			k8sClient := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs, int64(pageSize), logger)
 			policyReportStore := report.NewPolicyReportStore(client, logger)
 
 			scannerConfig := scanner.Config{
@@ -136,7 +131,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 
 			scanner, err := scanner.NewScanner(scannerConfig)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create scanner: %w", err)
 			}
 			return startScanner(namespace, clusterWide, scanner)
 		},
@@ -176,6 +171,7 @@ func Execute(rootCmd *cobra.Command) {
 	}
 }
 
+//nolint:wrapcheck // this function calls internal package which already wrap the errors with context
 func startScanner(namespace string, clusterWide bool, scanner *scanner.Scanner) error {
 	if clusterWide && namespace != "" {
 		fmt.Fprintln(os.Stderr, "Cannot scan cluster wide and only a namespace at the same time")

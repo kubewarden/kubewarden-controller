@@ -46,7 +46,7 @@ func (s *PolicyReportStore) CreateOrPatchPolicyReport(ctx context.Context, polic
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create or patch policy report %s: %w", policyReport.GetName(), err)
 	}
 
 	s.logger.DebugContext(ctx, fmt.Sprintf("PolicyReport %s", operation),
@@ -62,14 +62,17 @@ func (s *PolicyReportStore) CreateOrPatchPolicyReport(ctx context.Context, polic
 func (s *PolicyReportStore) DeleteOldPolicyReports(ctx context.Context, scanRunID, namespace string) error {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s!=%s,%s=%s", auditConstants.AuditScannerRunUIDLabel, scanRunID, labelAppManagedBy, labelApp))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse label selector: %w", err)
 	}
 	s.logger.DebugContext(ctx, "Deleting old PolicyReports", slog.String("labelSelector", labelSelector.String()))
 
-	return s.client.DeleteAllOf(ctx, &wgpolicy.PolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
+	if err := s.client.DeleteAllOf(ctx, &wgpolicy.PolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,
 		Namespace:     namespace,
-	}})
+	}}); err != nil {
+		return fmt.Errorf("failed to delete PolicyReports: %w", err)
+	}
+	return nil
 }
 
 // CreateOrPatchClusterPolicyReport creates or patches a ClusterPolicyReport.
@@ -88,7 +91,7 @@ func (s *PolicyReportStore) CreateOrPatchClusterPolicyReport(ctx context.Context
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create or patch cluster policy report %s: %w", clusterPolicyReport.GetName(), err)
 	}
 
 	s.logger.DebugContext(ctx, fmt.Sprintf("ClusterPolicyReport %s", operation),
@@ -104,11 +107,14 @@ func (s *PolicyReportStore) CreateOrPatchClusterPolicyReport(ctx context.Context
 func (s *PolicyReportStore) DeleteOldClusterPolicyReports(ctx context.Context, scanRunID string) error {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s!=%s,%s=%s", auditConstants.AuditScannerRunUIDLabel, scanRunID, labelAppManagedBy, labelApp))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse label selector: %w", err)
 	}
 	s.logger.DebugContext(ctx, "Deleting old ClusterPolicyReports", slog.String("labelSelector", labelSelector.String()))
 
-	return s.client.DeleteAllOf(ctx, &wgpolicy.ClusterPolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
+	if err := s.client.DeleteAllOf(ctx, &wgpolicy.ClusterPolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,
-	}})
+	}}); err != nil {
+		return fmt.Errorf("failed to delete ClusterPolicyReports: %w", err)
+	}
+	return nil
 }

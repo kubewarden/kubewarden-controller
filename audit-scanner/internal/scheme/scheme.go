@@ -1,6 +1,8 @@
 package scheme
 
 import (
+	"fmt"
+
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -11,11 +13,11 @@ func NewScheme() (*runtime.Scheme, error) {
 	scheme := scheme.Scheme
 	err := policiesv1.AddToScheme(scheme)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add Kubewarden types into scheme: %w", err)
 	}
 	err = wgpolicy.AddToScheme(scheme)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add policy report types into scheme: %w", err)
 	}
 
 	return scheme, nil

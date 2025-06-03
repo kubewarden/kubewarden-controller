@@ -31,7 +31,7 @@ type Client struct {
 }
 
 // NewClient returns a new client.
-func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, kubewardenNamespace string, skippedNs []string, pageSize int64, logger *slog.Logger) (*Client, error) {
+func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, kubewardenNamespace string, skippedNs []string, pageSize int64, logger *slog.Logger) *Client {
 	skippedNs = append(skippedNs, kubewardenNamespace)
 
 	return &Client{
@@ -40,7 +40,7 @@ func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, 
 		skippedNs,
 		pageSize,
 		logger.With("component", "k8sclient"),
-	}, nil
+	}
 }
 
 func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) *pager.ListPager {
@@ -66,7 +66,11 @@ func (f *Client) listResources(ctx context.Context,
 		Resource: gvr.Resource,
 	}
 
-	return f.dynamicClient.Resource(resourceID).Namespace(nsName).List(ctx, opts)
+	list, err := f.dynamicClient.Resource(resourceID).Namespace(nsName).List(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("can't list resources %s in namespace %s: %w", gvr.String(), nsName, err)
+	}
+	return list, nil
 }
 
 // GetAuditedNamespaces gets all namespaces besides the ones in skippedNs.
@@ -86,5 +90,9 @@ func (f *Client) GetAuditedNamespaces(ctx context.Context) (*corev1.NamespaceLis
 }
 
 func (f *Client) GetNamespace(ctx context.Context, nsName string) (*corev1.Namespace, error) {
-	return f.clientset.CoreV1().Namespaces().Get(ctx, nsName, metav1.GetOptions{})
+	namespace, err := f.clientset.CoreV1().Namespaces().Get(ctx, nsName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("can't get namespace %s: %w", nsName, err)
+	}
+	return namespace, nil
 }

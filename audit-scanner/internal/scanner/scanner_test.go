@@ -384,11 +384,9 @@ func TestScanAllNamespaces(t *testing.T) {
 	require.NoError(t, err)
 
 	logger := slog.Default()
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
-	require.NoError(t, err)
+	k8sClient := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
 
-	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
-	require.NoError(t, err)
+	policiesClient := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
 
 	policyReportStore := report.NewPolicyReportStore(client, logger)
 
@@ -591,11 +589,9 @@ func TestScanClusterWideResources(t *testing.T) {
 	require.NoError(t, err)
 
 	logger := slog.Default()
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
-	require.NoError(t, err)
+	k8sClient := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
 
-	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
-	require.NoError(t, err)
+	policiesClient := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
 
 	policyReportStore := report.NewPolicyReportStore(client, logger)
 
@@ -703,11 +699,9 @@ func TestScanWithHTTPErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	logger := slog.Default()
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
-	require.NoError(t, err)
+	k8sClient := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
 
-	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServerWithErrors.URL, logger)
-	require.NoError(t, err)
+	policiesClient := policies.NewClient(client, "kubewarden", mockPolicyServerWithErrors.URL, logger)
 
 	policyReportStore := report.NewPolicyReportStore(client, logger)
 
@@ -828,11 +822,9 @@ func TestScanWithMTLS(t *testing.T) {
 	require.NoError(t, err)
 
 	logger := slog.Default()
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
-	require.NoError(t, err)
+	k8sClient := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
 
-	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
-	require.NoError(t, err)
+	policiesClient := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
 
 	policyReportStore := report.NewPolicyReportStore(client, logger)
 
@@ -967,12 +959,8 @@ func TestScanFailureClusterWideResources(t *testing.T) {
 	})
 
 	logger := slog.Default()
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, 1, logger)
-	require.NoError(t, err)
-
-	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
-	require.NoError(t, err)
-
+	k8sClient := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, 1, logger)
+	policiesClient := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
 	policyReportStore := report.NewPolicyReportStore(client, logger)
 
 	config := newTestConfig(policiesClient, k8sClient, policyReportStore)
@@ -1267,12 +1255,8 @@ func TestScanFailureAllNamespaces(t *testing.T) {
 	})
 
 	logger := slog.Default()
-	k8sClient, err := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
-	require.NoError(t, err)
-
-	policiesClient, err := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
-	require.NoError(t, err)
-
+	k8sClient := k8s.NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
+	policiesClient := policies.NewClient(client, "kubewarden", mockPolicyServer.URL, logger)
 	policyReportStore := report.NewPolicyReportStore(client, logger)
 
 	config := newTestConfig(policiesClient, k8sClient, policyReportStore)

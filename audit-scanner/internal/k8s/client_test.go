@@ -29,8 +29,7 @@ func TestGetResources(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
 	logger := slog.Default()
-	k8sClient, err := NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
-	require.NoError(t, err)
+	k8sClient := NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
 
 	pager := k8sClient.GetResources(schema.GroupVersionResource{
 		Group:    "",
