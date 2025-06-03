@@ -98,18 +98,12 @@ fn has_minimum_kubewarden_version(metadata: &Metadata) -> Result<()> {
 
 // Check if the policy uses a valid protocol version for KubewardenWapc policies
 fn has_valid_protocol_version(metadata: &Metadata) -> Result<()> {
-    if metadata.execution_mode != PolicyExecutionMode::KubewardenWapc {
-        return Err(anyhow!(
-            "Policy execution mode {:?} is not supported, only KubewardenWapc is supported",
-            metadata.execution_mode
-        ));
-    }
-
-    if metadata.protocol_version != Some(ProtocolVersion::V1) {
-        return Err(anyhow!(
-            "Policy uses protocol version {:?} but only V1 is supported",
-            metadata.protocol_version
-        ));
+    if metadata.execution_mode == PolicyExecutionMode::KubewardenWapc {
+        match &metadata.protocol_version {
+         Some(ProtocolVersion::V1) => return Ok(()) ,
+         Some(other) => return Err(anyhow!("Policy uses protocol version {:?} but only V1 is supported", other)),
+         None => return Err(anyhow!("Policy is missing protocol version, which is required for KubewardenWapc execution mode")),
+        };
     }
     Ok(())
 }
@@ -177,7 +171,7 @@ mod tests {
         execution_mode: PolicyExecutionMode::Opa,
         protocol_version: Some(ProtocolVersion::Unknown),
         ..Default::default()
-    }, false)]
+    }, true)]
     fn validate_protocol_version_test(#[case] metadata: Metadata, #[case] is_valid: bool) {
         assert_eq!(is_valid, has_valid_protocol_version(&metadata).is_ok())
     }
