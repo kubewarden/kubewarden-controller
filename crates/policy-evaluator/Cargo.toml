@@ -36,7 +36,7 @@ picky = { version = "7.0.0-rc.8", default-features = false, features = [
   "chrono_conversion",
   "x509",
 ] }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.10.3" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.10.4" }
 rhai = { version = "1.21", features = ["sync"] }
 semver = { version = "1.0", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -51,15 +51,15 @@ url = { version = "2.5", features = ["serde"] }
 validator = { version = "0.20", features = ["derive"] }
 wapc = "2.1"
 wasi-common = { workspace = true }
-wasmparser = "0.231"
+wasmparser = "0.232"
 wasmtime = { workspace = true }
-wasmtime-provider = { version = "2.7.0", features = ["cache"] }
+wasmtime-provider = { version = "2.8.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
-wasi-common   = "32.0"
-wasmtime      = "32.0"
-wasmtime-wasi = "32.0"
+wasi-common   = "33.0"
+wasmtime      = "33.0"
+wasmtime-wasi = "33.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
