@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	corev1 "k8s.io/api/core/v1"
-	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -44,33 +43,14 @@ func NewClient(dynamicClient dynamic.Interface, clientset kubernetes.Interface, 
 	}, nil
 }
 
-func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) (*pager.ListPager, error) {
-	page := 0
-
+func (f *Client) GetResources(gvr schema.GroupVersionResource, nsName string) *pager.ListPager {
 	listPager := pager.New(func(ctx context.Context, opts metav1.ListOptions) (runtime.Object, error) {
-		var resources *unstructured.UnstructuredList
-		page++
-
-		resources, err := f.listResources(ctx, gvr, nsName, opts)
-		if apimachineryerrors.IsNotFound(err) {
-			f.logger.WarnContext(ctx, "API resource not found",
-				slog.String("resource-GVK", gvr.String()),
-				slog.String("ns", nsName))
-		}
-		if apimachineryerrors.IsForbidden(err) {
-			// ServiceAccount lacks permissions, GVK may not exist, or policies may be misconfigured
-			f.logger.WarnContext(ctx, "API resource forbidden, unknown GVK or ServiceAccount lacks permissions",
-				slog.String("resource-GVK", gvr.String()),
-				slog.String("ns", nsName))
-		}
-		if err != nil {
-			return nil, err
-		}
-		return resources, nil
+		list, err := f.listResources(ctx, gvr, nsName, opts)
+		return list, err
 	})
 
 	listPager.PageSize = f.pageSize
-	return listPager, nil
+	return listPager
 }
 
 func (f *Client) listResources(ctx context.Context,

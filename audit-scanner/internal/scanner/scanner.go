@@ -143,10 +143,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	}
 	policies, err := s.policiesClient.GetPoliciesByNamespace(ctx, namespace)
 	if err != nil {
-		s.logger.ErrorContext(ctx, "failed to obtain auditable policies",
-			slog.String("error", err.Error()),
-			slog.String("namespace", nsName))
-		return err
+		return fmt.Errorf("failed to obtain auditable policies for namespace %s: %w", nsName, err)
 	}
 
 	s.logger.InfoContext(ctx, "policy count",
@@ -156,13 +153,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 		slog.Int("policies-errored", policies.ErroredNum))
 
 	for gvr, pols := range policies.PoliciesByGVR {
-		pager, err := s.k8sClient.GetResources(gvr, nsName)
-		if err != nil {
-			s.logger.ErrorContext(ctx, "failed to get resources",
-				slog.String("error", err.Error()),
-				slog.String("gvr", gvr.String()),
-				slog.String("ns", nsName))
-		}
+		pager := s.k8sClient.GetResources(gvr, nsName)
 
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
 			resource, ok := obj.(*unstructured.Unstructured)
@@ -190,7 +181,14 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 			return nil
 		})
 		if err != nil {
-			return err
+			// If we fail to get the resources, we log the error inside the pager function
+			// and continue with the next GVR. Otherwise, the scan would stop
+			// and not audit any other resources.
+			s.logger.WarnContext(ctx, "Failed to list resources",
+				slog.String("error", err.Error()),
+				slog.String("resource-GVK", gvr.String()),
+				slog.String("ns", nsName))
+			continue
 		}
 	}
 	workers.Wait()
@@ -220,9 +218,9 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 
 	for _, namespace := range nsList.Items {
 		workers.Add(1)
-		err := semaphore.Acquire(ctx, 1)
-		if err != nil {
-			return err
+		acquireErr := semaphore.Acquire(ctx, 1)
+		if acquireErr != nil {
+			return acquireErr
 		}
 		namespaceName := namespace.Name
 
@@ -231,7 +229,7 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 			defer workers.Done()
 
 			if e := s.ScanNamespace(ctx, namespaceName, runUID); e != nil {
-				s.logger.ErrorContext(ctx, "error scanning namespace", slog.String("error", err.Error()), slog.String("ns", namespaceName))
+				s.logger.ErrorContext(ctx, "error scanning namespace", slog.String("error", e.Error()), slog.String("ns", namespaceName))
 				err = errors.Join(err, e)
 			}
 		}()
@@ -255,7 +253,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 
 	policies, err := s.policiesClient.GetClusterWidePolicies(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to obtain cluster auditable policies: %w", err)
 	}
 
 	s.logger.InfoContext(ctx, "cluster admission policies count",
@@ -265,11 +263,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 		slog.Int("parallel-resources-audits", s.parallelResourcesAudits))
 
 	for gvr, pols := range policies.PoliciesByGVR {
-		pager, err := s.k8sClient.GetResources(gvr, "")
-		if err != nil {
-			return err
-		}
-
+		pager := s.k8sClient.GetResources(gvr, "")
 		err = pager.EachListItem(ctx, metav1.ListOptions{}, func(obj runtime.Object) error {
 			resource, ok := obj.(*unstructured.Unstructured)
 			if !ok {
@@ -293,7 +287,13 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 			return nil
 		})
 		if err != nil {
-			return err
+			// If we fail to get the resources, we log the error inside the pager function
+			// and continue with the next GVR. Otherwise, the scan would stop
+			// and not audit any other resources.
+			s.logger.WarnContext(ctx, "Failed to list resources",
+				slog.String("error", err.Error()),
+				slog.String("resource-GVK", gvr.String()))
+			continue
 		}
 	}
 
