@@ -206,7 +206,7 @@ impl PolicyEvaluatorBuilder {
                 || {
                     let mut wasmtime_config = wasmtime::Config::new();
                     if self.wasmtime_cache {
-                        let cache = wasmtime::Cache::new(wasmtime::CacheConfig::new()).unwrap();
+                        let cache = wasmtime::Cache::new(wasmtime::CacheConfig::new())?;
                         wasmtime_config.cache(Some(cache));
                     }
                     if self.epoch_deadlines.is_some() {
