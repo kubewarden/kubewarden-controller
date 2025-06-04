@@ -41,7 +41,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = "2.5.0"
 walrus = "0.23.0"
-wasmparser = "0.232"
+wasmparser = "0.233"
 
 hostname-validator = "1.1.1"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
