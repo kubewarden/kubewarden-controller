@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -252,7 +253,10 @@ func setupManager(deploymentsNamespace string, metricsAddr string, probeAddr str
 			ClientCAName: clientCAName,
 		}),
 	})
-	return mgr, err
+	if err != nil {
+		return mgr, fmt.Errorf("failed to setup manager: %w", err)
+	}
+	return mgr, nil
 }
 
 func setupProbes(mgr ctrl.Manager) error {

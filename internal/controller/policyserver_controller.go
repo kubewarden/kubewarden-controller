@@ -83,7 +83,10 @@ type TelemetryConfiguration struct {
 func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var policyServer policiesv1.PolicyServer
 	if err := r.Get(ctx, req.NamespacedName, &policyServer); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		if client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get policy server: %w", err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	policies, err := r.getPolicies(ctx, &policyServer)

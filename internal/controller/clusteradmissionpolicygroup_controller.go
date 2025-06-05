@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/go-logr/logr"
 
@@ -61,7 +62,10 @@ type ClusterAdmissionPolicyGroupReconciler struct {
 func (r *ClusterAdmissionPolicyGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var clusterAdmissionPolicy policiesv1.ClusterAdmissionPolicyGroup
 	if err := r.Get(ctx, req.NamespacedName, &clusterAdmissionPolicy); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		if client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get cluster admission policy group: %w", err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	return r.policySubReconciler.reconcile(ctx, &clusterAdmissionPolicy)

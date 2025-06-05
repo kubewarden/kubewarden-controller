@@ -63,7 +63,7 @@ func (p *policyServerConfigEntry) UnmarshalJSON(b []byte) error {
 
 func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 	if len(p.Policies) > 0 {
-		return json.Marshal(struct {
+		bytes, err := json.Marshal(struct {
 			NamespacedName types.NamespacedName                    `json:"namespacedName"`
 			PolicyMode     string                                  `json:"policyMode"`
 			Policies       map[string]policyGroupMemberWithContext `json:"policies"`
@@ -76,9 +76,13 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 			Expression:     p.Expression,
 			Message:        p.Message,
 		})
+		if err != nil {
+			return nil, errors.New("failed to encode policy server configuration")
+		}
+		return bytes, nil
 	}
 
-	return json.Marshal(struct {
+	bytes, err := json.Marshal(struct {
 		NamespacedName        types.NamespacedName              `json:"namespacedName"`
 		Module                string                            `json:"module"`
 		PolicyMode            string                            `json:"policyMode"`
@@ -93,6 +97,10 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 		ContextAwareResources: p.ContextAwareResources,
 		Settings:              p.Settings,
 	})
+	if err != nil {
+		return nil, errors.New("failed to encode policy server configuration")
+	}
+	return bytes, nil
 }
 
 type policyServerSourceAuthority struct {
