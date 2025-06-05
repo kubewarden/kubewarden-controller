@@ -139,7 +139,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 
 	namespace, err := s.k8sClient.GetNamespace(ctx, nsName)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get namespace %s: %w", nsName, err)
 	}
 	policies, err := s.policiesClient.GetPoliciesByNamespace(ctx, namespace)
 	if err != nil {
@@ -163,7 +163,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 
 			err := semaphore.Acquire(ctx, 1)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to acquire the permission to audit resouce: %w", err)
 			}
 			workers.Add(1)
 			policiesToAudit := pols
@@ -220,7 +220,7 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 		workers.Add(1)
 		acquireErr := semaphore.Acquire(ctx, 1)
 		if acquireErr != nil {
-			return acquireErr
+			return fmt.Errorf("failed to acquire the permission to audit namespace: %w", err)
 		}
 		namespaceName := namespace.Name
 
@@ -238,7 +238,10 @@ func (s *Scanner) ScanAllNamespaces(ctx context.Context, runUID string) error {
 
 	s.logger.InfoContext(ctx, "all-namespaces scan finished")
 
-	return err
+	if err != nil {
+		return fmt.Errorf("error scanning all namespaces: %w", err)
+	}
+	return nil
 }
 
 // ScanClusterWideResources scans all cluster wide resources.
@@ -273,7 +276,7 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 			workers.Add(1)
 			err := semaphore.Acquire(ctx, 1)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to acquire the permission to audit a resource: %w", err)
 			}
 			policiesToAudit := pols
 
@@ -328,7 +331,7 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	for _, policyToUse := range policies {
 		err := semaphore.Acquire(ctx, 1)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to acquire the permission to audit a resource: %w", err)
 		}
 		workers.Add(1)
 
@@ -497,7 +500,7 @@ func policyMatches(policy policiesv1.Policy, resource unstructured.Unstructured)
 
 	selector, err := metav1.LabelSelectorAsSelector(policy.GetObjectSelector())
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to convert label selector from policy object selector: %w", err)
 	}
 
 	labels := labels.Set(resource.GetLabels())
@@ -511,18 +514,18 @@ func policyMatches(policy policiesv1.Policy, resource unstructured.Unstructured)
 func (s *Scanner) sendAdmissionReviewToPolicyServer(ctx context.Context, url *url.URL, admissionRequest *admissionv1.AdmissionReview) (*admissionv1.AdmissionReview, error) {
 	payload, err := json.Marshal(admissionRequest)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encode the admission request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url.String(), bytes.NewBuffer(payload))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build the policy server request: %w", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	res, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request to policy server failed: %w ", err)
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)

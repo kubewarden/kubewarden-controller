@@ -258,8 +258,7 @@ func TestGetPoliciesByNamespace(t *testing.T) {
 	require.NoError(t, err)
 
 	logger := slog.Default()
-	policiesClient, err := NewClient(client, "kubewarden", "", logger)
-	require.NoError(t, err)
+	policiesClient := NewClient(client, "kubewarden", "", logger)
 
 	policies, err := policiesClient.GetPoliciesByNamespace(t.Context(), namespace)
 	require.NoError(t, err)
@@ -469,8 +468,7 @@ func TestGetClusterWidePolicies(t *testing.T) {
 	require.NoError(t, err)
 
 	logger := slog.Default()
-	policiesClient, err := NewClient(client, "kubewarden", "", logger)
-	require.NoError(t, err)
+	policiesClient := NewClient(client, "kubewarden", "", logger)
 
 	policies, err := policiesClient.GetClusterWidePolicies(t.Context())
 	require.NoError(t, err)
