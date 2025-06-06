@@ -46,6 +46,8 @@ Problems to solve:
    it can be installed via the Rancher Explorer UI.
 5. As a 3rd party developer, I want to release a policy on Artifact Hub so it can
    be discovered and installed via the Rancher Explorer UI.
+6. As a user, I want to install Kubewarden policies via Rancher Explorer UI, in
+   an airgapped system.
 
 # Detailed design
 
@@ -113,12 +115,15 @@ All policies will be listed in a new repository:
 [https://github.com/kubewarden/policy-catalog](https://github.com/kubewarden/policy-catalog).  
 This repository will act as a Helm chart repository, published via GitHub Pages.
 
-Each policy release will generate a `Chart.yaml` file that includes the metadata required by the Rancher UI.
-This file will be placed at `charts/<policy-name>/Chart.yaml`.
+Each policy release will generate `Chart.yaml`, `values.yaml` files that
+include the metadata required by the Rancher UI.
+Thess file will be placed at `charts/<policy-name>/Chart.yaml` and
+`charts/<policy-name>/values.yaml`.
+
 If the original policy contains a `questions-ui.yml` file, it will be copied to `charts/policy-name/questions.yaml`.
 The `LICENSE` and `README.md` files will also be copied into the chart directory.
 
-This is not a functional Helm chart, as it doesn't include any templates or values.
+This is not a functional Helm chart, as it doesn't include any templates.
 It only provides the metadata needed by the Rancher Explorer UI, making use of the existing Helm chart repository structure.
 
 You can refer to the [Rancher source code](https://github.com/rancher/rancher/blob/794ebe98840e64e47664df2e28d67e76cbc37bf6/pkg/api/steve/catalog/types/rest.go#L50-L56) for more details.
@@ -136,13 +141,17 @@ All the annotations present in `artifacthub-pkg.yml` will be copied to the `Char
 Addtionally, the following annotations will be added to the `Chart.yaml` file:
 
 - `artifacthub.io/repository`: The name of the Artifact Hub repository where the policy is published. This will be fetched by querying the Artifact Hub API using the `repositoryID` present in the `artifacthub-repo.yml` file.
-- `kubewarden/registry`: The OCI registry where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
-- `kubewarden/repository`: The OCI repository where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
-- `kubewarden/tag`: The OCI tag where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
 - `kubewarden/displayName`: The display name of the policy. This is obtained by the `displayName` field in the `artifacthub-pkg.yml` file.
 - `catalog.cattle.io/ui-component`: Always set to `kubewarden`.
 - `catalog.cattle.io/hidden`: Always set to `true`.
 - `catalog.cattle.io/type`: Always set to `kubewarden-policy`.
+
+The following annotations are marked as deprecated, and substituted by the
+`values.yaml` file:
+
+- `kubewarden/registry`: The OCI registry where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
+- `kubewarden/repository`: The OCI repository where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
+- `kubewarden/tag`: The OCI tag where the policy is published. This is obtained by the `containesImages` field in the `artifacthub-pkg.yml` file.
 
 The `kubewarden/questions-ui` annotation will be not set in the `Chart.yaml` file, since the `questions.yaml` file will be copied to the chart directory.
 
@@ -156,8 +165,8 @@ annotations:
   catalog.cattle.io/ui-component: kubewarden
   kubewarden/displayName: Allowed Fs Groups PSP
   kubewarden/mutation: "true"
-  kubewarden/registry: ghcr.io
-  kubewarden/repository: kubewarden/policies/allowed-fsgroups-psp
+  kubewarden/registry: ghcr.io # deprecated, moved to values
+  kubewarden/repository: kubewarden/policies/allowed-fsgroups-psp # deprecated, moved to values
   kubewarden/resources: Pod
   kubewarden/rules: |
     - apiGroups:
@@ -169,7 +178,7 @@ annotations:
       operations:
       - CREATE
       - UPDATE
-  kubewarden/tag: v0.1.10
+  kubewarden/tag: v0.1.10 # deprecated, moved to values
 appVersion: 0.1.10
 description:
   Replacement for the Kubernetes Pod Security Policy that controls the
@@ -183,6 +192,31 @@ name: allowed-fsgroups-psp
 sources:
   - ghcr.io/kubewarden/policies/allowed-fsgroups-psp:v0.1.10
 version: 0.1.10
+```
+
+### values.yaml generation
+
+The `values.yaml` file will be generated or updated from the
+`artifacthub-pkg.yml` and `artifacthub-repo.yml` files present in the policy
+repository.
+
+The values file contains the needed metadata to know from where to obtain the
+OCI artifact from, and at the same time allows users to overwrite this values
+and save them in the deployed Helm release. It also follows the Rancher
+convention of `global.cattle.systemDefaultRegistry` values.
+
+This allows users, via the Kubewarden UI, to overwrite the registry and
+repository. This enables airgap deployments and the usage of registry mirrors.
+
+Example of a `values.yaml` file:
+
+```yaml
+global:
+  cattle:
+    systemDefaultRegistry: ghcr.io
+module:
+  repository: kubewarden/policies/sysctl-psp
+  tag: v1.0.2
 ```
 
 ### Policy catalog release flow
