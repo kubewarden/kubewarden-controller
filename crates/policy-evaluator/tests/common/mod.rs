@@ -1,4 +1,4 @@
-use tempfile::TempDir;
+use std::path::PathBuf;
 
 use policy_evaluator::{
     evaluation_context::EvaluationContext, policy_evaluator::PolicyEvaluator,
@@ -6,10 +6,10 @@ use policy_evaluator::{
 };
 use policy_fetcher::{policy::Policy, PullDestination};
 
-pub(crate) async fn fetch_policy(policy_uri: &str, tempdir: TempDir) -> Policy {
+pub(crate) async fn fetch_policy(policy_uri: &str, tempdir: PathBuf) -> Policy {
     policy_evaluator::policy_fetcher::fetch_policy(
         policy_uri,
-        PullDestination::LocalFile(tempdir.into_path()),
+        PullDestination::LocalFile(tempdir),
         None,
     )
     .await

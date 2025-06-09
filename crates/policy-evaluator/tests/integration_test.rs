@@ -193,7 +193,7 @@ async fn test_policy_evaluator(
     #[case] mutating: bool,
 ) {
     let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
-    let policy = fetch_policy(policy_uri, tempdir).await;
+    let policy = fetch_policy(policy_uri, tempdir.path().to_owned()).await;
 
     let eval_ctx = EvaluationContext {
         policy_id: "test".to_owned(),
@@ -282,7 +282,7 @@ async fn test_runtime_context_aware<F, Fut>(
     use kube::client::Body;
 
     let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
-    let policy = fetch_policy(policy_uri, tempdir).await;
+    let policy = fetch_policy(policy_uri, tempdir.path().to_owned()).await;
 
     let (mocksvc, handle) = tower_test::mock::pair::<Request<Body>, Response<Body>>();
     let client = Client::new(mocksvc, "default");
