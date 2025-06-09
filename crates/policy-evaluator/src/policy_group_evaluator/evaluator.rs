@@ -492,7 +492,7 @@ mod tests {
                 .causes;
             for expected in expected_status_causes {
                 assert!(
-                    causes.iter().any(|c| *c == expected),
+                    causes.contains(&expected),
                     "could not find cause {:?}",
                     expected
                 );
