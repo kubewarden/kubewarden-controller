@@ -35,10 +35,10 @@ type policyServerConfigEntry struct {
 	AllowedToMutate       bool                              `json:"allowedToMutate,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
+	Message               string                            `json:"message,omitempty"`
 	// The following fields are used by policy groups only.
 	Policies   map[string]policyGroupMemberWithContext `json:"policies,omitempty"`
 	Expression string                                  `json:"expression,omitempty"`
-	Message    string                                  `json:"message,omitempty"`
 }
 
 // The following MarshalJSON and UnmarshalJSON methods are used to serialize
@@ -89,6 +89,7 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 		AllowedToMutate       bool                              `json:"allowedToMutate"`
 		ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 		Settings              runtime.RawExtension              `json:"settings,omitempty"`
+		Message               string                            `json:"message,omitempty"`
 	}{
 		NamespacedName:        p.NamespacedName,
 		Module:                p.Module,
@@ -96,6 +97,7 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 		AllowedToMutate:       p.AllowedToMutate,
 		ContextAwareResources: p.ContextAwareResources,
 		Settings:              p.Settings,
+		Message:               p.Message,
 	})
 	if err != nil {
 		return nil, errors.New("failed to encode policy server configuration")
@@ -208,12 +210,12 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMa
 			AllowedToMutate:       admissionPolicy.IsMutating(),
 			Settings:              admissionPolicy.GetSettings(),
 			ContextAwareResources: admissionPolicy.GetContextAwareResources(),
+			Message:               admissionPolicy.GetMessage(),
 		}
 
 		if policyGroup, ok := admissionPolicy.(policiesv1.PolicyGroup); ok {
 			configEntry.Policies = buildPolicyGroupMembersWithContext(policyGroup.GetPolicyGroupMembersWithContext())
 			configEntry.Expression = policyGroup.GetExpression()
-			configEntry.Message = policyGroup.GetMessage()
 		}
 
 		policies[admissionPolicy.GetUniqueName()] = configEntry

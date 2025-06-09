@@ -231,3 +231,7 @@ func (r *ClusterAdmissionPolicy) GetDescription() (string, bool) {
 	desc, present := r.Annotations[AnnotationDescription]
 	return desc, present
 }
+
+func (r *ClusterAdmissionPolicy) GetMessage() string {
+	return r.Spec.Message
+}

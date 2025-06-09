@@ -149,6 +149,13 @@ type PolicySpec struct {
 	// +optional
 	// +kubebuilder:default:=10
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
+
+	// Message overrides the rejection message of the policy.
+	// When provided, the policy's rejection message can be found
+	// inside of the `.status.details.causes` field of the
+	// AdmissionResponse object
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 type PolicyGroupMembers map[string]PolicyGroupMember
