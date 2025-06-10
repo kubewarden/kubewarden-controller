@@ -11,4 +11,6 @@ pub(crate) struct PolicyEvaluationSettings {
     pub(crate) allowed_to_mutate: bool,
     /// The policy-specific settings provided by the user
     pub(crate) settings: PolicyOrPolicyGroupSettings,
+    /// Determines a custom rejection message for the policy
+    pub(crate) custom_rejection_message: Option<String>,
 }

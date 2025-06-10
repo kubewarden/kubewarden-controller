@@ -230,6 +230,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                 PolicyOrPolicyGroup::Policy {
                     module: url,
                     policy_mode,
+                    message,
                     allowed_to_mutate,
                     context_aware_resources,
                     ..
@@ -238,6 +239,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                         policy_mode: policy_mode.to_owned(),
                         allowed_to_mutate: allowed_to_mutate.unwrap_or(false),
                         settings,
+                        custom_rejection_message: message.clone(),
                     };
 
                     let eval_ctx = EvaluationContext {
@@ -270,6 +272,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                     let policy_evaluation_settings = PolicyEvaluationSettings {
                         policy_mode: policy_mode.to_owned(),
                         allowed_to_mutate: false, // Group policies are not allowed to mutate
+                        custom_rejection_message: None,
                         settings,
                     };
                     eval_env.register_policy_group(&id, policy_evaluation_settings);
@@ -298,6 +301,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                             policy_mode: PolicyMode::Protect,
                             allowed_to_mutate: false,
                             settings,
+                            custom_rejection_message: None,
                         };
 
                         let eval_ctx = EvaluationContext {
@@ -446,6 +450,17 @@ impl EvaluationEnvironment {
         self.policy_id_to_settings
             .get(policy_id)
             .map(|settings| settings.policy_mode.clone())
+            .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))
+    }
+
+    /// Given a policy ID, return how the policy custom reject message
+    pub(crate) fn get_policy_custom_rejection_message(
+        &self,
+        policy_id: &PolicyID,
+    ) -> Result<Option<String>> {
+        self.policy_id_to_settings
+            .get(policy_id)
+            .map(|settings| settings.custom_rejection_message.clone())
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))
     }
 
@@ -765,6 +780,7 @@ mod tests {
                     allowed_to_mutate: None,
                     settings: None,
                     context_aware_resources: BTreeSet::new(),
+                    message: None,
                 },
             );
             precompiled_policies.insert(policy_url, Ok(precompiled_policy.clone()));

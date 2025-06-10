@@ -36,6 +36,7 @@ pub(crate) fn default_test_config() -> Config {
                 allowed_to_mutate: None,
                 settings: None,
                 context_aware_resources: BTreeSet::new(),
+                message: None,
             },
         ),
         (
@@ -52,6 +53,7 @@ pub(crate) fn default_test_config() -> Config {
                     ("defaultResource".to_owned(), "hay".into()),
                 ])),
                 context_aware_resources: BTreeSet::new(),
+                message: None,
             },
         ),
         (
@@ -62,6 +64,7 @@ pub(crate) fn default_test_config() -> Config {
                 allowed_to_mutate: None,
                 settings: Some(HashMap::from([("sleepMilliseconds".to_owned(), 2.into())])),
                 context_aware_resources: BTreeSet::new(),
+                message: None,
             },
         ),
         (

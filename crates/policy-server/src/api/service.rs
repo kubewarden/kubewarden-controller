@@ -1,5 +1,5 @@
 use policy_evaluator::{
-    admission_response::{AdmissionResponse, AdmissionResponseStatus},
+    admission_response::{AdmissionResponse, AdmissionResponseStatus, StatusCause, StatusDetails},
     policy_evaluator::ValidateRequest,
 };
 use std::fmt;
@@ -95,6 +95,8 @@ pub(crate) fn evaluate(
 
     let policy_mode = evaluation_environment.get_policy_mode(&policy_id)?;
     let allowed_to_mutate = evaluation_environment.get_policy_allowed_to_mutate(&policy_id)?;
+    let custom_rejection_message =
+        evaluation_environment.get_policy_custom_rejection_message(&policy_id)?;
 
     let policy_evaluation_duration = start_time.elapsed();
     let accepted = vanilla_validation_response.allowed;
@@ -110,6 +112,7 @@ pub(crate) fn evaluate(
             &policy_id,
             &policy_mode,
             allowed_to_mutate,
+            custom_rejection_message,
             vanilla_validation_response.clone(),
         ),
         RequestOrigin::Audit => vanilla_validation_response.clone(),
@@ -157,12 +160,33 @@ pub(crate) fn evaluate(
 //   configuration does not allow it to mutate
 // - A policy might be running in "Monitor" mode, that always
 //   accepts the request (without mutation), logging the answer
+// - A policy might have a custom error message that should be used instead of the error returned
+//   by the policy. The original error is added in the warnings list.
 fn validation_response_with_constraints(
     policy_id: &PolicyID,
     policy_mode: &PolicyMode,
     allowed_to_mutate: bool,
-    validation_response: AdmissionResponse,
+    custom_rejection_message: Option<String>,
+    mut validation_response: AdmissionResponse,
 ) -> AdmissionResponse {
+    if !validation_response.allowed && custom_rejection_message.is_some() {
+        let custom_rejection_message = custom_rejection_message.unwrap_or_default();
+        let status = validation_response.status.unwrap_or_default();
+        let original_rejection_message = status.message.unwrap_or_default();
+        let mut causes = status.details.clone().unwrap_or_default().causes;
+        causes.push(StatusCause {
+            message: Some(original_rejection_message),
+            ..Default::default()
+        });
+        validation_response.status = Some(AdmissionResponseStatus {
+            message: Some(custom_rejection_message),
+            details: Some(StatusDetails {
+                causes,
+                ..status.details.unwrap_or_default()
+            }),
+            ..status
+        });
+    }
     match policy_mode {
         PolicyMode::Protect => {
             if validation_response.patch.is_some() && !allowed_to_mutate {
@@ -214,7 +238,7 @@ mod tests {
     use crate::test_utils::build_admission_review_request;
 
     use lazy_static::lazy_static;
-    use policy_evaluator::admission_response;
+    use policy_evaluator::admission_response::{self, StatusCause, StatusDetails};
     use rstest::*;
 
     lazy_static! {
@@ -244,6 +268,9 @@ mod tests {
         mock_evaluation_environment
             .expect_should_always_accept_requests_made_inside_of_namespace()
             .returning(|_namespace| false);
+        mock_evaluation_environment
+            .expect_get_policy_custom_rejection_message()
+            .returning(|_policy_id| Ok(None));
 
         mock_evaluation_environment
     }
@@ -278,6 +305,9 @@ mod tests {
         mock_evaluation_environment
             .expect_should_always_accept_requests_made_inside_of_namespace()
             .returning(move |namespace| namespace == allowed_namespace);
+        mock_evaluation_environment
+            .expect_get_policy_custom_rejection_message()
+            .returning(|_policy_id| Ok(None));
 
         mock_evaluation_environment
     }
@@ -304,6 +334,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
@@ -319,6 +350,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
@@ -327,6 +359,65 @@ mod tests {
                 },
             ),
             accept_response,
+        );
+    }
+
+    #[test]
+    fn validation_response_with_custom_rejection_message() {
+        assert_eq!(
+            validation_response_with_constraints(
+                &POLICY_ID,
+                &PolicyMode::Protect,
+                false,
+                None,
+                AdmissionResponse {
+                    allowed: false,
+                    status: Some(AdmissionResponseStatus {
+                        message: Some("Policy error message".to_string()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+            ),
+            AdmissionResponse {
+                allowed: false,
+                status: Some(AdmissionResponseStatus {
+                    message: Some("Policy error message".to_string()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        );
+        assert_eq!(
+            validation_response_with_constraints(
+                &POLICY_ID,
+                &PolicyMode::Protect,
+                false,
+                Some("My custom error message".to_owned()),
+                AdmissionResponse {
+                    allowed: false,
+                    status: Some(AdmissionResponseStatus {
+                        message: Some("Policy error message".to_string()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+            ),
+            AdmissionResponse {
+                allowed: false,
+                status: Some(AdmissionResponseStatus {
+                    message: Some("My custom error message".to_owned()),
+                    details: Some(StatusDetails {
+                        causes: vec![StatusCause {
+                            message: Some("Policy error message".to_owned()),
+                            ..Default::default()
+                        }],
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
         );
     }
 
@@ -342,6 +433,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
@@ -358,6 +450,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
@@ -373,6 +466,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     ..Default::default()
@@ -387,6 +481,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Monitor,
                 true,
+                None,
                 AdmissionResponse {
                     allowed: false,
                     status: Some(AdmissionResponseStatus {
@@ -405,6 +500,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     ..Default::default()
@@ -418,6 +514,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Monitor,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: false,
                     status: Some(AdmissionResponseStatus {
@@ -444,6 +541,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Protect,
                 true,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
@@ -465,6 +563,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     patch: Some("patch".to_string()),
@@ -490,6 +589,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Protect,
                 true,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     ..Default::default()
@@ -504,6 +604,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Protect,
                 true,
+                None,
                 AdmissionResponse {
                     allowed: false,
                     status: Some(AdmissionResponseStatus {
@@ -530,6 +631,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: true,
                     ..Default::default()
@@ -543,6 +645,7 @@ mod tests {
                 &POLICY_ID,
                 &PolicyMode::Protect,
                 false,
+                None,
                 AdmissionResponse {
                     allowed: false,
                     status: Some(AdmissionResponseStatus {
