@@ -270,7 +270,7 @@ impl PolicyGroupEvaluator {
     ///
     /// Each policy is validated individually, and the expression is also validated.
     #[tracing::instrument]
-    pub fn validate_settings(self) -> SettingsValidationResponse {
+    pub fn validate_settings(&self) -> SettingsValidationResponse {
         let mut rhai_engine = rhai::Engine::new_raw();
 
         let mut policy_validation_errors = HashMap::new();

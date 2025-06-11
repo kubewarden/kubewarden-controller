@@ -163,7 +163,11 @@ impl Runtime<'_> {
         let data = match ctx_data {
             KubernetesContext::Opa(ctx) => {
                 let mut data = settings.clone();
-                if data.insert("kubernetes".to_string(), json!(ctx)).is_some() {
+                if data
+                    .0
+                    .insert("kubernetes".to_string(), json!(ctx))
+                    .is_some()
+                {
                     warn!("OPA policy had user provided setting with key `kubernetes`. This value has been overwritten with the actual kubernetes context data");
                 }
                 json!(data)

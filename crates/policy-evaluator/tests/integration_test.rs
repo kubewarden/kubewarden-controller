@@ -192,6 +192,7 @@ async fn test_policy_evaluator(
     #[case] code: Option<u16>,
     #[case] mutating: bool,
 ) {
+    let settings = PolicySettings::try_from(&settings).expect("cannot convert settings");
     let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
     let policy = fetch_policy(policy_uri, tempdir.path().to_owned()).await;
 
@@ -214,9 +215,6 @@ async fn test_policy_evaluator(
         ValidateRequest::AdmissionRequest(Box::new(admission_request))
     };
 
-    let serde_json::Value::Object(settings) = settings else {
-        panic!("settings must be an object")
-    };
     let settings_validation_response = policy_evaluator.validate_settings(&settings);
     assert!(settings_validation_response.valid);
 

@@ -1,6 +1,5 @@
 use std::{collections::BTreeSet, fmt};
 
-use k8s_openapi::apimachinery::pkg::runtime::RawExtension;
 use kubewarden_policy_sdk::crd::policies::{
     admission_policy_group::PolicyGroupMember,
     cluster_admission_policy_group::PolicyGroupMemberWithContext,
@@ -14,6 +13,7 @@ use crate::policy_evaluator::PolicySettings;
 use crate::policy_metadata::ContextAwareResource;
 
 /// The settings of a policy group member
+#[derive(Clone)]
 pub struct PolicyGroupMemberSettings {
     /// The policy settings
     pub settings: PolicySettings,
@@ -53,25 +53,11 @@ impl fmt::Display for PolicyGroupMemberEvaluationResult {
     }
 }
 
-/// Converts a `kubewarden_policy_sdk::crd::RawExtension` to `PolicySettings`.
-/// If the `RawExtension` is `null`, it returns default settings.
-/// If the `RawExtension` is an object, it converts it to `PolicySettings`.
-/// If the `RawExtension` is not an object or null, it returns an error.
-fn convert_raw_extension_to_settings(
-    raw_extension: &RawExtension,
-) -> Result<PolicySettings, &'static str> {
-    match &raw_extension.0 {
-        serde_json::Value::Null => Ok(PolicySettings::default()),
-        serde_json::Value::Object(obj) => Ok(obj.to_owned()),
-        _ => Err("Invalid settings in CRD, not an object"),
-    }
-}
-
 impl TryFrom<&PolicyGroupMemberWithContext> for PolicyGroupMemberSettings {
     type Error = &'static str;
 
     fn try_from(member: &PolicyGroupMemberWithContext) -> Result<Self, Self::Error> {
-        let settings = convert_raw_extension_to_settings(&member.settings)?;
+        let settings = PolicySettings::try_from(&member.settings)?;
         let ctx_aware_resources_allow_list = member
             .context_aware_resources
             .iter()
@@ -89,7 +75,7 @@ impl TryFrom<&PolicyGroupMember> for PolicyGroupMemberSettings {
     type Error = &'static str;
 
     fn try_from(member: &PolicyGroupMember) -> Result<Self, Self::Error> {
-        let settings = convert_raw_extension_to_settings(&member.settings)?;
+        let settings = PolicySettings::try_from(&member.settings)?;
 
         Ok(Self {
             settings,
@@ -103,29 +89,9 @@ mod tests {
     use super::*;
 
     use assert_json_diff::assert_json_eq;
+    use k8s_openapi::apimachinery::pkg::runtime::RawExtension;
     use kubewarden_policy_sdk::crd::policies::common::ContextAwareResource as ContextAwareResourceSdk;
-    use rstest::rstest;
     use serde_json::json;
-
-    #[rstest]
-    #[case::dictionrary(json!({"key1": "value1", "key2": "value2"}), true)]
-    #[case::empty_dictionrary(json!({}), true)]
-    #[case::nil(serde_json::Value::Null, true)]
-    #[case::string(json!("boom"), false)]
-    #[case::number(json!(123), false)]
-    #[case::bool(json!(true), false)]
-    fn convert_raw_extension_to_settings_conversion(
-        #[case] settings: serde_json::Value,
-        #[case] is_ok: bool,
-    ) {
-        let conversion_result = convert_raw_extension_to_settings(&RawExtension(settings.clone()));
-        assert_eq!(
-            conversion_result.is_ok(),
-            is_ok,
-            "Conversion should {}",
-            if is_ok { "succeed" } else { "fail" }
-        );
-    }
 
     #[test]
     fn test_convert_policy_group_member_with_context_into_policy_group_member() {
