@@ -247,7 +247,7 @@ mod tests {
             create_evaluation_environment_that_accepts_request(policy_mode);
         let policy_id = "test_policy1";
         let validate_request =
-            ValidateRequest::AdmissionRequest(build_admission_review_request().request);
+            ValidateRequest::AdmissionRequest(Box::new(build_admission_review_request().request));
 
         let response = evaluate(
             Arc::new(evaluation_environment),
@@ -280,7 +280,7 @@ mod tests {
             "".to_string(),
         );
         let validate_request =
-            ValidateRequest::AdmissionRequest(build_admission_review_request().request);
+            ValidateRequest::AdmissionRequest(Box::new(build_admission_review_request().request));
         let policy_id = "test_policy1";
 
         let response = evaluate(
@@ -369,7 +369,7 @@ mod tests {
         );
         let mut request = build_admission_review_request().request;
         request.namespace = Some(allowed_namespace.clone());
-        let validate_request = ValidateRequest::AdmissionRequest(request);
+        let validate_request = ValidateRequest::AdmissionRequest(Box::new(request));
 
         let policy_id = "test_policy1";
 

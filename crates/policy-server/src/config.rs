@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use lazy_static::lazy_static;
 use policy_evaluator::{
+    policy_evaluator::PolicySettings,
     policy_fetcher::{
         sources::{read_sources_file, Sources},
         verify::config::{read_verification_file, LatestVerificationConfig, VerificationConfigV1},
@@ -302,34 +303,9 @@ impl From<PolicyMode> for String {
     }
 }
 
-/// Settings specified by the user for a given policy.
-#[derive(Debug, Clone, Default)]
-pub struct SettingsJSON(serde_json::Map<String, serde_json::Value>);
-
-impl From<SettingsJSON> for serde_json::Map<String, serde_json::Value> {
-    fn from(val: SettingsJSON) -> Self {
-        val.0
-    }
-}
-
-impl TryFrom<HashMap<String, serde_yaml::Value>> for SettingsJSON {
-    type Error = anyhow::Error;
-
-    fn try_from(settings: HashMap<String, serde_yaml::Value>) -> Result<Self> {
-        let settings_yaml = serde_yaml::Mapping::from_iter(
-            settings
-                .iter()
-                .map(|(key, value)| (serde_yaml::Value::String(key.to_string()), value.clone())),
-        );
-        let settings_json = convert_yaml_map_to_json(settings_yaml)
-            .map_err(|e| anyhow!("cannot convert YAML settings to JSON: {:?}", e))?;
-        Ok(SettingsJSON(settings_json))
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum PolicyOrPolicyGroupSettings {
-    Policy(SettingsJSON),
+    Policy(PolicySettings),
     PolicyGroup {
         expression: String,
         message: String,
@@ -344,7 +320,7 @@ pub struct PolicyGroupMember {
     /// The URL where the policy is located
     pub module: String,
     /// The settings for the policy
-    pub settings: Option<HashMap<String, serde_yaml::Value>>,
+    pub settings: Option<PolicySettings>,
     /// The list of Kubernetes resources the policy is allowed to access
     #[serde(default)]
     pub context_aware_resources: BTreeSet<ContextAwareResource>,
@@ -352,8 +328,9 @@ pub struct PolicyGroupMember {
 
 impl PolicyGroupMember {
     pub fn settings(&self) -> Result<PolicyOrPolicyGroupSettings> {
-        let settings = SettingsJSON::try_from(self.settings.clone().unwrap_or_default())?;
-        Ok(PolicyOrPolicyGroupSettings::Policy(settings))
+        Ok(PolicyOrPolicyGroupSettings::Policy(
+            self.settings.clone().unwrap_or_default(),
+        ))
     }
 }
 
@@ -372,7 +349,7 @@ pub enum PolicyOrPolicyGroup {
         /// Whether the policy is allowed to mutate the request
         allowed_to_mutate: Option<bool>,
         /// The settings for the policy, as provided by the user
-        settings: Option<HashMap<String, serde_yaml::Value>>,
+        settings: Option<PolicySettings>,
         #[serde(default)]
         /// The list of Kubernetes resources the policy is allowed to access
         context_aware_resources: BTreeSet<ContextAwareResource>,
@@ -398,10 +375,9 @@ pub enum PolicyOrPolicyGroup {
 impl PolicyOrPolicyGroup {
     pub fn settings(&self) -> Result<PolicyOrPolicyGroupSettings> {
         match self {
-            PolicyOrPolicyGroup::Policy { settings, .. } => {
-                let settings = SettingsJSON::try_from(settings.clone().unwrap_or_default())?;
-                Ok(PolicyOrPolicyGroupSettings::Policy(settings))
-            }
+            PolicyOrPolicyGroup::Policy { settings, .. } => Ok(
+                PolicyOrPolicyGroupSettings::Policy(settings.clone().unwrap_or_default()),
+            ),
             PolicyOrPolicyGroup::PolicyGroup {
                 expression,
                 message,
@@ -414,34 +390,6 @@ impl PolicyOrPolicyGroup {
             }),
         }
     }
-}
-
-/// Helper function that takes a YAML map and returns a
-/// JSON object.
-fn convert_yaml_map_to_json(
-    yml_map: serde_yaml::Mapping,
-) -> Result<serde_json::Map<String, serde_json::Value>> {
-    // convert the policy settings from yaml format to json
-    let yml_string = serde_yaml::to_string(&yml_map).map_err(|e| {
-        anyhow!(
-            "error while converting {:?} from yaml to string: {}",
-            yml_map,
-            e
-        )
-    })?;
-
-    let v: serde_json::Value = serde_yaml::from_str(&yml_string).map_err(|e| {
-        anyhow!(
-            "error while converting {:?} from yaml string to json: {}",
-            yml_map,
-            e
-        )
-    })?;
-
-    Ok(v.as_object()
-        .map_or_else(serde_json::Map::<String, serde_json::Value>::new, |m| {
-            m.clone()
-        }))
 }
 
 /// Reads the policies configuration file, returns a HashMap with String as value
@@ -546,7 +494,7 @@ group_policy:
                     module: "ghcr.io/kubewarden/policies/context-aware-policy:0.1.0".to_owned(),
                     policy_mode: PolicyMode::Protect,
                     allowed_to_mutate: Some(true),
-                    settings: Some(HashMap::new()),
+                    settings: Some(PolicySettings::default()),
                     context_aware_resources: BTreeSet::from([
                         ContextAwareResource {
                             api_version: "v1".to_owned(),
@@ -571,7 +519,7 @@ group_policy:
                             "policy1".to_owned(),
                             PolicyGroupMember {
                                 module: "ghcr.io/kubewarden/policies/policy1:0.1.0".to_owned(),
-                                settings: Some(HashMap::new()),
+                                settings: Some(PolicySettings::default()),
                                 context_aware_resources: BTreeSet::new(),
                             },
                         ),
@@ -579,7 +527,7 @@ group_policy:
                             "policy2".to_string(),
                             PolicyGroupMember {
                                 module: "ghcr.io/kubewarden/policies/policy2:0.1.0".to_owned(),
-                                settings: Some(HashMap::new()),
+                                settings: Some(PolicySettings::default()),
                                 context_aware_resources: BTreeSet::new(),
                             },
                         ),
