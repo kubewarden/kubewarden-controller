@@ -20,7 +20,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -58,6 +57,7 @@ func TestClusterAdmissionPolicyGroupValidateCreate(t *testing.T) {
 func TestClusterAdmissionPolicyGroupValidateCreateWithErrors(t *testing.T) {
 	policy := NewClusterAdmissionPolicyGroupFactory().
 		WithPolicyServer("").
+		WithMessage("").
 		WithRules([]admissionregistrationv1.RuleWithOperations{
 			{},
 			{
@@ -190,6 +190,15 @@ func TestClusterAdmissionPolicyGroupValidateUpdateWithErrors(t *testing.T) {
 	newPolicy = NewClusterAdmissionPolicyGroupFactory().
 		WithPolicyServer("new").
 		WithMode("monitor").
+		Build()
+
+	warnings, err = validator.ValidateUpdate(t.Context(), oldPolicy, newPolicy)
+	require.Error(t, err)
+	assert.Empty(t, warnings)
+
+	newPolicy = NewClusterAdmissionPolicyGroupFactory().
+		WithPolicyServer("old").
+		WithMessage("").
 		Build()
 
 	warnings, err = validator.ValidateUpdate(t.Context(), oldPolicy, newPolicy)

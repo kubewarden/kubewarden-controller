@@ -37,6 +37,9 @@ func validatePolicyGroupCreate(policyGroup PolicyGroup) field.ErrorList {
 	if err := validatePolicyGroupExpressionField(policyGroup); err != nil {
 		allErrors = append(allErrors, err)
 	}
+	if err := validatePolicyGroupMessageField(policyGroup); err != nil {
+		allErrors = append(allErrors, err)
+	}
 
 	return allErrors
 }
@@ -49,8 +52,20 @@ func validatePolicyGroupUpdate(oldPolicyGroup, newPolicyGroup PolicyGroup) field
 	if err := validatePolicyGroupExpressionField(newPolicyGroup); err != nil {
 		allErrors = append(allErrors, err)
 	}
+	if err := validatePolicyGroupMessageField(newPolicyGroup); err != nil {
+		allErrors = append(allErrors, err)
+	}
 
 	return allErrors
+}
+
+func validatePolicyGroupMessageField(policyGroup PolicyGroup) *field.Error {
+	messageField := field.NewPath("spec").Child("message")
+
+	if len(policyGroup.GetMessage()) == 0 {
+		return field.Required(messageField, "must be non-empty")
+	}
+	return nil
 }
 
 // validatePolicyGroupMembers validates that a policy group has at least one policy member.
