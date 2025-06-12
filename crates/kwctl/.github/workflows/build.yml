@@ -51,7 +51,7 @@ jobs:
         run: ./kwctl-linux-x86_64 --help
 
       - name: Generate attestations
-        uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         id: attestations
         with:
           subject-path: kwctl-linux-${{ matrix.targetarch }}
@@ -133,7 +133,7 @@ jobs:
         run: ./kwctl-darwin-x86_64 --help
 
       - name: Generate attestations
-        uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         id: attestations
         with:
           subject-path: kwctl-darwin-${{ matrix.targetarch }}
@@ -217,7 +217,7 @@ jobs:
         run: .\kwctl-windows-x86_64.exe --help
 
       - name: Generate attestations
-        uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         id: attestations
         with:
           subject-path: kwctl-windows-${{ matrix.targetarch }}.exe
