@@ -270,7 +270,7 @@ impl PolicyGroupEvaluator {
     ///
     /// Each policy is validated individually, and the expression is also validated.
     #[tracing::instrument]
-    pub fn validate_settings(self) -> SettingsValidationResponse {
+    pub fn validate_settings(&self) -> SettingsValidationResponse {
         let mut rhai_engine = rhai::Engine::new_raw();
 
         let mut policy_validation_errors = HashMap::new();
@@ -492,7 +492,7 @@ mod tests {
                 .causes;
             for expected in expected_status_causes {
                 assert!(
-                    causes.iter().any(|c| *c == expected),
+                    causes.contains(&expected),
                     "could not find cause {:?}",
                     expected
                 );

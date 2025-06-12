@@ -154,10 +154,6 @@ impl PolicyEvaluatorBuilder {
             return Err(InvalidUserInputError::EngineForModule);
         }
 
-        if self.execution_mode.is_none() {
-            return Err(InvalidUserInputError::ExecutionMode);
-        }
-
         Ok(())
     }
 
@@ -169,7 +165,7 @@ impl PolicyEvaluatorBuilder {
         let engine = self.build_engine()?;
         let module = self.build_module(&engine)?;
 
-        let execution_mode = self.execution_mode.unwrap();
+        let execution_mode = self.execution_mode.unwrap_or_default();
 
         let stack_pre = match execution_mode {
             PolicyExecutionMode::KubewardenWapc => {

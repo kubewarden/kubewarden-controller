@@ -192,8 +192,9 @@ async fn test_policy_evaluator(
     #[case] code: Option<u16>,
     #[case] mutating: bool,
 ) {
+    let settings = PolicySettings::try_from(&settings).expect("cannot convert settings");
     let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
-    let policy = fetch_policy(policy_uri, tempdir).await;
+    let policy = fetch_policy(policy_uri, tempdir.path().to_owned()).await;
 
     let eval_ctx = EvaluationContext {
         policy_id: "test".to_owned(),
@@ -214,9 +215,6 @@ async fn test_policy_evaluator(
         ValidateRequest::AdmissionRequest(Box::new(admission_request))
     };
 
-    let serde_json::Value::Object(settings) = settings else {
-        panic!("settings must be an object")
-    };
     let settings_validation_response = policy_evaluator.validate_settings(&settings);
     assert!(settings_validation_response.valid);
 
@@ -282,7 +280,7 @@ async fn test_runtime_context_aware<F, Fut>(
     use kube::client::Body;
 
     let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
-    let policy = fetch_policy(policy_uri, tempdir).await;
+    let policy = fetch_policy(policy_uri, tempdir.path().to_owned()).await;
 
     let (mocksvc, handle) = tower_test::mock::pair::<Request<Body>, Response<Body>>();
     let client = Client::new(mocksvc, "default");

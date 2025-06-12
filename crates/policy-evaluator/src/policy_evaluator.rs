@@ -8,7 +8,8 @@ pub use evaluator::PolicyEvaluator;
 pub use policy_evaluator_pre::PolicyEvaluatorPre;
 
 use anyhow::{anyhow, Result};
-use serde::Serialize;
+use k8s_openapi::apimachinery::pkg::runtime::RawExtension;
+use serde::{Deserialize, Serialize};
 use serde_json::value;
 use std::{convert::TryFrom, fmt};
 
@@ -78,14 +79,37 @@ impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
 }
 
 /// Settings specified by the user for a given policy.
-pub type PolicySettings = serde_json::Map<String, serde_json::Value>;
+#[derive(Clone, Default, Serialize, Deserialize, Debug, Eq, PartialEq)]
+pub struct PolicySettings(pub serde_json::Map<String, serde_json::Value>);
+
+impl TryFrom<&RawExtension> for PolicySettings {
+    type Error = &'static str;
+
+    fn try_from(raw_extension: &RawExtension) -> Result<Self, Self::Error> {
+        PolicySettings::try_from(&raw_extension.0)
+    }
+}
+
+impl TryFrom<&serde_json::Value> for PolicySettings {
+    type Error = &'static str;
+
+    fn try_from(value: &serde_json::Value) -> Result<Self, Self::Error> {
+        match value {
+            serde_json::Value::Null => Ok(PolicySettings::default()),
+            serde_json::Value::Object(obj) => Ok(Self(obj.clone())),
+            _ => Err("Invalid settings in CRD, not an object"),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use serde_json::json;
     use std::collections::HashMap;
+
+    use rstest::rstest;
+    use serde_json::json;
 
     #[test]
     fn serialize_policy_execution_mode() {
@@ -136,5 +160,25 @@ mod tests {
         let actual: std::result::Result<PolicyExecutionMode, serde_json::Error> =
             serde_json::from_str("hello world");
         assert!(actual.is_err());
+    }
+
+    #[rstest]
+    #[case::dictionrary(json!({"key1": "value1", "key2": "value2"}), true)]
+    #[case::empty_dictionrary(json!({}), true)]
+    #[case::nil(serde_json::Value::Null, true)]
+    #[case::string(json!("boom"), false)]
+    #[case::number(json!(123), false)]
+    #[case::bool(json!(true), false)]
+    fn convert_raw_extension_to_settings_conversion(
+        #[case] settings: serde_json::Value,
+        #[case] is_ok: bool,
+    ) {
+        let conversion_result = PolicySettings::try_from(&settings);
+        assert_eq!(
+            conversion_result.is_ok(),
+            is_ok,
+            "Conversion should {}",
+            if is_ok { "succeed" } else { "fail" }
+        );
     }
 }
