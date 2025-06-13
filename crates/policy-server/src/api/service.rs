@@ -158,7 +158,7 @@ pub(crate) fn evaluate(
 //   configuration does not allow it to mutate
 // - A policy might be running in "Monitor" mode, that always
 //   accepts the request (without mutation), logging the answer
-// - A policy might have a custom error message that should be used instead of the error returned
+// - A policy might have a custom rejection message that should be used instead of the error returned
 //   by the policy. The original error is added in the warnings list.
 fn validation_response_with_constraints(
     policy_id: &PolicyID,
