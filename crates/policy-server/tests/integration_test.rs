@@ -16,7 +16,7 @@ use axum::{
 };
 use backon::{ExponentialBuilder, Retryable};
 use http_body_util::BodyExt;
-use policy_evaluator::admission_response;
+use policy_evaluator::admission_response::{self, StatusCause, StatusDetails};
 use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     policy_fetcher::verify::config::VerificationConfigV1,
@@ -66,6 +66,59 @@ async fn test_validate() {
             }
         )
     )
+}
+
+#[tokio::test]
+async fn test_validate_custom_rejection_message() {
+    setup();
+
+    let mut config = default_test_config();
+    config.policies.insert(
+        "pod-privileged".to_owned(),
+        PolicyOrPolicyGroup::Policy {
+            module: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: None,
+            context_aware_resources: BTreeSet::new(),
+            message: Some("Custom error message".to_owned()),
+        },
+    );
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+    assert_eq!(
+        admission_review_response.response.status,
+        Some(
+            policy_evaluator::admission_response::AdmissionResponseStatus {
+                message: Some("Custom error message".to_owned()),
+                details: Some(StatusDetails {
+                    causes: vec![StatusCause {
+                        message: Some("Privileged container is not allowed".to_owned()),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+        )
+    );
 }
 
 #[tokio::test]
@@ -460,6 +513,7 @@ async fn test_verified_policy() {
             allowed_to_mutate: None,
             settings: None,
             context_aware_resources: BTreeSet::new(),
+            message: None,
         },
     )]);
     config.verification_config = Some(verification_config);
@@ -495,6 +549,7 @@ async fn test_policy_with_invalid_settings() {
                 "abc".into(),
             )])),
             context_aware_resources: BTreeSet::new(),
+            message: None,
         },
     );
     config.continue_on_errors = true;
@@ -540,6 +595,7 @@ async fn test_policy_with_wrong_url() {
             allowed_to_mutate: None,
             settings: None,
             context_aware_resources: BTreeSet::new(),
+            message: None,
         },
     );
     config.continue_on_errors = true;

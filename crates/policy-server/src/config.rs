@@ -376,6 +376,8 @@ pub enum PolicyOrPolicyGroup {
         #[serde(default)]
         /// The list of Kubernetes resources the policy is allowed to access
         context_aware_resources: BTreeSet<ContextAwareResource>,
+        /// The message that is returned when the policy evaluates to false
+        message: Option<String>,
     },
     /// A group of policies that are evaluated together using a given expression
     #[serde(rename_all = "camelCase")]
@@ -512,6 +514,7 @@ example:
     module: ghcr.io/kubewarden/policies/context-aware-policy:0.1.0
     settings: {}
     allowedToMutate: true
+    message: "my custom error message"
     contextAwareResources:
         - apiVersion: v1
           kind: Namespace
@@ -554,6 +557,7 @@ group_policy:
                             kind: "Pod".to_owned(),
                         },
                     ]),
+                    message: Some("my custom error message".to_owned()),
                 },
             ),
             (

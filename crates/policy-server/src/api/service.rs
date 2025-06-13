@@ -1,14 +1,10 @@
-use policy_evaluator::{
-    admission_response::{AdmissionResponse, AdmissionResponseStatus},
-    policy_evaluator::ValidateRequest,
-};
-use std::fmt;
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
+
+use policy_evaluator::{admission_response::AdmissionResponse, policy_evaluator::ValidateRequest};
 use tokio::time::Instant;
-use tracing::info;
 
 use crate::{
-    config::PolicyMode,
+    api::admission_response_handler::AdmissionResponseHandler,
     evaluation::{errors::EvaluationError, EvaluationEnvironment, PolicyID},
     metrics,
 };
@@ -95,6 +91,8 @@ pub(crate) fn evaluate(
 
     let policy_mode = evaluation_environment.get_policy_mode(&policy_id)?;
     let allowed_to_mutate = evaluation_environment.get_policy_allowed_to_mutate(&policy_id)?;
+    let custom_rejection_message =
+        evaluation_environment.get_policy_custom_rejection_message(&policy_id)?;
 
     let policy_evaluation_duration = start_time.elapsed();
     let accepted = vanilla_validation_response.allowed;
@@ -105,14 +103,18 @@ pub(crate) fn evaluate(
         None
     };
 
+    let admission_response_handler = AdmissionResponseHandler::new(
+        &policy_id,
+        &policy_mode,
+        allowed_to_mutate,
+        custom_rejection_message,
+    );
+
     let validation_response = match request_origin {
-        RequestOrigin::Validate => validation_response_with_constraints(
-            &policy_id,
-            &policy_mode,
-            allowed_to_mutate,
-            vanilla_validation_response.clone(),
-        ),
-        RequestOrigin::Audit => vanilla_validation_response.clone(),
+        RequestOrigin::Validate => {
+            admission_response_handler.process_response(vanilla_validation_response)
+        }
+        RequestOrigin::Audit => vanilla_validation_response,
     };
 
     match validate_request {
@@ -132,8 +134,6 @@ pub(crate) fn evaluate(
             metrics::add_policy_evaluation(&policy_evaluation_metric);
         }
         ValidateRequest::Raw(_) => {
-            let accepted = vanilla_validation_response.allowed;
-            let mutated = vanilla_validation_response.patch.is_some();
             let raw_policy_evaluation_metric = metrics::RawPolicyEvaluation {
                 policy_name: policy_id.to_string(),
                 policy_mode: policy_mode.into(),
@@ -151,70 +151,15 @@ pub(crate) fn evaluate(
     Ok(validation_response)
 }
 
-// Returns a validation response with policy-server specific
-// constraints taken into account:
-// - A policy might have tried to mutate while the policy-server
-//   configuration does not allow it to mutate
-// - A policy might be running in "Monitor" mode, that always
-//   accepts the request (without mutation), logging the answer
-fn validation_response_with_constraints(
-    policy_id: &PolicyID,
-    policy_mode: &PolicyMode,
-    allowed_to_mutate: bool,
-    validation_response: AdmissionResponse,
-) -> AdmissionResponse {
-    match policy_mode {
-        PolicyMode::Protect => {
-            if validation_response.patch.is_some() && !allowed_to_mutate {
-                AdmissionResponse {
-                        allowed: false,
-                        status: Some(AdmissionResponseStatus {
-                            message: Some(format!("Request rejected by policy {policy_id}. The policy attempted to mutate the request, but it is currently configured to not allow mutations.")),
-                            code: None,
-                            ..Default::default()
-                        }),
-                        // if `allowed_to_mutate` is false, we are in a validating webhook. If we send a patch, k8s will fail because validating webhook do not expect this field
-                        patch: None,
-                        patch_type: None,
-                        ..validation_response
-                    }
-            } else {
-                validation_response
-            }
-        }
-        PolicyMode::Monitor => {
-            // In monitor mode we always accept
-            // the request, but log what would
-            // have been the decision of the
-            // policy. We also force mutating
-            // patches to be none. Status is also
-            // overridden, as it's only taken into
-            // account when a request is rejected.
-            info!(
-                policy_id = policy_id.to_string(),
-                allowed_to_mutate = allowed_to_mutate,
-                response = format!("{validation_response:?}").as_str(),
-                "policy evaluation (monitor mode)",
-            );
-            AdmissionResponse {
-                allowed: true,
-                patch_type: None,
-                patch: None,
-                status: None,
-                ..validation_response
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::test_utils::build_admission_review_request;
+    use crate::{
+        config::PolicyMode, evaluation::PolicyID, test_utils::build_admission_review_request,
+    };
 
     use lazy_static::lazy_static;
-    use policy_evaluator::admission_response;
     use rstest::*;
 
     lazy_static! {
@@ -244,6 +189,9 @@ mod tests {
         mock_evaluation_environment
             .expect_should_always_accept_requests_made_inside_of_namespace()
             .returning(|_namespace| false);
+        mock_evaluation_environment
+            .expect_get_policy_custom_rejection_message()
+            .returning(|_policy_id| Ok(None));
 
         mock_evaluation_environment
     }
@@ -278,291 +226,11 @@ mod tests {
         mock_evaluation_environment
             .expect_should_always_accept_requests_made_inside_of_namespace()
             .returning(move |namespace| namespace == allowed_namespace);
+        mock_evaluation_environment
+            .expect_get_policy_custom_rejection_message()
+            .returning(|_policy_id| Ok(None));
 
         mock_evaluation_environment
-    }
-
-    #[test]
-    fn validation_response_with_constraints_not_allowed_to_mutate() {
-        let rejection_response = AdmissionResponse {
-            allowed: false,
-            patch: None,
-            patch_type: None,
-            status: Some(AdmissionResponseStatus {
-                message: Some("Request rejected by policy policy-id. The policy attempted to mutate the request, but it is currently configured to not allow mutations.".to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        };
-        let accept_response = AdmissionResponse {
-            allowed: true,
-            ..Default::default()
-        };
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Protect,
-                false,
-                AdmissionResponse {
-                    allowed: true,
-                    patch: Some("patch".to_string()),
-                    patch_type: Some(admission_response::PatchType::JSONPatch),
-                    ..Default::default()
-                },
-            ),
-            rejection_response,
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Monitor,
-                false,
-                AdmissionResponse {
-                    allowed: true,
-                    patch: Some("patch".to_string()),
-                    patch_type: Some(admission_response::PatchType::JSONPatch),
-                    ..Default::default()
-                },
-            ),
-            accept_response,
-        );
-    }
-
-    #[test]
-    fn validation_response_with_constraints_monitor_mode() {
-        let admission_response = AdmissionResponse {
-            allowed: true,
-            ..Default::default()
-        };
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Monitor,
-                true,
-                AdmissionResponse {
-                    allowed: true,
-                    patch: Some("patch".to_string()),
-                    patch_type: Some(admission_response::PatchType::JSONPatch),
-                    ..Default::default()
-                },
-            ),
-            admission_response,
-            "Mutated request from a policy allowed to mutate should be accepted in monitor mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Monitor,
-                false,
-                AdmissionResponse {
-                    allowed: true,
-                    patch: Some("patch".to_string()),
-                    patch_type: Some(admission_response::PatchType::JSONPatch),
-                    ..Default::default()
-                },
-            ),
-            admission_response, "Mutated request from a policy not allowed to mutate should be accepted in monitor mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Monitor,
-                true,
-                AdmissionResponse {
-                    allowed: true,
-                    ..Default::default()
-                },
-            ),
-            admission_response,
-            "Accepted request from a policy allowed to mutate should be accepted in monitor mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Monitor,
-                true,
-                AdmissionResponse {
-                    allowed: false,
-                    status: Some(AdmissionResponseStatus {
-                        message: Some("some rejection message".to_string()),
-                        code: Some(500),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                },
-            ),
-            admission_response, "Not accepted request from a policy allowed to mutate should be accepted in monitor mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Monitor,
-                false,
-                AdmissionResponse {
-                    allowed: true,
-                    ..Default::default()
-                },
-            ),
-            admission_response, "Accepted request from a policy not allowed to mutate should be accepted in monitor mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Monitor,
-                false,
-                AdmissionResponse {
-                    allowed: false,
-                    status: Some(AdmissionResponseStatus {
-                        message: Some("some rejection message".to_string()),
-                        code: Some(500),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                },
-            ),
-            admission_response, "Not accepted request from a policy not allowed to mutate should be accepted in monitor mode"
-        );
-    }
-
-    #[test]
-    fn validation_response_with_constraints_protect_mode() {
-        let admission_response = AdmissionResponse {
-            allowed: true,
-            ..Default::default()
-        };
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Protect,
-                true,
-                AdmissionResponse {
-                    allowed: true,
-                    patch: Some("patch".to_string()),
-                    patch_type: Some(admission_response::PatchType::JSONPatch),
-                    ..Default::default()
-                },
-            ),
-            AdmissionResponse {
-                allowed: true,
-                patch: Some("patch".to_string()),
-                patch_type: Some(admission_response::PatchType::JSONPatch),
-                ..Default::default()
-            },
-            "Mutated request from a policy allowed to mutate should be accepted in protect mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Protect,
-                false,
-                AdmissionResponse {
-                    allowed: true,
-                    patch: Some("patch".to_string()),
-                    patch_type: Some(admission_response::PatchType::JSONPatch),
-                    ..Default::default()
-                },
-            ),
-            AdmissionResponse {
-            allowed: false,
-            patch: None,
-            patch_type: None,
-            status: Some(AdmissionResponseStatus {
-                message: Some("Request rejected by policy policy-id. The policy attempted to mutate the request, but it is currently configured to not allow mutations.".to_string()),
-                ..Default::default()
-            }),
-            ..Default::default()
-        },
-            "Mutated request from a policy not allowed to mutate should be reject in protect mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Protect,
-                true,
-                AdmissionResponse {
-                    allowed: true,
-                    ..Default::default()
-                },
-            ),
-            admission_response,
-            "Accepted request from a policy allowed to mutate should be accepted in protect mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Protect,
-                true,
-                AdmissionResponse {
-                    allowed: false,
-                    status: Some(AdmissionResponseStatus {
-                        message: Some("some rejection message".to_string()),
-                        code: Some(500),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                },
-            ),
-            AdmissionResponse {
-                    allowed: false,
-                    status: Some(AdmissionResponseStatus {
-                        message: Some("some rejection message".to_string()),
-                        code: Some(500),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                }, "Not accepted request from a policy allowed to mutate should be rejected in protect mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Protect,
-                false,
-                AdmissionResponse {
-                    allowed: true,
-                    ..Default::default()
-                },
-            ),
-            admission_response, "Accepted request from a policy not allowed to mutate should be accepted in protect mode"
-        );
-
-        assert_eq!(
-            validation_response_with_constraints(
-                &POLICY_ID,
-                &PolicyMode::Protect,
-                false,
-                AdmissionResponse {
-                    allowed: false,
-                    status: Some(AdmissionResponseStatus {
-                        message: Some("some rejection message".to_string()),
-                        code: Some(500),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                },
-            ),
-            AdmissionResponse {
-                    allowed: false,
-                    status: Some(AdmissionResponseStatus {
-                        message: Some("some rejection message".to_string()),
-                        code: Some(500),
-                        ..Default::default()
-                    }),
-                    ..Default::default()
-                }, "Not accepted request from a policy not allowed to mutate should be rejected in protect mode"
-        );
     }
 
     #[rstest]

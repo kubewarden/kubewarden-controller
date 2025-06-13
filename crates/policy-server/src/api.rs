@@ -1,3 +1,4 @@
+mod admission_response_handler;
 pub mod admission_review;
 mod api_error;
 pub(crate) mod handlers;

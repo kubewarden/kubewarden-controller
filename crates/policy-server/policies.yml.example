@@ -3,6 +3,7 @@ psp-apparmor:
 psp-capabilities:
   module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.7
   allowedToMutate: true
+  message: "My custom error message"
   settings:
     allowed_capabilities: ["*"]
     required_drop_capabilities: ["KILL"]
