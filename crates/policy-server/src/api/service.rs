@@ -113,9 +113,9 @@ pub(crate) fn evaluate(
             &policy_mode,
             allowed_to_mutate,
             custom_rejection_message,
-            vanilla_validation_response.clone(),
+            vanilla_validation_response,
         ),
-        RequestOrigin::Audit => vanilla_validation_response.clone(),
+        RequestOrigin::Audit => vanilla_validation_response,
     };
 
     match validate_request {
@@ -135,8 +135,6 @@ pub(crate) fn evaluate(
             metrics::add_policy_evaluation(&policy_evaluation_metric);
         }
         ValidateRequest::Raw(_) => {
-            let accepted = vanilla_validation_response.allowed;
-            let mutated = vanilla_validation_response.patch.is_some();
             let raw_policy_evaluation_metric = metrics::RawPolicyEvaluation {
                 policy_name: policy_id.to_string(),
                 policy_mode: policy_mode.into(),
