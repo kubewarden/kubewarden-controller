@@ -13,7 +13,7 @@ use crate::policy_evaluator::PolicySettings;
 use crate::policy_metadata::ContextAwareResource;
 
 /// The settings of a policy group member
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PolicyGroupMemberSettings {
     /// The policy settings
     pub settings: PolicySettings,
