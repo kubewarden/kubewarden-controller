@@ -67,16 +67,7 @@ func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer
 			{
 				Name:       "policy-server",
 				Port:       constants.PolicyServerServicePort,
-				TargetPort: intstr.FromInt(constants.PolicyServerPort),
-				Protocol:   corev1.ProtocolTCP,
-			},
-			// Keep adding the old port to avoid breaking a cluster
-			// during the upgrade to Kubewarden 1.23.0
-			// TODO: remove this port with a future release
-			{
-				Name:       "policy-server-legacy",
-				Port:       constants.PolicyServerPort,
-				TargetPort: intstr.FromInt(constants.PolicyServerPort),
+				TargetPort: intstr.FromInt(constants.PolicyServerListenPort),
 				Protocol:   corev1.ProtocolTCP,
 			},
 		},
