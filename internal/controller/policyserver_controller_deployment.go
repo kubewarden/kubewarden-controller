@@ -598,7 +598,7 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 			},
 			{
 				Name:  "KUBEWARDEN_PORT",
-				Value: strconv.Itoa(constants.PolicyServerPort),
+				Value: strconv.Itoa(constants.PolicyServerListenPort),
 			},
 			{
 				Name:  "KUBEWARDEN_READINESS_PROBE_PORT",
