@@ -79,13 +79,37 @@ Add Kubewarden metadata to a WebAssembly module
 
 ## `kwctl bench`
 
-Benchmarks a Kubewarden policy
+Benchmarks a Kubewarden policy.
 
-**Usage:** `kwctl bench [OPTIONS] --request-path <PATH> <uri_or_sha_prefix>`
+The policy can be specified in the following ways:
+- URI: e.g., `registry://ghcr.io/kubewarden/policies/psp-policy:latest` or `https://example.com/kubewarden/policies/main/psp-policy/psp-policy.wasm`
+- SHA prefix: e.g., `c3b80a10f9c3` (requires the policy to be already pulled)
+- Local WASM file: e.g., `file://home/tux/new-policy/psp-policy.wasm`
+- Local YAML file: e.g., `file://home/tux/cluster-admission-policy.yaml` (contains declarations of Kubewarden Custom Resources like `ClusterAdmissionPolicy`, `AdmissionPolicy`, etc.)
+
+Default Behavior:
+If the schema is omitted, `file://` is assumed, rooted in the current directory.
+
+Notes on Kubewarden Custom Resources:
+- Flags `--request-path`, `--settings-path`, and `--settings-json` are ignored; settings are read from the Custom Resource definition.
+- The `--execution-mode` flag applies to all policies in the YAML file.
+- The `--raw` flag cannot be used, as Kubewarden's Custom Resources do not support `raw` policies.
+
+Only the following attributes of the Custom Resource Definition (CRD) are evaluated:
+- Policy module
+- Policy settings
+- Context-aware resources the policy can access
+
+Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
+
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+
+
+**Usage:** `kwctl bench [OPTIONS] --request-path <PATH> <uri_or_sha_prefix_or_yaml_file>`
 
 ###### **Arguments:**
 
-* `<URI_OR_SHA_PREFIX>` — Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.
+* `<URI_OR_SHA_PREFIX_OR_YAML_FILE>` — Policy URI, SHA prefix or YAML file containing Kubewarden policy resources. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.
 
 ###### **Options:**
 
@@ -292,13 +316,37 @@ Removes a Kubewarden policy from the store
 
 ## `kwctl run`
 
-Runs a Kubewarden policy from a given URI
+Run one or more Kubewarden policies locally.
 
-**Usage:** `kwctl run [OPTIONS] --request-path <PATH> <uri_or_sha_prefix>`
+The policy can be specified in the following ways:
+- URI: e.g., `registry://ghcr.io/kubewarden/policies/psp-policy:latest` or `https://example.com/kubewarden/policies/main/psp-policy/psp-policy.wasm`
+- SHA prefix: e.g., `c3b80a10f9c3` (requires the policy to be already pulled)
+- Local WASM file: e.g., `file://home/tux/new-policy/psp-policy.wasm`
+- Local YAML file: e.g., `file://home/tux/cluster-admission-policy.yaml` (contains declarations of Kubewarden Custom Resources like `ClusterAdmissionPolicy`, `AdmissionPolicy`, etc.)
+
+Default Behavior:
+If the schema is omitted, `file://` is assumed, rooted in the current directory.
+
+Notes on Kubewarden Custom Resources:
+- Flags `--request-path`, `--settings-path`, and `--settings-json` are ignored; settings are read from the Custom Resource definition.
+- The `--execution-mode` flag applies to all policies in the YAML file.
+- The `--raw` flag cannot be used, as Kubewarden's Custom Resources do not support `raw` policies.
+
+Only the following attributes of the Custom Resource Definition (CRD) are evaluated:
+- Policy module
+- Policy settings
+- Context-aware resources the policy can access
+
+Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
+
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+
+
+**Usage:** `kwctl run [OPTIONS] --request-path <PATH> <uri_or_sha_prefix_or_yaml_file>`
 
 ###### **Arguments:**
 
-* `<URI_OR_SHA_PREFIX>` — Policy URI or SHA prefix. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.
+* `<URI_OR_SHA_PREFIX_OR_YAML_FILE>` — Policy URI, SHA prefix or YAML file containing Kubewarden policy resources. Supported schemes: registry://, https://, file://. If schema is omitted, file:// is assumed, rooted on the current directory.
 
 ###### **Options:**
 

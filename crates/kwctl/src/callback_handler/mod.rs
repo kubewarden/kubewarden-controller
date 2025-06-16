@@ -1,12 +1,15 @@
-use crate::run::{HostCapabilitiesMode, PullAndRunSettings};
+use std::path::PathBuf;
+
 use anyhow::Result;
 use policy_evaluator::{callback_requests::CallbackRequest, kube};
-use std::path::PathBuf;
 use tokio::sync::{mpsc, oneshot};
 
-use self::proxy::CallbackHandlerProxy;
-
 mod proxy;
+
+use crate::{
+    callback_handler::proxy::CallbackHandlerProxy,
+    config::{pull_and_run::PullAndRunSettings, HostCapabilitiesMode},
+};
 
 #[derive(Clone)]
 pub(crate) enum ProxyMode {
@@ -27,29 +30,29 @@ impl CallbackHandler {
     pub async fn new(
         cfg: &PullAndRunSettings,
         kube_client: Option<kube::Client>,
-        shutdown_channel: oneshot::Receiver<()>,
+        shutdown_channel_rx: oneshot::Receiver<()>,
     ) -> Result<CallbackHandler> {
         match &cfg.host_capabilities_mode {
             HostCapabilitiesMode::Proxy(proxy_mode) => {
-                new_proxy(proxy_mode, cfg, kube_client, shutdown_channel).await
+                new_proxy(proxy_mode, cfg, kube_client, shutdown_channel_rx).await
             }
             HostCapabilitiesMode::Direct => {
-                new_transparent(cfg, kube_client, shutdown_channel).await
+                new_transparent(cfg, kube_client, shutdown_channel_rx).await
             }
-        }
-    }
-
-    pub async fn loop_eval(&mut self) {
-        match self {
-            CallbackHandler::Direct(direct) => direct.loop_eval().await,
-            CallbackHandler::Proxy(proxy) => proxy.loop_eval().await,
         }
     }
 
     pub fn sender_channel(&self) -> mpsc::Sender<CallbackRequest> {
         match self {
-            CallbackHandler::Direct(direct) => direct.sender_channel(),
-            CallbackHandler::Proxy(proxy) => proxy.sender_channel(),
+            CallbackHandler::Direct(handler) => handler.sender_channel(),
+            CallbackHandler::Proxy(handler) => handler.sender_channel(),
+        }
+    }
+
+    pub async fn loop_eval(self) {
+        match self {
+            CallbackHandler::Direct(mut handler) => handler.loop_eval().await,
+            CallbackHandler::Proxy(mut handler) => handler.loop_eval().await,
         }
     }
 }
@@ -58,11 +61,11 @@ async fn new_proxy(
     mode: &ProxyMode,
     cfg: &PullAndRunSettings,
     kube_client: Option<kube::Client>,
-    shutdown_channel: oneshot::Receiver<()>,
+    shutdown_channel_rx: oneshot::Receiver<()>,
 ) -> Result<CallbackHandler> {
     let proxy = CallbackHandlerProxy::new(
         mode,
-        shutdown_channel,
+        shutdown_channel_rx,
         cfg.sources.clone(),
         cfg.sigstore_trust_root.clone(),
         kube_client,
@@ -75,10 +78,10 @@ async fn new_proxy(
 async fn new_transparent(
     cfg: &PullAndRunSettings,
     kube_client: Option<kube::Client>,
-    shutdown_channel: oneshot::Receiver<()>,
+    shutdown_channel_rx: oneshot::Receiver<()>,
 ) -> Result<CallbackHandler> {
     let mut callback_handler_builder =
-        policy_evaluator::callback_handler::CallbackHandlerBuilder::new(shutdown_channel)
+        policy_evaluator::callback_handler::CallbackHandlerBuilder::new(shutdown_channel_rx)
             .registry_config(cfg.sources.clone())
             .trust_root(cfg.sigstore_trust_root.clone());
     if let Some(kc) = kube_client {

@@ -104,14 +104,19 @@ This value can be obtained using a tool like [crane](https://github.com/google/g
 crane digest ghcr.io/kubewarden/policies/psp-capabilities:v0.1.6
 ```
 
-### Run a policy locally
+### Run
 
 `kwctl` can be used to run a policy locally, outside of Kubernetes. This can be used
 to quickly evaluate a policy and find the right settings for it.
 
 The evaluation is done against a pre-recorded [`AdmissionReview`](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#request).
 
-Running a policy locally:
+> **Note:** it's possible to scaffodl an `AdmissionReview` object from a Kubernetes resource.
+> Take a look at [this section](#scaffold-kubernetes-custom-resources) for more details.
+
+#### Run a local policy
+
+To run a local `.wasm` file containing a policy:
 
 ```console
 kwctl run \
@@ -123,7 +128,33 @@ kwctl run \
 Policy configuration can be passed on the CLI via the `--settings-json` flag
 or can be loaded from the disk via the `--settings-path` flag.
 
-#### Scaffold AdmissionReview from a Kubernetes resource
+#### Run a policy defined by a Kubewarden Custom Resource
+
+To run a local YAML file containing the definition of any of the Kubewarden Custom
+Resources:
+
+```console
+kwctl run \
+  -r test_data/ingress.json \
+  policy.yaml
+```
+
+The YAML file can contain any of the Kubewarden CRDs, including policy groups.
+
+**Warning:** kwctl considers only these attributes of the CRD:
+
+- policy module to be evaluated
+- policy settings
+- context aware resources
+
+All the other fields are ignored. For example, `rules`, `matchConditions`, `objectSelector`,
+`namespaceSelector` and other fields are not taken into account.
+
+Moreover, the YAML file could contain multiple declarations of Kubewarden Custom Resources. In this case
+kwctl will evaluate each policy found inside of the YAML file. However, the same request is going to be used
+during each evaluation.
+
+### [Scaffold AdmissionReview from a Kubernetes resource](#scaffold-admissionreview-from-a-kubernetes-resource)
 
 It's possible to scaffold an `AdmissionReview` object from a Kubernetes resource:
 

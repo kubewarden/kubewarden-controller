@@ -1,4 +1,10 @@
-use crate::{Registry, Sources};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    io::{self},
+    str::FromStr,
+};
+
 use anyhow::{anyhow, Result};
 use is_terminal::IsTerminal;
 use policy_evaluator::{
@@ -9,16 +15,16 @@ use policy_evaluator::{
             manifest::{OciImageManifest, OciManifest},
             secrets::RegistryAuth,
         },
+        registry::Registry,
         sigstore::{
             cosign::{ClientBuilder, CosignCapabilities},
             registry::{oci_reference::OciReference, Auth, ClientConfig},
         },
+        sources::Sources,
     },
     policy_metadata::Metadata,
 };
-use prettytable::{format::FormatBuilder, Table};
-use std::io::{self};
-use std::{collections::HashMap, convert::TryFrom, str::FromStr};
+use prettytable::{format::FormatBuilder, row, Table};
 use termimad::{terminal_size, FmtText, MadSkin};
 
 pub(crate) async fn inspect(
@@ -330,6 +336,7 @@ async fn fetch_signatures_manifest(
     let auth = match Registry::auth(image_name) {
         RegistryAuth::Anonymous => Auth::Anonymous,
         RegistryAuth::Basic(username, password) => Auth::Basic(username, password),
+        RegistryAuth::Bearer(token) => Auth::Bearer(token),
     };
 
     let (cosign_signature_image, _source_image_digest) =

@@ -1,11 +1,17 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     path::Path,
 };
 
 use anyhow::Result;
 use common::{setup_command, test_data};
-use policy_evaluator::{policy_fetcher, policy_metadata};
+use policy_evaluator::{
+    kubewarden_policy_sdk::crd::policies::{
+        admission_policy, admission_policy_group, cluster_admission_policy,
+        cluster_admission_policy_group, common::ContextAwareResource as ContextAwareResourceSdk,
+    },
+    policy_fetcher, policy_metadata,
+};
 use predicates::{prelude::*, str::contains, str::is_empty};
 use rstest::rstest;
 use tempfile::tempdir;
@@ -27,6 +33,46 @@ fn pull_policies(path: &Path, policies: &[&str]) {
 
         cmd.assert().success();
     }
+}
+
+fn admission_policy(name: &str, module: &str) -> admission_policy::AdmissionPolicy {
+    admission_policy::AdmissionPolicy {
+        metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+            name: Some(name.to_string()),
+            ..Default::default()
+        },
+        spec: Some(admission_policy::AdmissionPolicySpec {
+            module: module.to_string(),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+fn cluster_admission_policy(
+    name: &str,
+    module: &str,
+    context_aware_resources: &[ContextAwareResourceSdk],
+) -> cluster_admission_policy::ClusterAdmissionPolicy {
+    cluster_admission_policy::ClusterAdmissionPolicy {
+        metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+            name: Some(name.to_string()),
+            ..Default::default()
+        },
+        spec: Some(cluster_admission_policy::ClusterAdmissionPolicySpec {
+            module: module.to_string(),
+            context_aware_resources: context_aware_resources.to_vec(),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+fn write_tmp_yaml_file(data: &[u8]) -> tempfile::NamedTempFile {
+    let yaml_file =
+        tempfile::NamedTempFile::with_suffix(".yaml").expect("cannot create temp file for CRD");
+    std::fs::write(yaml_file.path(), data).expect("cannot write data to file");
+    yaml_file
 }
 
 #[test]
@@ -100,7 +146,7 @@ fn test_pull_registry_no_tag() {
 #[case::rejected("privileged-pod.json", false)]
 #[case::admission_review_allowed("unprivileged-pod-admission-review.json", true)]
 #[case::admission_review_rejected("privileged-pod-admission-review.json", false)]
-fn test_run(#[case] request: &str, #[case] allowed: bool) {
+fn test_run_individual_policy_from_cli(#[case] request: &str, #[case] allowed: bool) {
     let tempdir = tempdir().unwrap();
     pull_policies(tempdir.path(), POLICIES);
 
@@ -113,6 +159,136 @@ fn test_run(#[case] request: &str, #[case] allowed: bool) {
     cmd.assert().success();
     cmd.assert()
         .stdout(contains(format!("\"allowed\":{}", allowed)));
+}
+
+#[rstest]
+#[case::allowed("unprivileged-pod.json", true)]
+#[case::rejected("privileged-pod.json", false)]
+#[case::admission_review_allowed("unprivileged-pod-admission-review.json", true)]
+#[case::admission_review_rejected("privileged-pod-admission-review.json", false)]
+fn test_run_individual_policy_from_yaml(#[case] request: &str, #[case] allowed: bool) {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let crd = admission_policy(
+        "pod-privileged-policy",
+        "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+    );
+    let yaml_file = write_tmp_yaml_file(
+        serde_yaml::to_string(&crd)
+            .expect("cannot serialize CRD")
+            .as_bytes(),
+    );
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--request-path")
+        .arg(test_data(request))
+        .arg(yaml_file.path());
+
+    cmd.assert().success();
+    cmd.assert()
+        .stdout(contains(format!("\"allowed\":{}", allowed)));
+}
+
+#[test]
+fn test_run_multiple_policies_from_crd() {
+    use serde::Serialize;
+
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let mut serializer = serde_yaml::Serializer::new(vec![]);
+    for i in 1..3 {
+        let crd = admission_policy(
+            format!("pod-privileged-policy-{}", i).as_str(),
+            "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+        );
+        crd.serialize(&mut serializer)
+            .expect("cannot serialize CRD");
+    }
+    let yaml_file = write_tmp_yaml_file(
+        serializer
+            .into_inner()
+            .expect("cannot serialize CRD doc")
+            .as_slice(),
+    );
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--request-path")
+        .arg(test_data("unprivileged-pod.json"))
+        .arg(yaml_file.path());
+
+    cmd.assert().success();
+    cmd.assert()
+        .stdout(contains(format!("\"allowed\":{}", true)));
+}
+
+#[test]
+fn test_run_a_yaml_file_and_use_raw_flag() {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let crd = admission_policy(
+        "pod-privileged-policy",
+        "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+    );
+    let yaml_file = write_tmp_yaml_file(
+        serde_yaml::to_string(&crd)
+            .expect("cannot serialize CRD")
+            .as_bytes(),
+    );
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--raw")
+        .arg("--request-path")
+        .arg(test_data("unprivileged-pod.json"))
+        .arg(yaml_file.path());
+
+    cmd.assert().failure();
+}
+
+#[test]
+fn test_run_group_policy() {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let crd = admission_policy_group::AdmissionPolicyGroup {
+        metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+            name: Some("group-policy".to_string()),
+            ..Default::default()
+        },
+        spec: Some(admission_policy_group::AdmissionPolicyGroupSpec {
+            expression: "pod_privileged() && true".to_string(),
+            message: "you shall not pass!".to_string(),
+            policies: HashMap::from([(
+                "pod_privileged".to_string(),
+                admission_policy_group::PolicyGroupMember {
+                    module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5".to_string(),
+                    ..Default::default()
+                },
+            )]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let yaml_file = write_tmp_yaml_file(
+        serde_yaml::to_string(&crd)
+            .expect("cannot serialize CRD")
+            .as_bytes(),
+    );
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--request-path")
+        .arg(test_data("unprivileged-pod.json"))
+        .arg(yaml_file.path());
+
+    cmd.assert().success();
+    cmd.assert()
+        .stdout(contains(format!("\"allowed\":{}", true)));
 }
 
 #[rstest]
@@ -163,6 +339,137 @@ fn test_run_context(
     cmd.assert().success();
     cmd.assert()
         .stdout(contains(format!("\"allowed\":{}", allowed)));
+}
+
+#[rstest]
+#[case::allowed(
+    "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0",
+    vec![ContextAwareResourceSdk{
+        api_version: "v1".to_string(),
+        kind: "Namespace".to_string(),
+    }],
+    "context-aware-policy-request-pod-creation-all-labels.json",
+    "context-aware-demo-namespace-found.yml",
+    true
+)]
+#[case::rejected(
+    "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0",
+    vec![ContextAwareResourceSdk{
+        api_version: "v1".to_string(),
+        kind: "Namespace".to_string(),
+    }],
+    "context-aware-policy-request-pod-creation-all-labels.json",
+    "context-aware-demo-namespace-not-found.yml",
+    false
+)]
+#[case::gatekeeper_allowed(
+    "registry://ghcr.io/kubewarden/tests/unique-ingress-policy:v0.1.3",
+    vec![ContextAwareResourceSdk{
+        api_version: "networking.k8s.io/v1".to_string(),
+        kind: "Ingress".to_string(),
+    }],
+    "ingress.json",
+    "context-aware-unique-ingress-no-duplicate.yml",
+    true
+)]
+#[case::gatekeeper_rejected(
+    "registry://ghcr.io/kubewarden/tests/unique-ingress-policy:v0.1.3",
+    vec![ContextAwareResourceSdk{
+        api_version: "networking.k8s.io/v1".to_string(),
+        kind: "Ingress".to_string(),
+    }],
+    "ingress.json",
+    "context-aware-unique-ingress-duplicate.yml",
+    false
+)]
+fn test_run_context_from_yaml(
+    #[case] policy_uri: &str,
+    #[case] context_aware_resources: Vec<ContextAwareResourceSdk>,
+    #[case] request: &str,
+    #[case] session: &str,
+    #[case] allowed: bool,
+) {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let session_path = test_data(format!("host-capabilities-sessions/{}", session).as_str());
+
+    let crd = cluster_admission_policy("policy", policy_uri, &context_aware_resources);
+    let yaml_file = write_tmp_yaml_file(
+        serde_yaml::to_string(&crd)
+            .expect("cannot serialize CRD")
+            .as_bytes(),
+    );
+
+    let mut cmd = setup_command(tempdir.path());
+
+    cmd.arg("run")
+        .arg("--allow-context-aware")
+        .arg("--request-path")
+        .arg(test_data(request))
+        .arg("--replay-host-capabilities-interactions")
+        .arg(session_path)
+        .arg(yaml_file.path());
+
+    cmd.assert().success();
+    cmd.assert()
+        .stdout(contains(format!("\"allowed\":{}", allowed)));
+}
+
+#[test]
+fn test_run_ctx_aware_group_policy() {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let crd = cluster_admission_policy_group::ClusterAdmissionPolicyGroup {
+        metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+            name: Some("group-policy".to_string()),
+            ..Default::default()
+        },
+        spec: Some(
+            cluster_admission_policy_group::ClusterAdmissionPolicyGroupSpec {
+                expression: "demo_policy() && true".to_string(),
+                message: "you shall not pass!".to_string(),
+                policies: HashMap::from([(
+                    "demo_policy".to_string(),
+                    cluster_admission_policy_group::PolicyGroupMemberWithContext {
+                        module:
+                            "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0"
+                                .to_string(),
+                        context_aware_resources: vec![ContextAwareResourceSdk {
+                            api_version: "v1".to_string(),
+                            kind: "Namespace".to_string(),
+                        }],
+                        ..Default::default()
+                    },
+                )]),
+                ..Default::default()
+            },
+        ),
+        ..Default::default()
+    };
+    let yaml_file = write_tmp_yaml_file(
+        serde_yaml::to_string(&crd)
+            .expect("cannot serialize CRD")
+            .as_bytes(),
+    );
+    let request = "context-aware-policy-request-pod-creation-all-labels.json";
+
+    let session = "context-aware-demo-namespace-found.yml";
+    let session_path = test_data(format!("host-capabilities-sessions/{}", session).as_str());
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--allow-context-aware")
+        .arg("--request-path")
+        .arg(test_data(request))
+        .arg("--replay-host-capabilities-interactions")
+        .arg(session_path)
+        .arg(yaml_file.path());
+
+    cmd.assert().success();
+    cmd.assert()
+        .stdout(contains(format!("\"allowed\":{}", true)));
 }
 
 #[test]
