@@ -78,7 +78,7 @@ pub(crate) async fn audit_handler(
     let response = acquire_semaphore_and_evaluate(
         state,
         policy_id,
-        ValidateRequest::AdmissionRequest(admission_review.request),
+        ValidateRequest::AdmissionRequest(Box::new(admission_review.request)),
         RequestOrigin::Audit,
     )
     .await
@@ -129,7 +129,7 @@ pub(crate) async fn validate_handler(
     let response = acquire_semaphore_and_evaluate(
         state,
         policy_id,
-        ValidateRequest::AdmissionRequest(admission_review.request),
+        ValidateRequest::AdmissionRequest(Box::new(admission_review.request)),
         RequestOrigin::Validate,
     )
     .await

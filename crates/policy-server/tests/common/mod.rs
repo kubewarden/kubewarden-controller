@@ -1,15 +1,18 @@
+use std::{
+    collections::{BTreeSet, HashMap},
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener},
+    sync::Once,
+};
+
 use axum::Router;
+use policy_evaluator::policy_evaluator::PolicySettings;
 use policy_server::{
     config::{Config, PolicyGroupMember, PolicyMode, PolicyOrPolicyGroup},
     PolicyServer,
 };
-use std::{
-    collections::{BTreeSet, HashMap},
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener},
-};
+use serde_json::json;
 use tempfile::tempdir;
 
-use std::sync::Once;
 static START: Once = Once::new();
 
 /// Common setup for tests. This function should be called at the beginning of each test.
@@ -45,13 +48,13 @@ pub(crate) fn default_test_config() -> Config {
                 module: "ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0".to_owned(),
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: Some(true),
-                settings: Some(HashMap::from([
-                    (
-                        "forbiddenResources".to_owned(),
-                        vec!["banana", "carrot"].into(),
-                    ),
-                    ("defaultResource".to_owned(), "hay".into()),
-                ])),
+                settings: Some(
+                    PolicySettings::try_from(&json!({
+                        "forbiddenResources": ["banana", "carrot"],
+                        "defaultResource": "hay"
+                    }))
+                    .unwrap(),
+                ),
                 context_aware_resources: BTreeSet::new(),
                 message: None,
             },
@@ -62,7 +65,12 @@ pub(crate) fn default_test_config() -> Config {
                 module: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: None,
-                settings: Some(HashMap::from([("sleepMilliseconds".to_owned(), 2.into())])),
+                settings: Some(
+                    PolicySettings::try_from(&json!({
+                        "sleepMilliseconds": 2
+                    }))
+                    .unwrap(),
+                ),
                 context_aware_resources: BTreeSet::new(),
                 message: None,
             },
@@ -93,13 +101,13 @@ pub(crate) fn default_test_config() -> Config {
                     "raw_mutation".to_string(),
                     PolicyGroupMember {
                         module: "ghcr.io/kubewarden/tests/raw-mutation-policy:v0.1.0".to_owned(),
-                        settings: Some(HashMap::from([
-                            (
-                                "forbiddenResources".to_owned(),
-                                vec!["banana", "carrot"].into(),
-                            ),
-                            ("defaultResource".to_owned(), "hay".into()),
-                        ])),
+                        settings: Some(
+                            PolicySettings::try_from(&json!({
+                                "forbiddenResources": ["banana", "carrot"],
+                                "defaultResource": "hay"
+                            }))
+                            .unwrap(),
+                        ),
                         context_aware_resources: BTreeSet::new(),
                     },
                 )]),
@@ -112,14 +120,14 @@ pub(crate) fn default_test_config() -> Config {
         readiness_probe_addr: get_available_address_with_port(),
         sources: None,
         policies,
-        policies_download_dir: tempdir().unwrap().into_path(),
+        policies_download_dir: tempdir().unwrap().keep(),
         ignore_kubernetes_connection_failure: true,
         always_accept_admission_reviews_on_namespace: None,
         policy_evaluation_limit_seconds: Some(2),
         tls_config: None,
         pool_size: 2,
         metrics_enabled: false,
-        sigstore_cache_dir: tempdir().unwrap().into_path(),
+        sigstore_cache_dir: tempdir().unwrap().keep(),
         verification_config: None,
         log_level: "info".to_owned(),
         log_fmt: "json".to_owned(),

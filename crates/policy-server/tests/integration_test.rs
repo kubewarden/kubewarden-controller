@@ -18,7 +18,7 @@ use backon::{ExponentialBuilder, Retryable};
 use http_body_util::BodyExt;
 use policy_evaluator::admission_response::{self, StatusCause, StatusDetails};
 use policy_evaluator::{
-    admission_response::AdmissionResponseStatus,
+    admission_response::AdmissionResponseStatus, policy_evaluator::PolicySettings,
     policy_fetcher::verify::config::VerificationConfigV1,
 };
 use policy_server::{
@@ -27,6 +27,7 @@ use policy_server::{
 };
 use regex::Regex;
 use rstest::*;
+use serde_json::json;
 use tokio::fs;
 use tower::ServiceExt;
 
@@ -544,10 +545,12 @@ async fn test_policy_with_invalid_settings() {
             module: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
             policy_mode: PolicyMode::Protect,
             allowed_to_mutate: None,
-            settings: Some(HashMap::from([(
-                "sleepMilliseconds".to_owned(),
-                "abc".into(),
-            )])),
+            settings: Some(
+                PolicySettings::try_from(&json!({
+                    "sleepMilliseconds": "abc",
+                }))
+                .unwrap(),
+            ),
             context_aware_resources: BTreeSet::new(),
             message: None,
         },
