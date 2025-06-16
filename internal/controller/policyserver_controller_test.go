@@ -648,12 +648,7 @@ var _ = Describe("PolicyServer controller", func() {
 				// This is the new port used by the policy server service
 				Expect(service.Spec.Ports).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 					"Port":       Equal(int32(constants.PolicyServerServicePort)),
-					"TargetPort": Equal(intstr.IntOrString{IntVal: int32(constants.PolicyServerPort)}),
-				})))
-				// This is the legacy port used by the policy server service
-				Expect(service.Spec.Ports).To(ContainElement(MatchFields(IgnoreExtras, Fields{
-					"Port":       Equal(int32(constants.PolicyServerPort)),
-					"TargetPort": Equal(intstr.IntOrString{IntVal: int32(constants.PolicyServerPort)}),
+					"TargetPort": Equal(intstr.IntOrString{IntVal: int32(constants.PolicyServerListenPort)}),
 				})))
 				// This checks that the service has the legacy and recommended labels
 				// TODO simplify this with a future release
