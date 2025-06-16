@@ -28,19 +28,19 @@ lazy_static = "1.4.0"
 mime = "0.3"
 mockall_double = "0.3"
 num_cpus = "1.16.0"
-opentelemetry = { version = "0.29.0", default-features = false, features = [
+opentelemetry = { version = "0.30.0", default-features = false, features = [
   "metrics",
   "trace",
 ] }
-opentelemetry-otlp = { version = "0.29.0", features = [
+opentelemetry-otlp = { version = "0.30.0", features = [
   "grpc-tonic",
   "metrics",
   "tls",
   "tonic",
 ] }
-opentelemetry_sdk = { version = "0.29.0", features = ["rt-tokio"] }
+opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio"] }
 policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.26.0" }
-pprof = { version = "0.14", features = ["prost-codec"] }
+pprof = { version = "0.15", features = ["prost-codec"] }
 rayon = "1.10"
 regex = "1.10"
 rustls = { version = "0.23", default-features = false, features = [
@@ -63,10 +63,10 @@ tikv-jemallocator = { version = "0.6.0", features = [
   "unprefixed_malloc_on_supported_platforms",
 ] }
 tokio = { version = "^1.43.0", features = ["full"] }
-tonic = { version = "0.12.3" }
+tonic = { version = "0.13.1" }
 tower-http = { version = "0.6.1", features = ["trace"] }
 tracing = "0.1"
-tracing-opentelemetry = "0.30.0"
+tracing-opentelemetry = "0.31.0"
 tracing-subscriber = { version = "0.3", features = ["ansi", "fmt", "json"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -80,7 +80,7 @@ mockall        = "0.13"
 rcgen          = { version = "0.13", features = ["crypto"] }
 rstest         = "0.25"
 tempfile       = "3.16.0"
-testcontainers = { version = "0.23", features = ["watchdog"] }
+testcontainers = { version = "0.24", features = ["watchdog"] }
 tower          = { version = "0.5", features = ["util"] }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
