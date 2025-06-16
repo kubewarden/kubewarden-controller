@@ -180,3 +180,7 @@ func (r *AdmissionPolicy) GetDescription() (string, bool) {
 	desc, present := r.Annotations[AnnotationDescription]
 	return desc, present
 }
+
+func (r *AdmissionPolicy) GetMessage() string {
+	return r.Spec.Message
+}

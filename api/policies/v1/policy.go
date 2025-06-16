@@ -94,6 +94,7 @@ type PolicySettings interface {
 	GetTitle() (string, bool)
 	GetDescription() (string, bool)
 	GetTimeoutSeconds() *int32
+	GetMessage() string
 }
 
 // +kubebuilder:object:generate:=false
@@ -153,5 +154,4 @@ type PolicyGroup interface {
 	Policy
 	GetPolicyGroupMembersWithContext() PolicyGroupMembersWithContext
 	GetExpression() string
-	GetMessage() string
 }

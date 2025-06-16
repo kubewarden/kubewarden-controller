@@ -962,6 +962,10 @@ the webhook call will be ignored or the API call will fail based on the +
 failure policy. +
 The timeout value must be between 1 and 30 seconds. +
 Default to 10 seconds. + | 10 | 
+| *`message`* __string__ | Message overrides the rejection message of the policy. +
+When provided, the policy's rejection message can be found +
+inside of the `.status.details.causes` field of the +
+AdmissionResponse object + |  | 
 |===
 
 
@@ -1292,7 +1296,7 @@ PolicyServerSpec defines the desired state of PolicyServer.
 | *`annotations`* __object (keys:string, values:string)__ | Annotations is an unstructured key value map stored with a resource that may be +
 set by external tools to store and retrieve arbitrary metadata. They are not +
 queryable and should be preserved when modifying objects. +
-More info: http://kubernetes.io/docs/user-guide/annotations + |  | 
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ + |  | 
 | *`env`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#envvar-v1-core[$$EnvVar$$] array__ | List of environment variables to set in the container. + |  | 
 | *`serviceAccountName`* __string__ | Name of the service account associated with the policy server. +
 Namespace service account will be used if not specified. + |  | 

@@ -187,6 +187,13 @@ spec:
                   </ul>
                   Defaults to "Equivalent"
                 type: string
+              message:
+                description: |-
+                  Message overrides the rejection message of the policy.
+                  When provided, the policy's rejection message can be found
+                  inside of the `.status.details.causes` field of the
+                  AdmissionResponse object
+                type: string
               mode:
                 default: protect
                 description: |-

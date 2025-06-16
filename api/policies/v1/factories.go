@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	integrationTestsFinalizer   = "integration-tests-safety-net-finalizer"
-	defaultKubewardenRepository = "ghcr.io/kubewarden/policy-server"
-	maxNameSuffixLength         = 8
+	integrationTestsFinalizer          = "integration-tests-safety-net-finalizer"
+	defaultKubewardenRepository        = "ghcr.io/kubewarden/policy-server"
+	maxNameSuffixLength                = 8
+	defaultPolicyGroupRejectionMessage = "policy group default rejection message"
 )
 
 type AdmissionPolicyFactory struct {
@@ -30,6 +31,7 @@ type AdmissionPolicyFactory struct {
 	module       string
 	matchConds   []admissionregistrationv1.MatchCondition
 	mode         PolicyMode
+	message      string
 }
 
 func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
@@ -37,6 +39,7 @@ func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
 		name:         newName("admission-policy"),
 		namespace:    "default",
 		policyServer: "",
+		message:      "",
 		mutating:     false,
 		rules: []admissionregistrationv1.RuleWithOperations{
 			{
@@ -94,6 +97,11 @@ func (f *AdmissionPolicyFactory) WithMode(mode PolicyMode) *AdmissionPolicyFacto
 	return f
 }
 
+func (f *AdmissionPolicyFactory) WithMessage(message string) *AdmissionPolicyFactory {
+	f.message = message
+	return f
+}
+
 func (f *AdmissionPolicyFactory) Build() *AdmissionPolicy {
 	policy := AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -117,6 +125,7 @@ func (f *AdmissionPolicyFactory) Build() *AdmissionPolicy {
 				Mutating:        f.mutating,
 				MatchConditions: f.matchConds,
 				Mode:            f.mode,
+				Message:         f.message,
 			},
 		},
 	}
@@ -320,6 +329,7 @@ func (f *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
 					Rules:           f.rules,
 					MatchConditions: f.matchConds,
 					Mode:            f.mode,
+					Message:         defaultPolicyGroupRejectionMessage,
 				},
 				Policies: f.policyMembers,
 			},
@@ -335,12 +345,14 @@ type ClusterAdmissionPolicyGroupFactory struct {
 	policyMembers PolicyGroupMembersWithContext
 	matchConds    []admissionregistrationv1.MatchCondition
 	mode          PolicyMode
+	message       string
 }
 
 func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory {
 	return &ClusterAdmissionPolicyGroupFactory{
 		name:         newName("cluster-admission-policy-group"),
 		policyServer: "",
+		message:      defaultPolicyGroupRejectionMessage,
 		rules: []admissionregistrationv1.RuleWithOperations{
 			{
 				Operations: []admissionregistrationv1.OperationType{
@@ -376,6 +388,11 @@ func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory
 
 func (f *ClusterAdmissionPolicyGroupFactory) WithName(name string) *ClusterAdmissionPolicyGroupFactory {
 	f.name = name
+	return f
+}
+
+func (f *ClusterAdmissionPolicyGroupFactory) WithMessage(message string) *ClusterAdmissionPolicyGroupFactory {
+	f.message = message
 	return f
 }
 
@@ -426,6 +443,7 @@ func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGrou
 					Rules:           f.rules,
 					MatchConditions: f.matchConds,
 					Mode:            f.mode,
+					Message:         f.message,
 				},
 				Policies: f.policyMembers,
 			},

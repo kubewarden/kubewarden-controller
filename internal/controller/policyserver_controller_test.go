@@ -268,6 +268,7 @@ var _ = Describe("PolicyServer controller", func() {
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
 			admissionPolicy := policiesv1.NewAdmissionPolicyFactory().
+				WithMessage("This is a test message").
 				WithPolicyServer(policyServerName).
 				Build()
 			Expect(k8sClient.Create(ctx, admissionPolicy)).To(Succeed())
@@ -332,6 +333,7 @@ var _ = Describe("PolicyServer controller", func() {
 				AllowedToMutate:       admissionPolicy.IsMutating(),
 				Settings:              admissionPolicy.GetSettings(),
 				ContextAwareResources: admissionPolicy.GetContextAwareResources(),
+				Message:               admissionPolicy.GetMessage(),
 			}
 			policiesMap[clusterAdmissionPolicy.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -399,6 +401,7 @@ var _ = Describe("PolicyServer controller", func() {
 								}),
 								"module":     Equal(admissionPolicy.GetModule()),
 								"policyMode": Equal(string(admissionPolicy.GetPolicyMode())),
+								"message":    Equal(admissionPolicy.GetMessage()),
 							}),
 							clusterAdmissionPolicy.GetUniqueName(): And(MatchAllKeys(Keys{
 								"namespacedName": MatchAllKeys(Keys{
