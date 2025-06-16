@@ -80,7 +80,7 @@ mockall        = "0.13"
 rcgen          = { version = "0.13", features = ["crypto"] }
 rstest         = "0.25"
 tempfile       = "3.16.0"
-testcontainers = { version = "0.23", features = ["watchdog"] }
+testcontainers = { version = "0.24", features = ["watchdog"] }
 tower          = { version = "0.5", features = ["util"] }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
