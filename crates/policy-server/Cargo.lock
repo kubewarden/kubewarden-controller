@@ -4173,7 +4173,7 @@ dependencies = [
 
 [[package]]
 name = "policy-server"
-version = "1.26.0-rc1"
+version = "1.26.0"
 dependencies = [
  "anyhow",
  "axum",
