@@ -117,7 +117,7 @@ fn add_host_call_to_linker(linker: &mut wasmtime::Linker<Context>) -> Result<()>
     Ok(())
 }
 
-fn get_vec_from_memory<'a, T: 'a>(
+fn get_vec_from_memory<'a, T: 'static>(
     store: impl Into<StoreContext<'a, T>>,
     mem: Memory,
     ptr: i32,
