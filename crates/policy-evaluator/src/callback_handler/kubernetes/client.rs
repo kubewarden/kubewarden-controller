@@ -1,5 +1,10 @@
 use anyhow::{anyhow, Result};
-use kube::core::{DynamicObject, ObjectList};
+use k8s_openapi::api::authorization::v1::{SubjectAccessReview, SubjectAccessReviewStatus};
+use kube::{
+    api::PostParams,
+    core::{DynamicObject, ObjectList},
+    Api,
+};
 use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::RwLock, time::Instant};
 
@@ -286,5 +291,19 @@ impl Client {
     ) -> Result<String> {
         let resource = self.build_kube_resource(api_version, kind).await?;
         Ok(resource.resource.plural)
+    }
+
+    pub async fn can_i(
+        &mut self,
+        subject_access_review: &SubjectAccessReview,
+    ) -> Result<SubjectAccessReviewStatus> {
+        let sar_api: Api<SubjectAccessReview> = Api::all(self.kube_client.clone());
+
+        let response = sar_api
+            .create(&PostParams::default(), subject_access_review)
+            .await;
+        response
+            .map(|response| response.status.unwrap_or_default())
+            .map_err(anyhow::Error::new)
     }
 }

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use k8s_openapi::api::authorization::v1::SubjectAccessReview;
 use kubewarden_policy_sdk::host_capabilities::{
     verification::{KeylessInfo, KeylessPrefixInfo},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
@@ -201,6 +202,22 @@ pub enum CallbackRequestType {
         #[serde(with = "tokio_instant_serializer")]
         since: Instant,
     },
+
+    KubernetesCanI {
+        subject_access_review: Box<SubjectAccessReviewWrapper>,
+    },
+}
+/// Wrapper type to allow users to pass a `SubjectAccessReview` to the
+/// `KubernetesCanI` request. The original types does not implement the Eq trait.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct SubjectAccessReviewWrapper(pub SubjectAccessReview);
+
+impl Eq for SubjectAccessReviewWrapper {}
+
+impl AsRef<SubjectAccessReview> for SubjectAccessReviewWrapper {
+    fn as_ref(&self) -> &SubjectAccessReview {
+        &self.0
+    }
 }
 
 mod tokio_instant_serializer {
@@ -354,6 +371,14 @@ impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::GetResourceReque
             name: req.name,
             namespace: req.namespace,
             disable_cache: req.disable_cache,
+        }
+    }
+}
+
+impl From<SubjectAccessReview> for CallbackRequestType {
+    fn from(req: SubjectAccessReview) -> Self {
+        CallbackRequestType::KubernetesCanI {
+            subject_access_review: Box::new(SubjectAccessReviewWrapper(req)),
         }
     }
 }
