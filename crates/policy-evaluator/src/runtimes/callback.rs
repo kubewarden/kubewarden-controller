@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use k8s_openapi::api::authorization::v1::SubjectAccessReview;
 use kubewarden_policy_sdk::host_capabilities::{
     crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
-    kubernetes::{GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest},
+    kubernetes::{
+        GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
+        SubjectAccessReviewRequest,
+    },
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use tokio::sync::{mpsc, oneshot, oneshot::Receiver};
@@ -311,7 +313,7 @@ pub(crate) fn host_callback(
                     )
                 }
                 "can_i" => {
-                    let req: SubjectAccessReview =
+                    let req: SubjectAccessReviewRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
 
                     debug!(

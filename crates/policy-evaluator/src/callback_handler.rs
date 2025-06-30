@@ -326,10 +326,33 @@ impl CallbackHandler {
                 }
                 CallbackRequestType::KubernetesCanI {
                     subject_access_review,
+                    disable_cache,
                 } => {
-                    handle_callback!(req, format!("can_i"), "Service account has permissions", {
-                        kubernetes::can_i(kubernetes_client.as_mut(), &subject_access_review)
-                    })
+                    if disable_cache {
+                        handle_callback!(
+                            req,
+                            format!("can_i"),
+                            "Service account has permissions",
+                            {
+                                kubernetes::can_i(
+                                    kubernetes_client.as_mut(),
+                                    &subject_access_review,
+                                )
+                            }
+                        )
+                    } else {
+                        handle_callback!(
+                            req,
+                            format!("can_i"),
+                            "Service account has permissions",
+                            {
+                                kubernetes::can_i_cached(
+                                    kubernetes_client.as_mut(),
+                                    &subject_access_review,
+                                )
+                            }
+                        )
+                    }
                 }
             }
         });

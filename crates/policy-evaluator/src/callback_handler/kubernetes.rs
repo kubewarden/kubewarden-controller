@@ -164,3 +164,18 @@ pub(crate) async fn can_i(
             value,
         })
 }
+
+#[cached(
+    time = 5,
+    result = true,
+    key = "String",
+    convert = r#"{ format!("can_i({})", subject_access_review) }"#,
+    sync_writes = "default",
+    with_cached_flag = true
+)]
+pub(crate) async fn can_i_cached(
+    client: Option<&mut Client>,
+    subject_access_review: &SubjectAccessReviewWrapper,
+) -> Result<cached::Return<SubjectAccessReviewStatus>> {
+    can_i(client, subject_access_review).await
+}

@@ -271,7 +271,7 @@ async fn test_policy_evaluator(
 // https://github.com/kubewarden/context-aware-test-policy/pull/56
 #[case::wapc_cani(
     PolicyExecutionMode::KubewardenWapc,
-    "ghcr.io/jvanz/policies/context-aware-test-policy:cani",
+    "ghcr.io/jvanz/policies/context-aware-test-policy:latest",
     "app_deployment.json",
     wapc_and_wasi_scenario
 )]
