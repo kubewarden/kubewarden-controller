@@ -267,11 +267,9 @@ async fn test_policy_evaluator(
     "app_deployment.json",
     rego_scenario
 )]
-// FIXME update the policy URI once the PR is merged and released:
-// https://github.com/kubewarden/context-aware-test-policy/pull/56
 #[case::wapc_cani(
     PolicyExecutionMode::KubewardenWapc,
-    "ghcr.io/jvanz/policies/context-aware-test-policy:latest",
+    "ghcr.io/kubewarden/tests/context-aware-test-policy:v0.2.0",
     "app_deployment.json",
     wapc_and_wasi_scenario
 )]
