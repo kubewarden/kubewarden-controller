@@ -3,10 +3,13 @@ mod reflector;
 
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
+use k8s_openapi::api::authorization::v1::SubjectAccessReviewStatus;
 use kube::core::ObjectList;
 use serde::Serialize;
 
 pub(crate) use client::Client;
+
+use crate::callback_requests::SubjectAccessReviewWrapper;
 
 #[derive(Eq, Hash, PartialEq)]
 struct ApiVersionKind {
@@ -142,4 +145,37 @@ pub(crate) async fn has_list_resources_all_result_changed_since_instant(
         )
         .await
         .map(cached::Return::new)
+}
+
+pub(crate) async fn can_i(
+    client: Option<&mut Client>,
+    subject_access_review: &SubjectAccessReviewWrapper,
+) -> Result<cached::Return<SubjectAccessReviewStatus>> {
+    if client.is_none() {
+        return Err(anyhow!("kube::Client was not initialized properly"));
+    }
+
+    client
+        .unwrap()
+        .can_i(subject_access_review.as_ref())
+        .await
+        .map(|value| cached::Return {
+            was_cached: false,
+            value,
+        })
+}
+
+#[cached(
+    time = 5,
+    result = true,
+    key = "String",
+    convert = r#"{ format!("can_i({})", subject_access_review) }"#,
+    sync_writes = "default",
+    with_cached_flag = true
+)]
+pub(crate) async fn can_i_cached(
+    client: Option<&mut Client>,
+    subject_access_review: &SubjectAccessReviewWrapper,
+) -> Result<cached::Return<SubjectAccessReviewStatus>> {
+    can_i(client, subject_access_review).await
 }

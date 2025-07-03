@@ -71,6 +71,12 @@ pub(crate) async fn wapc_and_wasi_scenario(handle: Handle<Request<Body>, Respons
                 ) => {
                     send_response(send, fixtures::api_auth_service());
                 }
+                (
+                    &http::Method::POST,
+                    "/apis/authorization.k8s.io/v1/subjectaccessreviews",
+                    None,
+                    false,
+                ) => send_response(send, fixtures::subjectaccessreviewsstatus()),
                 _ => {
                     panic!("unexpected request: {:?}", request);
                 }

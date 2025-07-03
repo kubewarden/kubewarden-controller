@@ -1,10 +1,16 @@
 use anyhow::Result;
+use k8s_openapi::api::authorization::v1::SubjectAccessReview;
 use kubewarden_policy_sdk::host_capabilities::{
+    kubernetes::SubjectAccessReviewRequest,
     verification::{KeylessInfo, KeylessPrefixInfo},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    hash::{DefaultHasher, Hasher},
+};
+use std::{fmt::Display, hash::Hash};
 use tokio::{sync::oneshot, time::Instant};
 
 /// Holds the response to a waPC evaluation request
@@ -201,8 +207,12 @@ pub enum CallbackRequestType {
         #[serde(with = "tokio_instant_serializer")]
         since: Instant,
     },
-}
 
+    KubernetesCanI {
+        subject_access_review: Box<SubjectAccessReviewWrapper>,
+        disable_cache: bool,
+    },
+}
 mod tokio_instant_serializer {
     use serde::de::Error;
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -355,5 +365,59 @@ impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::GetResourceReque
             namespace: req.namespace,
             disable_cache: req.disable_cache,
         }
+    }
+}
+
+impl From<SubjectAccessReviewRequest> for CallbackRequestType {
+    fn from(req: SubjectAccessReviewRequest) -> Self {
+        CallbackRequestType::KubernetesCanI {
+            subject_access_review: Box::new(SubjectAccessReviewWrapper(req.subject_access_review)),
+            disable_cache: req.disable_cache,
+        }
+    }
+}
+
+/// Wrapper type to allow users to pass a `SubjectAccessReview` to the
+/// `KubernetesCanI` request. The original types does not implement the Eq trait.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct SubjectAccessReviewWrapper(pub SubjectAccessReview);
+
+impl Eq for SubjectAccessReviewWrapper {}
+
+/// Implementing the AsRef trait for SubjectAccessReviewWrapper to allow
+/// easy access to the inner SubjectAccessReview type.
+impl AsRef<SubjectAccessReview> for SubjectAccessReviewWrapper {
+    fn as_ref(&self) -> &SubjectAccessReview {
+        &self.0
+    }
+}
+
+/// Implementing the Display trait for SubjectAccessReviewWrapper to simplify the
+/// cache key generation. This implementation uses a hasher to generate a unique
+/// identifier for the SubjectAccessReviewWrapper instance.
+impl Display for SubjectAccessReviewWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        write!(f, "SubjectAccessReviewWrapper({})", hasher.finish())
+    }
+}
+
+/// Implementing the Hash trait for SubjectAccessReviewWrapper to be used in cache key
+impl Hash for SubjectAccessReviewWrapper {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.spec.user.hash(state);
+        if let Some(ref resource_attributes) = self.0.spec.resource_attributes {
+            resource_attributes.namespace.hash(state);
+            resource_attributes.verb.hash(state);
+            resource_attributes.resource.hash(state);
+        }
+        if let Some(ref non_resource_attributes) = self.0.spec.non_resource_attributes {
+            non_resource_attributes.path.hash(state);
+            non_resource_attributes.verb.hash(state);
+        }
+        self.0.spec.groups.hash(state);
+        self.0.spec.extra.hash(state);
+        self.0.spec.uid.hash(state);
     }
 }

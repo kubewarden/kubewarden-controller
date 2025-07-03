@@ -3,7 +3,10 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::{
     crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
-    kubernetes::{GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest},
+    kubernetes::{
+        GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
+        SubjectAccessReviewRequest,
+    },
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use tokio::sync::{mpsc, oneshot, oneshot::Receiver};
@@ -291,6 +294,32 @@ pub(crate) fn host_callback(
                     debug!(
                         eval_ctx.policy_id,
                         binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
+                    };
+                    send_request_and_wait_for_response(
+                        &eval_ctx.policy_id,
+                        binding,
+                        operation,
+                        req,
+                        rx,
+                        eval_ctx,
+                    )
+                }
+                "can_i" => {
+                    let req: SubjectAccessReviewRequest =
+                        serde_json::from_slice(payload.to_vec().as_ref())?;
+
+                    debug!(
+                        eval_ctx.policy_id,
+                        binding,
+                        namespace,
                         operation,
                         ?req,
                         "Sending request via callback channel"
