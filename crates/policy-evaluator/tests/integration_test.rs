@@ -267,7 +267,7 @@ async fn test_policy_evaluator(
     "app_deployment.json",
     rego_scenario
 )]
-#[case::wapc_cani(
+#[case::wapc_can_i(
     PolicyExecutionMode::KubewardenWapc,
     "ghcr.io/kubewarden/tests/context-aware-test-policy:v0.2.0",
     "app_deployment.json",

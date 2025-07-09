@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
-use k8s_openapi::api::authorization::v1::{SubjectAccessReview, SubjectAccessReviewStatus};
+use k8s_openapi::api::authorization::v1::{
+    ResourceAttributes, SubjectAccessReview, SubjectAccessReviewSpec, SubjectAccessReviewStatus,
+};
 use kube::{
     api::PostParams,
     core::{DynamicObject, ObjectList},
@@ -295,15 +297,37 @@ impl Client {
 
     pub async fn can_i(
         &mut self,
-        subject_access_review: &SubjectAccessReview,
+        user: String,
+        group: String,
+        namespace: String,
+        resource: String,
+        verb: String,
     ) -> Result<SubjectAccessReviewStatus> {
+        let subject_access_review = SubjectAccessReview {
+            spec: SubjectAccessReviewSpec {
+                user: Some(user),
+                resource_attributes: Some(ResourceAttributes {
+                    namespace: Some(namespace.to_owned()),
+                    verb: Some(verb),
+                    group: Some(group),
+                    resource: Some(resource),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
         let sar_api: Api<SubjectAccessReview> = Api::all(self.kube_client.clone());
 
         let response = sar_api
-            .create(&PostParams::default(), subject_access_review)
+            .create(&PostParams::default(), &subject_access_review)
             .await;
-        response
-            .map(|response| response.status.unwrap_or_default())
-            .map_err(anyhow::Error::new)
+        response.map_err(anyhow::Error::new).and_then(|response| {
+            if response.status.is_none() {
+                Err(anyhow!("SubjectAccessReview did not return a status"))
+            } else {
+                Ok(response.status.unwrap())
+            }
+        })
     }
 }

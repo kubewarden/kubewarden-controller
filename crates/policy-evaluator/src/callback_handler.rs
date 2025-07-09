@@ -325,30 +325,42 @@ impl CallbackHandler {
                     )
                 }
                 CallbackRequestType::KubernetesCanI {
-                    subject_access_review,
+                    user,
+                    group,
+                    namespace,
+                    resource,
+                    verb,
                     disable_cache,
                 } => {
                     if disable_cache {
                         handle_callback!(
                             req,
-                            format!("can_i"),
-                            "Service account has permissions",
+                            "can_i".to_owned(),
+                            "Check if user or service account has permission to perform operation",
                             {
                                 kubernetes::can_i(
                                     kubernetes_client.as_mut(),
-                                    &subject_access_review,
+                                    user,
+                                    group,
+                                    namespace,
+                                    resource,
+                                    verb,
                                 )
                             }
                         )
                     } else {
                         handle_callback!(
                             req,
-                            format!("can_i"),
-                            "Service account has permissions",
+                            "can_i".to_owned(),
+                            "Check if user or service account has permission to perform operation",
                             {
                                 kubernetes::can_i_cached(
                                     kubernetes_client.as_mut(),
-                                    &subject_access_review,
+                                    user,
+                                    group,
+                                    namespace,
+                                    resource,
+                                    verb,
                                 )
                             }
                         )

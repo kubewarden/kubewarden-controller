@@ -76,7 +76,7 @@ pub(crate) async fn wapc_and_wasi_scenario(handle: Handle<Request<Body>, Respons
                     "/apis/authorization.k8s.io/v1/subjectaccessreviews",
                     None,
                     false,
-                ) => send_response(send, fixtures::subjectaccessreviewsstatus()),
+                ) => send_response(send, fixtures::subject_access_review_not_allowed()),
                 _ => {
                     panic!("unexpected request: {:?}", request);
                 }
