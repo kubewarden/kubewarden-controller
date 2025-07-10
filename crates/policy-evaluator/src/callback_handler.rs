@@ -325,11 +325,7 @@ impl CallbackHandler {
                     )
                 }
                 CallbackRequestType::KubernetesCanI {
-                    user,
-                    group,
-                    namespace,
-                    resource,
-                    verb,
+                    request,
                     disable_cache,
                 } => {
                     if disable_cache {
@@ -337,32 +333,14 @@ impl CallbackHandler {
                             req,
                             "can_i".to_owned(),
                             "Check if user or service account has permission to perform operation",
-                            {
-                                kubernetes::can_i(
-                                    kubernetes_client.as_mut(),
-                                    user,
-                                    group,
-                                    namespace,
-                                    resource,
-                                    verb,
-                                )
-                            }
+                            { kubernetes::can_i(kubernetes_client.as_mut(), request) }
                         )
                     } else {
                         handle_callback!(
                             req,
                             "can_i".to_owned(),
                             "Check if user or service account has permission to perform operation",
-                            {
-                                kubernetes::can_i_cached(
-                                    kubernetes_client.as_mut(),
-                                    user,
-                                    group,
-                                    namespace,
-                                    resource,
-                                    verb,
-                                )
-                            }
+                            { kubernetes::can_i_cached(kubernetes_client.as_mut(), request) }
                         )
                     }
                 }

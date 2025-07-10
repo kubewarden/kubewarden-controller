@@ -1,6 +1,6 @@
 use anyhow::Result;
+use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReviewRequest as KWSubjectAccessReviewRequest;
 use kubewarden_policy_sdk::host_capabilities::{
-    kubernetes::SubjectAccessReviewRequest,
     verification::{KeylessInfo, KeylessPrefixInfo},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
@@ -203,12 +203,21 @@ pub enum CallbackRequestType {
         since: Instant,
     },
 
+    /// Check if the user can permissions to perform some operations
     KubernetesCanI {
-        user: String,
-        group: String,
-        namespace: String,
-        resource: String,
-        verb: String,
+        /// Describe the set of parameters used by the `can_i` function. The values in this struct
+        /// will be used to build the SubjectAccessReview resources sent to the Kubernetes API to
+        /// verify if the user is allowed to perform some operation
+        request: KWSubjectAccessReviewRequest,
+
+        /// Disable caching of results obtained from Kubernetes API Server
+        /// By default query results are cached for 5 seconds, that might cause
+        /// stale data to be returned.
+        /// However, making too many requests against the Kubernetes API Server
+        /// might cause issues to the cluster
+        ///
+        /// This field is also defined in the `KWSubjectAccessReviewRequest`. However, we duplicate
+        /// the value here to keep the same pattern used by the other Kubernetes requests
         disable_cache: bool,
     },
 }
@@ -367,15 +376,11 @@ impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::GetResourceReque
     }
 }
 
-impl From<SubjectAccessReviewRequest> for CallbackRequestType {
-    fn from(req: SubjectAccessReviewRequest) -> Self {
+impl From<KWSubjectAccessReviewRequest> for CallbackRequestType {
+    fn from(req: KWSubjectAccessReviewRequest) -> Self {
         CallbackRequestType::KubernetesCanI {
-            user: req.user,
-            group: req.group,
-            namespace: req.namespace,
-            resource: req.resource,
-            verb: req.verb,
             disable_cache: req.disable_cache,
+            request: req,
         }
     }
 }

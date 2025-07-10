@@ -1,12 +1,11 @@
 use anyhow::{anyhow, Result};
-use k8s_openapi::api::authorization::v1::{
-    ResourceAttributes, SubjectAccessReview, SubjectAccessReviewSpec, SubjectAccessReviewStatus,
-};
+use k8s_openapi::api::authorization::v1::{SubjectAccessReview, SubjectAccessReviewStatus};
 use kube::{
     api::PostParams,
     core::{DynamicObject, ObjectList},
     Api,
 };
+use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReviewRequest as KWSubjectAccessReviewRequest;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::RwLock, time::Instant};
 
@@ -297,24 +296,10 @@ impl Client {
 
     pub async fn can_i(
         &mut self,
-        user: String,
-        group: String,
-        namespace: String,
-        resource: String,
-        verb: String,
+        request: KWSubjectAccessReviewRequest,
     ) -> Result<SubjectAccessReviewStatus> {
         let subject_access_review = SubjectAccessReview {
-            spec: SubjectAccessReviewSpec {
-                user: Some(user),
-                resource_attributes: Some(ResourceAttributes {
-                    namespace: Some(namespace.to_owned()),
-                    verb: Some(verb),
-                    group: Some(group),
-                    resource: Some(resource),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            },
+            spec: request.into(),
             ..Default::default()
         };
         let sar_api: Api<SubjectAccessReview> = Api::all(self.kube_client.clone());
@@ -323,11 +308,9 @@ impl Client {
             .create(&PostParams::default(), &subject_access_review)
             .await;
         response.map_err(anyhow::Error::new).and_then(|response| {
-            if response.status.is_none() {
-                Err(anyhow!("SubjectAccessReview did not return a status"))
-            } else {
-                Ok(response.status.unwrap())
-            }
+            response
+                .status
+                .ok_or(anyhow!("SubjectAccessReview did not return a response"))
         })
     }
 }
