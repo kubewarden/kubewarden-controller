@@ -5,7 +5,7 @@ use kube::{
     core::{DynamicObject, ObjectList},
     Api,
 };
-use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReviewRequest as KWSubjectAccessReviewRequest;
+use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::RwLock, time::Instant};
 
@@ -296,7 +296,7 @@ impl Client {
 
     pub async fn can_i(
         &mut self,
-        request: KWSubjectAccessReviewRequest,
+        request: KWSubjectAccessReview,
     ) -> Result<SubjectAccessReviewStatus> {
         let subject_access_review = SubjectAccessReview {
             spec: request.into(),

@@ -1,5 +1,6 @@
 use anyhow::Result;
-use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReviewRequest as KWSubjectAccessReviewRequest;
+use kubewarden_policy_sdk::host_capabilities::kubernetes::CanIRequest;
+use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use kubewarden_policy_sdk::host_capabilities::{
     verification::{KeylessInfo, KeylessPrefixInfo},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
@@ -208,7 +209,7 @@ pub enum CallbackRequestType {
         /// Describe the set of parameters used by the `can_i` function. The values in this struct
         /// will be used to build the SubjectAccessReview resources sent to the Kubernetes API to
         /// verify if the user is allowed to perform some operation
-        request: KWSubjectAccessReviewRequest,
+        request: KWSubjectAccessReview,
 
         /// Disable caching of results obtained from Kubernetes API Server
         /// By default query results are cached for 5 seconds, that might cause
@@ -376,11 +377,11 @@ impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::GetResourceReque
     }
 }
 
-impl From<KWSubjectAccessReviewRequest> for CallbackRequestType {
-    fn from(req: KWSubjectAccessReviewRequest) -> Self {
+impl From<CanIRequest> for CallbackRequestType {
+    fn from(req: CanIRequest) -> Self {
         CallbackRequestType::KubernetesCanI {
             disable_cache: req.disable_cache,
-            request: req,
+            request: req.subject_access_review,
         }
     }
 }

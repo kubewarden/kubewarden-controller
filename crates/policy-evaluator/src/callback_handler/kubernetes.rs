@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use k8s_openapi::api::authorization::v1::SubjectAccessReviewStatus;
 use kube::core::ObjectList;
-use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReviewRequest as KWSubjectAccessReviewRequest;
+use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use serde::Serialize;
 
 pub(crate) use client::Client;
@@ -148,7 +148,7 @@ pub(crate) async fn has_list_resources_all_result_changed_since_instant(
 
 pub(crate) async fn can_i(
     client: Option<&mut Client>,
-    request: KWSubjectAccessReviewRequest,
+    request: KWSubjectAccessReview,
 ) -> Result<cached::Return<SubjectAccessReviewStatus>> {
     if client.is_none() {
         return Err(anyhow!("kube::Client was not initialized properly"));
@@ -171,14 +171,14 @@ pub(crate) async fn can_i(
     // traits. As we already implement these traits, there is no need to have a custom logic for key
     // generation. If we do that, we will only convert it into a type (e.g. string)  that
     // implements the traits as well. 
-    key = "KWSubjectAccessReviewRequest",
+    key = "KWSubjectAccessReview",
     convert = r#"{request.clone()}"#,
     sync_writes = "default",
     with_cached_flag = true
 )]
 pub(crate) async fn can_i_cached(
     client: Option<&mut Client>,
-    request: KWSubjectAccessReviewRequest,
+    request: KWSubjectAccessReview,
 ) -> Result<cached::Return<SubjectAccessReviewStatus>> {
     can_i(client, request).await
 }
