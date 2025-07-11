@@ -488,7 +488,7 @@ dependencies = [
 [[package]]
 name = "burrego"
 version = "0.3.4"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.27.0#fff0273a5e6654fdc00b389939ad2238dd4527e2"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.27.1#8dfbc44ce422f9f1911de58b2f775369b2fe447c"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -2969,9 +2969,9 @@ dependencies = [
 
 [[package]]
 name = "kubewarden-policy-sdk"
-version = "0.14.0"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b82828ea1b2a8a76b02930de4263bbd4ea0838838d416a149cc30f59d8cc938"
+checksum = "57bf4e90f1039aa9ab55469a563f0904042a11454256ff7cc67beb667afaeaf4"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -4007,8 +4007,8 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "policy-evaluator"
-version = "0.27.0"
-source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.27.0#fff0273a5e6654fdc00b389939ad2238dd4527e2"
+version = "0.27.1"
+source = "git+https://github.com/kubewarden/policy-evaluator?tag=v0.27.1#8dfbc44ce422f9f1911de58b2f775369b2fe447c"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

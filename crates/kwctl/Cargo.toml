@@ -24,7 +24,7 @@ k8s-openapi = { version = "0.25.0", default-features = false, features = [
 ] }
 lazy_static = "1.4.0"
 pem = "3"
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.27.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.27.1" }
 prettytable-rs = "^0.10"
 regex = "1"
 rustls-pki-types = { version = "1", features = ["alloc"] }
