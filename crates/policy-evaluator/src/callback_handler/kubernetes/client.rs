@@ -5,6 +5,7 @@ use kube::{
     core::{DynamicObject, ObjectList},
     Api,
 };
+use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::RwLock, time::Instant};
 
@@ -295,15 +296,21 @@ impl Client {
 
     pub async fn can_i(
         &mut self,
-        subject_access_review: &SubjectAccessReview,
+        request: KWSubjectAccessReview,
     ) -> Result<SubjectAccessReviewStatus> {
+        let subject_access_review = SubjectAccessReview {
+            spec: request.into(),
+            ..Default::default()
+        };
         let sar_api: Api<SubjectAccessReview> = Api::all(self.kube_client.clone());
 
         let response = sar_api
-            .create(&PostParams::default(), subject_access_review)
+            .create(&PostParams::default(), &subject_access_review)
             .await;
-        response
-            .map(|response| response.status.unwrap_or_default())
-            .map_err(anyhow::Error::new)
+        response.map_err(anyhow::Error::new).and_then(|response| {
+            response
+                .status
+                .ok_or(anyhow!("SubjectAccessReview did not return a response"))
+        })
     }
 }

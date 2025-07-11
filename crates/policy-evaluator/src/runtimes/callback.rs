@@ -4,8 +4,7 @@ use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::{
     crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
     kubernetes::{
-        GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
-        SubjectAccessReviewRequest,
+        CanIRequest, GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
     },
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
@@ -313,8 +312,7 @@ pub(crate) fn host_callback(
                     )
                 }
                 "can_i" => {
-                    let req: SubjectAccessReviewRequest =
-                        serde_json::from_slice(payload.to_vec().as_ref())?;
+                    let req: CanIRequest = serde_json::from_slice(payload.to_vec().as_ref())?;
 
                     debug!(
                         eval_ctx.policy_id,

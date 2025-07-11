@@ -1,7 +1,7 @@
 use k8s_openapi::{
     api::{
         apps::v1::Deployment,
-        authorization::v1::SubjectAccessReviewStatus,
+        authorization::v1::{SubjectAccessReview, SubjectAccessReviewStatus},
         core::v1::{Namespace, Service},
     },
     apimachinery::pkg::apis::meta::v1::{APIResource, APIResourceList},
@@ -161,9 +161,12 @@ pub(crate) fn api_auth_service() -> Service {
     }
 }
 
-pub(crate) fn subjectaccessreviewsstatus() -> SubjectAccessReviewStatus {
-    SubjectAccessReviewStatus {
-        allowed: false,
+pub(crate) fn subject_access_review_not_allowed() -> SubjectAccessReview {
+    SubjectAccessReview {
+        status: Some(SubjectAccessReviewStatus {
+            allowed: false,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

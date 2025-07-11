@@ -5,11 +5,10 @@ use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use k8s_openapi::api::authorization::v1::SubjectAccessReviewStatus;
 use kube::core::ObjectList;
+use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use serde::Serialize;
 
 pub(crate) use client::Client;
-
-use crate::callback_requests::SubjectAccessReviewWrapper;
 
 #[derive(Eq, Hash, PartialEq)]
 struct ApiVersionKind {
@@ -149,7 +148,7 @@ pub(crate) async fn has_list_resources_all_result_changed_since_instant(
 
 pub(crate) async fn can_i(
     client: Option<&mut Client>,
-    subject_access_review: &SubjectAccessReviewWrapper,
+    request: KWSubjectAccessReview,
 ) -> Result<cached::Return<SubjectAccessReviewStatus>> {
     if client.is_none() {
         return Err(anyhow!("kube::Client was not initialized properly"));
@@ -157,7 +156,7 @@ pub(crate) async fn can_i(
 
     client
         .unwrap()
-        .can_i(subject_access_review.as_ref())
+        .can_i(request)
         .await
         .map(|value| cached::Return {
             was_cached: false,
@@ -168,14 +167,18 @@ pub(crate) async fn can_i(
 #[cached(
     time = 5,
     result = true,
-    key = "String",
-    convert = r#"{ format!("can_i({})", subject_access_review) }"#,
+    // We can use the request type as key because cached requires the key to implement Hash + Eq
+    // traits. As we already implement these traits, there is no need to have a custom logic for key
+    // generation. If we do that, we will only convert it into a type (e.g. string)  that
+    // implements the traits as well. 
+    key = "KWSubjectAccessReview",
+    convert = r#"{request.clone()}"#,
     sync_writes = "default",
     with_cached_flag = true
 )]
 pub(crate) async fn can_i_cached(
     client: Option<&mut Client>,
-    subject_access_review: &SubjectAccessReviewWrapper,
+    request: KWSubjectAccessReview,
 ) -> Result<cached::Return<SubjectAccessReviewStatus>> {
-    can_i(client, subject_access_review).await
+    can_i(client, request).await
 }

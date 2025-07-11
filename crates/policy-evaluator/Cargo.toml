@@ -7,7 +7,7 @@ authors = [
 ]
 edition = "2021"
 name = "policy-evaluator"
-version = "0.27.0"
+version = "0.27.1"
 
 [workspace]
 members = ["crates/burrego"]
@@ -29,7 +29,7 @@ kube = { version = "1.0.0", default-features = false, features = [
   "runtime",
   "rustls-tls",
 ] }
-kubewarden-policy-sdk = { version = "0.14.0", features = ["crd"] }
+kubewarden-policy-sdk = { version = "0.14.2", features = ["crd"] }
 lazy_static = "1.5"
 mail-parser = { version = "0.11", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
