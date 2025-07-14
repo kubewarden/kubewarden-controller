@@ -127,11 +127,14 @@ mod e2e {
             let config_dir = config_dir.as_ref().unwrap();
             let subject_alt_names = vec!["localhost".to_string()];
 
-            let CertifiedKey { cert, key_pair } =
+            let CertifiedKey { cert, signing_key } =
                 generate_simple_self_signed(subject_alt_names).unwrap();
 
-            fs::write(config_dir.path().join("key.pem"), key_pair.serialize_pem())
-                .expect("cannot write key.pem");
+            fs::write(
+                config_dir.path().join("key.pem"),
+                signing_key.serialize_pem(),
+            )
+            .expect("cannot write key.pem");
             fs::write(config_dir.path().join("cert.pem"), cert.pem())
                 .expect("cannot write cert.pem");
 
