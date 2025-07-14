@@ -649,11 +649,11 @@ mod certificate_reload_helpers {
     pub fn create_cert(hostname: &str) -> TlsData {
         let subject_alt_names = vec![hostname.to_string()];
 
-        let CertifiedKey { cert, key_pair } =
+        let CertifiedKey { cert, signing_key } =
             generate_simple_self_signed(subject_alt_names).unwrap();
 
         TlsData {
-            key: key_pair.serialize_pem(),
+            key: signing_key.serialize_pem(),
             cert: cert.pem(),
         }
     }
@@ -1050,13 +1050,13 @@ async fn parse_exporter_output(
 
 #[cfg(feature = "otel_tests")]
 fn generate_tls_certs() -> (String, String, String) {
-    use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, KeyPair};
+    use rcgen::{BasicConstraints, CertificateParams, DnType, IsCa, Issuer, KeyPair};
 
-    let ca_key = KeyPair::generate().unwrap();
-    let mut params = CertificateParams::new(vec!["My Test CA".to_string()]).unwrap();
-    params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-    let ca_cert = params.self_signed(&ca_key).unwrap();
-    let ca_cert_pem = ca_cert.pem();
+    let mut ca_params = CertificateParams::new(vec!["My Test CA".to_string()]).unwrap();
+    ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    let ca_key_pair = KeyPair::generate().unwrap();
+    let ca_cert = ca_params.self_signed(&ca_key_pair).unwrap();
+    let issuer = Issuer::new(ca_params, ca_key_pair);
 
     let mut params = CertificateParams::new(vec!["localhost".to_string()]).unwrap();
     params
@@ -1067,10 +1067,10 @@ fn generate_tls_certs() -> (String, String, String) {
         .push(DnType::CommonName, "kubewarden.io");
 
     let cert_key = KeyPair::generate().unwrap();
-    let cert = params.signed_by(&cert_key, &ca_cert, &ca_key).unwrap();
+    let cert = params.signed_by(&cert_key, &issuer).unwrap();
     let key = cert_key.serialize_pem();
 
-    (ca_cert_pem, cert.pem(), key)
+    (ca_cert.pem(), cert.pem(), key)
 }
 
 #[cfg(target_os = "linux")]
