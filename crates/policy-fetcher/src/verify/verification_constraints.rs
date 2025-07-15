@@ -85,7 +85,7 @@ impl GenericIssuerSubjectVerifier {
                 if prefix.ends_with('/') {
                     subject.clone()
                 } else {
-                    let u = url::Url::parse(format!("{}/", prefix).as_str())
+                    let u = url::Url::parse(format!("{prefix}/").as_str())
                         .expect("This should never fail");
                     Subject::UrlPrefix(u)
                 }
@@ -238,15 +238,15 @@ impl VerificationConstraint for GitHubVerifier {
             CertificateSubject::Uri(u) => u,
         };
         GitHubRepo::try_from(signature_subject.as_str()).map_err(|_|
-            SigstoreError::VerificationConstraintError(format!("The certificate subject url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {}", signature_subject)))?;
+            SigstoreError::VerificationConstraintError(format!("The certificate subject url doesn't seem a GitHub valid one, despite the issuer being the GitHub Action one: {signature_subject}")))?;
 
         // the certificate github_workflow_extension must be there and correctly constructed
         let github_workflow_repository = certificate_signature.github_workflow_repository.as_ref()
             .ok_or_else(|| SigstoreError::VerificationConstraintError("The certificate is missing the github_workflow_repository extension despite being a GitHub Action one".to_string()))?;
 
-        let signature_repo = GitHubRepo::try_from(format!("https://github.com/{}", github_workflow_repository).as_str())
+        let signature_repo = GitHubRepo::try_from(format!("https://github.com/{github_workflow_repository}").as_str())
             .map_err(|_|
-            SigstoreError::VerificationConstraintError(format!("The certificate doesn't have a valid github_workflow_repository extension, despite the issuer being the GitHub Action one: {}", github_workflow_repository)))?;
+            SigstoreError::VerificationConstraintError(format!("The certificate doesn't have a valid github_workflow_repository extension, despite the issuer being the GitHub Action one: {github_workflow_repository}")))?;
 
         if signature_repo.owner != self.owner {
             debug!(
@@ -287,7 +287,7 @@ impl TryFrom<&str> for GitHubRepo {
 
     fn try_from(u: &str) -> std::result::Result<Self, Self::Error> {
         let u = url::Url::parse(u).map_err(|e| {
-            VerifyError::GithubUrlParserError(format!("Cannot parse github url: {}", e))
+            VerifyError::GithubUrlParserError(format!("Cannot parse github url: {e}"))
         })?;
         if u.host_str() != Some("github.com") {
             return Err(VerifyError::GithubUrlParserError(

@@ -21,7 +21,7 @@ type PolicyResult<T> = std::result::Result<T, DigestError>;
 impl Policy {
     pub fn digest(&self) -> PolicyResult<String> {
         let d = Sha256::digest(std::fs::read(&self.local_path)?);
-        Ok(format!("{:x}", d))
+        Ok(format!("{d:x}"))
     }
 }
 

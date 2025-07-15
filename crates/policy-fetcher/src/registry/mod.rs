@@ -169,7 +169,7 @@ impl Registry {
         // ensure it contains also the registry. Example: `busybox` ->
         // `docker.io/library/busybox:latest`
         let reference = build_fully_resolved_reference(url)?;
-        let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
+        let url: Url = Url::parse(format!("registry://{reference}").as_str())?;
         let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
 
@@ -200,7 +200,7 @@ impl Registry {
         // ensure it contains also the registry. Example: `busybox` ->
         // `docker.io/library/busybox:latest`
         let reference = build_fully_resolved_reference(url)?;
-        let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
+        let url: Url = Url::parse(format!("registry://{reference}").as_str())?;
         let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
 
@@ -306,7 +306,7 @@ impl Registry {
         serde_json::Value,
     )> {
         let reference = build_fully_resolved_reference(url)?;
-        let url: Url = Url::parse(format!("registry://{}", reference).as_str())?;
+        let url: Url = Url::parse(format!("registry://{reference}").as_str())?;
         let registry_auth = Registry::auth(reference.registry());
         let sources: Sources = sources.cloned().unwrap_or_default();
 
@@ -372,28 +372,25 @@ fn build_immutable_ref(image_ref: &str, manifest_url: &str) -> RegistryResult<St
         .map(|(_, digest)| digest.to_string())
         .ok_or_else(|| {
             RegistryError::BuildImmutableReferenceError(format!(
-                "Cannot extract manifest digest from the OCI registry response: {}",
-                manifest_url
+                "Cannot extract manifest digest from the OCI registry response: {manifest_url}"
             ))
         })?;
 
     let (digest, checksum) = manifest_digest.split_once(':').ok_or_else(|| {
-        RegistryError::BuildImmutableReferenceError(format!("Invalid digest: {}", manifest_digest))
+        RegistryError::BuildImmutableReferenceError(format!("Invalid digest: {manifest_digest}"))
     })?;
 
     let digest_valid = match digest {
         "sha256" => Ok(SHA256_DIGEST_RE.is_match(checksum)),
         "sha512" => Ok(SHA512_DIGEST_RE.is_match(checksum)),
         unknown => Err(RegistryError::BuildImmutableReferenceError(format!(
-            "unknown algorithm '{}' for manifest {}",
-            unknown, manifest_digest
+            "unknown algorithm '{unknown}' for manifest {manifest_digest}"
         ))),
     }?;
 
     if !digest_valid {
         return Err(RegistryError::BuildImmutableReferenceError(format!(
-            "The digest of the returned manifest is not valid: {}",
-            manifest_digest
+            "The digest of the returned manifest is not valid: {manifest_digest}"
         )));
     }
 
@@ -485,10 +482,10 @@ mod tests {
         digest: Option<&str>,
     ) {
         let reference = build_fully_resolved_reference(input).expect("could not parse reference");
-        assert_eq!(registry, reference.registry(), "input was: {}", input);
-        assert_eq!(repository, reference.repository(), "input was: {}", input);
-        assert_eq!(tag, reference.tag(), "input was: {}", input);
-        assert_eq!(digest, reference.digest(), "input was: {}", input);
+        assert_eq!(registry, reference.registry(), "input was: {input}");
+        assert_eq!(repository, reference.repository(), "input was: {input}");
+        assert_eq!(tag, reference.tag(), "input was: {input}");
+        assert_eq!(digest, reference.digest(), "input was: {input}");
     }
 
     #[rstest(
@@ -545,7 +542,7 @@ mod tests {
                 ));
                 assert_eq!(msg, actual.unwrap_err().to_string());
             }
-            Err(err) => panic!("unknown error: {:?}", err),
+            Err(err) => panic!("unknown error: {err:?}"),
         }
     }
 }

@@ -15,7 +15,7 @@ impl fmt::Display for ClientProtocol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ClientProtocol::Http => write!(f, "HTTP"),
-            ClientProtocol::Https(mode) => write!(f, "HTTPS({})", mode),
+            ClientProtocol::Https(mode) => write!(f, "HTTPS({mode})"),
         }
     }
 }

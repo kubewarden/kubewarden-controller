@@ -224,7 +224,7 @@ fn host_and_port(url: &Url) -> String {
         .host_str()
         .map(|host| {
             if let Some(port) = url.port() {
-                format!("{}:{}", host, port)
+                format!("{host}:{port}")
             } else {
                 host.into()
             }

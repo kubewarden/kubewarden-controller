@@ -295,7 +295,7 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
                 assert_eq!(path, expected);
             }
             unexpected => {
-                panic!("Didn't get the expected value: {:?}", unexpected);
+                panic!("Didn't get the expected value: {unexpected:?}");
             }
         }
     }
@@ -311,7 +311,7 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
                 assert_eq!(data, expected_data);
             }
             unexpected => {
-                panic!("Didn't get the expected value: {:?}", unexpected);
+                panic!("Didn't get the expected value: {unexpected:?}");
             }
         }
     }
@@ -324,9 +324,7 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
                 serde_json::from_value(bc.clone());
             assert!(
                 actual.is_err(),
-                "Expected {:?} to fail, got instead {:?}",
-                bc,
-                actual
+                "Expected {bc:?} to fail, got instead {actual:?}"
             );
         }
     }
@@ -349,7 +347,7 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
         let mut file = NamedTempFile::new().unwrap();
 
         let expected_contents = "hello world";
-        write!(file, "{}", expected_contents).unwrap();
+        write!(file, "{expected_contents}").unwrap();
 
         let path = file.path();
         let auth = RawSourceAuthority::Path {
@@ -376,7 +374,7 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
 
         let actual: SourceResult<SourceAuthorities> = raw_source_authorities.try_into();
 
-        assert!(actual.is_ok(), "Got an unexpected error: {:?}", actual);
+        assert!(actual.is_ok(), "Got an unexpected error: {actual:?}");
 
         let actual_map = actual.unwrap().0;
         let actual_certs = actual_map.get("foo.com").unwrap();

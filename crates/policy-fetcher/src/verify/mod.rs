@@ -171,7 +171,7 @@ impl Verifier {
 
         let file_digest = policy.digest()?;
         if file_digest != expected_digest {
-            Err(VerifyError::ChecksumVerificationError(format!("The digest of the local file doesn't match with the one reported inside of the signed manifest. Got {} instead of {}", file_digest, expected_digest)))
+            Err(VerifyError::ChecksumVerificationError(format!("The digest of the local file doesn't match with the one reported inside of the signed manifest. Got {file_digest} instead of {expected_digest}")))
         } else {
             info!("Local file checksum verification passed");
             Ok(())
@@ -312,8 +312,7 @@ pub async fn fetch_sigstore_remote_data(
         .map_err(|e| match e {
             SigstoreError::RegistryPullManifestError { image: _, error: _ } => {
                 VerifyError::ImageVerificationError(format!(
-                    "no signatures found for image: {} ",
-                    image_name
+                    "no signatures found for image: {image_name} "
                 ))
             }
             e => VerifyError::FailedToFetchTrustedLayersError(e),
