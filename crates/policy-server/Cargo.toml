@@ -20,7 +20,7 @@ clap-markdown = "0.1.4"
 daemonize = "0.5"
 futures = "0.3"
 itertools = "0.14.0"
-jemalloc_pprof = "0.7.0"
+jemalloc_pprof = "0.8.0"
 k8s-openapi = { version = "0.25.0", default-features = false, features = [
   "v1_30",
 ] }
