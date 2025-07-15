@@ -165,8 +165,7 @@ pub fn build_latest_verification_config(
             VersionedVerificationConfig::V1(c) => c,
             VersionedVerificationConfig::Unsupported => {
                 return Err(VerifyError::InvalidVerifyFileError(format!(
-                    "Not a supported configuration version: {:?}",
-                    versioned_config
+                    "Not a supported configuration version: {versioned_config:?}"
                 )));
             }
         },

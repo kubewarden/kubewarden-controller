@@ -65,14 +65,12 @@ fn parse_url(url: &str) -> std::result::Result<reqwest::Url, url::ParseError> {
             if !KNOWN_SCHEMES.contains(u.scheme()) && !url.contains("://") {
                 // something like "ghcr.io:443/kubewarden/policy1:latest"
                 // is not parsed properly, "ghcr.io" becomes the scheme
-                parse_url(format!("registry://{}", url).as_str())
+                parse_url(format!("registry://{url}").as_str())
             } else {
                 Ok(u)
             }
         }
-        Err(ParseError::RelativeUrlWithoutBase) => {
-            Url::parse(format!("registry://{}", url).as_str())
-        }
+        Err(ParseError::RelativeUrlWithoutBase) => Url::parse(format!("registry://{url}").as_str()),
         Err(e) => Err(e),
     }
 }
@@ -217,7 +215,7 @@ pub(crate) fn host_and_port(url: &Url) -> std::result::Result<String, errors::In
         url.host_str()
             .ok_or_else(|| errors::InvalidURLError(url.to_string()))?,
         url.port()
-            .map(|port| format!(":{}", port))
+            .map(|port| format!(":{port}"))
             .unwrap_or_default(),
     ))
 }
@@ -369,36 +367,32 @@ mod tests {
     }))]
     fn url_parsing(#[case] url: &str, #[case] expected: FetcherResult<UrlParseDetails>) {
         let res = parse_url(url);
-        println!("{} -> {:?}", url, res);
+        println!("{url} -> {res:?}");
         assert_eq!(res.is_ok(), expected.is_ok());
         if let Ok(u) = res {
             let expected = expected.unwrap();
             assert_eq!(
                 u.scheme(),
                 expected.scheme.as_str(),
-                "scheme expectation for {} not met",
-                url
+                "scheme expectation for {url} not met"
             );
 
             assert_eq!(
                 u.host_str().map(|h| h.to_string()),
                 expected.host,
-                "host expectation for {} not met",
-                url
+                "host expectation for {url} not met"
             );
 
             assert_eq!(
                 u.port(),
                 expected.port,
-                "port expectation for {} not met",
-                url
+                "port expectation for {url} not met"
             );
 
             assert_eq!(
                 u.path(),
                 expected.path.as_str(),
-                "path expectation for {} not met",
-                url
+                "path expectation for {url} not met"
             );
         }
     }
