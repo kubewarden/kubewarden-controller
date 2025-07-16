@@ -34,7 +34,7 @@ COPY ./ ./
 RUN cargo install cargo-auditable
 RUN cargo auditable install --locked --target x86_64-unknown-linux-musl --path .
 
-FROM --platform=$BUILDPLATFORM alpine:3.22.0 AS cfg
+FROM --platform=$BUILDPLATFORM alpine:3.22.1 AS cfg
 RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd
 RUN echo "policy-server:x:65533:policy-server" >> /etc/group
 
