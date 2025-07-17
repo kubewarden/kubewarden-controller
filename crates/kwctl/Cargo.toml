@@ -3,7 +3,7 @@ authors     = ["Kubewarden Developers <kubewarden@suse.de>"]
 description = "Tool to manage Kubewarden policies"
 edition     = "2021"
 name        = "kwctl"
-version     = "1.27.0-alpha2"
+version     = "1.27.0-alpha3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
