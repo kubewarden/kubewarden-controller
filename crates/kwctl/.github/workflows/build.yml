@@ -74,9 +74,8 @@ jobs:
       - name: Create SBOM file
         shell: bash
         run: |
-          syft \
-          --file kwctl-linux-${{ matrix.targetarch }}-sbom.spdx \
-          --output spdx-json \
+          syft scan \
+          --output spdx-json=kwctl-linux-${{ matrix.targetarch }}-sbom.spdx \
           --source-name kwctl-linux-${{ matrix.targetarch }} \
           --source-version ${{ github.sha }} \
           -vv \
@@ -157,9 +156,8 @@ jobs:
       - name: Create SBOM file
         shell: bash
         run: |
-          syft \
-          --file kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx \
-          --output spdx-json \
+          syft scan \
+          --output spdx-json=kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx \
           --source-name kwctl-darwin-${{ matrix.targetarch }} \
           --source-version ${{ github.sha }} \
           -vv \
@@ -243,9 +241,8 @@ jobs:
       - name: Create SBOM file
         shell: bash
         run: |
-          syft \
-          --file kwctl-windows-x86_64-sbom.spdx \
-          --output spdx-json \
+          syft scan \
+          --output spdx-json=kwctl-windows-x86_64-sbom.spdx \
           --source-name kwctl-windows-x86_64 \
           --source-version ${{ github.sha }} \
           -vv \
