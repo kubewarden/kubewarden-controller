@@ -3,6 +3,7 @@ extern crate wasmparser;
 
 pub mod admission_request;
 pub mod admission_response;
+pub mod admission_response_handler;
 pub mod callback_handler;
 pub mod callback_requests;
 pub mod constants;

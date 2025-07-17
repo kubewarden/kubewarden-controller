@@ -1,9 +1,13 @@
-use policy_evaluator::admission_response::{
+use crate::admission_response::{
     AdmissionResponse, AdmissionResponseStatus, StatusCause, StatusDetails,
 };
 use tracing::info;
 
-use crate::{config::PolicyMode, evaluation::PolicyID};
+pub mod errors;
+pub mod policy_id;
+pub mod policy_mode;
+
+use crate::admission_response_handler::{policy_id::PolicyID, policy_mode::PolicyMode};
 
 /// Apply as series of mutation constrains to the admission response.
 ///
@@ -14,7 +18,7 @@ use crate::{config::PolicyMode, evaluation::PolicyID};
 ///   accepts the request (without mutation), logging the answer
 /// - A policy might have a custom rejection message that should be used instead of the error
 ///   returned by the policy. The original error is added in the warnings list.
-pub(crate) struct AdmissionResponseHandler<'a> {
+pub struct AdmissionResponseHandler<'a> {
     policy_id: &'a PolicyID,
     policy_mode: &'a PolicyMode,
     allowed_to_mutate: bool,
@@ -22,7 +26,7 @@ pub(crate) struct AdmissionResponseHandler<'a> {
 }
 
 impl<'a> AdmissionResponseHandler<'a> {
-    pub(crate) fn new(
+    pub fn new(
         policy_id: &'a PolicyID,
         policy_mode: &'a PolicyMode,
         allowed_to_mutate: bool,
@@ -36,10 +40,7 @@ impl<'a> AdmissionResponseHandler<'a> {
         }
     }
 
-    pub(crate) fn process_response(
-        &'a self,
-        admission_response: AdmissionResponse,
-    ) -> AdmissionResponse {
+    pub fn process_response(&'a self, admission_response: AdmissionResponse) -> AdmissionResponse {
         let admission_response = self.apply_monitor_mode(admission_response);
         let admission_response = self.apply_mutation_constraint(admission_response);
 
@@ -49,7 +50,7 @@ impl<'a> AdmissionResponseHandler<'a> {
     }
 
     // In monitor mode we always accept the request, but log what would have been the decision of the
-    // policy. We also force mutating patches to be none. Status is also  overridden, as it's only taken into
+    // policy. We also force mutating patches to be none. Status is also overridden, as it's only taken into
     // account when a request is rejected.
     fn apply_monitor_mode(&'a self, admission_response: AdmissionResponse) -> AdmissionResponse {
         if self.policy_mode != &PolicyMode::Monitor {
@@ -164,8 +165,8 @@ fn rejection_message_because_policy_is_not_allowed_to_mutate(policy_id: &PolicyI
 mod tests {
     use super::*;
 
+    use crate::admission_response::{self, AdmissionResponse};
     use lazy_static::lazy_static;
-    use policy_evaluator::admission_response::{self, AdmissionResponse};
     use rstest::rstest;
 
     lazy_static! {

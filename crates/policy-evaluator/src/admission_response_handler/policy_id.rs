@@ -1,10 +1,10 @@
 use std::{fmt, str::FromStr};
 
-use crate::evaluation::errors::{EvaluationError, Result};
+use crate::admission_response_handler::errors::{EvaluationError, Result};
 
 /// A unique identifier for a policy.
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
-pub(crate) enum PolicyID {
+pub enum PolicyID {
     /// This is the identifier for "individual" policies and for "parent group" policies.
     /// In both cases, this is the name of the policy as seen inside of the `policy.yml` file.
     Policy(String),
