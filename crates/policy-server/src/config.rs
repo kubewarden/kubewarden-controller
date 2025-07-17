@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use lazy_static::lazy_static;
 use policy_evaluator::{
+    admission_response_handler::policy_mode::PolicyMode,
     policy_evaluator::PolicySettings,
     policy_fetcher::{
         sources::{read_sources_file, Sources},

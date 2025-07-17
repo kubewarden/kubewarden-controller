@@ -1,13 +1,15 @@
 use std::{fmt, sync::Arc};
 
-use policy_evaluator::{admission_response::AdmissionResponse, policy_evaluator::ValidateRequest};
+use policy_evaluator::{
+    admission_response::AdmissionResponse,
+    admission_response_handler::{
+        errors::EvaluationError, policy_id::PolicyID, AdmissionResponseHandler,
+    },
+    policy_evaluator::ValidateRequest,
+};
 use tokio::time::Instant;
 
-use crate::{
-    api::admission_response_handler::AdmissionResponseHandler,
-    evaluation::{errors::EvaluationError, EvaluationEnvironment, PolicyID},
-    metrics,
-};
+use crate::{evaluation::EvaluationEnvironment, metrics};
 
 pub(crate) enum RequestOrigin {
     Validate,
@@ -155,8 +157,9 @@ pub(crate) fn evaluate(
 mod tests {
     use super::*;
 
-    use crate::{
-        config::PolicyMode, evaluation::PolicyID, test_utils::build_admission_review_request,
+    use crate::test_utils::build_admission_review_request;
+    use policy_evaluator::admission_response_handler::{
+        policy_id::PolicyID, policy_mode::PolicyMode,
     };
 
     use lazy_static::lazy_static;
