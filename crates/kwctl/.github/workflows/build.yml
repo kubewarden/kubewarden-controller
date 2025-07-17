@@ -69,14 +69,13 @@ jobs:
           path: kwctl-linux-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@e4235d64971f43e9acdfed25797f9930fb85ca83 # v4.5.2
+        uses: kubewarden/github-actions/syft-installer@4da9b3a995e38a7821d404dee64d9559c29bb9c0 # v4.5.3
 
       - name: Create SBOM file
         shell: bash
         run: |
-          syft \
-          --file kwctl-linux-${{ matrix.targetarch }}-sbom.spdx \
-          --output spdx-json \
+          syft scan \
+          --output spdx-json=kwctl-linux-${{ matrix.targetarch }}-sbom.spdx \
           --source-name kwctl-linux-${{ matrix.targetarch }} \
           --source-version ${{ github.sha }} \
           -vv \
@@ -150,16 +149,15 @@ jobs:
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@e4235d64971f43e9acdfed25797f9930fb85ca83 # v4.5.2
+        uses: kubewarden/github-actions/syft-installer@4da9b3a995e38a7821d404dee64d9559c29bb9c0 # v4.5.3
         with:
           arch: darwin_amd64
 
       - name: Create SBOM file
         shell: bash
         run: |
-          syft \
-          --file kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx \
-          --output spdx-json \
+          syft scan \
+          --output spdx-json=kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx \
           --source-name kwctl-darwin-${{ matrix.targetarch }} \
           --source-version ${{ github.sha }} \
           -vv \
@@ -236,16 +234,15 @@ jobs:
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@e4235d64971f43e9acdfed25797f9930fb85ca83 # v4.5.2
+        uses: kubewarden/github-actions/syft-installer@4da9b3a995e38a7821d404dee64d9559c29bb9c0 # v4.5.3
         with:
           arch: windows_amd64
 
       - name: Create SBOM file
         shell: bash
         run: |
-          syft \
-          --file kwctl-windows-x86_64-sbom.spdx \
-          --output spdx-json \
+          syft scan \
+          --output spdx-json=kwctl-windows-x86_64-sbom.spdx \
           --source-name kwctl-windows-x86_64 \
           --source-version ${{ github.sha }} \
           -vv \
