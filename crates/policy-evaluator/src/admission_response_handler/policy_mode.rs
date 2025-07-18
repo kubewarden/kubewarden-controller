@@ -1,10 +1,9 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
 pub enum PolicyMode {
-    #[serde(rename = "monitor")]
     Monitor,
-    #[serde(rename = "protect")]
     #[default]
     Protect,
 }
