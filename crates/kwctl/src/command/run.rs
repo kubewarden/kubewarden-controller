@@ -42,12 +42,7 @@ pub(crate) async fn exec(
             }
             let vanilla_validation_response = evaluator.evaluate();
 
-            let policy_id = match policy_definition.get_policy_id() {
-                Ok(id) => id,
-                Err(e) => {
-                    return Err(anyhow!("Provided policy name is not valid: {:?}", e));
-                }
-            };
+            let policy_id = policy_definition.get_policy_id()?;
             let policy_mode = policy_definition.get_policy_mode();
             let admission_response_handler = AdmissionResponseHandler::new(
                 &policy_id,

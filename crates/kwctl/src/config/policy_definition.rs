@@ -70,8 +70,12 @@ impl fmt::Display for PolicyDefinition {
 impl PolicyDefinition {
     pub fn get_policy_id(&self) -> Result<PolicyID> {
         match self {
-            PolicyDefinition::Policy { id, .. } => Ok(PolicyID::from_str(&id.clone())?),
-            PolicyDefinition::PolicyGroup { id, .. } => Ok(PolicyID::from_str(&id.clone())?),
+            PolicyDefinition::Policy { id, .. } => {
+                PolicyID::from_str(id).map_err(anyhow::Error::new)
+            }
+            PolicyDefinition::PolicyGroup { id, .. } => {
+                PolicyID::from_str(id).map_err(anyhow::Error::new)
+            }
         }
     }
 
@@ -80,7 +84,7 @@ impl PolicyDefinition {
             PolicyDefinition::Policy {
                 custom_rejection_message,
                 ..
-            } => custom_rejection_message.clone(),
+            } => custom_rejection_message.to_owned(),
             PolicyDefinition::PolicyGroup { .. } => None,
         }
     }
@@ -96,8 +100,8 @@ impl PolicyDefinition {
 
     pub fn get_policy_mode(&self) -> PolicyMode {
         match self {
-            PolicyDefinition::Policy { policy_mode, .. } => policy_mode.clone(),
-            PolicyDefinition::PolicyGroup { policy_mode, .. } => policy_mode.clone(),
+            PolicyDefinition::Policy { policy_mode, .. } => policy_mode.to_owned(),
+            PolicyDefinition::PolicyGroup { policy_mode, .. } => policy_mode.to_owned(),
         }
     }
 }
