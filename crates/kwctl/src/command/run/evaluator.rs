@@ -138,6 +138,7 @@ impl Evaluator {
                 policy_members,
                 expression,
                 message,
+                ..
             } => {
                 let is_context_aware = policy_members
                     .iter()
