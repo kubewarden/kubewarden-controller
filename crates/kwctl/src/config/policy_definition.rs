@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     fmt,
@@ -7,6 +8,7 @@ use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use k8s_openapi::api::core::v1::ObjectReference;
 use policy_evaluator::{
+    admission_response_handler::{policy_id::PolicyID, policy_mode::PolicyMode},
     kubewarden_policy_sdk::crd::policies::{
         AdmissionPolicy, AdmissionPolicyGroup, ClusterAdmissionPolicy, ClusterAdmissionPolicyGroup,
     },
@@ -30,6 +32,13 @@ pub(crate) enum PolicyDefinition {
         uri: String,
         user_execution_cfg: PolicyExecutionConfiguration,
         raw: bool,
+        // Whether the policy is operating in `protect` or `monitor` mode
+        policy_mode: PolicyMode,
+        // Determines if a mutating policy is actually allowed to mutate
+        allowed_to_mutate: bool,
+        // Determines a custom rejection message for the policy
+        custom_rejection_message: Option<String>,
+        // The policy-specific settings provided by the user
         settings: PolicySettings,
         // Individual policies can be created from cli parameters,
         // which implies that context aware configuration can be
@@ -41,6 +50,8 @@ pub(crate) enum PolicyDefinition {
     /// file.
     PolicyGroup {
         id: String,
+        // Whether the policy is operating in `protect` or `monitor` mode
+        policy_mode: PolicyMode,
         policy_members: HashMap<String, PolicyMember>,
         expression: String,
         message: String,
@@ -52,6 +63,45 @@ impl fmt::Display for PolicyDefinition {
         match self {
             PolicyDefinition::Policy { id, uri, .. } => write!(f, "Policy {} ({})", id, uri),
             PolicyDefinition::PolicyGroup { id, .. } => write!(f, "Policy Group {}", id),
+        }
+    }
+}
+
+impl PolicyDefinition {
+    pub fn get_policy_id(&self) -> Result<PolicyID> {
+        match self {
+            PolicyDefinition::Policy { id, .. } => {
+                PolicyID::from_str(id).map_err(anyhow::Error::new)
+            }
+            PolicyDefinition::PolicyGroup { id, .. } => {
+                PolicyID::from_str(id).map_err(anyhow::Error::new)
+            }
+        }
+    }
+
+    pub fn get_policy_custom_rejection_message(&self) -> Option<String> {
+        match self {
+            PolicyDefinition::Policy {
+                custom_rejection_message,
+                ..
+            } => custom_rejection_message.to_owned(),
+            PolicyDefinition::PolicyGroup { .. } => None,
+        }
+    }
+
+    pub fn get_policy_allowed_to_mutate(&self) -> bool {
+        match self {
+            PolicyDefinition::Policy {
+                allowed_to_mutate, ..
+            } => allowed_to_mutate.to_owned(),
+            PolicyDefinition::PolicyGroup { .. } => false,
+        }
+    }
+
+    pub fn get_policy_mode(&self) -> PolicyMode {
+        match self {
+            PolicyDefinition::Policy { policy_mode, .. } => policy_mode.to_owned(),
+            PolicyDefinition::PolicyGroup { policy_mode, .. } => policy_mode.to_owned(),
         }
     }
 }
@@ -95,6 +145,10 @@ impl TryFrom<AdmissionPolicy> for PolicyDefinition {
 
         let uri = spec.module.clone();
 
+        let policy_mode = spec.mode.unwrap_or_default().into();
+        let allowed_to_mutate = spec.mutating;
+        let custom_rejection_message = spec.message;
+
         let settings = PolicySettings::try_from(&spec.settings.0).map_err(anyhow::Error::msg)?;
 
         Ok(PolicyDefinition::Policy {
@@ -105,6 +159,9 @@ impl TryFrom<AdmissionPolicy> for PolicyDefinition {
             uri,
             user_execution_cfg: PolicyExecutionConfiguration::PolicyDefined,
             raw: false,
+            policy_mode,
+            allowed_to_mutate,
+            custom_rejection_message,
             settings,
             ctx_aware_cfg: ContextAwareConfiguration::NoAccess,
         })
@@ -122,6 +179,10 @@ impl TryFrom<ClusterAdmissionPolicy> for PolicyDefinition {
 
         let uri = spec.module.clone();
 
+        let policy_mode = spec.mode.unwrap_or_default().into();
+        let allowed_to_mutate = spec.mutating;
+        let custom_rejection_message = spec.message;
+
         let settings = PolicySettings::try_from(&spec.settings.0).map_err(anyhow::Error::msg)?;
 
         let ctx_aware_allow_list = spec
@@ -138,6 +199,9 @@ impl TryFrom<ClusterAdmissionPolicy> for PolicyDefinition {
             uri,
             user_execution_cfg: PolicyExecutionConfiguration::PolicyDefined,
             raw: false,
+            policy_mode,
+            allowed_to_mutate,
+            custom_rejection_message,
             settings,
             ctx_aware_cfg: ContextAwareConfiguration::AllowList(ctx_aware_allow_list),
         })
@@ -162,12 +226,15 @@ impl TryFrom<ClusterAdmissionPolicyGroup> for PolicyDefinition {
             policy_members.insert(policy_id.clone(), PolicyMember { uri, settings });
         }
 
+        let policy_mode = spec.mode.unwrap_or_default().into();
+
         Ok(PolicyDefinition::PolicyGroup {
             id: cap_group
                 .metadata
                 .name
                 .unwrap_or_else(|| "crd-without-name".to_string()),
             policy_members,
+            policy_mode,
             expression: spec.expression.clone(),
             message: spec.message.clone(),
         })
@@ -192,12 +259,15 @@ impl TryFrom<AdmissionPolicyGroup> for PolicyDefinition {
             policy_members.insert(policy_id.clone(), PolicyMember { uri, settings });
         }
 
+        let policy_mode = spec.mode.unwrap_or_default().into();
+
         Ok(PolicyDefinition::PolicyGroup {
             id: ap_group
                 .metadata
                 .name
                 .unwrap_or_else(|| "crd-without-name".to_string()),
             policy_members,
+            policy_mode,
             expression: spec.expression.clone(),
             message: spec.message.clone(),
         })
@@ -320,8 +390,15 @@ impl PolicyDefinition {
 
         let raw = matches.get_one::<bool>("raw").unwrap_or(&false).to_owned();
 
+        let allowed_to_mutate = true;
+        let policy_mode = PolicyMode::Protect;
+        let custom_rejection_message = None;
+
         Ok(PolicyDefinition::Policy {
             id: "policy-from-cli".to_string(),
+            policy_mode,
+            allowed_to_mutate,
+            custom_rejection_message,
             uri,
             user_execution_cfg,
             raw,
@@ -346,6 +423,7 @@ mod tests {
 
     use k8s_openapi::apimachinery::pkg::runtime::RawExtension;
     use policy_evaluator::kubewarden_policy_sdk::crd::policies::common::ContextAwareResource as ContextAwareResourceSdk;
+    use policy_evaluator::kubewarden_policy_sdk::crd::policies::common::PolicyMode as PolicyModeSdk;
     use serde_json::json;
 
     #[test]
@@ -370,6 +448,9 @@ mod tests {
             },
             spec: Some(AdmissionPolicySpec {
                 module: module_uri.clone(),
+                mode: Some(PolicyModeSdk::Protect),
+                message: Some("foo".to_string()),
+                mutating: false,
                 settings: RawExtension(settings),
                 ..Default::default()
             }),
@@ -387,6 +468,9 @@ mod tests {
                 settings,
                 raw,
                 ctx_aware_cfg,
+                policy_mode,
+                allowed_to_mutate,
+                custom_rejection_message,
             } => {
                 assert_eq!(id, name);
                 assert_eq!(uri, module_uri);
@@ -395,6 +479,9 @@ mod tests {
                     PolicyExecutionConfiguration::PolicyDefined
                 ));
                 assert!(!raw);
+                assert_eq!(policy_mode, PolicyMode::Protect);
+                assert!(!allowed_to_mutate);
+                assert_eq!(custom_rejection_message, Some("foo".to_string()));
                 assert_eq!(settings, expected_settings);
                 assert!(matches!(ctx_aware_cfg, ContextAwareConfiguration::NoAccess));
             }
@@ -446,6 +533,9 @@ mod tests {
             },
             spec: Some(ClusterAdmissionPolicySpec {
                 module: module_uri.clone(),
+                mode: Some(PolicyModeSdk::Protect),
+                message: Some("foo".to_string()),
+                mutating: false,
                 settings: RawExtension(settings),
                 context_aware_resources: context_aware_resources_sdk,
                 ..Default::default()
@@ -464,6 +554,9 @@ mod tests {
                 settings,
                 raw,
                 ctx_aware_cfg,
+                policy_mode,
+                allowed_to_mutate,
+                custom_rejection_message,
             } => {
                 assert_eq!(id, name);
                 assert_eq!(uri, module_uri);
@@ -472,6 +565,9 @@ mod tests {
                     PolicyExecutionConfiguration::PolicyDefined
                 ));
                 assert!(!raw);
+                assert_eq!(policy_mode, PolicyMode::Protect);
+                assert!(!allowed_to_mutate);
+                assert_eq!(custom_rejection_message, Some("foo".to_string()));
                 assert_eq!(settings, expected_settings);
                 assert_eq!(
                     ctx_aware_cfg,
@@ -549,6 +645,7 @@ mod tests {
             spec: Some(ClusterAdmissionPolicyGroupSpec {
                 message: message.clone(),
                 expression: expression.clone(),
+                mode: Some(PolicyModeSdk::Protect),
                 policies,
                 ..Default::default()
             }),
@@ -584,6 +681,7 @@ mod tests {
                     },
                 ),
             ]),
+            policy_mode: PolicyMode::Protect,
             expression,
             message,
         };
@@ -650,11 +748,13 @@ mod tests {
                 id,
                 policy_members,
                 expression,
+                policy_mode,
                 message,
             } => {
                 assert_eq!(id, name);
                 assert_eq!(expression, expression);
                 assert_eq!(message, message);
+                assert_eq!(policy_mode, PolicyMode::Protect);
 
                 assert_eq!(policy_members.len(), 2);
 
