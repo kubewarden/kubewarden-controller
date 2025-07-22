@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use policy_evaluator::admission_response_handler::AdmissionResponseHandler;
 use tracing::{error, warn};
 
 use crate::{
@@ -39,8 +40,22 @@ pub(crate) async fn exec(
                     settings_validation_response.message.unwrap_or_default()
                 ));
             }
+            let vanilla_validation_response = evaluator.evaluate();
 
-            Ok(evaluator.evaluate())
+            let policy_id = match policy_definition.get_policy_id() {
+                Ok(id) => id,
+                Err(e) => {
+                    return Err(anyhow!("Provided policy name is not valid: {:?}", e));
+                }
+            };
+            let policy_mode = policy_definition.get_policy_mode();
+            let admission_response_handler = AdmissionResponseHandler::new(
+                &policy_id,
+                &policy_mode,
+                policy_definition.get_policy_allowed_to_mutate(),
+                policy_definition.get_policy_custom_rejection_message(),
+            );
+            Ok(admission_response_handler.process_response(vanilla_validation_response))
         });
 
         if shutdown_channel_tx.send(()).is_err() {
