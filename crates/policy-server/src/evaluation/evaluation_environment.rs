@@ -6,6 +6,11 @@ use std::{
 
 use policy_evaluator::{
     admission_response::AdmissionResponse,
+    admission_response_handler::{
+        errors::{EvaluationError, Result},
+        policy_id::PolicyID,
+        policy_mode::PolicyMode,
+    },
     callback_requests::CallbackRequest,
     evaluation_context::EvaluationContext,
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
@@ -19,12 +24,10 @@ use tokio::sync::mpsc;
 use tracing::debug;
 
 use crate::{
-    config::{PolicyMode, PolicyOrPolicyGroup, PolicyOrPolicyGroupSettings},
+    config::{PolicyOrPolicyGroup, PolicyOrPolicyGroupSettings},
     evaluation::{
-        errors::{EvaluationError, Result},
         policy_evaluation_settings::PolicyEvaluationSettings,
         precompiled_policy::{PrecompiledPolicies, PrecompiledPolicy},
-        PolicyID,
     },
 };
 

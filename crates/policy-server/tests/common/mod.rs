@@ -5,9 +5,10 @@ use std::{
 };
 
 use axum::Router;
+use policy_evaluator::admission_response_handler::policy_mode::PolicyMode;
 use policy_evaluator::policy_evaluator::PolicySettings;
 use policy_server::{
-    config::{Config, PolicyGroupMember, PolicyMode, PolicyOrPolicyGroup},
+    config::{Config, PolicyGroupMember, PolicyOrPolicyGroup},
     PolicyServer,
 };
 use serde_json::json;

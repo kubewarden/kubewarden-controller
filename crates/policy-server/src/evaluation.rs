@@ -1,4 +1,3 @@
-pub(crate) mod errors;
 mod evaluation_environment;
 mod policy_evaluation_settings;
 pub(crate) mod precompiled_policy;
@@ -8,6 +7,3 @@ pub(crate) mod precompiled_policy;
 pub(crate) use evaluation_environment::EvaluationEnvironment;
 
 pub(crate) use evaluation_environment::EvaluationEnvironmentBuilder;
-
-pub(crate) mod policy_id;
-pub(crate) use policy_id::PolicyID;
