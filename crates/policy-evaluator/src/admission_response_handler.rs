@@ -9,7 +9,7 @@ pub mod policy_mode;
 
 use crate::admission_response_handler::{policy_id::PolicyID, policy_mode::PolicyMode};
 
-/// Apply as series of mutation constrains to the admission response.
+/// Applies a series of mutation constrains to the admission response.
 ///
 /// Current constraints are:
 /// - A policy might have tried to mutate while the policy-server
