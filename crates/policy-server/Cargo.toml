@@ -9,7 +9,7 @@ authors = [
 ]
 edition = "2021"
 name = "policy-server"
-version = "1.26.0"
+version = "1.27.0-rc1"
 
 [dependencies]
 anyhow = "1.0"
