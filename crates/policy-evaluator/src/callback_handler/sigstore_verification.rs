@@ -1,21 +1,26 @@
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
+
 use anyhow::{anyhow, Result};
 use cached::proc_macro::cached;
 use itertools::Itertools;
 use kubewarden_policy_sdk::host_capabilities::verification::{
     KeylessInfo, KeylessPrefixInfo, VerificationResponse,
 };
-use policy_fetcher::sigstore;
-use policy_fetcher::sigstore::trust::ManualTrustRoot;
-use policy_fetcher::sources::Sources;
-use policy_fetcher::verify::config::{LatestVerificationConfig, Signature, Subject};
-use policy_fetcher::verify::{fetch_sigstore_remote_data, Verifier};
-use sha2::{Digest, Sha256};
-use sigstore::cosign::verification_constraint::{
-    AnnotationVerifier, CertificateVerifier, VerificationConstraintVec,
+use policy_fetcher::{
+    sigstore::{self, trust::ManualTrustRoot},
+    sources::Sources,
+    verify::{
+        config::{LatestVerificationConfig, Signature, Subject},
+        fetch_sigstore_remote_data, Verifier,
+    },
 };
-use sigstore::registry::{Certificate, CertificateEncoding};
-use std::collections::BTreeMap;
-use std::sync::Arc;
+use sha2::{Digest, Sha256};
+use sigstore::{
+    cosign::verification_constraint::{
+        AnnotationVerifier, CertificateVerifier, VerificationConstraintVec,
+    },
+    registry::{Certificate, CertificateEncoding},
+};
 use tokio::sync::Mutex;
 use tracing::warn;
 
