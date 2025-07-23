@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use cached::proc_macro::cached;
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
