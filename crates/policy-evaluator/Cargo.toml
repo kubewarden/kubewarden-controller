@@ -67,7 +67,7 @@ hyper = { version = "1" }
 k8s-openapi = { version = "0.25.0", default-features = false, features = [
   "v1_30",
 ] }
-rstest = "0.25"
+rstest = "0.26"
 serial_test = "3.2"
 tempfile = "3.19"
 test-context = "0.4"
