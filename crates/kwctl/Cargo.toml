@@ -57,7 +57,7 @@ reqwest = { version = "0", default-features = false, features = [
 assert_cmd     = "2.0.14"
 hyper          = { version = "1.5.0" }
 predicates     = "3.1"
-rstest         = "0.25"
+rstest         = "0.26"
 tempfile       = "3.17"
-testcontainers = { version = "0.24", features = ["blocking"] }
+testcontainers = { version = "0.25", features = ["blocking"] }
 tower-test     = "0.4"
