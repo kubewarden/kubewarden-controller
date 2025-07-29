@@ -1,5 +1,5 @@
 [package]
-authors     = ["Kubewarden Developers <kubewarden@suse.de>"]
+authors     = ["Kubewarden Developers <cncf-kubewarden-maintainers@lists.cncf.io>"]
 description = "Tool to manage Kubewarden policies"
 edition     = "2021"
 name        = "kwctl"
