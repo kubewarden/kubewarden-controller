@@ -1,5 +1,4 @@
 pub extern crate burrego;
-extern crate wasmparser;
 
 pub mod admission_request;
 pub mod admission_response;
@@ -32,4 +31,5 @@ pub use kubewarden_policy_sdk::metadata::ProtocolVersion;
 pub use policy_evaluator::policy_evaluator_builder;
 pub use policy_fetcher;
 pub use validator;
+pub use wasmparser;
 pub use wasmtime_provider::wasmtime;
