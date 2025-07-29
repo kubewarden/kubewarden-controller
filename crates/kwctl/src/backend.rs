@@ -2,7 +2,8 @@ use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use policy_evaluator::{
     evaluation_context::EvaluationContext, policy_evaluator::PolicyExecutionMode,
-    policy_evaluator_builder::PolicyEvaluatorBuilder, policy_metadata::Metadata, ProtocolVersion,
+    policy_evaluator_builder::PolicyEvaluatorBuilder, policy_metadata::Metadata, wasmparser,
+    ProtocolVersion,
 };
 use semver::{BuildMetadata, Prerelease, Version};
 use std::path::{Path, PathBuf};

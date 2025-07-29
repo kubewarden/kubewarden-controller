@@ -9,6 +9,7 @@ use policy_evaluator::{
     kubewarden_policy_sdk::crd::policies::{
         admission_policy, admission_policy_group, cluster_admission_policy,
         cluster_admission_policy_group, common::ContextAwareResource as ContextAwareResourceSdk,
+        common::PolicyMode,
     },
     policy_fetcher, policy_metadata,
 };
@@ -43,6 +44,7 @@ fn admission_policy(name: &str, module: &str) -> admission_policy::AdmissionPoli
         },
         spec: Some(admission_policy::AdmissionPolicySpec {
             module: module.to_string(),
+            mode: Some(PolicyMode::Protect),
             ..Default::default()
         }),
         ..Default::default()
