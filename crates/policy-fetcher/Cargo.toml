@@ -2,9 +2,9 @@
 authors = [
   "Fabrizio Sestito <fabrizio.sestito@suse.com>",
   "Flavio Castelli <fcastelli@suse.com>",
-  "Kubewarden Developers <kubewarden@suse.de>",
+  "Kubewarden Developers <cncf-kubewarden-maintainers@lists.cncf.io>",
   "Rafael Fernández López <rfernandezlopez@suse.com>",
-  "Víctor Cuadrado Juan <vcuadradojuan@suse.de>",
+  "Víctor Cuadrado Juan <vcuadradojuan@suse.com>",
 ]
 edition = "2021"
 name = "policy-fetcher"
