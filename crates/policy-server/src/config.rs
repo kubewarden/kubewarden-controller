@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use lazy_static::lazy_static;
+use opentelemetry_otlp::tonic_types::transport::{Certificate, ClientTlsConfig, Identity};
 use policy_evaluator::{
     admission_response_handler::policy_mode::PolicyMode,
     policy_evaluator::PolicySettings,
@@ -18,7 +19,6 @@ use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
 };
-use tonic::transport::{Certificate, ClientTlsConfig, Identity};
 
 pub static SERVICE_NAME: &str = "kubewarden-policy-server";
 const DOCKER_CONFIG_ENV_VAR: &str = "DOCKER_CONFIG";
