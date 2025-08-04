@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use anyhow::Result;
@@ -15,6 +15,7 @@ use policy_evaluator::{
 };
 use predicates::{prelude::*, str::contains, str::is_empty};
 use rstest::rstest;
+use sha2::{Digest, Sha256};
 use tempfile::tempdir;
 use testcontainers::{core::WaitFor, runners::SyncRunner};
 
@@ -921,6 +922,41 @@ fn test_artifacthub_scaffold_fail_when_metadata_not_provided_nor_found() {
     cmd.arg("scaffold").arg("artifacthub");
 
     cmd.assert().failure();
+}
+
+#[test]
+fn test_admission_request_scaffold_without_k8s_connectivity() {
+    // Checks regressions of https://github.com/kubewarden/kwctl/issues/1299
+
+    let tempdir = tempdir().unwrap();
+
+    let fixture_pod_file = PathBuf::from(test_data("admission-request/pod.yml"));
+    let tmp_pod_file = tempdir.path().join("pod.yml");
+    std::fs::copy(&fixture_pod_file, &tmp_pod_file).expect("cannot copy pod.yml");
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("scaffold")
+        .arg("admission-request")
+        .arg("--operation")
+        .arg("CREATE")
+        .arg("--object")
+        .arg("pod.yml");
+    cmd.assert().success();
+
+    let fixture_pod_checksum =
+        calculate_file_checksum(&fixture_pod_file).expect("cannot calculate fixture pod sha256");
+    let tmp_pod_checksum =
+        calculate_file_checksum(&tmp_pod_file).expect("cannot calculate tmp pod sha256");
+    assert_eq!(
+        fixture_pod_checksum, tmp_pod_checksum,
+        "The pod file was modified"
+    );
+}
+
+fn calculate_file_checksum(path: &Path) -> Result<String> {
+    let mut hasher = Sha256::new();
+    hasher.update(std::fs::read(path)?);
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
 fn get_wasm_annotations(dir: &Path, oci_ref: &str) -> Result<BTreeMap<String, String>> {
