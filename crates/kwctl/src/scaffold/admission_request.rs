@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Display, Formatter},
     fs::File,
     future::Future,
-    path::PathBuf,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -90,7 +90,7 @@ impl ApiResourceCatalog {
     /// The creation of the `kube::Client` is deferred. The catalog creates it only when the
     /// local cache is not available and it needs to query the API server.
     /// Creating the client can take some time, so it's better to defer it.
-    pub async fn new<F, Fut>(resource_catalog_file: PathBuf, build_kubeclient_fn: F) -> Self
+    pub async fn new<F, Fut>(resource_catalog_file: &Path, build_kubeclient_fn: F) -> Self
     where
         F: FnOnce() -> Fut + Clone,
         Fut: Future<Output = Result<kube::Client>>,
@@ -107,14 +107,14 @@ impl ApiResourceCatalog {
         }
     }
 
-    async fn init<F, Fut>(catalog_path: PathBuf, build_kubeclient_fn: F) -> Result<Self>
+    async fn init<F, Fut>(catalog_path: &Path, build_kubeclient_fn: F) -> Result<Self>
     where
         F: FnOnce() -> Fut + Clone,
         Fut: Future<Output = Result<kube::Client>>,
     {
         if catalog_path.exists() {
             debug!("Resource catalog found, loading it");
-            let file = File::open(catalog_path.clone())?;
+            let file = File::open(catalog_path)?;
             let catalog: Self = serde_json::from_reader(file)?;
             Ok(catalog)
         } else {
@@ -183,7 +183,7 @@ impl ApiResourceCatalog {
         })
     }
 
-    pub fn save(&self, catalog_path: PathBuf) -> Result<()> {
+    pub fn save(&self, catalog_path: &Path) -> Result<()> {
         let catalog_dir = catalog_path
             .parent()
             .ok_or(anyhow!("catalog path has no parent"))?;
@@ -261,12 +261,7 @@ pub(crate) async fn admission_request(
 
     let output = match operation {
         Operation::Create => {
-            scaffold_create(
-                RESOURCE_CATALOG_FILE.to_path_buf(),
-                build_kube_client,
-                object.unwrap(),
-            )
-            .await?
+            scaffold_create(&RESOURCE_CATALOG_FILE, build_kube_client, &object.unwrap()).await?
         }
         Operation::Update => todo!(),
         Operation::Delete => todo!(),
@@ -312,18 +307,18 @@ fn validate_params(
 }
 
 async fn scaffold_create<F, Fut>(
-    resource_catalog_file: PathBuf,
+    resource_catalog_file: &Path,
     kube_client: F,
-    object_path: PathBuf,
+    object_path: &Path,
 ) -> Result<String>
 where
     F: FnOnce() -> Fut + Clone,
     Fut: Future<Output = Result<kube::Client>>,
 {
     let mut resource_catalog =
-        ApiResourceCatalog::new(resource_catalog_file.clone(), kube_client.clone()).await;
+        ApiResourceCatalog::new(resource_catalog_file, kube_client.clone()).await;
 
-    let file = File::open(object_path.clone()).map_err(|err| {
+    let file = File::open(object_path).map_err(|err| {
         anyhow!(
             "failed to open object file {}: {}",
             object_path.to_string_lossy(),
@@ -562,7 +557,7 @@ mod tests {
 
         let build_mock_kube_client = || async { Ok(kube::Client::new(mocksvc, "default")) };
 
-        let catalog = ApiResourceCatalog::init(catalog_file.clone(), build_mock_kube_client)
+        let catalog = ApiResourceCatalog::init(&catalog_file, build_mock_kube_client)
             .await
             .expect("catalog creation failed");
 
@@ -610,16 +605,14 @@ mod tests {
             .collect(),
             restored_from: ApiResourceCatalogRestoredFrom::Cache,
         };
-        catalog
-            .save(catalog_file.clone())
-            .expect("failed to save catalog");
+        catalog.save(&catalog_file).expect("failed to save catalog");
 
         let (mocksvc, handle) = tower_test::mock::pair::<Request<Body>, Response<Body>>();
         expect_no_request(handle).await;
 
         let build_mock_kube_client = || async { Ok(kube::Client::new(mocksvc, "default")) };
 
-        let catalog = ApiResourceCatalog::init(catalog_file.clone(), build_mock_kube_client)
+        let catalog = ApiResourceCatalog::init(&catalog_file, build_mock_kube_client)
             .await
             .expect("catalog creation failed");
 
@@ -673,7 +666,7 @@ mod tests {
             requests:
               storage: 1Gi"#;
 
-    // creates a ApiResourceCatalog with a single resource(Namespace)
+    // Create an ApiResourceCatalog with a single resource(Namespace)
     // that has been restored from cache
     fn build_basic_catalog() -> ApiResourceCatalog {
         ApiResourceCatalog {
@@ -767,20 +760,16 @@ mod tests {
             .expect("failed to convert raw object into serde value");
 
         catalog
-            .save(catalog_filepath.clone())
+            .save(&catalog_filepath)
             .expect("failed to save catalog");
 
         let (mocksvc, handle) = tower_test::mock::pair::<Request<Body>, Response<Body>>();
         scenario(handle).await;
 
         let build_mock_kube_client = || async { Ok(kube::Client::new(mocksvc, "default")) };
-        let output = scaffold_create(
-            catalog_filepath.clone(),
-            build_mock_kube_client,
-            object_filepath.clone(),
-        )
-        .await
-        .expect("scaffold failed");
+        let output = scaffold_create(&catalog_filepath, build_mock_kube_client, &object_filepath)
+            .await
+            .expect("scaffold failed");
 
         let admission_request: AdmissionRequest =
             serde_json::from_str(&output).expect("failed to parse output");
