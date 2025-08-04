@@ -321,7 +321,7 @@ where
     Fut: Future<Output = Result<kube::Client>>,
 {
     let mut resource_catalog =
-        ApiResourceCatalog::new(resource_catalog_file, kube_client.clone()).await;
+        ApiResourceCatalog::new(resource_catalog_file.clone(), kube_client.clone()).await;
 
     let file = File::open(object_path.clone()).map_err(|err| {
         anyhow!(
@@ -349,7 +349,7 @@ where
         None => {
             // Try to refresh the catalog and lookup again
             if resource_catalog.refresh(kube_client).await.is_ok() {
-                if let Err(err) = resource_catalog.save(object_path) {
+                if let Err(err) = resource_catalog.save(resource_catalog_file) {
                     warn!(?err, "Failed to save resource catalog");
                 }
                 resource_catalog.lookup(&kube_gvk)
