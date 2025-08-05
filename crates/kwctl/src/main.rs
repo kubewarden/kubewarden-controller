@@ -7,6 +7,7 @@ use clap::ArgMatches;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::policy_fetcher::{registry::Registry, store::DEFAULT_ROOT, PullDestination};
+use rustls::crypto::aws_lc_rs::default_provider;
 use tracing::{debug, info};
 use tracing_subscriber::{
     filter::{EnvFilter, LevelFilter},
@@ -108,6 +109,10 @@ async fn main() -> Result<()> {
                 .with_ansi(!no_color),
         )
         .init();
+
+    if let Err(e) = default_provider().install_default() {
+        tracing::warn!("Failed to install rustls crypto provider: {:?}", e);
+    }
 
     match matches.subcommand_name() {
         Some("policies") => policies::list(),

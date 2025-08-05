@@ -3,7 +3,7 @@ authors     = ["Kubewarden Developers <cncf-kubewarden-maintainers@lists.cncf.io
 description = "Tool to manage Kubewarden policies"
 edition     = "2021"
 name        = "kwctl"
-version     = "1.27.1"
+version     = "1.27.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -51,6 +51,7 @@ hostname-validator = "1.1.1"
 reqwest = { version = "0", default-features = false, features = [
   "rustls-tls-native-roots",
 ] }
+rustls = { version = "0.23", default-features = false }
 
 [dev-dependencies]
 assert_cmd     = "2.0.14"
