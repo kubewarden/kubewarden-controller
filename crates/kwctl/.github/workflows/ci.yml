@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@6064345e6658255e90e9500fdf9a06ab77e6909c # v2.57.6
+        uses: taiki-e/install-action@306f65503be93cd2b3e3cfb4a9813e992e854dfa # v2.57.8
         with:
           tool: cargo-llvm-cov
 
