@@ -18,7 +18,7 @@ base64 = "0.22"
 burrego = { path = "crates/burrego" }
 cached = { version = "0.56", features = ["async_tokio_rt_multi_thread"] }
 chrono = { version = "0.4", default-features = false }
-dns-lookup = "2.0"
+dns-lookup = "2.1"
 email_address = { version = "0.2", features = ["serde"] }
 futures = "0.3"
 itertools = "0.14"
