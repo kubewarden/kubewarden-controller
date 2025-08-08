@@ -190,9 +190,9 @@ impl CallbackHandler {
                 }
                 CallbackRequestType::DNSLookupHost { host } => {
                     let response = dns_lookup::lookup_host(&host)
-                        .map(|ips| {
+                        .map(|ip_addresses| {
                             let res = LookupResponse {
-                                ips: ips.iter().map(|ip| ip.to_string()).collect(),
+                                ips: ip_addresses.map(|ip| ip.to_string()).collect(),
                             };
                             CallbackResponse {
                                 payload: serde_json::to_vec(&res).unwrap(),
