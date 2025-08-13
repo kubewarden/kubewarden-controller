@@ -294,6 +294,61 @@ fn test_run_group_policy() {
         .stdout(contains(format!("\"allowed\":{}", true)));
 }
 
+#[test]
+fn test_run_group_policy_differing_execution_modes() {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let crd = admission_policy_group::AdmissionPolicyGroup {
+        metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+            name: Some("group-policy".to_string()),
+            ..Default::default()
+        },
+        spec: Some(admission_policy_group::AdmissionPolicyGroupSpec {
+            expression: "pod_privileged() && true".to_string(),
+            message: "you shall not pass!".to_string(),
+            policies: HashMap::from([
+                (
+                    // Rust policy
+                    "pod_privileged".to_string(),
+                    admission_policy_group::PolicyGroupMember {
+                        module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5"
+                            .to_string(),
+                        ..Default::default()
+                    },
+                ),
+                (
+                    // Rego OPA policy
+                    "container_running_as_user".to_string(),
+                    admission_policy_group::PolicyGroupMember {
+                        module:
+                            "registry://ghcr.io/kubewarden/tests/container-running-as-user:v1.0.4"
+                                .to_string(),
+                        ..Default::default()
+                    },
+                ),
+            ]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let yaml_file = write_tmp_yaml_file(
+        serde_yaml::to_string(&crd)
+            .expect("cannot serialize CRD")
+            .as_bytes(),
+    );
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--request-path")
+        .arg(test_data("unprivileged-pod.json"))
+        .arg(yaml_file.path());
+
+    cmd.assert().success();
+    cmd.assert()
+        .stdout(contains(format!("\"allowed\":{}", true)));
+}
+
 #[rstest]
 #[case::allowed(
     "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0",
