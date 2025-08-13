@@ -158,8 +158,22 @@ impl Evaluator {
                 );
 
                 for (member_id, member) in policy_members {
+                    let metadata = local_data.metadata(&member.uri);
+
+                    let execution_mode = {
+                        let wasm_path = local_data.local_path(&member.uri)?;
+                        determine_execution_mode(
+                            metadata,
+                            None,
+                            BackendDetector::default(),
+                            wasm_path,
+                        )?
+                    };
+
                     let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new()
-                        .policy_file(local_data.local_path(&member.uri)?)?;
+                        .policy_file(local_data.local_path(&member.uri)?)?
+                        .execution_mode(execution_mode);
+
                     if cfg.enable_wasmtime_cache {
                         policy_evaluator_builder = policy_evaluator_builder.enable_wasmtime_cache();
                     }
