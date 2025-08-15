@@ -476,6 +476,42 @@ async fn test_timeout_protection_reject() {
 }
 
 #[tokio::test]
+async fn test_timeout_protection_policy_specific_reject() {
+    setup();
+
+    let mut config = default_test_config();
+    config.policy_evaluation_limit_seconds = Some(5); // global timeout, should not be used
+
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/sleep-1s-timeout") // policy with 1s timeout, has precedence over global timeout
+        .body(Body::from(include_str!("data/pod_sleep_4s.json")))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+    assert_eq!(
+        admission_review_response.response.status,
+        Some(
+            AdmissionResponseStatus {
+                message: Some("internal server error: Guest call failure: guest code interrupted, execution deadline exceeded".to_owned()),
+                code: Some(500),
+                ..Default::default()
+            }
+        )
+    );
+}
+
+#[tokio::test]
 async fn test_verified_policy() {
     setup();
 

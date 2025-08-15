@@ -119,6 +119,25 @@ pub(crate) fn default_test_config() -> Config {
                 )]),
             },
         ),
+        (
+            "sleep-1s-timeout".to_owned(),
+            PolicyOrPolicyGroup::Policy {
+                module: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
+                policy_mode: PolicyMode::Protect,
+                allowed_to_mutate: None,
+                // This policy will sleep for 2 seconds but has a 1s timeout eval, so it should timeout
+                // regardless of the global timeout evaluation limit of the policy-server
+                timeout_eval_seconds: Some(1),
+                settings: Some(
+                    PolicySettings::try_from(&json!({
+                        "sleepMilliseconds": 2
+                    }))
+                    .unwrap(),
+                ),
+                context_aware_resources: BTreeSet::new(),
+                message: None,
+            },
+        ),
     ]);
 
     Config {
