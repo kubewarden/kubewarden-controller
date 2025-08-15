@@ -41,6 +41,7 @@ pub(crate) fn default_test_config() -> Config {
                 settings: None,
                 context_aware_resources: BTreeSet::new(),
                 message: None,
+                timeout_eval_seconds: None,
             },
         ),
         (
@@ -58,6 +59,7 @@ pub(crate) fn default_test_config() -> Config {
                 ),
                 context_aware_resources: BTreeSet::new(),
                 message: None,
+                timeout_eval_seconds: None,
             },
         ),
         (
@@ -66,6 +68,7 @@ pub(crate) fn default_test_config() -> Config {
                 module: "ghcr.io/kubewarden/tests/sleeping-policy:v0.1.0".to_owned(),
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: None,
+                timeout_eval_seconds: None,
                 settings: Some(
                     PolicySettings::try_from(&json!({
                         "sleepMilliseconds": 2
@@ -88,6 +91,7 @@ pub(crate) fn default_test_config() -> Config {
                         module: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
+                        timeout_eval_seconds: None,
                     },
                 )]),
             },
@@ -110,6 +114,7 @@ pub(crate) fn default_test_config() -> Config {
                             .unwrap(),
                         ),
                         context_aware_resources: BTreeSet::new(),
+                        timeout_eval_seconds: None,
                     },
                 )]),
             },

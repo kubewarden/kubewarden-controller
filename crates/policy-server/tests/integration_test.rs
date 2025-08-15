@@ -81,6 +81,7 @@ async fn test_validate_custom_rejection_message() {
             settings: None,
             context_aware_resources: BTreeSet::new(),
             message: Some("Custom error message".to_owned()),
+            timeout_eval_seconds: None,
         },
     );
     let app = app(config).await;
@@ -513,6 +514,7 @@ async fn test_verified_policy() {
             settings: None,
             context_aware_resources: BTreeSet::new(),
             message: None,
+            timeout_eval_seconds: None,
         },
     )]);
     config.verification_config = Some(verification_config);
@@ -551,6 +553,7 @@ async fn test_policy_with_invalid_settings() {
             ),
             context_aware_resources: BTreeSet::new(),
             message: None,
+            timeout_eval_seconds: None,
         },
     );
     config.continue_on_errors = true;
@@ -597,6 +600,7 @@ async fn test_policy_with_wrong_url() {
             settings: None,
             context_aware_resources: BTreeSet::new(),
             message: None,
+            timeout_eval_seconds: None,
         },
     );
     config.continue_on_errors = true;
