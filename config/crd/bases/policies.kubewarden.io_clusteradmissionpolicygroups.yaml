@@ -391,6 +391,14 @@ spec:
                       nullable: true
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
+                    timeoutEvalSeconds:
+                      description: |-
+                        TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
+                        the timeout passes, the policy evaluation call will fail based on the
+                        failure policy.
+                        The timeout value must be between 1 and 30 seconds.
+                      format: int32
+                      type: integer
                   required:
                   - module
                   type: object

@@ -165,6 +165,11 @@ func (r *AdmissionPolicyGroup) GetTimeoutSeconds() *int32 {
 	return r.Spec.TimeoutSeconds
 }
 
+func (r *AdmissionPolicyGroup) GetTimeoutEvalSeconds() *int32 {
+	// Only policy group members have timeoutEvalSeconds
+	return nil
+}
+
 func (r *AdmissionPolicyGroup) GetObjectMeta() *metav1.ObjectMeta {
 	return &r.ObjectMeta
 }
