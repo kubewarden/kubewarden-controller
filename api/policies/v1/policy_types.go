@@ -141,7 +141,7 @@ type PolicySpec struct {
 	// sideEffects == Unknown or Some.
 	SideEffects *admissionregistrationv1.SideEffectClass `json:"sideEffects,omitempty"`
 
-	// TimeoutSeconds specifies the timeout for this webhook. After the timeout passes,
+	// TimeoutSeconds specifies the timeout for the policy webhook. After the timeout passes,
 	// the webhook call will be ignored or the API call will fail based on the
 	// failure policy.
 	// The timeout value must be between 1 and 30 seconds.
