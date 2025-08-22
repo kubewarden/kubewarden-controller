@@ -150,6 +150,13 @@ type PolicySpec struct {
 	// +kubebuilder:default:=10
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 
+	// TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
+	// the timeout passes, the policy evaluation call will fail based on the
+	// failure policy.
+	// The timeout value must be between 1 and 30 seconds.
+	// +optional
+	TimeoutEvalSeconds *int32 `json:"timeoutEvalSeconds,omitempty"`
+
 	// Message overrides the rejection message of the policy.
 	// When provided, the policy's rejection message can be found
 	// inside of the `.status.details.causes` field of the
@@ -177,6 +184,13 @@ type PolicyGroupMember struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// x-kubernetes-embedded-resource: false
 	Settings runtime.RawExtension `json:"settings,omitempty"`
+
+	// TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
+	// the timeout passes, the policy evaluation call will fail based on the
+	// failure policy.
+	// The timeout value must be between 1 and 30 seconds.
+	// +optional
+	TimeoutEvalSeconds *int32 `json:"timeoutEvalSeconds,omitempty"`
 }
 
 type PolicyGroupMembersWithContext map[string]PolicyGroupMemberWithContext
