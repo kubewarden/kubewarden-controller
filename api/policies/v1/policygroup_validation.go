@@ -34,6 +34,7 @@ func validatePolicyGroupCreate(policyGroup PolicyGroup) field.ErrorList {
 
 	allErrors = append(allErrors, validatePolicyCreate(policyGroup)...)
 	allErrors = append(allErrors, validatePolicyGroupMembers(policyGroup)...)
+	allErrors = append(allErrors, validatePolicyGroupMembersTimeouts(policyGroup)...)
 	if err := validatePolicyGroupExpressionField(policyGroup); err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -49,6 +50,7 @@ func validatePolicyGroupUpdate(oldPolicyGroup, newPolicyGroup PolicyGroup) field
 
 	allErrors = append(allErrors, validatePolicyUpdate(oldPolicyGroup, newPolicyGroup)...)
 	allErrors = append(allErrors, validatePolicyGroupMembers(newPolicyGroup)...)
+	allErrors = append(allErrors, validatePolicyGroupMembersTimeouts(newPolicyGroup)...)
 	if err := validatePolicyGroupExpressionField(newPolicyGroup); err != nil {
 		allErrors = append(allErrors, err)
 	}
@@ -137,4 +139,39 @@ func validatePolicyGroupExpressionField(policyGroup PolicyGroup) *field.Error {
 	}
 
 	return nil
+}
+
+// validatePolicyGroupMembersTimeouts checks that each member's
+// timeoutEvalSeconds is not greater than the group's timeoutSeconds.
+func validatePolicyGroupMembersTimeouts(policyGroup PolicyGroup) field.ErrorList {
+	var allErrors field.ErrorList
+	groupTimeout := policyGroup.GetTimeoutSeconds()
+	fldGroupTimeout := field.NewPath("spec").Child("timeoutSeconds")
+	fldMembers := field.NewPath("spec").Child("policies")
+
+	if groupTimeout != nil && *groupTimeout > maxWebhookTimeoutSeconds {
+		allErrors = append(allErrors, field.Invalid(
+			fldGroupTimeout,
+			*groupTimeout,
+			fmt.Sprintf("timeoutSeconds cannot be greater than %d (Kubernetes webhook max timeout)", maxWebhookTimeoutSeconds),
+		))
+	}
+	for memberName, member := range policyGroup.GetPolicyGroupMembersWithContext() {
+		memberTimeoutEval := member.TimeoutEvalSeconds
+		if memberTimeoutEval != nil && *memberTimeoutEval > maxWebhookTimeoutSeconds {
+			allErrors = append(allErrors, field.Invalid(
+				fldMembers.Key(memberName).Child("timeoutEvalSeconds"),
+				*memberTimeoutEval,
+				fmt.Sprintf("timeoutEvalSeconds cannot be greater than %d (Kubernetes webhook max timeout)", maxWebhookTimeoutSeconds),
+			))
+		}
+		if groupTimeout != nil && memberTimeoutEval != nil && *memberTimeoutEval > *groupTimeout {
+			allErrors = append(allErrors, field.Invalid(
+				fldMembers.Key(memberName).Child("timeoutEvalSeconds"),
+				*memberTimeoutEval,
+				fmt.Sprintf("timeoutEvalSeconds cannot be greater than group timeoutSeconds (%d)", *groupTimeout),
+			))
+		}
+	}
+	return allErrors
 }
