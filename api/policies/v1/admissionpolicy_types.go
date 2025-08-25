@@ -141,6 +141,10 @@ func (r *AdmissionPolicy) GetTimeoutSeconds() *int32 {
 	return r.Spec.TimeoutSeconds
 }
 
+func (r *AdmissionPolicy) GetTimeoutEvalSeconds() *int32 {
+	return r.Spec.TimeoutEvalSeconds
+}
+
 func (r *AdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
 	return &r.ObjectMeta
 }

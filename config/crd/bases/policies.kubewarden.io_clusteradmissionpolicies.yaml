@@ -463,10 +463,18 @@ spec:
                   Requests with the dryRun attribute will be auto-rejected if they match a webhook with
                   sideEffects == Unknown or Some.
                 type: string
+              timeoutEvalSeconds:
+                description: |-
+                  TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
+                  the timeout passes, the policy evaluation call will fail based on the
+                  failure policy.
+                  The timeout value must be between 1 and 30 seconds.
+                format: int32
+                type: integer
               timeoutSeconds:
                 default: 10
                 description: |-
-                  TimeoutSeconds specifies the timeout for this webhook. After the timeout passes,
+                  TimeoutSeconds specifies the timeout for the policy webhook. After the timeout passes,
                   the webhook call will be ignored or the API call will fail based on the
                   failure policy.
                   The timeout value must be between 1 and 30 seconds.

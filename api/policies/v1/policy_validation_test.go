@@ -15,6 +15,7 @@ limitations under the License.
 package v1
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -592,6 +593,76 @@ func TestValidatePolicyModeField(t *testing.T) {
 				require.ErrorContains(t, err, test.expectedErrorMessage)
 			} else {
 				require.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateTimeoutSeconds(t *testing.T) {
+	maxTimeout := int32(30)
+	overTimeout := int32(31)
+	underTimeout := int32(10)
+
+	type testCase struct {
+		name               string
+		timeoutSeconds     *int32
+		timeoutEvalSeconds *int32
+		expectedErrors     []string
+	}
+
+	tests := []testCase{
+		{
+			name:               "both nil",
+			timeoutSeconds:     nil,
+			timeoutEvalSeconds: nil,
+			expectedErrors:     nil,
+		},
+		{
+			name:               "timeoutSeconds over max",
+			timeoutSeconds:     &overTimeout,
+			timeoutEvalSeconds: nil,
+			expectedErrors:     []string{"timeoutSeconds cannot be greater than"},
+		},
+		{
+			name:               "timeoutEvalSeconds over max",
+			timeoutSeconds:     &maxTimeout,
+			timeoutEvalSeconds: &overTimeout,
+			expectedErrors:     []string{"timeoutEvalSeconds cannot be greater than"},
+		},
+		{
+			name:               "timeoutEvalSeconds > timeoutSeconds",
+			timeoutSeconds:     &underTimeout,
+			timeoutEvalSeconds: &maxTimeout,
+			expectedErrors:     []string{"timeoutEvalSeconds cannot be greater than timeoutSeconds"},
+		},
+		{
+			name:               "valid values",
+			timeoutSeconds:     &maxTimeout,
+			timeoutEvalSeconds: &underTimeout,
+			expectedErrors:     nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			policy := NewClusterAdmissionPolicyFactory().
+				WithTimeoutSeconds(tc.timeoutSeconds).
+				WithTimeoutEvalSeconds(tc.timeoutEvalSeconds).
+				Build()
+			errs := validateTimeoutSeconds(policy)
+			if tc.expectedErrors == nil {
+				require.Empty(t, errs)
+			} else {
+				for _, expected := range tc.expectedErrors {
+					found := false
+					for _, err := range errs {
+						if strings.Contains(err.Error(), expected) {
+							found = true
+							break
+						}
+					}
+					require.True(t, found, "expected error containing %q, got %v", expected, errs)
+				}
 			}
 		})
 	}
