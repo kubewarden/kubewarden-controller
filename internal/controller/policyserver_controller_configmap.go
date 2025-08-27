@@ -26,6 +26,7 @@ type policyGroupMemberWithContext struct {
 	Module                string                            `json:"module"`
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
+	TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
 }
 
 type policyServerConfigEntry struct {
@@ -36,6 +37,7 @@ type policyServerConfigEntry struct {
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	Message               string                            `json:"message,omitempty"`
+	TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
 	// The following fields are used by policy groups only.
 	Policies   map[string]policyGroupMemberWithContext `json:"policies,omitempty"`
 	Expression string                                  `json:"expression,omitempty"`
@@ -192,6 +194,7 @@ func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWi
 			Module:                policy.Module,
 			Settings:              policy.Settings,
 			ContextAwareResources: policy.ContextAwareResources,
+			TimeoutEvalSeconds:    policy.TimeoutEvalSeconds,
 		}
 	}
 	return policyGroupMembers
@@ -211,6 +214,7 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMa
 			Settings:              admissionPolicy.GetSettings(),
 			ContextAwareResources: admissionPolicy.GetContextAwareResources(),
 			Message:               admissionPolicy.GetMessage(),
+			TimeoutEvalSeconds:    admissionPolicy.GetTimeoutEvalSeconds(),
 		}
 
 		if policyGroup, ok := admissionPolicy.(policiesv1.PolicyGroup); ok {
