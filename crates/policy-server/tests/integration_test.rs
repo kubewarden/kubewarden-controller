@@ -487,7 +487,10 @@ async fn test_timeout_protection_policy_specific_reject() {
     let request = Request::builder()
         .method(http::Method::POST)
         .header(header::CONTENT_TYPE, "application/json")
-        .uri("/validate/sleep-1s-timeout") // policy with 1s timeout, has precedence over global timeout
+        // This policy has a 1s timeoutEvalSeconds, and its execution time is 4s via the pod
+        // annot. timeoutEvalSeconds has precedence over global timeout, hence it should timeout
+        // regardless of the global timeout evaluation limit of the policy-server
+        .uri("/validate/sleep-1s-timeout")
         .body(Body::from(include_str!("data/pod_sleep_4s.json")))
         .unwrap();
 
