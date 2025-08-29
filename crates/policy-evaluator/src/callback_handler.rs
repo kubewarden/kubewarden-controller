@@ -14,7 +14,6 @@ mod oci;
 mod sigstore_verification;
 
 pub use builder::CallbackHandlerBuilder;
-pub(crate) use crypto::verify_certificate;
 
 use sigstore_verification::{
     get_sigstore_certificate_verification_cached, get_sigstore_github_actions_verification_cached,
@@ -309,20 +308,20 @@ impl CallbackHandler {
                     since,
                 } => {
                     handle_callback!(
-                        req,
-                        format!("{api_version}/{kind}"),
-                        "Has the result of 'Kubernetes list all resources' changed since a given instant",
-                        {
-                            kubernetes::has_list_resources_all_result_changed_since_instant(
-                                kubernetes_client.as_mut(),
-                                &api_version,
-                                &kind,
-                                label_selector,
-                                field_selector,
-                                since,
-                            )
-                        }
-                    )
+                                    req,
+                                    format!("{api_version}/{kind}"),
+                                    "Has the result of 'Kubernetes list all resources' changed since a given instant",
+                                    {
+                                        kubernetes::has_list_resources_all_result_changed_since_instant(
+                                            kubernetes_client.as_mut(),
+                                            &api_version,
+                                            &kind,
+                                            label_selector,
+                                            field_selector,
+                                            since,
+                                        )
+                                    }
+                                )
                 }
                 CallbackRequestType::KubernetesCanI {
                     request,
@@ -343,6 +342,12 @@ impl CallbackHandler {
                             { kubernetes::can_i_cached(kubernetes_client.as_mut(), request) }
                         )
                     }
+                }
+                CallbackRequestType::CryptoIsCertificateTrusted { request } => {
+                    let cert_description = request.cert.to_string();
+                    handle_callback!(req, cert_description, "Certificate verification done", {
+                        async { crypto::verify_certificate(request) }
+                    })
                 }
             }
         });
