@@ -341,3 +341,108 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePolicyGroupTimeoutSeconds(t *testing.T) {
+	maxTimeout := int32(30)
+	overTimeout := int32(31)
+	underTimeout := int32(10)
+	overMinusUnderTimeout := int32(21)
+
+	type testCase struct {
+		name                string
+		timeoutSeconds      *int32
+		timeoutEvalSeconds  *int32
+		timeoutEvalSeconds2 *int32
+		expectedErrors      []string
+	}
+
+	tests := []testCase{
+		{
+			name:                "both nil",
+			timeoutSeconds:      nil,
+			timeoutEvalSeconds:  nil,
+			timeoutEvalSeconds2: nil,
+			expectedErrors:      nil,
+		},
+		{
+			name:                "timeoutSeconds over max",
+			timeoutSeconds:      &overTimeout,
+			timeoutEvalSeconds:  nil,
+			timeoutEvalSeconds2: nil,
+			expectedErrors:      []string{"timeoutSeconds cannot be greater than"},
+		},
+		{
+			name:                "timeoutEvalSeconds over max",
+			timeoutSeconds:      &maxTimeout,
+			timeoutEvalSeconds:  &overTimeout,
+			timeoutEvalSeconds2: nil,
+			expectedErrors:      []string{"timeoutEvalSeconds cannot be greater than"},
+		},
+		{
+			name:                "timeoutEvalSeconds > timeoutSeconds",
+			timeoutSeconds:      &underTimeout,
+			timeoutEvalSeconds:  &maxTimeout,
+			timeoutEvalSeconds2: nil,
+			expectedErrors:      []string{"timeoutEvalSeconds cannot be greater than group timeoutSeconds"},
+		},
+		{
+			name:                "the sum of all members' timeoutEvalSeconds > timeoutSeconds",
+			timeoutSeconds:      &underTimeout,
+			timeoutEvalSeconds:  &underTimeout,
+			timeoutEvalSeconds2: &underTimeout,
+			expectedErrors:      []string{"the sum of all members' timeoutEvalSeconds cannot be greater than group timeoutSeconds (10)"},
+		},
+		{
+			name:                "the sum of all members' timeoutEvalSeconds > maxTimeoutSeconds",
+			timeoutSeconds:      nil,
+			timeoutEvalSeconds:  &underTimeout,
+			timeoutEvalSeconds2: &overMinusUnderTimeout,
+			expectedErrors:      []string{"the sum of all members' timeoutEvalSeconds cannot be greater than 30 (Kubernetes webhook max timeout)"},
+		},
+		{
+			name:                "valid values",
+			timeoutSeconds:      &maxTimeout,
+			timeoutEvalSeconds:  &underTimeout,
+			timeoutEvalSeconds2: nil,
+			expectedErrors:      nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			group := NewClusterAdmissionPolicyGroupFactory().
+				WithTimeoutSeconds(tc.timeoutSeconds).
+				WithMembers(PolicyGroupMembersWithContext{
+					"pod_privileged": {
+						PolicyGroupMember: PolicyGroupMember{
+							Module:             "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+							TimeoutEvalSeconds: tc.timeoutEvalSeconds,
+						},
+					},
+					"pod_privileged2": {
+						PolicyGroupMember: PolicyGroupMember{
+							Module:             "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+							TimeoutEvalSeconds: tc.timeoutEvalSeconds2,
+						},
+					},
+				},
+				).
+				Build()
+			errs := validatePolicyGroupMembersTimeouts(group)
+			if tc.expectedErrors == nil {
+				require.Empty(t, errs)
+			} else {
+				for _, expected := range tc.expectedErrors {
+					found := false
+					for _, err := range errs {
+						if strings.Contains(err.Error(), expected) {
+							found = true
+							break
+						}
+					}
+					require.True(t, found, "expected error containing %q, got %v", expected, errs)
+				}
+			}
+		})
+	}
+}

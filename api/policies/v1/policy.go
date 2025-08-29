@@ -94,6 +94,7 @@ type PolicySettings interface {
 	GetTitle() (string, bool)
 	GetDescription() (string, bool)
 	GetTimeoutSeconds() *int32
+	GetTimeoutEvalSeconds() *int32
 	GetMessage() string
 }
 

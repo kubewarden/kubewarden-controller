@@ -141,6 +141,8 @@ type ClusterAdmissionPolicyFactory struct {
 	contextAwareResources []ContextAwareResource
 	matchConds            []admissionregistrationv1.MatchCondition
 	mode                  PolicyMode
+	timeoutSeconds        *int32
+	timeoutEvalSeconds    *int32
 }
 
 func NewClusterAdmissionPolicyFactory() *ClusterAdmissionPolicyFactory {
@@ -205,6 +207,16 @@ func (f *ClusterAdmissionPolicyFactory) WithMode(mode PolicyMode) *ClusterAdmiss
 	return f
 }
 
+func (f *ClusterAdmissionPolicyFactory) WithTimeoutSeconds(timeout *int32) *ClusterAdmissionPolicyFactory {
+	f.timeoutSeconds = timeout
+	return f
+}
+
+func (f *ClusterAdmissionPolicyFactory) WithTimeoutEvalSeconds(timeout *int32) *ClusterAdmissionPolicyFactory {
+	f.timeoutEvalSeconds = timeout
+	return f
+}
+
 func (f *ClusterAdmissionPolicyFactory) Build() *ClusterAdmissionPolicy {
 	clusterAdmissionPolicy := ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -222,12 +234,14 @@ func (f *ClusterAdmissionPolicyFactory) Build() *ClusterAdmissionPolicy {
 		Spec: ClusterAdmissionPolicySpec{
 			ContextAwareResources: f.contextAwareResources,
 			PolicySpec: PolicySpec{
-				PolicyServer:    f.policyServer,
-				Module:          f.module,
-				Rules:           f.rules,
-				Mutating:        f.mutating,
-				MatchConditions: f.matchConds,
-				Mode:            f.mode,
+				PolicyServer:       f.policyServer,
+				Module:             f.module,
+				Rules:              f.rules,
+				Mutating:           f.mutating,
+				MatchConditions:    f.matchConds,
+				Mode:               f.mode,
+				TimeoutSeconds:     f.timeoutSeconds,
+				TimeoutEvalSeconds: f.timeoutEvalSeconds,
 			},
 		},
 	}
@@ -338,14 +352,15 @@ func (f *AdmissionPolicyGroupFactory) Build() *AdmissionPolicyGroup {
 }
 
 type ClusterAdmissionPolicyGroupFactory struct {
-	name          string
-	policyServer  string
-	rules         []admissionregistrationv1.RuleWithOperations
-	expression    string
-	policyMembers PolicyGroupMembersWithContext
-	matchConds    []admissionregistrationv1.MatchCondition
-	mode          PolicyMode
-	message       string
+	name           string
+	policyServer   string
+	rules          []admissionregistrationv1.RuleWithOperations
+	expression     string
+	policyMembers  PolicyGroupMembersWithContext
+	matchConds     []admissionregistrationv1.MatchCondition
+	mode           PolicyMode
+	message        string
+	timeoutSeconds *int32
 }
 
 func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory {
@@ -421,6 +436,11 @@ func (f *ClusterAdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *ClusterA
 	return f
 }
 
+func (f *ClusterAdmissionPolicyGroupFactory) WithTimeoutSeconds(timeout *int32) *ClusterAdmissionPolicyGroupFactory {
+	f.timeoutSeconds = timeout
+	return f
+}
+
 func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGroup {
 	clusterAdmissionPolicy := ClusterAdmissionPolicyGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -444,6 +464,7 @@ func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGrou
 					MatchConditions: f.matchConds,
 					Mode:            f.mode,
 					Message:         f.message,
+					TimeoutSeconds:  f.timeoutSeconds,
 				},
 				Policies: f.policyMembers,
 			},

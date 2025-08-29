@@ -206,6 +206,11 @@ func (r *ClusterAdmissionPolicyGroup) GetTimeoutSeconds() *int32 {
 	return r.Spec.TimeoutSeconds
 }
 
+func (r *ClusterAdmissionPolicyGroup) GetTimeoutEvalSeconds() *int32 {
+	// Only policy group members have timeoutEvalSeconds
+	return nil
+}
+
 func (r *ClusterAdmissionPolicyGroup) GetObjectMeta() *metav1.ObjectMeta {
 	return &r.ObjectMeta
 }

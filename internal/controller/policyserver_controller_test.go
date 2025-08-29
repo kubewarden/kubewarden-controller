@@ -264,6 +264,8 @@ var _ = Describe("PolicyServer controller", func() {
 		})
 
 		It("should create the policy server configmap with the assigned policies", func() {
+			timeoutEvalSeconds := int32(5)
+
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
@@ -275,6 +277,7 @@ var _ = Describe("PolicyServer controller", func() {
 
 			clusterAdmissionPolicy := policiesv1.NewClusterAdmissionPolicyFactory().
 				WithPolicyServer(policyServerName).
+				WithTimeoutEvalSeconds(&timeoutEvalSeconds).
 				WithContextAwareResources([]policiesv1.ContextAwareResource{
 					{
 						APIVersion: "v1",
@@ -298,7 +301,8 @@ var _ = Describe("PolicyServer controller", func() {
 				WithMembers(policiesv1.PolicyGroupMembersWithContext{
 					"pod_privileged": {
 						PolicyGroupMember: policiesv1.PolicyGroupMember{
-							Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+							Module:             "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+							TimeoutEvalSeconds: &timeoutEvalSeconds,
 						},
 						ContextAwareResources: []policiesv1.ContextAwareResource{
 							{
@@ -334,6 +338,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Settings:              admissionPolicy.GetSettings(),
 				ContextAwareResources: admissionPolicy.GetContextAwareResources(),
 				Message:               admissionPolicy.GetMessage(),
+				TimeoutEvalSeconds:    admissionPolicy.GetTimeoutEvalSeconds(),
 			}
 			policiesMap[clusterAdmissionPolicy.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -420,9 +425,10 @@ var _ = Describe("PolicyServer controller", func() {
 									"kind":       Equal("Deployment"),
 								})), HaveLen(2)),
 							}), Not(MatchAllKeys(Keys{
-								"expression": Ignore(),
-								"message":    Ignore(),
-								"policies":   Ignore(),
+								"expression":         Ignore(),
+								"message":            Ignore(),
+								"timeoutEvalSeconds": Equal(clusterAdmissionPolicy.GetTimeoutEvalSeconds()),
+								"policies":           Ignore(),
 							}))),
 							admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
 								"namespacedName": MatchAllKeys(Keys{
@@ -445,8 +451,9 @@ var _ = Describe("PolicyServer controller", func() {
 								}),
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod_privileged": MatchAllKeys(Keys{
-										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
-										"settings": Ignore(),
+										"module":             Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
+										"settings":           Ignore(),
+										"timeoutEvalSeconds": Equal(float64(timeoutEvalSeconds)),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
 											"kind":       Equal("Pod"),

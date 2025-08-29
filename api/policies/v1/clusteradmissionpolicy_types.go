@@ -192,6 +192,10 @@ func (r *ClusterAdmissionPolicy) GetTimeoutSeconds() *int32 {
 	return r.Spec.TimeoutSeconds
 }
 
+func (r *ClusterAdmissionPolicy) GetTimeoutEvalSeconds() *int32 {
+	return r.Spec.TimeoutEvalSeconds
+}
+
 func (r *ClusterAdmissionPolicy) GetObjectMeta() *metav1.ObjectMeta {
 	return &r.ObjectMeta
 }

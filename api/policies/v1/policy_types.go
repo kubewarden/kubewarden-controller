@@ -21,6 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// maxWebhookTimeoutSeconds is a magic number on Kubernetes, there's no API to set or get it.
+// Example: https://github.com/kubernetes/kubernetes/blob/7c48c2bd72b9bf5c44d21d7338cc7bea77d0ad2a/pkg/apis/admissionregistration/validation/validation.go#L364
+const maxWebhookTimeoutSeconds = 30
+
 // +kubebuilder:validation:Enum=protect;monitor
 type PolicyMode string
 
@@ -141,7 +145,7 @@ type PolicySpec struct {
 	// sideEffects == Unknown or Some.
 	SideEffects *admissionregistrationv1.SideEffectClass `json:"sideEffects,omitempty"`
 
-	// TimeoutSeconds specifies the timeout for this webhook. After the timeout passes,
+	// TimeoutSeconds specifies the timeout for the policy webhook. After the timeout passes,
 	// the webhook call will be ignored or the API call will fail based on the
 	// failure policy.
 	// The timeout value must be between 1 and 30 seconds.
@@ -149,6 +153,13 @@ type PolicySpec struct {
 	// +optional
 	// +kubebuilder:default:=10
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
+
+	// TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
+	// the timeout passes, the policy evaluation call will fail based on the
+	// failure policy.
+	// The timeout value must be between 1 and 30 seconds.
+	// +optional
+	TimeoutEvalSeconds *int32 `json:"timeoutEvalSeconds,omitempty"`
 
 	// Message overrides the rejection message of the policy.
 	// When provided, the policy's rejection message can be found
@@ -177,6 +188,13 @@ type PolicyGroupMember struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// x-kubernetes-embedded-resource: false
 	Settings runtime.RawExtension `json:"settings,omitempty"`
+
+	// TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
+	// the timeout passes, the policy evaluation call will fail based on the
+	// failure policy.
+	// The timeout value must be between 1 and 30 seconds.
+	// +optional
+	TimeoutEvalSeconds *int32 `json:"timeoutEvalSeconds,omitempty"`
 }
 
 type PolicyGroupMembersWithContext map[string]PolicyGroupMemberWithContext
