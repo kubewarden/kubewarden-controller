@@ -81,6 +81,7 @@ async fn test_validate_custom_rejection_message() {
             settings: None,
             context_aware_resources: BTreeSet::new(),
             message: Some("Custom error message".to_owned()),
+            timeout_eval_seconds: None,
         },
     );
     let app = app(config).await;
@@ -475,6 +476,45 @@ async fn test_timeout_protection_reject() {
 }
 
 #[tokio::test]
+async fn test_timeout_protection_policy_specific_reject() {
+    setup();
+
+    let mut config = default_test_config();
+    config.policy_evaluation_limit_seconds = Some(20); // global timeout, should not be used
+
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        // This policy has a 1s timeoutEvalSeconds, and its execution time is 4s via the pod
+        // annot. timeoutEvalSeconds has precedence over global timeout, hence it should timeout
+        // regardless of the global timeout evaluation limit of the policy-server
+        .uri("/validate/sleep-1s-timeout")
+        .body(Body::from(include_str!("data/pod_sleep_4s.json")))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+    assert_eq!(
+        admission_review_response.response.status,
+        Some(
+            AdmissionResponseStatus {
+                message: Some("internal server error: Guest call failure: guest code interrupted, execution deadline exceeded".to_owned()),
+                code: Some(500),
+                ..Default::default()
+            }
+        )
+    );
+}
+
+#[tokio::test]
 async fn test_verified_policy() {
     setup();
 
@@ -513,6 +553,7 @@ async fn test_verified_policy() {
             settings: None,
             context_aware_resources: BTreeSet::new(),
             message: None,
+            timeout_eval_seconds: None,
         },
     )]);
     config.verification_config = Some(verification_config);
@@ -551,6 +592,7 @@ async fn test_policy_with_invalid_settings() {
             ),
             context_aware_resources: BTreeSet::new(),
             message: None,
+            timeout_eval_seconds: None,
         },
     );
     config.continue_on_errors = true;
@@ -597,6 +639,7 @@ async fn test_policy_with_wrong_url() {
             settings: None,
             context_aware_resources: BTreeSet::new(),
             message: None,
+            timeout_eval_seconds: None,
         },
     );
     config.continue_on_errors = true;

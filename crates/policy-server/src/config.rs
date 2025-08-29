@@ -36,6 +36,7 @@ pub struct Config {
     pub policies_download_dir: PathBuf,
     pub ignore_kubernetes_connection_failure: bool,
     pub always_accept_admission_reviews_on_namespace: Option<String>,
+    // This is the global timeout for each policy evaluation.
     pub policy_evaluation_limit_seconds: Option<u64>,
     pub tls_config: Option<TlsConfig>,
     pub pool_size: usize,
@@ -307,6 +308,8 @@ pub struct PolicyGroupMember {
     /// The list of Kubernetes resources the policy is allowed to access
     #[serde(default)]
     pub context_aware_resources: BTreeSet<ContextAwareResource>,
+    /// Timeout for the evaluation of the policy
+    pub timeout_eval_seconds: Option<u64>,
 }
 
 impl PolicyGroupMember {
@@ -338,6 +341,8 @@ pub enum PolicyOrPolicyGroup {
         context_aware_resources: BTreeSet<ContextAwareResource>,
         /// The message that is returned when the policy evaluates to false
         message: Option<String>,
+        /// Timeout for the evaluation of the policy
+        timeout_eval_seconds: Option<u64>,
     },
     /// A group of policies that are evaluated together using a given expression
     #[serde(rename_all = "camelCase")]
@@ -489,6 +494,7 @@ group_policy:
                         },
                     ]),
                     message: Some("my custom error message".to_owned()),
+                    timeout_eval_seconds: None,
                 },
             ),
             (
@@ -504,6 +510,7 @@ group_policy:
                                 module: "ghcr.io/kubewarden/policies/policy1:0.1.0".to_owned(),
                                 settings: Some(PolicySettings::default()),
                                 context_aware_resources: BTreeSet::new(),
+                                timeout_eval_seconds: None,
                             },
                         ),
                         (
@@ -512,6 +519,7 @@ group_policy:
                                 module: "ghcr.io/kubewarden/policies/policy2:0.1.0".to_owned(),
                                 settings: Some(PolicySettings::default()),
                                 context_aware_resources: BTreeSet::new(),
+                                timeout_eval_seconds: None,
                             },
                         ),
                     ]),

@@ -203,6 +203,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                     message,
                     allowed_to_mutate,
                     context_aware_resources,
+                    timeout_eval_seconds,
                     ..
                 } => {
                     let policy_evaluation_settings = PolicyEvaluationSettings {
@@ -210,6 +211,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                         allowed_to_mutate: allowed_to_mutate.unwrap_or(false),
                         settings,
                         custom_rejection_message: message.clone(),
+                        timeout_eval_seconds: timeout_eval_seconds.to_owned(),
                     };
 
                     let eval_ctx = EvaluationContext {
@@ -244,6 +246,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                         allowed_to_mutate: false, // Group policies are not allowed to mutate
                         custom_rejection_message: None,
                         settings,
+                        timeout_eval_seconds: None,
                     };
                     eval_env.register_policy_group(&id, policy_evaluation_settings);
 
@@ -272,6 +275,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                             allowed_to_mutate: false,
                             settings,
                             custom_rejection_message: None,
+                            timeout_eval_seconds: policy.timeout_eval_seconds.to_owned(),
                         };
 
                         let eval_ctx = EvaluationContext {
@@ -377,6 +381,13 @@ impl EvaluationEnvironment {
             .module_digest_to_policy_evaluator_pre
             .contains_key(module_digest)
         {
+            let evaluation_limit_seconds = match policy_evaluation_settings.timeout_eval_seconds {
+                None => policy_evaluation_limit_seconds, // use policy-server's limit
+                Some(s) => {
+                    debug!(?policy_id, "using policy timeoutEvalSeconds");
+                    Some(s)
+                }
+            };
             debug!(?policy_id, "create wasmtime::Module");
             let module = create_wasmtime_module(policy_id, engine, precompiled_policy)?;
             debug!(?policy_id, "create PolicyEvaluatorPre");
@@ -384,7 +395,7 @@ impl EvaluationEnvironment {
                 engine,
                 &module,
                 precompiled_policy.execution_mode,
-                policy_evaluation_limit_seconds,
+                evaluation_limit_seconds,
             )?;
 
             self.module_digest_to_policy_evaluator_pre
@@ -749,6 +760,7 @@ mod tests {
                     settings: None,
                     context_aware_resources: BTreeSet::new(),
                     message: None,
+                    timeout_eval_seconds: None,
                 },
             );
             precompiled_policies.insert(policy_url, Ok(precompiled_policy.clone()));
@@ -765,6 +777,7 @@ mod tests {
                         module: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
+                        timeout_eval_seconds: None,
                     },
                 )]
                 .into_iter()
@@ -792,6 +805,7 @@ mod tests {
                         module: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
+                        timeout_eval_seconds: None,
                     },
                 )]
                 .into_iter()
@@ -829,6 +843,7 @@ mod tests {
                         module: "file:///tmp/happy_policy_1.wasm".to_string(),
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
+                        timeout_eval_seconds: None,
                     },
                 )]
                 .into_iter()
@@ -848,6 +863,7 @@ mod tests {
                             module: "file:///tmp/happy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
+                            timeout_eval_seconds: None,
                         },
                     ),
                     (
@@ -856,6 +872,7 @@ mod tests {
                             module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
+                            timeout_eval_seconds: None,
                         },
                     ),
                     (
@@ -864,6 +881,7 @@ mod tests {
                             module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
+                            timeout_eval_seconds: None,
                         },
                     ),
                 ]
@@ -886,6 +904,7 @@ mod tests {
                             module: "file:///tmp/happy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
+                            timeout_eval_seconds: None,
                         },
                     ),
                     (
@@ -894,6 +913,7 @@ mod tests {
                             module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
+                            timeout_eval_seconds: None,
                         },
                     ),
                     (
@@ -902,6 +922,7 @@ mod tests {
                             module: "file:///tmp/unhappy_policy_1.wasm".to_string(),
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
+                            timeout_eval_seconds: None,
                         },
                     ),
                 ]

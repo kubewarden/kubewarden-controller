@@ -14,4 +14,6 @@ pub(crate) struct PolicyEvaluationSettings {
     pub(crate) settings: PolicyOrPolicyGroupSettings,
     /// Determines a custom rejection message for the policy
     pub(crate) custom_rejection_message: Option<String>,
+    /// Timeout for the evaluation of the policy in seconds
+    pub(crate) timeout_eval_seconds: Option<u64>,
 }
