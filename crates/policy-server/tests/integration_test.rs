@@ -480,7 +480,7 @@ async fn test_timeout_protection_policy_specific_reject() {
     setup();
 
     let mut config = default_test_config();
-    config.policy_evaluation_limit_seconds = Some(5); // global timeout, should not be used
+    config.policy_evaluation_limit_seconds = Some(20); // global timeout, should not be used
 
     let app = app(config).await;
 
