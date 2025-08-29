@@ -1,4 +1,5 @@
 use anyhow::Result;
+use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
 use kubewarden_policy_sdk::host_capabilities::kubernetes::CanIRequest;
 use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use kubewarden_policy_sdk::host_capabilities::{
@@ -221,6 +222,14 @@ pub enum CallbackRequestType {
         /// the value here to keep the same pattern used by the other Kubernetes requests
         disable_cache: bool,
     },
+
+    /// Check if the given certificate is trusted by the certificate chain and if
+    /// it is not expired
+    CryptoIsCertificateTrusted {
+        /// CertificateVerificationRequest holds information about a certificate and
+        /// a chain to validate it with.
+        request: CertificateVerificationRequest,
+    },
 }
 mod tokio_instant_serializer {
     use serde::de::Error;
@@ -383,5 +392,11 @@ impl From<CanIRequest> for CallbackRequestType {
             disable_cache: req.disable_cache,
             request: req.subject_access_review,
         }
+    }
+}
+
+impl From<CertificateVerificationRequest> for CallbackRequestType {
+    fn from(request: CertificateVerificationRequest) -> Self {
+        CallbackRequestType::CryptoIsCertificateTrusted { request }
     }
 }

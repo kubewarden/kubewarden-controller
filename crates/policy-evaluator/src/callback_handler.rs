@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationResponse;
 use kubewarden_policy_sdk::host_capabilities::net::LookupResponse;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
@@ -309,20 +310,20 @@ impl CallbackHandler {
                     since,
                 } => {
                     handle_callback!(
-                        req,
-                        format!("{api_version}/{kind}"),
-                        "Has the result of 'Kubernetes list all resources' changed since a given instant",
-                        {
-                            kubernetes::has_list_resources_all_result_changed_since_instant(
-                                kubernetes_client.as_mut(),
-                                &api_version,
-                                &kind,
-                                label_selector,
-                                field_selector,
-                                since,
-                            )
-                        }
-                    )
+                                    req,
+                                    format!("{api_version}/{kind}"),
+                                    "Has the result of 'Kubernetes list all resources' changed since a given instant",
+                                    {
+                                        kubernetes::has_list_resources_all_result_changed_since_instant(
+                                            kubernetes_client.as_mut(),
+                                            &api_version,
+                                            &kind,
+                                            label_selector,
+                                            field_selector,
+                                            since,
+                                        )
+                                    }
+                                )
                 }
                 CallbackRequestType::KubernetesCanI {
                     request,
@@ -342,6 +343,17 @@ impl CallbackHandler {
                             "Check if user or service account has permission to perform operation",
                             { kubernetes::can_i_cached(kubernetes_client.as_mut(), request) }
                         )
+                    }
+                }
+                CallbackRequestType::CryptoIsCertificateTrusted { request } => {
+                    let response = verify_certificate(request).map(|is_trusted| {
+                        let response: CertificateVerificationResponse = is_trusted.into();
+                        let res = serde_json::to_vec(&response).unwrap();
+                        CallbackResponse { payload: res }
+                    });
+
+                    if let Err(e) = req.response_channel.send(response) {
+                        warn!("callback handler: cannot send response back: {:?}", e);
                     }
                 }
             }

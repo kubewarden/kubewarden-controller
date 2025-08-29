@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use kubewarden_policy_sdk::host_capabilities::{
-    crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
+    crypto_v1::CertificateVerificationRequest,
     kubernetes::{
         CanIRequest, GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
     },
@@ -12,7 +12,7 @@ use tokio::sync::{mpsc, oneshot, oneshot::Receiver};
 use tracing::{debug, error, warn};
 
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
-use crate::{callback_handler::verify_certificate, evaluation_context::EvaluationContext};
+use crate::evaluation_context::EvaluationContext;
 
 /// The callback function used by waPC and Wasi policies to use host capabilities
 pub(crate) fn host_callback(
@@ -188,13 +188,27 @@ pub(crate) fn host_callback(
                 "v1/is_certificate_trusted" => {
                     let req: CertificateVerificationRequest =
                         serde_json::from_slice(payload.to_vec().as_ref())?;
-                    let response: CertificateVerificationResponse = match verify_certificate(req) {
-                        Ok(b) => b.into(),
-                        Err(e) => {
-                            return Err(format!("Error when verifying certificate: {e}").into())
-                        }
+
+                    debug!(
+                        eval_ctx.policy_id,
+                        binding,
+                        operation,
+                        ?req,
+                        "Sending request via callback channel"
+                    );
+                    let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
+                    let req = CallbackRequest {
+                        request: CallbackRequestType::from(req),
+                        response_channel: tx,
                     };
-                    Ok(serde_json::to_vec(&response)?)
+                    send_request_and_wait_for_response(
+                        &eval_ctx.policy_id,
+                        binding,
+                        operation,
+                        req,
+                        rx,
+                        eval_ctx,
+                    )
                 }
                 _ => {
                     error!(namespace, operation, "unknown operation");
