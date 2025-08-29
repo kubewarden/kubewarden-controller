@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationResponse;
 use kubewarden_policy_sdk::host_capabilities::net::LookupResponse;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
@@ -15,7 +14,6 @@ mod oci;
 mod sigstore_verification;
 
 pub use builder::CallbackHandlerBuilder;
-pub(crate) use crypto::verify_certificate;
 
 use sigstore_verification::{
     get_sigstore_certificate_verification_cached, get_sigstore_github_actions_verification_cached,
@@ -346,15 +344,10 @@ impl CallbackHandler {
                     }
                 }
                 CallbackRequestType::CryptoIsCertificateTrusted { request } => {
-                    let response = verify_certificate(request).map(|is_trusted| {
-                        let response: CertificateVerificationResponse = is_trusted.into();
-                        let res = serde_json::to_vec(&response).unwrap();
-                        CallbackResponse { payload: res }
-                    });
-
-                    if let Err(e) = req.response_channel.send(response) {
-                        warn!("callback handler: cannot send response back: {:?}", e);
-                    }
+                    let cert_description = request.cert.to_string();
+                    handle_callback!(req, cert_description, "Certificate verification done", {
+                        async { crypto::verify_certificate(request) }
+                    })
                 }
             }
         });
