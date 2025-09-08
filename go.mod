@@ -20,7 +20,7 @@ require (
 	k8s.io/apiserver v0.34.0
 	k8s.io/client-go v0.34.0
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
-	sigs.k8s.io/controller-runtime v0.22.0
+	sigs.k8s.io/controller-runtime v0.22.1
 )
 
 // CEL needs to be pinned to the same version as the one used by the k8s.io/apiserver package
