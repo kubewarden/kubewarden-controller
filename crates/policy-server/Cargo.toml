@@ -21,8 +21,8 @@ daemonize = "0.5"
 futures = "0.3"
 itertools = "0.14.0"
 jemalloc_pprof = "0.8"
-k8s-openapi = { version = "0.25.0", default-features = false, features = [
-  "v1_30",
+k8s-openapi = { version = "0.26.0", default-features = false, features = [
+  "v1_32",
 ] }
 lazy_static = "1.4.0"
 mime = "0.3"
@@ -39,7 +39,7 @@ opentelemetry-otlp = { version = "0.30.0", features = [
   "tonic",
 ] }
 opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.29.0" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.29.4" }
 pprof = { version = "0.15", features = ["prost-codec"] }
 rayon = "1.10"
 regex = "1.10"
