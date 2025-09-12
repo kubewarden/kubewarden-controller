@@ -191,6 +191,10 @@ func (factory *AdmissionPolicyFactory) Build() *policiesv1.AdmissionPolicy {
 			Name:      factory.name,
 			Namespace: factory.namespace,
 		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       constants.KubewardenKindAdmissionPolicy,
+			APIVersion: constants.KubewardenPoliciesVersion,
+		},
 		Spec: policiesv1.AdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				ObjectSelector:  factory.objectSelector,
@@ -275,6 +279,10 @@ func (factory *AdmissionPolicyGroupFactory) Build() *policiesv1.AdmissionPolicyG
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      factory.name,
 			Namespace: factory.namespace,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       constants.KubewardenKindAdmissionPolicyGroup,
+			APIVersion: constants.KubewardenPoliciesVersion,
 		},
 		Spec: policiesv1.AdmissionPolicyGroupSpec{
 			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
@@ -449,7 +457,7 @@ func (factory *ClusterAdmissionPolicyGroupFactory) Status(status policiesv1.Poli
 func (factory *ClusterAdmissionPolicyGroupFactory) Build() *policiesv1.ClusterAdmissionPolicyGroup {
 	policy := &policiesv1.ClusterAdmissionPolicyGroup{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       constants.KubewardenKindClusterAdmissionPolicy,
+			Kind:       constants.KubewardenKindClusterAdmissionPolicyGroup,
 			APIVersion: constants.KubewardenPoliciesVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{

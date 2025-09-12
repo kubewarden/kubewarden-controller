@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"slices"
 
+	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -233,7 +234,7 @@ func policyMatchesNamespace(policy policiesv1.Policy, namespace *corev1.Namespac
 	return labelSelector.Matches(labels.Set(namespace.Labels)), nil
 }
 
-// groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
+// groupPoliciesByGVR groups policies by GVR.
 // If namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
 // If the policy targets an unknown GVR or the policy server URL cannot be constructed, the policy will be counted as errored.
 func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) {
@@ -299,6 +300,10 @@ func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.P
 				slog.String("policy", policy.GetUniqueName()))
 			continue
 		}
+
+		// set TypeMeta.Kind and APIVersion fields. Needed for test comparisons as
+		// one loses embedded fields when using the struct as an interface
+		setTypeMeta(policy)
 
 		auditablePolicies[policy.GetUniqueName()] = struct{}{}
 		policy := &Policy{
@@ -460,12 +465,28 @@ func filterWildcardRules(rules []admissionregistrationv1.RuleWithOperations) []a
 func filterNonCreateOperations(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
 	filteredRules := []admissionregistrationv1.RuleWithOperations{}
 	for _, rule := range rules {
-		for _, operation := range rule.Operations {
-			if operation == admissionregistrationv1.Create {
-				filteredRules = append(filteredRules, rule)
-			}
+		if slices.Contains(rule.Operations, admissionregistrationv1.Create) {
+			filteredRules = append(filteredRules, rule)
 		}
 	}
 
 	return filteredRules
+}
+
+// setTypeMeta sets TypeMeta.Kind and APIVersion fields.
+func setTypeMeta(policy policiesv1.Policy) {
+	switch p := policy.(type) {
+	case *policiesv1.ClusterAdmissionPolicy:
+		p.Kind = constants.KubewardenKindClusterAdmissionPolicy
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	case *policiesv1.ClusterAdmissionPolicyGroup:
+		p.Kind = constants.KubewardenKindClusterAdmissionPolicyGroup
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	case *policiesv1.AdmissionPolicy:
+		p.Kind = constants.KubewardenKindAdmissionPolicy
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	case *policiesv1.AdmissionPolicyGroup:
+		p.Kind = constants.KubewardenKindAdmissionPolicyGroup
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	}
 }
