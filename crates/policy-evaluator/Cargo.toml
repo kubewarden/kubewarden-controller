@@ -7,7 +7,7 @@ authors = [
 ]
 edition = "2021"
 name = "policy-evaluator"
-version = "0.29.4"
+version = "0.29.5"
 
 [workspace]
 members = ["crates/burrego"]
