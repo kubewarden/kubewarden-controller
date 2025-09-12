@@ -460,10 +460,8 @@ func filterWildcardRules(rules []admissionregistrationv1.RuleWithOperations) []a
 func filterNonCreateOperations(rules []admissionregistrationv1.RuleWithOperations) []admissionregistrationv1.RuleWithOperations {
 	filteredRules := []admissionregistrationv1.RuleWithOperations{}
 	for _, rule := range rules {
-		for _, operation := range rule.Operations {
-			if operation == admissionregistrationv1.Create {
-				filteredRules = append(filteredRules, rule)
-			}
+		if slices.Contains(rule.Operations, admissionregistrationv1.Create) {
+			filteredRules = append(filteredRules, rule)
 		}
 	}
 
