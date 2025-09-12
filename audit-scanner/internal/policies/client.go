@@ -234,7 +234,7 @@ func policyMatchesNamespace(policy policiesv1.Policy, namespace *corev1.Namespac
 	return labelSelector.Matches(labels.Set(namespace.Labels)), nil
 }
 
-// groupPoliciesByGVRAndLabelSelectorg groups policies by GVR.
+// groupPoliciesByGVR groups policies by GVR.
 // If namespaced is true, it will skip cluster-wide resources, otherwise it will skip namespaced resources.
 // If the policy targets an unknown GVR or the policy server URL cannot be constructed, the policy will be counted as errored.
 func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.Policy, namespaced bool) (*Policies, error) {
