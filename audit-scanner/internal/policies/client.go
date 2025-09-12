@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"slices"
 
+	"github.com/kubewarden/audit-scanner/internal/constants"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -300,6 +301,10 @@ func (f *Client) groupPoliciesByGVR(ctx context.Context, policies []policiesv1.P
 			continue
 		}
 
+		// set TypeMeta.Kind and APIVersion fields. Needed for test comparisons as
+		// one loses embedded fields when using the struct as an interface
+		setTypeMeta(policy)
+
 		auditablePolicies[policy.GetUniqueName()] = struct{}{}
 		policy := &Policy{
 			Policy:       policy,
@@ -466,4 +471,22 @@ func filterNonCreateOperations(rules []admissionregistrationv1.RuleWithOperation
 	}
 
 	return filteredRules
+}
+
+// setTypeMeta sets TypeMeta.Kind and APIVersion fields.
+func setTypeMeta(policy policiesv1.Policy) {
+	switch p := policy.(type) {
+	case *policiesv1.ClusterAdmissionPolicy:
+		p.Kind = constants.KubewardenKindClusterAdmissionPolicy
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	case *policiesv1.ClusterAdmissionPolicyGroup:
+		p.Kind = constants.KubewardenKindClusterAdmissionPolicyGroup
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	case *policiesv1.AdmissionPolicy:
+		p.Kind = constants.KubewardenKindAdmissionPolicy
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	case *policiesv1.AdmissionPolicyGroup:
+		p.Kind = constants.KubewardenKindAdmissionPolicyGroup
+		p.APIVersion = constants.KubewardenPoliciesGroup + "/" + constants.KubewardenPoliciesVersion
+	}
 }
