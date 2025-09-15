@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, FixedOffset, Utc};
-use kubewarden_policy_sdk::host_capabilities::crypto::{
-    BoolWithReason, Certificate, CertificateEncoding,
+use kubewarden_policy_sdk::host_capabilities::crypto::{Certificate, CertificateEncoding};
+use kubewarden_policy_sdk::host_capabilities::crypto_v1::{
+    CertificateVerificationRequest, CertificateVerificationResponse,
 };
-use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
 use tracing::debug;
 
 /// A collection of trusted root certificates
@@ -18,7 +18,7 @@ struct CertificatePool {
 /// If the provided certificate chain is empty, it is treated as trusted.
 pub fn verify_certificate(
     req: CertificateVerificationRequest,
-) -> Result<cached::Return<BoolWithReason>> {
+) -> Result<cached::Return<CertificateVerificationResponse>> {
     // verify validity:
     let pc = match req.cert.encoding {
         CertificateEncoding::Pem => {
@@ -47,9 +47,10 @@ pub fn verify_certificate(
 
             if pc.valid_not_after().lt(&p_not_after) {
                 return Ok(cached::Return {
-                    value: BoolWithReason::False(
-                        "Certificate is being used after its expiration date".to_string(),
-                    ),
+                    value: CertificateVerificationResponse {
+                        trusted: false,
+                        reason: "Certificate is being used after its expiration date".to_string(),
+                    },
                     was_cached: false,
                 });
             }
@@ -62,9 +63,10 @@ pub fn verify_certificate(
     let now = picky::x509::date::UtcDate::now();
     if pc.valid_not_before().gt(&now) {
         return Ok(cached::Return {
-            value: BoolWithReason::False(
-                "Certificate is being used before its validity date".to_string(),
-            ),
+            value: CertificateVerificationResponse {
+                trusted: false,
+                reason: "Certificate is being used before its validity date".to_string(),
+            },
             was_cached: false,
         });
     }
@@ -76,16 +78,20 @@ pub fn verify_certificate(
         let cert_pool = CertificatePool::from_certificates(&certs)?;
         if !cert_pool.verify(&pc) {
             return Ok(cached::Return {
-                value: BoolWithReason::False(
-                    "Certificate is not trusted by the provided cert chain".to_string(),
-                ),
+                value: CertificateVerificationResponse {
+                    trusted: false,
+                    reason: "Certificate is not trusted by the provided cert chain".to_string(),
+                },
                 was_cached: false,
             });
         }
     }
 
     Ok(cached::Return {
-        value: BoolWithReason::True,
+        value: CertificateVerificationResponse {
+            trusted: true,
+            reason: "".to_string(),
+        },
         was_cached: false,
     })
 }
@@ -161,9 +167,7 @@ mod tests {
     use super::*;
 
     use chrono::Utc;
-    use kubewarden_policy_sdk::host_capabilities::crypto::{
-        BoolWithReason, Certificate, CertificateEncoding,
-    };
+    use kubewarden_policy_sdk::host_capabilities::crypto::{Certificate, CertificateEncoding};
     use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
 
     // spellchecker:off
@@ -271,10 +275,13 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: Some(cert_chain),
             not_after: None,
         };
-        assert!(matches!(
+        assert_eq!(
             verify_certificate(req).unwrap().value,
-            BoolWithReason::True
-        ));
+            CertificateVerificationResponse {
+                trusted: true,
+                reason: "".to_string(),
+            }
+        );
     }
 
     #[test]
@@ -296,11 +303,13 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
         };
 
         // compiler thinks 'reason' is unused, doesn't detect it's used in 'matches!()'
-        let _reason = "Certificate is not trusted by the provided cert chain".to_string();
-        assert!(matches!(
+        assert_eq!(
             verify_certificate(req).unwrap().value,
-            BoolWithReason::False(_reason)
-        ));
+            CertificateVerificationResponse {
+                trusted: false,
+                reason: "Certificate is not trusted by the provided cert chain".to_string(),
+            }
+        );
     }
 
     #[test]
@@ -314,10 +323,13 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: None,
             not_after: None,
         };
-        assert!(matches!(
+        assert_eq!(
             verify_certificate(req).unwrap().value,
-            BoolWithReason::True
-        ));
+            CertificateVerificationResponse {
+                trusted: true,
+                reason: "".to_string(),
+            }
+        );
     }
 
     #[test]
@@ -336,10 +348,13 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
             cert_chain: Some(cert_chain),
             not_after: None, // not checking expiration
         };
-        assert!(matches!(
+        assert_eq!(
             verify_certificate(req).unwrap().value,
-            BoolWithReason::True
-        ));
+            CertificateVerificationResponse {
+                trusted: true,
+                reason: "".to_string(),
+            }
+        );
     }
 
     #[test]
@@ -373,11 +388,13 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
         };
 
         // compiler thinks 'reason' is unused, doesn't detect it's used in 'matches!()'
-        let _reason = "Certificate is being used after its expiration date".to_string();
-        assert!(matches!(
+        assert_eq!(
             verify_certificate(req).unwrap().value,
-            BoolWithReason::False(_reason)
-        ));
+            CertificateVerificationResponse {
+                trusted: false,
+                reason: "Certificate is being used after its expiration date".to_string(),
+            }
+        );
     }
 
     #[test]
@@ -393,10 +410,12 @@ iDAKBggqhkjOPQQDAgNIADBFAiEArSsdE5dDXqAU2vM3ThT8GvTnjkWhER3l9v1j
         };
 
         // compiler thinks 'reason' is unused, doesn't detect it's used in 'matches!()'
-        let _reason = "Certificate is being used before its validity date".to_string();
-        assert!(matches!(
+        assert_eq!(
             verify_certificate(req).unwrap().value,
-            BoolWithReason::False(_reason)
-        ));
+            CertificateVerificationResponse {
+                trusted: false,
+                reason: "Certificate is being used before its validity date".to_string()
+            }
+        );
     }
 }
