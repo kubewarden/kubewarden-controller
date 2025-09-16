@@ -14,7 +14,7 @@ pub mod metrics;
 pub mod profiling;
 pub mod tracing;
 
-use ::tracing::{debug, info, warn, Level};
+use ::tracing::{debug, info, trace, warn, Level};
 use anyhow::{anyhow, Result};
 use axum::{
     routing::{get, post},
@@ -83,7 +83,10 @@ impl PolicyServer {
             Err(e) => {
                 // Do not exit, only policies making use of sigstore's keyless/certificate based signatures will fail
                 // There are good chances everything is going to work fine in the majority of cases
-                warn!(?e, "Cannot create Sigstore trust root, verification relying on Rekor and Fulcio will fail");
+                warn!("Cannot create Sigstore trust root, verification relying on Rekor and Fulcio will fail");
+                // Only log the error if the log level is set to trace. This is to avoid
+                // spamming the logs with errors that are not relevant to most users
+                trace!(?e);
                 None
             }
         };
