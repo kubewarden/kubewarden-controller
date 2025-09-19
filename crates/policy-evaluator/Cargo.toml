@@ -32,12 +32,9 @@ kube = { version = "2.0.0", default-features = false, features = [
 kubewarden-policy-sdk = { version = "0.14", features = ["crd"] }
 lazy_static = "1.5"
 mail-parser = { version = "0.11", features = ["serde"] }
-pem = "3.0"
-picky = { version = "7.0.0-rc.8", default-features = false, features = [
-  "chrono_conversion",
-  "x509",
+pki-types = { package = "rustls-pki-types", version = "1.12", default-features = false, features = [
+  "std",
 ] }
-pki-types = { package = "rustls-pki-types", version = "1.11", default-features = false }
 policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.10.4" }
 rhai = { version = "1.21", features = ["sync"] }
 rustls-webpki = { version = "0.103", default-features = false, features = [
@@ -60,7 +57,7 @@ wasmparser = "0.239"
 wasmtime = { workspace = true }
 wasmtime-provider = { version = "2.11.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
-x509-cert = "0.2.5"
+webpki-roots = "1"
 
 [workspace.dependencies]
 wasi-common   = "36.0"
@@ -73,7 +70,7 @@ hyper = { version = "1" }
 k8s-openapi = { version = "0.26.0", default-features = false, features = [
   "v1_30",
 ] }
-rcgen = { version = "0.14.3", features = ["x509-parser"] }
+rcgen = { version = "0.14", features = ["x509-parser"] }
 rstest = "0.26"
 serial_test = "3.2"
 tempfile = "3.19"
