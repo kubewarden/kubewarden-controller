@@ -146,9 +146,20 @@ impl PolicyServer {
             .await;
 
         let mut wasmtime_config = wasmtime::Config::new();
-        if config.policy_evaluation_limit_seconds.is_some() {
+
+        let any_policy_has_timeout = config.policies.values().any(|policy| match policy {
+            config::PolicyOrPolicyGroup::Policy {
+                timeout_eval_seconds,
+                ..
+            } => timeout_eval_seconds.is_some(),
+            config::PolicyOrPolicyGroup::PolicyGroup { policies, .. } => policies
+                .values()
+                .any(|member| member.timeout_eval_seconds.is_some()),
+        });
+        if config.policy_evaluation_limit_seconds.is_some() || any_policy_has_timeout {
             wasmtime_config.epoch_interruption(true);
         }
+
         let engine = wasmtime::Engine::new(&wasmtime_config)?;
         let precompiled_policies = precompile_policies(&engine, &fetched_policies);
 
