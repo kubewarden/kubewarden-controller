@@ -172,7 +172,7 @@ impl PolicyServer {
         }
         if let Some(limit) = config.policy_evaluation_limit_seconds {
             evaluation_environment_builder =
-                evaluation_environment_builder.with_policy_evaluation_limit_seconds(limit);
+                evaluation_environment_builder.with_global_policy_evaluation_limit_seconds(limit);
         }
         let evaluation_environment = evaluation_environment_builder.build(&config.policies)?;
 

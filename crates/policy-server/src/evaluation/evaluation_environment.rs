@@ -114,7 +114,7 @@ pub(crate) struct EvaluationEnvironmentBuilder<'engine, 'precompiled_policies> {
     precompiled_policies: &'precompiled_policies PrecompiledPolicies,
     callback_handler_tx: mpsc::Sender<CallbackRequest>,
     continue_on_errors: bool,
-    policy_evaluation_limit_seconds: Option<u64>,
+    global_policy_evaluation_limit_seconds: Option<u64>,
     always_accept_admission_reviews_on_namespace: Option<String>,
 }
 
@@ -130,17 +130,17 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
             precompiled_policies,
             callback_handler_tx,
             continue_on_errors: false,
-            policy_evaluation_limit_seconds: None,
+            global_policy_evaluation_limit_seconds: None,
             always_accept_admission_reviews_on_namespace: None,
         }
     }
 
-    /// Enable policy evaluatation timeout feature
-    pub fn with_policy_evaluation_limit_seconds(
+    /// Enable global policy evaluation timeout feature
+    pub fn with_global_policy_evaluation_limit_seconds(
         mut self,
         policy_evaluation_limit_seconds: u64,
     ) -> Self {
-        self.policy_evaluation_limit_seconds = Some(policy_evaluation_limit_seconds);
+        self.global_policy_evaluation_limit_seconds = Some(policy_evaluation_limit_seconds);
         self
     }
 
@@ -347,7 +347,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                 policy_evaluation_settings,
                 eval_ctx,
                 precompiled_policy,
-                self.policy_evaluation_limit_seconds,
+                self.global_policy_evaluation_limit_seconds,
             )
             .map_err(|e| EvaluationError::BootstrapFailure(e.to_string()))?;
 
