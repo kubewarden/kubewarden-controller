@@ -813,6 +813,20 @@ mod tests {
             precompiled_policies.insert(policy_url, Ok(precompiled_policy.clone()));
         }
 
+        // add policy with timeoutEvalSeconds
+        policies.insert(
+            "policy_with_timeout".to_string(),
+            PolicyOrPolicyGroup::Policy {
+                module: "file:///tmp/happy_policy_1.wasm".to_string(),
+                policy_mode: PolicyMode::Protect,
+                allowed_to_mutate: None,
+                settings: None,
+                context_aware_resources: BTreeSet::new(),
+                message: None,
+                timeout_eval_seconds: Some(5),
+            },
+        );
+
         // add policy group policies
         policies.insert(
             "group_policy_valid_expression_with_single_member".to_string(),
@@ -1093,17 +1107,19 @@ mod tests {
         }
     }
 
-    /// Given to identical wasm modules, only one instance of PolicyEvaluator is going to be
+    /// Given two identical wasm modules, only one instance of PolicyEvaluator is going to be
     /// created
+    // Given two identical wasm modules in two different policies with different
+    // timeoutEvalSeconds, two different instances of PolicyEvaluator must be created
     #[test]
-    fn avoid_duplicated_instances_of_policy_evaluator() {
+    fn ensure_correct_instances_of_policy_evaluator() {
         let evaluation_environment = build_evaluation_environment();
 
         assert_eq!(
             evaluation_environment
                 .module_digest_and_eval_timeout_to_policy_evaluator_pre
                 .len(),
-            2
+            3 // 2 unique modules, 1 with two different timeoutEvalSeconds
         );
     }
 
