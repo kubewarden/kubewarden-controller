@@ -36,13 +36,6 @@ use mockall::automock;
 /// The digest of a WebAssembly module
 type ModuleDigest = String;
 
-/// Key used to identify a `PolicyEvaluatorPre` instance
-#[derive(Hash, Eq, PartialEq, Clone, Debug)]
-struct PolicyEvaluatorPreKey {
-    module_digest: String,
-    policy_evaluation_limit_seconds: Option<u64>,
-}
-
 /// This structure contains all the policies defined by the user inside of the `policies.yml`.
 /// It also provides helper methods to perform the validation of a request and the validation
 /// of the settings provided by the user.
@@ -67,15 +60,14 @@ pub(crate) struct EvaluationEnvironment {
     /// deployed inside of the same Namespace).
     always_accept_admission_reviews_on_namespace: Option<String>,
 
-    /// A map with the PolicyEvaluatorPreKey as key, and the associated `PolicyEvaluatorPre`
+    /// A map with the module digest as key, and the associated `PolicyEvaluatorPre`
     /// as value
     ///
     /// Note: the `PolicyEvaluatorPre` is wrapped into an `Arc` to allow cheap cloning
     /// when it's being used inside of a `GroupPolicyEvaluator`.
     /// We have to use an `Arc` instead of a `Rc` because rhai (used by the `PolicyGroupEvaluator`)
     /// requires `+send` and `+sync`.
-    module_digest_and_eval_timeout_to_policy_evaluator_pre:
-        HashMap<PolicyEvaluatorPreKey, Arc<PolicyEvaluatorPre>>,
+    module_digest_to_policy_evaluator_pre: HashMap<ModuleDigest, Arc<PolicyEvaluatorPre>>,
 
     /// A map with the ID of the policy as value, and the list of ContextAwareResource the
     /// policy is allowed to access.
@@ -84,10 +76,6 @@ pub(crate) struct EvaluationEnvironment {
     /// Map a `policy_id` to the module's digest.
     /// This allows us to deduplicate the Wasm modules defined by the user.
     policy_id_to_module_digest: HashMap<PolicyID, ModuleDigest>,
-
-    /// Map a `policy_id` to its policy evaluation timeout.
-    /// This allows us to deduplicate the Wasm modules defined by the user.
-    policy_id_to_evaluation_timeout: HashMap<PolicyID, Option<u64>>,
 
     /// Map a `policy_id` to the `PolicyEvaluationSettings` instance. This allows us to obtain
     /// the list of settings to be used when evaluating a given policy.
@@ -106,6 +94,9 @@ pub(crate) struct EvaluationEnvironment {
     /// to request the computation of code that can only be run inside of an
     /// asynchronous block
     callback_handler_tx: Option<mpsc::Sender<CallbackRequest>>,
+
+    /// When set, defines after how many seconds a policy evaluation is interrupted.
+    global_policy_evaluation_limit_seconds: Option<u64>,
 }
 
 /// This structure is used to build the `EvaluationEnvironment` instance.
@@ -186,6 +177,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                 .always_accept_admission_reviews_on_namespace
                 .clone(),
             callback_handler_tx: Some(self.callback_handler_tx.clone()),
+            global_policy_evaluation_limit_seconds: self.global_policy_evaluation_limit_seconds,
             ..Default::default()
         };
 
@@ -226,10 +218,14 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                         timeout_eval_seconds: timeout_eval_seconds.to_owned(),
                     };
 
+                    let epoch_deadline =
+                        timeout_eval_seconds.or(self.global_policy_evaluation_limit_seconds);
+
                     let eval_ctx = EvaluationContext {
                         policy_id: id.to_string(),
                         callback_channel: Some(self.callback_handler_tx.clone()),
                         ctx_aware_resources_allow_list: context_aware_resources.to_owned(),
+                        epoch_deadline,
                     };
 
                     if let Err(e) = self.bootstrap_policy(
@@ -287,8 +283,12 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                             allowed_to_mutate: false,
                             settings,
                             custom_rejection_message: None,
-                            timeout_eval_seconds: policy.timeout_eval_seconds.to_owned(),
+                            timeout_eval_seconds: policy.timeout_eval_seconds,
                         };
+
+                        let epoch_deadline = policy
+                            .timeout_eval_seconds
+                            .or(self.global_policy_evaluation_limit_seconds);
 
                         let eval_ctx = EvaluationContext {
                             policy_id: policy_id.to_string(),
@@ -296,6 +296,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                             ctx_aware_resources_allow_list: policy
                                 .context_aware_resources
                                 .to_owned(),
+                            epoch_deadline,
                         };
 
                         if let Err(e) = self.bootstrap_policy(
@@ -347,7 +348,6 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                 policy_evaluation_settings,
                 eval_ctx,
                 precompiled_policy,
-                self.global_policy_evaluation_limit_seconds,
             )
             .map_err(|e| EvaluationError::BootstrapFailure(e.to_string()))?;
 
@@ -377,12 +377,10 @@ impl EvaluationEnvironment {
     /// - `policy_evaluation_settings`: the settings associated with the policy
     /// - `precompiled_policy`: the `PrecompiledPolicy` associated with the Wasm module referenced by the policy
     /// - `callback_handler_tx`: the transmission end of a channel that connects the worker with the asynchronous world
-    /// - `global_policy_evaluation_limit_seconds`: when set, defines after how many seconds the policy evaluation is interrupted
     ///
     /// Invariants that are not in params:
     /// - `module_digest`: obtained from `precompiled_policy.digest`
-    /// - `evaluation_limit_seconds`: obtained from `policy_evaluation_settings.timeout_eval_seconds` or `global_policy_evaluation_limit_seconds`
-    /// - `key`: constructed from `module_digest` and `evaluation_limit_seconds`
+    /// - `evaluation_limit_seconds`: obtained from `eval_ctx.epoch_deadline`
     fn register(
         &mut self,
         engine: &wasmtime::Engine,
@@ -390,27 +388,12 @@ impl EvaluationEnvironment {
         policy_evaluation_settings: PolicyEvaluationSettings,
         eval_ctx: EvaluationContext,
         precompiled_policy: &PrecompiledPolicy,
-        global_policy_evaluation_limit_seconds: Option<u64>,
     ) -> Result<()> {
         let module_digest = &precompiled_policy.digest;
-        debug!(?policy_id, "calculate Eval timeout limit");
-        let evaluation_limit_seconds = match policy_evaluation_settings.timeout_eval_seconds {
-            None => {
-                global_policy_evaluation_limit_seconds // use policy-server's limit
-            }
-            Some(s) => {
-                Some(s) // use policy's limit
-            }
-        };
-
-        let key = PolicyEvaluatorPreKey {
-            module_digest: module_digest.to_owned(),
-            policy_evaluation_limit_seconds: evaluation_limit_seconds.to_owned(),
-        };
 
         if !self
-            .module_digest_and_eval_timeout_to_policy_evaluator_pre
-            .contains_key(&key)
+            .module_digest_to_policy_evaluator_pre
+            .contains_key(module_digest)
         {
             debug!(?policy_id, "create wasmtime::Module");
             let module = create_wasmtime_module(policy_id, engine, precompiled_policy)?;
@@ -419,17 +402,15 @@ impl EvaluationEnvironment {
                 engine,
                 &module,
                 precompiled_policy.execution_mode,
-                evaluation_limit_seconds,
+                eval_ctx.epoch_deadline,
             )?;
 
-            self.module_digest_and_eval_timeout_to_policy_evaluator_pre
-                .insert(key.to_owned(), Arc::new(pol_eval_pre));
+            self.module_digest_to_policy_evaluator_pre
+                .insert(module_digest.to_owned(), Arc::new(pol_eval_pre));
         }
+
         self.policy_id_to_module_digest
             .insert(policy_id.to_owned(), module_digest.to_owned());
-
-        self.policy_id_to_evaluation_timeout
-            .insert(policy_id.to_owned(), evaluation_limit_seconds.to_owned());
 
         self.policy_id_to_settings
             .insert(policy_id.to_owned(), policy_evaluation_settings);
@@ -544,19 +525,15 @@ impl EvaluationEnvironment {
             .get(policy_id)
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-        let policy_evaluation_limit_seconds =
-            self.policy_id_to_evaluation_timeout
-                .get(policy_id)
-                .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
+        let policy_settings = self.get_policy_settings(policy_id)?;
 
-        let key = PolicyEvaluatorPreKey {
-            module_digest: module_digest.to_owned(),
-            policy_evaluation_limit_seconds: policy_evaluation_limit_seconds.to_owned(),
-        };
+        let epoch_deadline = policy_settings
+            .timeout_eval_seconds
+            .or(self.global_policy_evaluation_limit_seconds);
 
         let policy_evaluator_pre = self
-            .module_digest_and_eval_timeout_to_policy_evaluator_pre
-            .get(&key)
+            .module_digest_to_policy_evaluator_pre
+            .get(module_digest)
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
         let ctx_aware_resources_allow_list = self
@@ -568,6 +545,7 @@ impl EvaluationEnvironment {
             policy_id: policy_id.to_string(),
             callback_channel: self.callback_handler_tx.clone(),
             ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
+            epoch_deadline,
         };
 
         policy_evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
@@ -651,19 +629,10 @@ impl EvaluationEnvironment {
                 .policy_id_to_module_digest
                 .get(&policy_id)
                 .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
-            let policy_evaluation_limit_seconds = self
-                .policy_id_to_evaluation_timeout
-                .get(&policy_id)
-                .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
-
-            let key = PolicyEvaluatorPreKey {
-                module_digest: module_digest.to_owned(),
-                policy_evaluation_limit_seconds: policy_evaluation_limit_seconds.to_owned(),
-            };
 
             let policy_evaluator_pre = self
-                .module_digest_and_eval_timeout_to_policy_evaluator_pre
-                .get(&key)
+                .module_digest_to_policy_evaluator_pre
+                .get(module_digest)
                 .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
             let ctx_aware_resources_allow_list = self
@@ -671,14 +640,20 @@ impl EvaluationEnvironment {
                 .get(&policy_id)
                 .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-            let settings = match self.get_policy_settings(&policy_id)?.settings {
+            let policy_settings = self.get_policy_settings(&policy_id)?;
+            let settings = match policy_settings.settings {
                 PolicyOrPolicyGroupSettings::Policy(settings) => settings,
                 _ => unreachable!(),
             };
 
+            let epoch_deadline = policy_settings
+                .timeout_eval_seconds
+                .or(self.global_policy_evaluation_limit_seconds);
+
             let policy_group_member_settings = PolicyGroupMemberSettings {
                 settings,
                 ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
+                epoch_deadline,
             };
 
             evaluator.add_policy_member(
@@ -1117,9 +1092,9 @@ mod tests {
 
         assert_eq!(
             evaluation_environment
-                .module_digest_and_eval_timeout_to_policy_evaluator_pre
+                .module_digest_to_policy_evaluator_pre
                 .len(),
-            3 // 2 unique modules, 1 with two different timeoutEvalSeconds
+            2 // 2 unique modules
         );
     }
 
