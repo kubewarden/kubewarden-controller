@@ -8,9 +8,10 @@ use kubewarden_policy_sdk::crd::policies::{
 pub mod errors;
 pub mod evaluator;
 
-use crate::admission_response::AdmissionResponse;
-use crate::policy_evaluator::PolicySettings;
-use crate::policy_metadata::ContextAwareResource;
+use crate::{
+    admission_response::AdmissionResponse, policy_evaluator::PolicySettings,
+    policy_metadata::ContextAwareResource,
+};
 
 /// The settings of a policy group member
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,6 +20,8 @@ pub struct PolicyGroupMemberSettings {
     pub settings: PolicySettings,
     /// The list of kubernetes resources that are allowed to be accessed by the policy member
     pub ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource>,
+    /// The epoch deadlines to be used when executing this policy member
+    pub epoch_deadline: Option<u64>,
 }
 
 /// This holds the a summary of the evaluation results of a policy group member
@@ -67,6 +70,10 @@ impl TryFrom<&PolicyGroupMemberWithContext> for PolicyGroupMemberSettings {
         Ok(Self {
             settings,
             ctx_aware_resources_allow_list,
+            epoch_deadline: member
+                .timeout_eval_seconds
+                .as_ref()
+                .map(|t| Into::<i32>::into(t) as u64),
         })
     }
 }
@@ -80,6 +87,10 @@ impl TryFrom<&PolicyGroupMember> for PolicyGroupMemberSettings {
         Ok(Self {
             settings,
             ctx_aware_resources_allow_list: BTreeSet::new(),
+            epoch_deadline: member
+                .timeout_eval_seconds
+                .as_ref()
+                .map(|t| Into::<i32>::into(t) as u64),
         })
     }
 }
@@ -126,6 +137,7 @@ mod tests {
             module: "test-module.wasm".to_string(),
             settings: RawExtension(settings.clone()),
             context_aware_resources: context_aware_resources_sdk,
+            timeout_eval_seconds: None,
         };
 
         let policy_group_member_settings: PolicyGroupMemberSettings =
@@ -148,6 +160,7 @@ mod tests {
         let pgm = PolicyGroupMember {
             module: "test-module.wasm".to_string(),
             settings: RawExtension(settings.clone()),
+            timeout_eval_seconds: Some(15i32.into()),
         };
 
         let policy_group_member_settings: PolicyGroupMemberSettings =
@@ -157,5 +170,6 @@ mod tests {
         assert!(policy_group_member_settings
             .ctx_aware_resources_allow_list
             .is_empty(),);
+        assert_eq!(policy_group_member_settings.epoch_deadline, Some(15));
     }
 }

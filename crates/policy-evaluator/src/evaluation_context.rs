@@ -22,6 +22,13 @@ pub struct EvaluationContext {
 
     /// List of ContextAwareResource the policy is granted access to.
     pub ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource>,
+
+    /// Optional epoch deadline to set on the wasmtime store. This is used to
+    /// interrupt long running executions
+    ///
+    /// This could either be the global epoch deadline, or the one
+    /// specific to the policy
+    pub epoch_deadline: Option<u64>,
 }
 
 impl EvaluationContext {
@@ -94,6 +101,7 @@ mod tests {
             policy_id: name.to_string(),
             callback_channel: None,
             ctx_aware_resources_allow_list: allowed_resources,
+            epoch_deadline: None,
         };
 
         let requested_resource = ContextAwareResource {

@@ -259,6 +259,7 @@ impl PolicyGroupEvaluator {
             policy_id: policy_id.to_owned(),
             callback_channel: self.callback_channel.clone(),
             ctx_aware_resources_allow_list: settings.ctx_aware_resources_allow_list.clone(),
+            epoch_deadline: settings.epoch_deadline,
         };
         let mut evaluator = evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
             EvaluationError::CannotRehydratePolicyGroupMember(policy_id.to_owned(), e)
@@ -332,6 +333,7 @@ impl PolicyGroupEvaluator {
             policy_id: policy_id.to_owned(),
             callback_channel: self.callback_channel.clone(),
             ctx_aware_resources_allow_list: settings.ctx_aware_resources_allow_list.clone(),
+            epoch_deadline: settings.epoch_deadline,
         };
         let mut evaluator = evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
             EvaluationError::CannotRehydratePolicyGroupMember(policy_id.to_owned(), e)
@@ -470,6 +472,7 @@ mod tests {
                 PolicyGroupMemberSettings {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
+                    epoch_deadline: None,
                 },
             );
         }
@@ -547,6 +550,7 @@ mod tests {
                 PolicyGroupMemberSettings {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
+                    epoch_deadline: None,
                 },
             );
         }

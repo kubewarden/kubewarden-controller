@@ -2,25 +2,23 @@ use std::io::Write;
 
 use wasmtime::{AsContext, Engine, InstancePre, Linker, Memory, Module, StoreContext};
 
-use crate::runtimes::wasi_cli::errors::{Result, WasiRuntimeError};
-
-use crate::policy_evaluator_builder::EpochDeadlines;
-use crate::runtimes::{callback::host_callback, wasi_cli::stack::Context};
+use crate::runtimes::{
+    callback::host_callback,
+    wasi_cli::{
+        errors::{Result, WasiRuntimeError},
+        stack::Context,
+    },
+};
 
 /// Reduce the allocation time of a Wasi Stack. This is done by leveraging `wasmtime::InstancePre`.
 #[derive(Clone)]
 pub(crate) struct StackPre {
     engine: Engine,
     instance_pre: InstancePre<Context>,
-    epoch_deadlines: Option<EpochDeadlines>,
 }
 
 impl StackPre {
-    pub(crate) fn new(
-        engine: Engine,
-        module: Module,
-        epoch_deadlines: Option<EpochDeadlines>,
-    ) -> Result<Self> {
+    pub(crate) fn new(engine: Engine, module: Module) -> Result<Self> {
         let mut linker = Linker::<Context>::new(&engine);
         wasi_common::sync::add_to_linker(&mut linker, |c: &mut Context| &mut c.wasi_ctx)
             .map_err(WasiRuntimeError::WasmLinkerError)?;
@@ -32,15 +30,18 @@ impl StackPre {
         Ok(Self {
             engine,
             instance_pre,
-            epoch_deadlines,
         })
     }
 
     /// Create a brand new `wasmtime::Store` to be used during an evaluation
-    pub(crate) fn build_store(&self, ctx: Context) -> wasmtime::Store<Context> {
+    pub(crate) fn build_store(
+        &self,
+        ctx: Context,
+        epoch_deadline: Option<u64>,
+    ) -> wasmtime::Store<Context> {
         let mut store = wasmtime::Store::new(&self.engine, ctx);
-        if let Some(deadline) = self.epoch_deadlines {
-            store.set_epoch_deadline(deadline.wapc_func);
+        if let Some(deadline) = epoch_deadline {
+            store.set_epoch_deadline(deadline);
         }
 
         store

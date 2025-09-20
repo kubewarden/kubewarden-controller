@@ -29,7 +29,7 @@ kube = { version = "2.0.0", default-features = false, features = [
   "runtime",
   "rustls-tls",
 ] }
-kubewarden-policy-sdk = { version = "0.14", features = ["crd"] }
+kubewarden-policy-sdk = { version = "0.15.0", features = ["crd"] }
 lazy_static = "1.5"
 mail-parser = { version = "0.11", features = ["serde"] }
 picky = { version = "7.0.0-rc.8", default-features = false, features = [
@@ -53,13 +53,13 @@ wapc = "2.1"
 wasi-common = { workspace = true }
 wasmparser = "0.239"
 wasmtime = { workspace = true }
-wasmtime-provider = { version = "2.11.0", features = ["cache"] }
+wasmtime-provider = { version = "2.12.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 
 [workspace.dependencies]
-wasi-common   = "36.0"
-wasmtime      = "36.0"
-wasmtime-wasi = "36.0"
+wasi-common   = "37.0"
+wasmtime      = "37.0"
+wasmtime-wasi = "37.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"

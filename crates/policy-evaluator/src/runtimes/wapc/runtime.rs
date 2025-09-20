@@ -1,14 +1,20 @@
-use crate::runtimes::wapc::errors::{Result, WapcRuntimeError};
-use kubewarden_policy_sdk::metadata::ProtocolVersion;
-use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
-use kubewarden_policy_sdk::settings::SettingsValidationResponse;
-use serde_json::json;
 use std::convert::TryFrom;
+
+use kubewarden_policy_sdk::{
+    metadata::ProtocolVersion, response::ValidationResponse as PolicyValidationResponse,
+    settings::SettingsValidationResponse,
+};
+use serde_json::json;
 use tracing::{error, info};
 
-use crate::admission_response::AdmissionResponse;
-use crate::policy_evaluator::{PolicySettings, ValidateRequest};
-use crate::runtimes::wapc::WapcStack;
+use crate::{
+    admission_response::AdmissionResponse,
+    policy_evaluator::{PolicySettings, ValidateRequest},
+    runtimes::wapc::{
+        errors::{Result, WapcRuntimeError},
+        WapcStack,
+    },
+};
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut WapcStack);
 
@@ -188,17 +194,23 @@ mod tests {
         let wat = include_bytes!("../../../tests/data/endless_wasm/wapc_endless_loop.wat");
         let module = wasmtime::Module::new(&engine, wat).expect("cannot compile WAT to wasm");
 
+        let epoch_deadline = 10;
+
         // Create the wapc engine, the code will be interrupted after 10 ticks
         // happen. We produce 1 tick every 10 milliseconds, see below
         let wapc_engine_builder = wasmtime_provider::WasmtimeEngineProviderBuilder::new()
             .engine(engine.clone())
             .module(module)
-            .enable_epoch_interruptions(10, 10);
+            .enable_epoch_interruptions(wasmtime_provider::EpochDeadlines {
+                wapc_init: epoch_deadline,
+                wapc_func: epoch_deadline,
+            });
 
         let eval_ctx = EvaluationContext {
             policy_id: "wapc_endless_loop".to_string(),
             callback_channel: None,
             ctx_aware_resources_allow_list: Default::default(),
+            epoch_deadline: Some(epoch_deadline),
         };
 
         let eval_ctx = Arc::new(eval_ctx);

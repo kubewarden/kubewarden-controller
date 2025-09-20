@@ -200,6 +200,7 @@ async fn test_policy_evaluator(
         policy_id: "test".to_owned(),
         callback_channel: None,
         ctx_aware_resources_allow_list: Default::default(),
+        epoch_deadline: None,
     };
 
     let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
@@ -312,6 +313,7 @@ async fn test_runtime_context_aware<F, Fut>(
                 kind: "Service".to_owned(),
             },
         ]),
+        epoch_deadline: Some(2),
     };
 
     let request_data = load_request_data(request_file_path);
@@ -358,6 +360,7 @@ async fn test_oci_manifest_capability(
         policy_id: "test".to_owned(),
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
+        epoch_deadline: None,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -448,6 +451,7 @@ async fn test_oci_manifest_and_config_capability(
         policy_id: "test".to_owned(),
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
+        epoch_deadline: None,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -511,6 +515,7 @@ async fn test_oci_digest_capability() {
         policy_id: "test".to_owned(),
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
+        epoch_deadline: None,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx

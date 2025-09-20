@@ -41,7 +41,7 @@ impl PolicyEvaluatorPre {
                 Runtime::Cli(wasi_stack)
             }
             StackPre::Rego(stack_pre) => {
-                let rego_stack = rego::Stack::new_from_pre(stack_pre)
+                let rego_stack = rego::Stack::new_from_pre(stack_pre, eval_ctx)
                     .map_err(PolicyEvaluatorPreError::RehydrateRego)?;
                 Runtime::Rego(Box::new(rego_stack))
             }

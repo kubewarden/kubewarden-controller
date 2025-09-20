@@ -56,7 +56,7 @@ impl WapcStack {
         pre: &StackPre,
         eval_ctx: Arc<EvaluationContext>,
     ) -> Result<wapc::WapcHost> {
-        let engine_provider = pre.rehydrate()?;
+        let engine_provider = pre.rehydrate(eval_ctx.epoch_deadline)?;
         let wapc_host =
             wapc::WapcHost::new(Box::new(engine_provider), Some(new_host_callback(eval_ctx)))
                 .map_err(WapcRuntimeError::WapcHostBuilder)?;

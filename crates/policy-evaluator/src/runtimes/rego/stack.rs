@@ -1,8 +1,10 @@
 use std::collections::BTreeSet;
+
 use tokio::sync::mpsc;
 
 use crate::{
     callback_requests::CallbackRequest,
+    evaluation_context::EvaluationContext,
     policy_evaluator::RegoPolicyExecutionMode,
     policy_metadata::ContextAwareResource,
     runtimes::rego::{
@@ -22,9 +24,9 @@ pub(crate) struct Stack {
 
 impl Stack {
     /// Create a new `Stack` using a `StackPre` object
-    pub fn new_from_pre(stack_pre: &StackPre) -> Result<Self> {
+    pub fn new_from_pre(stack_pre: &StackPre, eval_ctx: &EvaluationContext) -> Result<Self> {
         let evaluator = stack_pre
-            .rehydrate()
+            .rehydrate(eval_ctx.epoch_deadline)
             .map_err(|e| RegoRuntimeError::EvaluatorError(e.to_string()))?;
         Ok(Self {
             evaluator,
