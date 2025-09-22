@@ -146,6 +146,7 @@ pub fn has_minimum_kubewarden_version(opt_metadata: Option<&Metadata>) -> Result
                 pre: Prerelease::EMPTY,
                 build: BuildMetadata::EMPTY,
             };
+            #[allow(clippy::to_string_in_format_args)]
             if *KUBEWARDEN_VERSION < sanitized_minimum_kubewarden_version {
                 return Err(anyhow!(
                     "Policy required Kubewarden version {} or greater. But it's running on {}",
