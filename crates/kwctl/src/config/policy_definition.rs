@@ -618,6 +618,7 @@ mod tests {
                 }
             })),
             context_aware_resources: pgm_1_context_aware_resources_sdk,
+            timeout_eval_seconds: None,
         };
 
         let pgm_2_id = "policy2".to_string();
@@ -630,6 +631,7 @@ mod tests {
                 }
             })),
             context_aware_resources: vec![],
+            timeout_eval_seconds: None,
         };
 
         let policies = HashMap::from([
@@ -666,6 +668,7 @@ mod tests {
                             settings: PolicySettings::try_from(&pgm_1.settings.0)
                                 .expect("Failed to convert settings for member 1"),
                             ctx_aware_resources_allow_list: pgm_1_expected_context_aware_resources,
+                            epoch_deadline: None,
                         },
                     },
                 ),
@@ -677,6 +680,7 @@ mod tests {
                             settings: PolicySettings::try_from(&pgm_2.settings.0)
                                 .expect("Failed to convert settings for member 2"),
                             ctx_aware_resources_allow_list: BTreeSet::new(),
+                            epoch_deadline: None,
                         },
                     },
                 ),
@@ -708,6 +712,7 @@ mod tests {
                     "key2": 42
                 }
             })),
+            timeout_eval_seconds: None,
         };
 
         let pgm_2_id = "policy2".to_string();
@@ -719,6 +724,7 @@ mod tests {
                     "key4": 84
                 }
             })),
+            timeout_eval_seconds: None,
         };
 
         let policies = HashMap::from([
