@@ -169,12 +169,12 @@ impl PolicyEvaluatorBuilder {
 
         let stack_pre = match execution_mode {
             PolicyExecutionMode::KubewardenWapc => {
-                let wapc_stack_pre = wapc::StackPre::new(engine, module, self.epoch_deadlines)
+                let wapc_stack_pre = wapc::StackPre::new(engine, module)
                     .map_err(PolicyEvaluatorBuilderError::NewWapcStackPre)?;
                 StackPre::from(wapc_stack_pre)
             }
             PolicyExecutionMode::Wasi => {
-                let wasi_stack_pre = wasi_cli::StackPre::new(engine, module, self.epoch_deadlines)
+                let wasi_stack_pre = wasi_cli::StackPre::new(engine, module)
                     .map_err(PolicyEvaluatorBuilderError::NewWasiStackPre)?;
                 StackPre::from(wasi_stack_pre)
             }
@@ -182,7 +182,6 @@ impl PolicyEvaluatorBuilder {
                 let rego_stack_pre = rego::StackPre::new(
                     engine,
                     module,
-                    self.epoch_deadlines,
                     0, // currently the entrypoint is hard coded to this value
                     execution_mode
                         .try_into()

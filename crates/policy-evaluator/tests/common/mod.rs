@@ -21,12 +21,16 @@ pub(crate) fn build_policy_evaluator(
     policy: &Policy,
     eval_ctx: &EvaluationContext,
 ) -> PolicyEvaluator {
-    let policy_evaluator_builder = PolicyEvaluatorBuilder::new()
+    let mut policy_evaluator_builder = PolicyEvaluatorBuilder::new()
         .execution_mode(execution_mode)
         .policy_file(&policy.local_path)
         .expect("cannot read policy file")
-        .enable_wasmtime_cache()
-        .enable_epoch_interruptions(1, 2);
+        .enable_wasmtime_cache();
+
+    if let Some(deadline) = eval_ctx.epoch_deadline {
+        policy_evaluator_builder =
+            policy_evaluator_builder.enable_epoch_interruptions(deadline, deadline);
+    }
 
     let policy_evaluator_pre = policy_evaluator_builder
         .build_pre()

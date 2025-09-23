@@ -1,13 +1,18 @@
-use std::io::Cursor;
-use std::sync::{Arc, RwLock};
-use tracing::debug;
-use wasi_common::pipe::{ReadPipe, WritePipe};
-use wasi_common::sync::WasiCtxBuilder;
-use wasi_common::WasiCtx;
+use std::{
+    io::Cursor,
+    sync::{Arc, RwLock},
+};
 
-use crate::evaluation_context::EvaluationContext;
-use crate::runtimes::wasi_cli::{
-    errors::WasiRuntimeError, stack_pre::StackPre, wasi_pipe::WasiPipe,
+use tracing::debug;
+use wasi_common::{
+    pipe::{ReadPipe, WritePipe},
+    sync::WasiCtxBuilder,
+    WasiCtx,
+};
+
+use crate::{
+    evaluation_context::EvaluationContext,
+    runtimes::wasi_cli::{errors::WasiRuntimeError, stack_pre::StackPre, wasi_pipe::WasiPipe},
 };
 
 const EXIT_SUCCESS: i32 = 0;
@@ -61,7 +66,9 @@ impl Stack {
             eval_ctx: self.eval_ctx.clone(),
         };
 
-        let mut store = self.stack_pre.build_store(ctx);
+        let mut store = self
+            .stack_pre
+            .build_store(ctx, self.eval_ctx.epoch_deadline);
         let instance = self.stack_pre.rehydrate(&mut store)?;
         let start_fn = instance
             .get_typed_func::<(), ()>(&mut store, "_start")
