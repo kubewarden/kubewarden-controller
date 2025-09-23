@@ -119,6 +119,7 @@ impl Evaluator {
                     policy_id: uri.to_owned(),
                     callback_channel: Some(callback_handler.sender_channel()),
                     ctx_aware_resources_allow_list: context_aware_allowed_resources.clone(),
+                    epoch_deadline: None,
                 };
                 let policy_evaluator =
                     policy_evaluator_builder.build_pre()?.rehydrate(&eval_ctx)?;
