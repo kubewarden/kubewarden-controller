@@ -92,6 +92,7 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 		ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 		Settings              runtime.RawExtension              `json:"settings,omitempty"`
 		Message               string                            `json:"message,omitempty"`
+		TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
 	}{
 		NamespacedName:        p.NamespacedName,
 		Module:                p.Module,
@@ -100,6 +101,7 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 		ContextAwareResources: p.ContextAwareResources,
 		Settings:              p.Settings,
 		Message:               p.Message,
+		TimeoutEvalSeconds:    p.TimeoutEvalSeconds,
 	})
 	if err != nil {
 		return nil, errors.New("failed to encode policy server configuration")

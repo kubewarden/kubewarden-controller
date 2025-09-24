@@ -350,6 +350,7 @@ var _ = Describe("PolicyServer controller", func() {
 				AllowedToMutate:       clusterAdmissionPolicy.IsMutating(),
 				Settings:              clusterAdmissionPolicy.GetSettings(),
 				ContextAwareResources: clusterAdmissionPolicy.GetContextAwareResources(),
+				TimeoutEvalSeconds:    clusterAdmissionPolicy.GetTimeoutEvalSeconds(),
 			}
 			policiesMap[admissionPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -364,6 +365,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Policies:              buildPolicyGroupMembersWithContext(admissionPolicyGroup.GetPolicyGroupMembersWithContext()),
 				Expression:            admissionPolicyGroup.GetExpression(),
 				Message:               admissionPolicyGroup.GetMessage(),
+				TimeoutEvalSeconds:    &timeoutEvalSeconds,
 			}
 			policiesMap[clusterPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -378,6 +380,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Policies:              buildPolicyGroupMembersWithContext(clusterPolicyGroup.GetPolicyGroupMembersWithContext()),
 				Expression:            clusterPolicyGroup.GetExpression(),
 				Message:               clusterPolicyGroup.GetMessage(),
+				TimeoutEvalSeconds:    &timeoutEvalSeconds,
 			}
 
 			policies, err := json.Marshal(policiesMap)
@@ -399,7 +402,7 @@ var _ = Describe("PolicyServer controller", func() {
 							err = json.Unmarshal(policies, &policiesData)
 							return policiesData, err
 						}, MatchKeys(IgnoreExtras, Keys{
-							admissionPolicy.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+							admissionPolicy.GetUniqueName(): And(MatchKeys(IgnoreExtras, Keys{
 								"namespacedName": MatchAllKeys(Keys{
 									"Namespace": Equal(admissionPolicy.GetNamespace()),
 									"Name":      Equal(admissionPolicy.GetName()),
@@ -408,15 +411,19 @@ var _ = Describe("PolicyServer controller", func() {
 								"policyMode": Equal(string(admissionPolicy.GetPolicyMode())),
 								"message":    Equal(admissionPolicy.GetMessage()),
 							}),
+								Not(MatchAllKeys(Keys{
+									"timeoutEvalSeconds": Ignore(),
+								}))),
 							clusterAdmissionPolicy.GetUniqueName(): And(MatchAllKeys(Keys{
 								"namespacedName": MatchAllKeys(Keys{
 									"Namespace": Equal(clusterAdmissionPolicy.GetNamespace()),
 									"Name":      Equal(clusterAdmissionPolicy.GetName()),
 								}),
-								"module":          Equal(clusterAdmissionPolicy.GetModule()),
-								"policyMode":      Equal(string(clusterAdmissionPolicy.GetPolicyMode())),
-								"allowedToMutate": Equal(clusterAdmissionPolicy.IsMutating()),
-								"settings":        BeNil(),
+								"module":             Equal(clusterAdmissionPolicy.GetModule()),
+								"policyMode":         Equal(string(clusterAdmissionPolicy.GetPolicyMode())),
+								"allowedToMutate":    Equal(clusterAdmissionPolicy.IsMutating()),
+								"timeoutEvalSeconds": BeNumerically("==", *clusterAdmissionPolicy.GetTimeoutEvalSeconds()),
+								"settings":           BeNil(),
 								"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 									"apiVersion": Equal("v1"),
 									"kind":       Equal("Pod"),
@@ -425,25 +432,28 @@ var _ = Describe("PolicyServer controller", func() {
 									"kind":       Equal("Deployment"),
 								})), HaveLen(2)),
 							}), Not(MatchAllKeys(Keys{
-								"expression":         Ignore(),
-								"message":            Ignore(),
-								"timeoutEvalSeconds": Equal(clusterAdmissionPolicy.GetTimeoutEvalSeconds()),
-								"policies":           Ignore(),
+								"expression": Ignore(),
+								"message":    Ignore(),
+								"policies":   Ignore(),
 							}))),
-							admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+							admissionPolicyGroup.GetUniqueName(): And(MatchKeys(IgnoreExtras, Keys{
 								"namespacedName": MatchAllKeys(Keys{
 									"Namespace": Equal(admissionPolicyGroup.GetNamespace()),
 									"Name":      Equal(admissionPolicyGroup.GetName()),
 								}),
 								"policies": MatchKeys(IgnoreExtras, Keys{
-									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
+									"pod_privileged": And(MatchKeys(IgnoreExtras, Keys{
 										"module": Equal(admissionPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
-									}),
+									}), Not(MatchAllKeys(Keys{
+										"timeoutEvalSeconds": Ignore(),
+									}))),
 								}),
 								"policyMode": Equal(string(admissionPolicyGroup.GetPolicyMode())),
 								"expression": Equal(admissionPolicyGroup.GetExpression()),
 								"message":    Equal(admissionPolicyGroup.GetMessage()),
-							}),
+							}), Not(MatchAllKeys(Keys{
+								"timeoutEvalSeconds": Ignore(),
+							}))),
 							clusterPolicyGroup.GetUniqueName(): And(MatchAllKeys(Keys{
 								"namespacedName": MatchAllKeys(Keys{
 									"Namespace": Equal(clusterPolicyGroup.GetNamespace()),
@@ -453,29 +463,30 @@ var _ = Describe("PolicyServer controller", func() {
 									"pod_privileged": MatchAllKeys(Keys{
 										"module":             Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
 										"settings":           Ignore(),
-										"timeoutEvalSeconds": Equal(float64(timeoutEvalSeconds)),
+										"timeoutEvalSeconds": BeNumerically("==", timeoutEvalSeconds),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
 											"kind":       Equal("Pod"),
 										})), HaveLen(1)),
 									}),
-									"user_group_psp": MatchAllKeys(Keys{
+									"user_group_psp": And(MatchAllKeys(Keys{
 										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["user_group_psp"].Module),
 										"settings": Ignore(),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
 											"kind":       Equal("Deployment"),
 										})), HaveLen(1)),
-									}),
+									}), Not(MatchAllKeys(Keys{
+										"timeoutEvalSeconds": Ignore(),
+									}))),
 								}),
 								"policyMode": Equal(string(clusterPolicyGroup.GetPolicyMode())),
 								"expression": Equal(clusterPolicyGroup.GetExpression()),
 								"message":    Equal(clusterPolicyGroup.GetMessage()),
 							}),
 								Not(MatchKeys(IgnoreExtras, Keys{
-									"settings":              Ignore(),
-									"allowedToMutate":       Ignore(),
-									"contextAwareResources": Ignore(),
+									"settings":           Ignore(),
+									"timeoutEvalSeconds": Ignore(),
 								}))),
 						}),
 						)),
