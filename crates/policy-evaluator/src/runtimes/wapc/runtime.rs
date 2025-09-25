@@ -88,11 +88,14 @@ impl Runtime<'_> {
                     })
             }
             Err(e) => {
-                error!(error = e.to_string().as_str(), "waPC communication error");
                 if e.to_string()
                     .as_str()
                     .contains(WAPC_EPOCH_INTERRUPTION_ERR_MSG)
                 {
+                    error!(
+                        error = e.to_string().as_str(),
+                        "policy execution time exceeded"
+                    );
                     // TL;DR: after code execution is interrupted because of an
                     // epoch deadline being reached, we have to reset the waPC host
                     // to ensure further invocations of the policy work as expected.
@@ -128,7 +131,9 @@ impl Runtime<'_> {
                     } else {
                         info!("wapc_host reset performed after timeout protection was triggered");
                     }
+                    return AdmissionResponse::reject(uid.to_string(), "Policy execution interrupted because it exceeded the allowed execution time".to_owned(), 500);
                 }
+                error!(error = e.to_string().as_str(), "waPC communication error");
                 AdmissionResponse::reject_internal_server_error(uid.to_string(), e.to_string())
             }
         }
