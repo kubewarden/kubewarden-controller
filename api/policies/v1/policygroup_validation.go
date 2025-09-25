@@ -170,7 +170,6 @@ func validatePolicyGroupMembersTimeouts(policyGroup PolicyGroup) field.ErrorList
 		sumMemberTimeoutEval += *memberTimeoutEval
 
 		if *memberTimeoutEval > maxWebhookTimeoutSeconds {
-			sumMemberTimeoutEval += *memberTimeoutEval
 			allErrors = append(allErrors, field.Invalid(
 				fldMembers.Key(memberName).Child("timeoutEvalSeconds"),
 				*memberTimeoutEval,
