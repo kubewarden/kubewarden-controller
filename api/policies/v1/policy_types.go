@@ -148,17 +148,21 @@ type PolicySpec struct {
 	// TimeoutSeconds specifies the timeout for the policy webhook. After the timeout passes,
 	// the webhook call will be ignored or the API call will fail based on the
 	// failure policy.
-	// The timeout value must be between 1 and 30 seconds.
+	// The timeout value must be between 2 and 30 seconds.
 	// Default to 10 seconds.
 	// +optional
 	// +kubebuilder:default:=10
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:Maximum=30
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 
 	// TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
 	// the timeout passes, the policy evaluation call will fail based on the
 	// failure policy.
-	// The timeout value must be between 1 and 30 seconds.
+	// The timeout value must be between 2 and 30 seconds.
 	// +optional
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:Maximum=30
 	TimeoutEvalSeconds *int32 `json:"timeoutEvalSeconds,omitempty"`
 
 	// Message overrides the rejection message of the policy.
@@ -192,8 +196,10 @@ type PolicyGroupMember struct {
 	// TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
 	// the timeout passes, the policy evaluation call will fail based on the
 	// failure policy.
-	// The timeout value must be between 1 and 30 seconds.
+	// The timeout value must be between 2 and 30 seconds.
 	// +optional
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:Maximum=30
 	TimeoutEvalSeconds *int32 `json:"timeoutEvalSeconds,omitempty"`
 }
 
@@ -308,10 +314,12 @@ type GroupSpec struct {
 	// TimeoutSeconds specifies the timeout for this webhook. After the timeout passes,
 	// the webhook call will be ignored or the API call will fail based on the
 	// failure policy.
-	// The timeout value must be between 1 and 30 seconds.
+	// The timeout value must be between 2 and 30 seconds.
 	// Default to 10 seconds.
 	// +optional
 	// +kubebuilder:default:=10
+	// +kubebuilder:validation:Minimum=2
+	// +kubebuilder:validation:Maximum=30
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 
 	// Expression is the evaluation expression to accept or reject the

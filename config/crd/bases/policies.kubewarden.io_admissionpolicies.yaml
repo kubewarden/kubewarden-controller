@@ -356,8 +356,10 @@ spec:
                   TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
                   the timeout passes, the policy evaluation call will fail based on the
                   failure policy.
-                  The timeout value must be between 1 and 30 seconds.
+                  The timeout value must be between 2 and 30 seconds.
                 format: int32
+                maximum: 30
+                minimum: 2
                 type: integer
               timeoutSeconds:
                 default: 10
@@ -365,9 +367,11 @@ spec:
                   TimeoutSeconds specifies the timeout for the policy webhook. After the timeout passes,
                   the webhook call will be ignored or the API call will fail based on the
                   failure policy.
-                  The timeout value must be between 1 and 30 seconds.
+                  The timeout value must be between 2 and 30 seconds.
                   Default to 10 seconds.
                 format: int32
+                maximum: 30
+                minimum: 2
                 type: integer
             required:
             - module
