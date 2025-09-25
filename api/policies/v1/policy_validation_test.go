@@ -600,7 +600,6 @@ func TestValidatePolicyModeField(t *testing.T) {
 
 func TestValidateTimeoutSeconds(t *testing.T) {
 	maxTimeout := int32(30)
-	overTimeout := int32(31)
 	underTimeout := int32(10)
 
 	type testCase struct {
@@ -616,18 +615,6 @@ func TestValidateTimeoutSeconds(t *testing.T) {
 			timeoutSeconds:     nil,
 			timeoutEvalSeconds: nil,
 			expectedErrors:     nil,
-		},
-		{
-			name:               "timeoutSeconds over max",
-			timeoutSeconds:     &overTimeout,
-			timeoutEvalSeconds: nil,
-			expectedErrors:     []string{"timeoutSeconds cannot be greater than"},
-		},
-		{
-			name:               "timeoutEvalSeconds over max",
-			timeoutSeconds:     &maxTimeout,
-			timeoutEvalSeconds: &overTimeout,
-			expectedErrors:     []string{"timeoutEvalSeconds cannot be greater than"},
 		},
 		{
 			name:               "timeoutEvalSeconds > timeoutSeconds",

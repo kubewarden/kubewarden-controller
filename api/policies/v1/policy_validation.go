@@ -309,30 +309,13 @@ func validateMatchConditionsExpression(expressionStr string, fldPath *field.Path
 }
 
 // validateTimeoutSeconds checks the timeouts so that:
-//   - the policy's timeoutSeconds is not greater than the Kubernetes webhook max timeout (30s).
-//   - the policy's timeoutEvalSeconds is not greater than the Kubernetes webhook max timeout (30s).
 //   - the policy's timeoutEvalSeconds is not greater than the policy's timeoutSeconds.
 func validateTimeoutSeconds(policy Policy) field.ErrorList {
 	var allErrors field.ErrorList
 	timeoutSeconds := policy.GetTimeoutSeconds()
 	timeoutEvalSeconds := policy.GetTimeoutEvalSeconds()
-	fldTimeoutSeconds := field.NewPath("spec").Child("timeoutSeconds")
 	fldTimeoutEvalSeconds := field.NewPath("spec").Child("timeoutEvalSeconds")
 
-	if timeoutSeconds != nil && *timeoutSeconds > maxWebhookTimeoutSeconds {
-		allErrors = append(allErrors, field.Invalid(
-			fldTimeoutSeconds,
-			*timeoutSeconds,
-			fmt.Sprintf("timeoutSeconds cannot be greater than %d (Kubernetes webhook max timeout)", maxWebhookTimeoutSeconds),
-		))
-	}
-	if timeoutEvalSeconds != nil && *timeoutEvalSeconds > maxWebhookTimeoutSeconds {
-		allErrors = append(allErrors, field.Invalid(
-			fldTimeoutEvalSeconds,
-			*timeoutEvalSeconds,
-			fmt.Sprintf("timeoutEvalSeconds cannot be greater than %d (Kubernetes webhook max timeout)", maxWebhookTimeoutSeconds),
-		))
-	}
 	if timeoutSeconds != nil && timeoutEvalSeconds != nil {
 		if *timeoutEvalSeconds > *timeoutSeconds {
 			allErrors = append(allErrors, field.Invalid(

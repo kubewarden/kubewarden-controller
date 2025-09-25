@@ -344,7 +344,6 @@ func TestValidatePolicyGroupMembers(t *testing.T) {
 
 func TestValidatePolicyGroupTimeoutSeconds(t *testing.T) {
 	maxTimeout := int32(30)
-	overTimeout := int32(31)
 	underTimeout := int32(10)
 	overMinusUnderTimeout := int32(21)
 
@@ -363,20 +362,6 @@ func TestValidatePolicyGroupTimeoutSeconds(t *testing.T) {
 			timeoutEvalSeconds:  nil,
 			timeoutEvalSeconds2: nil,
 			expectedErrors:      nil,
-		},
-		{
-			name:                "timeoutSeconds over max",
-			timeoutSeconds:      &overTimeout,
-			timeoutEvalSeconds:  nil,
-			timeoutEvalSeconds2: nil,
-			expectedErrors:      []string{"timeoutSeconds cannot be greater than"},
-		},
-		{
-			name:                "timeoutEvalSeconds over max",
-			timeoutSeconds:      &maxTimeout,
-			timeoutEvalSeconds:  &overTimeout,
-			timeoutEvalSeconds2: nil,
-			expectedErrors:      []string{"timeoutEvalSeconds cannot be greater than"},
 		},
 		{
 			name:                "timeoutEvalSeconds > timeoutSeconds",
