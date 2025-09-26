@@ -465,13 +465,14 @@ async fn test_timeout_protection_reject() {
     assert!(!admission_review_response.response.allowed);
     assert_eq!(
         admission_review_response.response.status,
-        Some(
-            AdmissionResponseStatus {
-                message: Some("internal server error: Guest call failure: guest code interrupted, execution deadline exceeded".to_owned()),
-                code: Some(500),
-                ..Default::default()
-            }
-        )
+        Some(AdmissionResponseStatus {
+            message: Some(
+                "Policy execution interrupted because it exceeded the allowed execution time"
+                    .to_owned()
+            ),
+            code: Some(500),
+            ..Default::default()
+        })
     );
 }
 
@@ -504,13 +505,14 @@ async fn test_timeout_protection_policy_specific_reject() {
     assert!(!admission_review_response.response.allowed);
     assert_eq!(
         admission_review_response.response.status,
-        Some(
-            AdmissionResponseStatus {
-                message: Some("internal server error: Guest call failure: guest code interrupted, execution deadline exceeded".to_owned()),
-                code: Some(500),
-                ..Default::default()
-            }
-        )
+        Some(AdmissionResponseStatus {
+            message: Some(
+                "Policy execution interrupted because it exceeded the allowed execution time"
+                    .to_owned()
+            ),
+            code: Some(500),
+            ..Default::default()
+        })
     );
 }
 
