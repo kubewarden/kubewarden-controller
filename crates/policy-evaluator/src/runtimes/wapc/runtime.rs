@@ -50,10 +50,7 @@ impl Runtime<'_> {
         let validate_str = match serde_json::to_string(&validate_params) {
             Ok(s) => s,
             Err(e) => {
-                error!(
-                    error = e.to_string().as_str(),
-                    "cannot serialize validation params"
-                );
+                error!(error = ?e, "cannot serialize validation params");
                 return AdmissionResponse::reject_internal_server_error(
                     uid.to_string(),
                     e.to_string(),
@@ -77,10 +74,7 @@ impl Runtime<'_> {
                         })
                     })
                     .unwrap_or_else(|e| {
-                        error!(
-                            error = e.to_string().as_str(),
-                            "cannot build validation response from policy result"
-                        );
+                        error!( error = ?e, "cannot build validation response from policy result");
                         AdmissionResponse::reject_internal_server_error(
                             uid.to_string(),
                             e.to_string(),
@@ -92,10 +86,7 @@ impl Runtime<'_> {
                     .as_str()
                     .contains(WAPC_EPOCH_INTERRUPTION_ERR_MSG)
                 {
-                    error!(
-                        error = e.to_string().as_str(),
-                        "policy execution time exceeded"
-                    );
+                    error!(error = ?e, "policy execution time exceeded");
                     // TL;DR: after code execution is interrupted because of an
                     // epoch deadline being reached, we have to reset the waPC host
                     // to ensure further invocations of the policy work as expected.
@@ -124,16 +115,16 @@ impl Runtime<'_> {
                     // solution to that is to reinitialize the wasmtime::Store.
                     // It's hard to provide a facility for that inside of WapcHost, because
                     // epoch deadline is a feature provided only by the wasmtime backend.
-                    // Hence it's easier to just recreate the wapc_host associated with this
+                    // Hence, it's easier to just recreate the wapc_host associated with this
                     // policy evaluator
                     if let Err(reset_err) = self.0.reset() {
-                        error!(error = reset_err.to_string().as_str(), "cannot reset waPC stack - further calls to this policy can result in errors");
+                        error!(error = ?reset_err, "cannot reset waPC stack - further calls to this policy can result in errors");
                     } else {
                         info!("wapc_host reset performed after timeout protection was triggered");
                     }
                     return AdmissionResponse::reject(uid.to_string(), "Policy execution interrupted because it exceeded the allowed execution time".to_owned(), 500);
                 }
-                error!(error = e.to_string().as_str(), "waPC communication error");
+                error!(error = ?e, "waPC communication error");
                 AdmissionResponse::reject_internal_server_error(uid.to_string(), e.to_string())
             }
         }
