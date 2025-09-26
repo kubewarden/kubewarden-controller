@@ -217,6 +217,11 @@ func (f *ClusterAdmissionPolicyFactory) WithTimeoutEvalSeconds(timeout *int32) *
 	return f
 }
 
+func (f *ClusterAdmissionPolicyFactory) WithNoModule() *ClusterAdmissionPolicyFactory {
+	f.module = ""
+	return f
+}
+
 func (f *ClusterAdmissionPolicyFactory) Build() *ClusterAdmissionPolicy {
 	clusterAdmissionPolicy := ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -355,6 +360,7 @@ type ClusterAdmissionPolicyGroupFactory struct {
 	name           string
 	policyServer   string
 	rules          []admissionregistrationv1.RuleWithOperations
+	module         string
 	expression     string
 	policyMembers  PolicyGroupMembersWithContext
 	matchConds     []admissionregistrationv1.MatchCondition
@@ -438,6 +444,24 @@ func (f *ClusterAdmissionPolicyGroupFactory) WithMode(mode PolicyMode) *ClusterA
 
 func (f *ClusterAdmissionPolicyGroupFactory) WithTimeoutSeconds(timeout *int32) *ClusterAdmissionPolicyGroupFactory {
 	f.timeoutSeconds = timeout
+	return f
+}
+
+func (f *ClusterAdmissionPolicyGroupFactory) WithTimeoutEvalSeconds(timeout *int32) *ClusterAdmissionPolicyGroupFactory {
+	member := f.policyMembers["pod_privileged"]
+	member.TimeoutEvalSeconds = timeout
+	f.policyMembers["pod_privileged"] = member
+	return f
+}
+
+func (f *ClusterAdmissionPolicyGroupFactory) WithNoModule() *ClusterAdmissionPolicyGroupFactory {
+	f.module = ""
+	return f
+}
+
+func (f *ClusterAdmissionPolicyGroupFactory) WithNoGroupModule() *ClusterAdmissionPolicyGroupFactory {
+	member := f.policyMembers["pod_privileged"]
+	member.Module = ""
 	return f
 }
 
