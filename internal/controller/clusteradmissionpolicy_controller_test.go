@@ -33,6 +33,48 @@ import (
 var _ = Describe("ClusterAdmissionPolicy controller", Label("real-cluster"), func() {
 	ctx := context.Background()
 
+	When("creating a wrongly defined Policy", Ordered, func() {
+		// this test triggers kubebuilder/controller-gen markers tags for PolicySpec{}
+
+		var policyServerName string
+		var policyName string
+		var policy *policiesv1.ClusterAdmissionPolicy
+
+		It("should fail CRD validation because of too low TimeoutSeconds", func() {
+			policyServerName = newName("policy-server")
+			policyServer := policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			policyName = newName("validating-policy")
+			underMinTimeout := int32(1)
+			policy = policiesv1.NewClusterAdmissionPolicyFactory().
+				WithName(policyName).
+				WithPolicyServer(policyServerName).
+				WithTimeoutSeconds(&underMinTimeout). // too low value
+				Build()
+			Expect(k8sClient.Create(ctx, policy)).NotTo(Succeed())
+		})
+
+		It("should fail CRD validation because of too low TimeoutEvalSeconds", func() {
+			policyServerName = newName("policy-server")
+			policyServer := policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			policyName = newName("validating-policy")
+			underMinTimeout := int32(1)
+			policy = policiesv1.NewClusterAdmissionPolicyFactory().
+				WithName(policyName).
+				WithPolicyServer(policyServerName).
+				WithTimeoutEvalSeconds(&underMinTimeout). // too low value
+				Build()
+			Expect(k8sClient.Create(ctx, policy)).NotTo(Succeed())
+		})
+	})
+
 	When("creating a validating ClusterAdmissionPolicy", Ordered, func() {
 		var policyServerName string
 		var policyName string

@@ -441,6 +441,13 @@ func (f *ClusterAdmissionPolicyGroupFactory) WithTimeoutSeconds(timeout *int32) 
 	return f
 }
 
+func (f *ClusterAdmissionPolicyGroupFactory) WithTimeoutEvalSeconds(timeout *int32) *ClusterAdmissionPolicyGroupFactory {
+	member := f.policyMembers["pod_privileged"]
+	member.TimeoutEvalSeconds = timeout
+	f.policyMembers["pod_privileged"] = member
+	return f
+}
+
 func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGroup {
 	clusterAdmissionPolicy := ClusterAdmissionPolicyGroup{
 		ObjectMeta: metav1.ObjectMeta{
