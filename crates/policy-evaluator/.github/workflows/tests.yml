@@ -56,14 +56,14 @@ jobs:
       - name: Checkout Actions Repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Spell Check Repo
-        uses: crate-ci/typos@85f62a8a84f939ae994ab3763f01a0296d61a7ee # v1.36.2
+        uses: crate-ci/typos@0c17dabcee8b8f1957fa917d17393a23e02e1583 # v1.36.3
 
   coverage:
     name: coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: kubewarden/github-actions/tarpaulin-install@5e22c63afd22d04a802a7a0463f66ffda6c3c71a # v4.5.7
+      - uses: kubewarden/github-actions/tarpaulin-install@acb006fafe5e4da789055f573d11cea2917de59a # v4.5.8
       - name: Generate unit-tests coverage
         run: make coverage-unit-tests
       - name: Upload unit-tests coverage to Codecov
