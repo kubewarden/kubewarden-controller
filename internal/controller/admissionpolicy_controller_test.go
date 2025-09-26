@@ -67,7 +67,7 @@ var _ = Describe("AdmissionPolicy controller", Label("real-cluster"), func() {
 			Expect(k8sClient.Create(ctx, policy)).To(Succeed())
 		})
 
-		It("should set the AdminissionPolicy to active sometime after its creation", func() {
+		It("should set the AdmissionPolicy to active sometime after its creation", func() {
 			By("changing the policy status to pending")
 			Eventually(func() (*policiesv1.AdmissionPolicy, error) {
 				return getTestAdmissionPolicy(ctx, policyNamespace, policyName)
