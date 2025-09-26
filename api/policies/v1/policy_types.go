@@ -21,9 +21,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// maxWebhookTimeoutSeconds is a magic number on Kubernetes, there's no API to set or get it.
+// minWebhookTimeoutSeconds and maxWebhookTimeoutSeconds are magic number on
+// Kubernetes, there's no API to set or get it.
 // Example: https://github.com/kubernetes/kubernetes/blob/7c48c2bd72b9bf5c44d21d7338cc7bea77d0ad2a/pkg/apis/admissionregistration/validation/validation.go#L364
-const maxWebhookTimeoutSeconds = 30
+const (
+	minWebhookTimeoutSeconds = 1
+	maxWebhookTimeoutSeconds = 30
+)
 
 // +kubebuilder:validation:Enum=protect;monitor
 type PolicyMode string

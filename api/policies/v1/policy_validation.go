@@ -309,7 +309,9 @@ func validateMatchConditionsExpression(expressionStr string, fldPath *field.Path
 }
 
 // validateTimeoutSeconds checks the timeouts so that:
+//   - the policy's timeoutSeconds is not less than the Kubernetes webhook min timeout (1s).
 //   - the policy's timeoutSeconds is not greater than the Kubernetes webhook max timeout (30s).
+//   - the policy's timeoutEvalSeconds is not less than the Kubernetes webhook min timeout (30s).
 //   - the policy's timeoutEvalSeconds is not greater than the Kubernetes webhook max timeout (30s).
 //   - the policy's timeoutEvalSeconds is not greater than the policy's timeoutSeconds.
 func validateTimeoutSeconds(policy Policy) field.ErrorList {

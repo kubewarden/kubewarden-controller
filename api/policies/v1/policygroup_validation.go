@@ -142,9 +142,12 @@ func validatePolicyGroupExpressionField(policyGroup PolicyGroup) *field.Error {
 }
 
 // validatePolicyGroupMembersTimeouts checks the timeouts so that:
+//   - the group's timeoutSeconds is not less than the Kubernetes webhook min timeout (1s).
 //   - the group's timeoutSeconds is not greater than the Kubernetes webhook max timeout (30s).
+//   - each member's timeoutEvalSeconds is not less than the Kubernetes webhook min timeout (1s)
+//   - each member's timeoutEvalSeconds is not greater than the Kubernetes webhook max timeout (30s)
 //   - each member's timeoutEvalSeconds is not greater than the group's
-//     timeoutSeconds nor the Kubernetes webhook max timeout (30s)
+//     timeoutSeconds
 //   - the sum of each members' timeoutEvalSeconds is not greater than the group's
 //     timeoutSeconds nor the Kubernetes webhook max timeout (30s)
 func validatePolicyGroupMembersTimeouts(policyGroup PolicyGroup) field.ErrorList {
@@ -153,6 +156,13 @@ func validatePolicyGroupMembersTimeouts(policyGroup PolicyGroup) field.ErrorList
 	fldGroupTimeout := field.NewPath("spec").Child("timeoutSeconds")
 	fldMembers := field.NewPath("spec").Child("policies")
 
+	if groupTimeout != nil && *groupTimeout < minWebhookTimeoutSeconds {
+		allErrors = append(allErrors, field.Invalid(
+			fldGroupTimeout,
+			*groupTimeout,
+			fmt.Sprintf("timeoutSeconds cannot be less than %d (Kubernetes webhook min timeout)", minWebhookTimeoutSeconds),
+		))
+	}
 	if groupTimeout != nil && *groupTimeout > maxWebhookTimeoutSeconds {
 		allErrors = append(allErrors, field.Invalid(
 			fldGroupTimeout,
@@ -169,6 +179,13 @@ func validatePolicyGroupMembersTimeouts(policyGroup PolicyGroup) field.ErrorList
 		}
 		sumMemberTimeoutEval += *memberTimeoutEval
 
+		if *memberTimeoutEval < minWebhookTimeoutSeconds {
+			allErrors = append(allErrors, field.Invalid(
+				fldMembers.Key(memberName).Child("timeoutEvalSeconds"),
+				*memberTimeoutEval,
+				fmt.Sprintf("timeoutEvalSeconds cannot be less than %d (Kubernetes webhook min timeout)", minWebhookTimeoutSeconds),
+			))
+		}
 		if *memberTimeoutEval > maxWebhookTimeoutSeconds {
 			allErrors = append(allErrors, field.Invalid(
 				fldMembers.Key(memberName).Child("timeoutEvalSeconds"),

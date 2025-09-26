@@ -347,6 +347,7 @@ func TestValidatePolicyGroupTimeoutSeconds(t *testing.T) {
 	overTimeout := int32(31)
 	underTimeout := int32(10)
 	overMinusUnderTimeout := int32(21)
+	underMinTimeout := int32(0)
 
 	type testCase struct {
 		name                string
@@ -365,11 +366,25 @@ func TestValidatePolicyGroupTimeoutSeconds(t *testing.T) {
 			expectedErrors:      nil,
 		},
 		{
+			name:                "timeoutSeconds under min",
+			timeoutSeconds:      &underMinTimeout,
+			timeoutEvalSeconds:  nil,
+			timeoutEvalSeconds2: nil,
+			expectedErrors:      []string{"timeoutSeconds cannot be less than"},
+		},
+		{
 			name:                "timeoutSeconds over max",
 			timeoutSeconds:      &overTimeout,
 			timeoutEvalSeconds:  nil,
 			timeoutEvalSeconds2: nil,
 			expectedErrors:      []string{"timeoutSeconds cannot be greater than"},
+		},
+		{
+			name:                "timeoutEvalSeconds under min",
+			timeoutSeconds:      &maxTimeout,
+			timeoutEvalSeconds:  &underMinTimeout,
+			timeoutEvalSeconds2: nil,
+			expectedErrors:      []string{"timeoutEvalSeconds cannot be less than"},
 		},
 		{
 			name:                "timeoutEvalSeconds over max",
