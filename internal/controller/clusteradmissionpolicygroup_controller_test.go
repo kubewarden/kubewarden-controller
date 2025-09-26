@@ -33,6 +33,34 @@ import (
 var _ = Describe("ClusterAdmissionPolicyGroup controller", Label("real-cluster"), func() {
 	ctx := context.Background()
 
+	When("creating a wrong PolicyGroup should fail because of CRD validation", Ordered, func() {
+		// this test triggers all the kubebuilder:validation tags for PolicyGroupmember{} and GroupSpec{}
+
+		var policyServerName string
+		var policyName string
+		var policy *policiesv1.ClusterAdmissionPolicyGroup
+
+		BeforeAll(func() {
+			policyServerName = newName("policy-server")
+			policyServer := policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			policyName = newName("validating-policy")
+			underMinTimeout := int32(1)
+			policy = policiesv1.NewClusterAdmissionPolicyGroupFactory().
+				WithName(policyName).
+				WithPolicyServer(policyServerName).
+				WithTimeoutSeconds(&underMinTimeout).     // too low value
+				WithTimeoutEvalSeconds(&underMinTimeout). // too low value
+				WithNoModule().                           // missing module
+				WithNoGroupModule().                      // missing group module
+				Build()
+			Expect(k8sClient.Create(ctx, policy)).NotTo(Succeed())
+		})
+	})
+
 	When("creating a validating ClusterAdmissionPolicyGroup", Ordered, func() {
 		var policyServerName string
 		var policyName string
