@@ -530,8 +530,10 @@ sideEffects == Unknown or Some. + |  |
 | *`timeoutSeconds`* __integer__ | TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, +
 the webhook call will be ignored or the API call will fail based on the +
 failure policy. +
-The timeout value must be between 1 and 30 seconds. +
-Default to 10 seconds. + | 10 | 
+The timeout value must be between 2 and 30 seconds. +
+Default to 10 seconds. + | 10 | Maximum: 30 +
+Minimum: 2 +
+
 | *`expression`* __string__ | Expression is the evaluation expression to accept or reject the +
 admission request under evaluation. This field uses CEL as the +
 expression language for the policy groups. Each policy in the group +
@@ -591,6 +593,12 @@ internally. + |  | Required: {} +
 | *`settings`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#rawextension-runtime-pkg[$$RawExtension$$]__ | Settings is a free-form object that contains the policy configuration +
 values. +
 x-kubernetes-embedded-resource: false + |  | 
+| *`timeoutEvalSeconds`* __integer__ | TimeoutEvalSeconds specifies the timeout for the policy evaluation. After +
+the timeout passes, the policy evaluation call will fail based on the +
+failure policy. +
+The timeout value must be between 2 and 30 seconds. + |  | Maximum: 30 +
+Minimum: 2 +
+
 |===
 
 
@@ -957,11 +965,19 @@ Webhooks with side effects MUST implement a reconciliation system, since a reque
 rejected by a future step in the admission change and the side effects therefore need to be undone. +
 Requests with the dryRun attribute will be auto-rejected if they match a webhook with +
 sideEffects == Unknown or Some. + |  | 
-| *`timeoutSeconds`* __integer__ | TimeoutSeconds specifies the timeout for this webhook. After the timeout passes, +
+| *`timeoutSeconds`* __integer__ | TimeoutSeconds specifies the timeout for the policy webhook. After the timeout passes, +
 the webhook call will be ignored or the API call will fail based on the +
 failure policy. +
-The timeout value must be between 1 and 30 seconds. +
-Default to 10 seconds. + | 10 | 
+The timeout value must be between 2 and 30 seconds. +
+Default to 10 seconds. + | 10 | Maximum: 30 +
+Minimum: 2 +
+
+| *`timeoutEvalSeconds`* __integer__ | TimeoutEvalSeconds specifies the timeout for the policy evaluation. After +
+the timeout passes, the policy evaluation call will fail based on the +
+failure policy. +
+The timeout value must be between 2 and 30 seconds. + |  | Maximum: 30 +
+Minimum: 2 +
+
 | *`message`* __string__ | Message overrides the rejection message of the policy. +
 When provided, the policy's rejection message can be found +
 inside of the `.status.details.causes` field of the +
