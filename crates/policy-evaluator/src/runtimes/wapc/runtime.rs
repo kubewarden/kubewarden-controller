@@ -170,7 +170,7 @@ mod tests {
     };
 
     #[test]
-    fn wapc_epoch_interrutpion_error_msg() {
+    fn wapc_epoch_interruption_error_msg() {
         // This unit test makes sure that waPC host error raised when a wasmtime
         // epoch_interruption happens contains the WAPC_EPOCH_INTERRUPTION_ERR_MSG
         // string
