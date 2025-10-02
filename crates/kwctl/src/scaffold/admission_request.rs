@@ -73,7 +73,7 @@ enum ApiResourceCatalogRestoredFrom {
 /// A catalog of Kubernetes resources. The catalog is built once by querying a Kubernetes API server.
 ///
 /// This is required because some information about the resource being scaffolded cannot be
-/// inferred from the object itself. For example: knowning if a resource is namespaced or not, or
+/// inferred from the object itself. For example: knowing if a resource is namespaced or not, or
 /// the plural name of the resource.
 #[derive(Serialize, Deserialize, Debug)]
 struct ApiResourceCatalog {
