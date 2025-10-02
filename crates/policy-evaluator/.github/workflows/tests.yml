@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: kubewarden/github-actions/tarpaulin-install@acb006fafe5e4da789055f573d11cea2917de59a # v4.5.8
+      - uses: kubewarden/github-actions/tarpaulin-install@0c3d96f5251f687de1bbe1cd29e86b8a47bd17a6 # v4.5.9
       - name: Generate unit-tests coverage
         run: make coverage-unit-tests
       - name: Upload unit-tests coverage to Codecov
