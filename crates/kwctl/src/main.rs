@@ -246,13 +246,12 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Some("scaffold") => {
-            if let Some(matches) = matches.subcommand_matches("scaffold") {
-                if let Some(_matches) = matches.subcommand_matches("verification-config") {
+            if let Some(matches) = matches.subcommand_matches("scaffold")
+                && let Some(_matches) = matches.subcommand_matches("verification-config") {
                     println!("{}", scaffold::verification_config()?);
                 }
-            }
-            if let Some(matches) = matches.subcommand_matches("scaffold") {
-                if let Some(artifacthub_matches) = matches.subcommand_matches("artifacthub") {
+            if let Some(matches) = matches.subcommand_matches("scaffold")
+                && let Some(artifacthub_matches) = matches.subcommand_matches("artifacthub") {
                     let metadata_file = artifacthub_matches
                         .get_one::<String>("metadata-path")
                         .map(|output| PathBuf::from_str(output).unwrap())
@@ -285,14 +284,12 @@ async fn main() -> Result<()> {
                         println!("{}", content);
                     }
                 }
-            }
-            if let Some(matches) = matches.subcommand_matches("scaffold") {
-                if let Some(matches) = matches.subcommand_matches("manifest") {
+            if let Some(matches) = matches.subcommand_matches("scaffold")
+                && let Some(matches) = matches.subcommand_matches("manifest") {
                     scaffold_manifest_command(matches).await?;
                 };
-            }
-            if let Some(matches) = matches.subcommand_matches("scaffold") {
-                if let Some(matches) = matches.subcommand_matches("vap") {
+            if let Some(matches) = matches.subcommand_matches("scaffold")
+                && let Some(matches) = matches.subcommand_matches("vap") {
                     let cel_policy_uri = matches.get_one::<String>("cel-policy").unwrap();
                     let vap_file: PathBuf = matches.get_one::<String>("policy").unwrap().into();
                     let vap_binding_file: PathBuf =
@@ -304,9 +301,8 @@ async fn main() -> Result<()> {
                         vap_binding_file.as_path(),
                     )?;
                 };
-            }
-            if let Some(matches) = matches.subcommand_matches("scaffold") {
-                if let Some(matches) = matches.subcommand_matches("admission-request") {
+            if let Some(matches) = matches.subcommand_matches("scaffold")
+                && let Some(matches) = matches.subcommand_matches("admission-request") {
                     let operation: scaffold::AdmissionRequestOperation = matches
                         .get_one::<String>("operation")
                         .unwrap()
@@ -325,7 +321,6 @@ async fn main() -> Result<()> {
 
                     scaffold::admission_request(operation, object_path, old_object_path).await?;
                 };
-            }
 
             Ok(())
         }

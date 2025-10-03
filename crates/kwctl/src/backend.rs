@@ -136,8 +136,8 @@ impl BackendDetector {
 /// version required by the policy
 /// TODO: this should not take an Option
 pub fn has_minimum_kubewarden_version(opt_metadata: Option<&Metadata>) -> Result<()> {
-    if let Some(metadata) = opt_metadata {
-        if let Some(minimum_kubewarden_version) = &metadata.minimum_kubewarden_version {
+    if let Some(metadata) = opt_metadata
+        && let Some(minimum_kubewarden_version) = &metadata.minimum_kubewarden_version {
             let sanitized_minimum_kubewarden_version = Version {
                 major: minimum_kubewarden_version.major,
                 minor: minimum_kubewarden_version.minor,
@@ -155,7 +155,6 @@ pub fn has_minimum_kubewarden_version(opt_metadata: Option<&Metadata>) -> Result
                 ));
             }
         }
-    }
     Ok(())
 }
 

@@ -271,12 +271,11 @@ fn build_context_aware_allowed_resources(
 ) -> BTreeSet<ContextAwareResource> {
     match ctx_aware_cfg {
         ContextAwareConfiguration::NoAccess => {
-            if let Some(metadata) = metadata {
-                if !metadata.context_aware_resources.is_empty() {
+            if let Some(metadata) = metadata
+                && !metadata.context_aware_resources.is_empty() {
                     warn!("Policy requires access to Kubernetes resources at evaluation time. During this execution the access to Kubernetes resources is denied. This can cause the policy to not behave properly");
                     warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command, then run the policy using the `--allow-context-aware` flag.");
                 }
-            }
             BTreeSet::new()
         }
         ContextAwareConfiguration::AllowList(allowed) => allowed.to_owned(),

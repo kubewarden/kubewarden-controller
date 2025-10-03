@@ -73,14 +73,13 @@ fn build_oci_annotations(annotations: BTreeMap<String, String>) -> BTreeMap<Stri
         .map(|(k, v)| (k.to_owned(), v.trim().to_owned()))
         .collect();
 
-    if let Some(source) = annotations.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE) {
-        if !annotations.contains_key(ORG_OPENCONTAINERS_IMAGE_SOURCE) {
+    if let Some(source) = annotations.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE)
+        && !annotations.contains_key(ORG_OPENCONTAINERS_IMAGE_SOURCE) {
             annotations.insert(
                 ORG_OPENCONTAINERS_IMAGE_SOURCE.to_string(),
                 source.to_owned(),
             );
         }
-    }
 
     debug!("OCI annotations: {:?}", annotations);
 
