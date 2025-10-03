@@ -3,3 +3,4 @@ Cargo.lock
 
 # coverage instrumentation:
 *.profraw
+annotated-policy.wasm

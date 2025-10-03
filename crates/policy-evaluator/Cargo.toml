@@ -11,7 +11,7 @@ name = "policy-evaluator"
 version = "0.30.1"
 
 [workspace]
-members = ["crates/burrego"]
+members = ["crates/burrego", "crates/context-aware-test-policy"]
 
 [dependencies]
 anyhow = "1.0"
@@ -24,14 +24,14 @@ email_address = { version = "0.2", features = ["serde"] }
 futures = "0.3"
 itertools = "0.14"
 json-patch = "4.0"
-k8s-openapi = { version = "0.26.0", default-features = false }
+k8s-openapi = { workspace = true }
 kube = { version = "2.0.0", default-features = false, features = [
   "client",
   "runtime",
   "rustls-tls",
 ] }
-kubewarden-policy-sdk = { version = "0.15.0", features = ["crd"] }
-lazy_static = "1.5"
+kubewarden-policy-sdk = { workspace = true }
+lazy_static = { workspace = true }
 mail-parser = { version = "0.11", features = ["serde"] }
 pki-types = { package = "rustls-pki-types", version = "1.12", default-features = false, features = [
   "std",
@@ -42,7 +42,7 @@ rustls-webpki = { version = "0.103", default-features = false, features = [
   "std",
 ] }
 semver = { version = "1.0", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { workspace = true }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.10"
@@ -61,23 +61,27 @@ wasmtime-wasi = { workspace = true }
 webpki-roots = "1"
 
 [workspace.dependencies]
-wasi-common   = "37.0"
-wasmtime      = "37.0"
+k8s-openapi = { version = "0.26.0", default-features = false, features = [
+  "v1_30",
+] }
+kubewarden-policy-sdk = { version = "0.15.0", features = ["crd"] }
+lazy_static = "1.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wasi-common = "37.0"
+wasmtime = "37.0"
 wasmtime-wasi = "37.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
-hyper = { version = "1" }
-k8s-openapi = { version = "0.26.0", default-features = false, features = [
-  "v1_30",
-] }
-rcgen = { version = "0.14", features = ["x509-parser"] }
-rstest = "0.26"
-serial_test = "3.2"
-tempfile = "3.19"
-test-context = "0.4"
-test-log = "0.2"
-tower-test = "0.4"
+hyper            = { version = "1" }
+rcgen            = { version = "0.14", features = ["x509-parser"] }
+rstest           = "0.26"
+serial_test      = "3.2"
+tempfile         = "3.19"
+test-context     = "0.4"
+test-log         = "0.2"
+tower-test       = "0.4"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of policy-fetcher
 # This is required to have the integration tests use the system certificates instead of the
