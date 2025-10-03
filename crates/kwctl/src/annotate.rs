@@ -1,7 +1,7 @@
 use crate::backend::{Backend, BackendDetector};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::validator::Validate;
-use policy_evaluator::{constants::*, policy_metadata::Metadata, ProtocolVersion};
+use policy_evaluator::{ProtocolVersion, constants::*, policy_metadata::Metadata};
 use std::fs::{self, File};
 use std::path::PathBuf;
 
@@ -82,6 +82,20 @@ fn write_annotated_wasm_file(
         data: metadata_json,
     };
     module.customs.add(custom_section);
+
+    // Rewrite the import from `kubewarden:javy/host` to just `host` so that the
+    // runtime can provide the right implementation.
+    //
+    // This is needed to make JavaScript/TypeScript WASI policies work out
+    // of the box.
+    module.imports.iter_mut().for_each(|import| {
+        if let walrus::ImportKind::Function(_) = import.kind
+            && import.module == "kubewarden:javy/host"
+            && import.name == "call"
+        {
+            import.module = "host".to_string();
+        }
+    });
 
     module.emit_wasm_file(output_path)?;
     Ok(())
