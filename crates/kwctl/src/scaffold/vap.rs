@@ -148,12 +148,26 @@ mod tests {
     }
 
     #[rstest]
-    #[case::vap_without_variables("vap/vap-without-variables.yml", "vap/vap-binding.yml", false)]
-    #[case::vap_with_variables("vap/vap-with-variables.yml", "vap/vap-binding.yml", true)]
+    #[case::vap_without_variables(
+        "vap/vap-without-variables.yml",
+        "vap/vap-binding.yml",
+        false,
+        false
+    )]
+    #[case::vap_with_variables("vap/vap-with-variables.yml", "vap/vap-binding.yml", true, false)]
+    #[case::vap_with_params("vap/vap-with-params.yml", "vap/vap-binding-params.yml", false, true)]
+    #[case::only_param_kind("vap/vap-with-params.yml", "vap/vap-binding.yml", false, true)]
+    #[case::only_param_ref(
+        "vap/vap-without-variables.yml",
+        "vap/vap-binding-params.yml",
+        false,
+        true
+    )]
     fn from_vap_to_cluster_admission_policy(
         #[case] vap_yaml_path: &str,
         #[case] vap_binding_yaml_path: &str,
         #[case] has_variables: bool,
+        #[case] has_params: bool,
     ) {
         let yaml_file = File::open(test_data(vap_yaml_path)).unwrap();
         let vap: ValidatingAdmissionPolicy = serde_yaml::from_reader(yaml_file).unwrap();
@@ -177,12 +191,22 @@ mod tests {
         let vap_binding: ValidatingAdmissionPolicyBinding =
             serde_yaml::from_reader(yaml_file).unwrap();
 
-        let cluster_admission_policy = convert_vap_to_cluster_admission_policy(
+        let result = convert_vap_to_cluster_admission_policy(
             CEL_POLICY_MODULE,
             vap.clone(),
             vap_binding.clone(),
-        )
-        .unwrap();
+        );
+
+        if has_params {
+            let present_param_kind = vap.clone().spec.unwrap().param_kind.is_some();
+            let present_param_ref = vap_binding.clone().spec.unwrap().param_ref.is_some();
+            if present_param_kind != present_param_ref {
+                assert!(result.is_err());
+                return;
+            }
+        }
+
+        let cluster_admission_policy = result.unwrap();
 
         assert_eq!(CEL_POLICY_MODULE, cluster_admission_policy.spec.module);
         assert!(!cluster_admission_policy.spec.mutating);
@@ -234,6 +258,30 @@ mod tests {
                 .spec
                 .settings
                 .contains_key("variables"));
+        }
+
+        if has_params {
+            let expected_param_kind =
+                serde_yaml::to_value(vap.clone().spec.unwrap().param_kind.unwrap()).unwrap();
+            assert_eq!(
+                expected_param_kind,
+                cluster_admission_policy.spec.settings["paramKind"]
+            );
+            let expected_param_ref =
+                serde_yaml::to_value(vap_binding.clone().spec.unwrap().param_ref.unwrap()).unwrap();
+            assert_eq!(
+                expected_param_ref,
+                cluster_admission_policy.spec.settings["paramRef"]
+            );
+        } else {
+            assert!(!cluster_admission_policy
+                .spec
+                .settings
+                .contains_key("paramKind"));
+            assert!(!cluster_admission_policy
+                .spec
+                .settings
+                .contains_key("paramRef"));
         }
     }
 }
