@@ -16,6 +16,7 @@ import (
 	"github.com/kubewarden/audit-scanner/internal/constants"
 	"github.com/kubewarden/audit-scanner/internal/scheme"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,6 +91,16 @@ func (factory *PolicyReportFactory) Build() *wgpolicy.PolicyReport {
 	}
 }
 
+func (factory *PolicyReportFactory) BuildOpenReports() *openreports.Report {
+	return &openreports.Report{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      factory.name,
+			Namespace: factory.namespace,
+			Labels:    factory.labels,
+		},
+	}
+}
+
 type ClusterPolicyReportFactory struct {
 	name   string
 	labels map[string]string
@@ -120,6 +131,15 @@ func (factory *ClusterPolicyReportFactory) WithAppLabel() *ClusterPolicyReportFa
 
 func (factory *ClusterPolicyReportFactory) Build() *wgpolicy.ClusterPolicyReport {
 	return &wgpolicy.ClusterPolicyReport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   factory.name,
+			Labels: factory.labels,
+		},
+	}
+}
+
+func (factory *ClusterPolicyReportFactory) BuildOpenReports() *openreports.ClusterReport {
+	return &openreports.ClusterReport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   factory.name,
 			Labels: factory.labels,

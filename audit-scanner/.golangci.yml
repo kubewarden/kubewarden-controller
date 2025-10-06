@@ -471,3 +471,11 @@ linters:
           - noctx
           - wrapcheck
           - typecheck # tests files use a package which is built only in testing mode
+      # The following exclusion rules are required while we support OpenReports and PolicyReports.
+      # Once the PolicyReport support is dropped, these rules must be removed.
+      - path: "internal/report/store.go"
+        linters:
+          - dupl
+      - path: "internal/report/openreports_store.go"
+        linters:
+          - dupl

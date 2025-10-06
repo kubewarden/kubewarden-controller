@@ -40,3 +40,8 @@ const (
 	labelPolicyReportVersion      = "kubewarden.io/policyreport-version"
 	labelPolicyReportVersionValue = "v2"
 )
+
+const (
+	OpenReportsKind  = "openreports"
+	PolicyReportKind = "policyreport"
+)

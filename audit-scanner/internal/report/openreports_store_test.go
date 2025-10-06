@@ -8,6 +8,7 @@ import (
 	auditConstants "github.com/kubewarden/audit-scanner/internal/constants"
 	testutils "github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,14 +16,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
-func TestCreatePolicyReport(t *testing.T) {
+func TestCreateReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
 	logger := slog.Default()
-	store := NewPolicyReportStore(fakeClient, logger)
+	store := NewOpenReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -32,11 +32,11 @@ func TestCreatePolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport("runUID", resource)
+	policyReport := NewOpenReport("runUID", resource)
 	err = store.CreateOrPatchReport(t.Context(), policyReport)
 	require.NoError(t, err)
 
-	storedPolicyReport := &wgpolicy.PolicyReport{}
+	storedPolicyReport := &openreports.Report{}
 	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: policyReport.report.GetName(), Namespace: policyReport.report.GetNamespace()}, storedPolicyReport)
 	require.NoError(t, err)
 
@@ -47,11 +47,11 @@ func TestCreatePolicyReport(t *testing.T) {
 	require.Equal(t, policyReport.report.Results, storedPolicyReport.Results)
 }
 
-func TestPatchPolicyReport(t *testing.T) {
+func TestPatchReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
 	logger := slog.Default()
-	store := NewPolicyReportStore(fakeClient, logger)
+	store := NewOpenReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -61,13 +61,13 @@ func TestPatchPolicyReport(t *testing.T) {
 	resource.SetKind("Pod")
 	resource.SetResourceVersion("12345")
 
-	policyReport := NewPolicyReport("runUID", resource)
+	policyReport := NewOpenReport("runUID", resource)
 	err = store.CreateOrPatchReport(t.Context(), policyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newPolicyReport := NewPolicyReport("runUID", resource)
+	newPolicyReport := NewOpenReport("runUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.AdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,7 +87,7 @@ func TestPatchPolicyReport(t *testing.T) {
 	err = store.CreateOrPatchReport(t.Context(), newPolicyReport)
 	require.NoError(t, err)
 
-	storedPolicyReport := &wgpolicy.PolicyReport{}
+	storedPolicyReport := &openreports.Report{}
 	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: policyReport.report.GetName(), Namespace: policyReport.report.GetNamespace()}, storedPolicyReport)
 	require.NoError(t, err)
 
@@ -98,11 +98,11 @@ func TestPatchPolicyReport(t *testing.T) {
 	require.Equal(t, newPolicyReport.report.Results, storedPolicyReport.Results)
 }
 
-func TestCreateClusterPolicyReport(t *testing.T) {
+func TestCreateClusterReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
 	logger := slog.Default()
-	store := NewPolicyReportStore(fakeClient, logger)
+	store := NewOpenReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -111,11 +111,11 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 	resource.SetKind("Namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
+	clusterPolicyReport := NewClusterOpenReport("runUID", resource)
 	err = store.CreateOrPatchClusterReport(t.Context(), clusterPolicyReport)
 	require.NoError(t, err)
 
-	storedClusterPolicyReport := &wgpolicy.ClusterPolicyReport{}
+	storedClusterPolicyReport := &openreports.ClusterReport{}
 	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: clusterPolicyReport.report.GetName()}, storedClusterPolicyReport)
 	require.NoError(t, err)
 
@@ -126,11 +126,11 @@ func TestCreateClusterPolicyReport(t *testing.T) {
 	require.Equal(t, clusterPolicyReport.report.Results, storedClusterPolicyReport.Results)
 }
 
-func TestPatchClusterPolicyReport(t *testing.T) {
+func TestPatchClusterReport(t *testing.T) {
 	fakeClient, err := testutils.NewFakeClient()
 	require.NoError(t, err)
 	logger := slog.Default()
-	store := NewPolicyReportStore(fakeClient, logger)
+	store := NewOpenReportStore(fakeClient, logger)
 
 	resource := unstructured.Unstructured{}
 	resource.SetUID("uid")
@@ -139,13 +139,13 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	resource.SetName("test-namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
+	clusterPolicyReport := NewClusterOpenReport("runUID", resource)
 	err = store.CreateOrPatchClusterReport(t.Context(), clusterPolicyReport)
 	require.NoError(t, err)
 
 	// The resource version is updated to simulate a change in the resource.
 	resource.SetResourceVersion("45678")
-	newClusterPolicyReport := NewClusterPolicyReport("runUID", resource)
+	newClusterPolicyReport := NewClusterOpenReport("runUID", resource)
 	// Results are added to the policy report
 	policy := &policiesv1.ClusterAdmissionPolicy{
 		ObjectMeta: metav1.ObjectMeta{
@@ -164,7 +164,7 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	err = store.CreateOrPatchClusterReport(t.Context(), newClusterPolicyReport)
 	require.NoError(t, err)
 
-	storedClusterPolicyReport := &wgpolicy.ClusterPolicyReport{}
+	storedClusterPolicyReport := &openreports.ClusterReport{}
 	err = fakeClient.Get(t.Context(), types.NamespacedName{Name: clusterPolicyReport.report.GetName()}, storedClusterPolicyReport)
 	require.NoError(t, err)
 
@@ -175,25 +175,25 @@ func TestPatchClusterPolicyReport(t *testing.T) {
 	require.Equal(t, newClusterPolicyReport.report.Results, storedClusterPolicyReport.Results)
 }
 
-func TestDeletePolicyReport(t *testing.T) {
+func TestDeleteReport(t *testing.T) {
 	oldPolicyReport := testutils.NewPolicyReportFactory().
-		Name("old-report").Namespace("default").RunUID("old-uid").WithAppLabel().Build()
+		Name("old-report").Namespace("default").RunUID("old-uid").WithAppLabel().BuildOpenReports()
 	otherOldPolicyReport := testutils.NewPolicyReportFactory().
-		Name("other-old-report").Namespace("default").RunUID("old-uid").Build()
+		Name("other-old-report").Namespace("default").RunUID("old-uid").BuildOpenReports()
 	newPolicyReport := testutils.NewPolicyReportFactory().
-		Name("new-report").Namespace("default").RunUID("new-uid").WithAppLabel().Build()
+		Name("new-report").Namespace("default").RunUID("new-uid").WithAppLabel().BuildOpenReports()
 	oldPolicyReportOtheNamespace := testutils.NewPolicyReportFactory().
-		Name("old-report-other-namespace").Namespace("other").RunUID("old-uid").WithAppLabel().Build()
+		Name("old-report-other-namespace").Namespace("other").RunUID("old-uid").WithAppLabel().BuildOpenReports()
 
 	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport, oldPolicyReportOtheNamespace)
 	require.NoError(t, err)
 	logger := slog.Default()
-	store := NewPolicyReportStore(fakeClient, logger)
+	store := NewOpenReportStore(fakeClient, logger)
 
 	err = store.DeleteOldReports(t.Context(), "new-uid", "default")
 	require.NoError(t, err)
 
-	storedPolicyReportList := &wgpolicy.PolicyReportList{}
+	storedPolicyReportList := &openreports.ReportList{}
 
 	err = fakeClient.List(t.Context(), storedPolicyReportList, &client.ListOptions{Namespace: "other"})
 	require.NoError(t, err)
@@ -213,22 +213,22 @@ func TestDeletePolicyReport(t *testing.T) {
 	require.Len(t, storedPolicyReportList.Items, 1)
 }
 
-func TestDeleteClusterPolicyReport(t *testing.T) {
+func TestDeleteClusterReport(t *testing.T) {
 	oldPolicyReport := testutils.NewClusterPolicyReportFactory().
-		Name("old-report-with-app-label").WithAppLabel().RunUID("old-uid").Build()
+		Name("old-report-with-app-label").WithAppLabel().RunUID("old-uid").BuildOpenReports()
 	otherOldPolicyReport := testutils.NewClusterPolicyReportFactory().
-		Name("old-report-with-no-app-label").RunUID("old-uid").Build()
+		Name("old-report-with-no-app-label").RunUID("old-uid").BuildOpenReports()
 	newPolicyReport := testutils.NewClusterPolicyReportFactory().
-		Name("new-report").WithAppLabel().RunUID("new-uid").Build()
+		Name("new-report").WithAppLabel().RunUID("new-uid").BuildOpenReports()
 	fakeClient, err := testutils.NewFakeClient(oldPolicyReport, otherOldPolicyReport, newPolicyReport)
 	require.NoError(t, err)
 	logger := slog.Default()
-	store := NewPolicyReportStore(fakeClient, logger)
+	store := NewOpenReportStore(fakeClient, logger)
 
 	err = store.DeleteOldClusterReports(t.Context(), "new-uid")
 	require.NoError(t, err)
 
-	storedPolicyReportList := &wgpolicy.ClusterPolicyReportList{}
+	storedPolicyReportList := &openreports.ClusterReportList{}
 
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
 	require.NoError(t, err)
@@ -237,7 +237,7 @@ func TestDeleteClusterPolicyReport(t *testing.T) {
 	require.Len(t, storedPolicyReportList.Items, 1)
 	require.Equal(t, "old-report-with-no-app-label", storedPolicyReportList.Items[0].Name)
 
-	storedPolicyReportList = &wgpolicy.ClusterPolicyReportList{}
+	storedPolicyReportList = &openreports.ClusterReportList{}
 
 	labelSelector, err = labels.Parse(fmt.Sprintf("%s!=%s", auditConstants.AuditScannerRunUIDLabel, "old-uid"))
 	require.NoError(t, err)

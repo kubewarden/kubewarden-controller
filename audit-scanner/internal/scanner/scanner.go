@@ -32,9 +32,9 @@ const httpClientTimeout = 10 * time.Second
 
 // Scanner verifies that existing resources don't violate any of the policies.
 type Scanner struct {
-	policiesClient    *policies.Client
-	k8sClient         *k8s.Client
-	policyReportStore *report.PolicyReportStore
+	policiesClient *policies.Client
+	k8sClient      *k8s.Client
+	reportStore    report.Store
 	// http client used to make requests against the Policy Server
 	httpClient               http.Client
 	outputScan               bool
@@ -43,6 +43,7 @@ type Scanner struct {
 	parallelResourcesAudits  int
 	parallelPoliciesAudits   int
 	logger                   *slog.Logger
+	reportKind               report.CrdKind
 }
 
 // NewScanner creates a new scanner
@@ -114,7 +115,7 @@ func NewScanner(config Config) (*Scanner, error) {
 	return &Scanner{
 		policiesClient:           config.PoliciesClient,
 		k8sClient:                config.K8sClient,
-		policyReportStore:        config.PolicyReportStore,
+		reportStore:              config.ReportStore,
 		httpClient:               httpClient,
 		outputScan:               config.OutputScan,
 		disableStore:             config.DisableStore,
@@ -122,6 +123,7 @@ func NewScanner(config Config) (*Scanner, error) {
 		parallelResourcesAudits:  config.Parallelization.ParallelResourcesAudits,
 		parallelPoliciesAudits:   config.Parallelization.PoliciesAudits,
 		logger:                   logger,
+		reportKind:               config.ReportKind,
 	}, nil
 }
 
@@ -192,8 +194,9 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 		}
 	}
 	workers.Wait()
-	if err := s.policyReportStore.DeleteOldPolicyReports(ctx, runUID, nsName); err != nil {
-		s.logger.ErrorContext(ctx, "error deleting old PolicyReports",
+
+	if err := s.reportStore.DeleteOldReports(ctx, runUID, nsName); err != nil {
+		s.logger.ErrorContext(ctx, "error deleting old reports",
 			slog.String("error", err.Error()),
 			slog.String("RunUID", runUID))
 	}
@@ -301,13 +304,13 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 	}
 
 	workers.Wait()
-	if err := s.policyReportStore.DeleteOldClusterPolicyReports(ctx, runUID); err != nil {
-		s.logger.ErrorContext(ctx, "error deleting old ClusterPolicyReports",
+
+	if err := s.reportStore.DeleteOldClusterReports(ctx, runUID); err != nil {
+		s.logger.ErrorContext(ctx, "error deleting old ClusterReports",
 			slog.String("error", err.Error()),
 			slog.String("RunUID", runUID))
 	}
 	s.logger.InfoContext(ctx, "Cluster-wide resources scan finished")
-
 	return nil
 }
 
@@ -394,11 +397,11 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	workers.Wait()
 	close(auditResults)
 
-	policyReport := report.NewPolicyReport(runUID, resource)
-	policyReport.Summary.Skip = skippedPoliciesNum
-	policyReport.Summary.Error = erroredPoliciesNum
+	policyReport := report.NewReportOfKind(s.reportKind, runUID, resource)
+	policyReport.SetErrorPolicies(erroredPoliciesNum)
+	policyReport.SetSkipPolicies(skippedPoliciesNum)
 	for res := range auditResults {
-		report.AddResultToPolicyReport(policyReport, res.policy, res.admissionReviewResponse, res.errored)
+		policyReport.AddResult(res.policy, res.admissionReviewResponse, res.errored)
 	}
 
 	if s.outputScan {
@@ -411,12 +414,11 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 	}
 
 	if !s.disableStore {
-		err := s.policyReportStore.CreateOrPatchPolicyReport(ctx, policyReport)
+		err := s.reportStore.CreateOrPatchReport(ctx, policyReport)
 		if err != nil {
 			s.logger.ErrorContext(ctx, "error adding PolicyReport to store.", slog.String("error", err.Error()))
 		}
 	}
-
 	return nil
 }
 
@@ -425,9 +427,9 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 		slog.String("resource", resource.GetName()),
 		slog.Int("policies-to-evaluate", len(policies)))
 
-	clusterPolicyReport := report.NewClusterPolicyReport(runUID, resource)
-	clusterPolicyReport.Summary.Skip = skippedPoliciesNum
-	clusterPolicyReport.Summary.Error = erroredPoliciesNum
+	clusterReport := report.NewClusterReportOfKind(s.reportKind, runUID, resource)
+	clusterReport.SetSkipPolicies(skippedPoliciesNum)
+	clusterReport.SetErrorPolicies(erroredPoliciesNum)
 	for _, p := range policies {
 		url := p.PolicyServer
 		policy := p.Policy
@@ -473,11 +475,11 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 					slog.Bool("allowed", admissionReviewResponse.Response.Allowed)))
 		}
 
-		report.AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionReviewResponse, errored)
+		clusterReport.AddResult(policy, admissionReviewResponse, errored)
 	}
 
 	if s.outputScan {
-		clusterPolicyReportJSON, err := json.Marshal(clusterPolicyReport)
+		clusterPolicyReportJSON, err := json.Marshal(clusterReport)
 		if err != nil {
 			s.logger.ErrorContext(ctx, "error while marshalling ClusterPolicyReport to JSON, skipping output scan", slog.String("error", err.Error()))
 		}
@@ -486,7 +488,7 @@ func (s *Scanner) auditClusterResource(ctx context.Context, policies []*policies
 	}
 
 	if !s.disableStore {
-		err := s.policyReportStore.CreateOrPatchClusterPolicyReport(ctx, clusterPolicyReport)
+		err := s.reportStore.CreateOrPatchClusterReport(ctx, clusterReport)
 		if err != nil {
 			s.logger.ErrorContext(ctx, "error adding ClusterPolicyReport to store", slog.String("error", err.Error()))
 		}

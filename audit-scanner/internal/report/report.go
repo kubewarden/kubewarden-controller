@@ -12,125 +12,153 @@ import (
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
+// CrdKind represents the kind of report to use to store audit results.
+type CrdKind int
+
+const (
+	ReportKindOpenReport CrdKind = iota
+	ReportKindPolicyReport
+)
+
+// Report interface to abstract which kind of report are under use. This is useful
+// to support both PolicyReport and OpenReport without duplicating code.
+type Report interface {
+	SetSkipPolicies(n int)
+	SetErrorPolicies(n int)
+	AddResult(policy policiesv1.Policy, admissionReview *admissionv1.AdmissionReview, errored bool)
+}
+
+type PolicyReport struct {
+	report *wgpolicy.PolicyReport
+}
+
+type ClusterPolicyReport struct {
+	report *wgpolicy.ClusterPolicyReport
+}
+
+func NewReportOfKind(kind CrdKind, runUID string, resource unstructured.Unstructured) Report {
+	if kind == ReportKindPolicyReport {
+		return NewPolicyReport(runUID, resource)
+	}
+	return NewOpenReport(runUID, resource)
+}
+
+func NewClusterReportOfKind(kind CrdKind, runUID string, resource unstructured.Unstructured) Report {
+	if kind == ReportKindPolicyReport {
+		return NewClusterPolicyReport(runUID, resource)
+	}
+	return NewClusterOpenReport(runUID, resource)
+}
+
 // NewPolicyReport creates a new PolicyReport from a given resource.
-func NewPolicyReport(runUID string, resource unstructured.Unstructured) *wgpolicy.PolicyReport {
-	return &wgpolicy.PolicyReport{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      string(resource.GetUID()),
-			Namespace: resource.GetNamespace(),
-			Labels: map[string]string{
-				labelAppManagedBy:                 labelApp,
-				labelPolicyReportVersion:          labelPolicyReportVersionValue,
-				constants.AuditScannerRunUIDLabel: runUID,
+// Deprecated: use NewReport instead. wgpolicy.PolicyReport is deprecated in favor of openreports.Report.
+func NewPolicyReport(runUID string, resource unstructured.Unstructured) *PolicyReport {
+	objMeta := getReportObjectMeta(runUID, resource)
+	objMeta.Namespace = resource.GetNamespace()
+	return &PolicyReport{
+		report: &wgpolicy.PolicyReport{
+			ObjectMeta: objMeta,
+			Scope:      getReportScope(resource),
+			Summary: wgpolicy.PolicyReportSummary{
+				Pass:  0, // count of policies with requirements met
+				Fail:  0, // count of policies with requirements not met
+				Warn:  0, // not used for now
+				Error: 0, // count of policies that couldn't be evaluated
+				Skip:  0, // count of policies that were not selected for evaluation
 			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: resource.GetAPIVersion(),
-					Kind:       resource.GetKind(),
-					Name:       resource.GetName(),
-					UID:        resource.GetUID(),
-				},
-			},
-		},
-		Scope: &corev1.ObjectReference{
-			APIVersion:      resource.GetAPIVersion(),
-			Kind:            resource.GetKind(),
-			Namespace:       resource.GetNamespace(),
-			Name:            resource.GetName(),
-			UID:             resource.GetUID(),
-			ResourceVersion: resource.GetResourceVersion(),
-		},
-		Summary: wgpolicy.PolicyReportSummary{
-			Pass:  0, // count of policies with requirements met
-			Fail:  0, // count of policies with requirements not met
-			Warn:  0, // not used for now
-			Error: 0, // count of policies that couldn't be evaluated
-			Skip:  0, // count of policies that were not selected for evaluation
 		},
 	}
 }
 
-// AddResultToPolicyReport adds a result to a PolicyReport and updates the summary.
-func AddResultToPolicyReport(
-	policyReport *wgpolicy.PolicyReport,
+func (r *PolicyReport) AddResult(
 	policy policiesv1.Policy,
 	admissionReview *admissionv1.AdmissionReview,
 	errored bool,
-) *wgpolicy.PolicyReportResult {
+) {
 	now := metav1.Timestamp{Seconds: time.Now().Unix()}
 	result := newPolicyReportResult(policy, admissionReview, errored, now)
 	switch result.Result {
 	case statusFail:
-		policyReport.Summary.Fail++
+		r.report.Summary.Fail++
 	case statusError:
-		policyReport.Summary.Error++
+		r.report.Summary.Error++
 	case statusPass:
-		policyReport.Summary.Pass++
+		r.report.Summary.Pass++
 	}
-	policyReport.Results = append(policyReport.Results, result)
+	r.report.Results = append(r.report.Results, result)
+}
 
-	return result
+func (r *PolicyReport) SetSkipPolicies(skippedPoliciesNumber int) {
+	r.report.Summary.Skip = skippedPoliciesNumber
+}
+
+func (r *PolicyReport) SetErrorPolicies(erroredPoliciesNumber int) {
+	r.report.Summary.Error = erroredPoliciesNumber
 }
 
 // NewClusterPolicyReport creates a new ClusterPolicyReport from a given resource.
-func NewClusterPolicyReport(runUID string, resource unstructured.Unstructured) *wgpolicy.ClusterPolicyReport {
-	return &wgpolicy.ClusterPolicyReport{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: string(resource.GetUID()),
-			Labels: map[string]string{
-				labelAppManagedBy:                 labelApp,
-				labelPolicyReportVersion:          labelPolicyReportVersionValue,
-				constants.AuditScannerRunUIDLabel: runUID,
+// Deprecated: use NewClusterReport instead. wgpolicy.ClusterPolicyReport is deprecated in favor of openreports.ClusterReport.
+func NewClusterPolicyReport(runUID string, resource unstructured.Unstructured) *ClusterPolicyReport {
+	return &ClusterPolicyReport{
+		report: &wgpolicy.ClusterPolicyReport{
+			ObjectMeta: getReportObjectMeta(runUID, resource),
+			Scope:      getReportScope(resource),
+			Summary: wgpolicy.PolicyReportSummary{
+				Pass:  0, // count of policies with requirements met
+				Fail:  0, // count of policies with requirements not met
+				Warn:  0, // not used for now
+				Error: 0, // count of policies that couldn't be evaluated
+				Skip:  0, // count of policies that were not selected for evaluation
 			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: resource.GetAPIVersion(),
-					Kind:       resource.GetKind(),
-					Name:       resource.GetName(),
-					UID:        resource.GetUID(),
-				},
-			},
-		},
-		Scope: &corev1.ObjectReference{
-			APIVersion:      resource.GetAPIVersion(),
-			Kind:            resource.GetKind(),
-			Name:            resource.GetName(),
-			UID:             resource.GetUID(),
-			ResourceVersion: resource.GetResourceVersion(),
-		},
-		Summary: wgpolicy.PolicyReportSummary{
-			Pass:  0, // count of policies with requirements met
-			Fail:  0, // count of policies with requirements not met
-			Warn:  0, // not used for now
-			Error: 0, // count of policies that couldn't be evaluated
-			Skip:  0, // count of policies that were not selected for evaluation
 		},
 	}
 }
 
-// AddResultToClusterPolicyReport adds a result to a ClusterPolicyReport and updates the summary.
-func AddResultToClusterPolicyReport(
-	policyReport *wgpolicy.ClusterPolicyReport,
+func (r *ClusterPolicyReport) AddResult(
 	policy policiesv1.Policy,
 	admissionReview *admissionv1.AdmissionReview,
 	errored bool,
-) *wgpolicy.PolicyReportResult {
+) {
 	now := metav1.Timestamp{Seconds: time.Now().Unix()}
 	result := newPolicyReportResult(policy, admissionReview, errored, now)
 	switch result.Result {
 	case statusFail:
-		policyReport.Summary.Fail++
+		r.report.Summary.Fail++
 	case statusError:
-		policyReport.Summary.Error++
+		r.report.Summary.Error++
 	case statusPass:
-		policyReport.Summary.Pass++
+		r.report.Summary.Pass++
 	}
-	policyReport.Results = append(policyReport.Results, result)
+	r.report.Results = append(r.report.Results, result)
+}
 
-	return result
+func (r *ClusterPolicyReport) SetSkipPolicies(skippedPoliciesNumber int) {
+	r.report.Summary.Skip = skippedPoliciesNumber
+}
+
+func (r *ClusterPolicyReport) SetErrorPolicies(erroredPoliciesNumber int) {
+	r.report.Summary.Error = erroredPoliciesNumber
 }
 
 func newPolicyReportResult(policy policiesv1.Policy, admissionReview *admissionv1.AdmissionReview, errored bool, timestamp metav1.Timestamp) *wgpolicy.PolicyReportResult {
+	category, message := getCategoryAndMessage(policy, admissionReview)
+
+	return &wgpolicy.PolicyReportResult{
+		Source:          policyReportSource,
+		Policy:          policy.GetUniqueName(),
+		Category:        category,
+		Severity:        wgpolicy.PolicyResultSeverity(computePolicyResultSeverity(policy)),   // either info for monitor or empty
+		Timestamp:       timestamp,                                                            // time the result was computed
+		Result:          wgpolicy.PolicyResult(computePolicyResult(errored, admissionReview)), // pass, fail, error
+		Scored:          true,
+		SubjectSelector: &metav1.LabelSelector{},
+		// This field is marshalled to `message`
+		Description: message,
+		Properties:  computeProperties(policy),
+	}
+}
+
+func getCategoryAndMessage(policy policiesv1.Policy, admissionReview *admissionv1.AdmissionReview) (string, string) {
 	var category string
 	if c, present := policy.GetCategory(); present {
 		category = c
@@ -148,45 +176,29 @@ func newPolicyReportResult(policy policiesv1.Policy, admissionReview *admissionv
 		// or the reason why the policy returned a failure
 		message = admissionReview.Response.Result.Message
 	}
-
-	return &wgpolicy.PolicyReportResult{
-		Source:          policyReportSource,
-		Policy:          policy.GetUniqueName(),
-		Category:        category,
-		Severity:        computePolicyResultSeverity(policy),           // either info for monitor or empty
-		Timestamp:       timestamp,                                     // time the result was computed
-		Result:          computePolicyResult(errored, admissionReview), // pass, fail, error
-		Scored:          true,
-		SubjectSelector: &metav1.LabelSelector{},
-		// This field is marshalled to `message`
-		Description: message,
-		Properties:  computeProperties(policy),
-	}
+	return category, message
 }
 
-func computePolicyResult(errored bool, admissionReview *admissionv1.AdmissionReview) wgpolicy.PolicyResult {
+func computePolicyResult(errored bool, admissionReview *admissionv1.AdmissionReview) string {
 	if errored {
 		return statusError
 	}
 	if admissionReview.Response.Allowed {
 		return statusPass
 	}
-
 	return statusFail
 }
 
-func computePolicyResultSeverity(policy policiesv1.Policy) wgpolicy.PolicyResultSeverity {
-	var severity wgpolicy.PolicyResultSeverity
-
+func computePolicyResultSeverity(policy policiesv1.Policy) string {
 	if policy.GetPolicyMode() == policiesv1.PolicyMode(policiesv1.PolicyModeStatusMonitor) {
 		return severityInfo
 	}
 
 	if s, present := policy.GetSeverity(); present {
-		return wgpolicy.PolicyResultSeverity(s)
+		return s
 	}
 
-	return severity
+	return ""
 }
 
 func computeProperties(policy policiesv1.Policy) map[string]string {
@@ -210,4 +222,34 @@ func computeProperties(policy policiesv1.Policy) map[string]string {
 	}
 
 	return properties
+}
+
+func getReportObjectMeta(runUID string, resource unstructured.Unstructured) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name: string(resource.GetUID()),
+		Labels: map[string]string{
+			labelAppManagedBy:                 labelApp,
+			labelPolicyReportVersion:          labelPolicyReportVersionValue,
+			constants.AuditScannerRunUIDLabel: runUID,
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: resource.GetAPIVersion(),
+				Kind:       resource.GetKind(),
+				Name:       resource.GetName(),
+				UID:        resource.GetUID(),
+			},
+		},
+	}
+}
+
+func getReportScope(resource unstructured.Unstructured) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		APIVersion:      resource.GetAPIVersion(),
+		Kind:            resource.GetKind(),
+		Namespace:       resource.GetNamespace(),
+		Name:            resource.GetName(),
+		UID:             resource.GetUID(),
+		ResourceVersion: resource.GetResourceVersion(),
+	}
 }
