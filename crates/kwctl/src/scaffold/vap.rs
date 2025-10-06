@@ -49,17 +49,12 @@ fn convert_vap_to_cluster_admission_policy(
     vap_binding: ValidatingAdmissionPolicyBinding,
 ) -> anyhow::Result<ClusterAdmissionPolicy> {
     let vap_spec = vap.spec.unwrap_or_default();
+    let vap_binding_spec = vap_binding.spec.unwrap_or_default();
     if vap_spec.audit_annotations.is_some() {
         warn!("auditAnnotations are not supported by Kubewarden's CEL policy yet. They will be ignored.");
     }
     if vap_spec.match_conditions.is_some() {
         warn!("matchConditions are not supported by Kubewarden's CEL policy yet. They will be ignored.");
-    }
-    if vap_spec.param_kind.is_some() {
-        // It's not safe to skip this, the policy will definitely not work.
-        return Err(anyhow!(
-            "paramKind is not supported by Kubewarden's CEL policy yet"
-        ));
     }
 
     let mut settings = serde_yaml::Mapping::new();
@@ -73,6 +68,20 @@ fn convert_vap_to_cluster_admission_policy(
         settings.insert("variables".into(), vap_variables.into());
     }
 
+    // migrate CEL params
+    match (vap_spec.param_kind, vap_binding_spec.param_ref) {
+        (Some(vap_param_kind), Some(vap_param_ref)) => {
+            settings.insert("paramKind".into(), serde_yaml::to_value(vap_param_kind)?);
+            settings.insert("paramRef".into(), serde_yaml::to_value(vap_param_ref)?);
+        }
+        (None, None) => {}
+        _ => {
+            return Err(anyhow!(
+                "Both paramKind and paramRef must be present together, or both absent"
+            ));
+        }
+    }
+
     // migrate CEL validations
     if let Some(vap_validations) = vap_spec.validations {
         let kw_cel_validations: Vec<serde_yaml::Value> = vap_validations
@@ -83,9 +92,7 @@ fn convert_vap_to_cluster_admission_policy(
     }
 
     // VAP specifies the namespace selector inside of the binding
-    let namespace_selector = vap_binding
-        .spec
-        .unwrap_or_default()
+    let namespace_selector = vap_binding_spec
         .match_resources
         .unwrap_or_default()
         .namespace_selector;
