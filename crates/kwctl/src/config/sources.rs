@@ -3,7 +3,7 @@ use std::{env, path::Path};
 use anyhow::Result;
 use clap::ArgMatches;
 use policy_evaluator::policy_fetcher::{
-    sources::{read_sources_file, Sources},
+    sources::{Sources, read_sources_file},
     store::DEFAULT_ROOT,
 };
 use tracing::warn;
@@ -33,11 +33,17 @@ pub(crate) fn remote_server_options(matches: &ArgMatches) -> Result<Option<Sourc
         match docker_config_path.as_path().try_exists() {
             Ok(exist) => {
                 if !exist {
-                    warn!("Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.", docker_config_path.display());
+                    warn!(
+                        "Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.",
+                        docker_config_path.display()
+                    );
                 }
             }
             Err(_) => {
-                warn!("Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.", docker_config_path.display());
+                warn!(
+                    "Docker config file not found. Check if you are pointing to the directory containing the file. The file path should be {}.",
+                    docker_config_path.display()
+                );
             }
         }
     }

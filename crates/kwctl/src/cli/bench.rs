@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 
 use crate::config::pull_and_run::{parse_policy_definitions, parse_pull_and_run_settings};

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use k8s_openapi::api::admissionregistration::v1::{
     ValidatingAdmissionPolicy, ValidatingAdmissionPolicyBinding,
 };
@@ -50,10 +50,14 @@ fn convert_vap_to_cluster_admission_policy(
 ) -> anyhow::Result<ClusterAdmissionPolicy> {
     let vap_spec = vap.spec.unwrap_or_default();
     if vap_spec.audit_annotations.is_some() {
-        warn!("auditAnnotations are not supported by Kubewarden's CEL policy yet. They will be ignored.");
+        warn!(
+            "auditAnnotations are not supported by Kubewarden's CEL policy yet. They will be ignored."
+        );
     }
     if vap_spec.match_conditions.is_some() {
-        warn!("matchConditions are not supported by Kubewarden's CEL policy yet. They will be ignored.");
+        warn!(
+            "matchConditions are not supported by Kubewarden's CEL policy yet. They will be ignored."
+        );
     }
     if vap_spec.param_kind.is_some() {
         // It's not safe to skip this, the policy will definitely not work.
@@ -181,10 +185,12 @@ mod tests {
         assert!(!cluster_admission_policy.spec.mutating);
         assert_eq!(cluster_admission_policy.spec.rules, expected_rules);
         assert!(cluster_admission_policy.spec.background_audit);
-        assert!(cluster_admission_policy
-            .spec
-            .context_aware_resources
-            .is_empty());
+        assert!(
+            cluster_admission_policy
+                .spec
+                .context_aware_resources
+                .is_empty()
+        );
         assert_eq!(
             vap.clone().spec.unwrap().failure_policy,
             cluster_admission_policy.spec.failure_policy
@@ -223,10 +229,12 @@ mod tests {
                 cluster_admission_policy.spec.settings["variables"]
             );
         } else {
-            assert!(!cluster_admission_policy
-                .spec
-                .settings
-                .contains_key("variables"));
+            assert!(
+                !cluster_admission_policy
+                    .spec
+                    .settings
+                    .contains_key("variables")
+            );
         }
     }
 }

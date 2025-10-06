@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
-use flate2::write::GzEncoder;
+use anyhow::{Result, anyhow};
 use flate2::Compression;
+use flate2::write::GzEncoder;
 use policy_evaluator::policy_fetcher::store::{PolicyPath, Store};
 use std::fs::File;
 

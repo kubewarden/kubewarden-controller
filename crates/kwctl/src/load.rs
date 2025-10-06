@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use flate2::read::GzDecoder;
 use policy_evaluator::policy_fetcher::store::Store;
 use std::fs::File;

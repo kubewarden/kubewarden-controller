@@ -1,6 +1,6 @@
 use clap::{
-    builder::PossibleValuesParser, crate_authors, crate_description, crate_name, crate_version,
-    Arg, ArgAction, ArgGroup, Command,
+    Arg, ArgAction, ArgGroup, Command, builder::PossibleValuesParser, crate_authors,
+    crate_description, crate_name, crate_version,
 };
 use lazy_static::lazy_static;
 

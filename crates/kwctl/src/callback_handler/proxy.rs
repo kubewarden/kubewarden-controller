@@ -1,5 +1,5 @@
 use super::ProxyMode;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::{
     callback_handler::CallbackHandlerBuilder,
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},

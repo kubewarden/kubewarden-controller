@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::{
     policy_fetcher::{policy::Policy, store::Store},
     policy_metadata::Metadata as PolicyMetadata,
 };
-use prettytable::{format, row, Table};
+use prettytable::{Table, format, row};
 
 pub(crate) fn list() -> Result<()> {
     if policy_list()?.is_empty() {

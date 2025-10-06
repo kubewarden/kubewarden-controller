@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::{policy_fetcher::PullDestination, policy_metadata::Metadata};
 
 use crate::{

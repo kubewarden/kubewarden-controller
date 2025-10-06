@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use policy_evaluator::policy_fetcher::{
-    fetch_policy, policy::Policy, sources::Sources, PullDestination,
+    PullDestination, fetch_policy, policy::Policy, sources::Sources,
 };
 
 pub(crate) async fn pull(

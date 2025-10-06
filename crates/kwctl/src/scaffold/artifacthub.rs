@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::{policy_artifacthub::ArtifactHubPkg, policy_metadata::Metadata};
 use std::{
     fs::{self, File},

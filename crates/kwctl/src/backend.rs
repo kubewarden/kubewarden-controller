@@ -1,9 +1,8 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use lazy_static::lazy_static;
 use policy_evaluator::{
-    evaluation_context::EvaluationContext, policy_evaluator::PolicyExecutionMode,
+    ProtocolVersion, evaluation_context::EvaluationContext, policy_evaluator::PolicyExecutionMode,
     policy_evaluator_builder::PolicyEvaluatorBuilder, policy_metadata::Metadata, wasmparser,
-    ProtocolVersion,
 };
 use semver::{BuildMetadata, Prerelease, Version};
 use std::path::{Path, PathBuf};
@@ -137,24 +136,25 @@ impl BackendDetector {
 /// TODO: this should not take an Option
 pub fn has_minimum_kubewarden_version(opt_metadata: Option<&Metadata>) -> Result<()> {
     if let Some(metadata) = opt_metadata
-        && let Some(minimum_kubewarden_version) = &metadata.minimum_kubewarden_version {
-            let sanitized_minimum_kubewarden_version = Version {
-                major: minimum_kubewarden_version.major,
-                minor: minimum_kubewarden_version.minor,
-                // Kubewarden stack version ignore patch version number
-                patch: 0,
-                pre: Prerelease::EMPTY,
-                build: BuildMetadata::EMPTY,
-            };
-            #[allow(clippy::to_string_in_format_args)]
-            if *KUBEWARDEN_VERSION < sanitized_minimum_kubewarden_version {
-                return Err(anyhow!(
-                    "Policy required Kubewarden version {} or greater. But it's running on {}",
-                    sanitized_minimum_kubewarden_version,
-                    KUBEWARDEN_VERSION.to_string(),
-                ));
-            }
+        && let Some(minimum_kubewarden_version) = &metadata.minimum_kubewarden_version
+    {
+        let sanitized_minimum_kubewarden_version = Version {
+            major: minimum_kubewarden_version.major,
+            minor: minimum_kubewarden_version.minor,
+            // Kubewarden stack version ignore patch version number
+            patch: 0,
+            pre: Prerelease::EMPTY,
+            build: BuildMetadata::EMPTY,
+        };
+        #[allow(clippy::to_string_in_format_args)]
+        if *KUBEWARDEN_VERSION < sanitized_minimum_kubewarden_version {
+            return Err(anyhow!(
+                "Policy required Kubewarden version {} or greater. But it's running on {}",
+                sanitized_minimum_kubewarden_version,
+                KUBEWARDEN_VERSION.to_string(),
+            ));
         }
+    }
     Ok(())
 }
 

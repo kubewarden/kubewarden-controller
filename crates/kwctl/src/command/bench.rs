@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Result};
-use tiny_bench::{bench_with_configuration_labeled, BenchmarkConfig};
+use anyhow::{Result, anyhow};
+use tiny_bench::{BenchmarkConfig, bench_with_configuration_labeled};
 use tracing::{debug, error};
 
 use crate::{

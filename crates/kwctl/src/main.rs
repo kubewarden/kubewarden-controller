@@ -2,11 +2,11 @@ use std::{
     collections::HashMap, convert::TryFrom, env, fs, io::prelude::*, path::PathBuf, str::FromStr,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use policy_evaluator::policy_fetcher::{registry::Registry, store::DEFAULT_ROOT, PullDestination};
+use policy_evaluator::policy_fetcher::{PullDestination, registry::Registry, store::DEFAULT_ROOT};
 use rustls::crypto::aws_lc_rs::default_provider;
 use tracing::{debug, info};
 use tracing_subscriber::{
@@ -22,7 +22,7 @@ use crate::{
     },
     load::load,
     save::save,
-    utils::{find_file_matching_file, LookupError},
+    utils::{LookupError, find_file_matching_file},
 };
 
 mod annotate;
@@ -247,80 +247,85 @@ async fn main() -> Result<()> {
         }
         Some("scaffold") => {
             if let Some(matches) = matches.subcommand_matches("scaffold")
-                && let Some(_matches) = matches.subcommand_matches("verification-config") {
-                    println!("{}", scaffold::verification_config()?);
+                && let Some(_matches) = matches.subcommand_matches("verification-config")
+            {
+                println!("{}", scaffold::verification_config()?);
+            }
+            if let Some(matches) = matches.subcommand_matches("scaffold")
+                && let Some(artifacthub_matches) = matches.subcommand_matches("artifacthub")
+            {
+                let metadata_file = artifacthub_matches
+                    .get_one::<String>("metadata-path")
+                    .map(|output| PathBuf::from_str(output).unwrap())
+                    .or_else(|| find_file_matching_file(&["metadata.yml", "metadata.yaml"]))
+                    .ok_or_else(|| {
+                        anyhow!("path to metadata file not provided, plus 'metadata.yml' not found")
+                    })?;
+
+                if artifacthub_matches.get_one::<String>("version").is_some() {
+                    tracing::warn!(
+                        "The 'version' flag is deprecated and will be removed in a future release. The value of the `io.kubewarden.policy.version` field in the policy metadata file is used instead."
+                    );
                 }
-            if let Some(matches) = matches.subcommand_matches("scaffold")
-                && let Some(artifacthub_matches) = matches.subcommand_matches("artifacthub") {
-                    let metadata_file = artifacthub_matches
-                        .get_one::<String>("metadata-path")
-                        .map(|output| PathBuf::from_str(output).unwrap())
-                        .or_else(|| find_file_matching_file(&["metadata.yml", "metadata.yaml"]))
-                        .ok_or_else(|| {
-                            anyhow!(
-                                "path to metadata file not provided, plus 'metadata.yml' not found"
-                            )
-                        })?;
-
-                    if artifacthub_matches.get_one::<String>("version").is_some() {
-                        tracing::warn!("The 'version' flag is deprecated and will be removed in a future release. The value of the `io.kubewarden.policy.version` field in the policy metadata file is used instead.");
-                    }
-                    let questions_file = artifacthub_matches
-                        .get_one::<String>("questions-path")
-                        .map(|output| PathBuf::from_str(output).unwrap())
-                        .or_else(|| {
-                            find_file_matching_file(&[
-                                "questions-ui.yml",
-                                "questions-ui.yaml",
-                                "questions.yml",
-                                "questions.yaml",
-                            ])
-                        });
-                    let content = scaffold::artifacthub(metadata_file, questions_file)?;
-                    if let Some(output) = artifacthub_matches.get_one::<String>("output") {
-                        let output_path = PathBuf::from_str(output)?;
-                        fs::write(output_path, content)?;
-                    } else {
-                        println!("{}", content);
-                    }
+                let questions_file = artifacthub_matches
+                    .get_one::<String>("questions-path")
+                    .map(|output| PathBuf::from_str(output).unwrap())
+                    .or_else(|| {
+                        find_file_matching_file(&[
+                            "questions-ui.yml",
+                            "questions-ui.yaml",
+                            "questions.yml",
+                            "questions.yaml",
+                        ])
+                    });
+                let content = scaffold::artifacthub(metadata_file, questions_file)?;
+                if let Some(output) = artifacthub_matches.get_one::<String>("output") {
+                    let output_path = PathBuf::from_str(output)?;
+                    fs::write(output_path, content)?;
+                } else {
+                    println!("{}", content);
                 }
+            }
             if let Some(matches) = matches.subcommand_matches("scaffold")
-                && let Some(matches) = matches.subcommand_matches("manifest") {
-                    scaffold_manifest_command(matches).await?;
-                };
+                && let Some(matches) = matches.subcommand_matches("manifest")
+            {
+                scaffold_manifest_command(matches).await?;
+            };
             if let Some(matches) = matches.subcommand_matches("scaffold")
-                && let Some(matches) = matches.subcommand_matches("vap") {
-                    let cel_policy_uri = matches.get_one::<String>("cel-policy").unwrap();
-                    let vap_file: PathBuf = matches.get_one::<String>("policy").unwrap().into();
-                    let vap_binding_file: PathBuf =
-                        matches.get_one::<String>("binding").unwrap().into();
+                && let Some(matches) = matches.subcommand_matches("vap")
+            {
+                let cel_policy_uri = matches.get_one::<String>("cel-policy").unwrap();
+                let vap_file: PathBuf = matches.get_one::<String>("policy").unwrap().into();
+                let vap_binding_file: PathBuf =
+                    matches.get_one::<String>("binding").unwrap().into();
 
-                    scaffold::vap(
-                        cel_policy_uri.as_str(),
-                        vap_file.as_path(),
-                        vap_binding_file.as_path(),
-                    )?;
-                };
+                scaffold::vap(
+                    cel_policy_uri.as_str(),
+                    vap_file.as_path(),
+                    vap_binding_file.as_path(),
+                )?;
+            };
             if let Some(matches) = matches.subcommand_matches("scaffold")
-                && let Some(matches) = matches.subcommand_matches("admission-request") {
-                    let operation: scaffold::AdmissionRequestOperation = matches
-                        .get_one::<String>("operation")
-                        .unwrap()
-                        .parse::<scaffold::AdmissionRequestOperation>()
-                        .map_err(|e| anyhow!("Error parsing operation: {}", e))?;
-                    let object_path: Option<PathBuf> = if matches.contains_id("object") {
-                        Some(matches.get_one::<String>("object").unwrap().into())
-                    } else {
-                        None
-                    };
-                    let old_object_path: Option<PathBuf> = if matches.contains_id("old-object") {
-                        Some(matches.get_one::<String>("old-object").unwrap().into())
-                    } else {
-                        None
-                    };
-
-                    scaffold::admission_request(operation, object_path, old_object_path).await?;
+                && let Some(matches) = matches.subcommand_matches("admission-request")
+            {
+                let operation: scaffold::AdmissionRequestOperation = matches
+                    .get_one::<String>("operation")
+                    .unwrap()
+                    .parse::<scaffold::AdmissionRequestOperation>()
+                    .map_err(|e| anyhow!("Error parsing operation: {}", e))?;
+                let object_path: Option<PathBuf> = if matches.contains_id("object") {
+                    Some(matches.get_one::<String>("object").unwrap().into())
+                } else {
+                    None
                 };
+                let old_object_path: Option<PathBuf> = if matches.contains_id("old-object") {
+                    Some(matches.get_one::<String>("old-object").unwrap().into())
+                } else {
+                    None
+                };
+
+                scaffold::admission_request(operation, object_path, old_object_path).await?;
+            };
 
             Ok(())
         }

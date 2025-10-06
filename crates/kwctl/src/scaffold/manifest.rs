@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use hostname_validator::is_valid;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use policy_evaluator::{
@@ -206,11 +206,19 @@ fn generate_yaml_resource(
                     warn!(
                         "Policy has been granted access to the Kubernetes resources mentioned by its metadata."
                     );
-                    warn!("Carefully review the contents of the `contextAwareResources` attribute for abuses.");
+                    warn!(
+                        "Carefully review the contents of the `contextAwareResources` attribute for abuses."
+                    );
                 } else {
-                    warn!("Policy requires access to Kubernetes resources at evaluation time. For safety reasons, the `contextAwareResources` attribute has been left empty.");
-                    warn!("Carefully review which types of Kubernetes resources the policy needs via the `inspect` command an populate the `contextAwareResources` accordingly.");
-                    warn!("Otherwise, invoke the `scaffold` command using the `--allow-context-aware` flag.");
+                    warn!(
+                        "Policy requires access to Kubernetes resources at evaluation time. For safety reasons, the `contextAwareResources` attribute has been left empty."
+                    );
+                    warn!(
+                        "Carefully review which types of Kubernetes resources the policy needs via the `inspect` command an populate the `contextAwareResources` accordingly."
+                    );
+                    warn!(
+                        "Otherwise, invoke the `scaffold` command using the `--allow-context-aware` flag."
+                    );
 
                     scaffold_data.metadata.context_aware_resources = BTreeSet::new();
                 }
@@ -311,8 +319,8 @@ mod tests {
     }
 
     #[test]
-    fn get_policy_title_from_cli_or_metadata_returns_title_from_annotation_if_name_from_cli_not_present(
-    ) {
+    fn get_policy_title_from_cli_or_metadata_returns_title_from_annotation_if_name_from_cli_not_present()
+     {
         let policy_title = "title";
         assert_eq!(
             Some(policy_title.to_string()),

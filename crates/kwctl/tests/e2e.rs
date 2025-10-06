@@ -887,7 +887,9 @@ fn test_scaffold_from_vap(
 #[case::wrong(
     "rego-annotate/metadata-wrong.yml",
     false,
-    contains("Error: Wrong value inside of policy's metadata for 'executionMode'. This policy has been created using Rego")
+    contains(
+        "Error: Wrong value inside of policy's metadata for 'executionMode'. This policy has been created using Rego"
+    )
 )]
 fn test_annotate_rego(
     #[case] metadata_path: &str,

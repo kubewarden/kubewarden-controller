@@ -14,4 +14,4 @@ pub(crate) use artifacthub::artifacthub;
 
 mod admission_request;
 pub(crate) use admission_request::Operation as AdmissionRequestOperation;
-pub(crate) use admission_request::{admission_request, DEFAULT_KWCTL_CACHE};
+pub(crate) use admission_request::{DEFAULT_KWCTL_CACHE, admission_request};
