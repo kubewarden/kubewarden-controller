@@ -59,6 +59,14 @@ fn convert_vap_to_cluster_admission_policy(
 
     let mut settings = serde_yaml::Mapping::new();
 
+    if let Some(vap_failure_policy) = vap_spec.failure_policy {
+        // CEL settings.failurePolicy, not to confuse with spec.failurePolicy
+        settings.insert(
+            "failurePolicy".into(),
+            serde_yaml::to_value(vap_failure_policy)?,
+        );
+    }
+
     // migrate CEL variables
     if let Some(vap_variables) = vap_spec.variables {
         let vap_variables: Vec<serde_yaml::Value> = vap_variables
@@ -122,7 +130,7 @@ fn convert_vap_to_cluster_admission_policy(
             mutating: false,
             background_audit: true,
             context_aware_resources: BTreeSet::new(),
-            failure_policy: vap_spec.failure_policy,
+            failure_policy: None,
             mode: None, // VAP policies are always in protect mode, which is the default for KW
             settings,
         },
@@ -186,7 +194,8 @@ mod tests {
             .map(Rule::try_from)
             .collect::<Result<Vec<Rule>, &str>>()
             .unwrap();
-
+        let expected_failure_policy =
+            serde_yaml::to_value(vap.clone().spec.unwrap().failure_policy).unwrap();
         let yaml_file = File::open(test_data(vap_binding_yaml_path)).unwrap();
         let vap_binding: ValidatingAdmissionPolicyBinding =
             serde_yaml::from_reader(yaml_file).unwrap();
@@ -217,8 +226,8 @@ mod tests {
             .context_aware_resources
             .is_empty());
         assert_eq!(
-            vap.clone().spec.unwrap().failure_policy,
-            cluster_admission_policy.spec.failure_policy
+            expected_failure_policy,
+            cluster_admission_policy.spec.settings["failurePolicy"]
         );
         assert!(cluster_admission_policy.spec.mode.is_none());
         assert_eq!(
