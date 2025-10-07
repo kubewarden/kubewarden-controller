@@ -283,14 +283,18 @@ mod tests {
                 cluster_admission_policy.spec.settings["paramRef"]
             );
         } else {
-            assert!(!cluster_admission_policy
-                .spec
-                .settings
-                .contains_key("paramKind"));
-            assert!(!cluster_admission_policy
-                .spec
-                .settings
-                .contains_key("paramRef"));
+            assert!(
+                !cluster_admission_policy
+                    .spec
+                    .settings
+                    .contains_key("paramKind")
+            );
+            assert!(
+                !cluster_admission_policy
+                    .spec
+                    .settings
+                    .contains_key("paramRef")
+            );
         }
     }
 }
