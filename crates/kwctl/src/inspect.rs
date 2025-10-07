@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use is_terminal::IsTerminal;
 use policy_evaluator::{
     constants::*,
@@ -18,14 +18,14 @@ use policy_evaluator::{
         registry::Registry,
         sigstore::{
             cosign::{ClientBuilder, CosignCapabilities},
-            registry::{oci_reference::OciReference, Auth, ClientConfig},
+            registry::{Auth, ClientConfig, oci_reference::OciReference},
         },
         sources::Sources,
     },
     policy_metadata::Metadata,
 };
-use prettytable::{format::FormatBuilder, row, Table};
-use termimad::{terminal_size, FmtText, MadSkin};
+use prettytable::{Table, format::FormatBuilder, row};
+use termimad::{FmtText, MadSkin, terminal_size};
 
 pub(crate) async fn inspect(
     uri_or_sha_prefix: &str,
@@ -43,10 +43,12 @@ pub(crate) async fn inspect(
 
     match metadata {
         Some(metadata) => metadata_printer.print(&metadata, no_color)?,
-        None => return Err(anyhow!(
-            "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
-            uri
-        )),
+        None => {
+            return Err(anyhow!(
+                "No Kubewarden metadata found inside of '{}'.\nPolicies can be annotated with the `kwctl annotate` command.",
+                uri
+            ));
+        }
     };
 
     if no_signatures {
@@ -70,7 +72,9 @@ pub(crate) async fn inspect(
             {
                 println!("No sigstore signatures found");
             } else {
-                println!("Cannot determine if the policy has been signed. There was an error while attempting to fetch its signatures from the remote registry: {error} ")
+                println!(
+                    "Cannot determine if the policy has been signed. There was an error while attempting to fetch its signatures from the remote registry: {error} "
+                )
             }
         }
     }

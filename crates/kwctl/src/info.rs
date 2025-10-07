@@ -3,7 +3,7 @@ use clap::crate_version;
 use itertools::Itertools;
 use policy_evaluator::{
     burrego,
-    policy_fetcher::store::{Store, DEFAULT_ROOT},
+    policy_fetcher::store::{DEFAULT_ROOT, Store},
 };
 
 pub(crate) fn info() -> Result<()> {

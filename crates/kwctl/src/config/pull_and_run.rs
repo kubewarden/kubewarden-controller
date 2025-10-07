@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use policy_evaluator::policy_fetcher::{
     sigstore::trust::ManualTrustRoot, sources::Sources, verify::config::LatestVerificationConfig,
@@ -17,10 +17,10 @@ use tracing::info;
 use crate::{
     callback_handler,
     config::{
+        HostCapabilitiesMode,
         policy_definition::PolicyDefinition,
         sources::remote_server_options,
         verification::{build_sigstore_trust_root, build_verification_options},
-        HostCapabilitiesMode,
     },
     verify,
 };
@@ -52,7 +52,9 @@ pub(crate) fn parse_policy_definitions(matches: &ArgMatches) -> Result<Vec<Polic
             ));
         }
         if matches.contains_id("settings-json") || matches.contains_id("settings-path") {
-            info!("The --settings-json and --settings-path options are ignored when using a YAML file");
+            info!(
+                "The --settings-json and --settings-path options are ignored when using a YAML file"
+            );
         }
 
         // If the URI is a YAML file, parse it as a policy definition

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::{policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata};
 
 use crate::backend::BackendDetector;
@@ -52,7 +52,9 @@ pub(crate) fn determine_execution_mode(
     // no metadata and no user execution mode provided, we can only make sure
     // that the policy is not a Rego one and then default to Kubewarden WAPC
     if is_rego_policy {
-        return Err(anyhow!("The policy has been created with Rego, please specify which Opa runtime has to be used"));
+        return Err(anyhow!(
+            "The policy has been created with Rego, please specify which Opa runtime has to be used"
+        ));
     }
 
     Ok(PolicyExecutionMode::KubewardenWapc)
@@ -76,13 +78,17 @@ fn determine_execution_mode_from_metadata(
     if (mode != PolicyExecutionMode::OpaGatekeeper && mode != PolicyExecutionMode::Opa)
         && is_rego_policy
     {
-        return Err(anyhow!("The policy has been created with Rego, the policy execution mode specified via CLI flag is wrong"));
+        return Err(anyhow!(
+            "The policy has been created with Rego, the policy execution mode specified via CLI flag is wrong"
+        ));
     }
 
     if (mode == PolicyExecutionMode::OpaGatekeeper || mode == PolicyExecutionMode::Opa)
         && !is_rego_policy
     {
-        return Err(anyhow!("The policy has not been created with Rego, the policy execution mode specified via CLI flag is wrong"));
+        return Err(anyhow!(
+            "The policy has not been created with Rego, the policy execution mode specified via CLI flag is wrong"
+        ));
     }
 
     Ok(mode)

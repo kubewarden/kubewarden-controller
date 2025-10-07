@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, convert::TryInto, fs, path::Path, sync::Arc};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use policy_evaluator::policy_fetcher::{
     sigstore::{
@@ -8,11 +8,11 @@ use policy_evaluator::policy_fetcher::{
         trust::{ManualTrustRoot, TrustRoot},
     },
     store::DEFAULT_ROOT,
-    verify::config::{read_verification_file, LatestVerificationConfig, Signature, Subject},
+    verify::config::{LatestVerificationConfig, Signature, Subject, read_verification_file},
 };
 use tracing::{debug, info};
 
-use crate::{verify::VerificationAnnotations, KWCTL_VERIFICATION_CONFIG};
+use crate::{KWCTL_VERIFICATION_CONFIG, verify::VerificationAnnotations};
 
 pub(crate) fn build_verification_options(
     matches: &ArgMatches,

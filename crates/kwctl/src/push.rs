@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::{
     constants::KUBEWARDEN_ANNOTATION_POLICY_SOURCE,
     policy_fetcher::{
@@ -30,7 +30,9 @@ pub(crate) async fn push(
                 return Err(anyhow!("Rego policies cannot be pushed without metadata"));
             }
         } else {
-            return Err(anyhow!("Cannot push a policy that is not annotated. Use `annotate` command or `push --force`"));
+            return Err(anyhow!(
+                "Cannot push a policy that is not annotated. Use `annotate` command or `push --force`"
+            ));
         }
     }
 
@@ -73,13 +75,13 @@ fn build_oci_annotations(annotations: BTreeMap<String, String>) -> BTreeMap<Stri
         .map(|(k, v)| (k.to_owned(), v.trim().to_owned()))
         .collect();
 
-    if let Some(source) = annotations.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE) {
-        if !annotations.contains_key(ORG_OPENCONTAINERS_IMAGE_SOURCE) {
-            annotations.insert(
-                ORG_OPENCONTAINERS_IMAGE_SOURCE.to_string(),
-                source.to_owned(),
-            );
-        }
+    if let Some(source) = annotations.get(KUBEWARDEN_ANNOTATION_POLICY_SOURCE)
+        && !annotations.contains_key(ORG_OPENCONTAINERS_IMAGE_SOURCE)
+    {
+        annotations.insert(
+            ORG_OPENCONTAINERS_IMAGE_SOURCE.to_string(),
+            source.to_owned(),
+        );
     }
 
     debug!("OCI annotations: {:?}", annotations);

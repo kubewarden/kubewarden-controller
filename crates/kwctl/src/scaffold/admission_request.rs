@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use directories::ProjectDirs;
 use k8s_openapi::{
     api::authentication::v1::UserInfo,
@@ -425,7 +425,7 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
 
-    use hyper::{http, Request, Response};
+    use hyper::{Request, Response, http};
     use k8s_openapi::apimachinery::pkg::apis::meta::v1::{
         APIGroup, APIGroupList, APIResource, APIResourceList, GroupVersionForDiscovery,
     };
@@ -561,27 +561,33 @@ mod tests {
             .await
             .expect("catalog creation failed");
 
-        assert!(catalog
-            .lookup(&kube::api::GroupVersionKind {
-                group: "".to_string(),
-                version: "v1".to_string(),
-                kind: "Namespace".to_string()
-            })
-            .is_some());
-        assert!(catalog
-            .lookup(&kube::api::GroupVersionKind {
-                group: "".to_string(),
-                version: "v1".to_string(),
-                kind: "Service".to_string()
-            })
-            .is_some());
-        assert!(catalog
-            .lookup(&kube::api::GroupVersionKind {
-                group: "apps".to_string(),
-                version: "v1".to_string(),
-                kind: "Deployment".to_string()
-            })
-            .is_some());
+        assert!(
+            catalog
+                .lookup(&kube::api::GroupVersionKind {
+                    group: "".to_string(),
+                    version: "v1".to_string(),
+                    kind: "Namespace".to_string()
+                })
+                .is_some()
+        );
+        assert!(
+            catalog
+                .lookup(&kube::api::GroupVersionKind {
+                    group: "".to_string(),
+                    version: "v1".to_string(),
+                    kind: "Service".to_string()
+                })
+                .is_some()
+        );
+        assert!(
+            catalog
+                .lookup(&kube::api::GroupVersionKind {
+                    group: "apps".to_string(),
+                    version: "v1".to_string(),
+                    kind: "Deployment".to_string()
+                })
+                .is_some()
+        );
         assert!(catalog_file.exists());
     }
 
@@ -616,20 +622,24 @@ mod tests {
             .await
             .expect("catalog creation failed");
 
-        assert!(catalog
-            .lookup(&kube::api::GroupVersionKind {
-                group: "".to_string(),
-                version: "v1".to_string(),
-                kind: "Namespace".to_string()
-            })
-            .is_some());
-        assert!(catalog
-            .lookup(&kube::api::GroupVersionKind {
-                group: "apps".to_string(),
-                version: "v1".to_string(),
-                kind: "Deployment".to_string()
-            })
-            .is_none());
+        assert!(
+            catalog
+                .lookup(&kube::api::GroupVersionKind {
+                    group: "".to_string(),
+                    version: "v1".to_string(),
+                    kind: "Namespace".to_string()
+                })
+                .is_some()
+        );
+        assert!(
+            catalog
+                .lookup(&kube::api::GroupVersionKind {
+                    group: "apps".to_string(),
+                    version: "v1".to_string(),
+                    kind: "Deployment".to_string()
+                })
+                .is_none()
+        );
         assert!(catalog_file.exists());
     }
 

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::admission_response_handler::AdmissionResponseHandler;
 use tracing::{error, warn};
 
@@ -18,7 +18,9 @@ pub(crate) async fn exec(
     let local_data = LocalData::new(policy_definitions, pull_and_run_settings).await?;
 
     if policy_definitions.len() > 1 {
-        warn!("Multiple policies defined inside of the CRD file. All of them will run sequentially using the same request.");
+        warn!(
+            "Multiple policies defined inside of the CRD file. All of them will run sequentially using the same request."
+        );
     }
 
     for policy_definition in policy_definitions {

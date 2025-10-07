@@ -8,7 +8,7 @@ mod proxy;
 
 use crate::{
     callback_handler::proxy::CallbackHandlerProxy,
-    config::{pull_and_run::PullAndRunSettings, HostCapabilitiesMode},
+    config::{HostCapabilitiesMode, pull_and_run::PullAndRunSettings},
 };
 
 #[derive(Clone)]

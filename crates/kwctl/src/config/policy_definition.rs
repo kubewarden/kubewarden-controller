@@ -4,7 +4,7 @@ use std::{
     fmt,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use k8s_openapi::api::core::v1::ObjectReference;
 use policy_evaluator::{

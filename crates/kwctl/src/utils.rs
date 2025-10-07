@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::policy_evaluator::PolicyExecutionMode;
 use policy_evaluator::policy_fetcher::oci_client::Reference;
-use policy_evaluator::policy_fetcher::store::{errors::StoreError, Store};
+use policy_evaluator::policy_fetcher::store::{Store, errors::StoreError};
 use regex::Regex;
 use serde_json::json;
 use std::path::PathBuf;

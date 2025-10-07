@@ -3,7 +3,7 @@ use policy_evaluator::policy_fetcher::{
     policy::Policy,
     sigstore::trust::ManualTrustRoot,
     sources::Sources,
-    verify::{config::LatestVerificationConfig, Verifier},
+    verify::{Verifier, config::LatestVerificationConfig},
 };
 use std::collections::BTreeMap;
 use std::sync::Arc;
