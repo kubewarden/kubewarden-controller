@@ -49,6 +49,7 @@ fn convert_vap_to_cluster_admission_policy(
     vap_binding: ValidatingAdmissionPolicyBinding,
 ) -> anyhow::Result<ClusterAdmissionPolicy> {
     let vap_spec = vap.spec.unwrap_or_default();
+    let vap_binding_spec = vap_binding.spec.unwrap_or_default();
     if vap_spec.audit_annotations.is_some() {
         warn!(
             "auditAnnotations are not supported by Kubewarden's CEL policy yet. They will be ignored."
@@ -59,14 +60,16 @@ fn convert_vap_to_cluster_admission_policy(
             "matchConditions are not supported by Kubewarden's CEL policy yet. They will be ignored."
         );
     }
-    if vap_spec.param_kind.is_some() {
-        // It's not safe to skip this, the policy will definitely not work.
-        return Err(anyhow!(
-            "paramKind is not supported by Kubewarden's CEL policy yet"
-        ));
-    }
 
     let mut settings = serde_yaml::Mapping::new();
+
+    if let Some(vap_failure_policy) = vap_spec.failure_policy {
+        // CEL settings.failurePolicy, not to confuse with spec.failurePolicy
+        settings.insert(
+            "failurePolicy".into(),
+            serde_yaml::to_value(vap_failure_policy)?,
+        );
+    }
 
     // migrate CEL variables
     if let Some(vap_variables) = vap_spec.variables {
@@ -75,6 +78,20 @@ fn convert_vap_to_cluster_admission_policy(
             .map(|v| serde_yaml::to_value(v).expect("cannot convert VAP variable to YAML"))
             .collect();
         settings.insert("variables".into(), vap_variables.into());
+    }
+
+    // migrate CEL params
+    match (vap_spec.param_kind, vap_binding_spec.param_ref) {
+        (Some(vap_param_kind), Some(vap_param_ref)) => {
+            settings.insert("paramKind".into(), serde_yaml::to_value(vap_param_kind)?);
+            settings.insert("paramRef".into(), serde_yaml::to_value(vap_param_ref)?);
+        }
+        (None, None) => {}
+        _ => {
+            return Err(anyhow!(
+                "Both paramKind and paramRef must be present together, or both absent"
+            ));
+        }
     }
 
     // migrate CEL validations
@@ -87,9 +104,7 @@ fn convert_vap_to_cluster_admission_policy(
     }
 
     // VAP specifies the namespace selector inside of the binding
-    let namespace_selector = vap_binding
-        .spec
-        .unwrap_or_default()
+    let namespace_selector = vap_binding_spec
         .match_resources
         .unwrap_or_default()
         .namespace_selector;
@@ -119,7 +134,7 @@ fn convert_vap_to_cluster_admission_policy(
             mutating: false,
             background_audit: true,
             context_aware_resources: BTreeSet::new(),
-            failure_policy: vap_spec.failure_policy,
+            failure_policy: None,
             mode: None, // VAP policies are always in protect mode, which is the default for KW
             settings,
         },
@@ -145,12 +160,26 @@ mod tests {
     }
 
     #[rstest]
-    #[case::vap_without_variables("vap/vap-without-variables.yml", "vap/vap-binding.yml", false)]
-    #[case::vap_with_variables("vap/vap-with-variables.yml", "vap/vap-binding.yml", true)]
+    #[case::vap_without_variables(
+        "vap/vap-without-variables.yml",
+        "vap/vap-binding.yml",
+        false,
+        false
+    )]
+    #[case::vap_with_variables("vap/vap-with-variables.yml", "vap/vap-binding.yml", true, false)]
+    #[case::vap_with_params("vap/vap-with-params.yml", "vap/vap-binding-params.yml", false, true)]
+    #[case::only_param_kind("vap/vap-with-params.yml", "vap/vap-binding.yml", false, true)]
+    #[case::only_param_ref(
+        "vap/vap-without-variables.yml",
+        "vap/vap-binding-params.yml",
+        false,
+        true
+    )]
     fn from_vap_to_cluster_admission_policy(
         #[case] vap_yaml_path: &str,
         #[case] vap_binding_yaml_path: &str,
         #[case] has_variables: bool,
+        #[case] has_params: bool,
     ) {
         let yaml_file = File::open(test_data(vap_yaml_path)).unwrap();
         let vap: ValidatingAdmissionPolicy = serde_yaml::from_reader(yaml_file).unwrap();
@@ -169,17 +198,28 @@ mod tests {
             .map(Rule::try_from)
             .collect::<Result<Vec<Rule>, &str>>()
             .unwrap();
-
+        let expected_failure_policy =
+            serde_yaml::to_value(vap.clone().spec.unwrap().failure_policy).unwrap();
         let yaml_file = File::open(test_data(vap_binding_yaml_path)).unwrap();
         let vap_binding: ValidatingAdmissionPolicyBinding =
             serde_yaml::from_reader(yaml_file).unwrap();
 
-        let cluster_admission_policy = convert_vap_to_cluster_admission_policy(
+        let result = convert_vap_to_cluster_admission_policy(
             CEL_POLICY_MODULE,
             vap.clone(),
             vap_binding.clone(),
-        )
-        .unwrap();
+        );
+
+        if has_params {
+            let present_param_kind = vap.clone().spec.unwrap().param_kind.is_some();
+            let present_param_ref = vap_binding.clone().spec.unwrap().param_ref.is_some();
+            if present_param_kind != present_param_ref {
+                assert!(result.is_err());
+                return;
+            }
+        }
+
+        let cluster_admission_policy = result.unwrap();
 
         assert_eq!(CEL_POLICY_MODULE, cluster_admission_policy.spec.module);
         assert!(!cluster_admission_policy.spec.mutating);
@@ -192,8 +232,8 @@ mod tests {
                 .is_empty()
         );
         assert_eq!(
-            vap.clone().spec.unwrap().failure_policy,
-            cluster_admission_policy.spec.failure_policy
+            expected_failure_policy,
+            cluster_admission_policy.spec.settings["failurePolicy"]
         );
         assert!(cluster_admission_policy.spec.mode.is_none());
         assert_eq!(
@@ -234,6 +274,34 @@ mod tests {
                     .spec
                     .settings
                     .contains_key("variables")
+            );
+        }
+
+        if has_params {
+            let expected_param_kind =
+                serde_yaml::to_value(vap.clone().spec.unwrap().param_kind.unwrap()).unwrap();
+            assert_eq!(
+                expected_param_kind,
+                cluster_admission_policy.spec.settings["paramKind"]
+            );
+            let expected_param_ref =
+                serde_yaml::to_value(vap_binding.clone().spec.unwrap().param_ref.unwrap()).unwrap();
+            assert_eq!(
+                expected_param_ref,
+                cluster_admission_policy.spec.settings["paramRef"]
+            );
+        } else {
+            assert!(
+                !cluster_admission_policy
+                    .spec
+                    .settings
+                    .contains_key("paramKind")
+            );
+            assert!(
+                !cluster_admission_policy
+                    .spec
+                    .settings
+                    .contains_key("paramRef")
             );
         }
     }
