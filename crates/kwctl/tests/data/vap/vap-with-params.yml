@@ -14,5 +14,5 @@ spec:
     apiVersion: v1
     kind: ConfigMap
   validations:
-    - expression: "object.spec.replicas <= params.maxReplicas"
+    - expression: "object.spec.replicas <= params.data.maxReplicas"
       message: "should have at most 5 replicas"
