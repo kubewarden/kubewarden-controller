@@ -27,7 +27,7 @@ typos:
 	typos # run typo checker from crate-ci/typos
 
 .PHONY: test
-test: fmt lint
+test: fmt lint annotated-policy.wasm
 	cargo test --workspace
 
 .PHONY: unit-tests
