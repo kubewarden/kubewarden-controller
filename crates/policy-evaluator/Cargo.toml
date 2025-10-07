@@ -30,7 +30,7 @@ kube = { version = "2.0.0", default-features = false, features = [
   "runtime",
   "rustls-tls",
 ] }
-kubewarden-policy-sdk = { workspace = true }
+kubewarden-policy-sdk = { workspace = true, features = ["crd"] }
 lazy_static = { workspace = true }
 mail-parser = { version = "0.11", features = ["serde"] }
 pki-types = { package = "rustls-pki-types", version = "1.12", default-features = false, features = [
@@ -61,20 +61,19 @@ wasmtime-wasi = { workspace = true }
 webpki-roots = "1"
 
 [workspace.dependencies]
-k8s-openapi = { version = "0.26.0", default-features = false, features = [
-  "v1_30",
-] }
-kubewarden-policy-sdk = { version = "0.15.0", features = ["crd"] }
-lazy_static = "1.5"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-wasi-common = "37.0"
-wasmtime = "37.0"
-wasmtime-wasi = "37.0"
+k8s-openapi           = { version = "0.26.0", default-features = false }
+kubewarden-policy-sdk = { version = "0.15.0" }
+lazy_static           = "1.5"
+serde                 = { version = "1.0", features = ["derive"] }
+serde_json            = "1.0"
+wasi-common           = "37.0"
+wasmtime              = "37.0"
+wasmtime-wasi         = "37.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
 hyper            = { version = "1" }
+k8s-openapi      = { workspace = true, features = ["v1_30"] }
 rcgen            = { version = "0.14", features = ["x509-parser"] }
 rstest           = "0.26"
 serial_test      = "3.2"

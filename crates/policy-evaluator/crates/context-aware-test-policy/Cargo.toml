@@ -10,9 +10,9 @@ version = "0.2.1"
 crate-type = ["cdylib"]
 
 [dependencies]
-k8s-openapi           = { workspace = true }
+k8s-openapi           = { workspace = true, features = ["v1_30"] }
 kubewarden-policy-sdk = { workspace = true }
 lazy_static           = { workspace = true }
-serde                 = { workspace = true, features = ["derive"] }
+serde                 = { workspace = true }
 serde_json            = { workspace = true }
 slog                  = "2.7"
