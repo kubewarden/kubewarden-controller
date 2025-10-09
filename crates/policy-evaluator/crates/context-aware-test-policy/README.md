@@ -15,7 +15,3 @@ Every time a deployment with the label `app.kubernetes.io/component: "api"` is c
 ## Settings
 
 This policy has no configurable settings.
-
-## Example
-
-See `test_data/example-stack.yml` for manual tests.
