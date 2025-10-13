@@ -330,7 +330,12 @@ async fn create_sigstore_trustroot(config: &Config) -> Result<Arc<ManualTrustRoo
 
     let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
         .fulcio_certs()
-        .expect("Cannot fetch Fulcio certificates from TUF repository")
+        .map_err(|e| {
+            anyhow!(
+                "Cannot fetch Fulcio certificates from TUF repository: {}",
+                e
+            )
+        })?
         .into_iter()
         .map(|c| c.into_owned())
         .collect();
@@ -339,7 +344,7 @@ async fn create_sigstore_trustroot(config: &Config) -> Result<Arc<ManualTrustRoo
         fulcio_certs,
         rekor_keys: repo
             .rekor_keys()
-            .expect("Cannot fetch Rekor keys from TUF repository")
+            .map_err(|e| anyhow!("Cannot fetch Rekor keys from TUF repository: {}", e))?
             .iter()
             .map(|k| k.to_vec())
             .collect(),
