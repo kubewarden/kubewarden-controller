@@ -173,7 +173,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 	rootCmd.Flags().IntP("parallel-resources", "", defaultParallelResources, "number of resources to scan in parallel")
 	rootCmd.Flags().IntP("parallel-policies", "", defaultParallelPolicies, "number of policies to evaluate for a given resource in parallel")
 	rootCmd.Flags().IntP("page-size", "", defaultPageSize, "number of resources to fetch from the Kubernetes API server when paginating")
-	rootCmd.Flags().StringP("report-kind", "", report.OpenReportsKind, "Report resouce kind to be used. Supported values are 'openreport' and 'policyreport'")
+	rootCmd.Flags().StringP("report-kind", "", report.PolicyReportKind, "Report resouce kind to be used. Supported values are 'openreport' and 'policyreport'")
 
 	return rootCmd
 }

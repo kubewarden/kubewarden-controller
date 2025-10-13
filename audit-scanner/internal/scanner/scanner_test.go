@@ -138,7 +138,8 @@ func newMockPolicyServerWithMTLS(caCert, serverCert, serverKey []byte) *httptest
 	return server
 }
 
-func TestScanAllNamespaces(t *testing.T) {
+// TODO: drop once we support only OpenReports
+func TestScanAllNamespacesWithPolicyReport(t *testing.T) {
 	mockPolicyServer := newMockPolicyServer()
 	defer mockPolicyServer.Close()
 
@@ -434,7 +435,8 @@ func TestScanAllNamespaces(t *testing.T) {
 	assert.Equal(t, runUID, policyReport.GetLabels()[auditConstants.AuditScannerRunUIDLabel])
 }
 
-func TestScanClusterWideResources(t *testing.T) {
+// TODO: drop once we support only OpenReports
+func TestScanClusterWideResourcesWithPolicyReport(t *testing.T) {
 	mockPolicyServer := newMockPolicyServer()
 	defer mockPolicyServer.Close()
 
