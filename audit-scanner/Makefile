@@ -25,7 +25,7 @@ unit-tests: fmt vet ## Run unit tests.
 	go test ./... -tags=testing -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic 
 
 build: fmt vet lint ## Build audit-scanner binary.
-	CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -a -o bin/audit-scanner .
+	CGO_ENABLED=0 go build -a -o bin/audit-scanner .
 
 .PHONY: docker-build
 docker-build: unit-tests
