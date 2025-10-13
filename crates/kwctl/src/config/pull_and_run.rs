@@ -12,7 +12,7 @@ use clap::ArgMatches;
 use policy_evaluator::policy_fetcher::{
     sigstore::trust::ManualTrustRoot, sources::Sources, verify::config::LatestVerificationConfig,
 };
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::{
     callback_handler,
@@ -92,22 +92,41 @@ pub(crate) async fn parse_pull_and_run_settings(
 
     let sources = remote_server_options(matches)
         .map_err(|e| anyhow!("Error getting remote server options: {}", e))?;
-    let sigstore_trust_root = build_sigstore_trust_root(matches.to_owned()).await?;
 
-    let verified_manifest_digests =
-        if let Some(verification_options) = build_verification_options(matches)? {
-            Some(
-                build_verified_manifest_digests(
-                    policy_definitions,
-                    &verification_options,
-                    &sources,
-                    sigstore_trust_root.clone(),
-                )
-                .await?,
+    let verification_options = build_verification_options(matches)?;
+
+    let sigstore_trust_root = match build_sigstore_trust_root(matches.to_owned()).await {
+        Ok(trust_root) => trust_root,
+        Err(e) => {
+            if verification_options.is_some() {
+                return Err(anyhow!(
+                    "Error building Sigstore trust root: {}. \
+                    Note that verification options were provided, \
+                    so a Sigstore trust root is required.",
+                    e
+                ));
+            } else {
+                warn!(
+                    error=?e, "Cannot create Sigstore trust root, verification relying on Rekor and Fulcio will fail"
+                );
+                None
+            }
+        }
+    };
+
+    let verified_manifest_digests = if let Some(verification_options) = verification_options {
+        Some(
+            build_verified_manifest_digests(
+                policy_definitions,
+                &verification_options,
+                &sources,
+                sigstore_trust_root.clone(),
             )
-        } else {
-            None
-        };
+            .await?,
+        )
+    } else {
+        None
+    };
 
     let enable_wasmtime_cache = !matches
         .get_one::<bool>("disable-wasmtime-cache")

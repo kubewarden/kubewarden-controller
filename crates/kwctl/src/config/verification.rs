@@ -218,7 +218,7 @@ pub(crate) async fn build_sigstore_trust_root(
             .await?;
         let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
             .fulcio_certs()
-            .expect("no fulcio certs found inside of TUF repository")
+            .map_err(|e| anyhow!("no fulcio certs found inside of TUF repository: {:?}", e))?
             .into_iter()
             .map(|c| c.into_owned())
             .collect();
@@ -226,7 +226,7 @@ pub(crate) async fn build_sigstore_trust_root(
             fulcio_certs,
             rekor_keys: repo
                 .rekor_keys()
-                .expect("no rekor keys found inside of TUF repository")
+                .map_err(|e| anyhow!("no rekor keys found inside of TUF repository: {:?}", e))?
                 .iter()
                 .map(|k| k.to_vec())
                 .collect(),
