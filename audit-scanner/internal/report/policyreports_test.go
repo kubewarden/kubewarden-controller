@@ -24,30 +24,30 @@ func TestNewPolicyReport(t *testing.T) {
 	resource.SetResourceVersion("12345")
 
 	policyReport := NewPolicyReport("runUID", resource)
-	policyReport.Summary.Skip = 1
-	policyReport.Summary.Error = 1
+	policyReport.report.Summary.Skip = 1
+	policyReport.report.Summary.Error = 1
 
-	assert.Equal(t, "uid", policyReport.ObjectMeta.Name)
-	assert.Equal(t, "namespace", policyReport.ObjectMeta.Namespace)
-	assert.Equal(t, "kubewarden", policyReport.ObjectMeta.Labels["app.kubernetes.io/managed-by"])
-	assert.Equal(t, "v2", policyReport.ObjectMeta.Labels["kubewarden.io/policyreport-version"])
-	assert.Equal(t, "runUID", policyReport.ObjectMeta.Labels[constants.AuditScannerRunUIDLabel])
+	assert.Equal(t, "uid", policyReport.report.ObjectMeta.Name)
+	assert.Equal(t, "namespace", policyReport.report.ObjectMeta.Namespace)
+	assert.Equal(t, "kubewarden", policyReport.report.ObjectMeta.Labels["app.kubernetes.io/managed-by"])
+	assert.Equal(t, "v2", policyReport.report.ObjectMeta.Labels["kubewarden.io/policyreport-version"])
+	assert.Equal(t, "runUID", policyReport.report.ObjectMeta.Labels[constants.AuditScannerRunUIDLabel])
 
-	assert.Equal(t, "v1", policyReport.ObjectMeta.OwnerReferences[0].APIVersion)
-	assert.Equal(t, "Pod", policyReport.ObjectMeta.OwnerReferences[0].Kind)
-	assert.Equal(t, "test-pod", policyReport.ObjectMeta.OwnerReferences[0].Name)
-	assert.Equal(t, types.UID("uid"), policyReport.ObjectMeta.OwnerReferences[0].UID)
+	assert.Equal(t, "v1", policyReport.report.ObjectMeta.OwnerReferences[0].APIVersion)
+	assert.Equal(t, "Pod", policyReport.report.ObjectMeta.OwnerReferences[0].Kind)
+	assert.Equal(t, "test-pod", policyReport.report.ObjectMeta.OwnerReferences[0].Name)
+	assert.Equal(t, types.UID("uid"), policyReport.report.ObjectMeta.OwnerReferences[0].UID)
 
-	assert.Equal(t, "v1", policyReport.Scope.APIVersion)
-	assert.Equal(t, "Pod", policyReport.Scope.Kind)
-	assert.Equal(t, "test-pod", policyReport.Scope.Name)
-	assert.Equal(t, types.UID("uid"), policyReport.Scope.UID)
-	assert.Equal(t, "12345", policyReport.Scope.ResourceVersion)
+	assert.Equal(t, "v1", policyReport.report.Scope.APIVersion)
+	assert.Equal(t, "Pod", policyReport.report.Scope.Kind)
+	assert.Equal(t, "test-pod", policyReport.report.Scope.Name)
+	assert.Equal(t, types.UID("uid"), policyReport.report.Scope.UID)
+	assert.Equal(t, "12345", policyReport.report.Scope.ResourceVersion)
 
-	assert.Equal(t, 1, policyReport.Summary.Skip)
-	assert.Equal(t, 1, policyReport.Summary.Error)
+	assert.Equal(t, 1, policyReport.report.Summary.Skip)
+	assert.Equal(t, 1, policyReport.report.Summary.Error)
 
-	assert.Empty(t, policyReport.Results)
+	assert.Empty(t, policyReport.report.Results)
 }
 
 func TestAddResultToPolicyReport(t *testing.T) {
@@ -104,17 +104,17 @@ func TestAddResultToPolicyReport(t *testing.T) {
 			policy := &policiesv1.AdmissionPolicy{}
 			policyReport := NewPolicyReport("runUID", unstructured.Unstructured{})
 
-			AddResultToPolicyReport(policyReport, policy, test.admissionReview, test.errored)
+			policyReport.AddResult(policy, test.admissionReview, test.errored)
 
-			assert.Len(t, policyReport.Results, 1)
+			assert.Len(t, policyReport.report.Results, 1)
 
 			if test.admissionReview != nil {
-				assert.Equal(t, test.admissionReview.Response.Result.Message, policyReport.Results[0].Description)
+				assert.Equal(t, test.admissionReview.Response.Result.Message, policyReport.report.Results[0].Description)
 			}
-			assert.Equal(t, test.expectedPass, policyReport.Summary.Pass)
-			assert.Equal(t, test.expectedFail, policyReport.Summary.Fail)
-			assert.Equal(t, test.expectedWarn, policyReport.Summary.Warn)
-			assert.Equal(t, test.expectedError, policyReport.Summary.Error)
+			assert.Equal(t, test.expectedPass, policyReport.report.Summary.Pass)
+			assert.Equal(t, test.expectedFail, policyReport.report.Summary.Fail)
+			assert.Equal(t, test.expectedWarn, policyReport.report.Summary.Warn)
+			assert.Equal(t, test.expectedError, policyReport.report.Summary.Error)
 		})
 	}
 }
@@ -127,7 +127,7 @@ func TestNewClusterPolicyReport(t *testing.T) {
 	resource.SetKind("Namespace")
 	resource.SetResourceVersion("12345")
 
-	clusterPolicyReport := NewClusterPolicyReport("runUID", resource)
+	clusterPolicyReport := NewClusterPolicyReport("runUID", resource).report
 	clusterPolicyReport.Summary.Skip = 1
 	clusterPolicyReport.Summary.Error = 1
 
@@ -163,13 +163,13 @@ func TestAddResultToClusterPolicyReport(t *testing.T) {
 	}
 
 	clusterPolicyReport := NewClusterPolicyReport("runUID", unstructured.Unstructured{})
-	AddResultToClusterPolicyReport(clusterPolicyReport, policy, admissionReview, false)
+	clusterPolicyReport.AddResult(policy, admissionReview, false)
 
-	assert.Len(t, clusterPolicyReport.Results, 1)
-	assert.Equal(t, 0, clusterPolicyReport.Summary.Pass)
-	assert.Equal(t, 1, clusterPolicyReport.Summary.Fail)
-	assert.Equal(t, 0, clusterPolicyReport.Summary.Warn)
-	assert.Equal(t, 0, clusterPolicyReport.Summary.Error)
+	assert.Len(t, clusterPolicyReport.report.Results, 1)
+	assert.Equal(t, 0, clusterPolicyReport.report.Summary.Pass)
+	assert.Equal(t, 1, clusterPolicyReport.report.Summary.Fail)
+	assert.Equal(t, 0, clusterPolicyReport.report.Summary.Warn)
+	assert.Equal(t, 0, clusterPolicyReport.report.Summary.Error)
 }
 
 func TestNewPolicyReportResult(t *testing.T) {

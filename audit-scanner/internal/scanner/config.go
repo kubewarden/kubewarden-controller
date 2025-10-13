@@ -22,9 +22,11 @@ type TLSConfig struct {
 }
 
 type Config struct {
-	PoliciesClient    *policies.Client
-	K8sClient         *k8s.Client
-	PolicyReportStore *report.PolicyReportStore
+	PoliciesClient *policies.Client
+	K8sClient      *k8s.Client
+
+	ReportStore report.Store
+	ReportKind  report.CrdKind
 
 	TLS             TLSConfig
 	Parallelization ParallelizationConfig

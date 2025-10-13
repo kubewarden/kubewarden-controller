@@ -90,6 +90,20 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			if err != nil {
 				return fmt.Errorf("failed to get page-size flag: %w", err)
 			}
+			reportKindStr, err := cmd.Flags().GetString("report-kind")
+			if err != nil {
+				return fmt.Errorf("failed to get report-kind flag: %w", err)
+			}
+
+			var reportKind report.CrdKind
+			switch reportKindStr {
+			case report.OpenReportsKind:
+				reportKind = report.ReportKindOpenReport
+			case report.PolicyReportKind:
+				reportKind = report.ReportKindPolicyReport
+			default:
+				return fmt.Errorf("invalid report-kind '%s': supported values are '%s' and '%s'", reportKindStr, report.OpenReportsKind, report.PolicyReportKind)
+			}
 
 			config := ctrl.GetConfigOrDie()
 			dynamicClient := dynamic.NewForConfigOrDie(config)
@@ -107,12 +121,12 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			policiesClient := policies.NewClient(client, kubewardenNamespace, policyServerURL, logger)
 
 			k8sClient := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs, int64(pageSize), logger)
-			policyReportStore := report.NewPolicyReportStore(client, logger)
+			reportStore := report.NewReportStoreOfKind(reportKind, client, logger)
 
 			scannerConfig := scanner.Config{
-				PoliciesClient:    policiesClient,
-				K8sClient:         k8sClient,
-				PolicyReportStore: policyReportStore,
+				PoliciesClient: policiesClient,
+				K8sClient:      k8sClient,
+				ReportStore:    reportStore,
 				TLS: scanner.TLSConfig{
 					Insecure:       insecureSSL,
 					CAFile:         caFile,
@@ -127,6 +141,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 				OutputScan:   outputScan,
 				DisableStore: disableStore,
 				Logger:       logger.With("component", "scanner"),
+				ReportKind:   reportKind,
 			}
 
 			scanner, err := scanner.NewScanner(scannerConfig)
@@ -158,6 +173,7 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 	rootCmd.Flags().IntP("parallel-resources", "", defaultParallelResources, "number of resources to scan in parallel")
 	rootCmd.Flags().IntP("parallel-policies", "", defaultParallelPolicies, "number of policies to evaluate for a given resource in parallel")
 	rootCmd.Flags().IntP("page-size", "", defaultPageSize, "number of resources to fetch from the Kubernetes API server when paginating")
+	rootCmd.Flags().StringP("report-kind", "", report.PolicyReportKind, "Report resouce kind to be used. Supported values are 'openreport' and 'policyreport'")
 
 	return rootCmd
 }
