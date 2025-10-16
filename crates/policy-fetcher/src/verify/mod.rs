@@ -3,7 +3,7 @@ use sigstore::{
     cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities},
     errors::SigstoreError,
     registry::oci_reference::OciReference,
-    trust::ManualTrustRoot,
+    trust::sigstore::SigstoreTrustRoot,
 };
 use std::{convert::TryFrom, str::FromStr, sync::Arc};
 use tokio::sync::Mutex;
@@ -50,7 +50,7 @@ impl Verifier {
     /// later used to interact with remote OCI registries.
     pub async fn new(
         sources: Option<Sources>,
-        trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+        trust_root: Option<Arc<SigstoreTrustRoot>>,
     ) -> VerifyResult<Self> {
         let client_config: sigstore::registry::ClientConfig =
             sources.clone().unwrap_or_default().into();
