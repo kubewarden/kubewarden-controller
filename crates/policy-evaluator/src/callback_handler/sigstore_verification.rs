@@ -7,7 +7,7 @@ use kubewarden_policy_sdk::host_capabilities::verification::{
     KeylessInfo, KeylessPrefixInfo, VerificationResponse,
 };
 use policy_fetcher::{
-    sigstore::{self, trust::ManualTrustRoot},
+    sigstore::{self, trust::sigstore::SigstoreTrustRoot},
     sources::Sources,
     verify::{
         config::{LatestVerificationConfig, Signature, Subject},
@@ -33,7 +33,7 @@ pub(crate) struct Client {
 impl Client {
     pub async fn new(
         sources: Option<Sources>,
-        trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+        trust_root: Option<Arc<SigstoreTrustRoot>>,
     ) -> Result<Self> {
         let cosign_client = Arc::new(Mutex::new(
             Self::build_cosign_client(sources.clone(), trust_root).await?,
@@ -48,7 +48,7 @@ impl Client {
 
     async fn build_cosign_client(
         sources: Option<Sources>,
-        trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+        trust_root: Option<Arc<SigstoreTrustRoot>>,
     ) -> Result<sigstore::cosign::Client> {
         let client_config: sigstore::registry::ClientConfig = sources.unwrap_or_default().into();
 

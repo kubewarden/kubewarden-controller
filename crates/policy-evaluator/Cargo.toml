@@ -8,7 +8,7 @@ authors = [
 ]
 edition = "2021"
 name = "policy-evaluator"
-version = "0.30.2"
+version = "0.30.3"
 
 [workspace]
 members = ["crates/burrego"]
@@ -36,7 +36,7 @@ mail-parser = { version = "0.11", features = ["serde"] }
 pki-types = { package = "rustls-pki-types", version = "1.12", default-features = false, features = [
   "std",
 ] }
-policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.10.4" }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.11.0" }
 rhai = { version = "1.21", features = ["sync"] }
 rustls-webpki = { version = "0.103", default-features = false, features = [
   "std",
