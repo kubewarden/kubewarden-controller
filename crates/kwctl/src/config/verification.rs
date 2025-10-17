@@ -1,12 +1,9 @@
-use std::{collections::BTreeMap, convert::TryInto, fs, path::Path, sync::Arc};
+use std::{collections::BTreeMap, fs, path::Path, sync::Arc};
 
 use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use policy_evaluator::policy_fetcher::{
-    sigstore::{
-        self,
-        trust::{ManualTrustRoot, TrustRoot},
-    },
+    sigstore::{self, trust::sigstore::SigstoreTrustRoot},
     store::DEFAULT_ROOT,
     verify::config::{LatestVerificationConfig, Signature, Subject, read_verification_file},
 };
@@ -162,76 +159,14 @@ fn build_verification_options_from_flags(
     Ok(Some(verification_config))
 }
 
-pub(crate) async fn build_sigstore_trust_root(
-    matches: ArgMatches,
-) -> Result<Option<Arc<ManualTrustRoot<'static>>>> {
-    use sigstore::registry::Certificate;
-
-    if matches.contains_id("fulcio-cert-path") || matches.contains_id("rekor-public-key-path") {
-        let mut fulcio_certs: Vec<Certificate> = vec![];
-        if let Some(items) = matches.get_many::<String>("fulcio-cert-path") {
-            for item in items {
-                let data = fs::read(item)?;
-                let cert = Certificate {
-                    data,
-                    encoding: sigstore::registry::CertificateEncoding::Pem,
-                };
-                fulcio_certs.push(cert);
-            }
-        };
-
-        let mut rekor_public_keys: Vec<Vec<u8>> = vec![];
-        if let Some(items) = matches.get_many::<String>("rekor-public-key-path") {
-            for item in items {
-                let data = fs::read(item)?;
-                let pem_data = pem::parse(&data)?;
-                rekor_public_keys.push(pem_data.contents().to_owned());
-            }
-        };
-
-        if fulcio_certs.is_empty() || rekor_public_keys.is_empty() {
-            return Err(anyhow!(
-                "both a fulcio certificate and a rekor public key are required"
-            ));
-        }
-        debug!("building Sigstore trust root from flags");
-        Ok(Some(Arc::new(ManualTrustRoot {
-            fulcio_certs: fulcio_certs
-                .iter()
-                .map(|c| {
-                    let cert: sigstore::registry::Certificate = c.to_owned();
-                    cert.try_into()
-                        .expect("could not convert certificate to CertificateDer")
-                })
-                .collect(),
-            rekor_keys: rekor_public_keys,
-            ..Default::default()
-        })))
-    } else {
-        debug!("building Sigstore trust root from Sigstore's TUF repository");
-        let checkout_path = DEFAULT_ROOT.config_dir().join("fulcio_and_rekor_data");
-        if !Path::exists(&checkout_path) {
-            fs::create_dir_all(checkout_path.clone())?
-        }
-
-        let repo = sigstore::trust::sigstore::SigstoreTrustRoot::new(Some(checkout_path.as_path()))
-            .await?;
-        let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
-            .fulcio_certs()
-            .map_err(|e| anyhow!("no fulcio certs found inside of TUF repository: {:?}", e))?
-            .into_iter()
-            .map(|c| c.into_owned())
-            .collect();
-        let manual_root = ManualTrustRoot {
-            fulcio_certs,
-            rekor_keys: repo
-                .rekor_keys()
-                .map_err(|e| anyhow!("no rekor keys found inside of TUF repository: {:?}", e))?
-                .iter()
-                .map(|k| k.to_vec())
-                .collect(),
-            ..Default::default()
-        };
-        Ok(Some(Arc::new(manual_root)))
+pub(crate) async fn build_sigstore_trust_root() -> Result<Option<Arc<SigstoreTrustRoot>>> {
+    debug!("building Sigstore trust root from Sigstore's TUF repository");
+    let checkout_path = DEFAULT_ROOT.config_dir().join("fulcio_and_rekor_data");
+    if !Path::exists(&checkout_path) {
+        fs::create_dir_all(checkout_path.clone())?
     }
+
+    let trust_root =
+        sigstore::trust::sigstore::SigstoreTrustRoot::new(Some(checkout_path.as_path())).await?;
+    Ok(Some(Arc::new(trust_root)))
 }

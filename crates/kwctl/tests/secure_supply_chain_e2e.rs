@@ -14,7 +14,6 @@ fn cosign_initialize(path: &Path) {
 }
 
 #[test]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_verify_tuf_integration() {
     let tempdir = tempdir().unwrap();
     let mut cmd = setup_command(tempdir.path());
@@ -39,19 +38,11 @@ fn test_verify_tuf_integration() {
 }
 
 #[test]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_verify_fulcio_cert_path() {
     let tempdir = tempdir().unwrap();
-    cosign_initialize(tempdir.path());
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("verify")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio.crt.pem")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio_v1.crt.pem")
-        .arg("--rekor-public-key-path")
-        .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
         .arg("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5");
@@ -59,8 +50,10 @@ fn test_verify_fulcio_cert_path() {
     cmd.assert().success();
 }
 
+// This test cannot be run until we implement support for BYO PKI.
+// We don't have a way to specify a custom fulcio certificate right now.
 #[test]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
+#[ignore]
 fn test_verify_fulcio_cert_path_no_rekor_public_key() {
     let tempdir = tempdir().unwrap();
     cosign_initialize(tempdir.path());
@@ -79,8 +72,10 @@ fn test_verify_fulcio_cert_path_no_rekor_public_key() {
     ));
 }
 
+// This test cannot be run until we implement support for BYO PKI.
+// We don't have a way to specify a custom rekor certificate right now.
+#[ignore]
 #[test]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_verify_rekor_public_key_no_certs() {
     let tempdir = tempdir().unwrap();
     cosign_initialize(tempdir.path());
@@ -100,19 +95,11 @@ fn test_verify_rekor_public_key_no_certs() {
 }
 
 #[test]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_verify_missing_signatures() {
     let tempdir = tempdir().unwrap();
-    cosign_initialize(tempdir.path());
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("verify")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio.crt.pem")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio_v1.crt.pem")
-        .arg("--rekor-public-key-path")
-        .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
         .arg("registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9");
@@ -123,19 +110,11 @@ fn test_verify_missing_signatures() {
 }
 
 #[test]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_verify_keyless() {
     let tempdir = tempdir().unwrap();
-    cosign_initialize(tempdir.path());
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("verify")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio.crt.pem")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio_v1.crt.pem")
-        .arg("--rekor-public-key-path")
-        .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
         .arg("registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9");
@@ -146,10 +125,8 @@ fn test_verify_keyless() {
 }
 
 #[test]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_verify_scaffolded_verification_config() {
     let tempdir = tempdir().unwrap();
-    cosign_initialize(tempdir.path());
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("scaffold").arg("verification-config");
@@ -166,12 +143,6 @@ fn test_verify_scaffolded_verification_config() {
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("verify")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio.crt.pem")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio_v1.crt.pem")
-        .arg("--rekor-public-key-path")
-        .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(&verification_config_path)
         .arg("registry://ghcr.io/kubewarden/tests/capabilities-psp:v0.1.9");
@@ -210,7 +181,6 @@ fn test_verify_scaffolded_verification_config() {
     false,
     contains("Image verification failed: missing signatures")
 )]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_verify_oci_registry(
     #[case] keys: &[&str],
     #[case] annotations: &[&str],
@@ -253,7 +223,6 @@ fn test_verify_oci_registry(
     &["sigstore/cosign2.pub"],
     false,contains("Image verification failed: missing signatures")
 )]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_pull_signed_policy(
     #[case] keys: &[&str],
     #[case] success: bool,
@@ -292,7 +261,6 @@ fn test_pull_signed_policy(
     false,
     contains("Image verification failed: missing signatures"))
 ]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_run_signed_policy(
     #[case] keys: &[&str],
     #[case] success: bool,
@@ -331,23 +299,15 @@ fn test_run_signed_policy(
     false,
     contains("Image verification failed: missing signatures")
 )]
-#[ignore] // We need to ignore it to make a quick patch release of kwctl - we need to fix the sigstore-rs issue first
 fn test_run_signed_policy_verification_config(
     #[case] uri: &str,
     #[case] success: bool,
     #[case] predicate: impl PredicateStrExt,
 ) {
     let tempdir = tempdir().unwrap();
-    cosign_initialize(tempdir.path());
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("run")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio.crt.pem")
-        .arg("--fulcio-cert-path")
-        .arg(".sigstore/root/targets/fulcio_v1.crt.pem")
-        .arg("--rekor-public-key-path")
-        .arg(".sigstore/root/targets/rekor.pub")
         .arg("--verification-config-path")
         .arg(test_data("sigstore/verification-config.yml"))
         .arg("--request-path")

@@ -10,7 +10,8 @@ use std::{
 use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use policy_evaluator::policy_fetcher::{
-    sigstore::trust::ManualTrustRoot, sources::Sources, verify::config::LatestVerificationConfig,
+    sigstore::trust::sigstore::SigstoreTrustRoot, sources::Sources,
+    verify::config::LatestVerificationConfig,
 };
 use tracing::{info, warn};
 
@@ -33,7 +34,7 @@ pub(crate) struct PullAndRunSettings {
     /// - key: the policy URI
     /// - value: the digest of the verified manifest
     pub verified_manifest_digests: Option<HashMap<String, String>>,
-    pub sigstore_trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+    pub sigstore_trust_root: Option<Arc<SigstoreTrustRoot>>,
     pub enable_wasmtime_cache: bool,
     pub host_capabilities_mode: HostCapabilitiesMode,
 }
@@ -95,7 +96,7 @@ pub(crate) async fn parse_pull_and_run_settings(
 
     let verification_options = build_verification_options(matches)?;
 
-    let sigstore_trust_root = match build_sigstore_trust_root(matches.to_owned()).await {
+    let sigstore_trust_root = match build_sigstore_trust_root().await {
         Ok(trust_root) => trust_root,
         Err(e) => {
             if verification_options.is_some() {
@@ -169,7 +170,7 @@ async fn build_verified_manifest_digests(
     policy_definitions: &[PolicyDefinition],
     verification_options: &LatestVerificationConfig,
     sources: &Option<Sources>,
-    sigstore_trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+    sigstore_trust_root: Option<Arc<SigstoreTrustRoot>>,
 ) -> Result<HashMap<String, String>> {
     let mut uris: HashSet<String> = HashSet::new();
     for policy_definition in policy_definitions {

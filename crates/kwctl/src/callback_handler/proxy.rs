@@ -4,7 +4,7 @@ use policy_evaluator::{
     callback_handler::CallbackHandlerBuilder,
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     kube,
-    policy_fetcher::{sigstore::trust::ManualTrustRoot, sources::Sources},
+    policy_fetcher::{sigstore::trust::sigstore::SigstoreTrustRoot, sources::Sources},
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, fs::File, path::PathBuf, sync::Arc};
@@ -29,7 +29,7 @@ struct Exchange {
 /// Can record guest requests, save them to file and reply them back
 pub(crate) struct CallbackHandlerProxy {
     sources: Option<Sources>,
-    sigstore_trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+    sigstore_trust_root: Option<Arc<SigstoreTrustRoot>>,
     kube_client: Option<kube::Client>,
     mode: ProxyMode,
 
@@ -53,7 +53,7 @@ impl CallbackHandlerProxy {
         mode: &ProxyMode,
         shutdown_channel: oneshot::Receiver<()>,
         sources: Option<Sources>,
-        sigstore_trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+        sigstore_trust_root: Option<Arc<SigstoreTrustRoot>>,
         kube_client: Option<kube::Client>,
     ) -> Result<CallbackHandlerProxy> {
         // the channels used to interact with this callback handler.
