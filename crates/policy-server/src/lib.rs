@@ -26,10 +26,7 @@ use evaluation::EvaluationEnvironmentBuilder;
 use policy_evaluator::{
     callback_handler::{CallbackHandler, CallbackHandlerBuilder},
     kube,
-    policy_fetcher::sigstore::trust::{
-        sigstore::{ManualTrustRoot, SigstoreTrustRoot},
-        TrustRoot,
-    },
+    policy_fetcher::sigstore::trust::sigstore::SigstoreTrustRoot,
     wasmtime,
 };
 use profiling::activate_memory_profiling;
@@ -320,36 +317,13 @@ fn precompile_policies(
         .collect()
 }
 
-async fn create_sigstore_trustroot(config: &Config) -> Result<Arc<ManualTrustRoot<'static>>> {
+async fn create_sigstore_trustroot(config: &Config) -> Result<Arc<SigstoreTrustRoot>> {
     if !config.sigstore_cache_dir.exists() {
         fs::create_dir_all(&config.sigstore_cache_dir)
             .map_err(|e| anyhow!("Cannot create directory to cache sigstore data: {}", e))?;
     }
 
-    let repo = SigstoreTrustRoot::new(Some(config.sigstore_cache_dir.as_path())).await?;
+    let trust_root = SigstoreTrustRoot::new(Some(config.sigstore_cache_dir.as_path())).await?;
 
-    let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
-        .fulcio_certs()
-        .map_err(|e| {
-            anyhow!(
-                "Cannot fetch Fulcio certificates from TUF repository: {}",
-                e
-            )
-        })?
-        .into_iter()
-        .map(|c| c.into_owned())
-        .collect();
-
-    let manual_root = ManualTrustRoot {
-        fulcio_certs,
-        rekor_keys: repo
-            .rekor_keys()
-            .map_err(|e| anyhow!("Cannot fetch Rekor keys from TUF repository: {}", e))?
-            .iter()
-            .map(|k| k.to_vec())
-            .collect(),
-        ..Default::default()
-    };
-
-    Ok(Arc::new(manual_root))
+    Ok(Arc::new(trust_root))
 }
