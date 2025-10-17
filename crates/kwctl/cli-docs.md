@@ -123,7 +123,6 @@ A YAML file may contain multiple Custom Resource declarations. In this case, `kw
 
   Possible values: `opa`, `gatekeeper`, `kubewarden`, `wasi`
 
-* `--fulcio-cert-path <PATH>` — Path to the Fulcio certificate. Can be repeated multiple times
 * `--github-owner <VALUE>` — GitHub owner expected in the certificates generated in CD pipelines
 * `--github-repo <VALUE>` — GitHub repository expected in the certificates generated in CD pipelines
 * `--measurement-time <SECONDS>` — How long the bench 'should' run, num_samples is prioritized so benching will take longer to be able to collect num_samples if the code to be benched is slower than this time limit allowed
@@ -135,7 +134,6 @@ A YAML file may contain multiple Custom Resource declarations. In this case, `kw
 * `--record-host-capabilities-interactions <FILE>` — Record all the policy and host capabilities
    communications to the given file.
    Useful to be combined later with '--replay-host-capabilities-interactions' flag
-* `--rekor-public-key-path <PATH>` — Path to the Rekor public key
 * `--replay-host-capabilities-interactions <FILE>` — During policy and host capabilities exchanges
    the host replays back the answers found inside of the provided file.
    This is useful to test policies in a reproducible way, given no external
@@ -260,11 +258,9 @@ Pulls a Kubewarden policy from a given URI
 * `--cert-email <VALUE>` — Expected email in Fulcio certificate
 * `--cert-oidc-issuer <VALUE>` — Expected OIDC issuer in Fulcio certificates
 * `--docker-config-json-path <DOCKER_CONFIG>` — Path to a directory containing the Docker 'config.json' file. Can be used to indicate registry authentication details
-* `--fulcio-cert-path <PATH>` — Path to the Fulcio certificate. Can be repeated multiple times
 * `--github-owner <VALUE>` — GitHub owner expected in the certificates generated in CD pipelines
 * `--github-repo <VALUE>` — GitHub repository expected in the certificates generated in CD pipelines
 * `-o`, `--output-path <PATH>` — Output file. If not provided will be downloaded to the Kubewarden store
-* `--rekor-public-key-path <PATH>` — Path to the Rekor public key. Can be repeated multiple times
 * `--sources-path <PATH>` — YAML file holding source information (https, registry insecure hosts, custom CA's...)
 * `-a`, `--verification-annotation <KEY=VALUE>` — Annotation in key=value format. Can be repeated multiple times
 * `--verification-config-path <PATH>` — YAML file holding verification config information (signatures, public keys...)
@@ -359,7 +355,6 @@ A YAML file may contain multiple Custom Resource declarations. In this case, `kw
 
   Possible values: `opa`, `gatekeeper`, `kubewarden`, `wasi`
 
-* `--fulcio-cert-path <PATH>` — Path to the Fulcio certificate. Can be repeated multiple times
 * `--github-owner <VALUE>` — GitHub owner expected in the certificates generated in CD pipelines
 * `--github-repo <VALUE>` — GitHub repository expected in the certificates generated in CD pipelines
 * `--raw <RAW>` — Validate a raw request
@@ -368,7 +363,6 @@ A YAML file may contain multiple Custom Resource declarations. In this case, `kw
 * `--record-host-capabilities-interactions <FILE>` — Record all the policy and host capabilities
    communications to the given file.
    Useful to be combined later with '--replay-host-capabilities-interactions' flag
-* `--rekor-public-key-path <PATH>` — Path to the Rekor public key
 * `--replay-host-capabilities-interactions <FILE>` — During policy and host capabilities exchanges
    the host replays back the answers found inside of the provided file.
    This is useful to test policies in a reproducible way, given no external
@@ -463,10 +457,8 @@ Output a Kubernetes resource manifest
 * `--cert-email <VALUE>` — Expected email in Fulcio certificate
 * `--cert-oidc-issuer <VALUE>` — Expected OIDC issuer in Fulcio certificates
 * `--docker-config-json-path <DOCKER_CONFIG>` — Path to a directory containing the Docker 'config.json' file. Can be used to indicate registry authentication details
-* `--fulcio-cert-path <PATH>` — Path to the Fulcio certificate. Can be repeated multiple times
 * `--github-owner <VALUE>` — GitHub owner expected in the certificates generated in CD pipelines
 * `--github-repo <VALUE>` — GitHub repository expected in the certificates generated in CD pipelines
-* `--rekor-public-key-path <PATH>` — Path to the Rekor public key. Can be repeated multiple times
 * `--settings-json <VALUE>` — JSON string containing the settings for this policy
 * `-s`, `--settings-path <PATH>` — File containing the settings for this policy
 * `--sources-path <PATH>` — YAML file holding source information (https, registry insecure hosts, custom CA's...)
@@ -520,10 +512,8 @@ Verify a Kubewarden policy from a given URI using Sigstore
 * `--cert-email <VALUE>` — Expected email in Fulcio certificate
 * `--cert-oidc-issuer <VALUE>` — Expected OIDC issuer in Fulcio certificates
 * `--docker-config-json-path <PATH>` — Path to a directory containing the Docker 'config.json' file. Can be used to indicate registry authentication details
-* `--fulcio-cert-path <PATH>` — Path to the Fulcio certificate. Can be repeated multiple times
 * `--github-owner <VALUE>` — GitHub owner expected in the certificates generated in CD pipelines
 * `--github-repo <VALUE>` — GitHub repository expected in the certificates generated in CD pipelines
-* `--rekor-public-key-path <PATH>` — Path to the Rekor public key
 * `--sources-path <PATH>` — YAML file holding source information (https, registry insecure hosts, custom CA's...)
 * `-a`, `--verification-annotation <KEY=VALUE>` — Annotation in key=value format. Can be repeated multiple times
 * `--verification-config-path <PATH>` — YAML file holding verification config information (signatures, public keys...)
