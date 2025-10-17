@@ -9,7 +9,7 @@ authors = [
 ]
 edition = "2021"
 name = "policy-server"
-version = "1.29.1"
+version = "1.29.2"
 
 [dependencies]
 anyhow = "1.0"
@@ -39,7 +39,7 @@ opentelemetry-otlp = { version = "0.31.0", features = [
   "tonic",
 ] }
 opentelemetry_sdk = { version = "0.31.0", features = ["rt-tokio"] }
-policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.30.2" }
+policy-evaluator = { git = "https://github.com/kubewarden/policy-evaluator", tag = "v0.30.3" }
 pprof = { version = "0.15", features = ["prost-codec"] }
 rayon = "1.10"
 regex = "1.10"

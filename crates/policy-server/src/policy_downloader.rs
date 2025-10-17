@@ -1,3 +1,9 @@
+use std::{
+    collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+
 use anyhow::{anyhow, Result};
 use policy_evaluator::{
     policy_fetcher,
@@ -8,12 +14,7 @@ use policy_evaluator::{
     },
     policy_metadata::Metadata,
 };
-use sigstore::trust::ManualTrustRoot;
-use std::{
-    collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use sigstore::trust::sigstore::SigstoreTrustRoot;
 use tracing::{debug, error, info};
 
 use crate::config::PolicyOrPolicyGroup;
@@ -37,7 +38,7 @@ impl Downloader {
     /// sigstore.
     pub async fn new(
         sources: Option<Sources>,
-        manual_root: Option<Arc<ManualTrustRoot<'static>>>,
+        manual_root: Option<Arc<SigstoreTrustRoot>>,
     ) -> Result<Self> {
         let verifier = if let Some(manual_root) = manual_root {
             info!("Fetching sigstore data from remote TUF repository");
@@ -220,9 +221,9 @@ impl Downloader {
 /// TUF repository of the sigstore project
 async fn create_verifier(
     sources: Option<Sources>,
-    manual_root: Arc<ManualTrustRoot<'static>>,
+    trust_root: Arc<SigstoreTrustRoot>,
 ) -> Result<Verifier> {
-    let verifier = Verifier::new(sources, Some(manual_root)).await?;
+    let verifier = Verifier::new(sources, Some(trust_root)).await?;
 
     Ok(verifier)
 }
@@ -258,7 +259,6 @@ fn policies_to_download(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use policy_evaluator::policy_fetcher::sigstore::trust::TrustRoot;
     use tempfile::TempDir;
 
     #[tokio::test]
@@ -323,7 +323,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // TODO: enable once we fix the issue with sigstore-rs
     async fn verify_error() {
         let verification_cfg_yml = r#"---
     allOf:
@@ -343,29 +342,11 @@ mod tests {
             serde_yaml::from_str(policies_cfg).expect("Cannot parse policy cfg");
 
         let policy_download_dir = TempDir::new().expect("Cannot create temp dir");
-        let repo = sigstore::trust::sigstore::SigstoreTrustRoot::new(None)
+        let trust_root = sigstore::trust::sigstore::SigstoreTrustRoot::new(None)
             .await
             .unwrap();
 
-        let fulcio_certs: Vec<rustls_pki_types::CertificateDer> = repo
-            .fulcio_certs()
-            .expect("Cannot fetch Fulcio certificates from TUF repository")
-            .into_iter()
-            .map(|c| c.into_owned())
-            .collect();
-
-        let manual_root = ManualTrustRoot {
-            fulcio_certs,
-            rekor_keys: repo
-                .rekor_keys()
-                .expect("Cannot fetch Rekor keys from TUF repository")
-                .iter()
-                .map(|k| k.to_vec())
-                .collect(),
-            ..Default::default()
-        };
-
-        let mut downloader = Downloader::new(None, Some(Arc::new(manual_root)))
+        let mut downloader = Downloader::new(None, Some(Arc::new(trust_root)))
             .await
             .unwrap();
 
