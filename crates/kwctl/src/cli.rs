@@ -67,16 +67,6 @@ fn pull_shared_flags() -> Vec<Arg> {
             .number_of_values(1)
             .value_name("PATH")
             .help("Path to key used to verify the policy. Can be repeated multiple times"),
-        Arg::new("fulcio-cert-path")
-            .long("fulcio-cert-path")
-            .action(ArgAction::Append)
-            .value_name("PATH")
-            .help("Path to the Fulcio certificate. Can be repeated multiple times"),
-        Arg::new("rekor-public-key-path")
-            .long("rekor-public-key-path")
-            .action(ArgAction::Append)
-            .value_name("PATH")
-            .help("Path to the Rekor public key. Can be repeated multiple times"),
         Arg::new("verification-annotation")
             .short('a')
             .long("verification-annotation")
@@ -148,16 +138,6 @@ fn subcommand_verify() -> Command {
             .number_of_values(1)
             .value_name("PATH")
             .help("Path to key used to verify the policy. Can be repeated multiple times"),
-        Arg::new("fulcio-cert-path")
-            .long("fulcio-cert-path")
-            .action(ArgAction::Append)
-            .number_of_values(1)
-            .value_name("PATH")
-            .help("Path to the Fulcio certificate. Can be repeated multiple times"),
-        Arg::new("rekor-public-key-path")
-            .long("rekor-public-key-path")
-            .value_name("PATH")
-            .help("Path to the Rekor public key"),
         Arg::new("verification-annotation")
             .short('a')
             .long("verification-annotation")
@@ -282,16 +262,6 @@ fn run_args() -> Vec<Arg> {
             .number_of_values(1)
             .value_name("PATH")
             .help("Path to key used to verify the policy. Can be repeated multiple times"),
-        Arg::new("fulcio-cert-path")
-            .long("fulcio-cert-path")
-            .action(ArgAction::Append)
-            .number_of_values(1)
-            .value_name("PATH")
-            .help("Path to the Fulcio certificate. Can be repeated multiple times"),
-        Arg::new("rekor-public-key-path")
-            .long("rekor-public-key-path")
-            .value_name("PATH")
-            .help("Path to the Rekor public key"),
         Arg::new("verification-annotation")
             .short('a')
             .long("verification-annotation")
