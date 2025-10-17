@@ -1,5 +1,5 @@
 use anyhow::Result;
-use policy_fetcher::sigstore::trust::ManualTrustRoot;
+use policy_fetcher::sigstore::trust::sigstore::SigstoreTrustRoot;
 use policy_fetcher::sources::Sources;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
@@ -15,7 +15,7 @@ pub struct CallbackHandlerBuilder {
     oci_sources: Option<Sources>,
     channel_buffer_size: usize,
     shutdown_channel: oneshot::Receiver<()>,
-    trust_root: Option<Arc<ManualTrustRoot<'static>>>,
+    trust_root: Option<Arc<SigstoreTrustRoot>>,
     kube_client: Option<kube::Client>,
 }
 
@@ -36,7 +36,7 @@ impl CallbackHandlerBuilder {
         self
     }
 
-    pub fn trust_root(mut self, trust_root: Option<Arc<ManualTrustRoot<'static>>>) -> Self {
+    pub fn trust_root(mut self, trust_root: Option<Arc<SigstoreTrustRoot>>) -> Self {
         self.trust_root = trust_root;
         self
     }
