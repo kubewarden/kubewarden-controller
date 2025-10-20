@@ -6,6 +6,18 @@ use policy_evaluator::{
 };
 use policy_fetcher::{policy::Policy, PullDestination};
 
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub(crate) static ref CONTEXT_AWARE_POLICY_FILE: String = format!(
+        "file://{}",
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("annotated-policy.wasm")
+            .to_str()
+            .expect("failed to convert path into str")
+    );
+}
+
 pub(crate) async fn fetch_policy(policy_uri: &str, tempdir: PathBuf) -> Policy {
     policy_evaluator::policy_fetcher::fetch_policy(
         policy_uri,

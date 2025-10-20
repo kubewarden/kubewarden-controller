@@ -1,0 +1,18 @@
+[package]
+authors = ["Fabrizio Sestito <fabrizio.sestito@suse.com>"]
+edition = "2021"
+name    = "context-aware-test-policy"
+version = "0.2.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+k8s-openapi           = { workspace = true, features = ["v1_30"] }
+kubewarden-policy-sdk = { workspace = true }
+lazy_static           = { workspace = true }
+serde                 = { workspace = true }
+serde_json            = { workspace = true }
+slog                  = "2.7"

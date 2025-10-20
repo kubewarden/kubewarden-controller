@@ -31,7 +31,9 @@ use policy_evaluator::{
     policy_metadata::ContextAwareResource,
 };
 
-use crate::common::{build_policy_evaluator, fetch_policy, load_request_data};
+use crate::common::{
+    build_policy_evaluator, fetch_policy, load_request_data, CONTEXT_AWARE_POLICY_FILE,
+};
 use crate::k8s_mock::{rego_scenario, wapc_and_wasi_scenario};
 
 async fn setup_callback_handler(
@@ -252,7 +254,7 @@ async fn test_policy_evaluator(
 )]
 #[case::wapc(
     PolicyExecutionMode::KubewardenWapc,
-    "ghcr.io/kubewarden/tests/context-aware-test-policy:v0.1.0",
+    &CONTEXT_AWARE_POLICY_FILE,
     "app_deployment.json",
     wapc_and_wasi_scenario
 )]
@@ -270,7 +272,7 @@ async fn test_policy_evaluator(
 )]
 #[case::wapc_can_i(
     PolicyExecutionMode::KubewardenWapc,
-    "ghcr.io/kubewarden/tests/context-aware-test-policy:v0.2.1",
+    &CONTEXT_AWARE_POLICY_FILE,
     "app_deployment.json",
     wapc_and_wasi_scenario
 )]

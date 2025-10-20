@@ -14,14 +14,20 @@ lint:
 
 .PHONY: check
 check:
-	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo check
+	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo check --workspace
 
+policy.wasm: 
+	cargo build  --target=wasm32-wasip1 --release -p context-aware-test-policy
+
+annotated-policy.wasm: policy.wasm
+	kwctl annotate -m crates/context-aware-test-policy/metadata.yml -u README.md -o annotated-policy.wasm target/wasm32-wasip1/release/context_aware_test_policy.wasm
+	
 .PHONY: typos
 typos:
 	typos # run typo checker from crate-ci/typos
 
 .PHONY: test
-test: fmt lint
+test: fmt lint annotated-policy.wasm
 	cargo test --workspace
 
 .PHONY: unit-tests
@@ -29,7 +35,7 @@ unit-tests: fmt lint
 	cargo test --workspace --lib
 
 .PHONY: integration-tests
-integration-tests: fmt lint
+integration-tests: fmt lint annotated-policy.wasm
 	cargo test --test '*'
 
 
