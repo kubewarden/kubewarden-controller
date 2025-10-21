@@ -5,7 +5,7 @@ use serde_json::json;
 use tracing::{error, warn};
 
 use crate::runtimes::rego::{
-    context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError, Stack,
+    Stack, context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError,
 };
 use crate::{
     admission_request,
@@ -134,10 +134,12 @@ impl Runtime<'_> {
                 if matches!(
                     err,
                     burrego::errors::BurregoError::ExecutionDeadlineExceeded
-                ) {
-                    if let Err(reset_error) = self.0.evaluator.reset() {
-                        error!(?reset_error, "cannot reset burrego evaluator, further invocations might fail or behave not properly");
-                    }
+                ) && let Err(reset_error) = self.0.evaluator.reset()
+                {
+                    error!(
+                        ?reset_error,
+                        "cannot reset burrego evaluator, further invocations might fail or behave not properly"
+                    );
                 }
                 AdmissionResponse::reject_internal_server_error(uid.to_string(), err.to_string())
             }
@@ -168,7 +170,9 @@ impl Runtime<'_> {
                     .insert("kubernetes".to_string(), json!(ctx))
                     .is_some()
                 {
-                    warn!("OPA policy had user provided setting with key `kubernetes`. This value has been overwritten with the actual kubernetes context data");
+                    warn!(
+                        "OPA policy had user provided setting with key `kubernetes`. This value has been overwritten with the actual kubernetes context data"
+                    );
                 }
                 json!(data)
             }

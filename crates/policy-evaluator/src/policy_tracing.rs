@@ -1,6 +1,6 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
-use tracing::{event, Level};
+use tracing::{Level, event};
 
 use crate::evaluation_context::EvaluationContext;
 

@@ -1,9 +1,9 @@
 use anyhow::Result;
-use futures::{future::ready, Stream, StreamExt, TryStreamExt};
-use kube::{runtime::reflector::store, Resource};
+use futures::{Stream, StreamExt, TryStreamExt, future::ready};
+use kube::{Resource, runtime::reflector::store};
 use kube::{
-    runtime::{reflector::store::Writer, watcher, WatchStreamExt},
     ResourceExt,
+    runtime::{WatchStreamExt, reflector::store::Writer, watcher},
 };
 use std::hash::Hash;
 use tokio::{sync::watch, time::Instant};

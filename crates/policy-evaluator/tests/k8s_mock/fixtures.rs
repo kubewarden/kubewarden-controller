@@ -7,8 +7,8 @@ use k8s_openapi::{
     apimachinery::pkg::apis::meta::v1::{APIResource, APIResourceList},
 };
 use kube::core::{
-    watch::{Bookmark, BookmarkMeta},
     ListMeta, ObjectList, ObjectMeta, TypeMeta, WatchEvent,
+    watch::{Bookmark, BookmarkMeta},
 };
 use std::collections::BTreeMap;
 

@@ -3,7 +3,7 @@ use std::time::Duration;
 mod client;
 mod reflector;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use cached::proc_macro::cached;
 use k8s_openapi::api::authorization::v1::SubjectAccessReviewStatus;
 use kube::core::ObjectList;

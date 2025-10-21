@@ -5,10 +5,10 @@ use crate::admission_response::AdmissionResponse;
 use crate::errors::PolicyEvaluatorError;
 use crate::evaluation_context::EvaluationContext;
 use crate::policy_evaluator::{PolicySettings, ValidateRequest};
+use crate::runtimes::Runtime;
 use crate::runtimes::rego::Runtime as BurregoRuntime;
 use crate::runtimes::wapc::Runtime as WapcRuntime;
 use crate::runtimes::wasi_cli::Runtime as WasiRuntime;
-use crate::runtimes::Runtime;
 
 pub struct PolicyEvaluator {
     runtime: Runtime,
@@ -57,7 +57,7 @@ impl PolicyEvaluator {
                 return SettingsValidationResponse {
                     valid: false,
                     message: Some(format!("could not marshal settings: {err}")),
-                }
+                };
             }
         };
 
@@ -76,7 +76,7 @@ impl PolicyEvaluator {
 
     pub fn protocol_version(&mut self) -> Result<ProtocolVersion, PolicyEvaluatorError> {
         match &mut self.runtime {
-            Runtime::Wapc(ref mut wapc_stack) => Ok(WapcRuntime(wapc_stack)
+            Runtime::Wapc(wapc_stack) => Ok(WapcRuntime(wapc_stack)
                 .protocol_version()
                 .map_err(PolicyEvaluatorError::InvokeWapcProtocolVersion)?),
             _ => Err(PolicyEvaluatorError::InvalidProtocolVersion()),

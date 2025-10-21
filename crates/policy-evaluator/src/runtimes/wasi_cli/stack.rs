@@ -5,9 +5,9 @@ use std::{
 
 use tracing::debug;
 use wasi_common::{
+    WasiCtx,
     pipe::{ReadPipe, WritePipe},
     sync::WasiCtxBuilder,
-    WasiCtx,
 };
 
 use crate::{

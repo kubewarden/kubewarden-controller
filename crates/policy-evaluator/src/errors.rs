@@ -22,13 +22,17 @@ pub enum ArtifactHubError {
     #[error("annotation \"{0}\" in policy metadata is malformed, must be csv values")]
     MalformedCSV(String),
 
-    #[error("annotation \"{0}\" in policy metadata is malformed, must be csv values of \"name <email>\"")]
+    #[error(
+        "annotation \"{0}\" in policy metadata is malformed, must be csv values of \"name <email>\""
+    )]
     MalformedCSVEmail(String),
 
     #[error("annotation \"{annot:?}\" in policy metadata must be a well formed email: {error:?}")]
     MalformedEmail { annot: String, error: String },
 
-    #[error("annotation \"{0}\" in policy metadata is malformed, must be a string \"true\" or \"false\"")]
+    #[error(
+        "annotation \"{0}\" in policy metadata is malformed, must be a string \"true\" or \"false\""
+    )]
     MalformedBoolString(String),
 }
 

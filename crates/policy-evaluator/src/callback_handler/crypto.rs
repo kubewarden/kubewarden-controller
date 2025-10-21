@@ -1,9 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use kubewarden_policy_sdk::host_capabilities::{
     crypto::{Certificate, CertificateEncoding},
     crypto_v1::{CertificateVerificationRequest, CertificateVerificationResponse},
 };
-use pki_types::{pem::PemObject, CertificateDer, TrustAnchor, UnixTime};
+use pki_types::{CertificateDer, TrustAnchor, UnixTime, pem::PemObject};
 use webpki::{EndEntityCert, Error};
 
 const CERTIFICATE_USED_AFTER_EXPIRATION: &str =

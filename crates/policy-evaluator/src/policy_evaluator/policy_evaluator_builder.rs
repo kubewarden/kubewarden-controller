@@ -5,7 +5,7 @@ use wasmtime_provider::wasmtime;
 
 use crate::errors::PolicyEvaluatorBuilderError;
 use crate::policy_evaluator::errors::InvalidUserInputError;
-use crate::policy_evaluator::{stack_pre::StackPre, PolicyEvaluatorPre, PolicyExecutionMode};
+use crate::policy_evaluator::{PolicyEvaluatorPre, PolicyExecutionMode, stack_pre::StackPre};
 use crate::runtimes::{rego, wapc, wasi_cli};
 
 /// Configure behavior of wasmtime [epoch-based interruptions](https://docs.rs/wasmtime/latest/wasmtime/struct.Config.html#method.epoch_interruption)

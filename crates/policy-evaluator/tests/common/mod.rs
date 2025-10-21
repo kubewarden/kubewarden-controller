@@ -4,7 +4,7 @@ use policy_evaluator::{
     evaluation_context::EvaluationContext, policy_evaluator::PolicyEvaluator,
     policy_evaluator::PolicyExecutionMode, policy_evaluator_builder::PolicyEvaluatorBuilder,
 };
-use policy_fetcher::{policy::Policy, PullDestination};
+use policy_fetcher::{PullDestination, policy::Policy};
 
 use lazy_static::lazy_static;
 

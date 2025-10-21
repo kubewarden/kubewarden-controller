@@ -1,6 +1,6 @@
 use crate::errors::ResponseError;
 
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use kubewarden_policy_sdk::response::ValidationResponse as PolicyValidationResponse;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, result::Result};
@@ -463,8 +463,8 @@ mod tests {
     }
 
     #[test]
-    fn create_from_policy_validation_response_and_mutated_object_is_not_different_from_original_one(
-    ) {
+    fn create_from_policy_validation_response_and_mutated_object_is_not_different_from_original_one()
+     {
         // The Mutated Object should be `Some` only when the policy performs an actual
         // mutation. However we have to play safe and ensure we can handle the case
         // where a policy has a bug and by mistake returns a `mutated_object` that is

@@ -14,8 +14,8 @@ use crate::callback_requests::CallbackRequest;
 use crate::evaluation_context::EvaluationContext;
 use crate::policy_evaluator::{PolicyEvaluatorPre, ValidateRequest};
 use crate::policy_group_evaluator::{
-    errors::{EvaluationError, Result},
     PolicyGroupMemberEvaluationResult, PolicyGroupMemberSettings,
+    errors::{EvaluationError, Result},
 };
 
 /// PolicyGroupEvaluator is an evaluator that can evaluate a group of policies
@@ -190,15 +190,15 @@ impl PolicyGroupEvaluator {
         let evaluation_results = policies_evaluation_results.lock().unwrap();
 
         for policy_id in self.policy_members.keys() {
-            if let Some(result) = evaluation_results.get(policy_id) {
-                if !result.allowed {
-                    let cause = admission_response::StatusCause {
-                        field: Some(format!("spec.policies.{}", policy_id)),
-                        message: result.message.clone(),
-                        ..Default::default()
-                    };
-                    status_causes.push(cause);
-                }
+            if let Some(result) = evaluation_results.get(policy_id)
+                && !result.allowed
+            {
+                let cause = admission_response::StatusCause {
+                    field: Some(format!("spec.policies.{}", policy_id)),
+                    message: result.message.clone(),
+                    ..Default::default()
+                };
+                status_causes.push(cause);
             }
         }
         debug!(

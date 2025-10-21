@@ -167,9 +167,11 @@ mod tests {
             PolicyGroupMemberSettings::try_from(&pgm).expect("Failed to convert");
 
         assert_json_eq!(policy_group_member_settings.settings, settings);
-        assert!(policy_group_member_settings
-            .ctx_aware_resources_allow_list
-            .is_empty(),);
+        assert!(
+            policy_group_member_settings
+                .ctx_aware_resources_allow_list
+                .is_empty(),
+        );
         assert_eq!(policy_group_member_settings.epoch_deadline, Some(15));
     }
 }

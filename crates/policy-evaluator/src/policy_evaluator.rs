@@ -7,7 +7,7 @@ mod stack_pre;
 pub use evaluator::PolicyEvaluator;
 pub use policy_evaluator_pre::PolicyEvaluatorPre;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use k8s_openapi::apimachinery::pkg::runtime::RawExtension;
 use serde::{Deserialize, Serialize};
 use serde_json::value;

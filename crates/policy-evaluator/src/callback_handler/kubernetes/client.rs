@@ -1,15 +1,15 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use k8s_openapi::api::authorization::v1::{SubjectAccessReview, SubjectAccessReviewStatus};
 use kube::{
+    Api,
     api::PostParams,
     core::{DynamicObject, ObjectList},
-    Api,
 };
 use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::RwLock, time::Instant};
 
-use crate::callback_handler::kubernetes::{reflector::Reflector, ApiVersionKind, KubeResource};
+use crate::callback_handler::kubernetes::{ApiVersionKind, KubeResource, reflector::Reflector};
 
 #[derive(Clone)]
 pub(crate) struct Client {
@@ -138,7 +138,9 @@ impl Client {
     ) -> Result<ObjectList<kube::core::DynamicObject>> {
         let resource = self.build_kube_resource(api_version, kind).await?;
         if !resource.namespaced {
-            return Err(anyhow!("resource {api_version}/{kind} is cluster wide. Cannot search for it inside of a namespace"));
+            return Err(anyhow!(
+                "resource {api_version}/{kind} is cluster wide. Cannot search for it inside of a namespace"
+            ));
         }
 
         self.list_resources_from_reflector(
