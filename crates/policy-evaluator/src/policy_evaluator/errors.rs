@@ -14,9 +14,7 @@ pub enum InvalidUserInputError {
     #[error("must specify one among: `policy_file`, `policy_contents` and `policy_module`")]
     OneOfFileContentsModule,
 
-    #[error(
-        "you must provide the `engine` that was used to instantiate the given `policy_module`"
-    )]
+    #[error("you must provide the `engine` that was used to instantiate the given `policy_module`")]
     EngineForModule,
 
     #[error("must specify execution mode")]

@@ -247,14 +247,15 @@ impl Metadata {
     pub fn from_contents(policy: &[u8]) -> std::result::Result<Option<Metadata>, MetadataError> {
         for payload in Parser::new(0).parse_all(policy) {
             if let Payload::CustomSection(reader) = payload.map_err(MetadataError::WasmPayload)?
-                && reader.name() == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
-                    return Ok(Some(serde_json::from_slice(reader.data()).map_err(
-                        |e| MetadataError::Deserialize {
-                            section: reader.name().to_string(),
-                            error: e,
-                        },
-                    )?));
-                }
+                && reader.name() == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA
+            {
+                return Ok(Some(serde_json::from_slice(reader.data()).map_err(
+                    |e| MetadataError::Deserialize {
+                        section: reader.name().to_string(),
+                        error: e,
+                    },
+                )?));
+            }
         }
         Ok(None)
     }
@@ -502,8 +503,8 @@ mod tests {
     }
 
     #[test]
-    fn validate_resource_asterisk_can_coexist_with_resources_that_have_subresources(
-    ) -> Result<(), ()> {
+    fn validate_resource_asterisk_can_coexist_with_resources_that_have_subresources()
+    -> Result<(), ()> {
         let pod_rule = Rule {
             api_groups: vec![String::from("a")],
             api_versions: vec![String::from("a")],
@@ -534,8 +535,8 @@ mod tests {
     }
 
     #[test]
-    fn validate_resource_asterisk_cannot_mix_with_resources_that_do_not_have_subresources(
-    ) -> Result<(), ()> {
+    fn validate_resource_asterisk_cannot_mix_with_resources_that_do_not_have_subresources()
+    -> Result<(), ()> {
         let pod_rule = Rule {
             api_groups: vec![String::from("a")],
             api_versions: vec![String::from("a")],
@@ -561,8 +562,8 @@ mod tests {
     }
 
     #[test]
-    fn validate_resource_foo_slash_asterisk_subresource_cannot_mix_with_foo_slash_bar(
-    ) -> Result<(), ()> {
+    fn validate_resource_foo_slash_asterisk_subresource_cannot_mix_with_foo_slash_bar()
+    -> Result<(), ()> {
         let pod_rule = Rule {
             api_groups: vec![String::from("a")],
             api_versions: vec![String::from("a")],

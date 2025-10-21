@@ -139,7 +139,7 @@ fn make_request_via_callback_channel(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use anyhow::{anyhow, Result};
+    use anyhow::{Result, anyhow};
     use assert_json_diff::assert_json_eq;
     use rstest::rstest;
     use std::collections::HashMap;

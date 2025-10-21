@@ -3,8 +3,8 @@ use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerification
 use kubewarden_policy_sdk::host_capabilities::kubernetes::CanIRequest;
 use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use kubewarden_policy_sdk::host_capabilities::{
-    verification::{KeylessInfo, KeylessPrefixInfo},
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
+    verification::{KeylessInfo, KeylessPrefixInfo},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

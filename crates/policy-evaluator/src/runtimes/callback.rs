@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use kubewarden_policy_sdk::host_capabilities::{
+    SigstoreVerificationInputV1, SigstoreVerificationInputV2,
     crypto_v1::CertificateVerificationRequest,
     kubernetes::{
         CanIRequest, GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
     },
-    SigstoreVerificationInputV1, SigstoreVerificationInputV2,
 };
 use tokio::sync::{mpsc, oneshot, oneshot::Receiver};
 use tracing::{debug, error, warn};

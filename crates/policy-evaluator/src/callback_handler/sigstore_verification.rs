@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use cached::proc_macro::cached;
 use itertools::Itertools;
 use kubewarden_policy_sdk::host_capabilities::verification::{
@@ -10,8 +10,9 @@ use policy_fetcher::{
     sigstore::{self, trust::sigstore::SigstoreTrustRoot},
     sources::Sources,
     verify::{
+        Verifier,
         config::{LatestVerificationConfig, Signature, Subject},
-        fetch_sigstore_remote_data, Verifier,
+        fetch_sigstore_remote_data,
     },
 };
 use sha2::{Digest, Sha256};
@@ -62,8 +63,12 @@ impl Client {
                 cosign_client_builder.build()?
             }
             None => {
-                warn!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
-                warn!("Sigstore Verifier created without Rekor data: transparency log data won't be used");
+                warn!(
+                    "Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified"
+                );
+                warn!(
+                    "Sigstore Verifier created without Rekor data: transparency log data won't be used"
+                );
                 warn!("Sigstore capabilities are going to be limited");
 
                 cosign_client_builder.build()?

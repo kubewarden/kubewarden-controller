@@ -5,8 +5,8 @@ mod k8s_mock;
 use anyhow::Result;
 use core::panic;
 use hyper::{Request, Response};
-use kube::client::Body;
 use kube::Client;
+use kube::client::Body;
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
 use policy_evaluator::admission_response::PatchType;
 use policy_fetcher::oci_client::manifest::OciImageManifest;
@@ -32,7 +32,7 @@ use policy_evaluator::{
 };
 
 use crate::common::{
-    build_policy_evaluator, fetch_policy, load_request_data, CONTEXT_AWARE_POLICY_FILE,
+    CONTEXT_AWARE_POLICY_FILE, build_policy_evaluator, fetch_policy, load_request_data,
 };
 use crate::k8s_mock::{rego_scenario, wapc_and_wasi_scenario};
 
@@ -469,19 +469,23 @@ async fn test_oci_manifest_and_config_capability(
         .expect("cannot get response");
     let response: serde_json::Value = serde_json::from_slice(&response_raw.payload).unwrap();
     if let Some(expected_config_json) = expected_config {
-        assert!(response
-            .get("config")
-            .unwrap()
-            .get("config")
-            .unwrap()
-            .eq(&expected_config_json));
+        assert!(
+            response
+                .get("config")
+                .unwrap()
+                .get("config")
+                .unwrap()
+                .eq(&expected_config_json)
+        );
     } else {
-        assert!(response
-            .get("config")
-            .unwrap()
-            .as_object()
-            .unwrap()
-            .is_empty());
+        assert!(
+            response
+                .get("config")
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .is_empty()
+        );
     }
     let manifest: OciImageManifest =
         serde_json::from_value(response.get("manifest").unwrap().clone())

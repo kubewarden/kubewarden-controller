@@ -11,8 +11,8 @@ use crate::{
     admission_response::AdmissionResponse,
     policy_evaluator::{PolicySettings, ValidateRequest},
     runtimes::wapc::{
-        errors::{Result, WapcRuntimeError},
         WapcStack,
+        errors::{Result, WapcRuntimeError},
     },
 };
 
@@ -251,9 +251,10 @@ mod tests {
         // Ensure we got back an error from waPC, the error must
         // contain the WAPC_EPOCH_INTERRUPTION_ERR_MSG string
         let err = res.unwrap_err();
-        assert!(err
-            .to_string()
-            .as_str()
-            .contains(WAPC_EPOCH_INTERRUPTION_ERR_MSG));
+        assert!(
+            err.to_string()
+                .as_str()
+                .contains(WAPC_EPOCH_INTERRUPTION_ERR_MSG)
+        );
     }
 }

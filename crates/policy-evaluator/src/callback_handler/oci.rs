@@ -5,8 +5,8 @@ use cached::proc_macro::cached;
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
 use policy_fetcher::{
     oci_client::{
-        manifest::{OciImageManifest, OciManifest},
         Reference,
+        manifest::{OciImageManifest, OciManifest},
     },
     registry::Registry,
     sources::Sources,
