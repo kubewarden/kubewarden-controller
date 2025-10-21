@@ -190,8 +190,8 @@ impl PolicyGroupEvaluator {
         let evaluation_results = policies_evaluation_results.lock().unwrap();
 
         for policy_id in self.policy_members.keys() {
-            if let Some(result) = evaluation_results.get(policy_id) {
-                if !result.allowed {
+            if let Some(result) = evaluation_results.get(policy_id)
+                && !result.allowed {
                     let cause = admission_response::StatusCause {
                         field: Some(format!("spec.policies.{}", policy_id)),
                         message: result.message.clone(),
@@ -199,7 +199,6 @@ impl PolicyGroupEvaluator {
                     };
                     status_causes.push(cause);
                 }
-            }
         }
         debug!(
             ?self.policy_id,

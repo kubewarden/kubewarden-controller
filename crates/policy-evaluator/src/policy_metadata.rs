@@ -246,8 +246,8 @@ impl Metadata {
 
     pub fn from_contents(policy: &[u8]) -> std::result::Result<Option<Metadata>, MetadataError> {
         for payload in Parser::new(0).parse_all(policy) {
-            if let Payload::CustomSection(reader) = payload.map_err(MetadataError::WasmPayload)? {
-                if reader.name() == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
+            if let Payload::CustomSection(reader) = payload.map_err(MetadataError::WasmPayload)?
+                && reader.name() == crate::constants::KUBEWARDEN_CUSTOM_SECTION_METADATA {
                     return Ok(Some(serde_json::from_slice(reader.data()).map_err(
                         |e| MetadataError::Deserialize {
                             section: reader.name().to_string(),
@@ -255,7 +255,6 @@ impl Metadata {
                         },
                     )?));
                 }
-            }
         }
         Ok(None)
     }

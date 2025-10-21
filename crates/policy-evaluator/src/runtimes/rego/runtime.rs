@@ -134,11 +134,10 @@ impl Runtime<'_> {
                 if matches!(
                     err,
                     burrego::errors::BurregoError::ExecutionDeadlineExceeded
-                ) {
-                    if let Err(reset_error) = self.0.evaluator.reset() {
+                )
+                    && let Err(reset_error) = self.0.evaluator.reset() {
                         error!(?reset_error, "cannot reset burrego evaluator, further invocations might fail or behave not properly");
                     }
-                }
                 AdmissionResponse::reject_internal_server_error(uid.to_string(), err.to_string())
             }
         }
