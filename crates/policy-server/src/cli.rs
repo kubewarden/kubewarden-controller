@@ -1,5 +1,5 @@
 use clap::builder::PossibleValue;
-use clap::{crate_authors, crate_description, crate_name, crate_version, Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, crate_authors, crate_description, crate_name, crate_version};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use policy_evaluator::burrego;

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use lazy_static::lazy_static;
 use opentelemetry_otlp::tonic_types::transport::{Certificate, ClientTlsConfig, Identity};
@@ -6,8 +6,8 @@ use policy_evaluator::{
     admission_response_handler::policy_mode::PolicyMode,
     policy_evaluator::PolicySettings,
     policy_fetcher::{
-        sources::{read_sources_file, Sources},
-        verify::config::{read_verification_file, LatestVerificationConfig, VerificationConfigV1},
+        sources::{Sources, read_sources_file},
+        verify::config::{LatestVerificationConfig, VerificationConfigV1, read_verification_file},
     },
     policy_metadata::ContextAwareResource,
 };
@@ -281,7 +281,9 @@ fn remote_server_options(matches: &clap::ArgMatches) -> Result<Option<Sources>> 
 
     if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
         // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility
-        env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
+        unsafe {
+            env::set_var(DOCKER_CONFIG_ENV_VAR, docker_config_json_path);
+        }
     }
 
     Ok(sources)

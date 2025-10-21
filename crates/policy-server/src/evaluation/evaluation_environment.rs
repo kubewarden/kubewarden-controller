@@ -15,7 +15,7 @@ use policy_evaluator::{
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
     policy_evaluator::{PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
-    policy_group_evaluator::{evaluator::PolicyGroupEvaluator, PolicyGroupMemberSettings},
+    policy_group_evaluator::{PolicyGroupMemberSettings, evaluator::PolicyGroupEvaluator},
     policy_metadata::ContextAwareResource,
     wasmtime,
 };
@@ -1005,15 +1005,21 @@ mod tests {
             ));
         } else {
             assert!(evaluation_environment.get_policy_mode(&policy_id).is_ok());
-            assert!(evaluation_environment
-                .get_policy_allowed_to_mutate(&policy_id)
-                .is_ok());
-            assert!(evaluation_environment
-                .get_policy_settings(&policy_id)
-                .is_ok());
-            assert!(evaluation_environment
-                .validate(&policy_id, &validate_request)
-                .is_ok());
+            assert!(
+                evaluation_environment
+                    .get_policy_allowed_to_mutate(&policy_id)
+                    .is_ok()
+            );
+            assert!(
+                evaluation_environment
+                    .get_policy_settings(&policy_id)
+                    .is_ok()
+            );
+            assert!(
+                evaluation_environment
+                    .validate(&policy_id, &validate_request)
+                    .is_ok()
+            );
         }
     }
 
@@ -1050,12 +1056,16 @@ mod tests {
             ValidateRequest::AdmissionRequest(Box::new(build_admission_review_request().request));
 
         assert!(evaluation_environment.get_policy_mode(&policy_id).is_ok());
-        assert!(evaluation_environment
-            .get_policy_allowed_to_mutate(&policy_id)
-            .is_ok());
-        assert!(evaluation_environment
-            .get_policy_settings(&policy_id)
-            .is_ok());
+        assert!(
+            evaluation_environment
+                .get_policy_allowed_to_mutate(&policy_id)
+                .is_ok()
+        );
+        assert!(
+            evaluation_environment
+                .get_policy_settings(&policy_id)
+                .is_ok()
+        );
 
         let response = evaluation_environment
             .validate(&policy_id, &validate_request)

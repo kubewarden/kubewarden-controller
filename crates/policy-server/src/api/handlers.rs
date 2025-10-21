@@ -1,8 +1,8 @@
 use axum::{
-    extract::{self, FromRequest, Query},
-    http::{header, StatusCode},
-    response::IntoResponse,
     Json,
+    extract::{self, FromRequest, Query},
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use policy_evaluator::{
     admission_request::AdmissionRequest, admission_response::AdmissionResponse,
@@ -12,7 +12,7 @@ use policy_evaluator::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::task;
-use tracing::{debug, error, Span};
+use tracing::{Span, debug, error};
 
 use crate::profiling::ReportGenerationError;
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
         admission_review::{AdmissionReviewRequest, AdmissionReviewResponse},
         api_error::ApiError,
         raw_review::{RawReviewRequest, RawReviewResponse},
-        service::{evaluate, RequestOrigin},
+        service::{RequestOrigin, evaluate},
         state::ApiServerState,
     },
     profiling,
@@ -224,8 +224,8 @@ pub(crate) async fn pprof_get_cpu(
 
 // Generate a pprof heap profile using google's pprof format
 // The report is generated and sent to the user as binary data
-pub(crate) async fn pprof_get_heap(
-) -> Result<impl axum::response::IntoResponse, (StatusCode, ApiError)> {
+pub(crate) async fn pprof_get_heap()
+-> Result<impl axum::response::IntoResponse, (StatusCode, ApiError)> {
     let mut prof_ctl = jemalloc_pprof::PROF_CTL
         .as_ref()
         .ok_or_else(|| handle_pprof_error(ReportGenerationError::CannotGetJemallocControlHandle))?

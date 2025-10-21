@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use opentelemetry::{metrics::Histogram, KeyValue};
+use opentelemetry::{KeyValue, metrics::Histogram};
 use std::convert::TryFrom;
 use std::time::Duration;
 

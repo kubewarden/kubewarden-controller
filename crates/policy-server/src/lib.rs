@@ -14,11 +14,11 @@ pub mod metrics;
 pub mod profiling;
 pub mod tracing;
 
-use ::tracing::{debug, info, trace, warn, Level};
-use anyhow::{anyhow, Result};
+use ::tracing::{Level, debug, info, trace, warn};
+use anyhow::{Result, anyhow};
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use axum_server::tls_rustls::RustlsConfig;
 use certs::create_tls_config_and_watch_certificate_changes;
@@ -33,7 +33,7 @@ use profiling::activate_memory_profiling;
 use rayon::prelude::*;
 use std::{fs, net::SocketAddr, sync::Arc};
 use tokio::{
-    sync::{oneshot, Notify, Semaphore},
+    sync::{Notify, Semaphore, oneshot},
     time,
 };
 use tower_http::trace::{self, TraceLayer};
@@ -53,7 +53,7 @@ use tikv_jemallocator::Jemalloc;
 static GLOBAL: Jemalloc = Jemalloc;
 
 #[allow(non_upper_case_globals)]
-#[export_name = "malloc_conf"]
+#[unsafe(export_name = "malloc_conf")]
 /// Prioritize memory usage, then enable features request by pprof but do not activate them by
 /// default. When pprof is activate there's a CPU overhead.
 pub static malloc_conf: &[u8] = b"background_thread:true,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000,abort_conf:true,prof:true,prof_active:false,lg_prof_sample:19\0";
@@ -80,7 +80,9 @@ impl PolicyServer {
             Err(e) => {
                 // Do not exit, only policies making use of sigstore's keyless/certificate based signatures will fail
                 // There are good chances everything is going to work fine in the majority of cases
-                warn!("Cannot create Sigstore trust root, verification relying on Rekor and Fulcio will fail");
+                warn!(
+                    "Cannot create Sigstore trust root, verification relying on Rekor and Fulcio will fail"
+                );
                 // Only log the error if the log level is set to trace. This is to avoid
                 // spamming the logs with errors that are not relevant to most users
                 trace!(?e);
@@ -112,12 +114,12 @@ impl PolicyServer {
                     // We cannot rely on `tracing` yet, because the tracing system has not
                     // been initialized yet
                     eprintln!(
-                    "Cannot connect to Kubernetes, context aware policies will not work properly"
-                );
+                        "Cannot connect to Kubernetes, context aware policies will not work properly"
+                    );
                 } else {
                     return Err(anyhow!(
-                    "Cannot connect to Kubernetes, context aware policies would not work properly"
-                ));
+                        "Cannot connect to Kubernetes, context aware policies would not work properly"
+                    ));
                 }
             }
         };

@@ -7,7 +7,7 @@ authors = [
   "Rafael Fernández López <rfernandezlopez@suse.com>",
   "Víctor Cuadrado Juan <vcuadradojuan@suse.com>",
 ]
-edition = "2021"
+edition = "2024"
 name = "policy-server"
 version = "1.29.2"
 

@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use opentelemetry::{metrics::Counter, KeyValue};
+use opentelemetry::{KeyValue, metrics::Counter};
 
 use crate::metrics::PolicyEvaluationMetric;
 
