@@ -56,7 +56,7 @@ wapc = "2.1"
 wasi-common = { workspace = true }
 wasmparser = "0.240"
 wasmtime = { workspace = true }
-wasmtime-provider = { version = "2.12.0", features = ["cache"] }
+wasmtime-provider = { version = "2.13.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 webpki-roots = "1"
 
@@ -66,9 +66,9 @@ kubewarden-policy-sdk = { version = "0.15.0" }
 lazy_static           = "1.5"
 serde                 = { version = "1.0", features = ["derive"] }
 serde_json            = "1.0"
-wasi-common           = "37.0"
-wasmtime              = "37.0"
-wasmtime-wasi         = "37.0"
+wasi-common           = "38.0"
+wasmtime              = "38.0"
+wasmtime-wasi         = "38.0"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
