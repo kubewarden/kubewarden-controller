@@ -8,7 +8,7 @@ authors = [
 ]
 edition = "2024"
 name = "policy-evaluator"
-version = "0.30.3"
+version = "0.30.4"
 
 [workspace]
 members = ["crates/burrego", "crates/context-aware-test-policy"]
