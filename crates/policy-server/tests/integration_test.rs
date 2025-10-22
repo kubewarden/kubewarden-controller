@@ -12,7 +12,7 @@ use common::{app, setup};
 
 use axum::{
     body::Body,
-    http::{self, header, Request},
+    http::{self, Request, header},
 };
 use backon::{ExponentialBuilder, Retryable};
 use http_body_util::BodyExt;
@@ -681,7 +681,7 @@ mod certificate_reload_helpers {
 
     use anyhow::anyhow;
     use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
-    use rcgen::{generate_simple_self_signed, CertifiedKey};
+    use rcgen::{CertifiedKey, generate_simple_self_signed};
     use reqwest::StatusCode;
 
     pub struct TlsData {
@@ -902,20 +902,21 @@ async fn test_detect_certificate_rotation() {
 async fn test_otel() {
     use policy_server::{metrics::setup_metrics, tracing::setup_tracing};
     use std::{
-        fs::{set_permissions, Permissions},
+        fs::{Permissions, set_permissions},
         os::unix::fs::PermissionsExt,
     };
     use tempfile::NamedTempFile;
     use testcontainers::{
+        GenericImage, ImageExt,
         core::{Mount, WaitFor},
         runners::AsyncRunner,
-        GenericImage, ImageExt,
     };
 
     setup();
 
-    let otelc_config_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/otel-collector-config.yaml");
+    let otelc_config_path = unsafe {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/otel-collector-config.yaml")
+    };
 
     let (server_ca, server_cert, server_key) = generate_tls_certs();
     let (client_ca, client_cert, client_key) = generate_tls_certs();
@@ -997,19 +998,21 @@ async fn test_otel() {
         .await
         .unwrap();
 
-    std::env::set_var("OTEL_EXPORTER_OTLP_ENDPOINT", "https://localhost:1337");
-    std::env::set_var(
-        "OTEL_EXPORTER_OTLP_CERTIFICATE",
-        server_ca_file.path().to_str().unwrap(),
-    );
-    std::env::set_var(
-        "OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
-        client_cert_file.path().to_str().unwrap(),
-    );
-    std::env::set_var(
-        "OTEL_EXPORTER_OTLP_CLIENT_KEY",
-        client_key_file.path().to_str().unwrap(),
-    );
+    unsafe {
+        std::env::set_var("OTEL_EXPORTER_OTLP_ENDPOINT", "https://localhost:1337");
+        std::env::set_var(
+            "OTEL_EXPORTER_OTLP_CERTIFICATE",
+            server_ca_file.path().to_str().unwrap(),
+        );
+        std::env::set_var(
+            "OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+            client_cert_file.path().to_str().unwrap(),
+        );
+        std::env::set_var(
+            "OTEL_EXPORTER_OTLP_CLIENT_KEY",
+            client_key_file.path().to_str().unwrap(),
+        );
+    }
 
     let mut config = default_test_config();
     config.metrics_enabled = true;

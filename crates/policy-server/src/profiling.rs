@@ -1,7 +1,7 @@
 use futures::{
+    Future, FutureExt,
     future::BoxFuture,
     task::{Context, Poll},
-    Future, FutureExt,
 };
 use lazy_static::lazy_static;
 use pprof::protos::Message;

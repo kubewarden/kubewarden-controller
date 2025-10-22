@@ -4,13 +4,13 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use policy_evaluator::{
     policy_fetcher,
     policy_fetcher::{
         sigstore,
         sources::Sources,
-        verify::{config::LatestVerificationConfig, Verifier},
+        verify::{Verifier, config::LatestVerificationConfig},
     },
     policy_metadata::Metadata,
 };
@@ -316,10 +316,12 @@ mod tests {
         // be downloaded
         assert_eq!(fetched_policies.len(), 1);
 
-        assert!(fetched_policies
-            .get("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")
-            .unwrap()
-            .is_ok());
+        assert!(
+            fetched_policies
+                .get("registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9")
+                .unwrap()
+                .is_ok()
+        );
     }
 
     #[tokio::test]

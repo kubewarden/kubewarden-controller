@@ -3,7 +3,7 @@ use std::{fmt, sync::Arc};
 use policy_evaluator::{
     admission_response::AdmissionResponse,
     admission_response_handler::{
-        errors::EvaluationError, policy_id::PolicyID, AdmissionResponseHandler,
+        AdmissionResponseHandler, errors::EvaluationError, policy_id::PolicyID,
     },
     policy_evaluator::ValidateRequest,
 };
@@ -35,37 +35,35 @@ pub(crate) fn evaluate(
     let policy_id: PolicyID = policy_id.parse()?;
 
     // Early check for requests from special namespaces
-    if let ValidateRequest::AdmissionRequest(adm_req) = validate_request {
-        if let Some(ref req_namespace) = adm_req.namespace {
-            if evaluation_environment
-                .should_always_accept_requests_made_inside_of_namespace(req_namespace)
-            {
-                // Record metrics for requests from special namespaces
-                let policy_evaluation_metric = metrics::PolicyEvaluation {
-                    policy_name: policy_id.to_string(),
-                    policy_mode: evaluation_environment.get_policy_mode(&policy_id)?.into(),
-                    resource_namespace: adm_req.clone().namespace,
-                    resource_kind: adm_req.clone().request_kind.unwrap_or_default().kind,
-                    resource_request_operation: adm_req.clone().operation,
-                    accepted: true,
-                    mutated: false,
-                    request_origin: request_origin.to_string(),
-                    error_code: None,
-                };
-                metrics::record_policy_latency(start_time.elapsed(), &policy_evaluation_metric);
-                metrics::add_policy_evaluation(&policy_evaluation_metric);
+    if let ValidateRequest::AdmissionRequest(adm_req) = validate_request
+        && let Some(ref req_namespace) = adm_req.namespace
+        && evaluation_environment
+            .should_always_accept_requests_made_inside_of_namespace(req_namespace)
+    {
+        // Record metrics for requests from special namespaces
+        let policy_evaluation_metric = metrics::PolicyEvaluation {
+            policy_name: policy_id.to_string(),
+            policy_mode: evaluation_environment.get_policy_mode(&policy_id)?.into(),
+            resource_namespace: adm_req.clone().namespace,
+            resource_kind: adm_req.clone().request_kind.unwrap_or_default().kind,
+            resource_request_operation: adm_req.clone().operation,
+            accepted: true,
+            mutated: false,
+            request_origin: request_origin.to_string(),
+            error_code: None,
+        };
+        metrics::record_policy_latency(start_time.elapsed(), &policy_evaluation_metric);
+        metrics::add_policy_evaluation(&policy_evaluation_metric);
 
-                return Ok(AdmissionResponse {
-                    uid: validate_request.uid().to_owned(),
-                    allowed: true,
-                    status: None,
-                    patch: None,
-                    audit_annotations: None,
-                    warnings: None,
-                    patch_type: None,
-                });
-            }
-        }
+        return Ok(AdmissionResponse {
+            uid: validate_request.uid().to_owned(),
+            allowed: true,
+            status: None,
+            patch: None,
+            audit_annotations: None,
+            warnings: None,
+            patch_type: None,
+        });
     }
 
     let vanilla_validation_response = match evaluation_environment

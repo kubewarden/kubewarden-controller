@@ -1,5 +1,5 @@
 use anyhow::Result;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::{KeyValue, global};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig, WithTonicConfig};
 
 mod policy_evaluations_total;

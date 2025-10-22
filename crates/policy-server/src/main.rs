@@ -4,12 +4,12 @@ use std::fs;
 use std::io::prelude::*;
 
 use ::tracing::info;
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use clap::ArgMatches;
+use policy_server::PolicyServer;
 use policy_server::metrics::setup_metrics;
 use policy_server::tracing::setup_tracing;
-use policy_server::PolicyServer;
 
 #[tokio::main]
 async fn main() -> Result<()> {

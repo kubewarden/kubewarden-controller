@@ -8,8 +8,8 @@ use axum::Router;
 use policy_evaluator::admission_response_handler::policy_mode::PolicyMode;
 use policy_evaluator::policy_evaluator::PolicySettings;
 use policy_server::{
-    config::{Config, PolicyGroupMember, PolicyOrPolicyGroup},
     PolicyServer,
+    config::{Config, PolicyGroupMember, PolicyOrPolicyGroup},
 };
 use serde_json::json;
 use tempfile::tempdir;

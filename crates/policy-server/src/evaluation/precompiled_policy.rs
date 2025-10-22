@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use lazy_static::lazy_static;
 use policy_evaluator::{
-    policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata, wasmtime, ProtocolVersion,
+    ProtocolVersion, policy_evaluator::PolicyExecutionMode, policy_metadata::Metadata, wasmtime,
 };
 use semver::{BuildMetadata, Prerelease, Version};
 use sha2::{Digest, Sha256};
@@ -102,9 +102,18 @@ fn has_minimum_kubewarden_version(metadata: &Metadata) -> Result<()> {
 fn has_valid_protocol_version(metadata: &Metadata) -> Result<()> {
     if metadata.execution_mode == PolicyExecutionMode::KubewardenWapc {
         match &metadata.protocol_version {
-         Some(ProtocolVersion::V1) => return Ok(()) ,
-         Some(other) => return Err(anyhow!("Policy uses protocol version {:?} but only V1 is supported", other)),
-         None => return Err(anyhow!("Policy is missing protocol version, which is required for KubewardenWapc execution mode")),
+            Some(ProtocolVersion::V1) => return Ok(()),
+            Some(other) => {
+                return Err(anyhow!(
+                    "Policy uses protocol version {:?} but only V1 is supported",
+                    other
+                ));
+            }
+            None => {
+                return Err(anyhow!(
+                    "Policy is missing protocol version, which is required for KubewardenWapc execution mode"
+                ));
+            }
         };
     }
     Ok(())

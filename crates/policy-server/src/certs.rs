@@ -1,6 +1,6 @@
 use ::tracing::{info, warn};
-use anyhow::{anyhow, Result};
-use rustls::{server::WebPkiClientVerifier, RootCertStore, ServerConfig};
+use anyhow::{Result, anyhow};
+use rustls::{RootCertStore, ServerConfig, server::WebPkiClientVerifier};
 use rustls_pemfile::Item;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 use std::{io::BufReader, path::Path, sync::Arc};
