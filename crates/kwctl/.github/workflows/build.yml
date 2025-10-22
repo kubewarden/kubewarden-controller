@@ -58,9 +58,11 @@ jobs:
 
       - name: Sign kwctl
         run: |
-          cosign sign-blob --yes kwctl-linux-${{ matrix.targetarch }} --output-certificate kwctl-linux-${{ matrix.targetarch}}.pem --output-signature kwctl-linux-${{ matrix.targetarch }}.sig
+          cosign sign-blob --yes \
+            --bundle kwctl-linux-${{ matrix.targetarch }}.bundle.sigstore \
+            kwctl-linux-${{ matrix.targetarch }}
 
-      - run: zip -j9 kwctl-linux-${{ matrix.targetarch }}.zip kwctl-linux-${{ matrix.targetarch }} kwctl-linux-${{ matrix.targetarch }}.sig kwctl-linux-${{ matrix.targetarch }}.pem
+      - run: zip -j9 kwctl-linux-${{ matrix.targetarch }}.zip kwctl-linux-${{ matrix.targetarch }} kwctl-linux-${{ matrix.targetarch }}.bundle.sigstore
 
       - name: Upload binary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -84,8 +86,7 @@ jobs:
       - name: Sign SBOM file
         run: |
           cosign sign-blob --yes \
-            --output-certificate kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert \
-            --output-signature kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig \
+            --bundle kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
@@ -94,8 +95,7 @@ jobs:
           name: kwctl-linux-${{ matrix.targetarch }}-sbom
           path: |
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
-            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.cert
-            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.sig
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore
 
       - name: Upload kwctl air gap scripts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -138,9 +138,12 @@ jobs:
           subject-path: kwctl-darwin-${{ matrix.targetarch }}
 
       - name: Sign kwctl
-        run: cosign sign-blob --yes kwctl-darwin-${{ matrix.targetarch }} --output-certificate kwctl-darwin-${{ matrix.targetarch }}.pem --output-signature kwctl-darwin-${{ matrix.targetarch }}.sig
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-darwin-${{ matrix.targetarch }}.bundle.sigstore \
+            kwctl-darwin-${{ matrix.targetarch }}
 
-      - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.sig kwctl-darwin-${{ matrix.targetarch }}.pem
+      - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.bundle.sigstore
 
       - name: Upload binary
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -166,8 +169,7 @@ jobs:
       - name: Sign SBOM file
         run: |
           cosign sign-blob --yes \
-            --output-certificate kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert \
-            --output-signature kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig \
+            --bundle kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
             kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
@@ -176,8 +178,7 @@ jobs:
           name: kwctl-darwin-${{ matrix.targetarch }}-sbom
           path: |
             kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
-            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.cert
-            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.sig
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore
 
   build-windows-x86_64:
     name: Build windows (x86_64) binary
@@ -221,10 +222,14 @@ jobs:
           subject-path: kwctl-windows-${{ matrix.targetarch }}.exe
 
       - name: Sign kwctl
-        run: cosign sign-blob --yes kwctl-windows-x86_64.exe --output-certificate kwctl-windows-x86_64.pem --output-signature kwctl-windows-x86_64.sig
+        shell: bash
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-windows-x86_64.bundle.sigstore \
+            kwctl-windows-x86_64.exe
 
       - run: |
-          "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.sig kwctl-windows-x86_64.pem
+          "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.bundle.sigstore
         shell: bash
 
       - name: Upload binary
@@ -252,9 +257,8 @@ jobs:
         shell: bash
         run: |
           cosign sign-blob --yes \
-          --output-certificate kwctl-windows-x86_64-sbom.spdx.cert \
-          --output-signature kwctl-windows-x86_64-sbom.spdx.sig \
-          kwctl-windows-x86_64-sbom.spdx
+            --bundle kwctl-windows-x86_64-sbom.spdx.bundle.sigstore \
+            kwctl-windows-x86_64-sbom.spdx
 
       - name: Upload kwctl SBOM files
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -262,5 +266,4 @@ jobs:
           name: kwctl-windows-x86_64-sbom
           path: |
             kwctl-windows-x86_64-sbom.spdx
-            kwctl-windows-x86_64-sbom.spdx.cert
-            kwctl-windows-x86_64-sbom.spdx.sig
+            kwctl-windows-x86_64-sbom.spdx.bundle.sigstore
