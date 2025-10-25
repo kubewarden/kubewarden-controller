@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install kwctl
-        uses: kubewarden/github-actions/kwctl-installer@73e92c9cf9059299619e79372b78eb09a5934fa0 # v4.5.11
+        uses: kubewarden/github-actions/kwctl-installer@605a03917fbc6b4b523145a1a78cf72a680f5f36 # v4.5.12
       - name: "Build testing policy"
         run: make annotated-policy.wasm
       - name: "Run cargo test"
@@ -80,7 +80,7 @@ jobs:
           flags: unit-tests
           verbose: true
       - name: Install kwctl
-        uses: kubewarden/github-actions/kwctl-installer@73e92c9cf9059299619e79372b78eb09a5934fa0 # v4.5.11
+        uses: kubewarden/github-actions/kwctl-installer@605a03917fbc6b4b523145a1a78cf72a680f5f36 # v4.5.12
       - name: "Build testing policy"
         run: make annotated-policy.wasm
       - name: Generate integration-tests coverage
