@@ -56,7 +56,11 @@ jobs:
 
       - name: Sign container image
         run: |
-          cosign sign --yes \
+          # We need to disable the new bundle format enabled by default since
+          # cosign v3.x.x because some verification tools (e.g. slsactl and old
+          # cosign) are not able to properly verify the signatures using this
+          # new format
+          cosign sign --yes --new-bundle-format=false --use-signing-config=false \
             ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
 
           cosign verify \
@@ -149,7 +153,11 @@ jobs:
       - name: Sign provenance and SBOM files
         run: |
           set -e
-          cosign sign-blob --yes \
+          # We need to disable the new bundle format enabled by default since
+          # cosign v3.x.x because some verification tools (e.g. slsactl and old
+          # cosign) are not able to properly verify the signatures using this
+          # new format
+          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
             --bundle audit-scanner-attestation-${{ matrix.arch }}-provenance.intoto.jsonl.bundle.sigstore \
             audit-scanner-attestation-${{ matrix.arch }}-provenance.intoto.jsonl
           cosign verify-blob \
@@ -158,7 +166,7 @@ jobs:
             --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/release.yml@${{ github.ref }}" \
             audit-scanner-attestation-${{ matrix.arch }}-provenance.intoto.jsonl
 
-          cosign sign-blob --yes \
+          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
             --bundle audit-scanner-attestation-${{ matrix.arch }}-sbom.json.bundle.sigstore \
             audit-scanner-attestation-${{ matrix.arch }}-sbom.json
           cosign verify-blob \
