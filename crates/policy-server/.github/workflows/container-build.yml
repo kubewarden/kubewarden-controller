@@ -61,7 +61,12 @@ jobs:
 
       - name: Sign container image
         run: |
-          cosign sign --yes ghcr.io/${{github.repository_owner}}/policy-server@${{ steps.build-image.outputs.digest }}
+          # We need to disable the new bundle format enabled by default since
+          # cosign v3.x.x because some verification tools (e.g. slsactl and old
+          # cosign) are not able to properly verify the signatures using this
+          # new format
+          cosign sign --yes --new-bundle-format=false --use-signing-config=false \
+            ghcr.io/${{github.repository_owner}}/policy-server@${{ steps.build-image.outputs.digest }}
             
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
