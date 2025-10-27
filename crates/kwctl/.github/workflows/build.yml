@@ -58,11 +58,7 @@ jobs:
 
       - name: Sign kwctl
         run: |
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle kwctl-linux-${{ matrix.targetarch }}.bundle.sigstore \
             kwctl-linux-${{ matrix.targetarch }}
 
@@ -89,11 +85,7 @@ jobs:
 
       - name: Sign SBOM file
         run: |
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
 
@@ -147,11 +139,7 @@ jobs:
 
       - name: Sign kwctl
         run: |
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle kwctl-darwin-${{ matrix.targetarch }}.bundle.sigstore \
             kwctl-darwin-${{ matrix.targetarch }}
 
@@ -180,11 +168,7 @@ jobs:
 
       - name: Sign SBOM file
         run: |
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
             kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
 
@@ -240,11 +224,7 @@ jobs:
       - name: Sign kwctl
         shell: bash
         run: |
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle kwctl-windows-x86_64.bundle.sigstore \
             kwctl-windows-x86_64.exe
 
@@ -273,14 +253,10 @@ jobs:
           -vv \
           dir:. # use dir default catalogers, which includes Cargo.toml
 
-      - name: Sign SBOM file
+      - name: Sign SBOM
         shell: bash
         run: |
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle kwctl-windows-x86_64-sbom.spdx.bundle.sigstore \
             kwctl-windows-x86_64-sbom.spdx
 
