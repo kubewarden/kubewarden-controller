@@ -4,7 +4,7 @@ go 1.25.1
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/kubewarden/kubewarden-controller v1.30.0-rc1
+	github.com/kubewarden/kubewarden-controller v1.30.0-rc2
 	github.com/openreports/reports-api v0.2.1
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
