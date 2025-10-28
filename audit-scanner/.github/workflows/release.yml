@@ -54,19 +54,27 @@ jobs:
           tags: |
             ghcr.io/${{github.repository_owner}}/audit-scanner:${{ env.TAG_NAME }}
 
-      - name: Sign container image
+      # We need to disable the new bundle format enabled by default since
+      # cosign v3.x.x because some verification tools (e.g. slsactl and old
+      # cosign) are not able to properly verify the signatures using this
+      # new format
+      - name: Sign container image with cosign v2 signature format
         run: |
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
           cosign sign --yes --new-bundle-format=false --use-signing-config=false \
             ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
 
+      - name: Sign container image with cosign v3 signature format
+        run: |
+          cosign sign --yes --new-bundle-format=true --use-signing-config=true \
+            ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
+
+      - name: Verify container image signature
+        run: |
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
             --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/release.yml@${{ github.ref }}" \
             ghcr.io/${{github.repository_owner}}/audit-scanner@${{ steps.build-image.outputs.digest }}
+
       - id: setoutput
         name: Set output parameters
         run: |
@@ -153,22 +161,20 @@ jobs:
       - name: Sign provenance and SBOM files
         run: |
           set -e
-          # We need to disable the new bundle format enabled by default since
-          # cosign v3.x.x because some verification tools (e.g. slsactl and old
-          # cosign) are not able to properly verify the signatures using this
-          # new format
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle audit-scanner-attestation-${{ matrix.arch }}-provenance.intoto.jsonl.bundle.sigstore \
             audit-scanner-attestation-${{ matrix.arch }}-provenance.intoto.jsonl
+
           cosign verify-blob \
             --bundle audit-scanner-attestation-${{ matrix.arch }}-provenance.intoto.jsonl.bundle.sigstore \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
             --certificate-identity="https://github.com/${{github.repository_owner}}/audit-scanner/.github/workflows/release.yml@${{ github.ref }}" \
             audit-scanner-attestation-${{ matrix.arch }}-provenance.intoto.jsonl
 
-          cosign sign-blob --yes --new-bundle-format=false --use-signing-config=false \
+          cosign sign-blob --yes \
             --bundle audit-scanner-attestation-${{ matrix.arch }}-sbom.json.bundle.sigstore \
             audit-scanner-attestation-${{ matrix.arch }}-sbom.json
+
           cosign verify-blob \
             --bundle audit-scanner-attestation-${{ matrix.arch }}-sbom.json.bundle.sigstore \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
