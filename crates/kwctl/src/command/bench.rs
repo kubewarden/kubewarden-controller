@@ -49,9 +49,9 @@ pub(crate) async fn pull_and_bench(
             "Settings validation response"
         );
         return Err(anyhow!(
-            "[{}] - provided settings are not valid: {:?}",
+            "[{}] - provided settings are not valid: {}",
             policy_definition,
-            settings_validation_response.message
+            settings_validation_response.message.unwrap_or_default()
         ));
     }
 
