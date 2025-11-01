@@ -78,7 +78,7 @@ rcgen            = { version = "0.14", features = ["x509-parser"] }
 rstest           = "0.26"
 serial_test      = "3.2"
 tempfile         = "3.19"
-test-context     = "0.4"
+test-context     = "0.5"
 test-log         = "0.2"
 tower-test       = "0.4"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
