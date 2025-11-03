@@ -38,7 +38,7 @@ pub(crate) async fn exec(
             let settings_validation_response = evaluator.validate_settings();
             if !settings_validation_response.valid {
                 return Err(anyhow!(
-                    "Provided settings are not valid: {:?}",
+                    "Provided settings are not valid: {}",
                     settings_validation_response.message.unwrap_or_default()
                 ));
             }

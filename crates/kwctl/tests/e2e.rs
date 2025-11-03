@@ -165,6 +165,27 @@ fn test_run_individual_policy_from_cli(#[case] request: &str, #[case] allowed: b
 }
 
 #[rstest]
+#[case::admission_review_rejected("unprivileged-pod.json", "settings_cel_type_error.json")]
+fn test_run_multiline_error(#[case] request: &str, #[case] settings: &str) {
+    let tempdir = tempdir().unwrap();
+    pull_policies(tempdir.path(), POLICIES);
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--request-path")
+        .arg(test_data(request))
+        .arg("--settings-path")
+        .arg(test_data(settings))
+        .arg("registry://ghcr.io/kubewarden/tests/cel-policy:v1.5.0");
+
+    cmd.assert().failure();
+    cmd.assert().stderr(contains("Error: Provided settings are not valid: The settings are invalid: 1 error occurred:
+\t* validations[0].messageExpression: Invalid value: \"\'Deployment: \' + object.metadata.name + \', namespace: \' + variables.namespaceName + \' - replicas must be no greater than \' + int(variables.maxReplicas)\": ERROR: <input>:1:124: found no matching overload for \'_+_\' applied to \'(string, int)\'
+ | \'Deployment: \' + object.metadata.name + \', namespace: \' + variables.namespaceName + \' - replicas must be no greater than \' + int(variables.maxReplicas)
+ | ...........................................................................................................................^:"));
+}
+
+#[rstest]
 #[case::allowed("unprivileged-pod.json", true)]
 #[case::rejected("privileged-pod.json", false)]
 #[case::admission_review_allowed("unprivileged-pod-admission-review.json", true)]
