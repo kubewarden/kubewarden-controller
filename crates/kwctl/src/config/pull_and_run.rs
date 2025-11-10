@@ -96,7 +96,11 @@ pub(crate) async fn parse_pull_and_run_settings(
 
     let verification_options = build_verification_options(matches)?;
 
-    let sigstore_trust_root = match build_sigstore_trust_root().await {
+    let sigstore_trust_root = match build_sigstore_trust_root(
+        matches.get_one::<PathBuf>("sigstore-trust-config"),
+    )
+    .await
+    {
         Ok(trust_root) => trust_root,
         Err(e) => {
             if verification_options.is_some() {

@@ -52,6 +52,7 @@ reqwest = { version = "0", default-features = false, features = [
   "rustls-tls-native-roots",
 ] }
 rustls = { version = "0.23", default-features = false }
+sigstore_protobuf_specs = "0.5"
 
 [dev-dependencies]
 assert_cmd     = "2.0.14"

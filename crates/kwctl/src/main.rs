@@ -137,7 +137,9 @@ async fn main() -> Result<()> {
                 let sources = remote_server_options(matches)?;
                 let verification_options = build_verification_options(matches)?
                     .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
-                let sigstore_trust_root = build_sigstore_trust_root().await?;
+                let sigstore_trust_root =
+                    build_sigstore_trust_root(matches.get_one::<PathBuf>("sigstore-trust-config"))
+                        .await?;
                 verify::verify(
                     uri,
                     sources.as_ref(),
@@ -407,7 +409,8 @@ async fn pull_command(
     let verification_options = build_verification_options(matches)?;
     let mut verified_manifest_digest: Option<String> = None;
     if verification_options.is_some() {
-        let sigstore_trust_root = build_sigstore_trust_root().await?;
+        let sigstore_trust_root =
+            build_sigstore_trust_root(matches.get_one::<PathBuf>("sigstore-trust-config")).await?;
         // verify policy prior to pulling if keys listed, and keep the
         // verified manifest digest:
         verified_manifest_digest = Some(
@@ -425,7 +428,8 @@ async fn pull_command(
     let policy = pull::pull(uri, sources.as_ref(), destination).await?;
 
     if verification_options.is_some() {
-        let sigstore_trust_root = build_sigstore_trust_root().await?;
+        let sigstore_trust_root =
+            build_sigstore_trust_root(matches.get_one::<PathBuf>("sigstore-trust-config")).await?;
         return verify::verify_local_checksum(
             &policy,
             sources.as_ref(),
