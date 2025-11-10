@@ -1,5 +1,6 @@
+
 [toolchain]
-channel    = "1.90.0"
-components = ["clippy", "rust-analyzer", "rustfmt"]
-profile    = "minimal"
-targets    = ["wasm32-wasip1"]
+  channel = "1.91.0"
+  components = ["clippy", "rust-analyzer", "rustfmt"]
+  profile = "minimal"
+  targets = ["wasm32-wasip1"]
