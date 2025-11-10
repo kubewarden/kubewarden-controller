@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install kwctl
-        uses: kubewarden/github-actions/kwctl-installer@847a8b8af7715a709c56426d3d298a90d7a6dad3 # v4.5.13
+        uses: kubewarden/github-actions/kwctl-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
       - name: "Build testing policy"
         run: make annotated-policy.wasm
       - name: "Run cargo test"
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: kubewarden/github-actions/tarpaulin-install@847a8b8af7715a709c56426d3d298a90d7a6dad3 # v4.5.13
+      - uses: kubewarden/github-actions/tarpaulin-install@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
       - name: Generate unit-tests coverage
         run: make coverage-unit-tests
       - name: Upload unit-tests coverage to Codecov
@@ -80,7 +80,7 @@ jobs:
           flags: unit-tests
           verbose: true
       - name: Install kwctl
-        uses: kubewarden/github-actions/kwctl-installer@847a8b8af7715a709c56426d3d298a90d7a6dad3 # v4.5.13
+        uses: kubewarden/github-actions/kwctl-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
       - name: "Build testing policy"
         run: make annotated-policy.wasm
       - name: Generate integration-tests coverage
