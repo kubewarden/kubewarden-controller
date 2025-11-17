@@ -73,6 +73,43 @@ jobs:
       - name: run e2e tests
         run: make e2e-tests
 
+  e2e-tests-sigstore-trust-config:
+    name: Test sigstore trust config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Prepare sigstore environment for testing
+        uses: ./.github/actions/setup-sigstore-env
+      - name: Run kwctl Sigstore E2E tests
+        run: make e2e-tests-sigstore
+
+  sigstore-coverage:
+    name: sigstore-e2e-coverage
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@81ee1d48d9194cdcab880cbdc7d36e87d39874cb # v2.62.45
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Prepare sigstore environment for testing
+        uses: ./.github/actions/setup-sigstore-env
+
+      - name: Generate sigstore e2e tests coverage
+        run: cargo llvm-cov --test 'sigstore' --features sigstore-testing --lcov --output-path lcov-sigstore.info
+
+      - name: Upload tests coverage to Codecov
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+        with:
+          files: lcov-sigstore.info
+          fail_ci_if_error: true
+          name: e2e-tests-sigstore
+          verbose: true
+          token: ${{ secrets.CODECOV_ORG_TOKEN }}
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest

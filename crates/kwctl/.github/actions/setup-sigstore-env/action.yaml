@@ -1,0 +1,93 @@
+name: "Prepare sigstore environment"
+description: "Prepare sigstore environment for testing"
+branding:
+  icon: box
+  color: green
+runs:
+  using: "composite"
+  steps:
+    - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+    - uses: sigstore/scaffolding/actions/setup@8e9b439dcf7072c0a9e3b1653c6227c258f94202 # v0.7.31
+    - name: Initialize cosign to use local Sigstore instance
+      shell: bash
+      run: |
+        cosign initialize --mirror $TUF_MIRROR --root ./root.json
+    - name: Generate trusted-root
+      shell: bash
+      run: |
+        curl --fail -o "fulcio.pem" "$FULCIO_URL/api/v1/rootCert"
+        curl --fail -o "rekor.pub" "$REKOR_URL/api/v1/log/publicKey"
+        curl --fail -o "tsa.pem" "$TSA_URL/api/v1/timestamp/certchain"
+        kubectl get secret -o json -n tuf-system ctlog-public-key | jq -r ".data.public" | base64 -d > ctfe.pub
+        cosign trusted-root create \
+          --fulcio="url=$FULCIO_URL,certificate-chain=fulcio.pem" \
+          --rekor="url=$REKOR_URL,public-key=rekor.pub,start-time=2025-11-01T00:00:00Z" \
+          --tsa="url=$TSA_URL,certificate-chain=tsa.pem" \
+        	--ctfe="url=$CTLOG_URL,public-key=ctfe.pub,start-time=2025-11-01T00:00:00Z" \
+          --out trusted_root.json
+    - name: Generate signing-config
+      shell: bash
+      run: |
+        cosign signing-config create \
+          --fulcio="url=$FULCIO_URL,api-version=1,start-time=2024-11-01T00:00:00Z,operator=sigstore.dev" \
+          --rekor="url=$REKOR_URL,api-version=1,start-time=2024-11-01T00:00:00Z,operator=sigstore.dev" \
+          --rekor-config="ANY" \
+          --oidc-provider="url=$ISSUER_URL/auth,api-version=1,start-time=2024-11-01T00:00:00Z,operator=sigstore.dev" \
+          --tsa="url=$TSA_URL/api/v1/timestamp,api-version=1,start-time=2024-11-01T00:00:00Z,operator=sigstore.dev" \
+          --tsa-config="EXACT:1" \
+          --out signing_config.json
+    - name: "Build the trust_config.json file"
+      shell: bash
+      run: |
+        cat << EOF >trust_config.json
+        {
+          "mediaType": "application/vnd.dev.sigstore.clienttrustconfig.v0.1+json",
+          "trustedRoot": $(cat trusted_root.json),
+          "signingConfig": $(cat signing_config.json)
+        }
+        EOF
+    - name: "Build verification file"
+      shell: bash
+      run: |
+        cat << EOF >verification_config.yaml
+          apiVersion: v1
+          allOf:
+            - kind: genericIssuer
+              issuer: https://kubernetes.default.svc.cluster.local
+              subject:
+                equal: https://kubernetes.io/namespaces/default/serviceaccounts/default
+          anyOf: null
+        EOF
+    - name: "Sign policy to use in test"
+      shell: bash
+      run: |
+        # Copy a testing policy to a local registry
+        skopeo copy --dest-tls-verify=false docker://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5 docker://registry.local:5000/policies/testing:latest
+        # cosign command cannot use the new bundle format because sigstore
+        # rust crate still does not support it
+        cosign sign --yes --rekor-url ${REKOR_URL} \
+          --fulcio-url ${FULCIO_URL} \
+          --allow-insecure-registry \
+          --new-bundle-format=false \
+          --use-signing-config=false \
+          --identity-token $(curl -s $ISSUER_URL) \
+          registry.local:5000/policies/testing:latest
+    - name: Verify signature to ensure that everything worked
+      shell: bash
+      run: |
+        # cosign command cannot use the new bundle format because sigstore
+        # rust crate still does not support it
+        cosign verify \
+          --new-bundle-format=false \
+          --rekor-url "${REKOR_URL}" \
+          --allow-insecure-registry \
+          --certificate-identity "https://kubernetes.io/namespaces/default/serviceaccounts/default" \
+          --certificate-oidc-issuer "https://kubernetes.default.svc.cluster.local" \
+          "registry.local:5000/policies/testing:latest"
+    - name: "Create sources.yaml to avoid https to the local registry"
+      shell: bash
+      run: |
+        cat << EOF >sources.yaml
+        insecure_sources: 
+          - registry.local:5000
+        EOF
