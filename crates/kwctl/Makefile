@@ -29,6 +29,10 @@ test: fmt lint
 e2e-tests:
 	cargo test --test '*'
 	
+.PHONY: e2e-tests-sigstore
+e2e-tests-sigstore:
+	cargo test --test 'sigstore' --features sigstore-testing
+	
 .PHONY: coverage
 coverage:
 	cargo llvm-cov --html

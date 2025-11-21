@@ -1,6 +1,8 @@
+use std::path::PathBuf;
+
 use clap::{
     Arg, ArgAction, ArgGroup, Command, builder::PossibleValuesParser, crate_authors,
-    crate_description, crate_name, crate_version,
+    crate_description, crate_name, crate_version, value_parser,
 };
 use lazy_static::lazy_static;
 
@@ -94,6 +96,11 @@ fn pull_shared_flags() -> Vec<Arg> {
             .number_of_values(1)
             .value_name("VALUE")
             .help("GitHub repository expected in the certificates generated in CD pipelines"),
+       Arg::new("sigstore-trust-config")
+           .long("sigstore-trust-config")
+           .value_parser(value_parser!(PathBuf))
+           .value_name("PATH")
+           .help("JSON-formatted file conforming to the ClientTrustConfig message in the Sigstore protobuf specs. This file configures the entire Sigstore instance state, including the URIs used to access the CA and artifact transparency services as well as the cryptographic root of trust itself"),
     ]
 }
 
@@ -165,6 +172,11 @@ fn subcommand_verify() -> Command {
             .number_of_values(1)
             .value_name("VALUE")
             .help("GitHub repository expected in the certificates generated in CD pipelines"),
+       Arg::new("sigstore-trust-config")
+           .long("sigstore-trust-config")
+           .value_parser(value_parser!(PathBuf))
+           .value_name("PATH")
+           .help("JSON-formatted file conforming to the ClientTrustConfig message in the Sigstore protobuf specs. This file configures the entire Sigstore instance state, including the URIs used to access the CA and artifact transparency services as well as the cryptographic root of trust itself"),
     ];
     args.sort_by(|a, b| a.get_id().cmp(b.get_id()));
     args.push(
@@ -228,100 +240,105 @@ renovatebot to detect policy updates."#,
 
 fn run_args() -> Vec<Arg> {
     vec![
-        Arg::new("docker-config-json-path")
-            .long("docker-config-json-path")
-            .value_name("PATH")
-            .help("Path to a directory containing the Docker 'config.json' file. Can be used to indicate registry authentication details"),
-        Arg::new("sources-path")
-            .long("sources-path")
-            .value_name("PATH")
-            .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
-        Arg::new("verification-config-path")
-            .long("verification-config-path")
-            .value_name("PATH")
-            .help("YAML file holding verification config information (signatures, public keys...)"),
-        Arg::new("request-path")
-            .long("request-path")
-            .short('r')
-            .value_name("PATH")
-            .required(true)
-            .help("File containing the Kubernetes admission request object in JSON format"),
-        Arg::new("settings-path")
-            .long("settings-path")
-            .short('s')
-            .value_name("PATH")
-            .help("File containing the settings for this policy"),
-        Arg::new("settings-json")
-            .long("settings-json")
-            .value_name("VALUE")
-            .help("JSON string containing the settings for this policy"),
-        Arg::new("verification-key")
-            .short('k')
-            .long("verification-key")
-            .action(ArgAction::Append)
-            .number_of_values(1)
-            .value_name("PATH")
-            .help("Path to key used to verify the policy. Can be repeated multiple times"),
-        Arg::new("verification-annotation")
-            .short('a')
-            .long("verification-annotation")
-            .action(ArgAction::Append)
-            .number_of_values(1)
-            .value_name("KEY=VALUE")
-            .help("Annotation in key=value format. Can be repeated multiple times"),
-        Arg::new("cert-email")
-            .long("cert-email")
-            .number_of_values(1)
-            .value_name("VALUE")
-            .help("Expected email in Fulcio certificate"),
-        Arg::new("cert-oidc-issuer")
-            .long("cert-oidc-issuer")
-            .number_of_values(1)
-            .value_name("VALUE")
-            .help("Expected OIDC issuer in Fulcio certificates"),
-        Arg::new("github-owner")
-            .long("github-owner")
-            .number_of_values(1)
-            .value_name("VALUE")
-            .help("GitHub owner expected in the certificates generated in CD pipelines"),
-        Arg::new("github-repo")
-            .long("github-repo")
-            .number_of_values(1)
-            .value_name("VALUE")
-            .help("GitHub repository expected in the certificates generated in CD pipelines"),
-        Arg::new("execution-mode")
-            .long("execution-mode")
-            .short('e')
-            .value_name("MODE")
-            .value_parser(PossibleValuesParser::new(["opa","gatekeeper", "kubewarden", "wasi"]))
-            .help("The runtime to use to execute this policy"),
-        Arg::new("raw")
-                .long("raw")
-                .num_args(0)
-                .default_value("false")
-                .help("Validate a raw request"),
-        Arg::new("disable-wasmtime-cache")
-            .long("disable-wasmtime-cache")
-            .num_args(0)
-            .help("Turn off usage of wasmtime cache"),
-        Arg::new("allow-context-aware")
-            .long("allow-context-aware")
-            .num_args(0)
-            .help("Grant access to the Kubernetes resources defined inside of the policy's `contextAwareResources` section. Warning: review the list of resources carefully to avoid abuses. Disabled by default"),
-        Arg::new("record-host-capabilities-interactions")
-            .long("record-host-capabilities-interactions")
-            .value_name("FILE")
-            .long_help(r#"Record all the policy and host capabilities
+       Arg::new("docker-config-json-path")
+           .long("docker-config-json-path")
+           .value_name("PATH")
+           .help("Path to a directory containing the Docker 'config.json' file. Can be used to indicate registry authentication details"),
+       Arg::new("sources-path")
+           .long("sources-path")
+           .value_name("PATH")
+           .help("YAML file holding source information (https, registry insecure hosts, custom CA's...)"),
+       Arg::new("verification-config-path")
+           .long("verification-config-path")
+           .value_name("PATH")
+           .help("YAML file holding verification config information (signatures, public keys...)"),
+       Arg::new("request-path")
+           .long("request-path")
+           .short('r')
+           .value_name("PATH")
+           .required(true)
+           .help("File containing the Kubernetes admission request object in JSON format"),
+       Arg::new("settings-path")
+           .long("settings-path")
+           .short('s')
+           .value_name("PATH")
+           .help("File containing the settings for this policy"),
+       Arg::new("settings-json")
+           .long("settings-json")
+           .value_name("VALUE")
+           .help("JSON string containing the settings for this policy"),
+       Arg::new("verification-key")
+           .short('k')
+           .long("verification-key")
+           .action(ArgAction::Append)
+           .number_of_values(1)
+           .value_name("PATH")
+           .help("Path to key used to verify the policy. Can be repeated multiple times"),
+       Arg::new("verification-annotation")
+           .short('a')
+           .long("verification-annotation")
+           .action(ArgAction::Append)
+           .number_of_values(1)
+           .value_name("KEY=VALUE")
+           .help("Annotation in key=value format. Can be repeated multiple times"),
+       Arg::new("cert-email")
+           .long("cert-email")
+           .number_of_values(1)
+           .value_name("VALUE")
+           .help("Expected email in Fulcio certificate"),
+       Arg::new("cert-oidc-issuer")
+           .long("cert-oidc-issuer")
+           .number_of_values(1)
+           .value_name("VALUE")
+           .help("Expected OIDC issuer in Fulcio certificates"),
+       Arg::new("github-owner")
+           .long("github-owner")
+           .number_of_values(1)
+           .value_name("VALUE")
+           .help("GitHub owner expected in the certificates generated in CD pipelines"),
+       Arg::new("github-repo")
+           .long("github-repo")
+           .number_of_values(1)
+           .value_name("VALUE")
+           .help("GitHub repository expected in the certificates generated in CD pipelines"),
+       Arg::new("execution-mode")
+           .long("execution-mode")
+           .short('e')
+           .value_name("MODE")
+           .value_parser(PossibleValuesParser::new(["opa","gatekeeper", "kubewarden", "wasi"]))
+           .help("The runtime to use to execute this policy"),
+       Arg::new("raw")
+               .long("raw")
+               .num_args(0)
+               .default_value("false")
+               .help("Validate a raw request"),
+       Arg::new("disable-wasmtime-cache")
+           .long("disable-wasmtime-cache")
+           .num_args(0)
+           .help("Turn off usage of wasmtime cache"),
+       Arg::new("allow-context-aware")
+           .long("allow-context-aware")
+           .num_args(0)
+           .help("Grant access to the Kubernetes resources defined inside of the policy's `contextAwareResources` section. Warning: review the list of resources carefully to avoid abuses. Disabled by default"),
+       Arg::new("record-host-capabilities-interactions")
+           .long("record-host-capabilities-interactions")
+           .value_name("FILE")
+           .long_help(r#"Record all the policy and host capabilities
 communications to the given file.
 Useful to be combined later with '--replay-host-capabilities-interactions' flag"#),
-        Arg::new("replay-host-capabilities-interactions")
-            .long("replay-host-capabilities-interactions")
-            .value_name("FILE")
-            .long_help(r#"During policy and host capabilities exchanges
+       Arg::new("replay-host-capabilities-interactions")
+           .long("replay-host-capabilities-interactions")
+           .value_name("FILE")
+           .long_help(r#"During policy and host capabilities exchanges
 the host replays back the answers found inside of the provided file.
 This is useful to test policies in a reproducible way, given no external
 interactions with OCI registries, DNS, Kubernetes are performed."#),
-     ]
+       Arg::new("sigstore-trust-config")
+           .long("sigstore-trust-config")
+           .value_parser(value_parser!(PathBuf))
+           .value_name("PATH")
+           .help("JSON-formatted file conforming to the ClientTrustConfig message in the Sigstore protobuf specs. This file configures the entire Sigstore instance state, including the URIs used to access the CA and artifact transparency services as well as the cryptographic root of trust itself"),
+    ]
 }
 
 fn subcommand_run() -> Command {

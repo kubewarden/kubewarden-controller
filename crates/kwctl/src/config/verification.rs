@@ -1,4 +1,9 @@
-use std::{collections::BTreeMap, fs, path::Path, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use anyhow::{Result, anyhow};
 use clap::ArgMatches;
@@ -7,6 +12,7 @@ use policy_evaluator::policy_fetcher::{
     store::DEFAULT_ROOT,
     verify::config::{LatestVerificationConfig, Signature, Subject, read_verification_file},
 };
+use sigstore_protobuf_specs::dev::sigstore::trustroot::v1::ClientTrustConfig;
 use tracing::{debug, info};
 
 use crate::{KWCTL_VERIFICATION_CONFIG, verify::VerificationAnnotations};
@@ -159,7 +165,15 @@ fn build_verification_options_from_flags(
     Ok(Some(verification_config))
 }
 
-pub(crate) async fn build_sigstore_trust_root() -> Result<Option<Arc<SigstoreTrustRoot>>> {
+/// Function that builds the Sigstore trust root used for verification. If a trust-config flag is
+/// provided, it uses that file to load the trust root. Otherwise, it builds the trust root from
+/// Sigstore's TUF repository.
+pub(crate) async fn build_sigstore_trust_root(
+    sigstore_trust_config: Option<&PathBuf>,
+) -> Result<Option<Arc<SigstoreTrustRoot>>> {
+    if let Some(pki_file) = sigstore_trust_config {
+        return build_sigstore_trust_root_from_config(pki_file);
+    }
     debug!("building Sigstore trust root from Sigstore's TUF repository");
     let checkout_path = DEFAULT_ROOT.config_dir().join("fulcio_and_rekor_data");
     if !Path::exists(&checkout_path) {
@@ -168,5 +182,43 @@ pub(crate) async fn build_sigstore_trust_root() -> Result<Option<Arc<SigstoreTru
 
     let trust_root =
         sigstore::trust::sigstore::SigstoreTrustRoot::new(Some(checkout_path.as_path())).await?;
+    Ok(Some(Arc::new(trust_root)))
+}
+
+fn build_sigstore_trust_root_from_config(
+    pki_file: &PathBuf,
+) -> Result<Option<Arc<SigstoreTrustRoot>>> {
+    debug!(
+        "Using user specified Sigstore trust root location: {}",
+        pki_file.display()
+    );
+    let json_bytes = fs::read(pki_file).map_err(|e| {
+        anyhow!(
+            "could not read Sigstore PKI file {}: {:?}",
+            pki_file.display(),
+            e
+        )
+    })?;
+    // Sigstore.rs does not have a direct way to read from file, so we parse the
+    // protobuf spec first, then re-serialize the trusted_root field to JSON bytes
+    let client_trust_config: ClientTrustConfig = serde_json::from_slice(json_bytes.as_slice())
+        .map_err(|e| {
+            anyhow!(
+                "could not parse Sigstore trust config file {}: {:?}",
+                pki_file.display(),
+                e
+            )
+        })?;
+    let trust_root = client_trust_config.trusted_root.ok_or_else(|| {
+        anyhow!(
+            "Sigstore PKI file {} missing trusted_root field",
+            pki_file.display()
+        )
+    })?;
+    let trust_root_bytes = serde_json::to_vec(&trust_root)?;
+    let trust_root =
+        sigstore::trust::sigstore::SigstoreTrustRoot::from_trusted_root_json_unchecked(
+            trust_root_bytes.as_slice(),
+        )?;
     Ok(Some(Arc::new(trust_root)))
 }
