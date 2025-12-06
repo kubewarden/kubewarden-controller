@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/kubewarden/kubewarden-controller v1.31.0
 	github.com/openreports/reports-api v0.2.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.18.0
 	k8s.io/api v0.34.2
