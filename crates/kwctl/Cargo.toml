@@ -61,7 +61,7 @@ predicates     = "3.1"
 rstest         = "0.26"
 sha2           = "0.10"
 tempfile       = "3.17"
-testcontainers = { version = "0.25", features = ["blocking"] }
+testcontainers = { version = "0.26", features = ["blocking"] }
 tower-test     = "0.4"
 
 
