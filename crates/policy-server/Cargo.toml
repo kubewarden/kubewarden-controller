@@ -14,7 +14,7 @@ version = "1.31.0"
 [dependencies]
 anyhow = "1.0"
 axum = { version = "0.8.1", features = ["macros", "query"] }
-axum-server = { version = "0.7.1", features = ["tls-rustls"] }
+axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 clap = { version = "4.5", features = ["cargo", "env"] }
 clap-markdown = "0.1.4"
 daemonize = "0.5"
@@ -79,7 +79,7 @@ mockall        = "0.14"
 rcgen          = { version = "0.14", features = ["crypto"] }
 rstest         = "0.26"
 tempfile       = "3.16.0"
-testcontainers = { version = "0.25", features = ["watchdog"] }
+testcontainers = { version = "0.26", features = ["watchdog"] }
 tower          = { version = "0.5", features = ["util"] }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
