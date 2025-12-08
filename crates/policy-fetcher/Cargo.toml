@@ -57,7 +57,7 @@ anyhow = "1.0"
 rcgen = "0.14"
 rstest = "0.26"
 tempfile = "3.19"
-testcontainers = { version = "0.25", default-features = false, features = [
+testcontainers = { version = "0.26", default-features = false, features = [
   "aws-lc-rs",
   "http_wait",
 ] }
