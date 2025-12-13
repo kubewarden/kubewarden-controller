@@ -169,7 +169,7 @@ jobs:
             kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json
 
       - name: Upload SBOMs as artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: attestation-${{ matrix.arch }}
           path: kubewarden-controller-attestation-${{ matrix.arch }}*
@@ -191,7 +191,7 @@ jobs:
           make generate-crds
           tar -czf CRDS.tar.gz -C generated-crds $(ls generated-crds)
       - name: Upload CRDs as artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: CRDS
           path: CRDS.tar.gz
@@ -250,13 +250,13 @@ jobs:
             core.setFailed(`Draft release not found`)
 
       - name: Download attestation artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: attestation-*
           merge-multiple: true
 
       - name: Download CRDs artifact
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: CRDS
 
