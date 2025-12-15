@@ -16,10 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubewarden/audit-scanner/internal/k8s"
-	"github.com/kubewarden/audit-scanner/internal/policies"
-	"github.com/kubewarden/audit-scanner/internal/report"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/k8s"
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/policies"
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/report"
 	"golang.org/x/sync/semaphore"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

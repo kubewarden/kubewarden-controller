@@ -13,9 +13,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/kubewarden/audit-scanner/internal/constants"
-	"github.com/kubewarden/audit-scanner/internal/scheme"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/scheme"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/meta"

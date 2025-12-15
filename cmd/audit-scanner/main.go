@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/kubewarden/audit-scanner/cmd"
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/cmd"
 )
 
 func main() {

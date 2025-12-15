@@ -5,39 +5,38 @@ import (
 	"fmt"
 	"log/slog"
 
-	auditConstants "github.com/kubewarden/audit-scanner/internal/constants"
+	auditConstants "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
+	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
-// PolicyReportStore is a store for PolicyReport and ClusterPolicyReport.
-// Deprecated: use OpenReportStore instead. wgpolicy.PolicyReport is deprecated in favor of openreports.Report.
-type PolicyReportStore struct {
+// OpenReportStore is a store for OpenReports Report and ClusterReport.
+type OpenReportStore struct {
 	// client is a controller-runtime client that knows about PolicyReport and ClusterPolicyReport CRDs
 	client client.Client
 	// logger is used to log the messages
 	logger *slog.Logger
 }
 
-// NewPolicyReportStore creates a new PolicyReportStore.
-func NewPolicyReportStore(client client.Client, logger *slog.Logger) *PolicyReportStore {
-	return &PolicyReportStore{
+// NewOpenReportStore creates a new PolicyReportStore.
+func NewOpenReportStore(client client.Client, logger *slog.Logger) Store {
+	return &OpenReportStore{
 		client: client,
 		logger: logger.With("component", "policyreportstore"),
 	}
 }
 
-// CreateOrPatchReport creates or patches a PolicyReport.
-func (s *PolicyReportStore) CreateOrPatchReport(ctx context.Context, obj any) error {
-	report, ok := obj.(*PolicyReport)
+// CreateOrPatchReport creates or patches a OpenReports Report.
+func (s *OpenReportStore) CreateOrPatchReport(ctx context.Context, obj any) error {
+	openReport, ok := obj.(*OpenReport)
 	if !ok {
-		return fmt.Errorf("expected *PolicyReport, got %T", obj)
+		return fmt.Errorf("expected *OpenReport, got %T", obj)
 	}
-	policyReport := report.report
-	oldPolicyReport := &wgpolicy.PolicyReport{ObjectMeta: metav1.ObjectMeta{
+	policyReport := openReport.report
+	oldPolicyReport := &openreports.Report{ObjectMeta: metav1.ObjectMeta{
 		Name:      policyReport.GetName(),
 		Namespace: policyReport.GetNamespace(),
 	}}
@@ -65,15 +64,15 @@ func (s *PolicyReportStore) CreateOrPatchReport(ctx context.Context, obj any) er
 	return nil
 }
 
-// DeleteOldReports deletes old PolicyReports that do not match the given scanRunID.
-func (s *PolicyReportStore) DeleteOldReports(ctx context.Context, scanRunID, namespace string) error {
+// DeleteOldReports deletes all the OpenReports Reports that do not belong to the current scan run.
+func (s *OpenReportStore) DeleteOldReports(ctx context.Context, scanRunID, namespace string) error {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s!=%s,%s=%s", auditConstants.AuditScannerRunUIDLabel, scanRunID, labelAppManagedBy, labelApp))
 	if err != nil {
 		return fmt.Errorf("failed to parse label selector: %w", err)
 	}
 	s.logger.DebugContext(ctx, "Deleting old PolicyReports", slog.String("labelSelector", labelSelector.String()))
 
-	if err := s.client.DeleteAllOf(ctx, &wgpolicy.PolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
+	if err := s.client.DeleteAllOf(ctx, &openreports.Report{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,
 		Namespace:     namespace,
 	}}); err != nil {
@@ -82,14 +81,14 @@ func (s *PolicyReportStore) DeleteOldReports(ctx context.Context, scanRunID, nam
 	return nil
 }
 
-// CreateOrPatchClusterReport creates or patches a ClusterPolicyReport.
-func (s *PolicyReportStore) CreateOrPatchClusterReport(ctx context.Context, obj any) error {
-	report, ok := obj.(*ClusterPolicyReport)
+// CreateOrPatchClusterReport creates or patches a OpenReports ClusterReport.
+func (s *OpenReportStore) CreateOrPatchClusterReport(ctx context.Context, obj any) error {
+	openReport, ok := obj.(*OpenClusterReport)
 	if !ok {
-		return fmt.Errorf("expected *PolicyReport, got %T", obj)
+		return fmt.Errorf("expected *OpenReport, got %T", obj)
 	}
-	clusterPolicyReport := report.report
-	oldClusterPolicyReport := &wgpolicy.ClusterPolicyReport{ObjectMeta: metav1.ObjectMeta{
+	clusterPolicyReport := openReport.report
+	oldClusterPolicyReport := &openreports.ClusterReport{ObjectMeta: metav1.ObjectMeta{
 		Name: clusterPolicyReport.GetName(),
 	}}
 
@@ -116,15 +115,15 @@ func (s *PolicyReportStore) CreateOrPatchClusterReport(ctx context.Context, obj 
 	return nil
 }
 
-// DeleteOldClusterReports deletes old ClusterPolicyReports that do not belong to the current scan run.
-func (s *PolicyReportStore) DeleteOldClusterReports(ctx context.Context, scanRunID string) error {
+// DeleteOldClusterReports deletes all the OpenReports ClusterReports that do not belong to the current scan run.
+func (s *OpenReportStore) DeleteOldClusterReports(ctx context.Context, scanRunID string) error {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s!=%s,%s=%s", auditConstants.AuditScannerRunUIDLabel, scanRunID, labelAppManagedBy, labelApp))
 	if err != nil {
 		return fmt.Errorf("failed to parse label selector: %w", err)
 	}
 	s.logger.DebugContext(ctx, "Deleting old ClusterPolicyReports", slog.String("labelSelector", labelSelector.String()))
 
-	if err := s.client.DeleteAllOf(ctx, &wgpolicy.ClusterPolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
+	if err := s.client.DeleteAllOf(ctx, &openreports.ClusterReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,
 	}}); err != nil {
 		return fmt.Errorf("failed to delete ClusterPolicyReports: %w", err)

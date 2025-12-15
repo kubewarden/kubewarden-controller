@@ -62,7 +62,7 @@ controller-image:
 		-t "$(REGISTRY)/$(REPO)/controller:$(TAG)" .
 	@echo "Built $(REGISTRY)/$(REPO)/controller:$(TAG)"
 
-AUDIT_SCANNER_SRC_DIRS := cmd/audit-scanner internal/apiserver internal/storage pkg
+AUDIT_SCANNER_SRC_DIRS := cmd/audit-scanner api internal/audit-scanner
 AUDIT_SCANNER_GO_SRCS := $(shell find $(STORAGE_SRC_DIRS) -type f -name '*.go')
 AUDIT_SCANNER_SRCS := $(GO_MOD_SRCS) $(STORAGE_GO_SRCS)
 .PHONY: audit-scanner

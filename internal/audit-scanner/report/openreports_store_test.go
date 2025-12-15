@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"testing"
 
-	auditConstants "github.com/kubewarden/audit-scanner/internal/constants"
-	testutils "github.com/kubewarden/audit-scanner/internal/testutils"
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	auditConstants "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
+	testutils "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
