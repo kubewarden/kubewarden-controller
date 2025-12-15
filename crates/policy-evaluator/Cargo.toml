@@ -1,0 +1,91 @@
+[package]
+authors = [
+  "Fabrizio Sestito <fabrizio.sestito@suse.com>",
+  "Flavio Castelli <fcastelli@suse.com>",
+  "José Guilherme Vanz <jguilhermevanz@suse.com>",
+  "Rafael Fernández López <rfernandezlopez@suse.com>",
+  "Víctor Cuadrado Juan <vcuadradojuan@suse.com>",
+]
+edition = "2024"
+name = "policy-evaluator"
+version = "0.30.4"
+
+[workspace]
+members = ["crates/burrego", "crates/context-aware-test-policy"]
+
+[dependencies]
+anyhow = "1.0"
+base64 = "0.22"
+burrego = { path = "crates/burrego" }
+cached = { version = "0.56", features = ["async_tokio_rt_multi_thread"] }
+chrono = { version = "0.4", default-features = false }
+dns-lookup = "3.0"
+email_address = { version = "0.2", features = ["serde"] }
+futures = "0.3"
+itertools = "0.14"
+json-patch = "4.0"
+k8s-openapi = { workspace = true }
+kube = { version = "2.0.0", default-features = false, features = [
+  "client",
+  "runtime",
+  "rustls-tls",
+] }
+kubewarden-policy-sdk = { workspace = true, features = ["crd"] }
+lazy_static = { workspace = true }
+mail-parser = { version = "0.11", features = ["serde"] }
+pki-types = { package = "rustls-pki-types", version = "1.12", default-features = false, features = [
+  "std",
+] }
+policy-fetcher = { git = "https://github.com/kubewarden/policy-fetcher", tag = "v0.11.0" }
+rhai = { version = "1.21", features = ["sync"] }
+rustls-webpki = { version = "0.103", default-features = false, features = [
+  "std",
+] }
+semver = { version = "1.0", features = ["serde"] }
+serde = { workspace = true }
+serde_json = "1.0"
+serde_yaml = "0.9"
+sha2 = "0.10"
+thiserror = "2.0"
+time = { version = "0.3", features = ["serde-human-readable"] }
+tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
+tracing = "0.1"
+url = { version = "2.5", features = ["serde"] }
+validator = { version = "0.20", features = ["derive"] }
+wapc = "2.1"
+wasi-common = { workspace = true }
+wasmparser = "0.243"
+wasmtime = { workspace = true }
+wasmtime-provider = { version = "2.13.0", features = ["cache"] }
+wasmtime-wasi = { workspace = true }
+webpki-roots = "1"
+
+[workspace.dependencies]
+k8s-openapi           = { version = "0.26.0", default-features = false }
+kubewarden-policy-sdk = { version = "0.15.0" }
+lazy_static           = "1.5"
+serde                 = { version = "1.0", features = ["derive"] }
+serde_json            = "1.0"
+wasi-common           = "39.0"
+wasmtime              = "39.0"
+wasmtime-wasi         = "39.0"
+
+[dev-dependencies]
+assert-json-diff = "2.0"
+hyper            = { version = "1" }
+k8s-openapi      = { workspace = true, features = ["v1_30"] }
+rcgen            = { version = "0.14", features = ["x509-parser"] }
+rstest           = "0.26"
+serial_test      = "3.2"
+tempfile         = "3.19"
+test-context     = "0.5"
+test-log         = "0.2"
+tower-test       = "0.4"
+# This is required to have reqwest built using the `rustls-tls-native-roots`
+# feature across all the transitive dependencies of policy-fetcher
+# This is required to have the integration tests use the system certificates instead of the
+# ones bundled inside of rustls. This allows to pull the test policies also from
+# self hosted registries (which is great at development time)
+reqwest = { version = "0", default-features = false, features = [
+  "rustls-tls-native-roots",
+] }
