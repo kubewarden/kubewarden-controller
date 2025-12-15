@@ -1,0 +1,61 @@
+header:
+  schema-version: 1.0.0
+  last-updated: "2024-08-12"
+  last-reviewed: "2023-08-12"
+  expiration-date: "2025-10-01T01:00:00.000Z"
+  project-url: https://github.com/kubewarden/policy-server/
+  changelog: https://github.com/kubewarden/policy-server/releases/latest
+  license: https://github.com/kubewarden/policy-server/blob/main/LICENSE
+project-lifecycle:
+  bug-fixes-only: false
+  core-maintainers:
+    - https://github.com/kubewarden/community?tab=readme-ov-file#maintainers
+  roadmap: https://github.com/kubewarden/community?tab=readme-ov-file#roadmap
+  status: active
+contribution-policy:
+  accepts-pull-requests: true
+  accepts-automated-pull-requests: true
+  contributing-policy: https://github.com/kubewarden/policy-server/blob/main/CONTRIBUTING.md
+  code-of-conduct: https://github.com/kubewarden/community/blob/main/CODE_OF_CONDUCT.md
+documentation:
+  - https://docs.kubewarden.io
+distribution-points:
+  - https://github.com/kubewarden/policy-server/
+  - https://artifacthub.io/packages/helm/kubewarden/kubewarden-defaults
+  - https://github.com/orgs/kubewarden/packages?repo_name=helm-charts
+security-artifacts:
+  threat-model:
+    threat-model-created: true
+    evidence-url:
+      - https://docs.kubewarden.io/reference/threat-model
+security-testing:
+  - tool-type: sca
+    tool-name: Dependabot
+    tool-version: latest
+    integration:
+      ad-hoc: false
+      ci: true
+      before-release: true
+    comment: |
+      Dependabot is enabled for this repo.
+security-contacts:
+  - type: website
+    value: https://docs.kubewarden.io/disclosure
+vulnerability-reporting:
+  accepts-vulnerability-reports: true
+  security-policy: https://github.com/kubewarden/community/blob/main/SECURITY.md
+  email-contact: cncf-kubewarden-maintainers@lists.cncf.io
+  comment: |
+    The first and best way to report a vulnerability is by using private security issues in GitHub or opening an issue on Github. We are also available on the Kubernetes Slack in the #kubewaden-dev channel.
+dependencies:
+  third-party-packages: true
+  dependencies-lists:
+    - https://github.com/kubewarden/policy-server/blob/main/Cargo.lock
+  sbom:
+    - sbom-file: https://github.com/kubewarden/policy-server/releases/latest/download/policy-server-sbom-adm64.spdx
+      sbom-format: SPDX
+      sbom-url: https://github.com/anchore/sbom-action
+  dependencies-lifecycle:
+    policy-url: https://github.com/kubewarden/community/blob/main/SECURITY.md#security-patch-policy
+  env-dependencies-policy:
+    policy-url: https://github.com/kubewarden/community/blob/main/SECURITY.md#dependency-policy

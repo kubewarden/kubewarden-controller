@@ -1,0 +1,3 @@
+output: "spdx-json"
+catalogers:
+  - rust

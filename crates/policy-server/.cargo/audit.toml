@@ -1,0 +1,16 @@
+[advisories]
+ignore = [
+  "RUSTSEC-2025-0069", # This is about "daemonize" being unmaintained.
+
+  "RUSTSEC-2023-0071", # "Classic" RSA timing sidechannel attack from non-constant-time implementation.
+  # Okay for local use.
+  # https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+  # This is a transitive depependency of sigstore
+
+  "RUSTSEC-2024-0436", # This is about "paste" being unmaintained.
+  # This is a transitive depependency of "jemalloc_pprof".
+
+  "RUSTSEC-2024-0384", # This is about "instant" being unmaintained.
+  # This is a transitive depependency of "rhai".
+  # The issue is tracked upstream via https://github.com/rhaiscript/rhai/issues/891
+]
