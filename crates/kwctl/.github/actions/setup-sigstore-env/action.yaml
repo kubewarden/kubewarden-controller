@@ -7,7 +7,7 @@ runs:
   using: "composite"
   steps:
     - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
-    - uses: sigstore/scaffolding/actions/setup@8e9b439dcf7072c0a9e3b1653c6227c258f94202 # v0.7.31
+    - uses: sigstore/scaffolding/actions/setup@8bd68672d418e5bd1b0ee1f2e2981874c3a30967 # v0.7.33
     - name: Initialize cosign to use local Sigstore instance
       shell: bash
       run: |
