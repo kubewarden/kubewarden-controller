@@ -1,0 +1,122 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{ include "admission_controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+  name: {{ include "admission_controller.fullname" . }}-controller
+rules:
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - create
+  - delete
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - admissionpolicies
+  - admissionpolicygroups
+  - clusteradmissionpolicies
+  - clusteradmissionpolicygroups
+  - policyservers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - admissionpolicies/finalizers
+  - admissionpolicygroups/finalizers
+  - clusteradmissionpolicies/finalizers
+  - clusteradmissionpolicygroups/finalizers
+  - policyservers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - admissionpolicies/status
+  - admissionpolicygroups/status
+  - clusteradmissionpolicies/status
+  - clusteradmissionpolicygroups/status
+  - policyservers/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    {{ include "admission_controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+  name: {{ include "admission_controller.fullname" . }}-controller
+  namespace: kubewarden
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

@@ -1,0 +1,78 @@
+{{- if .Values.auditScanner.enable }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "audit-scanner.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubewarden-controller.labels" . | nindent 4 }}
+  annotations:
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.auditScanner.cronJob.schedule | quote }}
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: {{ .Values.auditScanner.cronJob.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.auditScanner.cronJob.successfulJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ .Values.auditScanner.serviceAccountName }}
+          {{- with .Values.podSecurityContext }}
+          securityContext:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.imagePullSecrets }}
+          imagePullSecrets:
+          {{- include "imagePullSecrets" .Values.imagePullSecrets | nindent 12 }}
+          {{- end }}
+          restartPolicy: {{ .Values.auditScanner.containerRestartPolicy }}
+          volumes:
+          - name: kubewarden-ca
+            secret:
+              defaultMode: 420
+              secretName: kubewarden-ca
+              items:
+              - key: ca.crt
+                path: "ca.crt"
+          - name: kubewarden-audit-scanner-client-cert
+            secret:
+              defaultMode: 420
+              secretName: kubewarden-audit-scanner-client-cert
+              items:
+              - key: tls.crt
+                path: "tls.crt"
+              - key: tls.key
+                path: "tls.key"
+          {{- if .Values.global.affinity }}
+          affinity: {{ .Values.global.affinity | toYaml | nindent 14 }}
+          {{- end }}
+          {{- if .Values.global.tolerations }}
+          tolerations: {{ .Values.global.tolerations | toYaml | nindent 14 }}
+          {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 14 }}
+          {{- end }}
+          containers:
+          - name: audit-scanner
+            image: '{{ template "system_default_registry" . }}{{ .Values.auditScanner.image.repository }}:{{ .Values.auditScanner.image.tag }}'
+            imagePullPolicy: {{ .Values.auditScanner.image.pullPolicy }}
+            command:
+              {{- include "audit-scanner.command" . | nindent 14 -}}
+            {{- with .Values.containerSecurityContext }}
+            volumeMounts:
+            - mountPath: "/pki"
+              name: kubewarden-ca
+              readOnly: true
+            - mountPath: "/client-cert"
+              name: kubewarden-audit-scanner-client-cert
+              readOnly: true
+            securityContext:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+            {{- if and .Values.resources .Values.resources.auditScanner }}
+            resources:
+{{ toYaml .Values.resources.auditScanner | indent 14 }}
+            {{- end }}
+{{ end }}
