@@ -1,0 +1,70 @@
+name: Build container image, sign it, and generate SBOMs
+
+on:
+  workflow_call:
+    outputs:
+      digest:
+        description: "Container image digest"
+        value: ${{jobs.build.outputs.digest}}
+
+  push:
+    branches:
+      - "main"
+      - "feat-**"
+
+jobs:
+  build:
+    name: Build container image
+    permissions:
+      packages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    outputs:
+      repository: ${{ steps.setoutput.outputs.repository }}
+      tag: ${{ steps.setoutput.outputs.tag }}
+      digest: ${{ steps.setoutput.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Install cosign
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Retrieve tag name (main branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/main') }}
+        run: |
+          echo TAG_NAME=latest >> $GITHUB_ENV
+      - name: Retrieve tag name (feat branch)
+        if: ${{ startsWith(github.ref, 'refs/heads/feat') }}
+        run: |
+          echo "TAG_NAME=latest-$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+      - name: Retrieve tag name (tag)
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
+      - name: Build and push container image
+        id: build-image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64, linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ghcr.io/${{github.repository_owner}}/audit-scanner:${{ env.TAG_NAME }}
+      - id: setoutput
+        name: Set output parameters
+        run: |
+          echo "repository=ghcr.io/${{github.repository_owner}}/audit-scanner" >> $GITHUB_OUTPUT
+          echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
+          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
