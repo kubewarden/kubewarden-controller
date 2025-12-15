@@ -1,0 +1,27 @@
+{
+  "variables": [
+    {
+      "name": "deploymentSpec",
+      "expression": "object.spec"
+    },
+    {
+      "name": "replicas",
+      "expression": "variables.deploymentSpec.replicas"
+    },
+    {
+      "name": "maxReplicas",
+      "expression": "50"
+    },
+    {
+      "name": "namespaceName",
+      "expression": "namespaceObject.metadata.name"
+    }
+  ],
+  "validations": [
+    {
+      "expression": "variables.replicas <= variables.maxReplicas",
+      "messageExpression": "'Deployment: ' + object.metadata.name + ', namespace: ' + variables.namespaceName + ' - replicas must be no greater than ' + int(variables.maxReplicas)",
+      "reason": "Unauthorized"
+    }
+  ]
+}

@@ -1,0 +1,191 @@
+on:
+  - push
+  - pull_request
+  - workflow_call
+
+name: Continuous integration
+
+# Declare default permissions as read only.
+permissions: read-all
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Cargo check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: enable git long paths on Windows
+        if: matrix.os == 'windows-latest'
+        run: git config --global core.longpaths true
+
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      # aws-lc-sys CMakefile contains a directive that has been removed from
+      # cmake v4 that has just been released (march 2025). The build failure
+      # can be fixed by setting an environment variable
+      - name: fix aws-lc-sys building with cmake 4.0.0
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo 'CMAKE_POLICY_VERSION_MINIMUM="3.5"' >> $GITHUB_ENV
+
+      - name: Run cargo check
+        run: cargo check
+
+  version-check:
+    name: Check Cargo.toml version
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download source code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Check cargo file version
+        run: |
+          CARGO_VERSION=$(sed  -n 's,^version\s*= \"\(.*\)\",\1,p' Cargo.toml)
+          TAG_VERSION=$(echo ${{ github.ref_name }} | sed 's/v//')
+
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ];then
+              echo "::error title=Invalid Cargo.toml version::Cargo.toml version does not match the tag version"
+              exit 1
+          fi
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run cargo test
+        run: cargo test --workspace --bins
+
+  e2e-tests:
+    name: E2E tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        # FIXME workaround for https://github.com/kubewarden/kwctl/issues/1245
+        with:
+          cosign-release: "v2.5.0"
+      - name: run e2e tests
+        run: make e2e-tests
+
+  e2e-tests-sigstore-trust-config:
+    name: Test sigstore trust config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Prepare sigstore environment for testing
+        uses: ./.github/actions/setup-sigstore-env
+      - name: Run kwctl Sigstore E2E tests
+        run: make e2e-tests-sigstore
+
+  sigstore-coverage:
+    name: sigstore-e2e-coverage
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@d850aa816998e5cf15f67a78c7b933f2a5033f8a # v2.63.3
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Prepare sigstore environment for testing
+        uses: ./.github/actions/setup-sigstore-env
+
+      - name: Generate sigstore e2e tests coverage
+        run: cargo llvm-cov --test 'sigstore' --features sigstore-testing --lcov --output-path lcov-sigstore.info
+
+      - name: Upload tests coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          files: lcov-sigstore.info
+          fail_ci_if_error: true
+          name: e2e-tests-sigstore
+          verbose: true
+          token: ${{ secrets.CODECOV_ORG_TOKEN }}
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@d850aa816998e5cf15f67a78c7b933f2a5033f8a # v2.63.3
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Install cosign # this is needed by some of the e2e tests
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        # FIXME workaround for https://github.com/kubewarden/kwctl/issues/1245
+        with:
+          cosign-release: "v2.5.0"
+
+      - name: Generate tests coverage
+        run: cargo llvm-cov --lcov --output-path lcov.info
+
+      - name: Upload unit-tests coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          files: lcov.info
+          fail_ci_if_error: true
+          name: unit-tests and e2e-tests
+          verbose: true
+          token: ${{ secrets.CODECOV_ORG_TOKEN }}
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - run: rustup component add rustfmt
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - run: rustup component add clippy
+      - name: Run cargo clippy
+        run: cargo clippy -- -D warnings
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - run: shellcheck $(find scripts/ -name '*.sh')
+
+  docs:
+    name: Update documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - run: |
+          make build-docs
+          if ! git diff --quiet cli-docs.md; then
+            echo "Changes detected in cli-docs.md. Please run `make build-docs` and commit the changes."
+            gh run cancel ${{ github.run_id }}
+          fi
+
+  spelling:
+    name: Spell Check with Typos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Spell Check Repo
+        uses: crate-ci/typos@2d0ce569feab1f8752f1dde43cc2f2aa53236e06 # v1.40.0
