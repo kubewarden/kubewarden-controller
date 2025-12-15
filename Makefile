@@ -18,6 +18,20 @@ REGISTRY ?= ghcr.io
 REPO ?= kubewarden/admission-controller
 TAG ?= latest
 
+# Detect architecture for Rust builds
+ARCH ?= $(shell uname -m)
+ifeq ($(ARCH),x86_64)
+	RUST_TARGET := x86_64-unknown-linux-musl
+else ifeq ($(ARCH),amd64)
+	RUST_TARGET := x86_64-unknown-linux-musl
+else ifeq ($(ARCH),aarch64)
+	RUST_TARGET := aarch64-unknown-linux-musl
+else ifeq ($(ARCH),arm64)
+	RUST_TARGET := aarch64-unknown-linux-musl
+else
+	$(error Unsupported architecture: $(ARCH))
+endif
+
 .PHONY: all
 all: controller audit-scanner
 
@@ -49,6 +63,10 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 vet:
 	$(GO_BUILD_ENV) go vet -tags=testing ./...
 
+.PHOHY: clippy
+clippy:
+	cargo clippy --workspace -- -D warnings
+
 CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
 CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
 CONTROLLER_SRCS := $(GO_MOD_SRCS) $(CONTROLLER_GO_SRCS)
@@ -74,6 +92,24 @@ audit-scanner-image:
 	docker build -f ./Dockerfile.audit-scanner \
 		-t "$(REGISTRY)/$(REPO)/audit-scanner:$(TAG)" .
 	@echo "Built $(REGISTRY)/$(REPO)/audit-scanner:$(TAG)"
+
+POLICY_SERVER_SRC_DIRS := crates/policy-server
+POLICY_SERVER_SRCS := $(shell find $(POLICY_SERVER_SRC_DIRS) -type f -name '*.rs')
+.PHONY: policy-server
+policy-server: $(POLICY_SERVER_SRCS) clippy
+	cross build --target $(RUST_TARGET) --release -p policy-server
+
+.PHONY: policy-server-image
+policy-server-image:
+	docker build -f ./Dockerfile.policy-server \
+		-t "$(REGISTRY)/$(REPO)/policy-server:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/policy-server:$(TAG)"
+
+KWCTL_SRC_DIRS := crates/kwctl
+KWCTL_SRCS := $(shell find $(KWCTL_SRC_DIRS) -type f -name '*.rs')
+.PHONY: kwctl
+kwctl: $(KWCTL_SRCS) clippy
+	cross build --target $(RUST_TARGET) --release -p kwctl
 
 .PHONY: generate
 generate: generate-controller generate-chart generate-mocks
