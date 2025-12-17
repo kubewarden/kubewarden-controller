@@ -1,117 +1,183 @@
-# -*- mode: Python -*-
-
 tilt_settings_file = "./tilt-settings.yaml"
 settings = read_yaml(tilt_settings_file)
 
-kubectl_cmd = "kubectl"
-
-# verify kubectl command exists
-if str(local("command -v " + kubectl_cmd + " || true", quiet = True)) == "":
-    fail("Required command '" + kubectl_cmd + "' not found in PATH")
+update_settings(k8s_upsert_timeout_secs=300)
 
 # Create the kubewarden namespace
 # This is required since the helm() function doesn't support the create_namespace flag
-load('ext://namespace', 'namespace_create')
-namespace_create('kubewarden', labels = settings.get('namespace_labels', []))
+load("ext://namespace", "namespace_create")
+namespace_create("kubewarden")
 
-# Install CRDs
-
-# Install the policy report CRDs
-k8s_yaml(settings.get('audit_scanner_path') + '/config/crd/wgpolicyk8s.io_clusterpolicyreports.yaml')
-k8s_yaml(settings.get('audit_scanner_path') + '/config/crd/wgpolicyk8s.io_policyreports.yaml')
-
-crd = kustomize('config/crd')
-k8s_yaml(crd)
-roles = decode_yaml_stream(kustomize('config/rbac'))
-cluster_rules = []
-namespace_rules = []
-roles_rules_mapping = {
-	"ClusterRole": {},
-	"Role": {},
-}
-
-for role in roles:
-    if role.get('kind') == 'ClusterRole':
-	roles_rules_mapping["ClusterRole"][role.get('metadata').get('name')] = role.get('rules')
-    elif role.get('kind') == 'Role':
-        roles_rules_mapping["Role"][role.get('metadata').get('name')] = role.get('rules')
-
-if len(roles_rules_mapping["ClusterRole"]) == 0 or len(roles_rules_mapping["Role"]) == 0:
-    fail("Failed to load cluster and namespace roles")
-
-additional_helm_installation_args = {}
-# If the user provided a values file, use it in the helm installation
-userProvidedValues = settings.get("controller_values_file")
-if userProvidedValues:
-	if not os.path.exists(userProvidedValues):
-		fail("The provided values file does not exist")
-	additional_helm_installation_args["values"] = userProvidedValues
-# Install kubewarden-controller helm chart
-install = helm(
-    settings.get('helm_charts_path') + '/charts/kubewarden-controller/', 
-    name='kubewarden-controller', 
-    namespace='kubewarden', 
-    **additional_helm_installation_args
+# Install the CRDs Helm chart first
+crds_yaml = helm(
+    "./charts/kubewarden-crds",
+    name="kubewarden-crds",
+    namespace="kubewarden",
 )
+k8s_yaml(crds_yaml)
 
-objects = decode_yaml_stream(install)
-for o in objects:
-    # Update the root security group. Tilt requires root access to update the
-    # running process.
-    if o.get('kind') == 'Deployment' and o.get('metadata').get('name') == 'kubewarden-controller':
-        o['spec']['template']['spec']['securityContext']['runAsNonRoot'] = False
-        # Disable the leader election to speed up the startup time.
-        o['spec']['template']['spec']['containers'][0]['args'].remove('--leader-elect')
-        o['spec']['template']['spec']['containers'][0]['image'] = settings.get('registry') + '/' + settings.get('image')
-
-    # Update the cluster and namespace roles used by the controller. This ensures
-    # that always we have the latest roles applied to the cluster.
-    if o.get('kind') == 'ClusterRole' and o.get('metadata').get('name') == 'kubewarden-controller-manager-cluster-role':
-	o['rules'] = roles_rules_mapping["ClusterRole"]["manager-role"]
-    if o.get('kind') == 'Role' and o.get('metadata').get('name') == 'kubewarden-controller-manager-namespaced-role':
-	o['rules'] = roles_rules_mapping["Role"]["manager-role"]
-    if o.get('kind') == 'Role' and o.get('metadata').get('name') == 'kubewarden-controller-leader-election-role':
-	o['rules'] = roles_rules_mapping["Role"]["leader-election-role"]
-
-updated_install = encode_yaml_stream(objects)
-k8s_yaml(updated_install)
-
-# enable hot reloading by doing the following:
-# - locally build the whole project
-# - create a docker imagine using tilt's hot-swap wrapper
-# - push that container to the local tilt registry
-# Once done, rebuilding now should be a lot faster since only the relevant
-# binary is rebuilt and the hot swat wrapper takes care of the rest.
-local_resource(
-    'manager',
-    "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/manager cmd/main.go",
-    deps = [
-        "go.mod",
-        "go.sum",
-        "cmd",
-        "internal",
-        "api",
+# Group all CRDs under a single resource name for dependency tracking
+k8s_resource(
+    new_name='kubewarden-crds',
+    objects=[
+        'policyservers.policies.kubewarden.io:CustomResourceDefinition',
+        'admissionpolicies.policies.kubewarden.io:CustomResourceDefinition',
+        'clusteradmissionpolicies.policies.kubewarden.io:CustomResourceDefinition',
+        'admissionpolicygroups.policies.kubewarden.io:CustomResourceDefinition',
+        'clusteradmissionpolicygroups.policies.kubewarden.io:CustomResourceDefinition',
     ],
 )
 
-# Build the docker image for our controller. We use a specific Dockerfile
-# since tilt can't run on a scratch container.
-entrypoint = ['/manager', '-zap-devel']
-dockerfile = 'tilt.dockerfile'
+registry = settings.get("registry")
+controller_image = settings.get("controller").get("image")
+audit_scanner_image = settings.get("audit-scanner").get("image")
+policy_server_image = settings.get("policy-server").get("image")
 
-load('ext://restart_process', 'docker_build_with_restart')
+kubewarden_controller_yaml = helm(
+    "./charts/kubewarden-controller",
+    name="kubewarden-controller",
+    namespace="kubewarden",
+    set=[
+        "global.cattle.systemDefaultRegistry=null",
+        "image.repository=" + registry + "/" + controller_image,
+        "replicas=1",
+        "logLevel=debug",
+        "podSecurityContext=null",
+        "containerSecurityContext=null",
+        "auditScanner.image.repository=" + registry + "/" + audit_scanner_image,
+        "auditScanner.logLevel=debug", 
+    ],
+)
+k8s_yaml(kubewarden_controller_yaml)
+
+# Wait for kubewarden-controller deployment to be ready before applying defaults
+# This ensures the webhook is running before PolicyServer resources are created
+k8s_resource(
+    'kubewarden-controller:deployment',
+    new_name='kubewarden-controller',
+    resource_deps=['kubewarden-crds'],
+)
+
+kubewarden_defaults_yaml = helm(
+    "./charts/kubewarden-defaults",
+    name="kubewarden-defaults",
+    namespace="kubewarden",
+    set=[
+        "global.cattle.systemDefaultRegistry=null",
+        "policyServer.image.repository=" + registry + "/" + policy_server_image,
+        "policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL",
+        "policyServer.env[0].value=debug",
+    ],
+)
+k8s_yaml(kubewarden_defaults_yaml)
+
+k8s_resource(
+    'default',
+    resource_deps=['kubewarden-controller', 'policy_server_tilt'],
+)
+
+# Tell tilt about the image used by the PolicyServer CRD
+# so that it can update it when needed
+k8s_kind("PolicyServer", image_json_path='{.spec.image}')
+
+
+# Hot reloading containers
+local_resource(
+    "controller_tilt",
+    "make controller",
+    deps=[
+        "go.mod",
+        "go.sum",
+        "cmd/controller",
+        "api",
+        "internal/certs",
+        "internal/constants",
+        "internal/controller",
+        "internal/featuregates",
+        "internal/metrics",
+    ],
+)
+
+entrypoint = ["/controller"]
+dockerfile = "./hack/Dockerfile.controller.tilt"
+
+load("ext://restart_process", "docker_build_with_restart")
 docker_build_with_restart(
-    settings.get('registry') + '/' + settings.get('image'),
-    '.',
-    dockerfile = dockerfile,
-    entrypoint = entrypoint,
+    registry + "/" + controller_image,
+    ".",
+    dockerfile=dockerfile,
+    entrypoint=entrypoint,
     # `only` here is important, otherwise, the container will get updated
     # on _any_ file change.
     only=[
-      './bin',
+        "./bin/controller",
     ],
-    live_update = [
-        sync('./bin/manager', '/manager'),
+    live_update=[
+        sync("./bin/controller", "/controller"),
     ],
 )
 
+local_resource(
+    "audit_scanner_tilt",
+    "make audit-scanner",
+    deps=[
+        "go.mod",
+        "go.sum",
+        "cmd/audit-scanner",
+        "api",
+        "internal/audit-scanner",
+        "internal/constants",
+    ],
+)
+
+# We use a specific Dockerfile since tilt can't run on a scratch container.
+dockerfile = "./hack/Dockerfile.audit-scanner.tilt"
+
+load("ext://restart_process", "docker_build_with_restart")
+docker_build(
+    registry + "/" + audit_scanner_image,
+    ".",
+    dockerfile=dockerfile,
+    # `only` here is important, otherwise, the container will get updated
+    # on _any_ file change.
+    only=[
+        "./bin/audit-scanner",
+    ],
+)
+
+
+local_resource(
+    "policy_server_tilt",
+    "make policy-server",
+    deps=[
+        "Cargo.toml",
+        "Cargo.lock",
+        "crates/burrego",
+        "crates/policy-evaluator",
+        "crates/policy-fetcher",
+        "crates/policy-server",
+    ],
+)
+
+dockerfile = "./hack/Dockerfile.policy-server.tilt"
+
+# Note: Using docker_build instead of docker_build_with_restart because PolicyServer
+# is a CRD and Tilt cannot inject restart wrappers into CRD-managed containers
+# Instead, we trigger a restart by updating the PolicyServer `.spec.annotation`
+docker_build(
+    registry + "/" + policy_server_image,
+    ".",
+    dockerfile=dockerfile,
+    only=[
+        "./bin/policy-server",
+    ],
+)
+
+# Trigger PolicyServer pod restart by updating annotations when image changes
+# Runs automatically whenever the policy-server image is rebuilt
+local_resource(
+    "restart_policy_server",
+    "kubectl get policyserver default >/dev/null 2>&1 && kubectl patch policyserver default --type=merge -p '{\"spec\":{\"annotations\":{\"restart\":\"'$(date +%s)'\"}}}'  || true",
+    resource_deps=["default"],
+    trigger_mode=TRIGGER_MODE_AUTO,
+)

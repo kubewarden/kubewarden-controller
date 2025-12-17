@@ -33,11 +33,11 @@ else
 endif
 
 .PHONY: all
-all: controller audit-scanner
+all: controller audit-scanner policy-server kwctl
 
 .PHONY: test
 test: vet ## Run tests.
-	$(GO_BUILD_ENV) CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
+	$(GO_BUILD_ENV) CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -tags=testing -coverprofile coverage/cover.out -covermode=atomic
 
 .PHONY: helm-unittest
 helm-unittest:
@@ -51,21 +51,28 @@ test-e2e: controller-image audit-scanner-image
 fmt:
 	$(GO_BUILD_ENV) go fmt ./...
 
-.PHOHY: lint
-lint: golangci-lint
+.PHOHY: lint-go
+lint-go: golangci-lint
 	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --verbose
 
-.PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
+.PHONY: lint-go-fix
+lint-go-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --fix
 
 .PHOHY: vet
 vet:
 	$(GO_BUILD_ENV) go vet -tags=testing ./...
 
-.PHOHY: clippy
-clippy:
+.PHONY: lint-rust
+lint-rust:
 	cargo clippy --workspace -- -D warnings
+
+.PHONY: lint-rust-fix
+lint-rust-fix:
+	cargo clippy --workspace --fix --allow-dirty --allow-staged
+
+.PHONY: lint
+lint: lint-go lint-rust
 
 CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
 CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
@@ -96,8 +103,9 @@ audit-scanner-image:
 POLICY_SERVER_SRC_DIRS := crates/policy-server
 POLICY_SERVER_SRCS := $(shell find $(POLICY_SERVER_SRC_DIRS) -type f -name '*.rs')
 .PHONY: policy-server
-policy-server: $(POLICY_SERVER_SRCS) clippy
+policy-server: $(POLICY_SERVER_SRCS) lint-rust
 	cross build --target $(RUST_TARGET) --release -p policy-server
+	cp ./target/$(RUST_TARGET)/release/policy-server ./bin/policy-server
 
 .PHONY: policy-server-image
 policy-server-image:
@@ -108,8 +116,9 @@ policy-server-image:
 KWCTL_SRC_DIRS := crates/kwctl
 KWCTL_SRCS := $(shell find $(KWCTL_SRC_DIRS) -type f -name '*.rs')
 .PHONY: kwctl
-kwctl: $(KWCTL_SRCS) clippy
+kwctl: $(KWCTL_SRCS) lint-rust
 	cross build --target $(RUST_TARGET) --release -p kwctl
+	cp ./target/$(RUST_TARGET)/release/kwctl ./bin/kwctl
 
 .PHONY: generate
 generate: generate-controller generate-chart generate-mocks
@@ -120,20 +129,11 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=charts/admission-controller/templates/crd output:rbac:artifacts:config=charts/admission-controller/templates/controller
-	sed -i 's/controller-role/{{ include "admission_controller.fullname" . }}-controller/' charts/admission-controller/templates/controller/role.yaml
-	sed -i '/metadata:/a\  labels:\n    {{ include "admission_controller.labels" . | nindent 4 }}\n    app.kubernetes.io/component: controller' charts/admission-controller/templates/controller/role.yaml
-	for f in ./charts/admission-controller/templates/crd/*.yaml; do \
-		sed -i '/^[[:space:]]*annotations:/a\    helm.sh\/resource-policy: keep' "$$f"; \
-	done
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=charts/crds/templates output:rbac:artifacts:config=charts/admission-controller/templates/controller
 
 .PHONY: generate-chart
 generate-chart: ## Generate Helm chart values schema.
 	$(HELM_SCHEMA) --values charts/admission-controller/values.yaml --output charts/admission-controller/values.schema.json
-
-.PHONY: generate-mocks
-generate-mocks: ## Generate mocks for testing.
-	$(MOCKERY)
 
 ##@ Dependencies
 

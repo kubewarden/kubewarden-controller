@@ -1,0 +1,17 @@
+FROM alpine AS cfg
+
+FROM scratch
+COPY --from=cfg /etc/passwd /etc/passwd
+COPY --from=cfg /etc/group /etc/group
+USER 65533:65533
+WORKDIR /
+COPY ./bin/policy-server /policy-server
+
+# Default port, should be used when tls is not enabled
+EXPOSE 3000
+# Readiness probe port, always http
+EXPOSE 8081
+# To be used when tls is enabled
+EXPOSE 8443
+
+ENTRYPOINT ["/policy-server"]

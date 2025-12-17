@@ -1,0 +1,5 @@
+FROM alpine
+WORKDIR /
+COPY ./bin/audit-scanner /audit-scanner
+
+ENTRYPOINT ["/audit-scanner"]
