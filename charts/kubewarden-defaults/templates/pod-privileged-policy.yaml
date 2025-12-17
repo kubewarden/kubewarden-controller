@@ -1,0 +1,39 @@
+{{ if .Values.recommendedPolicies.enabled }}
+apiVersion: {{ $.Values.crdVersion }}
+kind: ClusterAdmissionPolicy
+metadata:
+  labels:
+    {{- include "kubewarden-defaults.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy
+  annotations:
+    io.kubewarden.policy.category: PSP
+    io.kubewarden.policy.severity: medium
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
+  name: {{ $.Values.recommendedPolicies.podPrivilegedPolicy.name }}
+spec:
+  mode: {{ $.Values.recommendedPolicies.defaultPolicyMode }}
+  failurePolicy: {{ template "policy_failure_policy" . }}
+  module: {{ template "policy_default_registry" . }}{{ .Values.recommendedPolicies.podPrivilegedPolicy.module.repository }}:{{ .Values.recommendedPolicies.podPrivilegedPolicy.module.tag }}
+
+{{ include "policy-namespace-selector" . | indent 2}}
+  rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["pods"]
+      operations: ["CREATE"] # kubernetes doesn't allow to add/remove privileged containers to an already running pod
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["replicationcontrollers"]
+      operations: ["CREATE", "UPDATE"]
+    - apiGroups: ["apps"]
+      apiVersions: ["v1"]
+      resources: ["deployments","replicasets","statefulsets","daemonsets"]
+      operations: ["CREATE", "UPDATE"]
+    - apiGroups: ["batch"]
+      apiVersions: ["v1"]
+      resources: ["jobs","cronjobs"]
+      operations: ["CREATE", "UPDATE"]
+  mutating: false
+  settings:
+    {{- toYaml .Values.recommendedPolicies.podPrivilegedPolicy.settings | replace "|\n" "" | nindent 4 }}
+{{ end }}

@@ -1,20 +1,18 @@
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    helm.sh/resource-policy: keep
-    controller-gen.kubebuilder.io/version: v0.16.5
-  name: admissionpolicies.policies.kubewarden.io
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: admissionpolicygroups.policies.kubewarden.io
 spec:
   group: policies.kubewarden.io
   names:
-    kind: AdmissionPolicy
-    listKind: AdmissionPolicyList
-    plural: admissionpolicies
+    kind: AdmissionPolicyGroup
+    listKind: AdmissionPolicyGroupList
+    plural: admissionpolicygroups
     shortNames:
-    - ap
-    singular: admissionpolicy
+    - apg
+    singular: admissionpolicygroup
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -56,7 +54,8 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: AdmissionPolicy is the Schema for the admissionpolicies API
+        description: AdmissionPolicyGroup is the Schema for the AdmissionPolicyGroups
+          API
         properties:
           apiVersion:
             description: |-
@@ -76,7 +75,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: AdmissionPolicySpec defines the desired state of AdmissionPolicy.
+            description: AdmissionPolicyGroupSpec defines the desired state of AdmissionPolicyGroup.
             properties:
               backgroundAudit:
                 default: true
@@ -86,6 +85,20 @@ spec:
                   evaluation results during audit checks and will be skipped.
                   The default is "true".
                 type: boolean
+              expression:
+                description: |-
+                  Expression is the evaluation expression to accept or reject the
+                  admission request under evaluation. This field uses CEL as the
+                  expression language for the policy groups. Each policy in the group
+                  will be represented as a function call in the expression with the
+                  same name as the policy defined in the group. The expression field
+                  should be a valid CEL expression that evaluates to a boolean value.
+                  If the expression evaluates to true, the group policy will be
+                  considered as accepted, otherwise, it will be considered as
+                  rejected. This expression allows grouping policies calls and perform
+                  logical operations on the results of the policies. See Kubewarden
+                  documentation to learn about all the features available.
+                type: string
               failurePolicy:
                 description: |-
                   FailurePolicy defines how unrecognized errors and timeout errors from the
@@ -169,10 +182,9 @@ spec:
                 type: string
               message:
                 description: |-
-                  Message overrides the rejection message of the policy.
-                  When provided, the policy's rejection message can be found
-                  inside of the `.status.details.causes` field of the
-                  AdmissionResponse object
+                  Message is  used to specify the message that will be returned when
+                  the policy group is rejected. The specific policy results will be
+                  returned in the warning field of the response.
                 type: string
               mode:
                 default: protect
@@ -188,20 +200,6 @@ spec:
                 - protect
                 - monitor
                 type: string
-              module:
-                description: |-
-                  Module is the location of the WASM module to be loaded. Can be a
-                  local file (file://), a remote file served by an HTTP server
-                  (http://, https://), or an artifact served by an OCI-compatible
-                  registry (registry://).
-                  If prefix is missing, it will default to registry:// and use that
-                  internally.
-                type: string
-              mutating:
-                description: |-
-                  Mutating indicates whether a policy has the ability to mutate
-                  incoming requests or not.
-                type: boolean
               objectSelector:
                 description: |-
                   ObjectSelector decides whether to run the webhook based on if the
@@ -259,6 +257,44 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-map-type: atomic
+              policies:
+                additionalProperties:
+                  properties:
+                    module:
+                      description: |-
+                        Module is the location of the WASM module to be loaded. Can be a
+                        local file (file://), a remote file served by an HTTP server
+                        (http://, https://), or an artifact served by an OCI-compatible
+                        registry (registry://).
+                        If prefix is missing, it will default to registry:// and use that
+                        internally.
+                      type: string
+                    settings:
+                      description: |-
+                        Settings is a free-form object that contains the policy configuration
+                        values.
+                        x-kubernetes-embedded-resource: false
+                      nullable: true
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    timeoutEvalSeconds:
+                      description: |-
+                        TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
+                        the timeout passes, the policy evaluation call will fail based on the
+                        failure policy.
+                        The timeout value must be between 2 and 30 seconds.
+                      format: int32
+                      maximum: 30
+                      minimum: 2
+                      type: integer
+                  required:
+                  - module
+                  type: object
+                description: |-
+                  Policies is a list of policies that are part of the group that will
+                  be available to be called in the evaluation expression field.
+                  Each policy in the group should be a Kubewarden policy.
+                type: object
               policyServer:
                 default: default
                 description: PolicyServer identifies an existing PolicyServer resource.
@@ -335,14 +371,6 @@ spec:
                       type: string
                   type: object
                 type: array
-              settings:
-                description: |-
-                  Settings is a free-form object that contains the policy configuration
-                  values.
-                  x-kubernetes-embedded-resource: false
-                nullable: true
-                type: object
-                x-kubernetes-preserve-unknown-fields: true
               sideEffects:
                 description: |-
                   SideEffects states whether this webhook has side effects.
@@ -352,20 +380,10 @@ spec:
                   Requests with the dryRun attribute will be auto-rejected if they match a webhook with
                   sideEffects == Unknown or Some.
                 type: string
-              timeoutEvalSeconds:
-                description: |-
-                  TimeoutEvalSeconds specifies the timeout for the policy evaluation. After
-                  the timeout passes, the policy evaluation call will fail based on the
-                  failure policy.
-                  The timeout value must be between 2 and 30 seconds.
-                format: int32
-                maximum: 30
-                minimum: 2
-                type: integer
               timeoutSeconds:
                 default: 10
                 description: |-
-                  TimeoutSeconds specifies the timeout for the policy webhook. After the timeout passes,
+                  TimeoutSeconds specifies the timeout for this webhook. After the timeout passes,
                   the webhook call will be ignored or the API call will fail based on the
                   failure policy.
                   The timeout value must be between 2 and 30 seconds.
@@ -375,8 +393,9 @@ spec:
                 minimum: 2
                 type: integer
             required:
-            - module
-            - mutating
+            - expression
+            - message
+            - policies
             - rules
             type: object
           status:

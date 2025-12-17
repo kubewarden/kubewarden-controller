@@ -1,0 +1,27 @@
+You now have a `PolicyServer` named `default` running in your cluster.
+It is ready to run any `clusteradmissionpolicies.policies.kubewarden.io` or
+`admissionpolicies.policies.kubewarden.io` resources.
+{{ if .Values.recommendedPolicies.enabled }}
+Installed recommended policies:
+- {{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.name }}
+  module: registry://{{ .Values.global.cattle.systemDefaultRegistry}}/{{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.module.repository }}:{{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.hostNamespacePolicy.name }}
+  module: registry://{{ .Values.global.cattle.systemDefaultRegistry}}/{{ .Values.recommendedPolicies.hostNamespacePolicy.module.repository }}:{{ .Values.recommendedPolicies.hostNamespacePolicy.module.tag }}
+- {{ .Values.recommendedPolicies.podPrivilegedPolicy.name }}
+  module: registry://{{ .Values.global.cattle.systemDefaultRegistry}}/{{ .Values.recommendedPolicies.podPrivilegedPolicy.module.repository }}:{{ .Values.recommendedPolicies.podPrivilegedPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.userGroupPolicy.name }}
+  module: registry://{{ .Values.global.cattle.systemDefaultRegistry}}/{{ .Values.recommendedPolicies.userGroupPolicy.module.repository }}:{{ .Values.recommendedPolicies.userGroupPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.hostPathsPolicy.name }}
+  module: registry://{{ .Values.global.cattle.systemDefaultRegistry}}/{{ .Values.recommendedPolicies.hostPathsPolicy.module.repository }}:{{ .Values.recommendedPolicies.hostPathsPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.capabilitiesPolicy.name }}
+  module: registry://{{ .Values.global.cattle.systemDefaultRegistry}}/{{ .Values.recommendedPolicies.capabilitiesPolicy.module.repository }}:{{ .Values.recommendedPolicies.capabilitiesPolicy.module.tag }}
+{{- if eq .Values.recommendedPolicies.defaultPolicyMode "monitor" }}
+
+Note: all these policies have been installed in `monitor` mode, you can enforce them
+by changing their `mode` to `protect`.
+
+{{- end }}
+{{- end }}
+
+For more information check out https://docs.kubewarden.io/quick-start.
+Discover ready to use policies at https://artifacthub.io/packages/search?kind=13.

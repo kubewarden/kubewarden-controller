@@ -59,8 +59,7 @@ spec:
             image: '{{ template "system_default_registry" . }}{{ .Values.auditScanner.image.repository }}:{{ .Values.auditScanner.image.tag }}'
             imagePullPolicy: {{ .Values.auditScanner.image.pullPolicy }}
             command:
-              {{- include "audit-scanner.command" . | nindent 14 -}}
-            {{- with .Values.containerSecurityContext }}
+              {{- include "audit-scanner.command" . | nindent 14 }}
             volumeMounts:
             - mountPath: "/pki"
               name: kubewarden-ca
@@ -68,8 +67,9 @@ spec:
             - mountPath: "/client-cert"
               name: kubewarden-audit-scanner-client-cert
               readOnly: true
+            {{- if .Values.containerSecurityContext }}
             securityContext:
-              {{- toYaml . | nindent 14 }}
+{{ toYaml .Values.containerSecurityContext | indent 14 }}
             {{- end }}
             {{- if and .Values.resources .Values.resources.auditScanner }}
             resources:
