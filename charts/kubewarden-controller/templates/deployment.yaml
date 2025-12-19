@@ -46,7 +46,7 @@ spec:
       priorityClassName: {{ .Values.global.priorityClassName | toYaml | nindent 8 }}
       {{- end }}
       containers:
-      - name: manager
+      - name: controller
         args:
         - --leader-elect
         - --deployments-namespace={{ .Release.Namespace }}
@@ -74,7 +74,7 @@ spec:
         {{- end }}
        {{- end }}
         command:
-        - /manager
+        - /controller
         env:
         {{- if and .Values.telemetry.metrics (eq .Values.telemetry.mode "sidecar") }}
           - name: KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT

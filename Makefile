@@ -15,7 +15,7 @@ GO_BUILD_ENV := CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 ENVTEST_DIR ?= $(shell pwd)/.envtest
 
 REGISTRY ?= ghcr.io
-REPO ?= kubewarden/admission-controller
+REPO ?= kubewarden
 TAG ?= latest
 
 # Detect architecture for Rust builds
@@ -44,8 +44,8 @@ helm-unittest:
 	helm unittest charts/admission-controller --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
-test-e2e: controller-image audit-scanner-image
-	$(GO_BUILD_ENV) go test ./test/e2e/ -v
+test-e2e: controller-image audit-scanner-image policy-server-image
+	$(GO_BUILD_ENV) go test ./e2e/ -v
 
 .PHONY: fmt
 fmt:
@@ -84,8 +84,8 @@ controller: $(CONTROLLER_SRCS) vet
 .PHONY: controller-image
 controller-image:
 	docker build -f ./Dockerfile.controller \
-		-t "$(REGISTRY)/$(REPO)/controller:$(TAG)" .
-	@echo "Built $(REGISTRY)/$(REPO)/controller:$(TAG)"
+		-t "$(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)"
 
 AUDIT_SCANNER_SRC_DIRS := cmd/audit-scanner api internal/audit-scanner
 AUDIT_SCANNER_GO_SRCS := $(shell find $(STORAGE_SRC_DIRS) -type f -name '*.go')
