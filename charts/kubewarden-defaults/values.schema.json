@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "type": "object",
+  "properties": {
+    "policyServer": {
+      "type": "object",
+      "properties": {
+        "maxUnavailable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minAvailable": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "anyOf": [
+        {
+          "oneOf": [
+            {
+              "required": ["minAvailable"]
+            },
+            {
+              "required": ["maxUnavailable"]
+            }
+          ]
+        },
+        {
+          "not": {
+            "allOf": [
+              {
+                "required": ["minAvailable"]
+              },
+              {
+                "required": ["maxUnavailable"]
+              }
+            ]
+          }
+        }
+      ],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

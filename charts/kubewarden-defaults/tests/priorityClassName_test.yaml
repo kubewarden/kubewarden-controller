@@ -1,0 +1,12 @@
+suite: priorityClassName configuration
+templates:
+  - policyserver-default.yaml
+tests:
+  - it: "should set the priorityClassName when .global.priorityClassName is defined"
+    set:
+      global:
+        priorityClassName: "high-priority"
+    asserts:
+      - equal:
+          path: spec.priorityClassName
+          value: "high-priority"

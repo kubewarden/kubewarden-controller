@@ -1,0 +1,204 @@
+suite: telemetry configuration
+templates:
+  - deployment.yaml
+tests:
+  - it: "should set required configuration when connecting with remote otel collector"
+    set:
+      telemetry:
+        mode: "custom"
+        metrics: true
+        tracing: true
+        custom:
+          endpoint: "https://my-collector-collector.kubewarden.svc:4317"
+          insecure: false
+          otelCollectorCertificateSecret: "my-server-cert"
+          otelCollectorClientCertificateSecret: "my-client-cert"
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.metadata.annotations
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-otel-sidecar
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-metrics
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-tracing
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --opentelemetry-certificate-secret=my-server-cert
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --opentelemetry-client-certificate-secret=my-client-cert
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT
+            value: "8080"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: "https://my-collector-collector.kubewarden.svc:4317"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_INSECURE
+            value: "false"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_CERTIFICATE
+            value: /kubewarden/otel-collector-certs/ca.crt 
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
+            value: /kubewarden/otel-collector-client-certs/tls.crt
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_CLIENT_KEY
+            value: /kubewarden/otel-collector-client-certs/tls.key
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /kubewarden/otel-collector-certs
+            name: otel-collector-certificate
+            readOnly: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /kubewarden/otel-collector-client-certs
+            name: otel-collector-client-certificate
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: otel-collector-certificate
+            secret:
+              defaultMode: 420
+              secretName: my-server-cert
+              items:
+                - key: ca.crt
+                  path: ca.crt
+      - contains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: otel-collector-client-certificate
+            secret:
+              defaultMode: 420
+              secretName: my-client-cert
+              items:
+                - key: tls.crt
+                  path: tls.crt
+                - key: tls.key
+                  path: tls.key
+  - it: "sidecar should be enable by default"
+    set:
+      telemetry:
+        mode: "sidecar"
+        metrics: true
+        tracing: true
+    asserts:
+      - isSubset:
+          path: spec.template.metadata.annotations
+          content:
+            "sidecar.opentelemetry.io/inject": "true"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-otel-sidecar
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-metrics
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-tracing
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --opentelemetry-certificate-secret=
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --opentelemetry-client-certificate-secret=
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT
+            value: "8080"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: "https://localhost:4317"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_INSECURE
+            value: "true"
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_CERTIFICATE
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: OTEL_EXPORTER_OTLP_CLIENT_KEY
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /kubewarden/otel-collector-certs
+            name: otel-collector-certificate
+            readOnly: true
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /kubewarden/otel-collector-client-certs
+            name: otel-collector-client-certificate
+            readOnly: true
+      - notContains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: otel-collector-certificate
+            secret:
+              defaultMode: 420
+              items:
+                - key: ca.crt
+                  path: ca.crt
+      - notContains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: otel-collector-client-certificate
+            secret:
+              defaultMode: 420
+              items:
+                - key: tls.crt
+                  path: tls.crt
+                - key: tls.key
+                  path: tls.key

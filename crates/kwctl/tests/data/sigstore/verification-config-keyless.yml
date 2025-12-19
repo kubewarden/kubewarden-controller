@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+
+allOf:
+  - kind: genericIssuer
+    issuer: https://token.actions.githubusercontent.com
+    subject:
+      urlPrefix: https://github.com/kubewarden

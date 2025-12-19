@@ -1,0 +1,6 @@
+dependencies:
+- name: openreports
+  repository: https://openreports.github.io/reports-api
+  version: 0.2.1
+digest: sha256:49254513a9d7f6f34d27a55271776fb48268cee1ad0daf9fc056d7fa00649736
+generated: "2025-10-22T14:25:46.704168411-03:00"

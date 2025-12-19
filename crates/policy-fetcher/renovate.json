@@ -1,0 +1,5 @@
+{
+  "extends": [
+    "github>kubewarden/github-actions//renovate-config/default"
+  ]
+}

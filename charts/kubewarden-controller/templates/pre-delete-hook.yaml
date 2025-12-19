@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": hook-succeeded
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      name: "{{ .Release.Name }}"
+      labels:
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+      annotations:
+        {{- include "kubewarden-controller.annotations" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "kubewarden-controller.serviceAccountName" . }}
+      {{- if .Values.preDeleteHook.podSecurityContext }}
+      securityContext:
+{{ toYaml .Values.preDeleteHook.podSecurityContext | indent 8 }}
+      {{- end }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- include "imagePullSecrets" .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: pre-delete-job
+          image: '{{ template "system_default_registry" . }}{{ .Values.preDeleteJob.image.repository }}:{{ .Values.preDeleteJob.image.tag }}'
+          command: ["kubectl", "delete", "--all", "policyservers.policies.kubewarden.io"]
+          env:
+            - name: KUBERLR_ALLOWDOWNLOAD
+              value: "1"
+          {{- if .Values.preDeleteHook.containerSecurityContext }}
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+{{ toYaml .Values.preDeleteHook.containerSecurityContext | indent 12 }}
+          {{- end }}
+          {{- if and .Values.resources .Values.resources.preDeleteJob }}
+          resources:
+{{ toYaml .Values.resources.preDeleteJob | indent 12 }}
+          {{- end }}

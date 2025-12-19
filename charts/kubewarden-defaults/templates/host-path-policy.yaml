@@ -1,0 +1,28 @@
+{{ if .Values.recommendedPolicies.enabled }}
+apiVersion: {{ $.Values.crdVersion }}
+kind: ClusterAdmissionPolicy
+metadata:
+  labels:
+    {{- include "kubewarden-defaults.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy
+  annotations:
+    io.kubewarden.policy.category: PSP
+    io.kubewarden.policy.severity: medium
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
+  name: {{ $.Values.recommendedPolicies.hostPathsPolicy.name }}
+spec:
+  mode: {{ $.Values.recommendedPolicies.defaultPolicyMode }}
+  failurePolicy: {{ template "policy_failure_policy" . }}
+  module: {{ template "policy_default_registry" . }}{{ .Values.recommendedPolicies.hostPathsPolicy.module.repository }}:{{ .Values.recommendedPolicies.hostPathsPolicy.module.tag }}
+{{ include "policy-namespace-selector" . | indent 2}}
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+    operations:
+    - CREATE
+    - UPDATE
+  mutating: false
+  settings:
+    {{- toYaml .Values.recommendedPolicies.hostPathsPolicy.settings | replace "|\n" "" | nindent 4 }}
+{{ end }}
