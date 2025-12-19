@@ -37,7 +37,7 @@ all: controller audit-scanner policy-server kwctl
 
 .PHONY: test
 test: vet ## Run tests.
-	$(GO_BUILD_ENV) CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -tags=testing -coverprofile coverage/cover.out -covermode=atomic
+	$(GO_BUILD_ENV) CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
 
 .PHONY: helm-unittest
 helm-unittest:
@@ -61,7 +61,7 @@ lint-go-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 
 .PHOHY: vet
 vet:
-	$(GO_BUILD_ENV) go vet -tags=testing ./...
+	$(GO_BUILD_ENV) go vet ./...
 
 .PHONY: lint-rust
 lint-rust:

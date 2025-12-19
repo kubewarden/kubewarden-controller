@@ -17,7 +17,6 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/policies"
 	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/report"
 	auditscheme "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/scheme"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,6 +33,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	testingclient "k8s.io/client-go/testing"
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
+
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
 )
 
 const (

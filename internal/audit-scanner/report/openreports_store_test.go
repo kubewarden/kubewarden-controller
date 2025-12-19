@@ -7,7 +7,6 @@ import (
 
 	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
 	auditConstants "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
-	testutils "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -16,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
 )
 
 func TestCreateReport(t *testing.T) {
