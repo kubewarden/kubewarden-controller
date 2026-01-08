@@ -465,56 +465,6 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).Feature()
 
-	// TODO: REMOVE THIS TEST - IT'S NEVER GOING TO PASS, IT'S WRONG
-
-	// unscheduledFeature := features.New("Unscheduled AdmissionPolicy").
-	// 	Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-	// 		// Create namespace
-	// 		err := createNamespaceWithRetry(ctx, cfg, policyNamespace)
-	// 		require.NoError(t, err)
-
-	// 		// Add scheme
-	// 		err = policiesv1.AddToScheme(cfg.Client().Resources().GetScheme())
-	// 		require.NoError(t, err)
-
-	// 		return ctx
-	// 	}).
-	// 	Assess("should set policy status to unscheduled when creating an AdmissionPolicy without a PolicyServer assigned", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-	// 		policyName := policiesv1.NewAdmissionPolicyFactory().Build().Name
-	// 		policy := policiesv1.NewAdmissionPolicyFactory().
-	// 			WithName(policyName).
-	// 			WithNamespace(policyNamespace).
-	// 			WithPolicyServer("i-do-not-exist").
-	// 			Build()
-
-	// 		err := cfg.Client().Resources().Create(ctx, policy)
-	// 		if err != nil && !apierrors.IsAlreadyExists(err) {
-	// 			require.NoError(t, err)
-	// 		}
-
-	// 		// Add debug logging to see what status we're getting
-	// 		err = wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
-	// 			&policiesv1.AdmissionPolicy{ObjectMeta: metav1.ObjectMeta{Name: policyName, Namespace: policyNamespace}},
-	// 			func(object k8s.Object) bool {
-	// 				p := object.(*policiesv1.AdmissionPolicy)
-	// 				t.Logf("Current policy status: %s", p.Status.PolicyStatus)
-	// 				return p.Status.PolicyStatus == policiesv1.PolicyStatusUnscheduled
-	// 			},
-	// 		), wait.WithTimeout(30*time.Second), wait.WithInterval(testPollInterval))
-	// 		//), wait.WithTimeout(testTimeout), wait.WithInterval(testPollInterval))
-
-	// 		// If it fails, get the final status for debugging
-	// 		if err != nil {
-	// 			finalPolicy := &policiesv1.AdmissionPolicy{}
-	// 			_ = cfg.Client().Resources().Get(ctx, policyName, policyNamespace, finalPolicy)
-	// 			t.Logf("Final policy status: %s, PolicyServer: %s", finalPolicy.Status.PolicyStatus, finalPolicy.Spec.PolicyServer)
-	// 		}
-
-	// 		require.NoError(t, err, "Policy should have unscheduled status")
-
-	// 		return ctx
-	// 	}).Feature()
-
 	scheduledFeature := features.New("Scheduled AdmissionPolicy").
 		Setup(func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			// Create namespace
