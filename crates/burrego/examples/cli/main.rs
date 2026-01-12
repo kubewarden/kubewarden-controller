@@ -63,7 +63,8 @@ fn main() -> Result<()> {
     // setup logging
     let level_filter = if cli.verbose { "debug" } else { "info" };
     let filter_layer = EnvFilter::new(level_filter)
-        .add_directive("wasmtime_cranelift=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
+        .add_directive("wasmtime=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
+        .add_directive("wasmtime_internal_cranelift=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("cranelift_codegen=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("cranelift_wasm=off".parse().unwrap()) // this crate generates lots of tracing events we don't care about
         .add_directive("regalloc=off".parse().unwrap()); // this crate generates lots of tracing events we don't care about

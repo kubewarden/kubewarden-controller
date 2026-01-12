@@ -4,7 +4,7 @@ OBJECTS=$(SOURCES:%.rego=%.wasm)
 all: $(OBJECTS)
 
 %.wasm: %.rego
-	opa build -t wasm -e policy/violation -o $*.tar.gz $<
+	opa build --v0-compatible -t wasm -e policy/violation -o $*.tar.gz $<
 	tar -xf $*.tar.gz --transform "s|policy.wasm|$*.wasm|" /policy.wasm
 	rm $*.tar.gz
 
