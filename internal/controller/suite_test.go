@@ -169,7 +169,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	go func() {
 		defer GinkgoRecover()
-		err = k8sManager.Start(ctx)
+		err := k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 
@@ -177,7 +177,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		By("tearing down the test environment")
 		cancel()
 
-		err = testEnv.Stop()
+		err := testEnv.Stop()
 		Expect(err).ToNot(HaveOccurred(), "failed to tear down the test environment")
 	})
 
