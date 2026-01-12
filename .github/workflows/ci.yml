@@ -105,6 +105,18 @@ jobs:
           flags: go-tests
           verbose: true
 
+  e2e-go:
+    name: Go e2e tests
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version: "1.25"
+      - run: make test-e2e
+
   golangci:
     name: Golangci-lint
     needs: changes
@@ -121,14 +133,23 @@ jobs:
           version: v2.4.0
 
   # Rust jobs
-  test-rust:
-    name: Rust tests
+  unit-tests-rust:
+    name: Rust unit tests
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - run: make test-rust
+      - run: make -C crates unit-tests
+
+  integration-tests-rust:
+    name: Rust integration tests
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - run: make -C crates integration-tests
 
   fmt-rust:
     name: Rust format
