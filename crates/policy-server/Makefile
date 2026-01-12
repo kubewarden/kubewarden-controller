@@ -27,11 +27,11 @@ typos:
 
 .PHONY: test
 test: fmt lint
-	cargo test --workspace
+	cargo test
 
 .PHONY: unit-tests
 unit-tests: fmt lint
-	cargo test --workspace --lib
+	cargo test --lib
 
 .PHONY: integration-test
 integration-tests: fmt lint

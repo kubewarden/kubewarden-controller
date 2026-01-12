@@ -1,26 +1,24 @@
-KUBE_API_VERSION?=1.30
-
 .PHONY: build
 build:
-	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo build --release
+	cargo build --release
 
 .PHONY: fmt
 fmt:
-	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo fmt --all -- --check
+	cargo fmt --all -- --check
 
 .PHONY: lint
 lint:
-	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo clippy --workspace -- -D warnings
+	cargo clippy -- -D warnings
 
 .PHONY: check
 check:
-	K8S_OPENAPI_ENABLED_VERSION=$(KUBE_API_VERSION) cargo check --workspace
+	cargo check
 
 policy.wasm: 
 	cargo build  --target=wasm32-wasip1 --release -p context-aware-test-policy
 
 annotated-policy.wasm: policy.wasm
-	kwctl annotate -m crates/context-aware-test-policy/metadata.yml -u README.md -o annotated-policy.wasm target/wasm32-wasip1/release/context_aware_test_policy.wasm
+	kwctl annotate -m ../context-aware-test-policy/metadata.yml -u ../../README.md -o annotated-policy.wasm ../../target/wasm32-wasip1/release/context_aware_test_policy.wasm
 	
 .PHONY: typos
 typos:
@@ -28,16 +26,15 @@ typos:
 
 .PHONY: test
 test: fmt lint annotated-policy.wasm
-	cargo test --workspace
+	cargo test
 
 .PHONY: unit-tests
 unit-tests: fmt lint
-	cargo test --workspace --lib
+	cargo test --lib
 
 .PHONY: integration-tests
 integration-tests: fmt lint annotated-policy.wasm
 	cargo test --test '*'
-
 
 .PHONY: coverage
 coverage: coverage-unit-tests coverage-integration-tests

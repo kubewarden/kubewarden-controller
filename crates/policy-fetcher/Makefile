@@ -16,7 +16,7 @@ typos:
 
 .PHONY: test
 test: fmt lint
-	cargo test --workspace
+	cargo test
 	
 .PHONY: coverage
 coverage: coverage-unit-tests

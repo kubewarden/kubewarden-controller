@@ -23,7 +23,11 @@ typos:
 
 .PHONY: test
 test: fmt lint
-	cargo test --workspace --bins
+	cargo test --bins
+
+.PHONY: unit-tests
+unit-tests: fmt lint
+	cargo test --bins
 
 .PHONY: e2e-tests
 e2e-tests:

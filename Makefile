@@ -42,7 +42,7 @@ test-go: vet
 
 .PHONY: test-rust
 test-rust:
-	$(MAKE) -C crates/policy-evaluator test
+	$(MAKE) -C crates test
 
 .PHONY: helm-unittest
 helm-unittest:
@@ -70,15 +70,15 @@ vet:
 
 .PHONY: lint-rust
 lint-rust:
-	cargo clippy --workspace -- -D warnings
+	$(MAKE) -C crates lint
 
 .PHONY: lint-rust-fix
 lint-rust-fix:
-	cargo clippy --workspace --fix --allow-dirty --allow-staged
+	$(MAKE) -C crates lint-fix
 
 .PHONY: fmt-rust
 fmt-rust:
-	cargo fmt --all -- --check
+	$(MAKE) -C crates fmt
 
 .PHONY: lint
 lint: lint-go lint-rust
