@@ -46,7 +46,7 @@ test-rust:
 
 .PHONY: helm-unittest
 helm-unittest:
-	helm unittest charts/admission-controller --file "tests/**/*_test.yaml"
+	helm unittest charts/kubewarden-controller --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
 test-e2e: controller-image audit-scanner-image policy-server-image
@@ -138,11 +138,11 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=charts/crds/templates output:rbac:artifacts:config=charts/admission-controller/templates/controller
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=charts/kubewarden-crds/templates output:rbac:artifacts:config=charts/kubewarden-controller/templates
 
 .PHONY: generate-chart
 generate-chart: ## Generate Helm chart values schema.
-	$(HELM_SCHEMA) --values charts/admission-controller/values.yaml --output charts/admission-controller/values.schema.json
+	$(HELM_SCHEMA) --values charts/kubewarden-controller/values.yaml --output charts/kubewarden-controller/values.schema.json
 
 ##@ Dependencies
 
