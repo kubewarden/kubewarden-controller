@@ -1,12 +1,10 @@
 CONTROLLER_TOOLS_VERSION := v0.16.5
 ENVTEST_VERSION := release-0.19
 ENVTEST_K8S_VERSION := 1.31.0
-MOCKERY_VERSION := v3.3.4
 HELM_VALUES_SCHEMA_JSON_VERSION := v2.3.1
 
 CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
-MOCKERY ?= go run github.com/vektra/mockery/v3@$(MOCKERY_VERSION)
 HELM_SCHEMA ?= go run github.com/losisin/helm-values-schema-json/v2@$(HELM_VALUES_SCHEMA_JSON_VERSION)
 
 GO_MOD_SRCS := go.mod go.sum
@@ -36,8 +34,15 @@ endif
 all: controller audit-scanner policy-server kwctl
 
 .PHONY: test
-test: vet ## Run tests.
+test: test-go test-rust
+
+.PHONY: test-go
+test-go: vet
 	$(GO_BUILD_ENV) CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
+
+.PHONY: test-rust
+test-rust:
+	cargo test --workspace
 
 .PHONY: helm-unittest
 helm-unittest:
@@ -51,7 +56,7 @@ test-e2e: controller-image audit-scanner-image policy-server-image
 fmt:
 	$(GO_BUILD_ENV) go fmt ./...
 
-.PHOHY: lint-go
+.PHONY: lint-go
 lint-go: golangci-lint
 	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --verbose
 
@@ -59,7 +64,7 @@ lint-go: golangci-lint
 lint-go-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --fix
 
-.PHOHY: vet
+.PHONY: vet
 vet:
 	$(GO_BUILD_ENV) go vet ./...
 
@@ -88,10 +93,10 @@ controller-image:
 	@echo "Built $(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)"
 
 AUDIT_SCANNER_SRC_DIRS := cmd/audit-scanner api internal/audit-scanner
-AUDIT_SCANNER_GO_SRCS := $(shell find $(STORAGE_SRC_DIRS) -type f -name '*.go')
-AUDIT_SCANNER_SRCS := $(GO_MOD_SRCS) $(STORAGE_GO_SRCS)
+AUDIT_SCANNER_GO_SRCS := $(shell find $(AUDIT_SCANNER_SRC_DIRS) -type f -name '*.go')
+AUDIT_SCANNER_SRCS := $(GO_MOD_SRCS) $(AUDIT_SCANNER_GO_SRCS)
 .PHONY: audit-scanner
-audit-scanner: $(STORAGE_SRCS) vet
+audit-scanner: $(AUDIT_SCANNER_SRCS) vet
 	$(GO_BUILD_ENV) go build -o ./bin/audit-scanner ./cmd/audit-scanner
 
 .PHONY: audit-scanner-image
@@ -121,7 +126,7 @@ kwctl: $(KWCTL_SRCS) lint-rust
 	cp ./target/$(RUST_TARGET)/release/kwctl ./bin/kwctl
 
 .PHONY: generate
-generate: generate-controller generate-chart generate-mocks
+generate: generate-controller generate-chart
 
 .PHONY: generate-controller
 generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
