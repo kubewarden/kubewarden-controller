@@ -42,7 +42,7 @@ test-go: vet
 
 .PHONY: test-rust
 test-rust:
-	cargo test --workspace
+	$(MAKE) -C crates/policy-evaluator test
 
 .PHONY: helm-unittest
 helm-unittest:
@@ -52,8 +52,8 @@ helm-unittest:
 test-e2e: controller-image audit-scanner-image policy-server-image
 	$(GO_BUILD_ENV) go test ./e2e/ -v
 
-.PHONY: fmt
-fmt:
+.PHONY: fmt-go
+fmt-go:
 	$(GO_BUILD_ENV) go fmt ./...
 
 .PHONY: lint-go
@@ -75,6 +75,10 @@ lint-rust:
 .PHONY: lint-rust-fix
 lint-rust-fix:
 	cargo clippy --workspace --fix --allow-dirty --allow-staged
+
+.PHONY: fmt-rust
+fmt-rust:
+	cargo fmt --all -- --check
 
 .PHONY: lint
 lint: lint-go lint-rust
