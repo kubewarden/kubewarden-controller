@@ -18,20 +18,17 @@ package controller
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/testcontainers/testcontainers-go/modules/k3s"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -72,29 +69,6 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	testEnv := &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
-	}
-	// If the suite is being run with the "real-cluster" label, start a k3s container
-	// and use it as the test environment.
-	// See: https://github.com/onsi/ginkgo/issues/1108#issuecomment-1456637713
-	if Label("real-cluster").MatchesLabelFilter(GinkgoLabelFilter()) {
-		By("starting the k3s test container")
-		k3sTestcontainerVersion, ok := os.LookupEnv("K3S_TESTCONTAINER_VERSION")
-		if !ok {
-			k3sTestcontainerVersion = "latest"
-		}
-
-		k3sContainer, err := k3s.Run(ctx, "docker.io/rancher/k3s:"+k3sTestcontainerVersion)
-		Expect(err).NotTo(HaveOccurred())
-
-		kubeConfigYaml, err := k3sContainer.GetKubeConfig(ctx)
-		Expect(err).NotTo(HaveOccurred())
-
-		kubeConfig, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigYaml)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("configuting the test environment to use the k3s cluster")
-		testEnv.UseExistingCluster = ptr.To(true)
-		testEnv.Config = kubeConfig
 	}
 
 	restConfig, err := testEnv.Start()
