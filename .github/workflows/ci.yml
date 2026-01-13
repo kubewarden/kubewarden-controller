@@ -171,6 +171,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - run: |
+          make -C crates/kwctl build-release
+
+          INSTALL_DIR=$HOME/.kwctl
+          mkdir $INSTALL_DIR
+          cp target/release/kwctl $INSTALL_DIR/kwctl
+
+          echo $INSTALL_DIR >> $GITHUB_PATH
       - run: make -C crates/policy-evaluator integration-tests
 
   fmt-rust:
