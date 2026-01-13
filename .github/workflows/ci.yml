@@ -143,7 +143,7 @@ jobs:
       - name: Install opa # required to run burrego tests
         uses: kubewarden/github-actions/opa-installer@v4.5.15
         with:
-          opa-version: 1.12.2
+          opa-version: v1.12.2
       - run: make -C crates unit-tests
 
   integration-tests-kwctl:
