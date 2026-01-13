@@ -163,9 +163,9 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 				return errors.New("failed to convert runtime.Object to *unstructured.Unstructured")
 			}
 
-			err := semaphore.Acquire(ctx, 1)
-			if err != nil {
-				return fmt.Errorf("failed to acquire the permission to audit resouce: %w", err)
+			acquireErr := semaphore.Acquire(ctx, 1)
+			if acquireErr != nil {
+				return fmt.Errorf("failed to acquire the permission to audit resouce: %w", acquireErr)
 			}
 			workers.Add(1)
 			policiesToAudit := pols
@@ -174,9 +174,9 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 				defer semaphore.Release(1)
 				defer workers.Done()
 
-				if err := s.auditResource(ctx, policiesToAudit, *resource, runUID, policies.SkippedNum, policies.ErroredNum); err != nil {
+				if auditErr := s.auditResource(ctx, policiesToAudit, *resource, runUID, policies.SkippedNum, policies.ErroredNum); auditErr != nil {
 					s.logger.ErrorContext(ctx, "error auditing resource",
-						slog.String("error", err.Error()),
+						slog.String("error", auditErr.Error()),
 						slog.String("RunUID", runUID))
 				}
 			}()
@@ -195,9 +195,9 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 	}
 	workers.Wait()
 
-	if err := s.reportStore.DeleteOldReports(ctx, runUID, nsName); err != nil {
+	if deleteErr := s.reportStore.DeleteOldReports(ctx, runUID, nsName); deleteErr != nil {
 		s.logger.ErrorContext(ctx, "error deleting old reports",
-			slog.String("error", err.Error()),
+			slog.String("error", deleteErr.Error()),
 			slog.String("RunUID", runUID))
 	}
 	s.logger.InfoContext(ctx, "Namespaced resources scan finished")
@@ -277,9 +277,9 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 			}
 
 			workers.Add(1)
-			err := semaphore.Acquire(ctx, 1)
-			if err != nil {
-				return fmt.Errorf("failed to acquire the permission to audit a resource: %w", err)
+			acquireErr := semaphore.Acquire(ctx, 1)
+			if acquireErr != nil {
+				return fmt.Errorf("failed to acquire the permission to audit a resource: %w", acquireErr)
 			}
 			policiesToAudit := pols
 
@@ -305,9 +305,9 @@ func (s *Scanner) ScanClusterWideResources(ctx context.Context, runUID string) e
 
 	workers.Wait()
 
-	if err := s.reportStore.DeleteOldClusterReports(ctx, runUID); err != nil {
+	if deleteErr := s.reportStore.DeleteOldClusterReports(ctx, runUID); deleteErr != nil {
 		s.logger.ErrorContext(ctx, "error deleting old ClusterReports",
-			slog.String("error", err.Error()),
+			slog.String("error", deleteErr.Error()),
 			slog.String("RunUID", runUID))
 	}
 	s.logger.InfoContext(ctx, "Cluster-wide resources scan finished")
@@ -345,9 +345,9 @@ func (s *Scanner) auditResource(ctx context.Context, policies []*policies.Policy
 			defer semaphore.Release(1)
 			defer workers.Done()
 
-			matches, err := policyMatches(policy, resource)
-			if err != nil {
-				s.logger.ErrorContext(ctx, "error matching policy to resource", slog.String("error", err.Error()))
+			matches, matchErr := policyMatches(policy, resource)
+			if matchErr != nil {
+				s.logger.ErrorContext(ctx, "error matching policy to resource", slog.String("error", matchErr.Error()))
 			}
 
 			if !matches {

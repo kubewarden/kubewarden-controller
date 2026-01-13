@@ -137,9 +137,9 @@ func (f *Client) findClusterAdmissionPoliciesByNamespace(ctx context.Context, na
 	var result []policiesv1.ClusterAdmissionPolicy
 
 	for _, policy := range clusterAdmissionPolicies {
-		matches, err := policyMatchesNamespace(&policy, namespace)
-		if err != nil {
-			return nil, err
+		matches, matchErr := policyMatchesNamespace(&policy, namespace)
+		if matchErr != nil {
+			return nil, matchErr
 		}
 
 		if matches {
@@ -159,9 +159,9 @@ func (f *Client) findClusterAdmissionPolicyGroupsByNamespace(ctx context.Context
 
 	var result []policiesv1.ClusterAdmissionPolicyGroup
 	for _, policy := range clusterAdmissionPolicyGroups {
-		matches, err := policyMatchesNamespace(&policy, namespace)
-		if err != nil {
-			return nil, err
+		matches, matchErr := policyMatchesNamespace(&policy, namespace)
+		if matchErr != nil {
+			return nil, matchErr
 		}
 
 		if matches {
@@ -406,11 +406,11 @@ func (f *Client) getPolicyServerURLRunningPolicy(ctx context.Context, policy pol
 	}
 	var urlStr string
 	if f.policyServerURL != "" {
-		url, err := url.Parse(f.policyServerURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse policy server URL %q: %w", f.policyServerURL, err)
+		parsedURL, parseErr := url.Parse(f.policyServerURL)
+		if parseErr != nil {
+			return nil, fmt.Errorf("failed to parse policy server URL %q: %w", f.policyServerURL, parseErr)
 		}
-		urlStr = fmt.Sprintf("%s/audit/%s", url, policy.GetUniqueName())
+		urlStr = fmt.Sprintf("%s/audit/%s", parsedURL, policy.GetUniqueName())
 	} else {
 		urlStr = fmt.Sprintf("https://%s.%s.svc:%d/audit/%s", service.Name, f.kubewardenNamespace, service.Spec.Ports[0].Port, policy.GetUniqueName())
 	}

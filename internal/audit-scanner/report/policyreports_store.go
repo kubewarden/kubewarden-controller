@@ -73,16 +73,18 @@ func (s *PolicyReportStore) DeleteOldReports(ctx context.Context, scanRunID, nam
 	}
 	s.logger.DebugContext(ctx, "Deleting old PolicyReports", slog.String("labelSelector", labelSelector.String()))
 
-	if err := s.client.DeleteAllOf(ctx, &wgpolicy.PolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
+	if deleteErr := s.client.DeleteAllOf(ctx, &wgpolicy.PolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,
 		Namespace:     namespace,
-	}}); err != nil {
-		return fmt.Errorf("failed to delete PolicyReports: %w", err)
+	}}); deleteErr != nil {
+		return fmt.Errorf("failed to delete PolicyReports: %w", deleteErr)
 	}
 	return nil
 }
 
 // CreateOrPatchClusterReport creates or patches a ClusterPolicyReport.
+//
+//nolint:dupl // Temporary duplicated code with openreports_store.go, it's planned to be removed in the near future.
 func (s *PolicyReportStore) CreateOrPatchClusterReport(ctx context.Context, obj any) error {
 	report, ok := obj.(*ClusterPolicyReport)
 	if !ok {
@@ -124,10 +126,10 @@ func (s *PolicyReportStore) DeleteOldClusterReports(ctx context.Context, scanRun
 	}
 	s.logger.DebugContext(ctx, "Deleting old ClusterPolicyReports", slog.String("labelSelector", labelSelector.String()))
 
-	if err := s.client.DeleteAllOf(ctx, &wgpolicy.ClusterPolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
+	if deleteErr := s.client.DeleteAllOf(ctx, &wgpolicy.ClusterPolicyReport{}, &client.DeleteAllOfOptions{ListOptions: client.ListOptions{
 		LabelSelector: labelSelector,
-	}}); err != nil {
-		return fmt.Errorf("failed to delete ClusterPolicyReports: %w", err)
+	}}); deleteErr != nil {
+		return fmt.Errorf("failed to delete ClusterPolicyReports: %w", deleteErr)
 	}
 	return nil
 }

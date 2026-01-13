@@ -49,12 +49,12 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			err = createPolicyServerAndWaitForItsService(ctx, cfg, policyServer)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			return ctx
 		}).
 		Assess("should fail CRD validation because of too low TimeoutSeconds", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyServerName := ctx.Value("policyServerName").(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
 			policyName := policiesv1.NewClusterAdmissionPolicyGroupFactory().Build().Name
 
 			underMinTimeout := int32(1)
@@ -70,7 +70,7 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should fail CRD validation because of too low TimeoutEvalSeconds", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyServerName := ctx.Value("policyServerName").(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
 			policyName := policiesv1.NewClusterAdmissionPolicyGroupFactory().Build().Name
 
 			underMinTimeout := int32(1)
@@ -101,7 +101,7 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			err = createPolicyServerAndWaitForItsService(ctx, cfg, policyServer)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			// Create validating ClusterAdmissionPolicyGroup
 			policyName := policiesv1.NewClusterAdmissionPolicyGroupFactory().Build().Name
@@ -112,13 +112,13 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			err = cfg.Client().Resources().Create(ctx, policy)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyName", policyName)
-			ctx = context.WithValue(ctx, "policy", policy)
+			ctx = context.WithValue(ctx, policyNameKey, policyName)
+			ctx = context.WithValue(ctx, policyKey, policy)
 
 			return ctx
 		}).
 		Assess("should set the ClusterAdmissionPolicyGroup to active", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyName := ctx.Value("policyName").(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			// Wait for policy status to be pending
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
@@ -143,9 +143,9 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should create the ValidatingWebhookConfiguration", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.ClusterAdmissionPolicyGroup)
-			policyName := ctx.Value("policyName").(string)
-			policyServerName := ctx.Value("policyServerName").(string)
+			policy := ctx.Value(policyKey).(*policiesv1.ClusterAdmissionPolicyGroup)
+			policyName := ctx.Value(policyNameKey).(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
 
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
@@ -190,11 +190,7 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 						break
 					}
 				}
-				if !hasNamespaceSelector {
-					return false
-				}
-
-				return true
+				return hasNamespaceSelector
 			}), wait.WithTimeout(testTimeout), wait.WithInterval(testPollInterval))
 			require.NoError(t, err, "ValidatingWebhookConfiguration should be created with correct configuration")
 
@@ -209,7 +205,7 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should reconcile the ValidatingWebhookConfiguration to the original state after some change", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.ClusterAdmissionPolicyGroup)
+			policy := ctx.Value(policyKey).(*policiesv1.ClusterAdmissionPolicyGroup)
 
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{}
@@ -265,7 +261,7 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should delete the ValidatingWebhookConfiguration when the ClusterAdmissionPolicyGroup is deleted", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.ClusterAdmissionPolicyGroup)
+			policy := ctx.Value(policyKey).(*policiesv1.ClusterAdmissionPolicyGroup)
 			webhookName := policy.GetUniqueName()
 
 			// Delete the policy
@@ -301,13 +297,13 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			ctx = context.WithValue(ctx, "policyName", policyName)
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyNameKey, policyName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			return ctx
 		}).
 		Assess("should set the policy status to scheduled", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyName := ctx.Value("policyName").(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
 				&policiesv1.ClusterAdmissionPolicyGroup{ObjectMeta: metav1.ObjectMeta{Name: policyName}},
@@ -321,8 +317,8 @@ func TestClusterAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should set the policy status to active when the PolicyServer is created", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyServerName := ctx.Value("policyServerName").(string)
-			policyName := ctx.Value("policyName").(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			// Create PolicyServer
 			policyServer := policiesv1.NewPolicyServerFactory().

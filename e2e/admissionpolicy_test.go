@@ -55,7 +55,7 @@ func TestAdmissionPolicyController(t *testing.T) {
 			err = createPolicyServerAndWaitForItsService(ctx, cfg, policyServer)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			// Create validating AdmissionPolicy
 			policyName := policiesv1.NewAdmissionPolicyFactory().Build().Name
@@ -67,13 +67,13 @@ func TestAdmissionPolicyController(t *testing.T) {
 			err = cfg.Client().Resources().Create(ctx, policy)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyName", policyName)
-			ctx = context.WithValue(ctx, "policy", policy)
+			ctx = context.WithValue(ctx, policyNameKey, policyName)
+			ctx = context.WithValue(ctx, policyKey, policy)
 
 			return ctx
 		}).
 		Assess("should set the AdmissionPolicy to active sometime after its creation", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyName := ctx.Value("policyName").(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			// Wait for policy status to be pending
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
@@ -98,9 +98,9 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should create the ValidatingWebhookConfiguration", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicy)
-			policyName := ctx.Value("policyName").(string)
-			policyServerName := ctx.Value("policyServerName").(string)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicy)
+			policyName := ctx.Value(policyNameKey).(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
 
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
@@ -152,7 +152,7 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should reconcile the ValidatingWebhookConfiguration to the original state after some change", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicy)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicy)
 
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{}
@@ -230,7 +230,7 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should delete the ValidatingWebhookConfiguration when the AdmissionPolicy is deleted", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicy)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicy)
 			webhookName := policy.GetUniqueName()
 
 			// Delete the policy
@@ -265,7 +265,7 @@ func TestAdmissionPolicyController(t *testing.T) {
 			err = createPolicyServerAndWaitForItsService(ctx, cfg, policyServer)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			// Create mutating AdmissionPolicy
 			policyName := policiesv1.NewAdmissionPolicyFactory().Build().Name
@@ -278,13 +278,13 @@ func TestAdmissionPolicyController(t *testing.T) {
 			err = cfg.Client().Resources().Create(ctx, policy)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyName", policyName)
-			ctx = context.WithValue(ctx, "policy", policy)
+			ctx = context.WithValue(ctx, policyNameKey, policyName)
+			ctx = context.WithValue(ctx, policyKey, policy)
 
 			return ctx
 		}).
 		Assess("should set the AdmissionPolicy to active", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyName := ctx.Value("policyName").(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			// Wait for policy status to be pending
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
@@ -309,9 +309,9 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should create the MutatingWebhookConfiguration", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicy)
-			policyName := ctx.Value("policyName").(string)
-			policyServerName := ctx.Value("policyServerName").(string)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicy)
+			policyName := ctx.Value(policyNameKey).(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
 
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.MutatingWebhookConfiguration{
@@ -363,7 +363,7 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should reconcile the MutatingWebhookConfiguration to the original state after some change", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicy)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicy)
 
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.MutatingWebhookConfiguration{}
@@ -441,7 +441,7 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should delete the MutatingWebhookConfiguration when the AdmissionPolicy is deleted", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicy)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicy)
 			webhookName := policy.GetUniqueName()
 
 			// Delete the policy
@@ -481,13 +481,13 @@ func TestAdmissionPolicyController(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			ctx = context.WithValue(ctx, "policyName", policyName)
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyNameKey, policyName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			return ctx
 		}).
 		Assess("should set the policy status to scheduled", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyName := ctx.Value("policyName").(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
 				&policiesv1.AdmissionPolicy{ObjectMeta: metav1.ObjectMeta{Name: policyName, Namespace: policyNamespace}},
@@ -501,8 +501,8 @@ func TestAdmissionPolicyController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should set the policy status to active when the PolicyServer is created", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyServerName := ctx.Value("policyServerName").(string)
-			policyName := ctx.Value("policyName").(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			// Create PolicyServer
 			policyServer := policiesv1.NewPolicyServerFactory().

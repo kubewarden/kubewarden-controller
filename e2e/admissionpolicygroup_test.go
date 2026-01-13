@@ -55,7 +55,7 @@ func TestAdmissionPolicyGroupController(t *testing.T) {
 			err = createPolicyServerAndWaitForItsService(ctx, cfg, policyServer)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			// Create validating AdmissionPolicyGroup
 			policyName := policiesv1.NewAdmissionPolicyGroupFactory().Build().Name
@@ -67,13 +67,13 @@ func TestAdmissionPolicyGroupController(t *testing.T) {
 			err = cfg.Client().Resources().Create(ctx, policy)
 			require.NoError(t, err)
 
-			ctx = context.WithValue(ctx, "policyName", policyName)
-			ctx = context.WithValue(ctx, "policy", policy)
+			ctx = context.WithValue(ctx, policyNameKey, policyName)
+			ctx = context.WithValue(ctx, policyKey, policy)
 
 			return ctx
 		}).
 		Assess("should set the AdmissionPolicyGroup to active sometime after its creation", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyName := ctx.Value("policyName").(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			// Wait for policy status to be pending
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
@@ -98,9 +98,9 @@ func TestAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should create the ValidatingWebhookConfiguration", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicyGroup)
-			policyName := ctx.Value("policyName").(string)
-			policyServerName := ctx.Value("policyServerName").(string)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicyGroup)
+			policyName := ctx.Value(policyNameKey).(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
 
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
@@ -143,7 +143,7 @@ func TestAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should reconcile the ValidatingWebhookConfiguration to the original state after some change", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicyGroup)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicyGroup)
 			webhookName := policy.GetUniqueName()
 			webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{}
 			err := cfg.Client().Resources().Get(ctx, webhookName, "", webhook)
@@ -202,7 +202,7 @@ func TestAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should delete the ValidatingWebhookConfiguration when the AdmissionPolicyGroup is deleted", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policy := ctx.Value("policy").(*policiesv1.AdmissionPolicyGroup)
+			policy := ctx.Value(policyKey).(*policiesv1.AdmissionPolicyGroup)
 
 			// Delete the policy
 			err := cfg.Client().Resources().Delete(ctx, policy)
@@ -245,13 +245,13 @@ func TestAdmissionPolicyGroupController(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			ctx = context.WithValue(ctx, "policyName", policyName)
-			ctx = context.WithValue(ctx, "policyServerName", policyServerName)
+			ctx = context.WithValue(ctx, policyNameKey, policyName)
+			ctx = context.WithValue(ctx, policyServerNameKey, policyServerName)
 
 			return ctx
 		}).
 		Assess("should set the policy status to scheduled", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyName := ctx.Value("policyName").(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			err := wait.For(conditions.New(cfg.Client().Resources()).ResourceMatch(
 				&policiesv1.AdmissionPolicyGroup{ObjectMeta: metav1.ObjectMeta{Name: policyName, Namespace: policyNamespace}},
@@ -265,8 +265,8 @@ func TestAdmissionPolicyGroupController(t *testing.T) {
 			return ctx
 		}).
 		Assess("should set the policy status to active when the PolicyServer is created", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
-			policyServerName := ctx.Value("policyServerName").(string)
-			policyName := ctx.Value("policyName").(string)
+			policyServerName := ctx.Value(policyServerNameKey).(string)
+			policyName := ctx.Value(policyNameKey).(string)
 
 			// Create PolicyServer
 			policyServer := policiesv1.NewPolicyServerFactory().

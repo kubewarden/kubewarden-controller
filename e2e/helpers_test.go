@@ -21,6 +21,14 @@ const (
 	testPollInterval = 1 * time.Second
 )
 
+type contextKey string
+
+const (
+	policyServerNameKey contextKey = "policyServerName"
+	policyNameKey       contextKey = "policyName"
+	policyKey           contextKey = "policy"
+)
+
 func createNamespaceWithRetry(ctx context.Context, cfg *envconf.Config, name string) error {
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -46,7 +54,7 @@ func createPolicyServerAndWaitForItsService(ctx context.Context, cfg *envconf.Co
 		service := &corev1.Service{}
 		err := cfg.Client().Resources(namespace).Get(ctx, serviceName, namespace, service)
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		return true, nil
 	}, wait.WithTimeout(testTimeout), wait.WithInterval(testPollInterval)); err != nil {

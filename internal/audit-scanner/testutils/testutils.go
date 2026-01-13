@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"net"
 	"os"
@@ -38,7 +39,7 @@ func NewFakeClient(objects ...runtime.Object) (client.Client, error) {
 
 	auditScheme, err := scheme.NewScheme()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create audit scheme: %w", err)
 	}
 	return fake.NewClientBuilder().WithRESTMapper(restMapper).WithScheme(auditScheme).WithRuntimeObjects(objects...).Build(), nil
 }
@@ -526,7 +527,7 @@ func GenerateTestCA() ([]byte, []byte, error) {
 
 	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
 	if err != nil {
-		panic(err)
+		return nil, nil, fmt.Errorf("failed to create CA certificate: %w", err)
 	}
 
 	certPEM := pem.EncodeToMemory(&pem.Block{
@@ -534,7 +535,7 @@ func GenerateTestCA() ([]byte, []byte, error) {
 		Bytes: certDER,
 	})
 
-	return certPEM, keyPEM, err
+	return certPEM, keyPEM, nil
 }
 
 // GenerateTestCert generates a test certificate and key signed by the given CA certificate and key.
@@ -547,13 +548,13 @@ func GenerateTestCert(caCertPEM, caKeyPEM []byte, commonName string) ([]byte, []
 	block, _ := pem.Decode(caCertPEM)
 	caCert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to parse CA certificate: %w", err)
 	}
 
 	block, _ = pem.Decode(caKeyPEM)
 	caKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to parse CA private key: %w", err)
 	}
 
 	template := &x509.Certificate{
@@ -575,7 +576,7 @@ func GenerateTestCert(caCertPEM, caKeyPEM []byte, commonName string) ([]byte, []
 
 	certDER, err := x509.CreateCertificate(rand.Reader, template, caCert, &key.PublicKey, caKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to create certificate: %w", err)
 	}
 
 	certPEM := pem.EncodeToMemory(&pem.Block{
@@ -589,7 +590,7 @@ func GenerateTestCert(caCertPEM, caKeyPEM []byte, commonName string) ([]byte, []
 func generateKey() (*rsa.PrivateKey, []byte, error) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048) //nolint:mnd // This is a test helper
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to generate RSA key: %w", err)
 	}
 
 	keyPEM := pem.EncodeToMemory(&pem.Block{
@@ -597,19 +598,19 @@ func generateKey() (*rsa.PrivateKey, []byte, error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
 
-	return key, keyPEM, err
+	return key, keyPEM, nil
 }
 
 // WriteTempFile creates a temporary file with the given content and returns the file path.
 func WriteTempFile(content []byte) (string, error) {
 	tmpfile, err := os.CreateTemp("", "test-cert-*")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer tmpfile.Close()
 
-	if _, err := tmpfile.Write(content); err != nil {
-		return "", err
+	if _, writeErr := tmpfile.Write(content); writeErr != nil {
+		return "", fmt.Errorf("failed to write to temp file: %w", writeErr)
 	}
 
 	return tmpfile.Name(), nil

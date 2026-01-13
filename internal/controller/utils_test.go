@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8spoliciesv1 "k8s.io/api/policy/v1"
@@ -40,26 +39,9 @@ import (
 )
 
 const (
-	integrationTestsFinalizer   = "integration-tests-safety-net-finalizer"
-	defaultKubewardenRepository = "ghcr.io/kubewarden/policy-server"
-	clientCAConfigMapName       = "client-ca"
+	integrationTestsFinalizer = "integration-tests-safety-net-finalizer"
+	clientCAConfigMapName     = "client-ca"
 )
-
-func getTestAdmissionPolicy(ctx context.Context, namespace, name string) (*policiesv1.AdmissionPolicy, error) {
-	admissionPolicy := policiesv1.AdmissionPolicy{}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &admissionPolicy); err != nil {
-		return nil, errors.Join(errors.New("could not find AdmissionPolicy"), err)
-	}
-	return &admissionPolicy, nil
-}
-
-func getTestAdmissionPolicyGroup(ctx context.Context, namespace, name string) (*policiesv1.AdmissionPolicyGroup, error) {
-	admissionPolicyGroup := policiesv1.AdmissionPolicyGroup{}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &admissionPolicyGroup); err != nil {
-		return nil, errors.Join(errors.New("could not find AdmissionPolicyGroup"), err)
-	}
-	return &admissionPolicyGroup, nil
-}
 
 func getTestClusterAdmissionPolicy(ctx context.Context, name string) (*policiesv1.ClusterAdmissionPolicy, error) {
 	clusterAdmissionPolicy := policiesv1.ClusterAdmissionPolicy{}
@@ -67,14 +49,6 @@ func getTestClusterAdmissionPolicy(ctx context.Context, name string) (*policiesv
 		return nil, errors.Join(errors.New("could not find ClusterAdmissionPolicy"), err)
 	}
 	return &clusterAdmissionPolicy, nil
-}
-
-func getTestClusterAdmissionPolicyGroup(ctx context.Context, name string) (*policiesv1.ClusterAdmissionPolicyGroup, error) {
-	clusterAdmissionPolicyGroup := policiesv1.ClusterAdmissionPolicyGroup{}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &clusterAdmissionPolicyGroup); err != nil {
-		return nil, errors.Join(errors.New("could not find ClusterAdmissionPolicyGroup"), err)
-	}
-	return &clusterAdmissionPolicyGroup, nil
 }
 
 func getTestPolicyServer(ctx context.Context, name string) (*policiesv1.PolicyServer, error) {
@@ -129,31 +103,6 @@ func getPolicyServerNameWithPrefix(policyServerName string) string {
 		},
 	}
 	return policyServer.NameWithPrefix()
-}
-
-func getTestValidatingWebhookConfiguration(ctx context.Context, name string) (*admissionregistrationv1.ValidatingWebhookConfiguration, error) {
-	validatingWebhookConfiguration := admissionregistrationv1.ValidatingWebhookConfiguration{}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &validatingWebhookConfiguration); err != nil {
-		return nil, errors.Join(errors.New("could not find ValidatingWebhookConfiguration"), err)
-	}
-	return &validatingWebhookConfiguration, nil
-}
-
-func getTestMutatingWebhookConfiguration(ctx context.Context, name string) (*admissionregistrationv1.MutatingWebhookConfiguration, error) {
-	mutatingWebhookConfiguration := admissionregistrationv1.MutatingWebhookConfiguration{}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: name}, &mutatingWebhookConfiguration); err != nil {
-		return nil, errors.Join(errors.New("could not find ValidatingWebhookConfiguration"), err)
-	}
-	return &mutatingWebhookConfiguration, nil
-}
-
-func getTestCASecret(ctx context.Context) (*corev1.Secret, error) {
-	secret := corev1.Secret{}
-	if err := k8sClient.Get(ctx, client.ObjectKey{Name: constants.CARootSecretName, Namespace: deploymentsNamespace}, &secret); err != nil {
-		return nil, errors.Join(errors.New("could not find CA secret"), err)
-	}
-
-	return &secret, nil
 }
 
 func getPolicyServerPodDisruptionBudget(ctx context.Context, policyServerName string) (*k8spoliciesv1.PodDisruptionBudget, error) {

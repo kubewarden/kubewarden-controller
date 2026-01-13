@@ -1,3 +1,4 @@
+//nolint:cyclop // This is the e2e test main file, some complexity is expected here.
 package e2e
 
 import (
@@ -92,7 +93,7 @@ func TestMain(m *testing.M) {
 	os.Exit(testenv.Run(m))
 }
 
-// waitForKubewardenControllerDeployment waits for the kubewarden-controller deployment to be ready
+// waitForKubewardenControllerDeployment waits for the kubewarden-controller deployment to be ready.
 func waitForKubewardenControllerDeployment(_ context.Context, cfg *envconf.Config) error {
 	// Wait for the kubewarden-controller deployment to be available
 	return wait.For(conditions.New(cfg.Client().Resources()).DeploymentConditionMatch(
