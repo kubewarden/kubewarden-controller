@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       run_all:
-        description: 'Run all checks (ignore path filtering)'
+        description: "Run all checks (ignore path filtering)"
         required: false
         type: boolean
         default: false
@@ -37,7 +37,7 @@ jobs:
             echo "rust=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           # Check if commit message contains [ci full] or [full ci] to run all checks
           COMMIT_MSG="${{ github.event.head_commit.message }}"
           if echo "$COMMIT_MSG" | grep -qiE '\[(ci full|full ci)\]'; then
@@ -46,7 +46,7 @@ jobs:
             echo "rust=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           # Determine base ref for comparison
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_REF="${{ github.event.pull_request.base.sha }}"
@@ -58,9 +58,9 @@ jobs:
               BASE_REF="HEAD^"
             fi
           fi
-          
+
           echo "Comparing against base: $BASE_REF"
-          
+
           # Check for Go file changes
           GO_CHANGES=$(git diff --name-only "$BASE_REF" HEAD | grep -E '\.(go)$|^go\.(mod|sum)$|^Makefile$|^\.golangci\.yml$|^cmd/|^api/|^internal/|^audit-scanner/' || true)
           if [ -n "$GO_CHANGES" ]; then
@@ -71,7 +71,7 @@ jobs:
             echo "go=false" >> $GITHUB_OUTPUT
             echo "No Go files changed"
           fi
-          
+
           # Check for Rust file changes
           RUST_CHANGES=$(git diff --name-only "$BASE_REF" HEAD | grep -E '^crates/.*\.rs$|^crates/.*/Cargo\.(toml|lock)$|^Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^crates/Makefile$' || true)
           if [ -n "$RUST_CHANGES" ]; then
@@ -140,16 +140,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Install opa # required to run burrego tests
+        uses: kubewarden/github-actions/opa-installer@v4.5.15
       - run: make -C crates unit-tests
 
-  integration-tests-rust:
-    name: Rust integration tests
+  integration-tests-kwctl:
+    name: kwctl integration tests
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - run: make -C crates integration-tests
+      - run: make -C crates/kwctl e2e-tests
+
+  integration-tests-policy-server:
+    name: policy-server integration tests
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - run: make -C crates/policy-server integration-tests
+
+  integration-tests-policy-evaluator:
+    name: policy-evaluator integration tests
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - run: make -C crates/policy-evaluator integration-tests
 
   fmt-rust:
     name: Rust format
