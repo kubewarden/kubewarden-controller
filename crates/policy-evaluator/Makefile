@@ -29,11 +29,11 @@ test: fmt lint annotated-policy.wasm
 	cargo test
 
 .PHONY: unit-tests
-unit-tests: fmt lint
+unit-tests:
 	cargo test --lib
 
 .PHONY: integration-tests
-integration-tests: fmt lint annotated-policy.wasm
+integration-tests: annotated-policy.wasm
 	cargo test --test '*'
 
 .PHONY: coverage

@@ -133,76 +133,115 @@ jobs:
           version: v2.4.0
 
   # Rust jobs
-  unit-tests-rust:
-    name: Rust unit tests
+  calculate-crates-matrix:
+    name: Calculate crates matrix
     needs: changes
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: List crate folders
+        id: set-matrix
+        run: |
+          # Exclude context-aware-test-policy as it's a test fixture, not a standalone crate
+          CRATES=$(ls -1 crates | grep -v "^Makefile$" | grep -v "^context-aware-test-policy$" | jq -R -s -c 'split("\n")[:-1]')
+          echo "matrix={\"crate\":$CRATES}" >> $GITHUB_OUTPUT
+
+  fmt-rust-per-crate:
+    needs: calculate-crates-matrix
+    name: Rustfmt (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - name: Install opa # required to run burrego tests
+      - name: "Run cargo fmt"
+        run: |
+          make -C crates/${{ matrix.crate }} fmt
+
+  clippy-rust-per-crate:
+    needs: calculate-crates-matrix
+    name: Clippy (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: "Run cargo clippy"
+        run: |
+          make -C crates/${{ matrix.crate }} lint
+
+  unit-tests-rust-per-crate:
+    needs: calculate-crates-matrix
+    name: Unit tests (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: "Run cargo test"
+        run: |
+          make -C crates/${{ matrix.crate }} unit-tests
+
+  integration-tests-burrego:
+    needs: [changes, calculate-crates-matrix]
+    if: needs.changes.outputs.rust == 'true'
+    name: E2E tests (burrego)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Install opa
         uses: kubewarden/github-actions/opa-installer@v4.5.15
         with:
           opa-version: v1.12.2
-      - run: make -C crates unit-tests
+      - name: Install bats
+        run: sudo apt-get install -y bats
+      - name: Run e2e tests
+        run: make -C crates/burrego e2e-tests
 
   integration-tests-kwctl:
-    name: kwctl integration tests
-    needs: changes
+    needs: [changes, calculate-crates-matrix]
     if: needs.changes.outputs.rust == 'true'
+    name: E2E tests (kwctl)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - run: make -C crates/kwctl e2e-tests
+      - name: Run e2e tests
+        run: make -C crates/kwctl e2e-tests
 
   integration-tests-policy-server:
-    name: policy-server integration tests
-    needs: changes
+    needs: [changes, calculate-crates-matrix]
     if: needs.changes.outputs.rust == 'true'
+    name: Integration tests (policy-server)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - run: make -C crates/policy-server integration-tests
+      - name: Run integration tests
+        run: make -C crates/policy-server integration-tests
 
   integration-tests-policy-evaluator:
-    name: policy-evaluator integration tests
-    needs: changes
+    needs: [changes, calculate-crates-matrix]
     if: needs.changes.outputs.rust == 'true'
+    name: Integration tests (policy-evaluator)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - name: Build kwctl
+        run: make -C crates/kwctl build-release
+      - name: Setup kwctl
         run: |
-          make -C crates/kwctl build-release
-
-          INSTALL_DIR=$HOME/.kwctl
-          mkdir $INSTALL_DIR
-          cp target/release/kwctl $INSTALL_DIR/kwctl
-
-          echo $INSTALL_DIR >> $GITHUB_PATH
+          mkdir -p $HOME/.kwctl
+          cp target/release/kwctl $HOME/.kwctl/kwctl
+          chmod +x $HOME/.kwctl/kwctl
+          echo "$HOME/.kwctl" >> $GITHUB_PATH
       - name: Install bats
         run: sudo apt install -y bats
-      - run: make -C crates/policy-evaluator integration-tests
-
-  fmt-rust:
-    name: Rust format
-    needs: changes
-    if: needs.changes.outputs.rust == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - run: rustup component add rustfmt
-      - run: make fmt-rust
-
-  clippy-rust:
-    name: Rust clippy
-    needs: changes
-    if: needs.changes.outputs.rust == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - run: rustup component add clippy
-      - run: make lint-rust
+      - name: Run integration tests
+        run: make -C crates/policy-evaluator integration-tests
 
   shellcheck:
     name: Shellcheck

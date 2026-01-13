@@ -41,18 +41,20 @@ unit-tests:
 	$(MAKE) -C policy-evaluator unit-tests
 	$(MAKE) -C policy-server unit-tests
 	$(MAKE) -C kwctl unit-tests
-	$(MAKE) -C policy-fetcher test
-	$(MAKE) -C burrego test
+	$(MAKE) -C policy-fetcher unit-tests
+	$(MAKE) -C burrego unit-tests
 
-.PHONY: integration-tests
-integration-tests:
+.PHONY: e2e-tests
+e2e-tests:
 	$(MAKE) -C policy-evaluator integration-tests
 	$(MAKE) -C policy-server integration-tests
 	$(MAKE) -C kwctl e2e-tests
+	$(MAKE) -C policy-fetcher integration-tests
+	$(MAKE) -C burrego e2e-tests
 
 # Coverage targets
 .PHONY: coverage
-coverage: coverage-unit-tests coverage-integration-tests
+coverage: coverage-unit-tests coverage-e2e-tests
 
 .PHONY: coverage-unit-tests
 coverage-unit-tests:
@@ -60,8 +62,8 @@ coverage-unit-tests:
 	$(MAKE) -C policy-server coverage-unit-tests
 	$(MAKE) -C policy-fetcher coverage-unit-tests
 
-.PHONY: coverage-integration-tests
-coverage-integration-tests:
+.PHONY: coverage-e2e-tests
+coverage-e2e-tests:
 	$(MAKE) -C policy-evaluator coverage-integration-tests
 	$(MAKE) -C policy-server coverage-integration-tests
 	$(MAKE) -C policy-fetcher coverage-integration-tests

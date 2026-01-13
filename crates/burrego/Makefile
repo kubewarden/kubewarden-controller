@@ -13,6 +13,10 @@ lint:
 test: fmt lint e2e-tests
 	cargo test
 
+.PHONY: unit-tests
+unit-tests:
+	cargo test --lib
+
 .PHONY: clean
 clean:
 	cargo clean

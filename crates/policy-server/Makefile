@@ -30,11 +30,11 @@ test: fmt lint
 	cargo test
 
 .PHONY: unit-tests
-unit-tests: fmt lint
+unit-tests:
 	cargo test --lib
 
-.PHONY: integration-test
-integration-tests: fmt lint
+.PHONY: integration-tests
+integration-tests:
 	cargo test --test '*'
 	cargo test --features otel_tests -- test_otel
 

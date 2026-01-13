@@ -17,6 +17,14 @@ typos:
 .PHONY: test
 test: fmt lint
 	cargo test
+
+.PHONY: unit-tests
+unit-tests:
+	cargo test --lib
+
+.PHONY: integration-tests
+integration-tests:
+	cargo test --test '*'
 	
 .PHONY: coverage
 coverage: coverage-unit-tests

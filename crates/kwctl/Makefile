@@ -26,7 +26,7 @@ test: fmt lint
 	cargo test --bins
 
 .PHONY: unit-tests
-unit-tests: fmt lint
+unit-tests:
 	cargo test --bins
 
 .PHONY: e2e-tests
