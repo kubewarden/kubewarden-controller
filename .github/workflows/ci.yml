@@ -171,7 +171,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - run: |
+      - name: Build kwctl
+        run: |
           make -C crates/kwctl build-release
 
           INSTALL_DIR=$HOME/.kwctl
@@ -179,6 +180,8 @@ jobs:
           cp target/release/kwctl $INSTALL_DIR/kwctl
 
           echo $INSTALL_DIR >> $GITHUB_PATH
+      - name: Install bats
+        run: sudo apt install -y bats
       - run: make -C crates/policy-evaluator integration-tests
 
   fmt-rust:
