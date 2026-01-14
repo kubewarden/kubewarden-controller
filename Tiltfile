@@ -99,7 +99,7 @@ local_resource(
 )
 
 entrypoint = ["/controller"]
-dockerfile = "./hack/Dockerfile.controller.tilt"
+dockerfile = "./hack/Dockerfile.kubewarden-controller.tilt"
 
 load("ext://restart_process", "docker_build_with_restart")
 docker_build_with_restart(

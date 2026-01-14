@@ -92,7 +92,7 @@ controller: $(CONTROLLER_SRCS) vet
 
 .PHONY: controller-image
 controller-image:
-	docker build -f ./Dockerfile.controller \
+	docker build -f ./Dockerfile.kubewarden-controller \
 		-t "$(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)" .
 	@echo "Built $(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)"
 
