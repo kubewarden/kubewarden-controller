@@ -1,63 +1,63 @@
-FROM --platform=${BUILDPLATFORM} ghcr.io/cross-rs/aarch64-unknown-linux-musl:0.2.5 AS build-arm64
-ARG BUILDPLATFORM
-ARG TARGETPLATFORM
+FROM alpine:3.23.0 AS builder
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --target aarch64-unknown-linux-musl  --default-toolchain stable
+# Install build dependencies for Rust and C libraries
+RUN apk add --no-cache \
+    curl \
+    build-base \
+    musl-dev \
+    pkgconfig
 
-ENV PATH=/root/.cargo/bin:$PATH 
-RUN cargo --version
+# Detect architecture and set Rust target
+RUN case "$(uname -m)" in \
+    x86_64) echo "x86_64-unknown-linux-musl" > /tmp/rust_target ;; \
+    aarch64) echo "aarch64-unknown-linux-musl" > /tmp/rust_target ;; \
+    *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;; \
+    esac
 
-WORKDIR /usr/src
+# Install Rust with musl target
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --default-toolchain stable --profile minimal --target $(cat /tmp/rust_target)
 
-RUN mkdir /usr/src/policy-server
+ENV PATH=/root/.cargo/bin:$PATH
+
 WORKDIR /usr/src/policy-server
-COPY ./Cargo.toml ./
-COPY ./Cargo.lock ./
+
+# Copy workspace files
+COPY ./Cargo.toml ./Cargo.lock ./
 COPY crates/ ./crates
 
+# Install cargo-auditable
 RUN cargo install cargo-auditable
-RUN cargo auditable install --locked --target aarch64-unknown-linux-musl --path crates/policy-server
 
-FROM --platform=${BUILDPLATFORM} ghcr.io/cross-rs/x86_64-unknown-linux-musl:0.2.5 AS build-amd64
-ARG BUILDPLATFORM
-ARG TARGETPLATFORM
+# Enable static linking after cargo-audit is installed,
+# apparetnly it cannot be statically linked.
+ENV RUSTFLAGS="-C target-feature=+crt-static"
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --target x86_64-unknown-linux-musl  --default-toolchain stable
+# Build the policy-server binary statically linked
+RUN cargo auditable build --release -p policy-server --target $(cat /tmp/rust_target)
 
-ENV PATH=/root/.cargo/bin:$PATH 
-RUN cargo --version
+# Verify the binary is statically linked
+RUN ldd /usr/src/policy-server/target/$(cat /tmp/rust_target)/release/policy-server || echo "Static binary confirmed"
 
-WORKDIR /usr/src
+# Create minimal user configuration
+FROM alpine:3.23.0 AS cfg
+RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd && \
+    echo "policy-server:x:65533:policy-server" >> /etc/group
 
-RUN mkdir /usr/src/policy-server
-WORKDIR /usr/src/policy-server
-COPY ./Cargo.toml ./
-COPY ./Cargo.lock ./
-COPY crates/ ./crates
-
-RUN cargo install cargo-auditable
-RUN cargo auditable install --locked --target x86_64-unknown-linux-musl --path crates/policy-server
-
-FROM --platform=$BUILDPLATFORM alpine:3.23.0 AS cfg
-RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd
-RUN echo "policy-server:x:65533:policy-server" >> /etc/group
-
-FROM scratch AS copy-amd64
-COPY --from=build-amd64 --chmod=0755 /root/.cargo/bin/policy-server /policy-server
-
-FROM scratch AS copy-arm64
-COPY --from=build-arm64 --chmod=0755 /root/.cargo/bin/policy-server /policy-server
-
-# Copy the statically-linked binary into a scratch container.
-FROM copy-${TARGETARCH}
+# Final stage with scratch image
+FROM scratch
+COPY --from=builder /usr/src/policy-server/target/*/release/policy-server /policy-server
 COPY --from=cfg /etc/passwd /etc/passwd
 COPY --from=cfg /etc/group /etc/group
 COPY ./Cargo.lock /Cargo.lock
+
 USER 65533:65533
+
 # Default port, should be used when tls is not enabled
 EXPOSE 3000
 # Readiness probe port, always http
 EXPOSE 8081
 # To be used when tls is enabled
 EXPOSE 8443
+
 ENTRYPOINT ["/policy-server"]
