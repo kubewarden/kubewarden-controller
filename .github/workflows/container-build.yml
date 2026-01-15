@@ -101,7 +101,7 @@ jobs:
       id-token: write # Signing images with cosign
     strategy:
       matrix:
-        component: [policy-server, controller, audit-scanner]
+        component: [policy-server, kubewarden-controller, audit-scanner]
     steps:
       - name: Download all digests
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
