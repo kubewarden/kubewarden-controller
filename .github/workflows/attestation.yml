@@ -55,7 +55,7 @@ jobs:
       - name: Find attestation digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/kubewarden-${{ inputs.component }}@${{ env.DIGEST }} \
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/${{ inputs.component }}@${{ env.DIGEST }} \
           | jq -r '.manifests[]
             | select(.annotations["vnd.docker.reference.type"] == "attestation-manifest")
             | .digest')
@@ -63,7 +63,7 @@ jobs:
       - name: Find provenance manifest digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/kubewarden-${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST }} |
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST }} |
                       jq -r '.layers[]
                         | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2")
                         | .digest')
@@ -71,7 +71,7 @@ jobs:
       - name: Find SBOM manifest layer digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/kubewarden-${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
             jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
           echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
 
@@ -81,9 +81,9 @@ jobs:
       - name: Download provenance and SBOM files
         run: |
           set -e
-          crane blob ghcr.io/${{github.repository_owner}}/kubewarden-${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}} \
+          crane blob ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}} \
             > Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
-          crane blob ghcr.io/${{github.repository_owner}}/kubewarden-${{ inputs.component }}@${{ env.SBOM_DIGEST}} \
+          crane blob ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.SBOM_DIGEST}} \
             > Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
       - name: Sign provenance and SBOM files
         run: |
