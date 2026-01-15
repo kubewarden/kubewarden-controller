@@ -65,6 +65,7 @@ global:
     - calico-apiserver
     - calico-system
     - capi-system
+    - cattle-capi-system
     - cattle-alerting
     - cattle-csp-adapter-system
     - cattle-elemental-system

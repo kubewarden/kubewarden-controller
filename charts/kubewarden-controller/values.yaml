@@ -65,6 +65,7 @@ global:
     - calico-apiserver
     - calico-system
     - capi-system
+    - cattle-capi-system
     - cattle-alerting
     - cattle-csp-adapter-system
     - cattle-elemental-system
@@ -149,9 +150,9 @@ logLevel: info
 # open-telemetry options
 telemetry:
   # Kubewarden controller telemetry configuration allow two OpenTelemetry
-  # collector communication options: 
+  # collector communication options:
   # - sidecar: It will create a Otel collector sidecar and configure the
-  # controller and policy server to send metrics and traces to it. 
+  # controller and policy server to send metrics and traces to it.
   # - custom: It will configure the controller and policy server to send metrics
   # and traces to a custom collector that is not running as a sidecar.
 
@@ -192,7 +193,7 @@ telemetry:
     otelCollectorClientCertificateSecret: ""
 
   # The following settings are used to configure the Prometheus metrics and
-  # Jaeger tracing when sidecar mode is used. Otherwise, these settings are ignored 
+  # Jaeger tracing when sidecar mode is used. Otherwise, these settings are ignored
   sidecar:
     # telemetry.sidecar.metrics is used to configure the Prometheus metrics exporter
     # in the Otel collector sidecar
@@ -260,7 +261,7 @@ mTLS:
   # policy-servers and the Kubernetes API server, as well as between the
   # policy-servers and the audit-scanner.
   # Enabling this feature will require the Kubernetes API server to be
-  # configured. If that is not achievable, consider using a service mesh. 
+  # configured. If that is not achievable, consider using a service mesh.
   enable: false
   # name of the ConfigMap in kubewarden-controller namespace containing the
   # client CA certificate. The ConfigMap must contain a data.client-ca.crt key
