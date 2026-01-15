@@ -2,13 +2,13 @@ module github.com/kubewarden/kubewarden-controller
 
 go 1.25.0
 
-toolchain go1.25.5
+toolchain go1.25.6
 
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/cel-go v0.26.0
-	github.com/onsi/ginkgo/v2 v2.27.3
-	github.com/onsi/gomega v1.38.3
+	github.com/onsi/ginkgo/v2 v2.27.5
+	github.com/onsi/gomega v1.39.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go/modules/k3s v0.40.0
 	go.opentelemetry.io/otel v1.39.0
