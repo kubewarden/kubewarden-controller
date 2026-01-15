@@ -77,7 +77,7 @@ jobs:
         run: |
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/container-build.yml@${{ github.ref }}" \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/build-containers.yml@${{ github.ref }}" \
             ghcr.io/${{ github.repository_owner }}/${{ matrix.component }}@${{ steps.build-image.outputs.digest }}
 
       - name: Export digest
@@ -193,5 +193,5 @@ jobs:
         run: |
           cosign verify \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/container-build.yml@${{ github.ref }}" \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/build-containers.yml@${{ github.ref }}" \
             ghcr.io/${{ github.repository_owner }}/${{ matrix.component }}@${{ env.MULTI_ARCH_MANIFEST_DIGEST}}

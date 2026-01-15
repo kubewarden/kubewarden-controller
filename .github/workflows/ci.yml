@@ -2,6 +2,12 @@ name: CI
 
 on:
   workflow_call:
+    inputs:
+      run_all:
+        description: "Run all checks (ignore path filtering)"
+        required: false
+        type: boolean
+        default: true
   push:
   pull_request:
   workflow_dispatch:
@@ -30,9 +36,9 @@ jobs:
       - name: Detect changed files
         id: changed-files
         run: |
-          # If manual run with run_all=true, skip filtering and run everything
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.run_all }}" = "true" ]; then
-            echo "Manual run with run_all=true, running all checks"
+          # If run_all input is true (from workflow_call or workflow_dispatch), run everything
+          if [ "${{ inputs.run_all }}" = "true" ]; then
+            echo "run_all=true, running all checks"
             echo "go=true" >> $GITHUB_OUTPUT
             echo "rust=true" >> $GITHUB_OUTPUT
             exit 0
