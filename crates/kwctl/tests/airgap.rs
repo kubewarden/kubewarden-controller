@@ -22,7 +22,10 @@ fn test_airgap() {
 
     // Save policies
     let mut save_policies_script = setup_airgap_script_command(
-        &project_root.join("scripts/kubewarden-save-policies.sh"),
+        &project_root
+            .join("../../scripts/kubewarden-save-policies.sh")
+            .canonicalize()
+            .expect("Failed to canonicalize path to kubewarden-save-policies.sh"),
         tempdir.path(),
     );
     save_policies_script
@@ -60,7 +63,10 @@ fn test_airgap() {
 
     // Load policies
     let mut load_policies_script = setup_airgap_script_command(
-        &project_root.join("scripts/kubewarden-load-policies.sh"),
+        &project_root
+            .join("../../scripts/kubewarden-load-policies.sh")
+            .canonicalize()
+            .expect("Failed to canonicalize path to kubewarden-load-policies.sh"),
         tempdir.path(),
     );
     load_policies_script
