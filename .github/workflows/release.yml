@@ -47,34 +47,11 @@ jobs:
       component: ${{ matrix.component }}
       arch: ${{ matrix.arch }}
 
-  crds:
-    name: Build CRDs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Golang
-        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
-        with:
-          go-version: "1.25"
-
-      - name: Checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-
-      - name: Generate CRDs
-        run: |
-          make generate-crds
-          tar -czf CRDS.tar.gz -C generated-crds $(ls generated-crds)
-      - name: Upload CRDs as artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: CRDS
-          path: CRDS.tar.gz
-
   release:
     name: Create release
 
     needs:
       - ci
-      - crds
       - build-containers
       - build-kwctl
       - attestation
@@ -128,11 +105,6 @@ jobs:
         with:
           pattern: attestation-*
           merge-multiple: true
-
-      - name: Download CRDs artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: CRDS
 
       - name: Download kwctl artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -192,8 +164,7 @@ jobs:
               './kwctl-linux-x86_64-sbom/kwctl-linux-x86_64-sbom.spdx.bundle.sigstore',
               './kwctl-windows-x86_64/kwctl-windows-x86_64.exe.zip',
               './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx',
-              './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx.bundle.sigstore',
-              "CRDS.tar.gz"]
+              './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx.bundle.sigstore']
             const {RELEASE_ID} = process.env
 
             for (const file of files) {
@@ -206,10 +177,6 @@ jobs:
                 name: path.basename(file),
                 data: file_data,
               });
-              // store the crds asset id used it in the helm chart update
-              if (file === "CRDS.tar.gz") {
-                core.setOutput('crds_asset_id', response.data.id)
-              }
             }
 
       - name: Publish release
@@ -239,8 +206,7 @@ jobs:
             "client_payload": {
               "version": "${{ github.ref_name }}",
               "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}",
-              "repository": "${{ github.repository }}",
-              "crds_asset_id": "${{ steps.upload_release_assets.outputs.crds_asset_id }}"
+              "repository": "${{ github.repository }}"
             }
           }' > payload.json
           gh api repos/${{ github.repository_owner }}/helm-charts/dispatches \
