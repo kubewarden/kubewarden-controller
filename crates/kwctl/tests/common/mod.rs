@@ -1,10 +1,11 @@
 use std::path::Path;
 
 use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 
 #[allow(dead_code)]
 pub fn setup_command(path: &Path) -> Command {
-    let mut cmd = Command::cargo_bin("kwctl").unwrap();
+    let mut cmd: Command = cargo_bin_cmd!("kwctl");
 
     cmd.current_dir(path)
         .env("XDG_CONFIG_HOME", path.join(".config"))
