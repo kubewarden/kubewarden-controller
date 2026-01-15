@@ -30,3 +30,6 @@ generated-crds/*
 
 # Tilt settings
 tilt-settings.yaml
+
+# envtest files
+.envtest
