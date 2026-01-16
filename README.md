@@ -114,8 +114,8 @@ You can verify the container image with:
 ```shell
 cosign verify-blob --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
     --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    --bundle kubewarden-controller-attestation-amd64-provenance-cosign.bundle \
-    kubewarden-controller-attestation-amd64-provenance.json
+    --bundle kubewarden-controller-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore \
+    kubewarden-controller-attestation-amd64-provenance.intoto.jsonl
 ```
 
 To verify the attestation manifest and its layer signatures:
