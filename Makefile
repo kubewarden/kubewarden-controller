@@ -109,7 +109,7 @@ audit-scanner-image:
 		-t "$(REGISTRY)/$(REPO)/audit-scanner:$(TAG)" .
 	@echo "Built $(REGISTRY)/$(REPO)/audit-scanner:$(TAG)"
 
-POLICY_SERVER_SRC_DIRS := crates/policy-server
+POLICY_SERVER_SRC_DIRS := crates/policy-server crates/policy-evaluator crates/policy-fetcher crates/burrego
 POLICY_SERVER_SRCS := $(shell find $(POLICY_SERVER_SRC_DIRS) -type f -name '*.rs')
 .PHONY: policy-server
 policy-server: $(POLICY_SERVER_SRCS) lint-rust
@@ -145,7 +145,7 @@ generate-chart: ## Generate Helm chart values schema.
 	$(HELM_SCHEMA) --values charts/kubewarden-controller/values.yaml --output charts/kubewarden-controller/values.schema.json
 
 
-.PHONY: check-charts-common-values
+.PHONY: charts-check-common-values
 charts-check-common-values:
 	@./scripts/charts-check-common-values.sh
 
