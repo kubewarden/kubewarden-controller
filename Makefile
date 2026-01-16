@@ -144,6 +144,23 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 generate-chart: ## Generate Helm chart values schema.
 	$(HELM_SCHEMA) --values charts/kubewarden-controller/values.yaml --output charts/kubewarden-controller/values.schema.json
 
+
+.PHONY: check-charts-common-values
+charts-check-common-values:
+	@./scripts/charts-check-common-values.sh
+
+.PHONY: charts-generate-images-file
+charts-generate-images-file:
+	@./scripts/charts-extract-images.sh ./charts
+
+.PHONY: charts-generate-policies-file
+charts-generate-policies-file:
+	@./scripts/charts-extract-policies.sh ./charts
+
+.PHONY: charts-generate-changelog-files
+charts-generate-changelog-files:
+	@./scripts/charts-generate-changelog-files.sh ./charts imagelist.txt
+
 ##@ Dependencies
 
 ## Location to install dependencies to
