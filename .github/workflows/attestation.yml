@@ -82,32 +82,32 @@ jobs:
         run: |
           set -e
           crane blob ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}} \
-            > Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
+            > ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
           crane blob ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.SBOM_DIGEST}} \
-            > Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+            > ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
       - name: Sign provenance and SBOM files
         run: |
           set -e
           cosign sign-blob --yes \
-            --bundle Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl.bundle.sigstore \
-            Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl.bundle.sigstore \
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
           cosign verify-blob \
-            --bundle Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl.bundle.sigstore \
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl.bundle.sigstore \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
             --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
-            Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
 
           cosign sign-blob --yes \
-            --bundle Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json.bundle.sigstore \
-            Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json.bundle.sigstore \
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
           cosign verify-blob \
-            --bundle Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json.bundle.sigstore \
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json.bundle.sigstore \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
             --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
-            Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
 
       - name: Upload SBOMs as artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: attestation-Kubewarden-${{ inputs.component }}-${{ inputs.arch }}
-          path: Kubewarden-${{ inputs.component }}-attestation-${{ inputs.arch }}*
+          name: attestation-${{ inputs.component }}-${{ inputs.arch }}
+          path: ${{ inputs.component }}-attestation-${{ inputs.arch }}*
