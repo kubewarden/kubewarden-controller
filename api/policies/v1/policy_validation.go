@@ -35,7 +35,7 @@ import (
 //
 //nolint:gochecknoglobals // lets keep the compiler available for the how module
 var (
-	nonStrictStatelessCELCompiler = plugincel.NewCompiler(environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion(), false))
+	nonStrictStatelessCELCompiler = plugincel.NewCompiler(environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion()))
 )
 
 const maxMatchConditionsCount = 64
@@ -300,7 +300,6 @@ func validateMatchConditionsExpression(expressionStr string, fldPath *field.Path
 	result := nonStrictStatelessCELCompiler.CompileCELExpression(expression, plugincel.OptionalVariableDeclarations{
 		HasParams:     false,
 		HasAuthorizer: true,
-		StrictCost:    false,
 	}, environment.NewExpressions)
 	if result.Error != nil {
 		allErrors = append(allErrors, convertCELErrorToValidationError(fldPath, expression, result.Error))
