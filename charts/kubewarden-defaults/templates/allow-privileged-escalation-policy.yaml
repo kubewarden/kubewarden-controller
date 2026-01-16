@@ -1,0 +1,26 @@
+{{ if .Values.recommendedPolicies.enabled }}
+apiVersion: {{ $.Values.crdVersion }}
+kind: ClusterAdmissionPolicy
+metadata:
+  labels:
+    {{- include "kubewarden-defaults.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy
+  annotations:
+    io.kubewarden.policy.severity: medium
+    io.kubewarden.policy.category: PSP
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
+  name: {{ $.Values.recommendedPolicies.allowPrivilegeEscalationPolicy.name }}
+spec:
+  mode: {{ $.Values.recommendedPolicies.defaultPolicyMode }}
+  failurePolicy: {{ template "policy_failure_policy" . }}
+  module: {{ template "policy_default_registry" . }}{{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.module.repository }}:{{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.module.tag }}
+{{ include "policy-namespace-selector" . | indent 2}}
+  rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["pods"]
+      operations: ["CREATE"] # kubernetes doesn't allow to add/remove privileged containers to an already running pod
+  mutating: true
+  settings:
+    {{- toYaml .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.settings | replace "|\n" "" | nindent 4 }}
+{{ end }}

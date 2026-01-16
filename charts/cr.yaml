@@ -1,0 +1,2 @@
+release-notes-file: CHANGELOG.md
+generate-release-notes: true

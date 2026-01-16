@@ -1,5 +1,3 @@
-//go:build testing
-
 package v1
 
 import (

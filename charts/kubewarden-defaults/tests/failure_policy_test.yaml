@@ -1,0 +1,25 @@
+suite: set failurePolicy based upon mode
+templates:
+  - allow-privileged-escalation-policy.yaml
+  - capabilities-policy.yaml
+  - host-namespace-policy.yaml
+  - host-path-policy.yaml
+  - pod-privileged-policy.yaml
+  - user-group-policy.yaml
+tests:
+  - it: "should ignore on webhook failures if in monitor mode"
+    set:
+      recommendedPolicies.enabled: true
+      recommendedPolicies.defaultPolicyMode: "monitor"
+    asserts:
+      - equal:
+          path: spec.failurePolicy
+          value: Ignore
+  - it: "should reject on webhook failures if in protect mode"
+    set:
+      recommendedPolicies.enabled: true
+      recommendedPolicies.defaultPolicyMode: "protect"
+    asserts:
+      - equal:
+          path: spec.failurePolicy
+          value: Fail

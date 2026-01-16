@@ -1,0 +1,17 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1.0"
+k8s-openapi = { version = "0.26.0", default-features = false, features = [
+  "v1_33",
+] }
+kubewarden-policy-sdk = { version = "0.15.0" }
+lazy_static = "1.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wasi-common = "39.0"
+wasmtime = "39.0"
+wasmtime-wasi = "39.0"
+thiserror = "2.0"

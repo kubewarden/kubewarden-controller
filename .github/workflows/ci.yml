@@ -2,54 +2,131 @@ name: CI
 
 on:
   workflow_call:
+    inputs:
+      run_all:
+        description: "Run all checks (ignore path filtering)"
+        required: false
+        type: boolean
+        default: true
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      run_all:
+        description: "Run all checks (ignore path filtering)"
+        required: false
+        type: boolean
+        default: false
 
 # Declare default permissions as read only.
 permissions: read-all
 
 jobs:
-  unit_tests:
-    name: Unit tests
+  # Detect which files changed to run appropriate checks
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.changed-files.outputs.go }}
+      rust: ${{ steps.changed-files.outputs.rust }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+      - name: Detect changed files
+        id: changed-files
+        run: |
+          # If run_all input is true (from workflow_call or workflow_dispatch), run everything
+          if [ "${{ inputs.run_all }}" = "true" ]; then
+            echo "run_all=true, running all checks"
+            echo "go=true" >> $GITHUB_OUTPUT
+            echo "rust=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check if commit message contains [ci full] or [full ci] to run all checks
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if echo "$COMMIT_MSG" | grep -qiE '\[(ci full|full ci)\]'; then
+            echo "Commit message contains [ci full] or [full ci], running all checks"
+            echo "go=true" >> $GITHUB_OUTPUT
+            echo "rust=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Determine base ref for comparison
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_REF="${{ github.event.pull_request.base.sha }}"
+          else
+            # For push events, compare with previous commit
+            BASE_REF="${{ github.event.before }}"
+            # If first push to branch, compare with parent
+            if [ "$BASE_REF" = "0000000000000000000000000000000000000000" ]; then
+              BASE_REF="HEAD^"
+            fi
+          fi
+
+          echo "Comparing against base: $BASE_REF"
+
+          # Check for Go file changes
+          GO_CHANGES=$(git diff --name-only "$BASE_REF" HEAD | grep -E '\.(go)$|^go\.(mod|sum)$|^Makefile$|^\.golangci\.yml$|^cmd/|^api/|^internal/|^audit-scanner/' || true)
+          if [ -n "$GO_CHANGES" ]; then
+            echo "go=true" >> $GITHUB_OUTPUT
+            echo "Go files changed:"
+            echo "$GO_CHANGES"
+          else
+            echo "go=false" >> $GITHUB_OUTPUT
+            echo "No Go files changed"
+          fi
+
+          # Check for Rust file changes
+          RUST_CHANGES=$(git diff --name-only "$BASE_REF" HEAD | grep -E '^crates/.*\.rs$|^crates/.*/Cargo\.(toml|lock)$|^Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^crates/Makefile$' || true)
+          if [ -n "$RUST_CHANGES" ]; then
+            echo "rust=true" >> $GITHUB_OUTPUT
+            echo "Rust files changed:"
+            echo "$RUST_CHANGES"
+          else
+            echo "rust=false" >> $GITHUB_OUTPUT
+            echo "No Rust files changed"
+          fi
+
+  # Go jobs
+  test-go:
+    name: Go tests
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version: "1.25"
-      - run: make unit-tests
-      - name: Upload unit-tests coverage to Codecov
+      - run: make test-go
+      - name: Upload Go test coverage to Codecov
         uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
         with:
-          name: unit-tests
-          directory: coverage/unit-tests
-          flags: unit-tests
+          name: go-tests
+          files: coverage/cover.out
+          flags: go-tests
           verbose: true
 
-  integration_tests:
-    name: Integration tests
+  e2e-go:
+    name: Go e2e tests
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version: "1.25"
-      - run: make integration-tests-envtest
-      - run: make integration-tests-real-cluster
-      - name: Upload integration-tests coverage to Codecov
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
-        with:
-          name: integration-tests
-          directory: coverage/integration-tests
-          flags: integration-tests
-          verbose: true
+      - run: make test-e2e
 
   golangci:
     name: Golangci-lint
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -61,6 +138,117 @@ jobs:
         with:
           version: v2.4.0
 
+  # Rust jobs
+  calculate-crates-matrix:
+    name: Calculate crates matrix
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: List crate folders
+        id: set-matrix
+        run: |
+          # Exclude context-aware-test-policy as it's a test fixture, not a standalone crate
+          CRATES=$(ls -1 crates | grep -v "^Makefile$" | grep -v "^context-aware-test-policy$" | jq -R -s -c 'split("\n")[:-1]')
+          echo "matrix={\"crate\":$CRATES}" >> $GITHUB_OUTPUT
+
+  fmt-rust-per-crate:
+    needs: calculate-crates-matrix
+    name: Rustfmt (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: "Run cargo fmt"
+        run: |
+          make -C crates/${{ matrix.crate }} fmt
+
+  clippy-rust-per-crate:
+    needs: calculate-crates-matrix
+    name: Clippy (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: "Run cargo clippy"
+        run: |
+          make -C crates/${{ matrix.crate }} lint
+
+  unit-tests-rust-per-crate:
+    needs: calculate-crates-matrix
+    name: Unit tests (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: "Run cargo test"
+        run: |
+          make -C crates/${{ matrix.crate }} unit-tests
+
+  integration-tests-burrego:
+    needs: [changes, calculate-crates-matrix]
+    if: needs.changes.outputs.rust == 'true'
+    name: E2E tests (burrego)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Install opa
+        uses: kubewarden/github-actions/opa-installer@v4.5.15
+        with:
+          opa-version: v1.12.2
+      - name: Install bats
+        run: sudo apt-get install -y bats
+      - name: Run e2e tests
+        run: make -C crates/burrego e2e-tests
+
+  integration-tests-kwctl:
+    needs: [changes, calculate-crates-matrix]
+    if: needs.changes.outputs.rust == 'true'
+    name: E2E tests (kwctl)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run e2e tests
+        run: make -C crates/kwctl e2e-tests
+
+  integration-tests-policy-server:
+    needs: [changes, calculate-crates-matrix]
+    if: needs.changes.outputs.rust == 'true'
+    name: Integration tests (policy-server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run integration tests
+        run: make -C crates/policy-server integration-tests
+
+  integration-tests-policy-evaluator:
+    needs: [changes, calculate-crates-matrix]
+    if: needs.changes.outputs.rust == 'true'
+    name: Integration tests (policy-evaluator)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Build kwctl
+        run: make -C crates/kwctl build-release
+      - name: Setup kwctl
+        run: |
+          mkdir -p $HOME/.kwctl
+          cp target/release/kwctl $HOME/.kwctl/kwctl
+          chmod +x $HOME/.kwctl/kwctl
+          echo "$HOME/.kwctl" >> $GITHUB_PATH
+      - name: Install bats
+        run: sudo apt install -y bats
+      - name: Run integration tests
+        run: make -C crates/policy-evaluator integration-tests
+
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
@@ -68,3 +256,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
       - run: shellcheck $(find scripts/ -name '*.sh')
+
+  charts:
+    name: Helm unittest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Install helm
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+      # Disable plugin verification until the following issue is addressed https://github.com/helm-unittest/helm-unittest/issues/777
+      - name: Install Helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
+      - name: Verify common values
+        run: make charts-check-common-values
+      - name: helm unit tests
+        run: make helm-unittest

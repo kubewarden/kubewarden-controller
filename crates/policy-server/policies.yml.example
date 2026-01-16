@@ -1,0 +1,34 @@
+psp-apparmor:
+  module: registry://ghcr.io/kubewarden/policies/psp-apparmor:v0.1.7
+psp-capabilities:
+  module: registry://ghcr.io/kubewarden/policies/psp-capabilities:v0.1.7
+  allowedToMutate: true
+  message: "My custom error message"
+  settings:
+    allowed_capabilities: ["*"]
+    required_drop_capabilities: ["KILL"]
+pod-image-signatures: # policy group
+  policies:
+    sigstore_pgp:
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      settings:
+        signatures:
+          - image: "*"
+            pubKeys:
+              - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
+              - "-----BEGIN PUBLIC KEY-----xxxxx-----END PUBLIC KEY-----"
+    sigstore_gh_action:
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.2.8
+      settings:
+        signatures:
+          - image: "*"
+            githubActions:
+            owner: "kubewarden"
+    reject_latest_tag:
+      module: ghcr.io/kubewarden/policies/trusted-repos-policy:v0.1.12
+      settings:
+        tags:
+          reject:
+            - latest
+  expression: "sigstore_pgp() || (sigstore_gh_action() && reject_latest_tag())"
+  message: "The group policy is rejected."

@@ -1,0 +1,34 @@
+suite: Audit scanner configuration
+templates:
+  - audit-scanner.yaml
+tests:
+  - it: "should set report-kind properly when value is defined"
+    set:
+      auditScanner:
+        reportCRDsKind: "openreports"
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content:
+            --report-kind
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content:
+            "openreports"
+  - it: "should not set report-kind when no value is defined"
+    set:
+      auditScanner:
+        reportCRDsKind: null
+    asserts:
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content:
+            --report-kind
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content:
+            "openreports"
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          content:
+            "policyreport"

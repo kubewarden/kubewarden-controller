@@ -1,0 +1,6 @@
+coverage/
+docs/
+examples/
+charts/
+test/
+target/

@@ -1,0 +1,14 @@
+You can now start defining admission policies by using the cluster-wide
+`clusteradmissionpolicies.policies.kubewarden.io` or the namespaced
+`admissionpolicies.policies.kubewarden.io` resources.
+
+For more information check out https://docs.kubewarden.io.
+
+
+🚀 **Kubewarden is applying to become a CNCF incubation project!** 🚀  
+
+If you'd like to support us, we'd love to hear from you as one of our adopters. 
+
+Adopters can be public or private. 
+
+Learn how to add your organization as a Kubewarden adopter by checking out the ADOPTERS.md file here: https://github.com/kubewarden/community/blob/main/ADOPTERS.md
