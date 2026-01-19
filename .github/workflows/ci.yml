@@ -45,7 +45,7 @@ jobs:
           fi
 
           # Check if commit message contains [ci full] or [full ci] to run all checks
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_MSG='${{ github.event.head_commit.message }}'
           if echo "$COMMIT_MSG" | grep -qiE '\[(ci full|full ci)\]'; then
             echo "Commit message contains [ci full] or [full ci], running all checks"
             echo "go=true" >> $GITHUB_OUTPUT
