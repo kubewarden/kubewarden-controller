@@ -2,30 +2,30 @@ module github.com/kubewarden/kubewarden-controller
 
 go 1.25.1
 
-toolchain go1.25.5
+toolchain go1.25.6
 
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/cel-go v0.26.0
 	github.com/google/uuid v1.6.0
-	github.com/onsi/ginkgo/v2 v2.27.3
-	github.com/onsi/gomega v1.38.3
+	github.com/onsi/ginkgo/v2 v2.27.5
+	github.com/onsi/gomega v1.39.0
 	github.com/openreports/reports-api v0.2.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.39.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.39.0
 	go.opentelemetry.io/otel/metric v1.39.0
 	go.opentelemetry.io/otel/sdk/metric v1.39.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
 	k8s.io/apiserver v0.35.0
 	k8s.io/client-go v0.35.0
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
-	sigs.k8s.io/controller-runtime v0.20.0
+	sigs.k8s.io/controller-runtime v0.23.0
 	sigs.k8s.io/e2e-framework v0.6.0
-	sigs.k8s.io/wg-policy-prototypes v0.0.0-20230505033312-51c21979086a
+	sigs.k8s.io/wg-policy-prototypes ed0ca5a1c778
 )
 
 // CEL needs to be pinned to the same version as the one used by the k8s.io/apiserver package
