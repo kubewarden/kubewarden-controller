@@ -1,4 +1,4 @@
-FROM alpine:3.23.0 AS builder
+FROM alpine:3.23.2 AS builder
 
 # Install build dependencies for Rust and C libraries
 RUN apk add --no-cache \
@@ -40,7 +40,7 @@ RUN cargo auditable build --release -p policy-server --target $(cat /tmp/rust_ta
 RUN ldd /usr/src/policy-server/target/$(cat /tmp/rust_target)/release/policy-server || echo "Static binary confirmed"
 
 # Create minimal user configuration
-FROM alpine:3.23.0 AS cfg
+FROM alpine:3.23.2 AS cfg
 RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd && \
     echo "policy-server:x:65533:policy-server" >> /etc/group
 
