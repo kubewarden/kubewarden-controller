@@ -12,14 +12,14 @@ version = "0.30.4"
 
 [dependencies]
 anyhow = { workspace = true }
-base64 = "0.22"
+base64 = { workspace = true }
 burrego = { path = "../burrego" }
 cached = { version = "0.56", features = ["async_tokio_rt_multi_thread"] }
 chrono = { version = "0.4", default-features = false }
 dns-lookup = "3.0"
 email_address = { version = "0.2", features = ["serde"] }
-futures = "0.3"
-itertools = "0.14"
+futures = { workspace = true }
+itertools = { workspace = true }
 json-patch = "4.0"
 k8s-openapi = { workspace = true }
 kube = { version = "2.0.0", default-features = false, features = [
@@ -38,16 +38,16 @@ rhai = { version = "1.21", features = ["sync"] }
 rustls-webpki = { version = "0.103", default-features = false, features = [
   "std",
 ] }
-semver = { version = "1.0", features = ["serde"] }
+semver = { workspace = true }
 serde = { workspace = true }
-serde_json = "1.0"
-serde_yaml = "0.9"
-sha2 = "0.10"
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+sha2 = { workspace = true }
 thiserror = { workspace = true }
 time = { version = "0.3", features = ["serde-human-readable"] }
-tokio = { version = "^1", features = ["rt", "rt-multi-thread"] }
-tracing = "0.1"
-url = { version = "2.5", features = ["serde"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
+tracing = { workspace = true }
+url = { workspace = true }
 validator = { version = "0.20", features = ["derive"] }
 wapc = "2.1"
 wasi-common = { workspace = true }
@@ -59,14 +59,14 @@ webpki-roots = "1"
 
 [dev-dependencies]
 assert-json-diff = "2.0"
-hyper = { version = "1" }
-rcgen = { version = "0.14", features = ["x509-parser"] }
-rstest = "0.26"
-serial_test = "3.2"
-tempfile = "3.19"
-test-context = "0.5"
-test-log = "0.2"
-tower-test = "0.4"
+hyper            = { version = "1" }
+rcgen            = { version = "0.14", features = ["x509-parser"] }
+rstest           = { workspace = true }
+serial_test      = "3.2"
+tempfile         = { workspace = true }
+test-context     = "0.5"
+test-log         = "0.2"
+tower-test       = "0.4"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of policy-fetcher
 # This is required to have the integration tests use the system certificates instead of the
