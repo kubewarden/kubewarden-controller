@@ -38,7 +38,7 @@ test: test-go test-rust
 
 .PHONY: test-go
 test-go: vet
-	$(GO_BUILD_ENV) CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
+	$(GO_BUILD_ENV) CGO_ENABLED=1 GOTOOLCHAIN=go1.25.6+auto KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
 
 .PHONY: test-rust
 test-rust:
@@ -50,7 +50,7 @@ helm-unittest:
 
 .PHONY: test-e2e
 test-e2e: controller-image audit-scanner-image policy-server-image
-	$(GO_BUILD_ENV) go test ./e2e/ -v
+	$(GO_BUILD_ENV) GOTOOLCHAIN=go1.25.6+auto go test ./e2e/ -v
 
 .PHONY: fmt-go
 fmt-go:
