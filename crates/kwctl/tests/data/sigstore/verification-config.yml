@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+
+allOf:
+  - kind: pubKey
+    owner: pubkey1.pub
+    key: |
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQiTy5S+2JFvVlhUwWPLziM7iTM2j
+          byLgh2IjpNQN0Uio/9pZOTP/CsJmXoUNshfpTUHd3OxgHgz/6adtf2nBwQ==
+          -----END PUBLIC KEY-----
+    annotations:
+      env: prod
+      stable: "true"
+  - kind: pubKey
+    owner: pubkey2.pub
+    key: |
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEx0HuqSss8DUIIUg3I006b1EQjj3Q
+          igsTrvZ/Q3+h+81DkNJg4LzID1rz0UJFUcdzI5NqlFLSTDIQw0gVKOiK7g==
+          -----END PUBLIC KEY-----
+    annotations:
+      env: prod

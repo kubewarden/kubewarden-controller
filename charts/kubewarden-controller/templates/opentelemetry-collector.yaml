@@ -1,0 +1,51 @@
+{{ if or .Values.telemetry.metrics .Values.telemetry.tracing }}
+{{ if eq .Values.telemetry.mode "sidecar" }}
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: kubewarden
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubewarden-controller.labels" . | nindent 4 }}
+  annotations:
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
+spec:
+  mode: sidecar
+  config: 
+    receivers:
+      otlp:
+        protocols:
+          grpc: {}
+    processors:
+      batch: {}
+    exporters:
+      {{- if and .Values.telemetry.tracing .Values.telemetry.sidecar.tracing.jaeger.endpoint }}
+      otlp/jaeger:
+        endpoint: {{ .Values.telemetry.sidecar.tracing.jaeger.endpoint }}
+        {{- if hasKey .Values.telemetry.sidecar.tracing.jaeger "tls" }}
+        {{- if .Values.telemetry.sidecar.tracing.jaeger.tls.insecure }}
+        tls:
+          insecure: {{ .Values.telemetry.sidecar.tracing.jaeger.tls.insecure }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if and .Values.telemetry.metrics .Values.telemetry.sidecar.metrics.port }}
+      prometheus:
+        endpoint: ":{{ .Values.telemetry.sidecar.metrics.port }}"
+      {{- end }}
+    service:
+      pipelines:
+        {{- if and .Values.telemetry.metrics .Values.telemetry.sidecar.metrics.port }}
+        metrics:
+          receivers: [otlp]
+          processors: []
+          exporters: [prometheus]
+        {{- end }}
+        {{- if and .Values.telemetry.tracing .Values.telemetry.sidecar.tracing.jaeger.endpoint }}
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp/jaeger]
+        {{- end }}
+{{ end }}
+{{ end }}

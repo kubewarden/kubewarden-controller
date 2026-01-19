@@ -1,0 +1,320 @@
+name: kwctl build
+on:
+  workflow_call:
+    inputs:
+      force_build:
+        description: "Force build even if no kwctl-related changes detected"
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches:
+      - "main"
+      - "feat-**"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  changes:
+    name: Detect kwctl changes
+    runs-on: ubuntu-latest
+    outputs:
+      kwctl: ${{ steps.changed-files.outputs.kwctl }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+      - name: Detect kwctl-related file changes
+        id: changed-files
+        run: |
+          # If force_build input is true (from workflow_call), always build
+          if [ "${{ inputs.force_build }}" = "true" ]; then
+            echo "force_build=true, building kwctl"
+            echo "kwctl=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Determine base ref for comparison
+          BASE_REF="${{ github.event.before }}"
+          # If first push to branch, compare with parent
+          if [ "$BASE_REF" = "0000000000000000000000000000000000000000" ]; then
+            BASE_REF="HEAD^"
+          fi
+
+          echo "Comparing against base: $BASE_REF"
+
+          # Check for kwctl-related file changes
+          KWCTL_CHANGES=$(git diff --name-only "$BASE_REF" HEAD | grep -E '^crates/(kwctl|policy-evaluator|policy-fetcher|burrego)/|^Cargo\.(toml|lock)$' || true)
+          if [ -n "$KWCTL_CHANGES" ]; then
+            echo "kwctl=true" >> $GITHUB_OUTPUT
+            echo "kwctl-related files changed:"
+            echo "$KWCTL_CHANGES"
+          else
+            echo "kwctl=false" >> $GITHUB_OUTPUT
+            echo "No kwctl-related files changed"
+          fi
+
+  build-linux-binaries:
+    name: Build linux binaries
+    needs: changes
+    if: needs.changes.outputs.kwctl == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        targetarch:
+          - aarch64
+          - x86_64
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - name: checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Install cross-rs
+        run: |
+          set -e
+
+          echo "$CROSS_CHECKSUM  cross-x86_64-unknown-linux-musl.tar.gz" > checksum
+          curl -L -O https://github.com/cross-rs/cross/releases/download/$CROSS_VERSION/cross-x86_64-unknown-linux-musl.tar.gz
+          sha512sum -c checksum
+          tar -xvf cross-x86_64-unknown-linux-musl.tar.gz
+        env:
+          CROSS_CHECKSUM: "70b31b207e981aa31925a7519a0ad125c5d97b84afe0e8e81b0664df5c3a7978558d83f9fcd0c36dc2176fc2a4d0caed67f8cf9fd689f9935f84449cd4922ceb"
+          CROSS_VERSION: "v0.2.5"
+
+      - name: Build kwctl
+        shell: bash
+        run: |
+          ./cross build --release --target ${{matrix.targetarch}}-unknown-linux-musl -p kwctl
+
+      - run: mv target/${{ matrix.targetarch }}-unknown-linux-musl/release/kwctl kwctl-linux-${{ matrix.targetarch }}
+
+      - name: Smoke test build
+        if: matrix.targetarch == 'x86_64'
+        run: ./kwctl-linux-x86_64 --help
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
+        id: attestations
+        with:
+          subject-path: kwctl-linux-${{ matrix.targetarch }}
+
+      - name: Sign kwctl
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-linux-${{ matrix.targetarch }}.bundle.sigstore \
+            kwctl-linux-${{ matrix.targetarch }}
+
+      - run: zip -j9 kwctl-linux-${{ matrix.targetarch }}.zip kwctl-linux-${{ matrix.targetarch }} kwctl-linux-${{ matrix.targetarch }}.bundle.sigstore
+
+      - name: Upload binary
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: kwctl-linux-${{ matrix.targetarch }}
+          path: kwctl-linux-${{ matrix.targetarch }}.zip
+
+      - name: Install the syft command
+        uses: kubewarden/github-actions/syft-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+
+      - name: Create SBOM file
+        shell: bash
+        run: |
+          syft scan \
+          --output spdx-json=kwctl-linux-${{ matrix.targetarch }}-sbom.spdx \
+          --source-name kwctl-linux-${{ matrix.targetarch }} \
+          --source-version ${{ github.sha }} \
+          -vv \
+          dir:. # use dir default catalogers, which includes Cargo.toml
+
+      - name: Sign SBOM file
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
+
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: kwctl-linux-${{ matrix.targetarch }}-sbom
+          path: |
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
+            kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore
+
+      - name: Upload kwctl air gap scripts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: matrix.targetarch == 'x86_64' # only upload the scripts once
+        with:
+          name: kwctl-airgap-scripts
+          path: |
+            scripts/kubewarden-load-policies.sh
+            scripts/kubewarden-save-policies.sh
+
+  build-darwin-binaries:
+    name: Build darwin binary
+    needs: changes
+    if: needs.changes.outputs.kwctl == 'true'
+    strategy:
+      matrix:
+        targetarch: ["aarch64", "x86_64"]
+    runs-on: macos-latest
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
+
+      - name: Build kwctl
+        run: cargo build --target=${{ matrix.targetarch }}-apple-darwin --release -p kwctl
+
+      - run: mv target/${{ matrix.targetarch }}-apple-darwin/release/kwctl kwctl-darwin-${{ matrix.targetarch }}
+
+      - name: Smoke test build
+        if: matrix.targetarch == 'x86_64'
+        run: ./kwctl-darwin-x86_64 --help
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
+        id: attestations
+        with:
+          subject-path: kwctl-darwin-${{ matrix.targetarch }}
+
+      - name: Sign kwctl
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-darwin-${{ matrix.targetarch }}.bundle.sigstore \
+            kwctl-darwin-${{ matrix.targetarch }}
+
+      - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.bundle.sigstore
+
+      - name: Upload binary
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: kwctl-darwin-${{ matrix.targetarch }}
+          path: kwctl-darwin-${{ matrix.targetarch }}.zip
+
+      - name: Install the syft command
+        uses: kubewarden/github-actions/syft-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+        with:
+          arch: darwin_amd64
+
+      - name: Create SBOM file
+        shell: bash
+        run: |
+          syft scan \
+          --output spdx-json=kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx \
+          --source-name kwctl-darwin-${{ matrix.targetarch }} \
+          --source-version ${{ github.sha }} \
+          -vv \
+          dir:. # use dir default catalogers, which includes Cargo.toml
+
+      - name: Sign SBOM file
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
+
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: kwctl-darwin-${{ matrix.targetarch }}-sbom
+          path: |
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
+            kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore
+
+  build-windows-x86_64:
+    name: Build windows (x86_64) binary
+    needs: changes
+    if: needs.changes.outputs.kwctl == 'true'
+    strategy:
+      matrix:
+        # workaround to have the same GH UI for all jobs
+        targetarch: ["x86_64"]
+        os: ["windows-latest"]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+
+      - name: enable git long paths on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo 'CMAKE_POLICY_VERSION_MINIMUM="3.5"' >> $GITHUB_ENV
+
+      # aws-lc-sys CMakefile contains a directive that has been removed from
+      # cmake v4 that has just been released (march 2025). The build failure
+      # can be fixed by setting an environment variable
+      - name: fix aws-lc-sys building with cmake 4.0.0
+        run: set CMAKE_POLICY_VERSION_MINIMUM="3.5"
+
+      - name: Build kwctl
+        run: cargo build --target=x86_64-pc-windows-msvc --release -p kwctl
+
+      - run: mv target/x86_64-pc-windows-msvc/release/kwctl.exe kwctl-windows-x86_64.exe
+
+      - name: Smoke test build
+        run: .\kwctl-windows-x86_64.exe --help
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
+        id: attestations
+        with:
+          subject-path: kwctl-windows-${{ matrix.targetarch }}.exe
+
+      - name: Sign kwctl
+        shell: bash
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-windows-x86_64.bundle.sigstore \
+            kwctl-windows-x86_64.exe
+
+      - run: |
+          "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.bundle.sigstore
+        shell: bash
+
+      - name: Upload binary
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: kwctl-windows-x86_64
+          path: kwctl-windows-x86_64.exe.zip
+
+      - name: Install the syft command
+        uses: kubewarden/github-actions/syft-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+        with:
+          arch: windows_amd64
+
+      - name: Create SBOM file
+        shell: bash
+        run: |
+          syft scan \
+          --output spdx-json=kwctl-windows-x86_64-sbom.spdx \
+          --source-name kwctl-windows-x86_64 \
+          --source-version ${{ github.sha }} \
+          -vv \
+          dir:. # use dir default catalogers, which includes Cargo.toml
+
+      - name: Sign SBOM
+        shell: bash
+        run: |
+          cosign sign-blob --yes \
+            --bundle kwctl-windows-x86_64-sbom.spdx.bundle.sigstore \
+            kwctl-windows-x86_64-sbom.spdx
+
+      - name: Upload kwctl SBOM files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: kwctl-windows-x86_64-sbom
+          path: |
+            kwctl-windows-x86_64-sbom.spdx
+            kwctl-windows-x86_64-sbom.spdx.bundle.sigstore

@@ -467,3 +467,9 @@ linters:
       - path: "api/policies/v1/(.+)_webhook.go"
         linters:
           - dupl
+      # e2e tests are pretty verbose and repetitive
+      - path: "e2e/(cluster)?admission(.+)_test.go"
+        linters:
+          - cyclop
+          - gocognit
+          - gocyclo

@@ -1,0 +1,128 @@
+on:
+  - push
+  - pull_request
+  - workflow_call
+
+name: Continuous integration
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run cargo check
+        run: cargo check
+
+  version-check:
+    name: Check Cargo.toml version
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download source code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Check cargo file version
+        run: |
+          CARGO_VERSION=$(sed  -n 's,^version\s*= \"\(.*\)\",\1,p' Cargo.toml)
+          TAG_VERSION=$(echo ${{ github.ref_name }} | sed 's/v//')
+
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ];then
+              echo "::error title=Invalid Cargo.toml version::Cargo.toml version does not match the tag version"
+              exit 1
+          fi
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run unit-tests coverage
+        run: make unit-tests
+
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run integration-tests coverage
+        run: make integration-tests
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run Rust format check
+        run: make fmt
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Run Clippy
+        run: make lint
+
+  spelling:
+    name: Spell Check with Typos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Actions Repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Spell Check Repo
+        uses: crate-ci/typos@2d0ce569feab1f8752f1dde43cc2f2aa53236e06 # v1.40.0
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: kubewarden/github-actions/tarpaulin-install@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+      - name: Generate unit-tests coverage
+        run: make coverage-unit-tests
+      - name: Upload unit-tests coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: unit-tests
+          directory: coverage/unit-tests
+          flags: unit-tests
+          verbose: true
+      - name: Generate integration-tests coverage
+        run: make coverage-integration-tests
+      - name: Upload integration-tests coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: integration-tests
+          directory: coverage/integration-tests
+          flags: integration-tests
+          verbose: true
+      - name: Upload OTEL integration-tests coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: otel-integration-tests
+          directory: coverage/otel-integration-tests
+          flags: integration-tests
+          verbose: true
+
+  docs:
+    name: Update documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - run: |
+          make build-docs
+          if ! git diff --quiet cli-docs.md; then
+            echo "Changes detected in cli-docs.md. Please run `make build-docs` and commit the changes."
+            gh run cancel ${{ github.run_id }}
+          fi

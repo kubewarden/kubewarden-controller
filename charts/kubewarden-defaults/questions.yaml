@@ -1,0 +1,381 @@
+# This is a Rancher questions file
+---
+questions:
+  # Recommended policies questions:
+  - variable: "recommendedPolicies.enabled"
+    type: boolean
+    default: false
+    required: true
+    label: Enable recommended policies
+    description: |
+      Whether the recommended policies are enabled or not. Recommended
+      policies are a minimum set of policies that secure your cluster and
+      Kubewarden, while leaving the system namespaces untouched.
+    group: "Recommended Policies"
+  - variable: "recommendedPolicies.defaultPolicyMode"
+    type: enum
+    options:
+      - "monitor"
+      - "protect"
+    default: "monitor"
+    show_if: recommendedPolicies.enabled=true
+    label: Execution mode of the recommended policies
+    description: |
+      Execution mode of the recommended policies. "protect" will reject requests,
+      "monitor" will log them. Transitioning from "monitor" to "protect" is
+      allowed, but not from "protect" to "monitor".
+    group: "Recommended Policies"
+  - variable: "recommendedPolicies.skipAdditionalNamespaces"
+    type: array[
+    show_if: recommendedPolicies.enabled=true
+    label: Additional namespaces to skip from evaluation
+    description: |
+      Additional namespaces that the recommended policies will not apply to.
+    group: "Recommended Policies"
+  # Default PolicyServer questions
+  - variable: "policyServer.serviceAccountName"
+    type: string
+    required: true
+    label: Name of the ServiceAccount associated to the PolicyServer default
+    description: |
+      The ServiceAccount that is being used by the default PolicyServer to interact
+      with the Kubernetes API Server.
+    group: "Default PolicyServer"
+  # Default PolicyServer HA
+  - variable: "policyServer.replicaCount"
+    type: integer
+    default: 1
+    required: true
+    label: Number of replicas
+    description: |
+      Number of replicas of the PolicyServer Deployment
+    group: "Default PolicyServer HA"
+  - variable: "global.priorityClassName"
+    type: string
+    default: ""
+    required: false
+    label: Name of priorityClass associated to the PolicyServer Pods
+    description: |
+      Name of the priorityClass to apply to default PolicyServer Pods.
+    group: "Default PolicyServer HA"
+  # no-privilege-escalation policy settings
+  - variable: recommendedPolicies.allowPrivilegeEscalationPolicy.settings.allowPrivilegeEscalation
+    description: >-
+      This policy works by inspecting the containers and init containers of a Pod.
+      If any of these containers have `allowPrivilegeEscalation` enabled, the Pod
+      will be rejected.
+    tooltip: >-
+      Used to default to disallow, while still permitting pods to request
+      allowPrivilegeEscalation explicitly.
+    label: Allow privilege escalation
+    required: false
+    type: boolean
+    group: "no-privilege-escalation policy settings"
+  # drop-capabilities policy settings
+  - variable: recommendedPolicies.capabilitiesPolicy.settings.allowed_capabilities
+    description: Provides a list of capabilities that are allowed to be added to a container
+    tooltip: Specified as the capability name in ALL_CAPS. (e.g. `CHOWN`, `KILL`)
+    group: "drop-capabilities policy settings"
+    label: Allowed capabilities
+    required: false
+    type: array[
+  - variable: recommendedPolicies.capabilitiesPolicy.settings.required_drop_capabilities
+    description: The capabilities which must be dropped from containers.
+    tooltip: Specified as the capability name in ALL_CAPS. (e.g. `NET_ADMIN`)
+    group: "drop-capabilities policy settings"
+    label: Required drop capabilities
+    required: false
+    type: array[
+  - variable: recommendedPolicies.capabilitiesPolicy.settings.default_add_capabilities
+    description: >-
+      The capabilities which are added to containers by default, in addition to
+      the runtime defaults.
+    tooltip: Specified as the capability name in ALL_CAPS. (e.g. `CHOWN`)
+    group: "drop-capabilities policy settings"
+    label: Default add capabilities
+    required: false
+    type: array[
+  # no-host-namespace-sharing policy settings
+  #
+  # - default: null
+  #   description: >-
+  #     This policy works by defining what host namespaces can be used by a Pod.
+  #     `allow_host_ipc`, `allow_host_network` and `allow_host_pid` are `false` by
+  #     default. `allow_host_ports` is an empty list by default. This means that by
+  #     default host IPC, network, pid and all host ports are disabled when this
+  #     policy is loaded with no configuration.
+  #   group: no-host-namespace-sharing policy settings
+  #   label: Description
+  #   required: false
+  #   hide_input: true # TODO not implemented yet in rancher/dashboard
+  #   type: string
+  #   variable: recommendedPolicies.hostNamespacePolicy.settings.description
+  - variable: recommendedPolicies.hostNamespacePolicy.settings.allow_host_ipc
+    tooltip: Allows the pod to set .spec.HostIPC to true.
+    group: no-host-namespace-sharing policy settings
+    label: Allow host IPC
+    required: false
+    type: boolean
+  - variable: recommendedPolicies.hostNamespacePolicy.settings.allow_host_network
+    tooltip: Allows the pod to set .spec.HostNetwork to true.
+    group: no-host-namespace-sharing policy settings
+    label: Allow host network
+    required: false
+    type: boolean
+  - variable: recommendedPolicies.hostNamespacePolicy.settings.allow_host_pid
+    tooltip: Allows the pod to set .spec.HostPID to true.
+    group: no-host-namespace-sharing policy settings
+    label: Allow host PID
+    required: false
+    type: boolean
+  #
+  # TODO sequence[ is not implemented in rancher/dashboard yet: https://github.com/rancher/dashboard/issues/10826
+  #
+  # - variable: recommendedPolicies.hostNamespacePolicy.settings.allow_host_ports
+  #   description: >-
+  #     A range of ports to allow, an example would allow host ports `80`, `443` and
+  #     the range `8000-9000`.
+  #   group: no-host-namespace-sharing policy settings
+  #   label: Allow host ports
+  #   hide_input: true
+  #   type: sequence[
+  #   sequence_questions:
+  #     - default: 0
+  #       tooltip: ""
+  #       group: no-host-namespace-sharing policy settings
+  #       label: min
+  #       type: int
+  #       variable: min
+  #     - default: 0
+  #       tooltip: ""
+  #       group: no-host-namespace-sharing policy settings
+  #       label: max
+  #       type: int
+  #       variable: max
+  # no-privileged-pod policy settings
+  - variable: recommendedPolicies.podPrivilegedPolicy.settings.skip_init_containers
+    tooltip: >-
+      Ignore that some init container is configured as privileged
+    group: no-privileged-pod policy settings
+    label: Skip init containers
+    required: false
+    type: boolean
+  - variable: recommendedPolicies.podPrivilegedPolicy.settings.skip_ephemeral_containers
+    tooltip: >-
+      Ignore that some ephemeral container is configured as privileged
+    group: no-privileged-pod policy settings
+    label: Skip ephemeral containers
+    required: false
+    type: boolean
+  # do-not-run-as-root policy
+  #
+  # TODO sequence[ is not implemented in rancher/dashboard yet: https://github.com/rancher/dashboard/issues/10826
+  #
+  # - default: null
+  #   description: >-
+  #     This policy is a replacement for the Kubernetes Pod Security Policy that
+  #     controls containers user and groups.
+  #   group: do-not-run-as-root policy settings
+  #   label: Description
+  #   required: false
+  #   hide_input: true # TODO not implemented yet in rancher/dashboard
+  #   type: string
+  #   variable: recommendedPolicies.userGroupPolicy.settings.description
+  # - variable: recommendedPolicies.userGroupPolicy.settings.run_as_user
+  #   description: Controls which user ID the containers are run with.
+  #   group: do-not-run-as-root policy settings
+  #   label: Run as user
+  #   hide_input: true
+  #   type: map[
+  #   subquestions:
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.run_as_user.rule
+  #       tooltip: >-
+  #         Defines the strategy used by the policy to enforce users and groups used
+  #         in containers.
+  #       group: do-not-run-as-root policy settings
+  #       label: Rule
+  #       options:
+  #         - MustRunAs
+  #         - MustRunAsNonRoot
+  #         - RunAsAny
+  #       type: enum
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.run_as_user.overwrite
+  #       group: do-not-run-as-root policy settings
+  #       label: Overwrite
+  #       show_if: recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAs
+  #       title: Overwrite
+  #       tooltip: >-
+  #         The overwrite attribute can be set only with the MustRunAs rule. This
+  #         flag configures the policy to mutate the runAsUser or runAsGroup despite
+  #         of the value present in the request - even if the value is a valid one.
+  #         The default value of this attribute is false.
+  #       type: boolean
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.run_as_user.ranges
+  #       description: >-
+  #         Ranges is a list of JSON objects with two attributes: min and max. Each
+  #         range object define the user/group ID range used by the rule.
+  #       group: do-not-run-as-root policy settings
+  #       label: Ranges
+  #       show_if: recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAsNonRoot
+  #       hide_input: true
+  #       type: sequence[
+  #       sequence_questions:
+  #         - default: 0
+  #           group: do-not-run-as-root policy settings
+  #           label: min
+  #           show_if: recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAsNonRoot
+  #           tooltip: Minimum UID or GID
+  #           type: int
+  #           variable: min
+  #         - default: 0
+  #           group: do-not-run-as-root policy settings
+  #           label: max
+  #           show_if: recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAsNonRoot
+  #           tooltip: Maxium UID or GID
+  #           type: int
+  #           variable: max
+  # - variable: recommendedPolicies.userGroupPolicy.settings.run_as_group
+  #   description: Controls which primary group ID the containers are run with.
+  #   group: do-not-run-as-root policy settings
+  #   label: Run as group
+  #   hide_input: true
+  #   type: map[
+  #   subquestions:
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.run_as_group.rule
+  #       tooltip: >-
+  #         Defines the strategy used by the policy to enforce users and groups used
+  #         in containers.
+  #       group: do-not-run-as-root policy settings
+  #       label: Rule
+  #       options:
+  #         - MustRunAs
+  #         - MayRunAs
+  #         - RunAsAny
+  #       type: enum
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.run_as_group.overwrite
+  #       group: do-not-run-as-root policy settings
+  #       label: Overwrite
+  #       show_if: recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MustRunAs
+  #       type: boolean
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.run_as_group.ranges
+  #       description: >-
+  #         Ranges is a list of JSON objects with two attributes: min and max. Each
+  #         range object define the user/group ID range used by the rule.
+  #       group: do-not-run-as-root policy settings
+  #       label: Ranges
+  #       show_if: recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MayRunAs
+  #       hide_input: true
+  #       type: sequence[
+  #       sequence_questions:
+  #         - default: 0
+  #           group: do-not-run-as-root policy settings
+  #           label: min
+  #           show_if: recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MayRunAs
+  #           tooltip: Minimum UID or GID
+  #           type: int
+  #           variable: min
+  #         - default: 0
+  #           group: do-not-run-as-root policy settings
+  #           label: max
+  #           show_if: recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MayRunAs
+  #           tooltip: Maxium UID or GID
+  #           type: int
+  #           variable: max
+  # - variable: recommendedPolicies.userGroupPolicy.settings.supplemental_groups
+  #   description: Controls which group IDs containers add.
+  #   group: do-not-run-as-root policy settings
+  #   label: Supplemental groups
+  #   hide_input: true
+  #   type: map[
+  #   subquestions:
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule
+  #       tooltip: >-
+  #         Defines the strategy used by the policy to enforce users and groups used
+  #         in containers.
+  #       group: do-not-run-as-root policy settings
+  #       label: Rule
+  #       options:
+  #         - MustRunAs
+  #         - MayRunAs
+  #         - RunAsAny
+  #       type: enum
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.supplemental_groups.overwrite
+  #       group: do-not-run-as-root policy settings
+  #       label: Overwrite
+  #       show_if: >-
+  #         recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MustRunAs
+  #       type: boolean
+  #     - variable: recommendedPolicies.userGroupPolicy.settings.supplemental_groups.ranges
+  #       description: >-
+  #         Ranges is a list of JSON objects with two attributes: min and max. Each
+  #         range object define the user/group ID range used by the rule.
+  #       group: do-not-run-as-root policy settings
+  #       label: Ranges
+  #       show_if: >-
+  #         recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MayRunAs
+  #       hide_input: true
+  #       type: sequence[
+  #       sequence_questions:
+  #         - default: 0
+  #           group: do-not-run-as-root policy settings
+  #           label: min
+  #           show_if: >-
+  #             recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MayRunAs
+  #           tooltip: Minimum UID or GID
+  #           type: int
+  #           variable: min
+  #         - default: 0
+  #           group: do-not-run-as-root policy settings
+  #           label: max
+  #           show_if: >-
+  #             recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MayRunAs
+  #           tooltip: Maxium UID or GID
+  #           type: int
+  #           variable: max
+  # - variable: recommendedPolicies.userGroupPolicy.settings.validate_container_image_configuration
+  #   default: false
+  #   tooltip: Validate the USER directive in the container image
+  #   label: Validate container image configuration
+  #   description: >-
+  #     Validate the USER directive in the container image. If set to true, the
+  #     policy will enforce the same rules as MustRunAs and MustRunAsNonRoot for
+  #     the run_as_user. And checks if the group of the USER directive is in the
+  #     run_as_group range. The user and group should be defined as uid and gid.
+  #     Container image validation is skipped if the container image is a Windows
+  #     container. And user and groups names are not allowed.
+  #   required: false
+  #   type: boolean
+  #
+  # do-not-share-host-paths policy settings
+  #
+  # TODO sequence[ is not implemented in rancher/dashboard yet: https://github.com/rancher/dashboard/issues/10826
+  #
+  # - variable: recommendedPolicies.hostPathsPolicy.settings.allowedHostPaths
+  #   description: >-
+  #     This policy is a replacement for the Kubernetes Pod Security Policy that
+  #     controls the usage of `hostPath` volumes. The policy inspects both the
+  #     containers and the init containers that are using `hostPath` volumes.
+  #     `allowedHostPaths` is a list of host paths that are allowed to be used by
+  #     hostPath volumes. An empty `allowedHostPaths` list means there is no
+  #     restriction on host paths used. Each entry of `allowedHostPaths` must have:
+  #     a `pathPrefix` field, which allows hostPath volumes to mount a path that
+  #     begins with an allowed prefix, and a `readOnly` field indicating it must be
+  #     mounted read-only.
+  #   tooltip: A list of host paths that are allowed to be used by hostPath volumes.
+  #   group: do-not-share-host-paths policy settings
+  #   label: Allow host path
+  #   hide_input: true
+  #   type: sequence[
+  #   sequence_questions:
+  #     - variable: pathPrefix
+  #       description: >-
+  #         Allows hostPath volumes to mount a path that begins with an allowed
+  #         prefix.
+  #       group: do-not-share-host-paths policy settings
+  #       label: Path prefix
+  #       type: string
+  #     - variable: readOnly
+  #       tooltip: Indicates if the volume must be mounted read-only.
+  #       group: do-not-share-host-paths policy settings
+  #       label: Read only
+  #       type: boolean

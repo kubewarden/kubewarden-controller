@@ -1,0 +1,75 @@
+{{- if .Values.policyServer.enabled }}
+apiVersion: {{ $.Values.crdVersion }}
+kind: PolicyServer
+metadata:
+  labels:
+    {{- include "kubewarden-defaults.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy-server
+  annotations:
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
+  name: default
+  finalizers:
+    - kubewarden.io/finalizer
+spec:
+  image: {{ template "system_default_registry" . }}{{ .Values.policyServer.image.repository }}:{{ .Values.policyServer.image.tag }}
+  serviceAccountName: {{ .Values.policyServer.serviceAccountName }}
+  replicas: {{ .Values.policyServer.replicaCount | default 1 }}
+  {{- if .Values.policyServer.minAvailable  }}
+  minAvailable: {{ .Values.policyServer.minAvailable  }}
+  {{- end }}
+  {{- if .Values.policyServer.maxUnavailable }}
+  maxUnavailable: {{ .Values.policyServer.maxUnavailable  }}
+  {{- end }}
+  {{- if .Values.global.affinity }}
+  affinity: {{ .Values.global.affinity | toYaml | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.tolerations }}
+  tolerations: {{ .Values.global.tolerations | toYaml | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.priorityClassName }}
+  priorityClassName: {{ .Values.global.priorityClassName | toYaml | nindent 4 }}
+  {{- end }}
+  {{- if .Values.policyServer.limits }}
+  limits: {{ .Values.policyServer.limits | toYaml | nindent 4 }}
+  {{- end }}
+  {{- if .Values.policyServer.requests }}
+  requests: {{ .Values.policyServer.requests | toYaml | nindent 4 }}
+  {{- end }}
+  {{- if .Values.policyServer.verificationConfig }}
+  verificationConfig: {{ .Values.policyServer.verificationConfig }}
+  {{- end }}
+  annotations:
+    {{- range $key, $value := .Values.policyServer.annotations }}
+      {{ $key | quote }}: {{ $value | quote }}
+    {{- end }}
+  {{- if .Values.policyServer.env }}
+  env:
+    {{- range .Values.policyServer.env }}
+    - name: {{ .name | quote }}
+      value: {{ .value | quote }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.policyServer.imagePullSecret }}
+  imagePullSecret: {{ .Values.policyServer.imagePullSecret | quote }}
+  {{- end }}
+  {{- if .Values.policyServer.insecureSources }}
+  insecureSources:
+  {{- range $source := .Values.policyServer.insecureSources }}
+    - {{ $source | quote }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.policyServer.sourceAuthorities }}
+  sourceAuthorities:
+  {{- range .Values.policyServer.sourceAuthorities }}
+  {{- if .certs }}
+    {{ .uri }}:
+  {{- range .certs }}
+      - {{ . | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.policyServer.securityContexts }}
+  securityContexts: {{ toYaml .Values.policyServer.securityContexts | nindent 4 }}
+  {{- end }}
+{{- end }}

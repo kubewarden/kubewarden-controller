@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "installPolicyReportCRDs": {
+      "type": "boolean"
+    },
+    "installOpenReportsCRDs": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "installPolicyReportCRDs"
+  ]
+}

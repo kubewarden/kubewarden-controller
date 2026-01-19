@@ -115,7 +115,7 @@ make integration-tests-envtest
 Run tests that require a Kubernetes cluster only:
 
 ```console
-make integration-tests-real-cluster
+make test-e2e
 ```
 
 ### Writing (controller) integration tests
@@ -128,30 +128,12 @@ By default, the tests are run by using [envtest](https://book.kubebuilder.io/ref
 sets up an instance of etcd and the Kubernetes API server, without kubelet, controller-manager or other components.
 
 However, some tests require a real Kubernetes cluster to run.
-These tests must be marked with the `real-cluster` ginkgo label.
+These tests are defined under the `e2e` folder using the [e2e-framework](https://github.com/kubernetes-sigs/e2e-framework).
 
-Example:
-
-```
-var _ = Describe("A test that requires a real cluster", Label("real cluster") func() {
-    Context("when running in a real cluster", func() {
-        It("should do something", func() {
-            // test code
-        })
-    })
-})
-```
-
-To run only the tests that require a real cluster, you can use the following command:
-
-```console
-make integration-test-real-cluster
-```
-
-The suite setup will start a [k3s testcontainer](https://testcontainers.com/modules/k3s/) and run the tests against it.
+The suite setup will start a cluster using [kind](https://kind.sigs.k8s.io/) and run the tests against it.
 It will also stop and remove the container when the tests finish.
 
-Note that the `real-cluster` tests are slower than the `envtest` tests, therefore, it is recommended to keep the number of `real-cluster` tests to a minimum.
+Note that the `e2e` tests are slower than the `envtest` tests, therefore, it is recommended to keep their number to a minimum.
 An example of a test that requires a real cluster is the `AdmissionPolicy` test suite, since at the time of writing, we wait for the `PolicyServer` Pod to be ready before reconciling the webhook configuration.
 
 ### Focusing

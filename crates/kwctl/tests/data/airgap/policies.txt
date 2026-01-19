@@ -1,0 +1,2 @@
+registry://ghcr.io/kubewarden/tests/pod-privileged:v0.1.9
+https://github.com/kubewarden/pod-privileged-policy/releases/download/v0.1.6/policy.wasm

@@ -1,4 +1,4 @@
-name: kubewarden-controller release
+name: Release
 on:
   push:
     tags:
@@ -11,198 +11,49 @@ jobs:
   ci:
     uses: ./.github/workflows/ci.yml
     permissions: read-all
+    with:
+      run_all: true
 
-  build:
-    name: Build container image, sign it
-    permissions:
-      packages: write
-      id-token: write # to mint the OIDC token for Sigstore signatures
-    runs-on: ubuntu-latest
-    outputs:
-      repository: ${{ steps.setoutput.outputs.repository }}
-      tag: ${{ steps.setoutput.outputs.tag }}
-      digest: ${{ steps.setoutput.outputs.digest }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - name: Install cosign
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Retrieve tag name (tag)
-        run: |
-          echo TAG_NAME=$(echo $GITHUB_REF | sed -e "s|refs/tags/||") >> $GITHUB_ENV
-      - name: Build and push container image
-        id: build-image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64, linux/arm64
-          push: true
-          sbom: true
-          provenance: mode=max
-          tags: |
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller:${{ env.TAG_NAME }}
-      # We need to disable the new bundle format enabled by default since
-      # cosign v3.x.x because some verification tools (e.g. slsactl and old
-      # cosign) are not able to properly verify the signatures using this
-      # new format
-      - name: Sign container image with cosign v2 signature format
-        run: |
-          cosign sign --yes --new-bundle-format=false --use-signing-config=false \
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
-
-      - name: Sign container image with cosign v3 signature format
-        run: |
-          cosign sign --yes --new-bundle-format=true --use-signing-config=true \
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
-
-      - name: Verify container image signature
-        run: |
-          cosign verify \
-            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/release.yml@${{ github.ref }}" \
-            ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ steps.build-image.outputs.digest }}
-      - id: setoutput
-        name: Set output parameters
-        run: |
-          echo "repository=ghcr.io/${{github.repository_owner}}/kubewarden-controller" >> $GITHUB_OUTPUT
-          echo "tag=${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
-          echo "digest=${{ steps.build-image.outputs.digest }}" >> $GITHUB_OUTPUT
-
-  attestation:
-    name: Sign attestations and upload as artifacts
-    needs: build
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
+  build-containers:
+    name: Build container images
+    uses: ./.github/workflows/build-containers.yml
     permissions:
       packages: write
       id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
-      - name: Install the crane command
-        uses: kubewarden/github-actions/crane-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    with:
+      version: ${{ github.ref_name }}
 
-      - name: Find platform digest
-        shell: bash
-        run: |
-          set -e
-          DIGEST=$(crane digest \
-            --platform "linux/${{ matrix.arch }}" \
-            ghcr.io/${{ github.repository_owner }}/kubewarden-controller@${{ needs.build.outputs.digest }})
+  build-kwctl:
+    name: Build kwctl binaries
+    uses: ./.github/workflows/build-kwctl.yml
+    permissions:
+      id-token: write
+      attestations: write
+    with:
+      force_build: true
 
-          echo "PLATFORM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
-
-      - name: Find attestation digest
-        run: |
-          set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ needs.build.outputs.digest }} \
-            | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest") | select(.annotations["vnd.docker.reference.digest"]=="${{ env.PLATFORM_DIGEST }}") | .digest'
-          )
-          echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
-
-      - name: Find provenance manifest digest
-        run: |
-          set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ env.ATTESTATION_MANIFEST_DIGEST}} | \
-            jq '.layers[] | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2") | .digest')
-          echo "PROVENANCE_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
-
-      - name: Find SBOM manifest layer digest
-        run: |
-          set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
-            jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
-          echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
-
-      # We need to upload provenance and SBOM files, plus their signatures under the GitHub Release page.
-      # Moreover, the files have to be named in a certain way.
-      # This is required by [ossf](https://github.com/ossf/scorecard/blob/main/docs/checks.md#signed-releases)
-      - name: Download provenance and SBOM files
-        run: |
-          set -e
-          crane blob ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ env.PROVENANCE_DIGEST}} \
-            > kubewarden-controller-attestation-${{ matrix.arch }}-provenance.intoto.jsonl
-
-          crane blob ghcr.io/${{github.repository_owner}}/kubewarden-controller@${{ env.SBOM_DIGEST}} \
-            > kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json
-
-      - name: Sign provenance and SBOM files
-        run: |
-          set -e
-          cosign sign-blob --yes \
-            --bundle kubewarden-controller-attestation-${{ matrix.arch }}-provenance.intoto.jsonl.bundle.sigstore \
-            kubewarden-controller-attestation-${{ matrix.arch }}-provenance.intoto.jsonl
-
-          cosign verify-blob \
-            --bundle kubewarden-controller-attestation-${{ matrix.arch }}-provenance.intoto.jsonl.bundle.sigstore \
-            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/release.yml@${{ github.ref }}" \
-            kubewarden-controller-attestation-${{ matrix.arch }}-provenance.intoto.jsonl
-
-          cosign sign-blob --yes \
-            --bundle kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json.bundle.sigstore \
-            kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json
-
-          cosign verify-blob \
-            --bundle kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json.bundle.sigstore \
-            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/release.yml@${{ github.ref }}" \
-            kubewarden-controller-attestation-${{ matrix.arch }}-sbom.json
-
-      - name: Upload SBOMs as artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: attestation-${{ matrix.arch }}
-          path: kubewarden-controller-attestation-${{ matrix.arch }}*
-
-  crds:
-    name: Build CRDs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install Golang
-        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
-        with:
-          go-version: "1.25"
-
-      - name: Checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-
-      - name: Generate CRDs
-        run: |
-          make generate-crds
-          tar -czf CRDS.tar.gz -C generated-crds $(ls generated-crds)
-      - name: Upload CRDs as artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: CRDS
-          path: CRDS.tar.gz
+  attestation:
+    name: Generate attestations
+    needs: build-containers
+    uses: ./.github/workflows/attestation.yml
+    permissions:
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        component: [kubewarden-controller, audit-scanner, policy-server]
+        arch: [amd64, arm64]
+    with:
+      component: ${{ matrix.component }}
+      arch: ${{ matrix.arch }}
 
   release:
     name: Create release
 
     needs:
       - ci
-      - crds
-      - build
+      - build-containers
+      - build-kwctl
       - attestation
 
     permissions:
@@ -255,10 +106,11 @@ jobs:
           pattern: attestation-*
           merge-multiple: true
 
-      - name: Download CRDs artifact
+      - name: Download kwctl artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: CRDS
+          pattern: kwctl-*
+          merge-multiple: false
 
       - name: Display structure of downloaded files
         run: ls -R
@@ -280,7 +132,39 @@ jobs:
               'kubewarden-controller-attestation-amd64-sbom.json.bundle.sigstore',
               'kubewarden-controller-attestation-arm64-sbom.json',
               'kubewarden-controller-attestation-arm64-sbom.json.bundle.sigstore',
-              "CRDS.tar.gz"]
+              'audit-scanner-attestation-amd64-provenance.intoto.jsonl',
+              'audit-scanner-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore',
+              'audit-scanner-attestation-arm64-provenance.intoto.jsonl',
+              'audit-scanner-attestation-arm64-provenance.intoto.jsonl.bundle.sigstore',
+              'audit-scanner-attestation-amd64-sbom.json',
+              'audit-scanner-attestation-amd64-sbom.json.bundle.sigstore',
+              'audit-scanner-attestation-arm64-sbom.json',
+              'audit-scanner-attestation-arm64-sbom.json.bundle.sigstore',
+              'policy-server-attestation-amd64-provenance.intoto.jsonl',
+              'policy-server-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore',
+              'policy-server-attestation-arm64-provenance.intoto.jsonl',
+              'policy-server-attestation-arm64-provenance.intoto.jsonl.bundle.sigstore',
+              'policy-server-attestation-amd64-sbom.json',
+              'policy-server-attestation-amd64-sbom.json.bundle.sigstore',
+              'policy-server-attestation-arm64-sbom.json',
+              'policy-server-attestation-arm64-sbom.json.bundle.sigstore',
+              './kwctl-airgap-scripts/kubewarden-load-policies.sh',
+              './kwctl-airgap-scripts/kubewarden-save-policies.sh',
+              './kwctl-darwin-aarch64/kwctl-darwin-aarch64.zip',
+              './kwctl-darwin-aarch64-sbom/kwctl-darwin-aarch64-sbom.spdx',
+              './kwctl-darwin-aarch64-sbom/kwctl-darwin-aarch64-sbom.spdx.bundle.sigstore',
+              './kwctl-darwin-x86_64/kwctl-darwin-x86_64.zip',
+              './kwctl-darwin-x86_64-sbom/kwctl-darwin-x86_64-sbom.spdx',
+              './kwctl-darwin-x86_64-sbom/kwctl-darwin-x86_64-sbom.spdx.bundle.sigstore',
+              './kwctl-linux-aarch64/kwctl-linux-aarch64.zip',
+              './kwctl-linux-aarch64-sbom/kwctl-linux-aarch64-sbom.spdx',
+              './kwctl-linux-aarch64-sbom/kwctl-linux-aarch64-sbom.spdx.bundle.sigstore',
+              './kwctl-linux-x86_64/kwctl-linux-x86_64.zip',
+              './kwctl-linux-x86_64-sbom/kwctl-linux-x86_64-sbom.spdx',
+              './kwctl-linux-x86_64-sbom/kwctl-linux-x86_64-sbom.spdx.bundle.sigstore',
+              './kwctl-windows-x86_64/kwctl-windows-x86_64.exe.zip',
+              './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx',
+              './kwctl-windows-x86_64-sbom/kwctl-windows-x86_64-sbom.spdx.bundle.sigstore']
             const {RELEASE_ID} = process.env
 
             for (const file of files) {
@@ -293,10 +177,6 @@ jobs:
                 name: path.basename(file),
                 data: file_data,
               });
-              // store the crds asset id used it in the helm chart update
-              if (file === "CRDS.tar.gz") {
-                core.setOutput('crds_asset_id', response.data.id)
-              }
             }
 
       - name: Publish release
@@ -326,8 +206,7 @@ jobs:
             "client_payload": {
               "version": "${{ github.ref_name }}",
               "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}",
-              "repository": "${{ github.repository }}",
-              "crds_asset_id": "${{ steps.upload_release_assets.outputs.crds_asset_id }}"
+              "repository": "${{ github.repository }}"
             }
           }' > payload.json
           gh api repos/${{ github.repository_owner }}/helm-charts/dispatches \

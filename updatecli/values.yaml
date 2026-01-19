@@ -1,0 +1,5 @@
+github:
+  branch: "main"
+  author: "kubewarden-controller bot"
+  email: "kubewarden-controller-bot@users.noreply.github.com"
+  owner: "kubewarden"

@@ -1,0 +1,45 @@
+name: Update Rust version inside of rust-toolchain file
+
+scms:
+  github:
+    kind: github
+    spec:
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "policy-evaluator"
+      token: "{{ requiredEnv .github.token }}"
+      username: "{{ requiredEnv .github.user }}"
+      branch: "{{ .github.branch }}"
+      commitusingapi: true # enable cryptographically signed commits
+      commitmessage:
+        hidecredit: true
+
+sources:
+  rust-lang:
+    name: Get the latest release of Rust from rust-lang
+    kind: githubrelease
+    spec:
+      owner: rust-lang
+      repository: rust
+      token: "{{ requiredEnv .github.token }}"
+      versionfilter:
+        kind: semver
+        pattern: "*"
+
+targets:
+  dataFile:
+    name: 'deps(rust): update Rust version to {{ source "rust-lang" }}'
+    kind: toml
+    scmid: github
+    spec:
+      file: "rust-toolchain.toml"
+      key: toolchain.channel
+
+actions:
+  default:
+    kind: github/pullrequest
+    scmid: github
+    spec:
+      labels:
+        - kind/chore

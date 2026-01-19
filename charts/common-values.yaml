@@ -1,0 +1,104 @@
+# Common settings across multiple charts. These settings will be used
+# by more than one chart and they ideally need to match during the
+# installation of the charts consuming this values.
+global:
+  # affinity:
+  #   podAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #     - labelSelector:
+  #         matchExpressions:
+  #         - key: security
+  #           operator: In
+  #           values:
+  #           - S1
+  #       topologyKey: topology.kubernetes.io/zone
+  #   podAntiAffinity:
+  #     preferredDuringSchedulingIgnoredDuringExecution:
+  #     - weight: 100
+  #       podAffinityTerm:
+  #         labelSelector:
+  #           matchExpressions:
+  #           - key: security
+  #             operator: In
+  #             values:
+  #             - S2
+  #         topologyKey: topology.kubernetes.io/zone
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #       - matchExpressions:
+  #         - key: kubernetes.io/os
+  #           operator: In
+  #           values:
+  #           - linux
+  #     preferredDuringSchedulingIgnoredDuringExecution:
+  #     - weight: 1
+  #       preference:
+  #         matchExpressions:
+  #         - key: label-1
+  #           operator: In
+  #           values:
+  #           - key-1
+  #     - weight: 50
+  #       preference:
+  #         matchExpressions:
+  #         - key: label-2
+  #           operator: In
+  #           values:
+  #           - key-2
+  affinity: {}
+  # tolerations:
+  #   - key: "key1"
+  #     operator: "Equal"
+  #     value: "value1"
+  #     effect: "NoSchedule"
+  #   - key: "key1"
+  #     operator: "Equal"
+  #     value: "value1"
+  #     effect: "NoExecute"
+  tolerations: []
+  # priorityClassName: ""
+  cattle:
+    systemDefaultRegistry: ghcr.io
+  skipNamespaces:
+    - calico-apiserver
+    - calico-system
+    - capi-system
+    - cattle-capi-system
+    - cattle-alerting
+    - cattle-csp-adapter-system
+    - cattle-elemental-system
+    - cattle-epinio-system
+    - cattle-externalip-system
+    - cattle-fleet-local-system
+    - cattle-fleet-system
+    - cattle-gatekeeper-system
+    - cattle-global-data
+    - cattle-global-nt
+    - cattle-impersonation-system
+    - cattle-istio
+    - cattle-istio-system
+    - cattle-logging
+    - cattle-logging-system
+    - cattle-monitoring-system
+    - cattle-neuvector-system
+    - cattle-prometheus
+    - cattle-provisioning-capi-system
+    - cattle-resources-system
+    - cattle-sriov-system
+    - cattle-system
+    - cattle-turtles-system
+    - cattle-ui-plugin-system
+    - cattle-windows-gmsa-system
+    - cert-manager
+    - cis-operator-system
+    - fleet-default
+    - ingress-nginx
+    - istio-system
+    - kube-node-lease
+    - kube-public
+    - kube-system
+    - longhorn-system
+    - rancher-alerting-drivers
+    - security-scan
+    - tigera-operator

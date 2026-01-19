@@ -1,0 +1,63 @@
+FROM alpine:3.23.0 AS builder
+
+# Install build dependencies for Rust and C libraries
+RUN apk add --no-cache \
+    curl \
+    build-base \
+    musl-dev \
+    pkgconfig
+
+# Detect architecture and set Rust target
+RUN case "$(uname -m)" in \
+    x86_64) echo "x86_64-unknown-linux-musl" > /tmp/rust_target ;; \
+    aarch64) echo "aarch64-unknown-linux-musl" > /tmp/rust_target ;; \
+    *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;; \
+    esac
+
+# Install Rust with musl target
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --default-toolchain stable --profile minimal --target $(cat /tmp/rust_target)
+
+ENV PATH=/root/.cargo/bin:$PATH
+
+WORKDIR /usr/src/policy-server
+
+# Copy workspace files
+COPY ./Cargo.toml ./Cargo.lock ./
+COPY crates/ ./crates
+
+# Install cargo-auditable
+RUN cargo install cargo-auditable
+
+# Enable static linking after cargo-audit is installed,
+# apparetnly it cannot be statically linked.
+ENV RUSTFLAGS="-C target-feature=+crt-static"
+
+# Build the policy-server binary statically linked
+RUN cargo auditable build --release -p policy-server --target $(cat /tmp/rust_target)
+
+# Verify the binary is statically linked
+RUN ldd /usr/src/policy-server/target/$(cat /tmp/rust_target)/release/policy-server || echo "Static binary confirmed"
+
+# Create minimal user configuration
+FROM alpine:3.23.0 AS cfg
+RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd && \
+    echo "policy-server:x:65533:policy-server" >> /etc/group
+
+# Final stage with scratch image
+FROM scratch
+COPY --from=builder /usr/src/policy-server/target/*/release/policy-server /policy-server
+COPY --from=cfg /etc/passwd /etc/passwd
+COPY --from=cfg /etc/group /etc/group
+COPY ./Cargo.lock /Cargo.lock
+
+USER 65533:65533
+
+# Default port, should be used when tls is not enabled
+EXPOSE 3000
+# Readiness probe port, always http
+EXPOSE 8081
+# To be used when tls is enabled
+EXPOSE 8443
+
+ENTRYPOINT ["/policy-server"]

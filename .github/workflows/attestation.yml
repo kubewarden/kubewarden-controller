@@ -1,0 +1,113 @@
+name: Attestation generation
+on:
+  workflow_call:
+    inputs:
+      component:
+        type: string
+        description: "Kubewarden component"
+        required: true
+      arch:
+        type: string
+        description: "Architecture"
+        required: true
+jobs:
+  attest:
+    name: Sign attestations and upload as artifacts
+    permissions:
+      packages: write # Uploading signed artifacts to ghcr.io
+      id-token: write # Signing images with cosign
+    runs-on: ubuntu-latest
+    env:
+      CRANE_VERSION: v0.20.5
+      CRANE_CHECKSUM: ad4cd9af2568c62c97e346de6d1295ee8c6ce3341f7b71cf02d41292b4532680
+
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+      - name: Install the crane command
+        run: |
+          set -e
+          INSTALL_DIR=$HOME/.crane
+          mkdir -p $INSTALL_DIR
+          curl -sL https://github.com/google/go-containerregistry/releases/download/${{ env.CRANE_VERSION }}/go-containerregistry_Linux_x86_64.tar.gz -o $INSTALL_DIR/crane.tar.gz
+          echo "${{ env.CRANE_CHECKSUM }} $INSTALL_DIR/crane.tar.gz" | sha256sum -c
+          tar xvf $INSTALL_DIR/crane.tar.gz -C $INSTALL_DIR
+          rm $INSTALL_DIR/crane.tar.gz
+          echo $INSTALL_DIR >> $GITHUB_PATH
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download all digests
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digest-${{ inputs.component }}-*
+          merge-multiple: true
+      - name: Retrieve digest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          set -e
+          DIGEST=$(cat ${{ inputs.component }}-${{ inputs.arch }}.txt)
+          echo "DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+      - name: Find attestation digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/${{ inputs.component }}@${{ env.DIGEST }} \
+          | jq -r '.manifests[]
+            | select(.annotations["vnd.docker.reference.type"] == "attestation-manifest")
+            | .digest')
+          echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+      - name: Find provenance manifest digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST }} |
+                      jq -r '.layers[]
+                        | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2")
+                        | .digest')
+          echo "PROVENANCE_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+      - name: Find SBOM manifest layer digest
+        run: |
+          set -e
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
+            jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
+          echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
+
+      # We need to upload provenance and SBOM files, plus their signatures under the GitHub Release page.
+      # Moreover, the files have to be named in a certain way.
+      # This is required by [ossf](https://github.com/ossf/scorecard/blob/main/docs/checks.md#signed-releases)
+      - name: Download provenance and SBOM files
+        run: |
+          set -e
+          crane blob ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.PROVENANCE_DIGEST}} \
+            > ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
+          crane blob ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.SBOM_DIGEST}} \
+            > ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+      - name: Sign provenance and SBOM files
+        run: |
+          set -e
+          cosign sign-blob --yes \
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl.bundle.sigstore \
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
+          cosign verify-blob \
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl.bundle.sigstore \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-provenance.intoto.jsonl
+
+          cosign sign-blob --yes \
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json.bundle.sigstore \
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+          cosign verify-blob \
+            --bundle ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json.bundle.sigstore \
+            --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+            --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@${{ github.ref }}" \
+            ${{ inputs.component }}-attestation-${{ inputs.arch }}-sbom.json
+
+      - name: Upload SBOMs as artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: attestation-${{ inputs.component }}-${{ inputs.arch }}
+          path: ${{ inputs.component }}-attestation-${{ inputs.arch }}*

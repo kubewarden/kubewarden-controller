@@ -1,187 +1,165 @@
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.30.0
-# K3S_TESTCONTAINER_VERSION refers to the version of k3s testcontainer to be used by envtest to run integration tests.
-K3S_TESTCONTAINER_VERSION = v1.30.0-k3s1
-# POLICY_SERVER_VERSION refers to the version of the policy server to be used by integration tests.
-# FIXME This should be updated to the latest stable version when the policy server is updated.
-POLICY_SERVER_VERSION ?= latest
-# POLICY_SERVER_REPOSITORY refers to the repository where the policy server image is hosted.
-# This is useful when you need to test the controller with a different policy server image.
-POLICY_SERVER_REPOSITORY ?= ghcr.io/kubewarden/policy-server
+CONTROLLER_TOOLS_VERSION := v0.16.5
+ENVTEST_VERSION := release-0.19
+ENVTEST_K8S_VERSION := 1.31.0
+HELM_VALUES_SCHEMA_JSON_VERSION := v2.3.1
 
-# Let's use a generous timeout for integration tests because GitHub workers can
-# be slow
-TEST_TIMEOUT := 30m
+CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
+HELM_SCHEMA ?= go run github.com/losisin/helm-values-schema-json/v2@$(HELM_VALUES_SCHEMA_JSON_VERSION)
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
+GO_MOD_SRCS := go.mod go.sum
+GO_BUILD_ENV := CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+
+ENVTEST_DIR ?= $(shell pwd)/.envtest
+
+REGISTRY ?= ghcr.io
+REPO ?= kubewarden
+TAG ?= latest
+
+# Detect architecture for Rust builds
+ARCH ?= $(shell uname -m)
+ifeq ($(ARCH),x86_64)
+	RUST_TARGET := x86_64-unknown-linux-musl
+else ifeq ($(ARCH),amd64)
+	RUST_TARGET := x86_64-unknown-linux-musl
+else ifeq ($(ARCH),aarch64)
+	RUST_TARGET := aarch64-unknown-linux-musl
+else ifeq ($(ARCH),arm64)
+	RUST_TARGET := aarch64-unknown-linux-musl
 else
-GOBIN=$(shell go env GOBIN)
+	$(error Unsupported architecture: $(ARCH))
 endif
-
-# CONTAINER_TOOL defines the container tool to be used for building images.
-# Be aware that the target commands are only tested with Docker which is
-# scaffolded by default. However, you might want to replace it to use other
-# tools. (i.e. podman)
-CONTAINER_TOOL ?= docker
-
-# Setting SHELL to bash allows bash commands to be executed by recipes.
-# Options are set to exit when a recipe line exits non-zero or a piped command fails.
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
 
 .PHONY: all
-all: build
-
-##@ General
-
-# The help target prints out all targets with their descriptions organized
-# beneath their categories. The categories are represented by '##@' and the
-# target descriptions by '##'. The awk command is responsible for reading the
-# entire set of makefiles included in this invocation, looking for lines of the
-# file as xyz: ## something, and then pretty-format the target and help. Then,
-# if there's a line with ##@ something, that gets pretty-printed as a category.
-# More info on the usage of ANSI control characters for terminal formatting:
-# https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_parameters
-# More info on the awk command:
-# http://linuxcommand.org/lc3_adv_awk.php
-
-.PHONY: help
-help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
-
-##@ Development
-
-.PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-
-.PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-
-.PHONY: fmt
-fmt: ## Run go fmt against code.
-	go fmt ./...
-
-.PHONY: vet
-vet: ## Run go vet against code.
-	go vet -tags=testing ./...
+all: controller audit-scanner policy-server kwctl
 
 .PHONY: test
-test: unit-tests integration-tests ## Run tests.
+test: test-go test-rust
 
-.PHONY: unit-tests
-unit-tests: manifests generate fmt vet ## Run unit tests.
-	go test $$(go list ./... | grep -v /internal/controller) -race -test.v -coverprofile=coverage/unit-tests/coverage.txt -covermode=atomic -tags=testing
+.PHONY: test-go
+test-go: vet
+	$(GO_BUILD_ENV) CGO_ENABLED=1 KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(ENVTEST_DIR) -p path)" go test $$(go list ./... | grep -v /e2e) -race -test.v -coverprofile coverage/cover.out -covermode=atomic
 
-# Integration tests are split into two targets to allow for running tests 
-# that require a real cluster to be run separately from those that can be run using envtest.
-.PHONY: integration-tests
-integration-tests: integration-tests-envtest integration-tests-real-cluster ## Run integration tests.
+.PHONY: test-rust
+test-rust:
+	$(MAKE) -C crates test
 
-# Note that the label-filter "!real-cluster" is used to exclude tests that require a real cluster, 
-# otherwise ginkgo will try to run ALL tests.
-.PHONY: integration-tests-envtest
-integration-tests-envtest: manifests generate fmt vet ginkgo envtest ## Run integration tests that do not require a real cluster only (using envtest).
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-	$(GINKGO) -v -github-output -timeout=$(TEST_TIMEOUT) -label-filter="!real-cluster"  -tags=testing \
-	-output-dir=./coverage/integration-tests/ -coverprofile=coverage-envtest.txt -covermode=atomic -coverpkg=all \
-	./internal/controller/ 
+.PHONY: helm-unittest
+helm-unittest:
+	helm unittest charts/kubewarden-controller --file "tests/**/*_test.yaml"
 
-.PHONY: integration-tests-real-cluster
-integration-tests-real-cluster: manifests generate fmt ginkgo vet ## Run integration tests that require a real cluster only.
-	K3S_TESTCONTAINER_VERSION="$(K3S_TESTCONTAINER_VERSION)" POLICY_SERVER_VERSION="$(POLICY_SERVER_VERSION)" \
-	POLICY_SERVER_REPOSITORY="$(POLICY_SERVER_REPOSITORY)" $(GINKGO) -p -v -github-output -timeout=$(TEST_TIMEOUT) \
-	-label-filter="real-cluster" -output-dir=./coverage/integration-tests/ -coverprofile=coverage-real-cluster.txt \
-  	-tags=testing -covermode=atomic -coverpkg=all ./internal/controller/
+.PHONY: test-e2e
+test-e2e: controller-image audit-scanner-image policy-server-image
+	$(GO_BUILD_ENV) go test ./e2e/ -v
+
+.PHONY: fmt-go
+fmt-go:
+	$(GO_BUILD_ENV) go fmt ./...
+
+.PHONY: lint-go
+lint-go: golangci-lint
+	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --verbose
+
+.PHONY: lint-go-fix
+lint-go-fix: golangci-lint ## Run golangci-lint linter and perform fixes
+	$(GO_BUILD_ENV) $(GOLANGCI_LINT) run --fix
+
+.PHONY: vet
+vet:
+	$(GO_BUILD_ENV) go vet ./...
+
+.PHONY: lint-rust
+lint-rust:
+	$(MAKE) -C crates lint
+
+.PHONY: lint-rust-fix
+lint-rust-fix:
+	$(MAKE) -C crates lint-fix
+
+.PHONY: fmt-rust
+fmt-rust:
+	$(MAKE) -C crates fmt
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint linter
-	$(GOLANGCI_LINT) run
+lint: lint-go lint-rust
 
-.PHONY: lint-fix
-lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
-	$(GOLANGCI_LINT) run --fix
+CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
+CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
+CONTROLLER_SRCS := $(GO_MOD_SRCS) $(CONTROLLER_GO_SRCS)
+.PHONY: controller
+controller: $(CONTROLLER_SRCS) vet
+	$(GO_BUILD_ENV) go build -o ./bin/controller ./cmd/controller
 
-.PHONY: tilt-up
-tilt-up: manifests generate fmt vet ## Run a controller using Tilt.
-	tilt up --stream
+.PHONY: controller-image
+controller-image:
+	docker build -f ./Dockerfile.kubewarden-controller \
+		-t "$(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)"
 
-.PHONY: tilt-down
-tilt-down: ## Stop Tilt.
-	tilt down
+AUDIT_SCANNER_SRC_DIRS := cmd/audit-scanner api internal/audit-scanner
+AUDIT_SCANNER_GO_SRCS := $(shell find $(AUDIT_SCANNER_SRC_DIRS) -type f -name '*.go')
+AUDIT_SCANNER_SRCS := $(GO_MOD_SRCS) $(AUDIT_SCANNER_GO_SRCS)
+.PHONY: audit-scanner
+audit-scanner: $(AUDIT_SCANNER_SRCS) vet
+	$(GO_BUILD_ENV) go build -o ./bin/audit-scanner ./cmd/audit-scanner
 
-##@ Build
+.PHONY: audit-scanner-image
+audit-scanner-image:
+	docker build -f ./Dockerfile.audit-scanner \
+		-t "$(REGISTRY)/$(REPO)/audit-scanner:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/audit-scanner:$(TAG)"
 
-.PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+POLICY_SERVER_SRC_DIRS := crates/policy-server crates/policy-evaluator crates/policy-fetcher crates/burrego
+POLICY_SERVER_SRCS := $(shell find $(POLICY_SERVER_SRC_DIRS) -type f -name '*.rs')
+.PHONY: policy-server
+policy-server: $(POLICY_SERVER_SRCS) lint-rust
+	cross build --target $(RUST_TARGET) --release -p policy-server
+	cp ./target/$(RUST_TARGET)/release/policy-server ./bin/policy-server
 
-# If you wish to build the manager image targeting other platforms you can use the --platform flag.
-# (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
-# More info: https://docs.docker.com/develop/develop-images/build_enhancements/
-.PHONY: docker-build
-docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build -t ${IMG} .
+.PHONY: policy-server-image
+policy-server-image:
+	docker build -f ./Dockerfile.policy-server \
+		-t "$(REGISTRY)/$(REPO)/policy-server:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/policy-server:$(TAG)"
 
-.PHONY: docker-push
-docker-push: ## Push docker image with the manager.
-	$(CONTAINER_TOOL) push ${IMG}
+KWCTL_SRC_DIRS := crates/kwctl
+KWCTL_SRCS := $(shell find $(KWCTL_SRC_DIRS) -type f -name '*.rs')
+.PHONY: kwctl
+kwctl: $(KWCTL_SRCS) lint-rust
+	cross build --target $(RUST_TARGET) --release -p kwctl
+	cp ./target/$(RUST_TARGET)/release/kwctl ./bin/kwctl
 
-# PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
-# architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
-# - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
-# - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
-# - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
-# To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
-PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
-.PHONY: docker-buildx
-docker-buildx: ## Build and push docker image for the manager for cross-platform support
-	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- $(CONTAINER_TOOL) buildx create --name kubebuild-builder
-	$(CONTAINER_TOOL) buildx use kubebuild-builder
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
-	- $(CONTAINER_TOOL) buildx rm kubebuild-builder
-	rm Dockerfile.cross
+.PHONY: generate
+generate: generate-controller generate-chart
 
-.PHONY: build-installer
-build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
-	mkdir -p dist
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default > dist/install.yaml
+.PHONY: generate-controller
+generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) object paths="./api/policies/v1"
 
-##@ Deployment
+.PHONY: manifests
+manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=charts/kubewarden-crds/templates output:rbac:artifacts:config=charts/kubewarden-controller/templates
 
-ifndef ignore-not-found
-  ignore-not-found = false
-endif
+.PHONY: generate-chart
+generate-chart: ## Generate Helm chart values schema.
+	$(HELM_SCHEMA) --values charts/kubewarden-controller/values.yaml --output charts/kubewarden-controller/values.schema.json
 
-.PHONY: generate-crds
-generate-crds: manifests kustomize ## generate final crds with kustomize. Normally shipped in Helm charts.
-	mkdir -p generated-crds
-	$(KUSTOMIZE) build config/crd -o generated-crds # If -o points to a folder, kustomize saves them as several files instead of 1
 
-.PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
+.PHONY: charts-check-common-values
+charts-check-common-values:
+	@./scripts/charts-check-common-values.sh
 
-.PHONY: uninstall
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+.PHONY: charts-generate-images-file
+charts-generate-images-file:
+	@./scripts/charts-extract-images.sh ./charts
 
-.PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
+.PHONY: charts-generate-policies-file
+charts-generate-policies-file:
+	@./scripts/charts-extract-policies.sh ./charts
 
-.PHONY: undeploy
-undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+.PHONY: charts-generate-changelog-files
+charts-generate-changelog-files:
+	@./scripts/charts-generate-changelog-files.sh ./charts imagelist.txt
 
 ##@ Dependencies
 
@@ -191,44 +169,15 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
-KUBECTL ?= kubectl
-KUSTOMIZE ?= $(LOCALBIN)/kustomize-$(KUSTOMIZE_VERSION)
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
-ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
-GINKGO ?= $(LOCALBIN)/ginkgo-$(GINKGO_VERSION)
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.4.1
-CONTROLLER_TOOLS_VERSION ?= v0.18.0
-ENVTEST_VERSION ?= release-0.18
 GOLANGCI_LINT_VERSION ?= v2.5.0
-GINKGO_VERSION ?= v2.25.1
-
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
-$(KUSTOMIZE): $(LOCALBIN)
-	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
-
-.PHONY: envtest
-envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,${GOLANGCI_LINT_VERSION})
-
-.PHONY: ginkgo
-ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
-$(GINKGO): $(LOCALBIN)
-	$(call go-install-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo,$(GINKGO_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary (ideally with version)
