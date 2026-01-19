@@ -26,7 +26,7 @@ func TestGetResources(t *testing.T) {
 	}
 
 	dynamicClient := dynamicFake.NewSimpleDynamicClient(scheme.Scheme, pods...)
-	clientset := fake.NewSimpleClientset()
+	clientset := fake.NewClientset()
 
 	logger := slog.Default()
 	k8sClient := NewClient(dynamicClient, clientset, "kubewarden", nil, pageSize, logger)
