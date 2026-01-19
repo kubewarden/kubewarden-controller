@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, slice};
 
 use policy_fetcher::policy::Policy;
 use policy_fetcher::store::{path, Store};
@@ -61,7 +61,7 @@ fn test_get_policy_by_uri() {
         )),
     };
 
-    setup_store(&[expected_policy.clone()]).unwrap();
+    setup_store(slice::from_ref(&expected_policy)).unwrap();
 
     let store = Store::new(store_root.path());
     let policy = store
@@ -112,7 +112,7 @@ fn test_get_policy_by_sha_prefix() {
         )),
     };
 
-    setup_store(&[expected_policy.clone()]).unwrap();
+    setup_store(slice::from_ref(&expected_policy)).unwrap();
 
     let store = Store::new(store_root.path());
     let policy = store
