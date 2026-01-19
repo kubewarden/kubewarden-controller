@@ -110,7 +110,7 @@ audit-scanner-image:
 	@echo "Built $(REGISTRY)/$(REPO)/audit-scanner:$(TAG)"
 
 POLICY_SERVER_SRC_DIRS := crates/policy-server crates/policy-evaluator crates/policy-fetcher crates/burrego
-POLICY_SERVER_SRCS := $(shell find $(POLICY_SERVER_SRC_DIRS) -type f -name '*.rs')
+POLICY_SERVER_SRCS := $(shell find $(POLICY_SERVER_SRC_DIRS) -type f -name '*.rs') Cargo.toml Cargo.lock $(shell find crates -name 'Cargo.*')
 .PHONY: policy-server
 policy-server: $(POLICY_SERVER_SRCS) lint-rust
 	cross build --target $(RUST_TARGET) --release -p policy-server
@@ -123,7 +123,7 @@ policy-server-image:
 	@echo "Built $(REGISTRY)/$(REPO)/policy-server:$(TAG)"
 
 KWCTL_SRC_DIRS := crates/kwctl
-KWCTL_SRCS := $(shell find $(KWCTL_SRC_DIRS) -type f -name '*.rs')
+KWCTL_SRCS := $(shell find $(KWCTL_SRC_DIRS) -type f -name '*.rs') Cargo.toml Cargo.lock $(shell find crates -name 'Cargo.*')
 .PHONY: kwctl
 kwctl: $(KWCTL_SRCS) lint-rust
 	cross build --target $(RUST_TARGET) --release -p kwctl
