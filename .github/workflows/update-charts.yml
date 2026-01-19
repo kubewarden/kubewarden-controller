@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Install Updatecli in the runner
-        uses: updatecli/updatecli-action@b846825b298f5351abd80f94c4f9eab63a38a804 # v2.98.0
+        uses: updatecli/updatecli-action@4fd2c16d992120bd5355264a03ad0cddec013e1b # v2.99.0
 
       # Helm and helm plugins installation required by the updatecli release action
       - name: Install helm
