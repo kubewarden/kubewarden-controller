@@ -83,6 +83,10 @@ fmt-rust:
 .PHONY: lint
 lint: lint-go lint-rust
 
+.PHONY: advisories-rust
+advisories-rust:
+	cargo deny check advisories
+
 CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
 CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
 CONTROLLER_SRCS := $(GO_MOD_SRCS) $(CONTROLLER_GO_SRCS)
