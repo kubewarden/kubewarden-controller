@@ -77,15 +77,6 @@ jobs:
             fi
           fi
 
-          # Check if commit message contains [ci full] or [full ci] to run all checks
-          COMMIT_MSG='${{ github.event.head_commit.message }}'
-          if echo "$COMMIT_MSG" | grep -qiE '\[(ci full|full ci)\]'; then
-            echo "Commit message contains [ci full] or [full ci], running all checks"
-            echo "go=true" >> $GITHUB_OUTPUT
-            echo "rust=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
           # Determine base ref for comparison
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_REF="${{ github.event.pull_request.base.sha }}"
