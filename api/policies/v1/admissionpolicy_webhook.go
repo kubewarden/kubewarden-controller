@@ -18,10 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/go-logr/logr"
@@ -32,8 +30,7 @@ import (
 func (r *AdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("admissionpolicy-webhook")
 
-	err := ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+	err := ctrl.NewWebhookManagedBy(mgr, r).
 		WithDefaulter(&admissionPolicyDefaulter{
 			logger: logger,
 		}).
@@ -54,15 +51,8 @@ type admissionPolicyDefaulter struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomDefaulter = &admissionPolicyDefaulter{}
-
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
-func (d *admissionPolicyDefaulter) Default(_ context.Context, obj runtime.Object) error {
-	admissionPolicy, ok := obj.(*AdmissionPolicy)
-	if !ok {
-		return fmt.Errorf("expected an AdmissionPolicy object, got %T", obj)
-	}
-
+func (d *admissionPolicyDefaulter) Default(_ context.Context, admissionPolicy *AdmissionPolicy) error {
 	if admissionPolicy.Spec.PolicyServer == "" {
 		admissionPolicy.Spec.PolicyServer = constants.DefaultPolicyServer
 	}
@@ -80,15 +70,8 @@ type admissionPolicyValidator struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomValidator = &admissionPolicyValidator{}
-
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *admissionPolicyValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	admissionPolicy, ok := obj.(*AdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicy object, got %T", obj)
-	}
-
+func (v *admissionPolicyValidator) ValidateCreate(_ context.Context, admissionPolicy *AdmissionPolicy) (admission.Warnings, error) {
 	v.logger.Info("Validating AdmissionPolicy creation", "name", admissionPolicy.GetName())
 
 	allErrors := validatePolicyCreate(admissionPolicy)
@@ -100,16 +83,7 @@ func (v *admissionPolicyValidator) ValidateCreate(_ context.Context, obj runtime
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *admissionPolicyValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	oldAdmissionPolicy, ok := oldObj.(*AdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicy object, got %T", oldObj)
-	}
-	newAdmissionPolicy, ok := newObj.(*AdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicy object, got %T", newObj)
-	}
-
+func (v *admissionPolicyValidator) ValidateUpdate(_ context.Context, oldAdmissionPolicy, newAdmissionPolicy *AdmissionPolicy) (admission.Warnings, error) {
 	v.logger.Info("Validating ClusterAdmissionPolicy update", "name", newAdmissionPolicy.GetName())
 
 	allErrors := validatePolicyUpdate(oldAdmissionPolicy, newAdmissionPolicy)
@@ -121,12 +95,7 @@ func (v *admissionPolicyValidator) ValidateUpdate(_ context.Context, oldObj, new
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *admissionPolicyValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	admissionPolicy, ok := obj.(*AdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicy object, got %T", obj)
-	}
-
+func (v *admissionPolicyValidator) ValidateDelete(_ context.Context, admissionPolicy *AdmissionPolicy) (admission.Warnings, error) {
 	v.logger.Info("Validating AdmissionPolicy delete", "name", admissionPolicy.GetName())
 
 	return nil, nil
