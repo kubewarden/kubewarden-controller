@@ -10,6 +10,7 @@ on:
         default: true
   push:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
     inputs:
       run_all:
@@ -42,6 +43,38 @@ jobs:
             echo "go=true" >> $GITHUB_OUTPUT
             echo "rust=true" >> $GITHUB_OUTPUT
             exit 0
+          fi
+
+          # Check for CI trigger labels on PRs
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+            echo "PR Labels: $LABELS"
+            
+            if echo "$LABELS" | grep -q "ci-full"; then
+              echo "Label 'ci-full' found, running all checks"
+              echo "go=true" >> $GITHUB_OUTPUT
+              echo "rust=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            if echo "$LABELS" | grep -q "ci-go"; then
+              echo "Label 'ci-go' found, running Go checks"
+              echo "go=true" >> $GITHUB_OUTPUT
+            fi
+            
+            if echo "$LABELS" | grep -q "ci-rust"; then
+              echo "Label 'ci-rust' found, running Rust checks"
+              echo "rust=true" >> $GITHUB_OUTPUT
+            fi
+            
+            # If triggered by label event and we found a matching label, skip path detection
+            if [ "${{ github.event.action }}" = "labeled" ]; then
+              LABEL_NAME='${{ github.event.label.name }}'
+              if [ "$LABEL_NAME" = "ci-full" ] || [ "$LABEL_NAME" = "ci-go" ] || [ "$LABEL_NAME" = "ci-rust" ]; then
+                echo "Triggered by label event, skipping path detection"
+                exit 0
+              fi
+            fi
           fi
 
           # Check if commit message contains [ci full] or [full ci] to run all checks
