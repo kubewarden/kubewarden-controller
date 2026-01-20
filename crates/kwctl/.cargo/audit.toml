@@ -1,6 +1,0 @@
-[advisories]
-ignore = [
-  "RUSTSEC-2023-0071", # "Classic" RSA timing sidechannel attack from non-constant-time implementation.
-  # Okay for local use.
-  # https://rustsec.org/advisories/RUSTSEC-2023-0071.html
-]
