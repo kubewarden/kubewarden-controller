@@ -2,8 +2,6 @@ module github.com/kubewarden/kubewarden-controller
 
 go 1.25.6
 
-toolchain go1.25.6
-
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/cel-go v0.26.0
