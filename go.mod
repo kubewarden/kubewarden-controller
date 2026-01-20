@@ -1,6 +1,6 @@
 module github.com/kubewarden/kubewarden-controller
 
-go 1.25.1
+go 1.25.6
 
 toolchain go1.25.5
 
