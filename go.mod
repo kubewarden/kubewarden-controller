@@ -25,7 +25,7 @@ require (
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	sigs.k8s.io/controller-runtime v0.23.0
 	sigs.k8s.io/e2e-framework v0.6.0
-	sigs.k8s.io/wg-policy-prototypes ed0ca5a1c778
+	sigs.k8s.io/wg-policy-prototypes v0.0.0-20250521155141-ed0ca5a1c778
 )
 
 // CEL needs to be pinned to the same version as the one used by the k8s.io/apiserver package
@@ -62,7 +62,6 @@ require (
 	github.com/go-openapi/swag/typeutils v0.24.0 // indirect
 	github.com/go-openapi/swag/yamlutils v0.24.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
@@ -112,7 +111,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.34.1 // indirect
+	k8s.io/apiextensions-apiserver v0.35.0 // indirect
 	k8s.io/component-base v0.35.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
@@ -123,3 +122,5 @@ require (
 )
 
 replace github.com/opencontainers/runc => github.com/opencontainers/runc v1.4.0
+
+replace sigs.k8s.io/wg-policy-prototypes => sigs.k8s.io/wg-policy-prototypes v0.0.0-20230505033312-51c21979086a
