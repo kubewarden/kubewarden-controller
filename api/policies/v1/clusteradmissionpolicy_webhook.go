@@ -18,10 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,8 +31,7 @@ import (
 func (r *ClusterAdmissionPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("clusteradmissionpolicy-webhook")
 
-	err := ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+	err := ctrl.NewWebhookManagedBy(mgr, r).
 		WithDefaulter(&clusterAdmissionPolicyDefaulter{
 			logger: logger,
 		}).
@@ -57,15 +53,8 @@ type clusterAdmissionPolicyDefaulter struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomDefaulter = &clusterAdmissionPolicyDefaulter{}
-
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
-func (d *clusterAdmissionPolicyDefaulter) Default(_ context.Context, obj runtime.Object) error {
-	clusterAdmissionPolicy, ok := obj.(*ClusterAdmissionPolicy)
-	if !ok {
-		return fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", obj)
-	}
-
+func (d *clusterAdmissionPolicyDefaulter) Default(_ context.Context, clusterAdmissionPolicy *ClusterAdmissionPolicy) error {
 	d.logger.Info("Defaulting ClusterAdmissionPolicy", "name", clusterAdmissionPolicy.GetName())
 
 	if clusterAdmissionPolicy.Spec.PolicyServer == "" {
@@ -85,15 +74,8 @@ type clusterAdmissionPolicyValidator struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomValidator = &clusterAdmissionPolicyValidator{}
-
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *clusterAdmissionPolicyValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	clusterAdmissionPolicy, ok := obj.(*ClusterAdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", obj)
-	}
-
+func (v *clusterAdmissionPolicyValidator) ValidateCreate(_ context.Context, clusterAdmissionPolicy *ClusterAdmissionPolicy) (admission.Warnings, error) {
 	v.logger.Info("Validating ClusterAdmissionPolicy creation", "name", clusterAdmissionPolicy.GetName())
 
 	allErrors := validatePolicyCreate(clusterAdmissionPolicy)
@@ -105,16 +87,7 @@ func (v *clusterAdmissionPolicyValidator) ValidateCreate(_ context.Context, obj 
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *clusterAdmissionPolicyValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	oldClusterAdmissionPolicy, ok := oldObj.(*ClusterAdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", oldObj)
-	}
-	newClusterAdmissionPolicy, ok := newObj.(*ClusterAdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", newObj)
-	}
-
+func (v *clusterAdmissionPolicyValidator) ValidateUpdate(_ context.Context, oldClusterAdmissionPolicy, newClusterAdmissionPolicy *ClusterAdmissionPolicy) (admission.Warnings, error) {
 	v.logger.Info("Validating ClusterAdmissionPolicy update", "name", newClusterAdmissionPolicy.GetName())
 
 	allErrors := validatePolicyUpdate(oldClusterAdmissionPolicy, newClusterAdmissionPolicy)
@@ -126,12 +99,7 @@ func (v *clusterAdmissionPolicyValidator) ValidateUpdate(_ context.Context, oldO
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *clusterAdmissionPolicyValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	clusterAdmissionPolicy, ok := obj.(*ClusterAdmissionPolicy)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicy object, got %T", obj)
-	}
-
+func (v *clusterAdmissionPolicyValidator) ValidateDelete(_ context.Context, clusterAdmissionPolicy *ClusterAdmissionPolicy) (admission.Warnings, error) {
 	v.logger.Info("Validating ClusterAdmissionPolicy delete", "name", clusterAdmissionPolicy.GetName())
 
 	return nil, nil

@@ -24,13 +24,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/api/validation"
-	"k8s.io/apimachinery/pkg/runtime"
 	validationutils "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/go-logr/logr"
@@ -41,8 +39,7 @@ import (
 func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager, deploymentsNamespace string) error {
 	logger := mgr.GetLogger().WithName("policyserver-webhook")
 
-	err := ctrl.NewWebhookManagedBy(mgr).
-		For(ps).
+	err := ctrl.NewWebhookManagedBy(mgr, ps).
 		WithDefaulter(&policyServerDefaulter{
 			logger: logger,
 		}).
@@ -66,15 +63,8 @@ type policyServerDefaulter struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomDefaulter = &policyServerDefaulter{}
-
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
-func (d *policyServerDefaulter) Default(_ context.Context, obj runtime.Object) error {
-	policyServer, ok := obj.(*PolicyServer)
-	if !ok {
-		return fmt.Errorf("expected a PolicyServer object, got %T", obj)
-	}
-
+func (d *policyServerDefaulter) Default(_ context.Context, policyServer *PolicyServer) error {
 	d.logger.Info("Defaulting PolicyServer", "name", policyServer.GetName())
 
 	if policyServer.ObjectMeta.DeletionTimestamp == nil {
@@ -93,39 +83,22 @@ type policyServerValidator struct {
 	logger               logr.Logger
 }
 
-var _ webhook.CustomValidator = &policyServerValidator{}
-
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *policyServerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	policyServer, ok := obj.(*PolicyServer)
-	if !ok {
-		return nil, fmt.Errorf("expected a PolicyServer object, got %T", obj)
-	}
-
+func (v *policyServerValidator) ValidateCreate(ctx context.Context, policyServer *PolicyServer) (admission.Warnings, error) {
 	v.logger.Info("Validating PolicyServer create", "name", policyServer.GetName())
 
 	return nil, v.validate(ctx, policyServer)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.)
-func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
-	policyServer, ok := newObj.(*PolicyServer)
-	if !ok {
-		return nil, fmt.Errorf("expected a PolicyServer object, got %T", newObj)
-	}
-
+func (v *policyServerValidator) ValidateUpdate(ctx context.Context, _, policyServer *PolicyServer) (admission.Warnings, error) {
 	v.logger.Info("Validating PolicyServer update", "name", policyServer.GetName())
 
 	return nil, v.validate(ctx, policyServer)
 }
 
 // ValdidaeDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *policyServerValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	policyServer, ok := obj.(*PolicyServer)
-	if !ok {
-		return nil, fmt.Errorf("expected a PolicyServer object, got %T", obj)
-	}
-
+func (v *policyServerValidator) ValidateDelete(_ context.Context, policyServer *PolicyServer) (admission.Warnings, error) {
 	v.logger.Info("Validating PolicyServer delete", "name", policyServer.GetName())
 
 	return nil, nil

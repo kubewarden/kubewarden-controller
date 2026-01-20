@@ -41,14 +41,6 @@ func TestPolicyServerDefault(t *testing.T) {
 	assert.Contains(t, policyServer.Finalizers, constants.KubewardenFinalizer)
 }
 
-func TestPolicyServerDefaultWithInvalidType(t *testing.T) {
-	policyServerDefaulter := policyServerDefaulter{}
-	obj := &corev1.Pod{}
-
-	err := policyServerDefaulter.Default(t.Context(), obj)
-	require.ErrorContains(t, err, "expected a PolicyServer object, got *v1.Pod")
-}
-
 func TestPolicyServerValidateCreate(t *testing.T) {
 	validator := policyServerValidator{logger: logr.Discard()}
 	policyServer := NewPolicyServerFactory().Build()
@@ -67,15 +59,6 @@ func TestPolicyServerValidateCreateWithErrors(t *testing.T) {
 
 	warnings, err := validator.ValidateCreate(t.Context(), policyServer)
 	require.Error(t, err)
-	assert.Empty(t, warnings)
-}
-
-func TestPolicyServerValidateCreateWithInvalidType(t *testing.T) {
-	validator := policyServerValidator{logger: logr.Discard()}
-	obj := &corev1.Pod{}
-
-	warnings, err := validator.ValidateCreate(t.Context(), obj)
-	require.ErrorContains(t, err, "expected a PolicyServer object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
 
@@ -101,16 +84,6 @@ func TestPolicyServerValidateUpdateWithErrors(t *testing.T) {
 
 	warnings, err := validator.ValidateUpdate(t.Context(), oldPolicyServer, newPolicyServer)
 	require.Error(t, err)
-	assert.Empty(t, warnings)
-}
-
-func TestPolicyServerValidateUpdateWithInvalidType(t *testing.T) {
-	validator := policyServerValidator{logger: logr.Discard()}
-	obj := &corev1.Pod{}
-	newPolicyServer := NewPolicyServerFactory().Build()
-
-	warnings, err := validator.ValidateUpdate(t.Context(), newPolicyServer, obj)
-	require.ErrorContains(t, err, "expected a PolicyServer object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }
 

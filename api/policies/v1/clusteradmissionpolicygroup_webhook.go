@@ -18,10 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,8 +30,7 @@ import (
 func (r *ClusterAdmissionPolicyGroup) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("clusteradmissionpolicygroup-webhook")
 
-	err := ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+	err := ctrl.NewWebhookManagedBy(mgr, r).
 		WithDefaulter(&clusterAdmissionPolicyGroupDefaulter{
 			logger: logger,
 		}).
@@ -56,15 +52,8 @@ type clusterAdmissionPolicyGroupDefaulter struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomDefaulter = &clusterAdmissionPolicyGroupDefaulter{}
-
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
-func (d *clusterAdmissionPolicyGroupDefaulter) Default(_ context.Context, obj runtime.Object) error {
-	clusterAdmissionPolicyGroup, ok := obj.(*ClusterAdmissionPolicyGroup)
-	if !ok {
-		return fmt.Errorf("expected a ClusterAdmissionPolicyGroup object, got %T", obj)
-	}
-
+func (d *clusterAdmissionPolicyGroupDefaulter) Default(_ context.Context, clusterAdmissionPolicyGroup *ClusterAdmissionPolicyGroup) error {
 	d.logger.Info("Defaulting ClusterAdmissionPolicyGroup", "name", clusterAdmissionPolicyGroup.GetName())
 
 	if clusterAdmissionPolicyGroup.Spec.PolicyServer == "" {
@@ -84,15 +73,8 @@ type clusterAdmissionPolicyGroupValidator struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomValidator = &clusterAdmissionPolicyGroupValidator{}
-
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *clusterAdmissionPolicyGroupValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	clusterAdmissionPolicyGroup, ok := obj.(*ClusterAdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicyGroup object, got %T", obj)
-	}
-
+func (v *clusterAdmissionPolicyGroupValidator) ValidateCreate(_ context.Context, clusterAdmissionPolicyGroup *ClusterAdmissionPolicyGroup) (admission.Warnings, error) {
 	v.logger.Info("Validating ClusterAdmissionPolicyGroup creation", "name", clusterAdmissionPolicyGroup.GetName())
 
 	allErrors := validatePolicyGroupCreate(clusterAdmissionPolicyGroup)
@@ -104,16 +86,7 @@ func (v *clusterAdmissionPolicyGroupValidator) ValidateCreate(_ context.Context,
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *clusterAdmissionPolicyGroupValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	oldclusterAdmissionPolicyGroup, ok := oldObj.(*ClusterAdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicyGroup object, got %T", oldObj)
-	}
-	newclusterAdmissionPolicyGroup, ok := newObj.(*ClusterAdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicyGroup object, got %T", newObj)
-	}
-
+func (v *clusterAdmissionPolicyGroupValidator) ValidateUpdate(_ context.Context, oldclusterAdmissionPolicyGroup, newclusterAdmissionPolicyGroup *ClusterAdmissionPolicyGroup) (admission.Warnings, error) {
 	v.logger.Info("Validating ClusterAdmissionPolicyGroup update", "name", newclusterAdmissionPolicyGroup.GetName())
 
 	if allErrors := validatePolicyGroupUpdate(oldclusterAdmissionPolicyGroup, newclusterAdmissionPolicyGroup); len(allErrors) != 0 {
@@ -124,12 +97,7 @@ func (v *clusterAdmissionPolicyGroupValidator) ValidateUpdate(_ context.Context,
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *clusterAdmissionPolicyGroupValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	clusterAdmissionPolicyGroup, ok := obj.(*ClusterAdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected a ClusterAdmissionPolicyGroup object, got %T", obj)
-	}
-
+func (v *clusterAdmissionPolicyGroupValidator) ValidateDelete(_ context.Context, clusterAdmissionPolicyGroup *ClusterAdmissionPolicyGroup) (admission.Warnings, error) {
 	v.logger.Info("Validating ClusterAdmissionPolicyGroup delete", "name", clusterAdmissionPolicyGroup.GetName())
 
 	return nil, nil

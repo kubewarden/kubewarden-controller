@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
@@ -35,14 +34,6 @@ func TestAdmissionPolicyDefault(t *testing.T) {
 
 	assert.Equal(t, constants.DefaultPolicyServer, policy.GetPolicyServer())
 	assert.Contains(t, policy.GetFinalizers(), constants.KubewardenFinalizer)
-}
-
-func TestAdmissionPolicyDefaultWithInvalidType(t *testing.T) {
-	defaulter := admissionPolicyDefaulter{logger: logr.Discard()}
-	obj := &corev1.Pod{}
-
-	err := defaulter.Default(t.Context(), obj)
-	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 }
 
 func TestAdmissionPolicyValidateCreate(t *testing.T) {
@@ -143,15 +134,6 @@ func TestAdmissionPolicyValidateCreateWithErrors(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
-func TestAdmissionPolicyValidateCreateWithInvalidType(t *testing.T) {
-	validator := admissionPolicyValidator{logger: logr.Discard()}
-	obj := &corev1.Pod{}
-
-	warnings, err := validator.ValidateCreate(t.Context(), obj)
-	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
-	assert.Empty(t, warnings)
-}
-
 func TestAdmissionPolicyValidateUpdate(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	oldPolicy := NewAdmissionPolicyFactory().Build()
@@ -196,35 +178,11 @@ func TestAdmissionPolicyValidateUpdateWithErrors(t *testing.T) {
 	assert.Empty(t, warnings)
 }
 
-func TestAdmissionPolicyValidateUpdateWithInvalidType(t *testing.T) {
-	validator := admissionPolicyValidator{logger: logr.Discard()}
-	obj := &corev1.Pod{}
-	oldPolicy := NewAdmissionPolicyFactory().Build()
-	newPolicy := NewAdmissionPolicyFactory().Build()
-
-	warnings, err := validator.ValidateUpdate(t.Context(), obj, newPolicy)
-	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
-	assert.Empty(t, warnings)
-
-	warnings, err = validator.ValidateUpdate(t.Context(), oldPolicy, obj)
-	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
-	assert.Empty(t, warnings)
-}
-
 func TestAdmissionPolicyValidateDelete(t *testing.T) {
 	validator := admissionPolicyValidator{logger: logr.Discard()}
 	policy := NewAdmissionPolicyFactory().Build()
 
 	warnings, err := validator.ValidateDelete(t.Context(), policy)
 	require.NoError(t, err)
-	assert.Empty(t, warnings)
-}
-
-func TestAdmissionPolicyValidateDeleteWithInvalidType(t *testing.T) {
-	validator := admissionPolicyValidator{logger: logr.Discard()}
-	obj := &corev1.Pod{}
-
-	warnings, err := validator.ValidateDelete(t.Context(), obj)
-	require.ErrorContains(t, err, "expected an AdmissionPolicy object, got *v1.Pod")
 	assert.Empty(t, warnings)
 }

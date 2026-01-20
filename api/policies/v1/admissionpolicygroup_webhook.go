@@ -18,10 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/go-logr/logr"
@@ -32,8 +30,7 @@ import (
 func (r *AdmissionPolicyGroup) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	logger := mgr.GetLogger().WithName("admissionpolicygroup-webhook")
 
-	err := ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+	err := ctrl.NewWebhookManagedBy(mgr, r).
 		WithDefaulter(&admissionPolicyGroupDefaulter{
 			logger: logger,
 		}).
@@ -55,15 +52,8 @@ type admissionPolicyGroupDefaulter struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomDefaulter = &admissionPolicyGroupDefaulter{}
-
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type.
-func (d *admissionPolicyGroupDefaulter) Default(_ context.Context, obj runtime.Object) error {
-	admissionPolicyGroup, ok := obj.(*AdmissionPolicyGroup)
-	if !ok {
-		return fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", obj)
-	}
-
+func (d *admissionPolicyGroupDefaulter) Default(_ context.Context, admissionPolicyGroup *AdmissionPolicyGroup) error {
 	d.logger.Info("Defaulting AdmissionPolicyGroup", "name", admissionPolicyGroup.GetName())
 
 	if admissionPolicyGroup.Spec.PolicyServer == "" {
@@ -83,15 +73,8 @@ type admissionPolicyGroupValidator struct {
 	logger logr.Logger
 }
 
-var _ webhook.CustomValidator = &admissionPolicyGroupValidator{}
-
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *admissionPolicyGroupValidator) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	admissionPolicyGroup, ok := obj.(*AdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", obj)
-	}
-
+func (v *admissionPolicyGroupValidator) ValidateCreate(_ context.Context, admissionPolicyGroup *AdmissionPolicyGroup) (admission.Warnings, error) {
 	v.logger.Info("Validating AdmissionPolicyGroup creation", "name", admissionPolicyGroup.GetName())
 
 	allErrors := validatePolicyGroupCreate(admissionPolicyGroup)
@@ -104,16 +87,7 @@ func (v *admissionPolicyGroupValidator) ValidateCreate(_ context.Context, obj ru
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (v *admissionPolicyGroupValidator) ValidateUpdate(_ context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	oldAdmissionPolicyGroup, ok := oldObj.(*AdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", oldObj)
-	}
-	newAdmissionPolicyGroup, ok := newObj.(*AdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", newObj)
-	}
-
+func (v *admissionPolicyGroupValidator) ValidateUpdate(_ context.Context, oldAdmissionPolicyGroup, newAdmissionPolicyGroup *AdmissionPolicyGroup) (admission.Warnings, error) {
 	v.logger.Info("Validating AdmissionPolicyGroup update", "name", newAdmissionPolicyGroup.GetName())
 
 	if allErrors := validatePolicyGroupUpdate(oldAdmissionPolicyGroup, newAdmissionPolicyGroup); len(allErrors) != 0 {
@@ -124,12 +98,7 @@ func (v *admissionPolicyGroupValidator) ValidateUpdate(_ context.Context, oldObj
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (v *admissionPolicyGroupValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	admissionPolicyGroup, ok := obj.(*AdmissionPolicyGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected an AdmissionPolicyGroup object, got %T", obj)
-	}
-
+func (v *admissionPolicyGroupValidator) ValidateDelete(_ context.Context, admissionPolicyGroup *AdmissionPolicyGroup) (admission.Warnings, error) {
 	v.logger.Info("Validating AdmissionPolicyGroup delete", "name", admissionPolicyGroup.GetName())
 
 	return nil, nil
