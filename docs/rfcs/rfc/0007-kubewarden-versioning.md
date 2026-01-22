@@ -4,6 +4,7 @@
 | Start Date   | Mar 3rd 2022                                    |
 | Category     | Versioning                                      |
 | RFC PR       | [PR4](https://github.com/kubewarden/rfc/pull/4) |
+| State        | **SUPERSEDED** by [RFC 0025](0025-unified-component-versioning.md) |
 
 # Summary
 
