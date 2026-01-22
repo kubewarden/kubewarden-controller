@@ -1,13 +1,29 @@
 name: Update kubewarden-controller chart versions
 
 sources:
-  chartVersion:
+  controllerChartVersion:
     name: "Get latest kubewarden-controller helm version"
     kind: yaml
     transformers:
       - semverinc: minor
     spec:
       file: charts/kubewarden-controller/Chart.yaml
+      key: $.version
+  crdsChartVersion:
+    name: "Get latest kubewarden-crds helm version"
+    kind: yaml
+    transformers:
+      - semverinc: minor
+    spec:
+      file: charts/kubewarden-crds/Chart.yaml
+      key: $.version
+  defaultsChartVersion:
+    name: "Get latest kubewarden-defaults helm version"
+    kind: yaml
+    transformers:
+      - semverinc: minor
+    spec:
+      file: charts/kubewarden-defaults/Chart.yaml
       key: $.version
   releaseVersion:
     name: "Get latest kubewarden-controller version"
@@ -46,14 +62,14 @@ scms:
 
 actions:
   default:
-    title: 'chore: Helm chart {{ source "chartVersion" }} release'
+    title: 'chore: Helm chart {{ source "controllerChartVersion" }} release'
     kind: github/pullrequest
     scmid: default
     spec:
       automerge: false
       mergemethod: squash
       description: |
-        Automatic Helm chart {{ source "chartVersion" }} update.
+        Automatic Helm chart {{ source "controllerChartVersion" }} update.
         This PR has been created by the automation used to automatically update the Helm charts when kubewarden-controller is released or helm chart content is updated.
         REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
       draft: false
@@ -61,31 +77,63 @@ actions:
         - "chore"
 
 targets:
-  update_helm_version:
+  update_kubewarden_crds_helm_version:
     scmid: default
-    name: Update Helm chart version
+    name: Update Helm chart kubewarden-crds version
     kind: yaml
-    sourceid: chartVersion
+    sourceid: crdsChartVersion
+    spec:
+      file: charts/kubewarden-crds/Chart.yaml
+      key: $.version
+  update_kubewarden_crds_helm_appversion:
+    scmid: default
+    name: Update Helm chart kubewarden-crds appVersion
+    kind: yaml
+    sourceid: releaseVersion
+    spec:
+      file: charts/kubewarden-crds/Chart.yaml
+      key: $.appVersion
+  update_kubewarden_controller_helm_version:
+    scmid: default
+    name: Update Helm chart kubewarden-controller version
+    kind: yaml
+    sourceid: controllerChartVersion
     spec:
       file: charts/kubewarden-controller/Chart.yaml
       key: $.version
-  update_appversion:
+  update_kubewarden_controller_helm_appversion:
     scmid: default
-    name: Update Helm chart appVersion
+    name: Update Helm chart kubewarden-controller appVersion
     kind: yaml
     sourceid: releaseVersion
     spec:
       file: charts/kubewarden-controller/Chart.yaml
       key: $.appVersion
-  update_controller_version:
+  update_kubewarden_defaults_helm_version:
     scmid: default
-    name: Update Helm chart kubewarden-controller version
+    name: Update Helm chart kubewarden-defaults version
+    kind: yaml
+    sourceid: defaultsChartVersion
+    spec:
+      file: charts/kubewarden-crds/Chart.yaml
+      key: $.version
+  update_kubewarden_defaults_helm_appversion:
+    scmid: default
+    name: Update Helm chart kubewarden-defaults appVersion
+    kind: yaml
+    sourceid: releaseVersion
+    spec:
+      file: charts/kubewarden-defaults/Chart.yaml
+      key: $.appVersion
+  update_controller_image_tag:
+    scmid: default
+    name: Update Helm chart kubewarden-controller image tag
     kind: yaml
     sourceid: releaseVersion
     spec:
       file: charts/kubewarden-controller/values.yaml
       key: $.image.tag
-  update_audit_scanner_version:
+  update_audit_scanner_image_tag:
     scmid: default
     name: Update Helm chart audit-scanner version
     kind: yaml
@@ -93,7 +141,7 @@ targets:
     spec:
       file: charts/kubewarden-controller/values.yaml
       key: $.auditScanner.image.tag
-  update_policy_server_version:
+  update_policy_server_image_tag:
     scmid: default
     name: Update Helm chart policy-server version
     kind: yaml
