@@ -1,0 +1,456 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "additionalAnnotations": {
+            "type": "object"
+        },
+        "additionalLabels": {
+            "type": "object"
+        },
+        "auditScanner": {
+            "type": "object",
+            "properties": {
+                "containerRestartPolicy": {
+                    "type": "string"
+                },
+                "cronJob": {
+                    "type": "object",
+                    "properties": {
+                        "failedJobsHistoryLimit": {
+                            "type": "integer"
+                        },
+                        "schedule": {
+                            "type": "string"
+                        },
+                        "successfulJobsHistoryLimit": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "disableStore": {
+                    "type": "boolean"
+                },
+                "enable": {
+                    "type": "boolean"
+                },
+                "image": {
+                    "type": "object",
+                    "properties": {
+                        "pullPolicy": {
+                            "type": "string"
+                        },
+                        "repository": {
+                            "type": "string"
+                        },
+                        "tag": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "logLevel": {
+                    "type": "string"
+                },
+                "outputScan": {
+                    "type": "boolean"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "parallelNamespaces": {
+                    "type": "integer"
+                },
+                "parallelPolicies": {
+                    "type": "integer"
+                },
+                "parallelResources": {
+                    "type": "integer"
+                },
+                "policyReporter": {
+                    "type": "boolean"
+                },
+                "reportCRDsKind": {
+                    "type": "string"
+                },
+                "serviceAccountName": {
+                    "type": "string"
+                },
+                "skipAdditionalNamespaces": {
+                    "type": "array"
+                }
+            }
+        },
+        "containerSecurityContext": {
+            "type": "object",
+            "properties": {
+                "allowPrivilegeEscalation": {
+                    "type": "boolean"
+                },
+                "capabilities": {
+                    "type": "object",
+                    "properties": {
+                        "drop": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "fullnameOverride": {
+            "type": "string"
+        },
+        "global": {
+            "type": "object",
+            "properties": {
+                "affinity": {
+                    "type": "object"
+                },
+                "cattle": {
+                    "type": "object",
+                    "properties": {
+                        "systemDefaultRegistry": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "skipNamespaces": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tolerations": {
+                    "type": "array"
+                }
+            }
+        },
+        "image": {
+            "type": "object",
+            "properties": {
+                "pullPolicy": {
+                    "type": "string"
+                },
+                "repository": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                }
+            }
+        },
+        "imagePullSecrets": {
+            "type": "array"
+        },
+        "logLevel": {
+            "type": "string"
+        },
+        "mTLS": {
+            "type": "object",
+            "properties": {
+                "configMapName": {
+                    "type": "string"
+                },
+                "enable": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "nameOverride": {
+            "type": "string"
+        },
+        "nodeSelector": {
+            "type": "object"
+        },
+        "podAnnotations": {
+            "type": "object"
+        },
+        "podSecurityContext": {
+            "type": "object",
+            "properties": {
+                "runAsNonRoot": {
+                    "type": "boolean"
+                },
+                "seccompProfile": {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "policy-reporter": {
+            "type": "object",
+            "properties": {
+                "sourceFilters": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "selector": {
+                                "type": "object",
+                                "properties": {
+                                    "source": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "ui": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "logo": {
+                            "type": "object",
+                            "properties": {
+                                "disabled": {
+                                    "type": "boolean"
+                                }
+                            }
+                        },
+                        "views": {
+                            "type": "object",
+                            "properties": {
+                                "logs": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "preDeleteHook": {
+            "type": "object",
+            "properties": {
+                "containerSecurityContext": {
+                    "type": "object",
+                    "properties": {
+                        "allowPrivilegeEscalation": {
+                            "type": "boolean"
+                        },
+                        "capabilities": {
+                            "type": "object",
+                            "properties": {
+                                "drop": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "podSecurityContext": {
+                    "type": "object",
+                    "properties": {
+                        "runAsNonRoot": {
+                            "type": "boolean"
+                        },
+                        "seccompProfile": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "preDeleteJob": {
+            "type": "object",
+            "properties": {
+                "image": {
+                    "type": "object",
+                    "properties": {
+                        "repository": {
+                            "type": "string"
+                        },
+                        "tag": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "replicas": {
+            "type": "integer"
+        },
+        "resources": {
+            "type": "object",
+            "properties": {
+                "auditScanner": {
+                    "type": "object",
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "requests": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "controller": {
+                    "type": "object",
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "requests": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "postInstallJob": {
+                    "type": "object",
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "requests": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "preDeleteJob": {
+                    "type": "object",
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "requests": {
+                            "type": "object",
+                            "properties": {
+                                "cpu": {
+                                    "type": "string"
+                                },
+                                "memory": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "telemetry": {
+            "type": "object",
+            "properties": {
+                "custom": {
+                    "type": "object",
+                    "properties": {
+                        "endpoint": {
+                            "type": "string"
+                        },
+                        "insecure": {
+                            "type": "boolean"
+                        },
+                        "otelCollectorCertificateSecret": {
+                            "type": "string"
+                        },
+                        "otelCollectorClientCertificateSecret": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "metrics": {
+                    "type": "boolean"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "sidecar": {
+                    "type": "object",
+                    "properties": {
+                        "metrics": {
+                            "type": "object",
+                            "properties": {
+                                "port": {
+                                    "type": "integer"
+                                }
+                            }
+                        },
+                        "tracing": {
+                            "type": "object",
+                            "properties": {
+                                "jaeger": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "tracing": {
+                    "type": "boolean"
+                }
+            }
+        }
+    }
+}
