@@ -231,18 +231,11 @@ jobs:
               prerelease: isPreRelease,
               make_latest: !isPreRelease
             });
-      - name: Trigger chart update
-        env:
-          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
-        run: |
-          echo '{
-            "event_type": "update-chart",
-            "client_payload": {
-              "version": "${{ github.ref_name }}",
-              "oldVersion": "${{ steps.get_last_release_tag.outputs.old_release_tag }}",
-              "repository": "${{ github.repository }}"
-            }
-          }' > payload.json
-          gh api repos/${{ github.repository_owner }}/helm-charts/dispatches \
-            -X POST \
-            --input payload.json
+
+  update-charts:
+    needs: [release]
+    uses: ./.github/workflows/update-charts.yml
+    permissions:
+      contents: write # for updatecli to update the repository
+      pull-requests: write # for updatecli to create a PR
+    secrets: inherit
