@@ -13,5 +13,6 @@ pr:
   labels:
     - "kind/chore"
     - "area/release"
+    - "ci-full" # this triggers all CI jobs
   reviewers:
     - "kubewarden/kubewarden-developers"
