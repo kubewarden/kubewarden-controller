@@ -34,5 +34,5 @@ jobs:
         env:
           UPDATECLI_GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |-
-          updatecli apply --config updatecli/updatecli.d/open-release-pr.yaml \
+          updatecli apply --config updatecli/updatecli.release.d/open-release-pr.yaml \
             --values updatecli/values.yaml
