@@ -21,7 +21,6 @@ sources:
         # release-drafter, as its title has the prospective semver that we want
         # to tag
         draft: true
-      versionfilter:
         kind: latest
   newestReleaseTagVersion:
     name: Extract newest tag from newest GitHub release
@@ -33,7 +32,8 @@ sources:
       repository: "{{ .github.repo }}"
       token: "{{ requiredEnv .github.token }}"
       key: "tagname"
-      versionfilter:
+      typefilter:
+        draft: false
         kind: latest
 
   controllerChartVersion:
