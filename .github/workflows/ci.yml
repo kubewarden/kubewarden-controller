@@ -298,3 +298,33 @@ jobs:
         run: make charts-check-common-values
       - name: helm unit tests
         run: make helm-unittest
+
+  # Rollup job for branch protection - single stable job name that depends on all checks
+  ci-success:
+    name: CI Success
+    if: always()
+    needs:
+      - changes
+      - test-go
+      - e2e-go
+      - golangci
+      - calculate-crates-matrix
+      - fmt-rust-per-crate
+      - clippy-rust-per-crate
+      - unit-tests-rust-per-crate
+      - integration-tests-burrego
+      - integration-tests-kwctl
+      - integration-tests-policy-server
+      - integration-tests-policy-evaluator
+      - shellcheck
+      - charts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs status
+        run: |
+          # Check if any job failed or was cancelled
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" || "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more jobs failed or were cancelled"
+            exit 1
+          fi
+          echo "All jobs passed or were skipped"
