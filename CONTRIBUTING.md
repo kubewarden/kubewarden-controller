@@ -1,43 +1,126 @@
 # Contributing
 
-## Building
+## Requirements
 
-To build kubewarden-controller there are package requirements. If you are using
-openSUSE Leap, you can install them with the following command:
+The following tools are required to build and run this project:
+
+- **Docker**: for building and running containerized workloads.
+- **Go**: required by the `audit-scanner` and `controller` components.
+- **Rust**: required by the `policy-server` and `kwctl` components. The exact version and required
+  targets are defined in `rust-toolchain.toml`.
+- **[cross](https://github.com/cross-rs/cross)**: required to cross-compile Rust code for different architectures.
+- **Make**: the build tool controlling various build tasks.
+- **[Tilt](https://docs.tilt.dev/)**: a development tool for multi-service applications.
+- **Kubernetes cluster**: a running Kubernetes cluster, used for development. [kind](https://kind.sigs.k8s.io/)
+  or a similar solution.
+- **[Helm](https://helm.sh/)**: required for deploying and testing charts.
+
+## Code Layout
+
+The repository is organized as follows:
+
+- `charts`: contains the Helm charts for managing deployments.
+- `cmd`: main entry points for the `audit-scanner` and `kubewarden-controller` executables.
+- `crates`: all Rust components of the project.
+- `docs`: developer-focused documentation and README files for various components.
+- `e2e`: end-to-end tests. A real Kubernetes cluster is created using Docker and Kind.
+- `internal`: contains the entire Go codebase.
+
+## Linting and Formatting
+
+### Go
+
+Format Go code:
 
 ```console
-sudo zypper in -y make go
+make fmt-go
 ```
 
-Then, can run the following command to build the package:
+Run the Go linter ([golangci-lint](https://golangci-lint.run/)):
 
 ```console
-make
+make lint-go
+```
+
+Automatically fix linting issues when possible:
+
+```console
+make lint-go-fix
+```
+
+### Rust
+
+Check Rust code formatting:
+
+```console
+make fmt-rust
+```
+
+Run the Rust linter (clippy):
+
+```console
+make lint-rust
+```
+
+Automatically fix linting issues when possible:
+
+```console
+make lint-rust-fix
+```
+
+### Security Auditing
+
+Check Rust dependencies for known security vulnerabilities using [cargo-deny](https://embarkstudios.github.io/cargo-deny/):
+
+```console
+make advisories-rust
+```
+
+## Building
+
+### Build All Components
+
+Build all components (controller, audit-scanner, policy-server, kwctl):
+
+```console
+make all
+```
+
+### Build Individual Components
+
+Build only the Go components:
+
+```console
+make controller
+make audit-scanner
+```
+
+Build only the Rust components:
+
+```console
+make policy-server
+make kwctl
+```
+
+### Build Container Images
+
+Build Docker images for each component:
+
+```console
+make controller-image
+make audit-scanner-image
+make policy-server-image
+```
+
+You can customize the registry, repository, and tag using environment variables:
+
+```console
+make controller-image REGISTRY=ghcr.io REPO=your-username TAG=dev
 ```
 
 ## Development
 
 To run the controller for development purposes, you can use [Tilt](https://tilt.dev/).
-
-### Pre-requisites
-
-Please follow the [Tilt installation
-documentation](https://docs.tilt.dev/install.html) to install the CLI tool. You
-need to clone the [kubewarden helm-charts
-repository](https://github.com/kubewarden/helm-charts) in your local machine:
-
-```console
-git clone git@github.com/kubewarden/helm-charts.git
-```
-
-You need to clone the [kubewarden audit-scanner repository](https://github.com/kubewarden/audit-scanner) in your local machine:
-
-```console
-git clone git@github.com/kubewarden/audit-scanner.git
-```
-
-A development Kubernetes cluster is needed to run the controller.
-You can use [k3d](https://k3d.io/) to create a local cluster for development purposes.
 
 ### Settings
 
@@ -53,69 +136,78 @@ The following settings can be configured:
   don't have a private registry, you can use `ghcr.io` provided your cluster has
   access to it.
 
-- `image`: the name of the controller image. If you are using `ghcr.io` as your
+- `audit-scanner`: the name of the audit-scanner image. If you are using `ghcr.io` as your
   registry, you need to prefix the image name with your GitHub username.
 
-- `helm_charts_path`: the path to the `helm-charts` repository that you cloned
-  in the previous step.
+- `controller`: the name of the controller image. If you are using `ghcr.io` as your
+  registry, you need to prefix the image name with your GitHub username.
+
+- `policy-server`: the name of the policy-server image. If you are using `ghcr.io` as your
+  registry, you need to prefix the image name with your GitHub username.
 
 Example:
 
 ```yaml
 registry: ghcr.io
-image: your-github-username/kubewarden-controller
-helmChartPath: /path/to/helm-charts
+audit-scanner: your-github-username/kubewarden/audit-scanner
+controller: your-github-username/kubewarden/controller
+policy-server: your-github-username/kubewarden/policy-server
 ```
 
-### Running the controller
+### Running
 
 The `Tiltfile` included in this repository takes care of the following:
 
-- Install the CRDs from the `config/crd/` directory of this repository.
-- Install `cert-manager`.
-- Create the `kubewarden` namespace and install the controller helm-chart in it.
-- Inject the development image in the deployment.
-- Automatically reload the controller when you make changes to the code.
+- Creates the `kubewarden` namespace.
+- Installs the `kubewarden-crds` and `kubewarden-controller` Helm charts from the `charts` folder.
+- Injects the development images into the running Pods.
+- Automatically reloads the controller/audit-scanner/policy-server when you make changes to the code.
 
 To run the controller, you just need to run the following command against an
 empty cluster:
 
 ```console
-tilt up --stream
+tilt up
 ```
+
+Use the web interface of Tilt to monitor the log streams of the different components and,
+if needed, manually trigger restarts.
+
+## Changes to CRDs
+
+After changing a CRD, run the following command:
+
+```console
+make generate
+```
+
+This will:
+
+- Update all the generated Go code
+- Update the CRDs shipped by our Helm chart
 
 ## Testing
 
-### Run tests
+### Running Tests
 
-Run all tests:
+Run all unit tests, regardless of the language:
 
 ```console
 make test
 ```
 
-Run unit tests only:
-
-```console
-make unit-tests
-```
-
-Run controller integration tests only:
-
-```console
-make integration-tests
-```
-
-Run tests that do not require a Kubernetes cluster only:
-
-```console
-make integration-tests-envtest
-```
-
-Run tests that require a Kubernetes cluster only:
+Run e2e tests:
 
 ```console
 make test-e2e
+```
+
+### Helm Chart Tests
+
+Run Helm chart unit tests:
+
+```console
+make helm-unittest
 ```
 
 ### Writing (controller) integration tests
@@ -124,8 +216,8 @@ The controller integration tests are written using the [Ginkgo](https://onsi.git
 and [Gomega](https://onsi.github.io/gomega/) testing frameworks.
 The tests are located in the `internal/controller` package.
 
-By default, the tests are run by using [envtest](https://book.kubebuilder.io/reference/envtest) which
-sets up an instance of etcd and the Kubernetes API server, without kubelet, controller-manager or other components.
+By default, the tests are run using [envtest](https://book.kubebuilder.io/reference/envtest), which
+sets up an instance of etcd and the Kubernetes API server, without kubelet, controller-manager, or other components.
 
 However, some tests require a real Kubernetes cluster to run.
 These tests are defined under the `e2e` folder using the [e2e-framework](https://github.com/kubernetes-sigs/e2e-framework).
@@ -133,10 +225,10 @@ These tests are defined under the `e2e` folder using the [e2e-framework](https:/
 The suite setup will start a cluster using [kind](https://kind.sigs.k8s.io/) and run the tests against it.
 It will also stop and remove the container when the tests finish.
 
-Note that the `e2e` tests are slower than the `envtest` tests, therefore, it is recommended to keep their number to a minimum.
+Note that the `e2e` tests are slower than the `envtest` tests; therefore, it is recommended to keep their number to a minimum.
 An example of a test that requires a real cluster is the `AdmissionPolicy` test suite, since at the time of writing, we wait for the `PolicyServer` Pod to be ready before reconciling the webhook configuration.
 
-### Focusing
+### Focusing on Specific Tests
 
 You can focus on a specific test or spec by using a [Focused Spec](https://onsi.github.io/ginkgo/#focused-specs).
 
@@ -150,73 +242,9 @@ var _ = Describe("Controller test", func() {
 })
 ```
 
-## Tagging a new release
+## Additional Resources
 
-### Make sure to update the CRD docs
-
-```console
-cd docs/crds
-make generate
-```
-
-Commit the resulting changes.
-
-### Create a new tag
-
-Assuming your official Kubewarden remote is named `upstream`:
-
-```console
-git tag -a vX.Y.Z  -m "vX.Y.Z" -s
-git push upstream main vX.Y.Z
-```
-
-Check that the GitHub actions run without
-errors. Regarding the release, several automation tasks should
-have been started:
-
-1. Execute tests
-1. Create a new GitHub release
-1. Push a tagged container image with the build of the project
-
-For a release to be complete, all these tasks should
-run successfully.
-
-### Consider bumping the helm-chart
-
-Now that the controller has a new tag released, the automation bumps the
-[Kubewarden
-`helm-chart`](https://github.com/kubewarden/helm-charts/tree/main/charts/kubewarden-controller).
-
-### Consider announcing the new release in channels!
-
-## Kubewarden release template
-
-If you are releasing the Kubewarden stack then follow these steps to ensure that
-everything works well:
-
-- [ ] Update controller code
-- [ ] Run controller tests or check if the CI is green in the main branch
-- [ ] Update audit scanner code
-- [ ] Run audit scanner tests or check if the CI is green in the main branch
-- [ ] Bump policy server version in the `Cargo.toml` and update the `Cargo.lock`
-      file. This requires a PR in the repository to update the files in the main
-      branch. Update the local code after merging the PR
-- [ ] Run policy server tests or check if the CI is green in the main branch
-- [ ] Bump kwctl version in the `Cargo.toml` and update the `Cargo.lock` file.
-      This requires a PR in the repository to update the files in the main branch.
-      Update the local code after merging the PR
-- [ ] Run kwctl tests or check if the CI is green in the main branch
-- [ ] Tag audit scanner
-- [ ] Tag policy server
-- [ ] Tag controller
-- [ ] Tag kwctl
-- [ ] Wait for all CI running in all the major components (audit scanner,
-      controller, policy server and kwctl) to finish
-- [ ] Check if the Helm chart repository CI open a PR updating the Helm charts
-      with the correct changes.
-  - [ ] Check if the `kubewarden-controller` chart versions are correctly bumped
-  - [ ] Check if the `kubewarden-defaults` chart versions are correctly bumped
-  - [ ] Check if the `kubewarden-crds` chart versions are correctly bumped
-  - [ ] Check if kubewarden-controller, kubewarden-defaults and kubewarden-crds
-        charts have the same `appVersion`
-- [ ] Check if CI in the Helm chart PR is green. If so, merge it.
+- **Developer Documentation**: The `docs/` folder contains additional documentation for each component
+  (`audit-scanner`, `controller`, `kwctl`, `policy-server`, and `crds`).
+- **RFCs**: Design proposals and architectural decisions are tracked in a separate repository at
+  <https://github.com/kubewarden/rfc>.
