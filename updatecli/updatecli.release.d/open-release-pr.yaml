@@ -1,0 +1,226 @@
+name: Update kubewarden-controller chart versions
+pipelineid: "{{ .pipelineid }}"
+
+# This updatecli pipeline takes the latest GH draft release title, which
+# corresponds with the future Kubewarden admission controller stack version.
+#
+# Then bumps all charts and Cargo.* files following that version and opens a PR against
+# the kubewarden-controller repo.
+
+sources:
+  newestGitHubDraftReleaseVersion:
+    name: Extract version from newest GitHub draft release from release drafter
+    kind: githubrelease
+    spec:
+      owner: "{{ .github.owner }}"
+      repository: "{{ .github.repo }}"
+      token: "{{ requiredEnv .github.token }}"
+      key: "title"
+      typefilter:
+        # We specifically only want the newest draft release, created with
+        # release-drafter, as its title has the prospective semver that we want
+        # to tag
+        draft: true
+        kind: latest
+  newestReleaseTagVersion:
+    name: Extract newest tag from newest GitHub release
+    # used for displaying a gh compare URL in the open PR
+    # TODO continue on fail (we may not have a tag)
+    kind: githubrelease
+    spec:
+      owner: "{{ .github.owner }}"
+      repository: "{{ .github.repo }}"
+      token: "{{ requiredEnv .github.token }}"
+      key: "tagname"
+      typefilter:
+        draft: false
+        kind: latest
+
+  controllerChartVersion:
+    name: "Get latest kubewarden-controller helm version"
+    kind: yaml
+    transformers:
+      - semverinc: minor
+    spec:
+      file: charts/kubewarden-controller/Chart.yaml
+      key: $.version
+  crdsChartVersion:
+    name: "Get latest kubewarden-crds helm version"
+    kind: yaml
+    transformers:
+      - semverinc: minor
+    spec:
+      file: charts/kubewarden-crds/Chart.yaml
+      key: $.version
+  defaultsChartVersion:
+    name: "Get latest kubewarden-defaults helm version"
+    kind: yaml
+    transformers:
+      - semverinc: minor
+    spec:
+      file: charts/kubewarden-defaults/Chart.yaml
+      key: $.version
+  readmeFile:
+    kind: file
+    spec:
+      file: "./README.md"
+
+scms:
+  default:
+    kind: github
+    spec:
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      owner: "{{ .github.owner }}"
+      repository: "kubewarden-controller"
+      branch: "{{ .github.branch }}"
+      token: "{{ requiredEnv .github.token }}"
+      commitusingapi: true
+      commitmessage:
+        squash: true
+        type: "chore"
+        title: "update kubewarden-controller Helm charts"
+        hidecredit: true
+        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
+
+actions:
+  openUpdatePR:
+    title: 'build: {{ source "newestGitHubDraftReleaseVersion" }} release'
+    kind: github/pullrequest
+    scmid: default
+    spec:
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic bump to `{{ source "newestGitHubDraftReleaseVersion" }}` release.
+
+        Changes since last released tag: (if no tag, since HEAD^): https://github.com/{{ .github.owner }}/{{ .github.repo }}/compare/{{ source "newestReleaseTagVersion" | default "HEAD^" }}...updatecli_main_release_pr
+
+        > [!IMPORTANT]
+        > REMEMBER USING SQUASH MERGE FOR THIS PR
+      #     {{ if .pr.reviewrs }}
+      reviewers:
+        #           {{ range .pr.reviewers }}
+        - "{{ . }}"
+      #           {{ end }}
+      #     {{ end }}
+      #     {{ if .pr.labels }}
+      labels:
+        #         {{ range .pr.labels }}
+        - "{{ . }}"
+      #           {{ end }}
+      #     {{ end }}
+      draft: false
+
+targets:
+  update_kubewarden_crds_helm_version:
+    scmid: default
+    name: Update Helm chart kubewarden-crds version
+    kind: yaml
+    sourceid: crdsChartVersion
+    spec:
+      file: charts/kubewarden-crds/Chart.yaml
+      key: $.version
+  update_kubewarden_crds_helm_appversion:
+    scmid: default
+    name: Update Helm chart kubewarden-crds appVersion
+    kind: yaml
+    sourceid: newestGitHubDraftReleaseVersion
+    spec:
+      file: charts/kubewarden-crds/Chart.yaml
+      key: $.appVersion
+  update_kubewarden_controller_helm_version:
+    scmid: default
+    name: Update Helm chart kubewarden-controller version
+    kind: yaml
+    sourceid: controllerChartVersion
+    spec:
+      file: charts/kubewarden-controller/Chart.yaml
+      key: $.version
+  update_kubewarden_controller_helm_appversion:
+    scmid: default
+    name: Update Helm chart kubewarden-controller appVersion
+    kind: yaml
+    sourceid: newestGitHubDraftReleaseVersion
+    spec:
+      file: charts/kubewarden-controller/Chart.yaml
+      key: $.appVersion
+  update_kubewarden_defaults_helm_version:
+    scmid: default
+    name: Update Helm chart kubewarden-defaults version
+    kind: yaml
+    sourceid: defaultsChartVersion
+    spec:
+      file: charts/kubewarden-defaults/Chart.yaml
+      key: $.version
+  update_kubewarden_defaults_helm_appversion:
+    scmid: default
+    name: Update Helm chart kubewarden-defaults appVersion
+    kind: yaml
+    sourceid: newestGitHubDraftReleaseVersion
+    spec:
+      file: charts/kubewarden-defaults/Chart.yaml
+      key: $.appVersion
+  update_controller_image_tag:
+    scmid: default
+    name: Update Helm chart kubewarden-controller image tag
+    kind: yaml
+    sourceid: newestGitHubDraftReleaseVersion
+    spec:
+      file: charts/kubewarden-controller/values.yaml
+      key: $.image.tag
+  update_audit_scanner_image_tag:
+    scmid: default
+    name: Update Helm chart audit-scanner version
+    kind: yaml
+    sourceid: newestGitHubDraftReleaseVersion
+    spec:
+      file: charts/kubewarden-controller/values.yaml
+      key: $.auditScanner.image.tag
+  update_policy_server_image_tag:
+    scmid: default
+    name: Update Helm chart policy-server version
+    kind: yaml
+    sourceid: newestGitHubDraftReleaseVersion
+    spec:
+      file: charts/kubewarden-defaults/values.yaml
+      key: $.policyServer.image.tag
+  update_readme:
+    scmid: default
+    name: Update Helm chart kubewarden-controller README
+    kind: file
+    sourceid: readmeFile
+    spec:
+      file: charts/kubewarden-controller/README.md
+      forcecreate: true
+  generate_values_schema:
+    kind: shell
+    disablesourceinput: true
+    scmid: default
+    name: Generate values.schema.json file
+    spec:
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - charts/kubewarden-controller/values.schema.json
+      command: |
+        make generate-chart
+  updateCargoTomlVersion:
+    name: Update Cargo.toml, Cargo.lock with new version
+    scmid: default
+    sourceid: newestGitHubDraftReleaseVersion
+    transformers:
+      - trimprefix: "v"
+    kind: shell
+    spec:
+      shell: /usr/bin/bash
+      command: cargo set-version --package policy-server --package kwctl
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - crates/policy-server/Cargo.toml
+            - crates/policy-server/Cargo.lock
+            - crates/kwctl/Cargo.toml
+            - crates/kwctl/Cargo.lock
