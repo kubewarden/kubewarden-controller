@@ -1,0 +1,38 @@
+on:
+  workflow_dispatch:
+
+name: Open release PR
+
+jobs:
+  open-release-pr:
+    name: "Open PR to release Admission Controller"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        id: generate-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Install cargo-set-version
+        run: cargo install cargo-edit
+
+      - name: Install Updatecli in the runner
+        uses: updatecli/updatecli-action@4fd2c16d992120bd5355264a03ad0cddec013e1b # v2.99.0
+
+      - name: Install helm
+        # Helm and helm plugins installation required by the updatecli release action
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+
+      - name: Install helm values schema json plugin
+        # Disable plugin verification until helm v4 is supported
+        run: helm plugin install https://github.com/losisin/helm-values-schema-json.git --verify=false
+
+      - name: Open PR with updatecli
+        env:
+          UPDATECLI_GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |-
+          updatecli apply --config updatecli/updatecli.d/open-release-pr.yaml \
+            --values updatecli/values.yaml

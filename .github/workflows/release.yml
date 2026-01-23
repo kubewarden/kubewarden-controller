@@ -231,11 +231,3 @@ jobs:
               prerelease: isPreRelease,
               make_latest: !isPreRelease
             });
-
-  update-charts:
-    needs: [release]
-    uses: ./.github/workflows/update-charts.yml
-    permissions:
-      contents: write # for updatecli to update the repository
-      pull-requests: write # for updatecli to create a PR
-    secrets: inherit
