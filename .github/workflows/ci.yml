@@ -31,7 +31,7 @@ jobs:
       go: ${{ steps.changed-files.outputs.go }}
       rust: ${{ steps.changed-files.outputs.rust }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: Detect changed files
@@ -120,7 +120,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: "1.25"
@@ -142,7 +142,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: "1.25"
@@ -155,7 +155,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version: "1.25"
@@ -175,7 +175,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: List crate folders
         id: set-matrix
@@ -191,7 +191,7 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Run cargo fmt"
         run: |
           make -C crates/${{ matrix.crate }} fmt
@@ -203,7 +203,7 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Run cargo clippy"
         run: |
           make -C crates/${{ matrix.crate }} lint
@@ -215,7 +215,7 @@ jobs:
     strategy:
       matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "Run cargo test"
         run: |
           make -C crates/${{ matrix.crate }} unit-tests
@@ -226,9 +226,9 @@ jobs:
     name: E2E tests (burrego)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install opa
-        uses: kubewarden/github-actions/opa-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+        uses: kubewarden/github-actions/opa-installer@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           opa-version: v1.12.2
       - name: Install bats
@@ -242,7 +242,7 @@ jobs:
     name: E2E tests (kwctl)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run e2e tests
         run: make -C crates/kwctl e2e-tests
 
@@ -252,7 +252,7 @@ jobs:
     name: Integration tests (policy-server)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run integration tests
         run: make -C crates/policy-server integration-tests
 
@@ -262,7 +262,7 @@ jobs:
     name: Integration tests (policy-evaluator)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build kwctl
         run: make -C crates/kwctl build-release
       - name: Setup kwctl
@@ -281,14 +281,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - run: shellcheck $(find scripts/ -name '*.sh')
 
   charts:
     name: Helm unittest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install helm
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
       # Disable plugin verification until the following issue is addressed https://github.com/helm-unittest/helm-unittest/issues/777

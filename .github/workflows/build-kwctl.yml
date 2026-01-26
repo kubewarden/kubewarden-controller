@@ -22,7 +22,7 @@ jobs:
     outputs:
       kwctl: ${{ steps.changed-files.outputs.kwctl }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: Detect kwctl-related file changes
@@ -72,7 +72,7 @@ jobs:
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
       - name: checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Install cross-rs
         run: |
@@ -118,7 +118,7 @@ jobs:
           path: kwctl-linux-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+        uses: kubewarden/github-actions/syft-installer@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
 
       - name: Create SBOM file
         shell: bash
@@ -165,7 +165,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
@@ -201,7 +201,7 @@ jobs:
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+        uses: kubewarden/github-actions/syft-installer@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           arch: darwin_amd64
 
@@ -243,7 +243,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
 
@@ -290,7 +290,7 @@ jobs:
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
-        uses: kubewarden/github-actions/syft-installer@247608f0b5a1562a6fd2576e5b2e6cbe62551baf # v4.5.15
+        uses: kubewarden/github-actions/syft-installer@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           arch: windows_amd64
 

@@ -33,9 +33,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Build, sign, and upload digest
-        uses: kubewarden/github-actions/container-build@v4.5.16
+        uses: kubewarden/github-actions/container-build@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
@@ -54,7 +54,7 @@ jobs:
         component: [policy-server, kubewarden-controller, audit-scanner]
     steps:
       - name: Merge multi-arch images
-        uses: kubewarden/github-actions/merge-multiarch@v4.5.16
+        uses: kubewarden/github-actions/merge-multiarch@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           component: ${{ matrix.component }}
           tag: ${{ github.ref_name }}
@@ -83,7 +83,7 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Generate and sign attestations
-        uses: kubewarden/github-actions/attestation@v4.5.16
+        uses: kubewarden/github-actions/attestation@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
