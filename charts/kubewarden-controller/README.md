@@ -1,152 +1,197 @@
-# kubewarden-controller
+[![Kubewarden Core Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-core.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#core-scope)
+[![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
+[![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-controller)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/6502/badge)](https://www.bestpractices.dev/projects/6502)
+[![FOSSA license scan](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller.svg?type=shield)](https://app.fossa.com/projects/custom%252B25850%252Fgithub.com%252Fkubewarden%252Fkubewarden-controller?ref=badge_shield)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/kubewarden-controller/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/kubewarden-controller)
+[![CLOMonitor](https://img.shields.io/endpoint?url=https://clomonitor.io/api/projects/cncf/kubewarden/badge)](https://clomonitor.io/projects/cncf/kubewarden)
 
-`kubewarden-controller` is a Kubernetes controller that allows you to
-dynamically register Kubewarden admission policies.
+Kubewarden is a Kubernetes Dynamic Admission Controller that uses policies written
+in WebAssembly.
 
-The `kubewarden-controller` will reconcile the admission policies you
-have registered against the Kubernetes webhooks of the cluster where
-it is deployed.
+For more information refer to the [official Kubewarden website](https://kubewarden.io/).
 
-The kubewarden-controller can be deployed using a helm chart.
+# Kubewarden Admission Controller - Monorepo
 
-## Installing the charts
+This repository is a monorepo containing the source code for all the different
+components of the Kubewarden Admission Controller:
 
-If you want to enable telemetry, you also need to install [OpenTelemetry Operator](https://github.com/open-telemetry/opentelemetry-operator).
+- **kubewarden-controller**: A Kubernetes controller that allows you to dynamically register Kubewarden admission policies and reconcile them with the Kubernetes webhooks of the cluster where it's deployed
+- **policy-server**: The runtime component that evaluates admission policies written in WebAssembly
+- **audit-scanner**: A component that scans existing resources in the cluster against registered policies
+- **kwctl**: A CLI tool for testing and managing Kubewarden policies
 
-For example:
-```console
-$ helm repo add kubewarden https://charts.kubewarden.io
-$ helm install --create-namespace -n kubewarden kubewarden-crds kubewarden/kubewarden-crds
-$ helm install --wait -n kubewarden kubewarden-controller kubewarden/kubewarden-controller
-$ helm install --wait -n kubewarden kubewarden-defaults kubewarden/kubewarden-defaults
-```
+## Documentation
 
-This will install kubewarden-crds, kubewarden-controller, and a
-default PolicyServer on the Kubernetes cluster in the default configuration
-(which includes self-signed TLS certs).
+The full and exhaustive documentation is available at [docs.kubewarden.io](https://docs.kubewarden.io).
 
-The default configuration values should be good enough for the majority of
-deployments. All the options are documented in the configuration section.
+The [`docs/`](./docs) folder contains README files for each component:
 
-## Upgrading the charts
+- [Controller](./docs/controller)
+- [Policy Server](./docs/policy-server)
+- [Audit Scanner](./docs/audit-scanner)
+- [kwctl](./docs/kwctl)
+- [CRDs](./docs/crds)
 
-Please refer to the release notes of each version of the helm charts.
-These can be found [here](https://github.com/kubewarden/helm-charts/releases).
+## Installation
 
-## Uninstalling the charts
+The kubewarden-controller can be deployed using a Helm chart. For instructions,
+see https://charts.kubewarden.io.
 
-To uninstall/delete kubewarden-controller and kubewarden-crds use the following
-command:
+Please refer to our [quickstart](https://docs.kubewarden.io/quick-start) for more details.
 
-```console
-$ helm uninstall -n kubewarden kubewarden-defaults
-$ helm uninstall -n kubewarden kubewarden-controller
-$ helm uninstall -n kubewarden kubewarden-crds
-```
+# Software bill of materials & provenance
 
-The commands remove all the Kubernetes components associated with the chart, all
-policy servers and their policies, and deletes the release along with the release
-history.
+Kubewarden controller has its software bill of materials (SBOM) and build
+[Provenance](https://slsa.dev/spec/v1.0/provenance) information published every
+release. It follows the [SPDX](https://spdx.dev/) format and
+[SLSA](https://slsa.dev/provenance/v0.2#schema) provenance schema.
+Both of the files are generated by [Docker
+buildx](https://docs.docker.com/build/metadata/attestations/) during the build
+process and stored in the container registry together with the container image
+as well as upload in the release page.
 
-If you want to keep the history use `--keep-history` flag.
+You can find them together with the signature and certificate used to sign it
+in the [release
+assets](https://github.com/kubewarden/kubewarden-controller/releases), and
+attached to the image as JSON-encoded documents following the [in-toto SPDX
+predicate](https://github.com/in-toto/attestation/blob/main/spec/predicates/spdx.md)
+format. You can obtain them with
+[`crane`](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md)
+or [`docker buildx imagetools
+inspect`](https://docs.docker.com/reference/cli/docker/buildx/imagetools/inspect).
 
-## Configuration
-
-See the `values.yaml` file of the chart for the configuration values.
-
-For the default PolicyServer configuration, Check the `kubewarden-defaults`
-chart and its documentation.
-
-# Kubewarden usage
-
-Once the kubewarden-controller is up and running, Kubewarden policies can be
-defined via the `ClusterAdmissionPolicy` resource.
-
-The documentation of this Custom Resource can be found
-[here](https://github.com/kubewarden/kubewarden-controller/blob/main/docs/crds/README.asciidoc)
-or on [docs.crds.dev](https://doc.crds.dev/github.com/kubewarden/kubewarden-controller).
-
-**Note well:** `ClusterAdmissionPolicy` resources are cluster-wide.
-
-### Deploy your first admission policy
-
-The following snippet defines a Kubewarden Policy based on the
-[pod-privileged](https://github.com/kubewarden/pod-privileged-policy)
-policy:
-
-```yaml
-kubectl apply -f - <<EOF
----
-apiVersion: policies.kubewarden.io/v1alpha2
-kind: ClusterAdmissionPolicy
-metadata:
-  name: privileged-pods
-spec:
-  policyServer: default
-  module: registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
-  rules:
-    - apiGroups: [""]
-      apiVersions: ["v1"]
-      resources: ["pods"]
-      operations:
-        - CREATE
-        - UPDATE
-  mutating: false
-EOF
-```
-
-**Note well**: The `ClusterAdmissionPolicy` is deployed in the `default` PolicyServer.
-Which is installed in the `kubewarden-defaults` chart. If you do not install
-the chart, you should deploy a PolicyServer first. Check out the
-[documentation](https://docs.kubewarden.io/quick-start.html#policy-server) for more details
-
-Let's try to create a Pod with no privileged containers:
+You can verify the container image with:
 
 ```shell
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: unprivileged-pod
-spec:
-  containers:
-    - name: nginx
-      image: nginx:latest
-EOF
+cosign verify-blob --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --bundle kubewarden-controller-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore \
+    kubewarden-controller-attestation-amd64-provenance.intoto.jsonl
 ```
 
-This will produce the following output, which means the Pod was successfully
-created:
-
-`pod/unprivileged-pod created`
-
-Now, let's try to create a pod with at least one privileged container:
+To verify the attestation manifest and its layer signatures:
 
 ```shell
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: privileged-pod
-spec:
-  containers:
-    - name: nginx
-      image: nginx:latest
-      securityContext:
-        privileged: true
-EOF
+cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    ghcr.io/kubewarden/kubewarden-controller@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
 ```
 
-This time the creation of the Pod will be blocked, with the following message:
+That sha256 hash is the digest of the attestation manifest or its layers.
+Therefore, you need to find this hash in the registry using the UI or tools
+like `crane`. For example, the following command will show you all the
+attestation manifests of the `latest` tag:
 
+```shell
+crane manifest  ghcr.io/kubewarden/kubewarden-controller:latest | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest")'
+{
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  "digest": "sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8",
+  "size": 1655,
+  "annotations": {
+    "vnd.docker.reference.digest": "sha256:611d499ec9a26034463f09fa4af4efe2856086252d233b38e3fc31b0b982d369",
+    "vnd.docker.reference.type": "attestation-manifest"
+  },
+  "platform": {
+    "architecture": "unknown",
+    "os": "unknown"
+  }
+}
+{
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  "digest": "sha256:e0cd736c2241407114256e09a4cdeef55eb81dcd374c5785c4e5c9362a0088a2",
+  "size": 1655,
+  "annotations": {
+    "vnd.docker.reference.digest": "sha256:03e5db83a25ea2ac498cf81226ab8db8eb53a74a2c9102e4a1da922d5f68b70f",
+    "vnd.docker.reference.type": "attestation-manifest"
+  },
+  "platform": {
+    "architecture": "unknown",
+    "os": "unknown"
+  }
+}
 ```
-Error from server: error when creating "STDIN": admission webhook "privileged-pods.kubewarden.admission" denied the request: User 'minikube-user' cannot schedule privileged containers
+
+Then you can use the `digest` field to verify the attestation manifest and its
+layers signatures.
+
+```shell
+cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
+
+crane manifest  ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  "config": {
+    "mediaType": "application/vnd.oci.image.config.v1+json",
+    "digest": "sha256:eda788a0e94041a443eca7286a9ef7fce40aa2832263f7d76c597186f5887f6a",
+    "size": 463
+  },
+  "layers": [
+    {
+      "mediaType": "application/vnd.in-toto+json",
+      "digest": "sha256:563689cdee407ab514d057fe2f8f693189279e10bfe4f31f277e24dee00793ea",
+      "size": 94849,
+      "annotations": {
+        "in-toto.io/predicate-type": "https://spdx.dev/Document"
+      }
+    },
+    {
+      "mediaType": "application/vnd.in-toto+json",
+      "digest": "sha256:7ce0572628290373e17ba0bbb44a9ec3c94ba36034124931d322ca3fbfb768d9",
+      "size": 7363045,
+      "annotations": {
+        "in-toto.io/predicate-type": "https://spdx.dev/Document"
+      }
+    },
+    {
+      "mediaType": "application/vnd.in-toto+json",
+      "digest": "sha256:dacf511c5ec7fd87e8692bd08c3ced2c46f4da72e7271b82f1b3720d5b0a8877",
+      "size": 71331,
+      "annotations": {
+        "in-toto.io/predicate-type": "https://spdx.dev/Document"
+      }
+    },
+    {
+      "mediaType": "application/vnd.in-toto+json",
+      "digest": "sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d",
+      "size": 980,
+      "annotations": {
+        "in-toto.io/predicate-type": "https://spdx.dev/Document"
+      }
+    },
+    {
+      "mediaType": "application/vnd.in-toto+json",
+      "digest": "sha256:7738d8d506c6482aaaef1d22ed920468ffaf4975afd28f49bb50dba2c20bf2ca",
+      "size": 13838,
+      "annotations": {
+        "in-toto.io/predicate-type": "https://slsa.dev/provenance/v0.2"
+      }
+    }
+  ]
+}
+
+cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
+    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    ghcr.io/kubewarden/kubewarden-controller@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
 ```
 
-### Remove your first admission policy
+Note that each attestation manifest (for each architecture) has its own layers.
+Each layer is a different SBOM SPDX or provenance file generated by Docker
+Buildx during the multi stage build process. You can also use `crane` to
+download the attestation file:
 
-You can delete the admission policy you just created:
-
-```console
-$ kubectl delete clusteradmissionpolicy privileged-pods
+```shell
+crane blob ghcr.io/kubewarden/kubewarden-controller@sha256:7738d8d506c6482aaaef1d22ed920468ffaf4975afd28f49bb50dba2c20bf2ca
 ```
+
+## Security disclosure
+
+See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md) on the kubewarden/community repo.
+
+# Changelog
+
+See [GitHub Releases content](https://github.com/kubewarden/kubewarden-controller/releases).

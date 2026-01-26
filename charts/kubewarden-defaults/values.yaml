@@ -119,7 +119,7 @@ policyServer:
   image:
     # The registry is defined in the global.cattle.systemDefaultRegistry value
     repository: "kubewarden/policy-server"
-    tag: v1.31.0
+    tag: v1.32.0-rc3
   serviceAccountName: policy-server
   # verificationConfig: your_configmap
   # Configmap containing a Sigstore verification configuration under a key
