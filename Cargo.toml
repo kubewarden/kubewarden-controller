@@ -30,6 +30,6 @@ tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = { version = "2.5", features = ["serde"] }
-wasi-common = "40.0"
-wasmtime = "40.0"
-wasmtime-wasi = "40.0"
+wasi-common = "41.0"
+wasmtime = "41.0"
+wasmtime-wasi = "41.0"
