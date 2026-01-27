@@ -43,7 +43,7 @@
       "groupName": "GitHub Actions"
     },
     {
-      "_comment": "bundle dependencies updates together",
+      "description": "bundle dependencies updates together",
       "matchUpdateTypes": [
         "patch",
         "minor",
