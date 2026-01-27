@@ -1,25 +1,66 @@
 {
-  "extends": ["github>kubewarden/github-actions//renovate-config/default"],
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver",
+    "schedule:weekends"
+  ],
+  "labels": [
+    "area/dependencies"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": false
+  },
   "packageRules": [
     {
-      "matchPackageNames": ["k8s.io/client-go"],
+      "matchPackageNames": [
+        "k8s.io/client-go"
+      ],
       "allowedVersions": "/^0\\.[0-9]+\\.[0-9]+$/"
     },
     {
-      "matchPackageNames": ["github.com/google/cel-go"],
+      "matchPackageNames": [
+        "github.com/google/cel-go"
+      ],
       "enabled": false
     },
     {
-      "matchManagers": ["gomod"],
+      "matchManagers": [
+        "gomod"
+      ],
       "groupName": "Go dependencies"
     },
     {
-      "matchManagers": ["cargo"],
+      "matchManagers": [
+        "cargo"
+      ],
       "groupName": "Rust dependencies"
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "GitHub Actions"
+    },
+    {
+      "description": "bundle dependencies updates together",
+      "matchUpdateTypes": [
+        "patch",
+        "minor",
+        "major"
+      ],
+      "groupName": "all dependencies updates",
+      "groupSlug": "all-updates",
+      "matchPackageNames": [
+        "*"
+      ],
+      "semanticCommits": "enabled",
+      "semanticCommitType": "build"
     }
-  ]
+  ],
+  "rebaseWhen": "behind-base-branch",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "build"
 }
