@@ -1,0 +1,7 @@
+policies:
+  - name: Update Helm chart dependencies and Hauler manifest
+    config:
+      - ./updatecli.d/update-chart-deps.yaml
+      - ./updatecli.d/update-hauler-manifest.yaml
+    values:
+      - ./update-deps-values.yaml

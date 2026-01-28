@@ -1,6 +1,6 @@
 policies:
   - name: Update Go version
     config:
-      - "updatecli.d"
+      - ./updatecli.d/go.yaml
     values:
       - values.yaml
