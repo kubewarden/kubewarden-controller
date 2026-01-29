@@ -30,9 +30,9 @@ jobs:
         # Disable plugin verification until helm v4 is supported
         run: helm plugin install https://github.com/losisin/helm-values-schema-json.git --verify=false
 
-      - name: Open PR with updatecli
+      - name: Open release PR with updatecli
         env:
           UPDATECLI_GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
         run: |-
-          updatecli apply --config updatecli/updatecli.release.d/open-release-pr.yaml \
-            --values updatecli/values.yaml
+          updatecli compose apply --file updatecli/open-release-pr.yaml

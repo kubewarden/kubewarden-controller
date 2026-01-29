@@ -1,0 +1,3 @@
+pipelineid: "update_helm_chart_dependencies"
+pr:
+  title: "Helm chart dependencies updates"

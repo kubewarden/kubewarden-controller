@@ -3,4 +3,4 @@ policies:
     config:
       - ./updatecli.d/go.yaml
     values:
-      - values.yaml
+      - ./values/values.yaml

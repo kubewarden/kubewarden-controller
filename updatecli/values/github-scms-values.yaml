@@ -1,0 +1,7 @@
+github:
+  token: "UPDATECLI_GITHUB_TOKEN"
+  branch: "main"
+  author: "kubewarden-controller bot"
+  email: "kubewarden-controller-bot@users.noreply.github.com"
+  owner: "UPDATECLI_GITHUB_OWNER"
+  repo: "kubewarden-controller"

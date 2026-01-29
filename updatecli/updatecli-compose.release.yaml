@@ -1,6 +1,0 @@
-policies:
-  - name: Update Helm Chart
-    config:
-      - "updatecli.release.d"
-    values:
-      - values.yaml

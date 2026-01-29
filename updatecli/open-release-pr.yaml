@@ -1,9 +1,10 @@
 policies:
-  - name: Update Helm chart dependencies and Hauler manifest
+  - name: Open a release PR with updated dependencies and Hauler manifest
     config:
       - ./updatecli.d/update-chart-deps.yaml
+      - ./updatecli.d/open-release-pr.yaml
       - ./updatecli.d/update-hauler-manifest.yaml
     values:
       - ./values/github-scms-values.yaml
-      - ./values/update-deps-values.yaml
+      - ./values/values.yaml
       - ./values/hauler-artifacts-values.yaml

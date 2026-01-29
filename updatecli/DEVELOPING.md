@@ -3,13 +3,13 @@
 You can trigger the pipeline and open the PR from your local machine
 as needed.
 
-Change `updatecli/values.yaml` as needed to target forks.
+Change `updatecli/values/values.yaml` as needed to target forks.
 
 ```console
 $ cd kubewarden-controller/
 $ export UPDATECLI_GITHUB_TOKEN=<your token>
-$ clear; updatecli apply --config updatecli/updatecli.release.d/open-release-pr.yaml \
-  --values updatecli/values.yaml \
+$ clear; updatecli apply --config updatecli/updatecli.d/open-release-pr.yaml \
+  --values updatecli/values/values.yaml \
   --debug --clean=true
 
 (...)
