@@ -4,22 +4,22 @@ name: Update Hauler manifest with versions from Helm chart
 pipelineid: "{{ .pipelineid }}"
 # {{ end }}
 
-scms:
-  default:
-    kind: github
-    spec:
-      user: "{{ .github.author }}"
-      email: "{{ .github.email }}"
-      owner: "{{ requiredEnv .github.owner }}"
-      repository: "kubewarden-controller"
-      branch: "{{ .github.branch }}"
-      commitusingapi: true
-      commitmessage:
-        type: "chore"
-        scope: deps
-        title: "Update dependencies in Hauler manifest"
-        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
-        hidecredit: true
+# scms:
+#   default:
+#     kind: github
+#     spec:
+#       user: "{{ .github.author }}"
+#       email: "{{ .github.email }}"
+#       owner: "{{ requiredEnv .github.owner }}"
+#       repository: "kubewarden-controller"
+#       branch: "{{ .github.branch }}"
+#       commitusingapi: true
+#       commitmessage:
+#         type: "chore"
+#         scope: deps
+#         title: "Update dependencies in Hauler manifest"
+#         footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
+#         hidecredit: true
 
 sources:
   # {{ range $oci := .ociArtifacts}}
@@ -134,28 +134,27 @@ targets:
       file: "charts/hauler.yaml"
       matchpattern: "(.*)- ?name: ?ghcr.io/kyverno/policy-reporter-ui:(v?.+) ?(.*)"
       replacepattern: '$1- name: ghcr.io/kyverno/policy-reporter-ui:{{ source "policyReporterChartUIImageTagValue" }}'
-
-actions:
-  openUpdatePR:
-    title: '{{ default "deps: Update Hauler manifest" .pr.title }}'
-    kind: "github/pullrequest"
-    scmid: "default"
-    spec:
-      automerge: false
-      mergemethod: squash
-      description: |
-        Automatic update of dependencies: policies and kuberlr-kubectl image
-        This PR has been created by automation.
-
-        NOTE: REMEMBER TO SQUASH MERGE
-
-        Update policies:
-        - [ ] I have checked that the kubewarden-defaults values
-          `recommendedPolicies.*.settings` are up to date
-        - [ ] I have updated charts/kubewarden-defaults/questions.yaml from
-          those of the policies
-
-      draft: false
-      labels:
-        - "kind/chore"
-        - "area/dependencies"
+# actions:
+#   openUpdatePR:
+#     title: '{{ default "deps: Update Hauler manifest" .pr.title }}'
+#     kind: "github/pullrequest"
+#     scmid: "default"
+#     spec:
+#       automerge: false
+#       mergemethod: squash
+#       description: |
+#         Automatic update of dependencies: policies and kuberlr-kubectl image
+#         This PR has been created by automation.
+#
+#         NOTE: REMEMBER TO SQUASH MERGE
+#
+#         Update policies:
+#         - [ ] I have checked that the kubewarden-defaults values
+#           `recommendedPolicies.*.settings` are up to date
+#         - [ ] I have updated charts/kubewarden-defaults/questions.yaml from
+#           those of the policies
+#
+#       draft: false
+#       labels:
+#         - "kind/chore"
+#         - "area/dependencies"

@@ -1,0 +1,46 @@
+# {{ if .github }}
+
+scms:
+  default:
+    kind: github
+    spec:
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "kubewarden-controller"
+      branch: "{{ .github.branch }}"
+      commitusingapi: true
+      commitmessage:
+        type: "chore"
+        scope: deps
+        title: "Update Helm charts dependencies"
+        hidecredit: true
+        footers: "Signed-off-by: Kubewarden bot <cncf-kubewarden-maintainers@lists.cncf.io>"
+
+# {{ if .pr }}
+actions:
+  openUpdatePR:
+    title: '{{ default "deps: Update helm chart dependencies" .pr.title }}'
+    kind: "github/pullrequest"
+    scmid: "default"
+    spec:
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic update of dependencies: policies and kuberlr-kubectl image
+        This PR has been created by automation.
+
+        NOTE: REMEMBER TO SQUASH MERGE
+
+        Update policies:
+        - [ ] I have checked that the kubewarden-defaults values
+          `recommendedPolicies.*.settings` are up to date
+        - [ ] I have updated charts/kubewarden-defaults/questions.yaml from
+          those of the policies
+
+      draft: false
+      labels:
+        - "kind/chore"
+        - "area/dependencies"
+# {{ end }}
+# {{ end }}

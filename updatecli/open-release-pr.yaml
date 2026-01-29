@@ -3,8 +3,8 @@ policies:
     config:
       - ./updatecli.d/update-chart-deps.yaml
       - ./updatecli.d/open-release-pr.yaml
-      - ./updatecli.d/update-hauler-manifest.yaml
+      # - ./updatecli.d/update-hauler-manifest.yaml
     values:
       - ./values/github-scms-values.yaml
       - ./values/values.yaml
-      - ./values/hauler-artifacts-values.yaml
+      # - ./values/hauler-artifacts-values.yaml
