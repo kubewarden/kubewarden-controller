@@ -194,14 +194,14 @@ recommendedPolicies:
   allowPrivilegeEscalationPolicy:
     module:
       repository: "kubewarden/policies/allow-privilege-escalation-psp"
-      tag: v1.0.6
+      tag: v1.0.9
     name: "no-privilege-escalation"
     settings:
       allowPrivilegeEscalation: false
   hostNamespacePolicy:
     module:
       repository: "kubewarden/policies/host-namespaces-psp"
-      tag: v1.1.6
+      tag: v1.1.7
     name: "no-host-namespace-sharing"
     settings:
       allow_host_ipc: false
@@ -211,7 +211,7 @@ recommendedPolicies:
   podPrivilegedPolicy:
     module:
       repository: "kubewarden/policies/pod-privileged"
-      tag: v1.0.8
+      tag: v1.0.9
     name: "no-privileged-pod"
     settings:
       skip_init_containers: false
@@ -219,7 +219,7 @@ recommendedPolicies:
   userGroupPolicy:
     module:
       repository: "kubewarden/policies/user-group-psp"
-      tag: v1.1.3
+      tag: v1.1.4
     name: "do-not-run-as-root"
     settings:
       run_as_user:
@@ -232,7 +232,7 @@ recommendedPolicies:
   hostPathsPolicy:
     module:
       repository: "kubewarden/policies/hostpaths-psp"
-      tag: v1.1.3
+      tag: v1.1.6
     name: "do-not-share-host-paths"
     settings:
       allowedHostPaths:
@@ -241,7 +241,7 @@ recommendedPolicies:
   capabilitiesPolicy:
     module:
       repository: "kubewarden/policies/capabilities-psp"
-      tag: v1.0.7
+      tag: v1.0.9
     name: "drop-capabilities"
     settings:
       allowed_capabilities: []
