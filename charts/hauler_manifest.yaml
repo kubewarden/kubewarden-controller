@@ -12,12 +12,12 @@ metadata:
     hauler.dev/certificate-oidc-issuer: https://token.actions.githubusercontent.com
 spec:
   images:
-    - name: ghcr.io/kubewarden/audit-scanner:v1.31.0
-      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.31.0
-    - name: ghcr.io/kubewarden/kubewarden-controller:v1.31.0
-      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.31.0
-    - name: ghcr.io/kubewarden/policy-server:v1.31.0
-      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.31.0
+    - name: ghcr.io/kubewarden/audit-scanner:v1.32.0-rc3
+      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
+    - name: ghcr.io/kubewarden/kubewarden-controller:v1.32.0-rc3
+      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
+    - name: ghcr.io/kubewarden/policy-server:v1.32.0-rc3
+      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
 ---
 # The policies are in a separated definition just to allow a better keyless validation
 # without the need to duplicate configuration
@@ -27,15 +27,15 @@ metadata:
   name: kubewarden-policies
   annotations:
     hauler.dev/certificate-oidc-issuer: https://token.actions.githubusercontent.com
-    hauler.dev/certificate-identity-regexp: https://github.com/kubewarden/github-actions/.github/workflows/.*
+    hauler.dev/certificate-identity-regexp: https://github.com/kubewarden/policies/.github/workflows/release.yml@refs/tags/.*
 spec:
   images:
-    - name: ghcr.io/kubewarden/policies/allow-privilege-escalation-psp:v1.0.5
-    - name: ghcr.io/kubewarden/policies/capabilities-psp:v1.0.7
-    - name: ghcr.io/kubewarden/policies/host-namespaces-psp:v1.1.5
-    - name: ghcr.io/kubewarden/policies/hostpaths-psp:v1.1.2
-    - name: ghcr.io/kubewarden/policies/pod-privileged:v1.0.8
-    - name: ghcr.io/kubewarden/policies/user-group-psp:v1.1.2
+    - name: ghcr.io/kubewarden/policies/allow-privilege-escalation-psp:v1.0.10
+    - name: ghcr.io/kubewarden/policies/capabilities-psp:v1.0.10
+    - name: ghcr.io/kubewarden/policies/host-namespaces-psp:v1.1.8
+    - name: ghcr.io/kubewarden/policies/hostpaths-psp:v1.1.7
+    - name: ghcr.io/kubewarden/policies/pod-privileged:v1.0.10
+    - name: ghcr.io/kubewarden/policies/user-group-psp:v1.1.5
 ---
 # The policy reporter and kuberlr images are defined in the dedicated manifest section because
 # the container images are not signed. Therefore, this difference is very clear
@@ -46,8 +46,8 @@ metadata:
   name: kubewarden-not-signed-images
 spec:
   images:
-    - name: ghcr.io/kyverno/policy-reporter-ui:2.5.0
-    - name: ghcr.io/kyverno/policy-reporter:3.6.0
+    - name: ghcr.io/kyverno/policy-reporter-ui:2.5.1
+    - name: ghcr.io/kyverno/policy-reporter:3.7.0
     - name: ghcr.io/rancher/kuberlr-kubectl:v6.0.0
 ---
 apiVersion: content.hauler.cattle.io/v1
@@ -58,13 +58,13 @@ spec:
   charts:
     - name: kubewarden-crds
       repoURL: https://charts.kubewarden.io
-      version: 1.23.0
+      version: 1.24.0-rc3
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
-      version: 5.9.0
+      version: 5.10.0-rc3
     - name: kubewarden-defaults
       repoURL: https://charts.kubewarden.io
-      version: 3.9.0
+      version: 3.10.0-rc3
     - name: policy-reporter
       version: 3.7.0
       repoURL: https://kyverno.github.io/policy-reporter
