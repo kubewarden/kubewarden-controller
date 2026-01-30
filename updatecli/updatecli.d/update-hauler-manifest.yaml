@@ -1,0 +1,162 @@
+name: Update Hauler manifest with versions from Helm chart
+
+# {{ if .pipelineid }}
+pipelineid: "{{ .pipelineid }}"
+# {{ end }}
+
+scms:
+  default:
+    kind: github
+    spec:
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      directory: "/tmp/kubewarden-controller"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "kubewarden-controller"
+      username: "{{ requiredEnv .github.user }}"
+      branch: "{{ .github.branch }}"
+      commitmessage:
+        type: "chore"
+        scope: deps
+        title: "Update dependencies in Hauler manifest"
+        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
+        hidecredit: true
+
+sources:
+  # {{ range $oci := .ociArtifacts}}
+  "source/{{ $oci.image }}Version":
+    kind: yaml
+    scmid: default
+    spec:
+      file: "{{ $oci.file }}"
+      key: "{{ $oci.key}}"
+  # {{ end }}
+  # {{ range $i, $chart := .helmCharts}}
+  "source/{{ $chart.name}}ChartVersion":
+    kind: yaml
+    scmid: default
+    spec:
+      file: "{{ $chart.file }}"
+      key: "{{ $chart.versionKey }}"
+  # {{ end }}
+  policyReporterChartAppVersion:
+    name: "Get appVersion from policy-reporter chart"
+    kind: yaml
+    dependson:
+      - source/policy-reporterChartVersion
+    spec:
+      file: 'https://raw.githubusercontent.com/kyverno/policy-reporter/refs/tags/policy-reporter-{{ source "source/policy-reporterChartVersion" }}/charts/policy-reporter/Chart.yaml'
+      key: "$.appVersion"
+  policyReporterChartUIImageTagValue:
+    name: "Get ui.image.tag value from policy-reporter chart"
+    kind: yaml
+    transformers:
+      - trimprefix: '"'
+      - trimsuffix: '"'
+    dependson:
+      - source/policy-reporterChartVersion
+    spec:
+      file: 'https://raw.githubusercontent.com/kyverno/policy-reporter/refs/tags/policy-reporter-{{ source "source/policy-reporterChartVersion" }}/charts/policy-reporter/values.yaml'
+      key: "$.ui.image.tag"
+
+# {{ if .helmCharts}}
+conditions:
+  # Adding this condition just to ensure that the policy-reporter chart is in
+  # the expected position. Hopefully, we could find a better way to do that in
+  # the target below. See why this is necessary in the target comment
+  # {{ range $i, $chart := .helmCharts}}
+  "condition/{{ $chart.name}}Position":
+    kind: yaml
+    disablesourceinput: true
+    spec:
+      file: "charts/hauler.yaml"
+      key: "$.spec.charts[{{ $i }}].name"
+      value: "{{ $chart.name }}"
+  # {{ end }}
+# {{ end }}
+
+targets:
+  # {{ range $oci := .ociArtifacts}}
+  "target/{{ $oci.image }}":
+    name: "Update {{ $oci.image }} image in Hauler manifest"
+    kind: file
+    sourceid: "source/{{ $oci.image }}Version"
+    scmid: "default"
+    dependson:
+      - '{{ printf "source#source/%sVersion" $oci.image }}'
+    spec:
+      file: "charts/hauler.yaml"
+      matchpattern: "(.*)- ?name: ?{{ $oci.image }}:(v?.+) ?(.*)"
+      replacepattern: '$1- name: {{ $oci.image }}:{{ printf "source/%sVersion" $oci.image | source }}'
+  # {{ if $oci.workflowUrl }}
+  "target/{{ $oci.image }}IdentityRegex":
+    name: "Update {{ $oci.image }} image identity regex in Hauler manifest"
+    kind: file
+    sourceid: "source/{{ $oci.image }}Version"
+    dependson:
+      - '{{ printf "source#source/%sVersion" $oci.image }}'
+    scmid: "default"
+    spec:
+      file: "charts/hauler.yaml"
+      matchpattern: "(.*)? certificate-identity-regexp: ?{{ $oci.workflowUrl }}/(v?.+) ?(.*)"
+      replacepattern: '$1 certificate-identity-regexp: {{ $oci.workflowUrl }}/{{ printf "source/%sVersion" $oci.image | source }}'
+  # {{ end }}
+  # {{ end }}
+  # {{ range $i, $chart := .helmCharts}}
+  "target/{{ $chart.name}}Chart":
+    name: "Update {{ $chart.name }} Helm chart version in Hauler manifest"
+    kind: yaml
+    sourceid: "source/{{  $chart.name }}ChartVersion"
+    scmid: "default"
+    dependson:
+      - '{{ printf "condition#condition/%sPosition" $chart.name }}'
+    spec:
+      file: "charts/hauler.yaml"
+      # Yamlpath to filter the helm chart by name did not work. That's why we
+      # have the condition to ensure the script is not updating the wrong helm
+      # chart
+      key: "$.spec.charts[{{ $i }}].version"
+  # {{ end }}
+  policyReporterImage:
+    name: "Update policy-reporter image in Hauler manifest"
+    kind: file
+    sourceid: policyReporterChartAppVersion
+    scmid: default
+    spec:
+      file: "charts/hauler.yaml"
+      matchpattern: "(.*)- ?name: ?ghcr.io/kyverno/policy-reporter:(v?.+) ?(.*)"
+      replacepattern: '$1- name: ghcr.io/kyverno/policy-reporter:{{ source "policyReporterChartAppVersion" }}'
+  policyReporterUIImage:
+    name: "Update policy-reporter-ui image in Hauler manifest"
+    kind: file
+    sourceid: policyReporterChartUIImageTagValue
+    scmid: default
+    spec:
+      file: "charts/hauler.yaml"
+      matchpattern: "(.*)- ?name: ?ghcr.io/kyverno/policy-reporter-ui:(v?.+) ?(.*)"
+      replacepattern: '$1- name: ghcr.io/kyverno/policy-reporter-ui:{{ source "policyReporterChartUIImageTagValue" }}'
+
+actions:
+  openUpdatePR:
+    title: '{{ default "deps: Update helm chart dependencies" .pr.title }}'
+    kind: "github/pullrequest"
+    scmid: "default"
+    spec:
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic update of helm chart dependencies:  Helm charts, policies, kuberlr-kubectl image, and Hauler manifest
+        This PR has been created by automation.
+
+        NOTE: REMEMBER TO SQUASH MERGE
+
+        Update checklist:
+        - [ ] I have checked that the kubewarden-defaults values
+          `recommendedPolicies.*.settings` are up to date
+        - [ ] I have updated charts/kubewarden-defaults/questions.yaml from
+          those of the policies
+
+      draft: false
+      labels:
+        - "kind/chore"
+        - "area/dependencies"
