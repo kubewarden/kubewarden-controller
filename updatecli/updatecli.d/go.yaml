@@ -60,7 +60,7 @@ scms:
     spec:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
-      owner: "{{ .github.owner }}"
+      owner: "{{ requiredEnv .github.owner }}"
       repository: "kubewarden-controller"
       branch: "{{ .github.branch }}"
       commitusingapi: true

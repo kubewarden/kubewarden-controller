@@ -21,6 +21,9 @@ jobs:
 
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@4fd2c16d992120bd5355264a03ad0cddec013e1b # v2.99.0
+        with:
+          # Pinned to v0.109.0 due to a behavior change in newer versions that breaks the update script
+          version: v0.109.0
 
       - name: Install helm
         # Helm and helm plugins installation required by the updatecli release action
@@ -33,6 +36,7 @@ jobs:
       - name: Open PR with updatecli
         env:
           UPDATECLI_GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
         run: |-
           updatecli apply --config updatecli/updatecli.release.d/open-release-pr.yaml \
             --values updatecli/values.yaml

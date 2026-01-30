@@ -33,7 +33,7 @@ jobs:
         env:
           # As a reminder, a pipeline create
           UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UPDATECLI_GITHUB_USERNAME: ${{ github.repository_owner }}
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
         run: "updatecli compose diff --file updatecli/updatecli-compose.yaml"
 
       - name: Run Updatecli
@@ -42,4 +42,5 @@ jobs:
           UPDATECLI_GITHUB_APP_CLIENT_ID: ${{ secrets.APP_ID }}
           UPDATECLI_GITHUB_APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
           UPDATECLI_GITHUB_APP_INSTALLATION_ID: "${{ secrets.APP_INSTALLATION_ID }}"
+          UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
         run: "updatecli compose apply --file updatecli/updatecli-compose.yaml"
