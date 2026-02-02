@@ -1,5 +1,5 @@
 use policy_fetcher::sources::SourceResult;
-use policy_fetcher::sources::{read_sources_file, Certificate, Sources};
+use policy_fetcher::sources::{Certificate, Sources, read_sources_file};
 use std::io::Write;
 use std::path::Path;
 use tempfile::NamedTempFile;

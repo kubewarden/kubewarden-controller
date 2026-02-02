@@ -220,8 +220,7 @@ fn policy_file_name(url: &Url) -> String {
 
 /// Returns the host and port (if any) as a string.
 fn host_and_port(url: &Url) -> String {
-    let host_and_port = url
-        .host_str()
+    url.host_str()
         .map(|host| {
             if let Some(port) = url.port() {
                 format!("{host}:{port}")
@@ -229,9 +228,7 @@ fn host_and_port(url: &Url) -> String {
                 host.into()
             }
         })
-        .unwrap_or_default();
-
-    host_and_port
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

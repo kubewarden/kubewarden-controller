@@ -1,6 +1,6 @@
 pub mod base64url {
     use crate::errors::{BurregoError, Result};
-    use base64::{engine::general_purpose, Engine as _};
+    use base64::{Engine as _, engine::general_purpose};
 
     /// A base64 engine that uses URL_SAFE alphabet and escapes using no padding
     /// For performance reasons, it's recommended to cache its creation

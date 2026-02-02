@@ -1,15 +1,15 @@
 use k8s_openapi::{
+    List,
     api::{
         apps::v1::Deployment,
         authorization::v1::SubjectAccessReviewStatus,
         core::v1::{Namespace, Service},
     },
-    List,
 };
 use kubewarden::host_capabilities::kubernetes::{
-    can_i, get_resource, list_all_resources, list_resources_by_namespace, CanIRequest,
-    GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
-    ResourceAttributes, SubjectAccessReview,
+    CanIRequest, GetResourceRequest, ListAllResourcesRequest, ListResourcesByNamespaceRequest,
+    ResourceAttributes, SubjectAccessReview, can_i, get_resource, list_all_resources,
+    list_resources_by_namespace,
 };
 use lazy_static::lazy_static;
 
@@ -23,7 +23,7 @@ use kubewarden::{logging, protocol_version_guest, request::ValidationRequest, va
 mod settings;
 use settings::Settings;
 
-use slog::{o, Logger};
+use slog::{Logger, o};
 
 lazy_static! {
     static ref LOG_DRAIN: Logger = Logger::root(
@@ -32,7 +32,7 @@ lazy_static! {
     );
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn wapc_init() {
     register_function("validate", validate);
     register_function("validate_settings", validate_settings::<Settings>);

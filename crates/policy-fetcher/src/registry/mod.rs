@@ -6,13 +6,13 @@ use errors::RegistryError;
 use futures::future::BoxFuture;
 use lazy_static::lazy_static;
 use oci_client::{
+    Reference,
     client::{
         Certificate as OciCertificate, CertificateEncoding, Client, ClientConfig,
         ClientProtocol as OciClientProtocol, Config, ImageLayer,
     },
     manifest,
     secrets::RegistryAuth,
-    Reference,
 };
 use regex::Regex;
 use tracing::{debug, info, warn};

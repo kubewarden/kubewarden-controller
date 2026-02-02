@@ -22,8 +22,8 @@ use crate::errors::{CannotCreateStoragePathError, FetcherError};
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::https::Https;
 use crate::policy::Policy;
-use crate::registry::build_fully_resolved_reference;
 use crate::registry::Registry;
+use crate::registry::build_fully_resolved_reference;
 use crate::sources::Sources;
 use crate::store::Store;
 

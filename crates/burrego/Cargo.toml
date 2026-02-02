@@ -1,6 +1,6 @@
 [package]
 authors = ["Flavio Castelli <fcastelli@suse.com>"]
-edition = "2021"
+edition = "2024"
 name    = "burrego"
 version = "0.3.4"
 

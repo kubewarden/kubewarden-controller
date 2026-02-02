@@ -1,4 +1,4 @@
-use base64::{alphabet, engine::general_purpose, Engine as _};
+use base64::{Engine as _, alphabet, engine::general_purpose};
 use std::path::{Path, PathBuf};
 
 use crate::store::errors::StoreResult;
