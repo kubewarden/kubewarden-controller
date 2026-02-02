@@ -4,6 +4,9 @@
     "helpers:pinGitHubActionDigestsToSemver",
     "schedule:weekends"
   ],
+  "ignoreDeps": [
+    "sigs.k8s.io/wg-policy-prototypes"
+  ],
   "labels": [
     "area/dependencies"
   ],
@@ -41,11 +44,6 @@
         "github-actions"
       ],
       "groupName": "GitHub Actions"
-    },
-    {
-      "ignoreDeps": [
-        "sigs.k8s.io/wg-policy-prototypes*"
-      ]
     }
   ],
   "rebaseWhen": "behind-base-branch",
