@@ -52,7 +52,7 @@ on:
     branches:
       - "main"
     paths:
-      - 'charts/kubewarden-*/**'
+      - "charts/kubewarden-*/**"
 
   # Nightly:
   # - install from main with latest images (to check if we can tag and release)
@@ -79,7 +79,7 @@ defaults:
 
 env:
   K3D_VERSION: # 'v5.6.3' - optionally pin version
-  K3D_CLUSTER_NAME: ${{ github.repository_owner }}-${{ github.event.repository.name }}-runner
+  K3D_CLUSTER_NAME: ${{ github.repository_owner }}-${{ github.event.repository.name }}
   MTLS: ${{ github.event_name == 'schedule' && 'true' || inputs.MTLS }}
 
 jobs:
