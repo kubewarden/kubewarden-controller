@@ -17,7 +17,7 @@ directories        = "6.0.0"
 flate2             = "1.1"
 humansize          = "2.1"
 indicatif          = "0.18"
-is-terminal        = "0.4.16"
+is-terminal        = "0.4.17"
 itertools          = { workspace = true }
 k8s-openapi        = { workspace = true }
 lazy_static        = { workspace = true }
@@ -30,16 +30,16 @@ semver             = { workspace = true }
 serde              = { workspace = true }
 serde_json         = { workspace = true }
 serde_yaml         = { workspace = true }
-tar                = "0.4.40"
-termimad           = "0.34.0"
+tar                = "0.4.44"
+termimad           = "0.34.1"
 thiserror          = { workspace = true }
-time               = "0.3.36"
+time               = "0.3.46"
 tiny-bench         = "0.4"
 tokio              = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { workspace = true }
 url                = { workspace = true }
-walrus             = "0.24.0"
+walrus             = "0.24.5"
 
 hostname-validator = "1.1.1"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
@@ -53,8 +53,8 @@ rustls = { version = "0.23", default-features = false }
 sigstore_protobuf_specs = "0.5"
 
 [dev-dependencies]
-assert_cmd     = "2.0.14"
-hyper          = { version = "1.5.0" }
+assert_cmd     = "2.1.2"
+hyper          = { version = "1.8.1" }
 predicates     = "3.1"
 rstest         = { workspace = true }
 sha2           = { workspace = true }

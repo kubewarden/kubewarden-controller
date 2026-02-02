@@ -15,4 +15,4 @@ kubewarden-policy-sdk = { workspace = true }
 lazy_static           = { workspace = true }
 serde                 = { workspace = true }
 serde_json            = { workspace = true }
-slog                  = "2.7"
+slog                  = "2.8"

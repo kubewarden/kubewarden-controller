@@ -6,7 +6,7 @@ resolver = "2"
 anyhow = "1.0"
 base64 = "0.22"
 clap = { version = "4.5", features = ["cargo", "env"] }
-clap-markdown = "0.1.4"
+clap-markdown = "0.1.5"
 futures = "0.3"
 itertools = "0.14.0"
 k8s-openapi = { version = "0.27.0", default-features = false, features = [
@@ -14,12 +14,12 @@ k8s-openapi = { version = "0.27.0", default-features = false, features = [
 ] }
 kubewarden-policy-sdk = { version = "0.15.1" }
 lazy_static = "1.5"
-rayon = "1.10"
+rayon = "1.11"
 regex = "1"
 rstest = "0.26"
 rustls = { version = "0.23", default-features = false }
 rustls-pki-types = { version = "1", features = ["alloc"] }
-semver = { version = "1.0.22", features = ["serde"] }
+semver = { version = "1.0.27", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"

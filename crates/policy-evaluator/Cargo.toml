@@ -20,9 +20,9 @@ dns-lookup = "3.0"
 email_address = { version = "0.2", features = ["serde"] }
 futures = { workspace = true }
 itertools = { workspace = true }
-json-patch = "4.0"
+json-patch = "4.1"
 k8s-openapi = { workspace = true }
-kube = { version = "3.0.0", default-features = false, features = [
+kube = { version = "3.0.1", default-features = false, features = [
   "client",
   "runtime",
   "rustls-tls",
@@ -30,7 +30,7 @@ kube = { version = "3.0.0", default-features = false, features = [
 kubewarden-policy-sdk = { workspace = true, features = ["crd"] }
 lazy_static = { workspace = true }
 mail-parser = { version = "0.11", features = ["serde"] }
-pki-types = { package = "rustls-pki-types", version = "1.12", default-features = false, features = [
+pki-types = { package = "rustls-pki-types", version = "1.14", default-features = false, features = [
   "std",
 ] }
 policy-fetcher = { path = "../policy-fetcher" }
@@ -62,7 +62,7 @@ assert-json-diff = "2.0"
 hyper            = { version = "1" }
 rcgen            = { version = "0.14", features = ["x509-parser"] }
 rstest           = { workspace = true }
-serial_test      = "3.2"
+serial_test      = "3.3"
 tempfile         = { workspace = true }
 test-context     = "0.5"
 test-log         = "0.2"
