@@ -30,6 +30,7 @@ jobs:
     outputs:
       go: ${{ steps.changed-files.outputs.go }}
       rust: ${{ steps.changed-files.outputs.rust }}
+      ci-full: ${{ steps.changed-files.outputs.ci-full }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -42,6 +43,7 @@ jobs:
             echo "run_all=true, running all checks"
             echo "go=true" >> $GITHUB_OUTPUT
             echo "rust=true" >> $GITHUB_OUTPUT
+            echo "ci-full=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -54,6 +56,7 @@ jobs:
               echo "Label 'ci-full' found, running all checks"
               echo "go=true" >> $GITHUB_OUTPUT
               echo "rust=true" >> $GITHUB_OUTPUT
+              echo "ci-full=true" >> $GITHUB_OUTPUT
               exit 0
             fi
             
@@ -299,6 +302,16 @@ jobs:
       - name: helm unit tests
         run: make helm-unittest
 
+  validate-hauler-manifest:
+    name: Validate Hauler manifest
+    needs: changes
+    if: needs.changes.outputs.ci-full == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run validation script
+        run: ./scripts/validate-hauler-manifest.sh
+
   # Rollup job for branch protection - single stable job name that depends on all checks
   ci-success:
     name: CI Success
@@ -318,6 +331,7 @@ jobs:
       - integration-tests-policy-evaluator
       - shellcheck
       - charts
+      - validate-hauler-manifest
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status
