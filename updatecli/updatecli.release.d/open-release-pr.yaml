@@ -70,21 +70,21 @@ conditions:
     kind: yaml
     disablesourceinput: true
     spec:
-      file: "./charts/hauler.yaml"
+      file: "./charts/hauler_manifest.yaml"
       key: "$.spec.charts[0].name"
       value: "kubewarden-crds"
   kubewardenControllerChartPosition:
     kind: yaml
     disablesourceinput: true
     spec:
-      file: "./charts/hauler.yaml"
+      file: "./charts/hauler_manifest.yaml"
       key: "$.spec.charts[1].name"
       value: "kubewarden-controller"
   kubewardenDefaultsChartPosition:
     kind: yaml
     disablesourceinput: true
     spec:
-      file: "./charts/hauler.yaml"
+      file: "./charts/hauler_manifest.yaml"
       key: "$.spec.charts[2].name"
       value: "kubewarden-defaults"
 
@@ -95,7 +95,7 @@ targets:
     sourceid: crdsChartVersion
     scmid: "default"
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       # Yamlpath to filter the helm chart by name did not work. That's why we
       # have the condition to ensure the script is not updating the wrong helm
       # chart
@@ -106,7 +106,7 @@ targets:
     sourceid: controllerChartVersion
     scmid: "default"
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       # Yamlpath to filter the helm chart by name did not work. That's why we
       # have the condition to ensure the script is not updating the wrong helm
       # chart
@@ -117,7 +117,7 @@ targets:
     sourceid: "defaultsChartVersion"
     scmid: "default"
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       # Yamlpath to filter the helm chart by name did not work. That's why we
       # have the condition to ensure the script is not updating the wrong helm
       # chart

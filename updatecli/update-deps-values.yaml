@@ -61,7 +61,7 @@ ociArtifacts:
     key: "$.preDeleteJob.image.tag"
 # The helmCharts list all the Helm charts listed in the Hauler that needs to be
 # updated regurlarly. This list should be in the same order as defined in the
-# charts/hauler.yaml file.
+# charts/hauler_manifest.yaml file.
 helmCharts:
   - name: kubewarden-crds
     file: "charts/kubewarden-crds/Chart.yaml"
