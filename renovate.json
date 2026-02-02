@@ -16,6 +16,31 @@
   },
   "packageRules": [
     {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "kubewarden/kubewarden-controller",
+        "kubewarden/audit-scanner"
+      ],
+      "matchPaths": [
+        "charts/kubewarden-controller/values.yaml"
+      ],
+      "enabled": false
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "kubewarden/policy-server"
+      ],
+      "matchPaths": [
+        "charts/kubewarden-defaults/values.yaml"
+      ],
+      "enabled": false
+    },
+    {
       "matchPackageNames": [
         "k8s.io/client-go"
       ],
