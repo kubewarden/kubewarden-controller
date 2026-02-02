@@ -1,4 +1,4 @@
-use super::{get_builtins, BuiltinFunctionsMap};
+use super::{BuiltinFunctionsMap, get_builtins};
 use crate::errors::{BurregoError, Result};
 
 use lazy_static::lazy_static;

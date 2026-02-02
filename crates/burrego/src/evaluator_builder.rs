@@ -2,7 +2,7 @@ use crate::errors::{BurregoError, Result};
 use std::path::{Path, PathBuf};
 use wasmtime::{Engine, Module};
 
-use crate::{host_callbacks::HostCallbacks, Evaluator};
+use crate::{Evaluator, host_callbacks::HostCallbacks};
 
 #[derive(Default)]
 pub struct EvaluatorBuilder {

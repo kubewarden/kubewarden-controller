@@ -1,6 +1,6 @@
 use crate::errors::{BurregoError, Result};
 use core::fmt::Display;
-use regex::{escape as regex_escape, Regex};
+use regex::{Regex, escape as regex_escape};
 use std::{fmt, str::FromStr};
 
 pub fn split(args: &[serde_json::Value]) -> Result<serde_json::Value> {
@@ -245,12 +245,14 @@ mod tests {
                 .is_match("urn:foo:{.*}"),
         );
 
-        assert!(TemplateMatch::regexp_from_template(
-            "urn:foo:test:section-<[0-9]{2}>:alert-<[0-9]{4}>",
-            '<',
-            '>',
-        )?
-        .is_match("urn:foo:test:section-42:alert-1234"),);
+        assert!(
+            TemplateMatch::regexp_from_template(
+                "urn:foo:test:section-<[0-9]{2}>:alert-<[0-9]{4}>",
+                '<',
+                '>',
+            )?
+            .is_match("urn:foo:test:section-42:alert-1234"),
+        );
 
         Ok(())
     }
