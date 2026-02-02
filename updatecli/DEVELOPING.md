@@ -26,3 +26,25 @@ Pipeline(s) run:
 One action to follow up:
   * https://github.com/viccuad/kubewarden-controller/pull/1
 ```
+
+## Dependency Updates
+
+All dependency updates are consolidated into a single weekly workflow.
+
+### Weekly Dependency Updates
+Runs weekly (Monday 3:30 AM) via `.github/workflows/update-dependencies.yaml` using `update-deps.yaml`.
+
+Updates the following dependencies:
+- Go version in `go.mod` and Dockerfiles
+- Policy image tags in Helm chart values
+- Policy-reporter chart version
+- Kuberlr-kubectl image version
+- Hauler manifest with all component versions
+
+### Running Updates Manually
+For manual runs of all dependency updates:
+```console
+$ export UPDATECLI_GITHUB_TOKEN=<your token>
+$ export UPDATECLI_GITHUB_OWNER=kubewarden
+$ updatecli compose diff --file updatecli/update-deps.yaml
+```

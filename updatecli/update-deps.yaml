@@ -1,0 +1,9 @@
+policies:
+  - name: Update Go version, Helm chart dependencies and Hauler manifest
+    config:
+      - ./updatecli.d/go.yaml
+      - ./updatecli.d/update-chart-deps.yaml
+      - ./updatecli.d/update-hauler-manifest.yaml
+    values:
+      - ./values.yaml
+      - ./update-deps-values.yaml

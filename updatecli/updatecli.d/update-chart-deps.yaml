@@ -1,0 +1,122 @@
+name: Update charts with new policies, policy-reporter and kubectl versions
+
+# {{ if .pipelineid }}
+pipelineid: "{{ .pipelineid }}"
+# {{ end }}
+
+sources:
+  # {{ range $oci := .ociArtifacts}}
+  # Kubewarden container image should now use the version from the registry.
+  # Let keep using the version defined in the release process.
+  # {{ if not $oci.skipVersionFromRegistry }}
+  "source/{{ $oci.image }}":
+    kind: dockerimage
+    spec:
+      image: "{{ $oci.image }}"
+      versionfilter:
+        kind: semver
+        # {{ if $oci.strict }}
+        strict: true
+        # {{ end }}
+  # {{ end }}
+  # {{ end }}
+  # {{ range $chart := .helmCharts}}
+  # {{ if $chart.repository }}
+  "source/{{ $chart.name }}Chart":
+    kind: helmchart
+    spec:
+      url: "{{ $chart.repository }}"
+      name: "{{ $chart.name }}"
+  # {{ end }}
+  # {{ end }}
+
+targets:
+  # {{ range $oci := .ociArtifacts}}
+  # {{ if not $oci.skipVersionFromRegistry }}
+  "target/{{ $oci.image }}":
+    name: "Update {{ $oci.image }} image tag"
+    kind: yaml
+    sourceid: "source/{{ $oci.image }}"
+    scmid: "default"
+    dependson:
+      - '{{ printf "source#source/%s" $oci.image }}'
+    spec:
+      file: "{{ $oci.file }}"
+      key: "{{ $oci.key }}"
+  # {{ end }}
+  # {{ end }}
+  # {{ range $chart := .helmCharts}}
+  # {{ if $chart.repository }}
+  "target/{{ $chart.name }}Chart":
+    name: "Update {{ $chart.name }} dependency helm chart"
+    kind: yaml
+    sourceid: "source/{{ $chart.name }}Chart"
+    scmid: "default"
+    dependson:
+      - '{{ printf "source#source/%sChart" $chart.name }}'
+    spec:
+      file: "{{ $chart.file }}"
+      key: "{{ $chart.versionKey }}"
+  # {{ end }}
+  # {{ if eq $chart.name "policy-reporter" }}
+  target/updateDependenciesLockFile:
+    name: Call helm dependency update command to update the lock file
+    kind: shell
+    disablesourceinput: true
+    scmid: "default"
+    dependson:
+      - '{{ printf "target#target/%sChart" $chart.name }}'
+    spec:
+      command: |
+        helm dependency update charts/kubewarden-controller
+      changedif:
+        kind: file/checksum
+        spec:
+          files:
+            - charts/kubewarden-controller/Chart.lock
+  # {{ end }}
+  # {{ end }}
+
+actions:
+  openUpdatePR:
+    title: '{{ default "deps: Update Helm chart dependencies" .pr.title }}'
+    kind: "github/pullrequest"
+    scmid: "default"
+    spec:
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic update of Helm chart dependencies: Helm charts, policies, kuberlr-kubectl image, and Hauler manifest
+        This PR has been created by automation.
+
+        > [!IMPORTANT]
+        > REMEMBER USING SQUASH MERGE FOR THIS PR
+
+        Update checklist:
+        - [ ] I have checked that the kubewarden-defaults values
+          `recommendedPolicies.*.settings` are up to date
+        - [ ] I have updated charts/kubewarden-defaults/questions.yaml from
+          those of the policies
+
+      draft: false
+      labels:
+        - "kind/chore"
+        - "area/dependencies"
+
+scms:
+  default:
+    kind: github
+    spec:
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      directory: "/tmp/kubewarden-controller"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "kubewarden-controller"
+      username: "{{ requiredEnv .github.user }}"
+      branch: "{{ .github.branch }}"
+      commitmessage:
+        type: "chore"
+        scope: deps
+        title: "Update Helm charts dependencies"
+        hidecredit: true
+        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
