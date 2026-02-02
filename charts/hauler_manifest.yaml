@@ -3,7 +3,7 @@
 #
 # To sync this file with Hauler and load everything into its storage, you can
 # run:
-# hauler store sync --filename hauler.yaml
+# hauler store sync --filename hauler_manifest.yaml
 apiVersion: content.hauler.cattle.io/v1
 kind: Images
 metadata:

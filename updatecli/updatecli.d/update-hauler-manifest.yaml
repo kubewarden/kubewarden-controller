@@ -69,7 +69,7 @@ conditions:
     kind: yaml
     disablesourceinput: true
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       key: "$.spec.charts[{{ $i }}].name"
       value: "{{ $chart.name }}"
   # {{ end }}
@@ -85,7 +85,7 @@ targets:
     dependson:
       - '{{ printf "source#source/%sVersion" $oci.image }}'
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       matchpattern: "(.*)- ?name: ?{{ $oci.image }}:(v?.+) ?(.*)"
       replacepattern: '$1- name: {{ $oci.image }}:{{ printf "source/%sVersion" $oci.image | source }}'
   # {{ if $oci.workflowUrl }}
@@ -97,7 +97,7 @@ targets:
       - '{{ printf "source#source/%sVersion" $oci.image }}'
     scmid: "default"
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       matchpattern: "(.*)? certificate-identity-regexp: ?{{ $oci.workflowUrl }}/(v?.+) ?(.*)"
       replacepattern: '$1 certificate-identity-regexp: {{ $oci.workflowUrl }}/{{ printf "source/%sVersion" $oci.image | source }}'
   # {{ end }}
@@ -111,7 +111,7 @@ targets:
     dependson:
       - '{{ printf "condition#condition/%sPosition" $chart.name }}'
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       # Yamlpath to filter the helm chart by name did not work. That's why we
       # have the condition to ensure the script is not updating the wrong helm
       # chart
@@ -123,7 +123,7 @@ targets:
     sourceid: policyReporterChartAppVersion
     scmid: default
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       matchpattern: "(.*)- ?name: ?ghcr.io/kyverno/policy-reporter:(v?.+) ?(.*)"
       replacepattern: '$1- name: ghcr.io/kyverno/policy-reporter:{{ source "policyReporterChartAppVersion" }}'
   policyReporterUIImage:
@@ -132,7 +132,7 @@ targets:
     sourceid: policyReporterChartUIImageTagValue
     scmid: default
     spec:
-      file: "charts/hauler.yaml"
+      file: "charts/hauler_manifest.yaml"
       matchpattern: "(.*)- ?name: ?ghcr.io/kyverno/policy-reporter-ui:(v?.+) ?(.*)"
       replacepattern: '$1- name: ghcr.io/kyverno/policy-reporter-ui:{{ source "policyReporterChartUIImageTagValue" }}'
 
