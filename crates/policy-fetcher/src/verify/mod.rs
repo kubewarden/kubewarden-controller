@@ -1,6 +1,6 @@
-use oci_client::{manifest::WASM_LAYER_MEDIA_TYPE, secrets::RegistryAuth, Reference};
+use oci_client::{Reference, manifest::WASM_LAYER_MEDIA_TYPE, secrets::RegistryAuth};
 use sigstore::{
-    cosign::{self, signature_layers::SignatureLayer, ClientBuilder, CosignCapabilities},
+    cosign::{self, ClientBuilder, CosignCapabilities, signature_layers::SignatureLayer},
     errors::SigstoreError,
     registry::oci_reference::OciReference,
     trust::sigstore::SigstoreTrustRoot,
@@ -10,6 +10,7 @@ use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
 use crate::{
+    Registry,
     errors::FailedToParseYamlDataError,
     policy::Policy,
     registry::build_fully_resolved_reference,
@@ -18,7 +19,6 @@ use crate::{
         config::Signature,
         errors::{VerifyError, VerifyResult},
     },
-    Registry,
 };
 
 pub mod config;
@@ -64,8 +64,12 @@ impl Verifier {
                 cosign_client_builder.build()?
             }
             None => {
-                warn!("Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified");
-                warn!("Sigstore Verifier created without Rekor data: transparency log data won't be used");
+                warn!(
+                    "Sigstore Verifier created without Fulcio data: keyless signatures are going to be discarded because they cannot be verified"
+                );
+                warn!(
+                    "Sigstore Verifier created without Rekor data: transparency log data won't be used"
+                );
                 warn!("Sigstore capabilities are going to be limited");
 
                 cosign_client_builder.build()?
@@ -158,7 +162,9 @@ impl Verifier {
                 })
                 .collect()
         } else {
-            unreachable!("Expected Image, found ImageIndex manifest. This cannot happen, as oci clientConfig.platform_resolver is None and we will error earlier");
+            unreachable!(
+                "Expected Image, found ImageIndex manifest. This cannot happen, as oci clientConfig.platform_resolver is None and we will error earlier"
+            );
         };
 
         if digests.len() != 1 {
@@ -171,7 +177,9 @@ impl Verifier {
 
         let file_digest = policy.digest()?;
         if file_digest != expected_digest {
-            Err(VerifyError::ChecksumVerificationError(format!("The digest of the local file doesn't match with the one reported inside of the signed manifest. Got {file_digest} instead of {expected_digest}")))
+            Err(VerifyError::ChecksumVerificationError(format!(
+                "The digest of the local file doesn't match with the one reported inside of the signed manifest. Got {file_digest} instead of {expected_digest}"
+            )))
         } else {
             info!("Local file checksum verification passed");
             Ok(())
@@ -253,8 +261,10 @@ fn verify_signatures_against_config(
             let minimum_matches: usize = signatures_any_of.minimum_matches.into();
 
             if num_satisfied_constraints < minimum_matches {
-                let mut errormsg =
-                    format!("Image verification failed: minimum number of signatures not reached: needed {}, got {}", signatures_any_of.minimum_matches, num_satisfied_constraints);
+                let mut errormsg = format!(
+                    "Image verification failed: minimum number of signatures not reached: needed {}, got {}",
+                    signatures_any_of.minimum_matches, num_satisfied_constraints
+                );
                 errormsg.push_str("\nThe following constraints were not satisfied:\n");
                 for s in unsatisfied_signatures.iter() {
                     errormsg

@@ -4,7 +4,7 @@ use sigstore::cosign::signature_layers::CertificateSignature;
 use sigstore::cosign::verification_constraint::{
     AnnotationVerifier, PublicKeyVerifier, VerificationConstraint,
 };
-use sigstore::cosign::{signature_layers::CertificateSubject, SignatureLayer};
+use sigstore::cosign::{SignatureLayer, signature_layers::CertificateSubject};
 use sigstore::errors::{Result, SigstoreError};
 use tracing::debug;
 
@@ -257,15 +257,15 @@ impl VerificationConstraint for GitHubVerifier {
             return Ok(false);
         }
 
-        if let Some(repo) = &self.repo {
-            if &signature_repo.repo != repo {
-                debug!(
-                    expected_value = ?repo,
-                    current_value = ?signature_repo.repo,
-                    "repo not satisfied"
-                );
-                return Ok(false);
-            }
+        if let Some(repo) = &self.repo
+            && &signature_repo.repo != repo
+        {
+            debug!(
+                expected_value = ?repo,
+                current_value = ?signature_repo.repo,
+                "repo not satisfied"
+            );
+            return Ok(false);
         }
 
         let outcome = if let Some(av) = &self.annotation_verifier {
@@ -595,21 +595,9 @@ kvUsh4eKpd1lwkDAzfFDs7yXEExsEkPPuiQJBelDT68n7PDIWB/QEY7mrA==
             Some("flavio"),
             Some("policy-secure-pod-images"),
         ),
-        case(
-            "https://example.com",
-            None,
-            None,
-        ),
-        case(
-            "https://github.com",
-            None,
-            None,
-        ),
-        case(
-            "https://github.com/kubewarden",
-            None,
-            None,
-        ),
+        case("https://example.com", None, None,),
+        case("https://github.com", None, None,),
+        case("https://github.com/kubewarden", None, None,),
         case(
             "https://github.com/kubewarden/policy",
             Some("kubewarden"),

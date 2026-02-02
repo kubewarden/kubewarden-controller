@@ -11,27 +11,26 @@ mod e2e {
         sync::Arc,
     };
 
-    use base64::prelude::{Engine as _, BASE64_STANDARD_NO_PAD};
-    use oci_client::{client::ImageData, manifest, secrets::RegistryAuth, Client, Reference};
+    use base64::prelude::{BASE64_STANDARD_NO_PAD, Engine as _};
+    use oci_client::{Client, Reference, client::ImageData, manifest, secrets::RegistryAuth};
     use policy_fetcher::{
         registry::Registry,
         sources::{Certificate, SourceAuthorities, Sources},
         verify::fetch_sigstore_remote_data,
     };
-    use rcgen::{generate_simple_self_signed, CertifiedKey};
+    use rcgen::{CertifiedKey, generate_simple_self_signed};
     use sigstore::{
         cosign::{
-            self,
+            self, ClientBuilder, Constraint, CosignCapabilities, SignatureLayer,
             constraint::PrivateKeySigner,
             verification_constraint::{PublicKeyVerifier, VerificationConstraint},
-            ClientBuilder, Constraint, CosignCapabilities, SignatureLayer,
         },
         crypto::SigningScheme,
         registry::{Auth, ClientConfig, ClientProtocol, OciReference},
     };
     use tempfile::TempDir;
     use testcontainers::{
-        core::Mount, core::WaitFor, runners::AsyncRunner, ContainerRequest, GenericImage, ImageExt,
+        ContainerRequest, GenericImage, ImageExt, core::Mount, core::WaitFor, runners::AsyncRunner,
     };
     use tokio::sync::Mutex;
 
