@@ -1,6 +1,6 @@
 [package]
 authors = ["Fabrizio Sestito <fabrizio.sestito@suse.com>"]
-edition = "2021"
+edition = "2024"
 name    = "context-aware-test-policy"
 version = "0.2.1"
 
