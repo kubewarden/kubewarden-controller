@@ -161,6 +161,8 @@ jobs:
       matrix:
         targetarch: ["aarch64", "x86_64"]
     runs-on: macos-latest
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
     permissions:
       id-token: write
       attestations: write
