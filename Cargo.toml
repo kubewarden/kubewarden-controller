@@ -31,5 +31,33 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = { version = "2.5", features = ["serde"] }
 wasi-common = "41.0"
-wasmtime = "41.0"
+# Disable stack-switching for kwctl
+# Replicate default features minus stack-switching
+# Workaround for https://github.com/bytecodealliance/wasmtime/issues/12217
+wasmtime = { version = "41.0", default-features = false, features = [
+  "addr2line",
+  "async",
+  "cache",
+  "compile-time-builtins",
+  "component-model",
+  "component-model-async",
+  "coredump",
+  "cranelift",
+  "debug",
+  "debug-builtins",
+  "demangle",
+  "gc",
+  "gc-drc",
+  "gc-null",
+  "once_cell",
+  "parallel-compilation",
+  "pooling-allocator",
+  "profiling",
+  "runtime",
+  "std",
+  "threads",
+  "wasmtime-jit-debug",
+  "wasmtime-jit-icache-coherence",
+  "wat",
+] }
 wasmtime-wasi = "41.0"
