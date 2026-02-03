@@ -23,7 +23,42 @@ thiserror          = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 url                = "2.5.8"
-wasmtime           = { workspace = true }
+
+# Enable default features for all platforms except macOS x86_64
+[target.'cfg(not(all(target_os = "macos", target_arch = "x86_64")))'.dependencies]
+wasmtime = { workspace = true, default-features = true }
+
+# Disable stack-switching for kwctl on macOS x86_64
+# Replicate default features minus stack-switching
+# Workaround for https://github.com/bytecodealliance/wasmtime/issues/12217
+[target.'cfg(all(target_os = "macos", target_arch = "x86_64"))'.dependencies]
+wasmtime = { workspace = true, features = [
+  "addr2line",
+  "async",
+  "cache",
+  "compile-time-builtins",
+  "component-model",
+  "component-model-async",
+  "coredump",
+  "cranelift",
+  "debug",
+  "debug-builtins",
+  "demangle",
+  "gc",
+  "gc-drc",
+  "gc-null",
+  "once_cell",
+  "parallel-compilation",
+  "pooling-allocator",
+  "profiling",
+  "runtime",
+  "std",
+  "threads",
+  "wasmtime-jit-debug",
+  "wasmtime-jit-icache-coherence",
+  "wat",
+] }
+
 
 [dev-dependencies]
 anyhow           = { workspace = true }

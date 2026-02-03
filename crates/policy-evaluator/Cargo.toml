@@ -52,10 +52,45 @@ validator = { version = "0.20", features = ["derive"] }
 wapc = "2.1"
 wasi-common = { workspace = true }
 wasmparser = "0.243"
-wasmtime = { workspace = true }
 wasmtime-provider = { version = "2.16.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 webpki-roots = "1"
+
+# Enable default features for all platforms except macOS x86_64
+[target.'cfg(not(all(target_os = "macos", target_arch = "x86_64")))'.dependencies]
+wasmtime = { workspace = true, default-features = true }
+
+# Disable stack-switching for kwctl on macOS x86_64
+# Replicate default features minus stack-switching
+# Workaround for https://github.com/bytecodealliance/wasmtime/issues/12217
+[target.'cfg(all(target_os = "macos", target_arch = "x86_64"))'.dependencies]
+wasmtime = { workspace = true, features = [
+  "addr2line",
+  "async",
+  "cache",
+  "compile-time-builtins",
+  "component-model",
+  "component-model-async",
+  "coredump",
+  "cranelift",
+  "debug",
+  "debug-builtins",
+  "demangle",
+  "gc",
+  "gc-drc",
+  "gc-null",
+  "once_cell",
+  "parallel-compilation",
+  "pooling-allocator",
+  "profiling",
+  "runtime",
+  "std",
+  "threads",
+  "wasmtime-jit-debug",
+  "wasmtime-jit-icache-coherence",
+  "wat",
+] }
+
 
 [dev-dependencies]
 assert-json-diff = "2.0"
