@@ -7,6 +7,13 @@ on:
         required: false
         type: boolean
         default: false
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Force build even if no kwctl-related changes detected"
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - "main"
