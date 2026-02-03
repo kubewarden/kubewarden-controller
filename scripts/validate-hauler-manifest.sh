@@ -9,9 +9,9 @@
 # The script runs automatically in CI when the `ci-full` label is added to a
 # PR, on pushes to the main branch, and on manual workflow triggers. It
 # validates all container images (kubewarden-controller, audit-scanner,
-# policy-server, kuberlr-kubectl, and policy modules) and Helm charts
-# (kubewarden-crds, kubewarden-controller, kubewarden-defaults,
-# policy-reporter, openreports).
+# policy-server, kuberlr-kubectl, policy modules and third-party images:
+# policy-reporter, policy-reporter-ui ) and Helm charts (kubewarden-crds,
+# kubewarden-controller, kubewarden-defaults, policy-reporter, openreports).
 # 
 # The weekly updatecli workflow automatically updates both Helm chart values
 # and the Hauler manifest. This validation serves as a safety check to catch
@@ -94,6 +94,32 @@ compare_version "policy-server" "$POLICY_SERVER_CHART_VERSION" "$POLICY_SERVER_H
 KUBERLR_CHART_VERSION=$(yq eval '.preDeleteJob.image.tag' "$CONTROLLER_VALUES")
 KUBERLR_HAULER_VERSION=$(get_hauler_image_version "kuberlr-kubectl")
 compare_version "kuberlr-kubectl" "$KUBERLR_CHART_VERSION" "$KUBERLR_HAULER_VERSION" "$CONTROLLER_VALUES"
+
+echo
+echo "🌐 Validating Third-Party Images..."
+echo "===================================="
+echo
+
+# Extract policy-reporter chart metadata from the vendored chart
+POLICY_REPORTER_CHART_PATH="$REPO_ROOT/charts/kubewarden-controller/charts"
+POLICY_REPORTER_CHART_VERSION=$(yq eval '.dependencies[0].version' "$CONTROLLER_CHART")
+POLICY_REPORTER_TGZ="$POLICY_REPORTER_CHART_PATH/policy-reporter-${POLICY_REPORTER_CHART_VERSION}.tgz"
+
+# Check if the vendored chart exists
+if [[ ! -f "$POLICY_REPORTER_TGZ" ]]; then
+    echo -e "${RED}❌ Error: policy-reporter chart tarball not found at $POLICY_REPORTER_TGZ${NC}"
+    ERRORS=$((ERRORS + 1))
+else
+    # Validate policy-reporter image (should match appVersion from Chart.yaml)
+    POLICY_REPORTER_APP_VERSION=$(tar -xzf "$POLICY_REPORTER_TGZ" policy-reporter/Chart.yaml --to-stdout 2>/dev/null | yq eval '.appVersion' -)
+    POLICY_REPORTER_HAULER_VERSION=$(get_hauler_image_version "policy-reporter:")
+    compare_version "policy-reporter" "$POLICY_REPORTER_APP_VERSION" "$POLICY_REPORTER_HAULER_VERSION" "policy-reporter chart (appVersion)"
+
+    # Validate policy-reporter-ui image (should match ui.image.tag from values.yaml)
+    POLICY_REPORTER_UI_VERSION=$(tar -xzf "$POLICY_REPORTER_TGZ" policy-reporter/values.yaml --to-stdout 2>/dev/null | yq eval '.ui.image.tag' -)
+    POLICY_REPORTER_UI_HAULER_VERSION=$(get_hauler_image_version "policy-reporter-ui")
+    compare_version "policy-reporter-ui" "$POLICY_REPORTER_UI_VERSION" "$POLICY_REPORTER_UI_HAULER_VERSION" "policy-reporter chart (ui.image.tag)"
+fi
 
 echo
 echo "🔐 Validating Policy Images..."
