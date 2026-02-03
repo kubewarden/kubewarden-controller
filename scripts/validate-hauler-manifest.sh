@@ -102,7 +102,7 @@ echo
 
 # Extract policy-reporter chart metadata from the vendored chart
 POLICY_REPORTER_CHART_PATH="$REPO_ROOT/charts/kubewarden-controller/charts"
-POLICY_REPORTER_CHART_VERSION=$(yq eval '.dependencies[0].version' "$CONTROLLER_CHART")
+POLICY_REPORTER_CHART_VERSION=$(yq -e eval '.dependencies[0].version' "$CONTROLLER_CHART")
 POLICY_REPORTER_TGZ="$POLICY_REPORTER_CHART_PATH/policy-reporter-${POLICY_REPORTER_CHART_VERSION}.tgz"
 
 # Check if the vendored chart exists
