@@ -23,6 +23,7 @@ on:
             "1.32",
             "1.33",
             "1.34",
+            "1.35",
           ]
         default: "k3d"
       ARCH:
@@ -54,21 +55,6 @@ on:
     paths:
       - "charts/kubewarden-*/**"
 
-  # Nightly:
-  # - install from main with latest images (to check if we can tag and release)
-  # - install tagged charts (refrence job to make sure product works, most stable case)
-  schedule:
-    - cron: "0 21 * * *"
-
-  # Release (stable, rc, beta):
-  # - install release
-  # - upgrade from previous stable to this release
-  # - install on oldest supported k8s
-  workflow_run:
-    workflows: ["Release helm chart"]
-    types:
-      - completed
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -80,42 +66,23 @@ defaults:
 env:
   K3D_VERSION: # 'v5.6.3' - optionally pin version
   K3D_CLUSTER_NAME: ${{ github.repository_owner }}-${{ github.event.repository.name }}
-  MTLS: ${{ github.event_name == 'schedule' && 'true' || inputs.MTLS }}
+  MTLS: ${{ github.event_name == 'pull_request' && 'true' || inputs.MTLS }}
 
 jobs:
   e2e:
     # x86: ubuntu-latest, arm64: ubuntu-24.04-arm
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-
-    # Run schedule workflows only on original repo, not forks
-    if:
-      (github.event_name != 'schedule' || github.repository_owner == 'kubewarden') &&
-      (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.display_title, 'Helm chart') ))
-
     strategy:
       fail-fast: false
       matrix:
         mode: ${{
-          (github.event_name == 'workflow_run') && fromJSON('["install", "upgrade"]') ||
-          (github.event_name == 'schedule') && fromJSON('["install", "upgrade"]') ||
           (github.event_name == 'pull_request') && fromJSON('["install"]') ||
           fromJSON(format('["{0}"]', inputs.UPGRADE && 'upgrade' || 'install')) }}
         version: ${{
-          (github.event_name == 'workflow_run') && fromJSON('["next"]') ||
-          (github.event_name == 'schedule') && fromJSON('["local", "next"]') ||
           (github.event_name == 'pull_request') && fromJSON('["local"]') ||
           fromJSON(format('["{0}"]', inputs.version || 'local')) }}
         k3s: ${{ (github.event_name == 'workflow_run') && fromJSON('["k3d", "1.27"]') || fromJSON(format('["{0}"]', inputs.K3S_VERSION || 'k3d' )) }}
         arch: ${{ (github.event_name == 'workflow_run') && fromJSON('["x86", "arm64"]') || fromJSON(format('["{0}"]', inputs.ARCH || 'x86')) }}
-        exclude:
-          - k3s: ${{ (github.event_name == 'workflow_run') && '1.27' }}
-            mode: upgrade
-          - version: ${{ (github.event_name == 'schedule') && 'next' }}
-            mode: upgrade
-          - arch: ${{ (github.event_name == 'workflow_run') && 'arm64' }}
-            mode: upgrade
-          - arch: ${{ (github.event_name == 'workflow_run') && 'arm64' }}
-            version: "1.27"
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
@@ -159,7 +126,7 @@ jobs:
           if [[ "${{ matrix.version }}" == 'local' ]]; then
             export CHARTS_LOCATION=../charts
             # Chart images are updated during release, use latest for nightly jobs
-            [[ "${{ github.event_name }}" == 'schedule' ]] && export LATEST=true
+            [[ "${{ github.event_name }}" == 'pull_request' ]] && export LATEST=true
           fi
 
           # mTLS should have been enabled during installation
