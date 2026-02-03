@@ -12,11 +12,11 @@ metadata:
     hauler.dev/certificate-oidc-issuer: https://token.actions.githubusercontent.com
 spec:
   images:
-    - name: ghcr.io/kubewarden/audit-scanner:v1.32.0-rc3
+    - name: ghcr.io/kubewarden/audit-scanner:v1.32.0-rc4
       certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
-    - name: ghcr.io/kubewarden/kubewarden-controller:v1.32.0-rc3
+    - name: ghcr.io/kubewarden/kubewarden-controller:v1.32.0-rc4
       certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
-    - name: ghcr.io/kubewarden/policy-server:v1.32.0-rc3
+    - name: ghcr.io/kubewarden/policy-server:v1.32.0-rc4
       certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
 ---
 # The policies are in a separated definition just to allow a better keyless validation
@@ -48,7 +48,7 @@ spec:
   images:
     - name: ghcr.io/kyverno/policy-reporter-ui:2.5.1
     - name: ghcr.io/kyverno/policy-reporter:3.7.0
-    - name: ghcr.io/rancher/kuberlr-kubectl:v6.0.0
+    - name: ghcr.io/rancher/kuberlr-kubectl:v7.0.0
 ---
 apiVersion: content.hauler.cattle.io/v1
 kind: Charts
@@ -58,13 +58,13 @@ spec:
   charts:
     - name: kubewarden-crds
       repoURL: https://charts.kubewarden.io
-      version: 1.24.0-rc3
+      version: 1.24.0-rc4
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
-      version: 5.10.0-rc3
+      version: 5.10.0-rc4
     - name: kubewarden-defaults
       repoURL: https://charts.kubewarden.io
-      version: 3.10.0-rc3
+      version: 3.10.0-rc4
     - name: policy-reporter
       version: 3.7.0
       repoURL: https://kyverno.github.io/policy-reporter
