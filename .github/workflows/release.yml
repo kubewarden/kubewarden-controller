@@ -10,7 +10,24 @@ permissions: read-all
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
-    permissions: read-all
+    # Specify all permissions explicitly - read for most, write for attestations
+    permissions:
+      actions: read
+      artifact-metadata: read
+      attestations: write
+      checks: read
+      contents: read
+      deployments: read
+      discussions: read
+      id-token: write
+      issues: read
+      models: read
+      packages: read
+      pages: read
+      pull-requests: read
+      repository-projects: read
+      security-events: read
+      statuses: read
     with:
       run_all: true
 
