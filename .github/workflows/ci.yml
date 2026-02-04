@@ -279,6 +279,18 @@ jobs:
       - name: Run integration tests
         run: make -C crates/policy-evaluator integration-tests
 
+  build-kwctl:
+    name: Build kwctl
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    permissions:
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/build-kwctl.yml
+    with:
+      force_build: true
+      build_only: true
+
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
@@ -329,6 +341,7 @@ jobs:
       - integration-tests-kwctl
       - integration-tests-policy-server
       - integration-tests-policy-evaluator
+      - build-kwctl
       - shellcheck
       - charts
       - validate-hauler-manifest

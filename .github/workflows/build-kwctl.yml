@@ -7,6 +7,23 @@ on:
         required: false
         type: boolean
         default: false
+      build_only:
+        description: "Build only, skip signing/attestation/publishing"
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Force build even if no kwctl-related changes detected"
+        required: false
+        type: boolean
+        default: false
+      build_only:
+        description: "Build only, skip signing/attestation/publishing"
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - "main"
@@ -70,6 +87,7 @@ jobs:
       attestations: write
     steps:
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        if: ${{ !inputs.build_only }}
 
       - name: checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -98,29 +116,35 @@ jobs:
         run: ./kwctl-linux-x86_64 --help
 
       - name: Generate attestations
+        if: ${{ !inputs.build_only }}
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         id: attestations
         with:
           subject-path: kwctl-linux-${{ matrix.targetarch }}
 
       - name: Sign kwctl
+        if: ${{ !inputs.build_only }}
         run: |
           cosign sign-blob --yes \
             --bundle kwctl-linux-${{ matrix.targetarch }}.bundle.sigstore \
             kwctl-linux-${{ matrix.targetarch }}
 
       - run: zip -j9 kwctl-linux-${{ matrix.targetarch }}.zip kwctl-linux-${{ matrix.targetarch }} kwctl-linux-${{ matrix.targetarch }}.bundle.sigstore
+        if: ${{ !inputs.build_only }}
 
       - name: Upload binary
+        if: ${{ !inputs.build_only }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
+        if: ${{ !inputs.build_only }}
         uses: kubewarden/github-actions/syft-installer@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
 
       - name: Create SBOM file
+        if: ${{ !inputs.build_only }}
         shell: bash
         run: |
           syft scan \
@@ -131,12 +155,14 @@ jobs:
           dir:. # use dir default catalogers, which includes Cargo.toml
 
       - name: Sign SBOM file
+        if: ${{ !inputs.build_only }}
         run: |
           cosign sign-blob --yes \
             --bundle kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
+        if: ${{ !inputs.build_only }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: kwctl-linux-${{ matrix.targetarch }}-sbom
@@ -145,8 +171,8 @@ jobs:
             kwctl-linux-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore
 
       - name: Upload kwctl air gap scripts
+        if: ${{ !inputs.build_only && matrix.targetarch == 'x86_64' }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        if: matrix.targetarch == 'x86_64' # only upload the scripts once
         with:
           name: kwctl-airgap-scripts
           path: |
@@ -161,6 +187,8 @@ jobs:
       matrix:
         targetarch: ["aarch64", "x86_64"]
     runs-on: macos-latest
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
     permissions:
       id-token: write
       attestations: write
@@ -168,6 +196,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        if: ${{ !inputs.build_only }}
 
       - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
 
@@ -181,31 +210,37 @@ jobs:
         run: ./kwctl-darwin-x86_64 --help
 
       - name: Generate attestations
+        if: ${{ !inputs.build_only }}
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         id: attestations
         with:
           subject-path: kwctl-darwin-${{ matrix.targetarch }}
 
       - name: Sign kwctl
+        if: ${{ !inputs.build_only }}
         run: |
           cosign sign-blob --yes \
             --bundle kwctl-darwin-${{ matrix.targetarch }}.bundle.sigstore \
             kwctl-darwin-${{ matrix.targetarch }}
 
       - run: zip -j9 kwctl-darwin-${{ matrix.targetarch }}.zip kwctl-darwin-${{ matrix.targetarch }} kwctl-darwin-${{ matrix.targetarch }}.bundle.sigstore
+        if: ${{ !inputs.build_only }}
 
       - name: Upload binary
+        if: ${{ !inputs.build_only }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
 
       - name: Install the syft command
+        if: ${{ !inputs.build_only }}
         uses: kubewarden/github-actions/syft-installer@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           arch: darwin_amd64
 
       - name: Create SBOM file
+        if: ${{ !inputs.build_only }}
         shell: bash
         run: |
           syft scan \
@@ -216,12 +251,14 @@ jobs:
           dir:. # use dir default catalogers, which includes Cargo.toml
 
       - name: Sign SBOM file
+        if: ${{ !inputs.build_only }}
         run: |
           cosign sign-blob --yes \
             --bundle kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx.bundle.sigstore \
             kwctl-darwin-${{ matrix.targetarch }}-sbom.spdx
 
       - name: Upload kwctl SBOM files
+        if: ${{ !inputs.build_only }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}-sbom
@@ -246,6 +283,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        if: ${{ !inputs.build_only }}
 
       - name: enable git long paths on Windows
         if: matrix.os == 'windows-latest'
@@ -267,12 +305,14 @@ jobs:
         run: .\kwctl-windows-x86_64.exe --help
 
       - name: Generate attestations
+        if: ${{ !inputs.build_only }}
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         id: attestations
         with:
           subject-path: kwctl-windows-${{ matrix.targetarch }}.exe
 
       - name: Sign kwctl
+        if: ${{ !inputs.build_only }}
         shell: bash
         run: |
           cosign sign-blob --yes \
@@ -282,19 +322,23 @@ jobs:
       - run: |
           "/c/Program Files/7-Zip/7z.exe" a kwctl-windows-x86_64.exe.zip kwctl-windows-x86_64.exe kwctl-windows-x86_64.bundle.sigstore
         shell: bash
+        if: ${{ !inputs.build_only }}
 
       - name: Upload binary
+        if: ${{ !inputs.build_only }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: kwctl-windows-x86_64
           path: kwctl-windows-x86_64.exe.zip
 
       - name: Install the syft command
+        if: ${{ !inputs.build_only }}
         uses: kubewarden/github-actions/syft-installer@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
         with:
           arch: windows_amd64
 
       - name: Create SBOM file
+        if: ${{ !inputs.build_only }}
         shell: bash
         run: |
           syft scan \
@@ -305,6 +349,7 @@ jobs:
           dir:. # use dir default catalogers, which includes Cargo.toml
 
       - name: Sign SBOM
+        if: ${{ !inputs.build_only }}
         shell: bash
         run: |
           cosign sign-blob --yes \
@@ -312,6 +357,7 @@ jobs:
             kwctl-windows-x86_64-sbom.spdx
 
       - name: Upload kwctl SBOM files
+        if: ${{ !inputs.build_only }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: kwctl-windows-x86_64-sbom
