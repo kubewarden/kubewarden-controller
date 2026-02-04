@@ -109,10 +109,8 @@ scms:
     spec:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
-      directory: "/tmp/kubewarden-controller"
       owner: "{{ requiredEnv .github.owner }}"
       repository: "kubewarden-controller"
-      username: "{{ requiredEnv .github.user }}"
       branch: "{{ .github.branch }}"
       commitmessage:
         type: "chore"
