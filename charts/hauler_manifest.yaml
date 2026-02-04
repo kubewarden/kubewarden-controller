@@ -58,7 +58,7 @@ spec:
   charts:
     - name: kubewarden-crds
       repoURL: https://charts.kubewarden.io
-      version: 1.24.0-rc4
+      version: 1.25.0
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
       version: 5.10.0-rc4
