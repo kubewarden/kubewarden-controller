@@ -134,6 +134,7 @@ targets:
       matchpattern: "(.*)- ?name: ?ghcr.io/kyverno/policy-reporter-ui:(v?.+) ?(.*)"
       replacepattern: '$1- name: ghcr.io/kyverno/policy-reporter-ui:{{ source "policyReporterChartUIImageTagValue" }}'
 
+# {{ if .pr.haulerUpdatePr }}
 actions:
   openUpdatePR:
     title: '{{ default "deps: Update helm chart dependencies" .pr.title }}'
@@ -158,3 +159,4 @@ actions:
       labels:
         - "kind/chore"
         - "area/dependencies"
+# {{ end }}

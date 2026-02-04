@@ -1,0 +1,3 @@
+pipelineid: "update_all_dependencies"
+pr:
+  title: "Update Helm charts dependencies"
