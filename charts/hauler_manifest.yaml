@@ -12,12 +12,12 @@ metadata:
     hauler.dev/certificate-oidc-issuer: https://token.actions.githubusercontent.com
 spec:
   images:
-    - name: ghcr.io/kubewarden/audit-scanner:v1.32.0-rc4
-      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
-    - name: ghcr.io/kubewarden/kubewarden-controller:v1.32.0-rc4
-      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
-    - name: ghcr.io/kubewarden/policy-server:v1.32.0-rc4
-      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc3
+    - name: ghcr.io/kubewarden/audit-scanner:v1.32.0-rc5
+      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc5
+    - name: ghcr.io/kubewarden/kubewarden-controller:v1.32.0-rc5
+      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc5
+    - name: ghcr.io/kubewarden/policy-server:v1.32.0-rc5
+      certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.0-rc5
 ---
 # The policies are in a separated definition just to allow a better keyless validation
 # without the need to duplicate configuration
@@ -58,13 +58,13 @@ spec:
   charts:
     - name: kubewarden-crds
       repoURL: https://charts.kubewarden.io
-      version: 1.25.0
+      version: 1.24.0-rc5
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
-      version: 5.11.0
+      version: 5.10.0-rc5
     - name: kubewarden-defaults
       repoURL: https://charts.kubewarden.io
-      version: 3.11.0
+      version: 3.10.0-rc5
     - name: policy-reporter
       version: 3.7.0
       repoURL: https://kyverno.github.io/policy-reporter
