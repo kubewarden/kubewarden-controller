@@ -242,6 +242,20 @@ var _ = Describe("Controller test", func() {
 })
 ```
 
+## Releasing
+
+1. Check that `:latest` builds of kubewarden-controller for main are fine, including kwctl
+1. Edit latest _draft_ release in https://github.com/kubewarden/kubewarden-controller/releases
+   Change its title to contain the correct version (e.g: 1.32.0-rc1)
+1. Open an automated release PR with https://github.com/kubewarden/kubewarden-controller/actions/workflows/open-release-pr.yml
+1. Review & merge automated PR
+1. Tag version in kubewarden-controller repo
+1. Wait for images to be built, so e2e tests can work
+1. Trigger automated PR that syncs adm controller charts with helm-chart repo
+   https://github.com/kubewarden/helm-charts/actions/workflows/update-adm-controller.yaml
+1. Merge automated PR on helm-chart repo
+1. chart-releaser releases the charts on Helm chart repo.
+
 ## Additional Resources
 
 - **Developer Documentation**: The `docs/` folder contains additional documentation for each component
