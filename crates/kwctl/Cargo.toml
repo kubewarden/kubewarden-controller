@@ -33,7 +33,7 @@ serde_yaml         = { workspace = true }
 tar                = "0.4.44"
 termimad           = "0.34.1"
 thiserror          = { workspace = true }
-time               = "0.3.46"
+time               = "0.3.47"
 tiny-bench         = "0.4"
 tokio              = { workspace = true }
 tracing            = { workspace = true }
