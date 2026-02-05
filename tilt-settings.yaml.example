@@ -4,4 +4,4 @@ audit-scanner:
 controller: 
     image: <username>/admission-controller/controller
 policy-server: 
-    image: <username>/audit-scanner/policy-server
+    image: <username>/admission-controller/policy-server
