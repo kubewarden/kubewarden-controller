@@ -1,5 +1,10 @@
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "stack version (E.g: v1.32.0-rc2)"
+        required: true
+        type: string
 
 name: Open release PR
 
@@ -37,6 +42,7 @@ jobs:
         env:
           UPDATECLI_GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
           UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
+          RELEASE_VERSION: ${{ github.event.inputs.version }}
         run: |-
           updatecli apply --config updatecli/updatecli.release.d/open-release-pr.yaml \
             --values updatecli/values.yaml
