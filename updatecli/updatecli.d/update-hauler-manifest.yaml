@@ -137,26 +137,32 @@ targets:
 # {{ if .pr.haulerUpdatePr }}
 actions:
   openUpdatePR:
-    title: '{{ default "deps: Update helm chart dependencies" .pr.title }}'
+    title: "chore(deps): Update Helm chart dependencies"
     kind: "github/pullrequest"
     scmid: "default"
     spec:
       automerge: false
       mergemethod: squash
       description: |
-        Automatic update of helm chart dependencies:  Helm charts, policies, kuberlr-kubectl image, and Hauler manifest
+        Automatic update of Helm chart dependencies: Helm charts, policies, kuberlr-kubectl image, and Hauler manifest.
         This PR has been created by automation.
 
-        NOTE: REMEMBER TO SQUASH MERGE
+        > [!IMPORTANT]
+        > REMEMBER USING SQUASH MERGE FOR THIS PR
 
-        Update checklist:
-        - [ ] I have checked that the kubewarden-defaults values
-          `recommendedPolicies.*.settings` are up to date
-        - [ ] I have updated charts/kubewarden-defaults/questions.yaml from
-          those of the policies
-
-      draft: false
+        ## Update Checklist
+        - [ ] I have checked that the kubewarden-defaults values `recommendedPolicies.*.settings` are up to date
+        - [ ] I have updated charts/kubewarden-defaults/questions.yaml from those of the policies
+      #     {{ if .pr.reviewrs }}
+      reviewers:
+        #           {{ range .pr.reviewers }}
+        - "{{ . }}"
+      #           {{ end }}
+      #     {{ end }}
+      #     {{ if .pr.labels }}
       labels:
-        - "kind/chore"
-        - "area/dependencies"
+        #         {{ range .pr.labels }}
+        - "{{ . }}"
+      #           {{ end }}
+      #     {{ end }}
 # {{ end }}

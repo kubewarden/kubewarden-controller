@@ -5,5 +5,5 @@ policies:
       - ./updatecli.d/update-hauler-manifest.yaml
     values:
       - ./values/scms.yaml
-      - ./values/deps-values.yaml
+      - ./values/artifacts.yaml
       - ./values/release-pr-values.yaml
