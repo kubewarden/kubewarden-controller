@@ -1,0 +1,11 @@
+pipelineid: "update_all_dependencies"
+
+pr:
+  # the haulerUpdatePr values configures if the updatecli.d/update-hauler-manifest.yaml
+  # action PR should be configure of not. In the release script, it should be disable
+  haulerUpdatePr: true
+  labels:
+    - "kind/chore"
+    - "area/dependencies"
+  reviewers:
+    - "kubewarden/kubewarden-developers"
