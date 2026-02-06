@@ -1,27 +1,19 @@
 name: Update kubewarden-controller chart versions
 pipelineid: "{{ .pipelineid }}"
 
-# This updatecli pipeline takes the latest GH draft release title, which
-# corresponds with the future Kubewarden admission controller stack version.
+# This updatecli pipeline receives as input a RELEASE_VERSION env var with the
+# desired Kubewarden admission controller stack version.
 #
 # Then bumps all charts and Cargo.* files following that version and opens a PR against
 # the kubewarden-controller repo.
 
 sources:
-  newestGitHubDraftReleaseVersion:
-    name: Extract version from newest GitHub draft release from release drafter
-    kind: githubrelease
+  desiredReleaseVersion:
+    name: "desired release version (e.g: v1.32.0-rc2)"
+    kind: shell
     spec:
-      owner: "{{ requiredEnv .github.owner }}"
-      repository: "{{ .github.repo }}"
-      token: "{{ requiredEnv .github.token }}"
-      key: "title"
-      typefilter:
-        # We specifically only want the newest draft release, created with
-        # release-drafter, as its title has the prospective semver that we want
-        # to tag
-        draft: true
-        kind: latest
+      command: |
+        echo '{{ requiredEnv "RELEASE_VERSION" }}'
   newestReleaseTagVersion:
     name: Extract newest tag from newest GitHub release
     # used for displaying a gh compare URL in the open PR
@@ -134,7 +126,7 @@ targets:
     scmid: default
     name: Update Helm chart kubewarden-crds appVersion
     kind: yaml
-    sourceid: newestGitHubDraftReleaseVersion
+    sourceid: desiredReleaseVersion
     spec:
       file: charts/kubewarden-crds/Chart.yaml
       key: $.appVersion
@@ -150,7 +142,7 @@ targets:
     scmid: default
     name: Update Helm chart kubewarden-controller appVersion
     kind: yaml
-    sourceid: newestGitHubDraftReleaseVersion
+    sourceid: desiredReleaseVersion
     spec:
       file: charts/kubewarden-controller/Chart.yaml
       key: $.appVersion
@@ -166,7 +158,7 @@ targets:
     scmid: default
     name: Update Helm chart kubewarden-defaults appVersion
     kind: yaml
-    sourceid: newestGitHubDraftReleaseVersion
+    sourceid: desiredReleaseVersion
     spec:
       file: charts/kubewarden-defaults/Chart.yaml
       key: $.appVersion
@@ -174,7 +166,7 @@ targets:
     scmid: default
     name: Update Helm chart kubewarden-controller image tag
     kind: yaml
-    sourceid: newestGitHubDraftReleaseVersion
+    sourceid: desiredReleaseVersion
     spec:
       file: charts/kubewarden-controller/values.yaml
       key: $.image.tag
@@ -182,7 +174,7 @@ targets:
     scmid: default
     name: Update Helm chart audit-scanner version
     kind: yaml
-    sourceid: newestGitHubDraftReleaseVersion
+    sourceid: desiredReleaseVersion
     spec:
       file: charts/kubewarden-controller/values.yaml
       key: $.auditScanner.image.tag
@@ -190,7 +182,7 @@ targets:
     scmid: default
     name: Update Helm chart policy-server version
     kind: yaml
-    sourceid: newestGitHubDraftReleaseVersion
+    sourceid: desiredReleaseVersion
     spec:
       file: charts/kubewarden-defaults/values.yaml
       key: $.policyServer.image.tag
@@ -218,7 +210,7 @@ targets:
   updateCargoTomlVersion:
     name: Update Cargo.toml, Cargo.lock with new version
     scmid: default
-    sourceid: newestGitHubDraftReleaseVersion
+    sourceid: desiredReleaseVersion
     transformers:
       - trimprefix: "v"
     kind: shell
@@ -255,14 +247,14 @@ scms:
 # {{ if not .pr.haulerUpdatePr }}
 actions:
   openUpdatePR:
-    title: 'build: {{ source "newestGitHubDraftReleaseVersion" }} release'
+    title: 'build: {{ source "desiredReleaseVersion" }} release'
     kind: github/pullrequest
     scmid: default
     spec:
       automerge: false
       mergemethod: squash
       description: |
-        Automatic bump to `{{ source "newestGitHubDraftReleaseVersion" }}` release.
+        Automatic bump to `{{ source "desiredReleaseVersion" }}` release.
 
         Changes since last released tag: (if no tag, since HEAD^): https://github.com/{{ requiredEnv .github.owner }}/{{ .github.repo }}/compare/{{ source "newestReleaseTagVersion" | default "HEAD^" }}...updatecli_main_release_pr
 
