@@ -119,6 +119,12 @@ func (v *policyServerValidator) validate(ctx context.Context, policyServer *Poli
 		}
 	}
 
+	if policyServer.Spec.SigstoreTrustConfig != "" {
+		if err := validateSigstoreTrustConfig(ctx, v.k8sClient, policyServer.Spec.SigstoreTrustConfig, v.deploymentsNamespace); err != nil {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("sigstoreTrustConfig"), policyServer.Spec.SigstoreTrustConfig, err.Error()))
+		}
+	}
+
 	// Kubernetes does not allow to set both MinAvailable and MaxUnavailable at the same time
 	if policyServer.Spec.MinAvailable != nil && policyServer.Spec.MaxUnavailable != nil {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec"), fmt.Sprintf("minAvailable: %s, maxUnavailable: %s", policyServer.Spec.MinAvailable, policyServer.Spec.MaxUnavailable), "minAvailable and maxUnavailable cannot be both set"))
@@ -146,6 +152,25 @@ func validateImagePullSecret(ctx context.Context, k8sClient client.Client, image
 
 	if secret.Type != "kubernetes.io/dockerconfigjson" {
 		return fmt.Errorf("spec.ImagePullSecret secret \"%s\" is not of type kubernetes.io/dockerconfigjson", secret.Name)
+	}
+
+	return nil
+}
+
+// validateSigstoreTrustConfig validates that the specified PolicyServer sigstoreTrustConfig ConfigMap exists
+// and contains the required key.
+func validateSigstoreTrustConfig(ctx context.Context, k8sClient client.Client, sigstoreTrustConfig string, deploymentsNamespace string) error {
+	configMap := &corev1.ConfigMap{}
+	err := k8sClient.Get(ctx, client.ObjectKey{
+		Namespace: deploymentsNamespace,
+		Name:      sigstoreTrustConfig,
+	}, configMap)
+	if err != nil {
+		return fmt.Errorf("cannot get spec.SigstoreTrustConfig ConfigMap: %w", err)
+	}
+
+	if _, ok := configMap.Data[constants.PolicyServerSigstoreTrustConfigEntry]; !ok {
+		return fmt.Errorf("spec.SigstoreTrustConfig ConfigMap \"%s\" does not contain required key \"%s\"", sigstoreTrustConfig, constants.PolicyServerSigstoreTrustConfigEntry)
 	}
 
 	return nil

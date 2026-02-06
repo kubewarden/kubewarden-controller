@@ -124,6 +124,13 @@ pub(crate) fn build_cli() -> Command {
             .env("KUBEWARDEN_SIGSTORE_CACHE_DIR")
             .help("Directory used to cache sigstore data"),
 
+        Arg::new("sigstore-trust-config")
+            .long("sigstore-trust-config")
+            .value_name("SIGSTORE_TRUST_CONFIG_PATH")
+            .env("KUBEWARDEN_SIGSTORE_TRUST_CONFIG_PATH")
+            .value_parser(clap::builder::PathBufValueParser::new())
+            .help("Path to a JSON Sigstore ClientTrustConfig file"),
+
         Arg::new("sources-path")
             .long("sources-path")
             .value_name("SOURCES_PATH")

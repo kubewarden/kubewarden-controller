@@ -4675,6 +4675,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
+ "sigstore_protobuf_specs",
  "tempfile",
  "testcontainers",
  "thiserror 2.0.18",

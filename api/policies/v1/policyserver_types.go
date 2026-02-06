@@ -88,11 +88,22 @@ type PolicyServerSpec struct {
 	// +optional
 	SourceAuthorities map[string][]string `json:"sourceAuthorities,omitempty"`
 
-	// Name of VerificationConfig configmap in the same namespace, containing
-	// Sigstore verification configuration. The configuration must be under a
-	// key named verification-config in the Configmap.
+	// Name of VerificationConfig configmap in the kubewarden namespace (same
+	// namespace as the controller deployment), containing Sigstore verification
+	// configuration. The configuration must be under a key named
+	// verification-config in the Configmap.
 	// +optional
 	VerificationConfig string `json:"verificationConfig,omitempty"`
+
+	// Name of SigstoreTrustConfig configmap in the kubewarden namespace (same
+	// namespace as the controller deployment), containing Sigstore trust
+	// configuration (ClientTrustConfig JSON). The configuration must be under a
+	// key named sigstore-trust-config in the ConfigMap. This is used to configure
+	// a custom Sigstore instance instead of the default public Sigstore infrastructure.
+	// WARNING: This feature requires strict access control. Users with write access
+	// to this ConfigMap can influence policy signature verification.
+	// +optional
+	SigstoreTrustConfig string `json:"sigstoreTrustConfig,omitempty"`
 
 	// Security configuration to be used in the Policy Server workload.
 	// The field allows different configurations for the pod and containers.

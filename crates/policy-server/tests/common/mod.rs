@@ -144,6 +144,7 @@ pub(crate) fn default_test_config() -> Config {
         pool_size: 2,
         metrics_enabled: false,
         sigstore_cache_dir: tempdir().unwrap().keep(),
+        sigstore_trust_config_path: None,
         verification_config: None,
         log_level: "info".to_owned(),
         log_fmt: "json".to_owned(),
