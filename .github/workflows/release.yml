@@ -248,3 +248,31 @@ jobs:
               prerelease: isPreRelease,
               make_latest: !isPreRelease
             });
+
+  sync-helm-charts:
+    name: Trigger Helm Charts Sync Workflow
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        id: generate-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            helm-charts
+      - name: Trigger chart update
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          echo '{
+            "event_type": "release-adm-controller",
+            "client_payload": {
+              "source_repo": "${{ github.repository }}",
+              "tag": "${{ github.ref_name }}"
+            }
+          }' > payload.json
+          gh api repos/${{ github.repository_owner }}/helm-charts/dispatches \
+            -X POST \
+            --input payload.json
