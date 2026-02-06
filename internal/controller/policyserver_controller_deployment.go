@@ -25,9 +25,11 @@ const (
 	policiesFilename                 = "policies.yml"
 	sourcesFilename                  = "sources.yml"
 	verificationFilename             = "verification.yml"
+	sigstoreTrustConfigFilename      = "sigstore-trust-config.json"
 	policiesVolumeName               = "policies"
 	sourcesVolumeName                = "sources"
 	verificationConfigVolumeName     = "verification"
+	sigstoreTrustConfigVolumeName    = "sigstore-trust-config"
 	kubewardenCAVolumeName           = "kubewarden-ca-cert"
 	kubewardenCAVolumePath           = "/ca"
 	clientCAVolumeName               = "client-ca-cert"
@@ -82,6 +84,22 @@ func configureVerificationConfig(policyServer *policiesv1.PolicyServer, admissio
 	}
 }
 
+func configureSigstoreTrustConfig(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
+	if policyServer.Spec.SigstoreTrustConfig != "" {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      sigstoreTrustConfigVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerSigstoreTrustConfigContainerPath,
+			})
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  "KUBEWARDEN_SIGSTORE_TRUST_CONFIG_PATH",
+				Value: filepath.Join(constants.PolicyServerSigstoreTrustConfigContainerPath, sigstoreTrustConfigFilename),
+			})
+	}
+}
+
 func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
 	admissionContainer := getPolicyServerContainer(policyServer)
 
@@ -93,6 +111,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 	}
 
 	configureVerificationConfig(policyServer, &admissionContainer)
+	configureSigstoreTrustConfig(policyServer, &admissionContainer)
 	configureImagePullSecret(policyServer, &admissionContainer)
 	configuresInsecureSources(policyServer, &admissionContainer)
 
@@ -209,6 +228,28 @@ func (r *PolicyServerReconciler) adaptDeploymentSettingsForPolicyServer(policySe
 							{
 								Key:  constants.PolicyServerVerificationConfigEntry,
 								Path: verificationFilename,
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+
+	if policyServer.Spec.SigstoreTrustConfig != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: sigstoreTrustConfigVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: policyServer.Spec.SigstoreTrustConfig,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.PolicyServerSigstoreTrustConfigEntry,
+								Path: sigstoreTrustConfigFilename,
 							},
 						},
 					},
