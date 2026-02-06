@@ -1,0 +1,13 @@
+pipelineid: release_pr # PR branch will be named: updatecli_main_release_pr
+
+# pr contains the pull request settings that can be overridden
+pr:
+  # the haulerUpdatePr values configures if the updatecli.d/update-hauler-manifest.yaml
+  # action PR should be configure of not. In the release script, it should be disable
+  haulerUpdatePr: false
+  labels:
+    - "kind/chore"
+    - "area/release"
+    - "ci-full" # this triggers all CI jobs
+  reviewers:
+    - "kubewarden/kubewarden-developers"

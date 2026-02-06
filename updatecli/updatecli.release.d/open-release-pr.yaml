@@ -252,6 +252,7 @@ scms:
         hidecredit: true
         footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
 
+# {{ if not .pr.haulerUpdatePr }}
 actions:
   openUpdatePR:
     title: 'build: {{ source "newestGitHubDraftReleaseVersion" }} release'
@@ -280,3 +281,4 @@ actions:
       #           {{ end }}
       #     {{ end }}
       draft: false
+#     {{ end }}
