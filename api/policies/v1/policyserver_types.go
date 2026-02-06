@@ -94,6 +94,14 @@ type PolicyServerSpec struct {
 	// +optional
 	VerificationConfig string `json:"verificationConfig,omitempty"`
 
+	// Name of SigstoreTrustConfig configmap in the same namespace, containing
+	// Sigstore trust configuration (ClientTrustConfig JSON). The configuration
+	// must be under a key named sigstore-trust-config in the Configmap.
+	// This is used to configure a custom Sigstore instance instead of the
+	// default public Sigstore infrastructure.
+	// +optional
+	SigstoreTrustConfig string `json:"sigstoreTrustConfig,omitempty"`
+
 	// Security configuration to be used in the Policy Server workload.
 	// The field allows different configurations for the pod and containers.
 	// If set for the containers, this configuration will not be used in

@@ -26,6 +26,9 @@ const (
 	PolicyServerVerificationConfigEntry         = "verification-config"
 	PolicyServerVerificationConfigContainerPath = "/verification"
 
+	PolicyServerSigstoreTrustConfigEntry         = "sigstore-trust-config"
+	PolicyServerSigstoreTrustConfigContainerPath = "/sigstore-trust"
+
 	// Policy Server Labels.
 
 	// AppLabelKey is the label used to identify the pod template in the deployment
