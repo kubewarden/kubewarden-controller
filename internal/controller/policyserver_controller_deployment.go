@@ -82,6 +82,22 @@ func configureVerificationConfig(policyServer *policiesv1.PolicyServer, admissio
 	}
 }
 
+func configureSigstoreTrustConfig(policyServer *policiesv1.PolicyServer, admissionContainer *corev1.Container) {
+	if policyServer.Spec.SigstoreTrustConfig != "" {
+		admissionContainer.VolumeMounts = append(admissionContainer.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      constants.PolicyServerSigstoreTrustConfigVolumeName,
+				ReadOnly:  true,
+				MountPath: constants.PolicyServerSigstoreTrustConfigContainerPath,
+			})
+		admissionContainer.Env = append(admissionContainer.Env,
+			corev1.EnvVar{
+				Name:  constants.PolicyServerSigstoreTrustConfigEnvVar,
+				Value: filepath.Join(constants.PolicyServerSigstoreTrustConfigContainerPath, constants.PolicyServerSigstoreTrustConfigFilename),
+			})
+	}
+}
+
 func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Context, policyServer *policiesv1.PolicyServer, policyServerDeployment *appsv1.Deployment, configMapVersion string) error {
 	admissionContainer := getPolicyServerContainer(policyServer)
 
@@ -93,6 +109,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 	}
 
 	configureVerificationConfig(policyServer, &admissionContainer)
+	configureSigstoreTrustConfig(policyServer, &admissionContainer)
 	configureImagePullSecret(policyServer, &admissionContainer)
 	configuresInsecureSources(policyServer, &admissionContainer)
 
@@ -209,6 +226,28 @@ func (r *PolicyServerReconciler) adaptDeploymentSettingsForPolicyServer(policySe
 							{
 								Key:  constants.PolicyServerVerificationConfigEntry,
 								Path: verificationFilename,
+							},
+						},
+					},
+				},
+			},
+		)
+	}
+
+	if policyServer.Spec.SigstoreTrustConfig != "" {
+		policyServerDeployment.Spec.Template.Spec.Volumes = append(
+			policyServerDeployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: constants.PolicyServerSigstoreTrustConfigVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: policyServer.Spec.SigstoreTrustConfig,
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.PolicyServerSigstoreTrustConfigEntry,
+								Path: constants.PolicyServerSigstoreTrustConfigFilename,
 							},
 						},
 					},
