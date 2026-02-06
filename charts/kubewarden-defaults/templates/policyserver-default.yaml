@@ -38,6 +38,9 @@ spec:
   {{- if .Values.policyServer.verificationConfig }}
   verificationConfig: {{ .Values.policyServer.verificationConfig }}
   {{- end }}
+  {{- if .Values.policyServer.sigstoreTrustConfig }}
+  sigstoreTrustConfig: {{ .Values.policyServer.sigstoreTrustConfig }}
+  {{- end }}
   {{- if .Values.policyServer.annotations }}
   annotations:
     {{- range $key, $value := .Values.policyServer.annotations }}
