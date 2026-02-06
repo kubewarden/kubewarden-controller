@@ -49,6 +49,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 sha2 = { workspace = true }
+sigstore_protobuf_specs = "0.5"
 thiserror = { workspace = true }
 tikv-jemalloc-ctl = "0.6"
 tikv-jemallocator = { version = "0.6", features = [
