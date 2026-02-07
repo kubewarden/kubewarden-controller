@@ -85,12 +85,12 @@ jobs:
         arch: ${{ (github.event_name == 'workflow_run') && fromJSON('["x86", "arm64"]') || fromJSON(format('["{0}"]', inputs.ARCH || 'x86')) }}
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: ${{ matrix.version == 'local' }}
       - run: helm repo add kubewarden https://charts.kubewarden.io
         if: ${{ matrix.version != 'local' || matrix.mode == 'upgrade' }}
 
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ${{ github.repository_owner }}/kubewarden-end-to-end-tests
           path: e2e-tests
