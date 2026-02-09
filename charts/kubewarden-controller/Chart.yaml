@@ -25,7 +25,7 @@ maintainers:
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
 version: 5.10.0
 # This is the version of Kubewarden stack
-appVersion: v1.32.0
+appVersion: v1.32.1
 annotations:
   # required ones:
   catalog.cattle.io/certified: rancher # Any application we are adding as a helm chart
