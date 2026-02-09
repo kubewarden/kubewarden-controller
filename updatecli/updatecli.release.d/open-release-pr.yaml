@@ -146,6 +146,15 @@ targets:
     spec:
       file: charts/kubewarden-controller/Chart.yaml
       key: $.appVersion
+  update_kubewarden_controller_auto_install_annotation:
+    name: "Update kubewarden-controller auto-install annotation"
+    kind: yaml
+    sourceid: crdsChartVersion
+    scmid: "default"
+    spec:
+      file: "file://charts/kubewarden-controller/Chart.yaml"
+      key: 'annotations.catalog\.cattle\.io/auto-install'
+      value: 'kubewarden-crds={{ source "crdsChartVersion" }}'
   update_kubewarden_defaults_helm_version:
     scmid: default
     name: Update Helm chart kubewarden-defaults version
@@ -162,6 +171,15 @@ targets:
     spec:
       file: charts/kubewarden-defaults/Chart.yaml
       key: $.appVersion
+  update_kubewarden_defaults_auto_install_annotation:
+    name: "Update kubewarden-defaults auto-install annotation"
+    kind: yaml
+    sourceid: crdsChartVersion
+    scmid: "default"
+    spec:
+      file: "file://charts/kubewarden-defaults/Chart.yaml"
+      key: 'annotations.catalog\.cattle\.io/auto-install'
+      value: 'kubewarden-crds={{ source "crdsChartVersion" }}'
   update_controller_image_tag:
     scmid: default
     name: Update Helm chart kubewarden-controller image tag
