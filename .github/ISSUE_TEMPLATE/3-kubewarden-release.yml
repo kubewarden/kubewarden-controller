@@ -1,0 +1,34 @@
+name: Kubewarden Release
+title: "Adm Controller <VERSION> release"
+description: Issue with all the items needed to release a new version of Kubewarden
+projects: ["kubewarden/6"]
+labels: ["kind/chore"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue tracks the release of a new version of Kubewarden.
+
+  - type: textarea
+    attributes:
+      label: Checklist
+      description: Base checklist for the release process. Please, add or remove items as needed.
+      value: |
+        This issue tracks the release of a new version of Kubewarden. Please
+        follow the checklist below to ensure a smooth release process.
+
+        - [ ] Notify consumers if any.
+        - [ ] Check that `:latest` images and `kwctl` builds from [kubewarden/kubewarden-controller](github.com/kubewarden/kubewarden-controller) for `main` are fine.
+        - [ ] Trigger an [`open-release-pr`](https://github.com/kubewarden/kubewarden-controller/actions/workflows/open-release-pr.yml)
+          job run with the desired Adm Controller stack version.
+          This opens an automated release PR in [kubewarden/kubewarden-controller](github.com/kubewarden/kubewarden-controller) repo.
+        - [ ] Review & merge the automated PR.
+        - [ ] Tag desired version in [kubewarden/kubewarden-controller](github.com/kubewarden/kubewarden-controller) repo.
+        - [ ] Wait for images to be built, so e2e tests can work.
+        - [ ] Trigger an [update-adm-controller](https://github.com/kubewarden/helm-charts/actions/workflows/update-adm-controller.yaml)
+          job run. This opens an automated PR that syncs adm controller charts in [kubewarden/helm-charts](github.com/kubewarden/helm-charts) repo.
+        - [ ] Merge automated PR on kubewarden/helm-chart repo.
+        - [ ] chart-releaser releases the charts on Helm chart repo.                                                                       
+        - [ ] Write and release the blog post about the release.
+          - [ ] Publish posts in Mastodon, Bluesky.
