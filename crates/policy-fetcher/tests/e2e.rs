@@ -245,7 +245,9 @@ mod e2e {
 
         // add the DOCKER_CONFIG environment variable to the client
         // so it knows where to find the credentials
-        std::env::set_var("DOCKER_CONFIG", auth_dir.path());
+        unsafe {
+            std::env::set_var("DOCKER_CONFIG", auth_dir.path());
+        }
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -288,7 +290,9 @@ mod e2e {
         cosign::verify_constraints(&trusted_layers, [signature_verifier].iter())
             .expect("failed to verify constraints");
 
-        std::env::remove_var("DOCKER_CONFIG");
+        unsafe {
+            std::env::remove_var("DOCKER_CONFIG");
+        }
     }
 
     #[tokio::test]

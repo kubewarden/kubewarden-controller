@@ -42,7 +42,6 @@ pprof = { version = "0.15", features = ["prost-codec"] }
 rayon = { workspace = true }
 regex = { workspace = true }
 rustls = { workspace = true, features = ["logging", "ring", "std", "tls12"] }
-rustls-pemfile = "2.2.0"
 rustls-pki-types = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
@@ -72,15 +71,14 @@ mockall        = "0.14"
 rcgen          = { version = "0.14", features = ["crypto"] }
 rstest         = { workspace = true }
 tempfile       = { workspace = true }
-testcontainers = { version = "0.26", features = ["watchdog"] }
+testcontainers = { version = "0.27", features = ["watchdog"] }
 tower          = { version = "0.5", features = ["util"] }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 openssl = "0.10"
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { version = "0.13", default-features = false, features = [
   "charset",
   "http2",
-  "rustls-tls-manual-roots",
 ] }
 
 [features]
