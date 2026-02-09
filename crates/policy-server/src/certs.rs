@@ -1,9 +1,9 @@
+use std::{path::Path, sync::Arc};
+
 use ::tracing::{info, warn};
 use anyhow::{Result, anyhow};
 use rustls::{RootCertStore, ServerConfig, server::WebPkiClientVerifier};
-use rustls_pemfile::Item;
-use rustls_pki_types::{CertificateDer, PrivateKeyDer};
-use std::{io::BufReader, path::Path, sync::Arc};
+use rustls_pki_types::{CertificateDer, PrivateKeyDer, pem::SliceIter};
 
 // This is required by certificate hot reload when using inotify, which is available only on linux
 #[cfg(target_os = "linux")]
@@ -188,43 +188,44 @@ async fn load_server_cert_and_key(
     let cert_contents = tokio::fs::read(cert_file).await?;
     let key_contents = tokio::fs::read(key_file).await?;
 
-    let cert_reader = &mut BufReader::new(&cert_contents[..]);
-    let key_reader = &mut BufReader::new(&key_contents[..]);
+    let cert_iterator: SliceIter<CertificateDer> =
+        rustls_pki_types::pem::SliceIter::new(&cert_contents[..]);
 
-    let cert: Vec<CertificateDer> = rustls_pemfile::certs(cert_reader)
+    let certs: Vec<_> = cert_iterator
         .filter_map(|it| {
             if let Err(ref e) = it {
-                warn!("Cannot parse certificate: {e}");
-                return None;
+                warn!("Cannot parse client CA certificate: {e}");
             }
             it.ok()
         })
         .collect();
-    if cert.len() > 1 {
-        return Err(anyhow!("Multiple certificates provided in cert file"));
+
+    if certs.len() != 1 {
+        return Err(anyhow!(
+            "Expected exactly one certificate in certificate file, found {}",
+            certs.len()
+        ));
     }
 
-    let mut key_vec: Vec<Vec<u8>> = rustls_pemfile::read_all(key_reader)
-        .filter_map(|i| match i.ok()? {
-            Item::Sec1Key(key) => Some(key.secret_sec1_der().to_vec()),
-            Item::Pkcs1Key(key) => Some(key.secret_pkcs1_der().to_vec()),
-            Item::Pkcs8Key(key) => Some(key.secret_pkcs8_der().to_vec()),
-            _ => {
-                info!("Ignoring non-key item in key file");
-                None
+    let key_iterator: SliceIter<PrivateKeyDer> =
+        rustls_pki_types::pem::SliceIter::new(&key_contents[..]);
+    let keys: Vec<PrivateKeyDer> = key_iterator
+        .filter_map(|it| {
+            if let Err(ref e) = it {
+                warn!("Cannot parse private key: {e}");
             }
+            it.ok()
         })
         .collect();
-    if key_vec.is_empty() {
-        return Err(anyhow!("No key provided in key file"));
-    }
-    if key_vec.len() > 1 {
-        return Err(anyhow!("Multiple keys provided in key file"));
-    }
-    let key = PrivateKeyDer::try_from(key_vec.pop().unwrap())
-        .map_err(|e| anyhow!("Cannot parse server key: {e}"))?;
 
-    Ok((cert, key))
+    if keys.len() != 1 {
+        return Err(anyhow!(
+            "Expected exactly one key in key file, found {}",
+            keys.len()
+        ));
+    }
+
+    Ok((certs, keys[0].clone_key()))
 }
 
 // Load the client CA certificates and build the client verifier
@@ -234,9 +235,10 @@ async fn load_client_ca_certs(
     let mut store = RootCertStore::empty();
     for client_ca_file in client_cas {
         let client_ca_contents = tokio::fs::read(&client_ca_file).await?;
-        let client_ca_reader = &mut BufReader::new(&client_ca_contents[..]);
+        let cert_iterator: SliceIter<CertificateDer> =
+            rustls_pki_types::pem::SliceIter::new(&client_ca_contents[..]);
 
-        let client_ca_certs: Vec<_> = rustls_pemfile::certs(client_ca_reader)
+        let client_ca_certs: Vec<_> = cert_iterator
             .filter_map(|it| {
                 if let Err(ref e) = it {
                     warn!("Cannot parse client CA certificate: {e}");

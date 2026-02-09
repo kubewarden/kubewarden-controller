@@ -275,7 +275,7 @@ impl Registry {
         )];
 
         let config = Config {
-            data: b"{}".to_vec(),
+            data: b"{}"[..].into(),
             media_type: manifest::WASM_CONFIG_MEDIA_TYPE.to_string(),
             annotations: None,
         };
@@ -355,7 +355,7 @@ impl PolicyFetcher for Registry {
             .map(|layer| layer.data);
 
         match image_content {
-            Some(image_content) => Ok(image_content),
+            Some(image_content) => Ok(image_content.into()),
             None => Err(SourceError::EmptyLayersError(url.to_string())),
         }
     }

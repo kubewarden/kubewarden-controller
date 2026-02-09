@@ -914,9 +914,8 @@ async fn test_otel() {
 
     setup();
 
-    let otelc_config_path = unsafe {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/otel-collector-config.yaml")
-    };
+    let otelc_config_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/otel-collector-config.yaml");
 
     let (server_ca, server_cert, server_key) = generate_tls_certs();
     let (client_ca, client_cert, client_key) = generate_tls_certs();
@@ -1274,15 +1273,23 @@ fn build_request_client(
     server_tls_data: Option<&certificate_reload_helpers::TlsData>,
     client_cert: Option<String>,
     client_key: Option<String>,
-    ignore_hostname: bool,
+    accept_invalid_hostname: bool,
 ) -> reqwest::Client {
     // Validate TLS communication
-    let mut builder = reqwest::Client::builder().danger_accept_invalid_hostnames(ignore_hostname);
+    let mut builder =
+        reqwest::Client::builder().tls_danger_accept_invalid_hostnames(accept_invalid_hostname);
 
     if let Some(server_tls_data) = server_tls_data {
         let certificate = reqwest::Certificate::from_pem(server_tls_data.cert.clone().as_bytes())
             .expect("Invalid policy server certificate");
-        builder = builder.add_root_certificate(certificate);
+        if accept_invalid_hostname {
+            // When hostname validation is disabled, reqwest requires to
+            // use the tls_certs_only method to set the server certificate,
+            // otherwise it raises an error when building the client
+            builder = builder.tls_certs_only([certificate]);
+        } else {
+            builder = builder.tls_certs_merge([certificate]);
+        }
     }
 
     if let (Some(client_cert), Some(client_key)) = (client_cert, client_key) {

@@ -50,10 +50,12 @@ impl PolicyFetcher for Https {
                 match tls_fetch_mode {
                     TlsVerificationMode::SystemCa => {}
                     TlsVerificationMode::CustomCaCertificates(ca_certificates) => {
-                        for certificate in ca_certificates.iter() {
-                            client_builder =
-                                client_builder.add_root_certificate(certificate.try_into()?);
-                        }
+                        client_builder = client_builder.tls_certs_merge(
+                            ca_certificates
+                                .iter()
+                                .map(|cert| cert.try_into())
+                                .collect::<SourceResult<Vec<reqwest::Certificate>>>()?,
+                        );
                     }
                     TlsVerificationMode::NoTlsVerification => {
                         client_builder = client_builder.danger_accept_invalid_certs(true);

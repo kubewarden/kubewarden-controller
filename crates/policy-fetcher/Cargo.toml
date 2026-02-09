@@ -26,9 +26,7 @@ oci-client = { version = "0.16", default-features = false, features = [
 path-slash = "0.2"
 rayon = { workspace = true }
 regex = { workspace = true }
-reqwest = { version = "0.13", default-features = false, features = [
-  "rustls-tls",
-] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 rustls = { workspace = true, features = ["std", "tls12"] }
 rustls-pki-types = { workspace = true }
 serde = { workspace = true }
