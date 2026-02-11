@@ -9,7 +9,7 @@ permissions: read-all
 
 jobs:
   version-check:
-    name: Check Cargo.toml version
+    name: Check Cargo.toml files version
     runs-on: ubuntu-latest
     steps:
       - name: Download source code
