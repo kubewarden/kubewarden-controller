@@ -50,7 +50,6 @@ runs:
       shell: bash
       run: |
         cat << EOF >verification_config.yaml
-          apiVersion: v1
           allOf:
             - kind: genericIssuer
               issuer: https://kubernetes.default.svc.cluster.local

@@ -83,4 +83,5 @@ reqwest = { version = "0.13", default-features = false, features = [
 ] }
 
 [features]
-otel_tests = []
+otel_tests       = []
+sigstore-testing = []
