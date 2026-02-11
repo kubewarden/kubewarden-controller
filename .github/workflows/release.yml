@@ -8,6 +8,23 @@ on:
 permissions: read-all
 
 jobs:
+  version-check:
+    name: Check Cargo.toml version
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download source code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Check cargo file version
+        run: |
+          CARGO_VERSION=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' crates/kwctl/Cargo.toml)
+          TAG_VERSION=$(echo ${{ github.ref_name }} | sed 's/v//')
+
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ];then
+              echo "::error title=Invalid Cargo.toml version::Cargo.toml version does not match the tag version"
+              exit 1
+          fi
+
   ci:
     uses: ./.github/workflows/ci.yml
     # Specify all permissions explicitly - read for most, write for attestations
@@ -80,6 +97,7 @@ jobs:
 
   build-kwctl:
     name: Build kwctl binaries
+    needs: version-check
     uses: ./.github/workflows/build-kwctl.yml
     permissions:
       id-token: write
