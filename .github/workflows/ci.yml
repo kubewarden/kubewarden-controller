@@ -261,6 +261,18 @@ jobs:
       - name: Run kwctl Sigstore E2E tests
         run: make -C crates/kwctl e2e-tests-sigstore
 
+  e2e-tests-sigstore-policy-server:
+    needs: [changes, calculate-crates-matrix]
+    if: needs.changes.outputs.rust == 'true'
+    name: E2E tests sigstore (policy-server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare sigstore environment for testing
+        uses: ./.github/actions/setup-sigstore-env
+      - name: Run policy-server Sigstore E2E tests
+        run: make -C crates/policy-server e2e-tests-sigstore
+
   integration-tests-policy-server:
     needs: [changes, calculate-crates-matrix]
     if: needs.changes.outputs.rust == 'true'
@@ -418,6 +430,7 @@ jobs:
       - integration-tests-burrego
       - integration-tests-kwctl
       - e2e-tests-sigstore-kwctl
+      - e2e-tests-sigstore-policy-server
       - integration-tests-policy-server
       - integration-tests-policy-evaluator
       - build-kwctl
