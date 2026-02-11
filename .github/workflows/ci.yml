@@ -336,6 +336,22 @@ jobs:
       - name: Run validation script
         run: ./scripts/validate-hauler-manifest.sh
 
+kwctl-docs:
+    name: Check if the kwctl reference documentation is up to date
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - run: |
+          make -C crates/kwctl build-docs
+          if ! git diff --quiet crates/kwctl/cli-docs.md; then
+            echo "Changes detected in cli-docs.md. Please run `make -C crates/kwctl build-docs` and commit the changes."
+            gh run cancel ${{ github.run_id }}
+          fi
+
   # Rollup job for branch protection - single stable job name that depends on all checks
   ci-success:
     name: CI Success
@@ -358,6 +374,7 @@ jobs:
       - shellcheck
       - charts
       - validate-hauler-manifest
+      - kwctl-docs
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status
