@@ -109,9 +109,8 @@ impl Config {
             .get_one::<String>("sigstore-cache-dir")
             .map(PathBuf::from)
             .expect("This should not happen, there's a default value for sigstore-cache-dir");
-        let sigstore_trust_config_path = matches
-            .get_one::<PathBuf>("sigstore-trust-config")
-            .cloned();
+        let sigstore_trust_config_path =
+            matches.get_one::<PathBuf>("sigstore-trust-config").cloned();
 
         let daemon = matches
             .get_one::<bool>("daemon")
