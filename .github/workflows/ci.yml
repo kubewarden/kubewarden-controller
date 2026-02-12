@@ -336,7 +336,7 @@ jobs:
       - name: Run validation script
         run: ./scripts/validate-hauler-manifest.sh
 
-kwctl-docs:
+  kwctl-docs:
     name: Check if the kwctl reference documentation is up to date
     needs: changes
     if: needs.changes.outputs.rust == 'true'
