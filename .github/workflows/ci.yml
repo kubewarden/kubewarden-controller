@@ -342,7 +342,7 @@ jobs:
     if: needs.changes.outputs.rust == 'true'
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -351,13 +351,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: git config --global core.longpaths true
 
-      - name: fix aws-lc-sys building with cmake 4.0.0
-        if: matrix.os == 'windows-latest'
-        run: |
-          echo 'CMAKE_POLICY_VERSION_MINIMUM="3.5"' >> $GITHUB_ENV
-
       - name: Run cargo check
-        run: cargo check --manifest-path crates/kwctl/Cargo.toml
+        run: make -C crates/kwctl check
 
   # Rollup job for branch protection - single stable job name that depends on all checks
   ci-success:
