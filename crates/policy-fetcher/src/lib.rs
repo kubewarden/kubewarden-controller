@@ -220,6 +220,22 @@ pub(crate) fn host_and_port(url: &Url) -> std::result::Result<String, errors::In
     ))
 }
 
+/// Helper function, reads proxy configuration from environment variables.
+/// Checks both uppercase and lowercase variants (HTTP_PROXY/http_proxy, etc.)
+pub(crate) fn get_proxy_env_vars() -> (Option<String>, Option<String>, Option<String>) {
+    let http_proxy = std::env::var("HTTP_PROXY")
+        .or_else(|_| std::env::var("http_proxy"))
+        .ok();
+    let https_proxy = std::env::var("HTTPS_PROXY")
+        .or_else(|_| std::env::var("https_proxy"))
+        .ok();
+    let no_proxy = std::env::var("NO_PROXY")
+        .or_else(|_| std::env::var("no_proxy"))
+        .ok();
+
+    (http_proxy, https_proxy, no_proxy)
+}
+
 // Each Wasm file begins with a well known bytes sequence, known as
 // "magic bytes" (see https://en.wikipedia.org/wiki/List_of_file_signatures).
 //
