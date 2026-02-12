@@ -336,6 +336,24 @@ jobs:
       - name: Run validation script
         run: ./scripts/validate-hauler-manifest.sh
 
+  check-kwctl-cross-platform:
+    name: Check kwctl (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      
+      - name: enable git long paths on Windows
+        if: matrix.os == 'windows-latest'
+        run: git config --global core.longpaths true
+
+      - name: Run cargo check
+        run: make -C crates/kwctl check
+
   # Rollup job for branch protection - single stable job name that depends on all checks
   ci-success:
     name: CI Success
@@ -358,6 +376,7 @@ jobs:
       - shellcheck
       - charts
       - validate-hauler-manifest
+      - check-kwctl-cross-platform
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status
