@@ -31,6 +31,8 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
+const fakeSigstoreTrustConfig = `{"trusted_root": {"version": "test"}}`
+
 func TestPolicyServerDefault(t *testing.T) {
 	defaulter := policyServerDefaulter{}
 	policyServer := &PolicyServer{}
@@ -222,6 +224,59 @@ func TestPolicyServerValidateLimitsAndRequests(t *testing.T) {
 			if test.error != "" {
 				require.ErrorContains(t, err, test.error)
 			}
+		})
+	}
+}
+
+func TestPolicyServerValidateSigstoreTrustConfig(t *testing.T) {
+	tests := []struct {
+		name      string
+		configMap *corev1.ConfigMap
+		error     string
+	}{
+		{
+			name:      "missing ConfigMap",
+			configMap: nil,
+			error:     "cannot get spec.SigstoreTrustConfig ConfigMap",
+		},
+		{
+			name: "ConfigMap missing required key",
+			configMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sigstore-config",
+					Namespace: "default",
+				},
+				Data: map[string]string{
+					"wrong-key": fakeSigstoreTrustConfig,
+				},
+			},
+			error: "does not contain required key",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			k8sClient := fake.NewClientBuilder().Build()
+
+			if test.configMap != nil {
+				err := k8sClient.Create(t.Context(), test.configMap)
+				require.NoError(t, err)
+			}
+
+			configMapName := "sigstore-config"
+			policyServer := NewPolicyServerFactory().
+				WithSigstoreTrustConfigMap(configMapName).
+				Build()
+
+			policyServerValidator := policyServerValidator{
+				deploymentsNamespace: "default",
+				k8sClient:            k8sClient,
+				logger:               logr.Discard(),
+			}
+			err := policyServerValidator.validate(t.Context(), policyServer)
+
+			require.Error(t, err)
+			require.ErrorContains(t, err, test.error)
 		})
 	}
 }

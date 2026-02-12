@@ -479,18 +479,24 @@ func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGrou
 }
 
 type PolicyServerBuilder struct {
-	name            string
-	minAvailable    *intstr.IntOrString
-	maxUnavailable  *intstr.IntOrString
-	imagePullSecret string
-	limits          corev1.ResourceList
-	requests        corev1.ResourceList
+	name                   string
+	minAvailable           *intstr.IntOrString
+	maxUnavailable         *intstr.IntOrString
+	imagePullSecret        string
+	limits                 corev1.ResourceList
+	requests               corev1.ResourceList
+	sigstoreTrustConfigMap string
 }
 
 func NewPolicyServerFactory() *PolicyServerBuilder {
 	return &PolicyServerBuilder{
 		name: newName("policy-server"),
 	}
+}
+
+func (f *PolicyServerBuilder) WithSigstoreTrustConfigMap(configMapName string) *PolicyServerBuilder {
+	f.sigstoreTrustConfigMap = configMapName
+	return f
 }
 
 func (f *PolicyServerBuilder) WithName(name string) *PolicyServerBuilder {
@@ -538,13 +544,14 @@ func (f *PolicyServerBuilder) Build() *PolicyServer {
 			},
 		},
 		Spec: PolicyServerSpec{
-			Image:           policyServerRepository() + ":" + policyServerVersion(),
-			Replicas:        1,
-			MinAvailable:    f.minAvailable,
-			MaxUnavailable:  f.maxUnavailable,
-			ImagePullSecret: f.imagePullSecret,
-			Limits:          f.limits,
-			Requests:        f.requests,
+			Image:               policyServerRepository() + ":" + policyServerVersion(),
+			Replicas:            1,
+			MinAvailable:        f.minAvailable,
+			MaxUnavailable:      f.maxUnavailable,
+			ImagePullSecret:     f.imagePullSecret,
+			Limits:              f.limits,
+			Requests:            f.requests,
+			SigstoreTrustConfig: f.sigstoreTrustConfigMap,
 			Env: []corev1.EnvVar{
 				{
 					Name:  "KUBEWARDEN_LOG_LEVEL",
