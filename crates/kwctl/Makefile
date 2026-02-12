@@ -51,3 +51,7 @@ tag:
 	@git-chglog --output CHANGELOG.md
 	@git commit -m 'Update CHANGELOG.md' -- CHANGELOG.md
 	@git tag -f "${TAG}"
+
+.PHONY: check
+check:
+	cargo check
