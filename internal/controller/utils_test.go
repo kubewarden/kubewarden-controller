@@ -193,3 +193,16 @@ func createPolicyServerAndWaitForItsService(ctx context.Context, policyServer *p
 		return err
 	}, timeout, pollInterval).Should(Succeed())
 }
+
+func createConfigMapWithSigstoreTrustConfig(ctx context.Context, name string, data string) {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: deploymentsNamespace,
+		},
+		Data: map[string]string{
+			constants.PolicyServerSigstoreTrustConfigEntry: data,
+		},
+	}
+	Expect(k8sClient.Create(ctx, configMap)).To(haveSucceededOrAlreadyExisted())
+}
