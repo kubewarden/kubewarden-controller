@@ -30,6 +30,7 @@ use tokio::fs;
 use tower::ServiceExt;
 
 use crate::common::default_test_config;
+use crate::common::pod_privileged_test_config;
 
 #[tokio::test]
 async fn test_validate() {
@@ -1299,4 +1300,70 @@ fn build_request_client(
         builder = builder.identity(identity)
     }
     builder.build().expect("failed to build client")
+}
+
+#[rstest]
+#[case::uppercase("HTTP_PROXY", "HTTPS_PROXY")]
+#[case::https_proxy_only("", "HTTPS_PROXY")]
+#[case::lowercase("http_proxy", "https_proxy")]
+#[tokio::test]
+async fn test_policy_server_with_proxy(#[case] http_var: &str, #[case] https_var: &str) {
+    use testcontainers::{
+        core::{IntoContainerPort, WaitFor},
+        runners::AsyncRunner,
+    };
+
+    setup();
+
+    // start proxy container
+    let proxy_image = testcontainers::GenericImage::new("kalaksi/tinyproxy", "1.7")
+        .with_wait_for(WaitFor::message_on_stdout("Starting main loop"))
+        .with_exposed_port(8888.tcp());
+    let container = proxy_image
+        .start()
+        .await
+        .expect("Failed to start proxy container");
+    let proxy_port = container
+        .get_host_port_ipv4(8888)
+        .await
+        .expect("Failed to get proxy port");
+    let proxy_url = format!("http://127.0.0.1:{}", proxy_port);
+
+    // set proxy env vars
+    unsafe {
+        if !http_var.is_empty() {
+            std::env::set_var(http_var, &proxy_url);
+        }
+        std::env::set_var(https_var, &proxy_url);
+    }
+
+    // this should download the policy through the proxy
+    let config = pod_privileged_test_config();
+    let app = app(config).await;
+
+    let request = http::Request::builder()
+        .method(http::Method::POST)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
+
+    let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+
+    // clean up env vars
+    unsafe {
+        if !http_var.is_empty() {
+            std::env::remove_var(http_var);
+        }
+        std::env::remove_var(https_var);
+    }
 }
