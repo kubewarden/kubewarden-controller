@@ -237,7 +237,7 @@ func TestPolicyServerValidateSigstoreTrustConfig(t *testing.T) {
 		{
 			name:      "missing ConfigMap",
 			configMap: nil,
-			error:     "cannot get spec.SigstoreTrustConfig ConfigMap",
+			error:     "cannot get spec.sigstoreTrustConfig ConfigMap",
 		},
 		{
 			name: "ConfigMap missing required key",
@@ -263,9 +263,8 @@ func TestPolicyServerValidateSigstoreTrustConfig(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			configMapName := "sigstore-config"
 			policyServer := NewPolicyServerFactory().
-				WithSigstoreTrustConfigMap(configMapName).
+				WithSigstoreTrustConfigMap("sigstore-config").
 				Build()
 
 			policyServerValidator := policyServerValidator{

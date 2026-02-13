@@ -147,11 +147,11 @@ func validateImagePullSecret(ctx context.Context, k8sClient client.Client, image
 		Name:      imagePullSecret,
 	}, secret)
 	if err != nil {
-		return fmt.Errorf("cannot get spec.ImagePullSecret: %w", err)
+		return fmt.Errorf("cannot get spec.imagePullSecret: %w", err)
 	}
 
 	if secret.Type != "kubernetes.io/dockerconfigjson" {
-		return fmt.Errorf("spec.ImagePullSecret secret \"%s\" is not of type kubernetes.io/dockerconfigjson", secret.Name)
+		return fmt.Errorf("spec.imagePullSecret secret \"%s\" is not of type kubernetes.io/dockerconfigjson", secret.Name)
 	}
 
 	return nil
@@ -166,11 +166,11 @@ func validateSigstoreTrustConfig(ctx context.Context, k8sClient client.Client, s
 		Name:      sigstoreTrustConfig,
 	}, configMap)
 	if err != nil {
-		return fmt.Errorf("cannot get spec.SigstoreTrustConfig ConfigMap: %w", err)
+		return fmt.Errorf("cannot get spec.sigstoreTrustConfig ConfigMap: %w", err)
 	}
 
 	if _, ok := configMap.Data[constants.PolicyServerSigstoreTrustConfigEntry]; !ok {
-		return fmt.Errorf("spec.SigstoreTrustConfig ConfigMap \"%s\" does not contain required key \"%s\"", sigstoreTrustConfig, constants.PolicyServerSigstoreTrustConfigEntry)
+		return fmt.Errorf("spec.sigstoreTrustConfig ConfigMap \"%s\" does not contain required key \"%s\"", sigstoreTrustConfig, constants.PolicyServerSigstoreTrustConfigEntry)
 	}
 
 	return nil
