@@ -248,6 +248,12 @@ Lists all downloaded policies
 
 Pulls a Kubewarden policy from a given URI
 
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+
+
 **Usage:** `kwctl pull [OPTIONS] <uri>`
 
 ###### **Arguments:**
@@ -504,6 +510,12 @@ Output a default Sigstore verification configuration file
 ## `kwctl verify`
 
 Verify a Kubewarden policy from a given URI using Sigstore
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+
 
 **Usage:** `kwctl verify [OPTIONS] <uri>`
 
