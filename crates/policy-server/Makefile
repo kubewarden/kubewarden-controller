@@ -38,6 +38,10 @@ integration-tests:
 	cargo test --test '*'
 	cargo test --features otel_tests -- test_otel
 
+.PHONY: e2e-tests-sigstore
+e2e-tests-sigstore:
+	cargo test --test 'sigstore' --features sigstore-testing
+
 .PHONY: coverage
 coverage: coverage-unit-tests coverage-integration-tests
 	
