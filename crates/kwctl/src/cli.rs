@@ -43,9 +43,16 @@ Only the following attributes of the Custom Resource Definition (CRD) are evalua
 
 Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
 
-A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates
+each policy in the file using the same request during each evaluation.
 "#
 );
+
+static PROXY_ENV_VARS_COMMON_LONG_ABOUT: &str = r#"It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+"#;
 
 // Minimum set of flags required to pull a policy from a registry
 fn pull_shared_flags() -> Vec<Arg> {
@@ -121,6 +128,12 @@ fn subcommand_pull() -> Command {
 
     Command::new("pull")
         .about("Pulls a Kubewarden policy from a given URI")
+        .long_about(format!(
+            r#"Pulls a Kubewarden policy from a given URI
+            
+{}"#,
+            PROXY_ENV_VARS_COMMON_LONG_ABOUT
+        ))
         .args(args)
 }
 
@@ -188,6 +201,15 @@ fn subcommand_verify() -> Command {
 
     Command::new("verify")
         .about("Verify a Kubewarden policy from a given URI using Sigstore")
+        .long_about(
+            r#"Verify a Kubewarden policy from a given URI using Sigstore
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+"#,
+        )
         .args(args)
 }
 
@@ -356,8 +378,10 @@ fn subcommand_run() -> Command {
         .long_about(format!(
             r#"Run one or more Kubewarden policies locally.
 
+{}
+
 {}"#,
-            RUN_AND_BENCH_COMMON_LONG_ABOUT
+            RUN_AND_BENCH_COMMON_LONG_ABOUT, PROXY_ENV_VARS_COMMON_LONG_ABOUT
         ))
         .args(args)
         .group(
