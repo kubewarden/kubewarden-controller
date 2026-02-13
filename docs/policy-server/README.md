@@ -71,6 +71,16 @@ depends on the URL format provided by the user:
 - `registry://localhost:5000/project/artifact:some-version` download the policy
   from a OCI registry. The policy must have been pushed as an OCI artifact
 
+### Using a proxy
+
+When downloading policies from remote locations, `policy-server` respects standard proxy environment variables:
+
+- `HTTP_PROXY` or `http_proxy`: proxy server for HTTP requests
+- `HTTPS_PROXY` or `https_proxy`: proxy server for HTTPS requests
+- `NO_PROXY` or `no_proxy`: comma-separated list of hosts to exclude from proxying
+
+These environment variables should be set in the policy-server container environment.
+
 ### Policy Group
 
 Multiple policies can be grouped together and are evaluated using a user provided boolean expression.
