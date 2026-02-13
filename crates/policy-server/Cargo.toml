@@ -72,6 +72,7 @@ mockall        = "0.14"
 rcgen          = { version = "0.14", features = ["crypto"] }
 rstest         = { workspace = true }
 tempfile       = { workspace = true }
+temp-env       = { version = "0.3", features = ["async_closure"] }
 testcontainers = { version = "0.27", features = ["watchdog"] }
 tower          = { version = "0.5", features = ["util"] }
 
