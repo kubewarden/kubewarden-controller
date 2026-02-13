@@ -121,6 +121,15 @@ fn subcommand_pull() -> Command {
 
     Command::new("pull")
         .about("Pulls a Kubewarden policy from a given URI")
+        .long_about(
+            r#"Pulls a Kubewarden policy from a given URI
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+"#,
+        )
         .args(args)
 }
 
@@ -188,6 +197,15 @@ fn subcommand_verify() -> Command {
 
     Command::new("verify")
         .about("Verify a Kubewarden policy from a given URI using Sigstore")
+        .long_about(
+            r#"Verify a Kubewarden policy from a given URI using Sigstore
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+"#,
+        )
         .args(args)
 }
 
