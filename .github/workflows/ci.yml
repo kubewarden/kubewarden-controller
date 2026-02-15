@@ -311,6 +311,15 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - run: shellcheck $(find scripts/ -name '*.sh')
 
+  spelling:
+    name: Spelling check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Check spelling with typos
+        uses: crate-ci/typos@v1.43.4   
+        
   charts:
     name: Helm unittest
     runs-on: ubuntu-latest
@@ -390,6 +399,7 @@ jobs:
       - integration-tests-policy-evaluator
       - build-kwctl
       - shellcheck
+      - spelling 
       - charts
       - validate-hauler-manifest
       - kwctl-docs
