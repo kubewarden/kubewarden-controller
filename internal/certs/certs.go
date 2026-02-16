@@ -160,7 +160,7 @@ func pemEncodePrivateKey(privateKey *ecdsa.PrivateKey) ([]byte, error) {
 	privateKeyPEM := new(bytes.Buffer)
 
 	err = pem.Encode(privateKeyPEM, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
+		Type:  "EC PRIVATE KEY",
 		Bytes: privateKeyBytes,
 	})
 	if err != nil {
