@@ -224,7 +224,7 @@ func (r *ClusterAdmissionPolicyGroup) GetUniqueName() string {
 }
 
 func (r *ClusterAdmissionPolicyGroup) GetContextAwareResources() []ContextAwareResource {
-	// We return an empty slice here because the policy memebers have the
+	// We return an empty slice here because the policy members have the
 	// context aware resources. Therefore, the policy group does not need
 	// to have them.
 	return []ContextAwareResource{}

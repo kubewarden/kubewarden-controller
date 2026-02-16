@@ -720,7 +720,7 @@ var _ = Describe("PolicyServer controller", func() {
 
 			kubewardenCAPath := filepath.Join(kubewardenCAVolumePath, constants.CARootCert)
 			clientCAPath := filepath.Join(clientCAVolumePath, constants.ClientCACert)
-			By("specifing the client ca certificate")
+			By("specifying the client ca certificate")
 			Expect(container.Env).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 				"Name":  Equal("KUBEWARDEN_CLIENT_CA_FILE"),
 				"Value": Equal(fmt.Sprintf("%s,%s", kubewardenCAPath, clientCAPath)),
@@ -791,7 +791,7 @@ var _ = Describe("PolicyServer controller", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
-			initalConfigMap, err := getTestPolicyServerConfigMap(ctx, policyServerName)
+			initialConfigMap, err := getTestPolicyServerConfigMap(ctx, policyServerName)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() error {
@@ -799,10 +799,10 @@ var _ = Describe("PolicyServer controller", func() {
 				if err != nil {
 					return err
 				}
-				if deployment.GetAnnotations()[constants.PolicyServerDeploymentConfigVersionAnnotation] != initalConfigMap.GetResourceVersion() {
+				if deployment.GetAnnotations()[constants.PolicyServerDeploymentConfigVersionAnnotation] != initialConfigMap.GetResourceVersion() {
 					return errors.New("deployment configmap version did not change")
 				}
-				if deployment.Spec.Template.GetLabels()[constants.PolicyServerDeploymentConfigVersionAnnotation] != initalConfigMap.GetResourceVersion() {
+				if deployment.Spec.Template.GetLabels()[constants.PolicyServerDeploymentConfigVersionAnnotation] != initialConfigMap.GetResourceVersion() {
 					return errors.New("pod configmap version did not change")
 				}
 				return nil
@@ -820,7 +820,7 @@ var _ = Describe("PolicyServer controller", func() {
 				if err != nil {
 					return err
 				}
-				if configmap.GetResourceVersion() == initalConfigMap.GetResourceVersion() {
+				if configmap.GetResourceVersion() == initialConfigMap.GetResourceVersion() {
 					return errors.New("configmap version did not change")
 				}
 				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)

@@ -232,7 +232,7 @@ func TestValidateRulesField(t *testing.T) {
 						APIVersions: []string{""},
 						Resources:   []string{"*/*"},
 					},
-				}}).WithPolicyServer("defaule").Build(),
+				}}).WithPolicyServer("default").Build(),
 			[]string{"spec.rules.rule.apiVersions[0]: Required value: must be non-empty"},
 		},
 		{

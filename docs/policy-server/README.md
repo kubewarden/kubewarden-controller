@@ -231,7 +231,7 @@ process and stored in the container registry together with the container image
 as well as uploaded to the release page. 
 
 After the container image building, the container image and their attestations
-are signed using cosign. The attestation files are stoed inside a tarball with
+are signed using cosign. The attestation files are stored inside a tarball with
 the checksum file with the md5sum for the files there. Therefore, after
 downloading the attestation files from the [release
 page](https://github.com/kubewarden/policy-server/releases), extracting them,

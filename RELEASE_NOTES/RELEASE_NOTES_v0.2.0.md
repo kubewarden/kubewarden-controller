@@ -88,7 +88,7 @@ kubectl delete deployment --namespace kubewarden kubewarden-controller
 
 #### Install new Custom Resource Definitions
 
-To install the new CRD definition execute the following commnad:
+To install the new CRD definition execute the following command:
 ```console
 kubectl apply -f https://raw.githubusercontent.com/kubewarden/helm-charts/kubewarden-controller-0.1.12/charts/kubewarden-controller/crds/clusteradmissionpolicies.yaml
 ````

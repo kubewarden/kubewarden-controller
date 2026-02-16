@@ -56,7 +56,7 @@ have been started:
 1. Push a tagged container image with the build of the project
 
 For a release to be complete, all these tasks should have been
-executed succesfully.
+executed successfully.
 
 ### Consider bumping the helm-chart
 

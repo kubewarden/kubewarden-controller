@@ -231,7 +231,7 @@ questions:
   #           group: do-not-run-as-root policy settings
   #           label: max
   #           show_if: recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_user.rule=MustRunAsNonRoot
-  #           tooltip: Maxium UID or GID
+  #           tooltip: Maximum UID or GID
   #           type: int
   #           variable: max
   # - variable: recommendedPolicies.userGroupPolicy.settings.run_as_group
@@ -278,7 +278,7 @@ questions:
   #           group: do-not-run-as-root policy settings
   #           label: max
   #           show_if: recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.run_as_group.rule=MayRunAs
-  #           tooltip: Maxium UID or GID
+  #           tooltip: Maximum UID or GID
   #           type: int
   #           variable: max
   # - variable: recommendedPolicies.userGroupPolicy.settings.supplemental_groups
@@ -329,7 +329,7 @@ questions:
   #           label: max
   #           show_if: >-
   #             recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MustRunAs||recommendedPolicies.userGroupPolicy.settings.supplemental_groups.rule=MayRunAs
-  #           tooltip: Maxium UID or GID
+  #           tooltip: Maximum UID or GID
   #           type: int
   #           variable: max
   # - variable: recommendedPolicies.userGroupPolicy.settings.validate_container_image_configuration
