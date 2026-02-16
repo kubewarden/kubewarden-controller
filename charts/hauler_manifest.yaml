@@ -48,7 +48,7 @@ spec:
   images:
     - name: ghcr.io/kyverno/policy-reporter-ui:2.5.1
     - name: ghcr.io/kyverno/policy-reporter:3.6.0
-    - name: ghcr.io/rancher/kuberlr-kubectl:v7.0.0
+    - name: ghcr.io/rancher/kuberlr-kubectl:v7.0.1
 ---
 apiVersion: content.hauler.cattle.io/v1
 kind: Charts
