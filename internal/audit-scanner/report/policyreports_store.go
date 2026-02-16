@@ -14,6 +14,7 @@ import (
 )
 
 // PolicyReportStore is a store for PolicyReport and ClusterPolicyReport.
+//
 // Deprecated: use OpenReportStore instead. wgpolicy.PolicyReport is deprecated in favor of openreports.Report.
 type PolicyReportStore struct {
 	// client is a controller-runtime client that knows about PolicyReport and ClusterPolicyReport CRDs
