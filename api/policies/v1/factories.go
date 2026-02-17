@@ -572,7 +572,7 @@ func policyServerRepository() string {
 func policyServerVersion() string {
 	version, ok := os.LookupEnv("POLICY_SERVER_VERSION")
 	if !ok {
-		return "latest"
+		return "dev"
 	}
 
 	return version
