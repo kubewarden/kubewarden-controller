@@ -41,7 +41,7 @@ policy-evaluator = { path = "../policy-evaluator" }
 pprof = { version = "0.15", features = ["prost-codec"] }
 rayon = { workspace = true }
 regex = { workspace = true }
-rustls = { workspace = true, features = ["logging", "ring", "std", "tls12"] }
+rustls = { workspace = true }
 rustls-pki-types = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }

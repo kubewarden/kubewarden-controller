@@ -13,12 +13,6 @@ use policy_server::tracing::setup_tracing;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Starting from rustls 0.22, each application must set its default crypto provider.
-    let crypto_provider = rustls::crypto::ring::default_provider();
-    crypto_provider
-        .install_default()
-        .expect("Failed to install crypto provider");
-
     let matches = cli::build_cli().get_matches();
     if matches.subcommand_name() == Some("docs") {
         return run_docs_subcommand(matches.subcommand_matches("docs"));
