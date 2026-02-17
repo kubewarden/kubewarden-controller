@@ -104,7 +104,7 @@ func NewScanner(config Config) (*Scanner, error) {
 
 	transport.TLSClientConfig = tlsConfig
 
-	// By dafault, the http client reuses connections. This causes
+	// By default, the http client reuses connections. This causes
 	// scaling issues when a PolicyServer instance is backed by multiple
 	// replicas. In this scanerio, the requests are sent to the same
 	// PolicyServer Pod, causing the load to be unevenly distributed.
@@ -165,7 +165,7 @@ func (s *Scanner) ScanNamespace(ctx context.Context, nsName, runUID string) erro
 
 			acquireErr := semaphore.Acquire(ctx, 1)
 			if acquireErr != nil {
-				return fmt.Errorf("failed to acquire the permission to audit resouce: %w", acquireErr)
+				return fmt.Errorf("failed to acquire the permission to audit resource: %w", acquireErr)
 			}
 			workers.Add(1)
 			policiesToAudit := pols

@@ -184,7 +184,7 @@ telemetry:
     # where the controller is deployed.
     #
     # telemetry.custom.otelCollectorCertificateSecret should contains a key ca.crt
-    # storing the certifcate to validate the remote collector certificate.
+    # storing the certificate to validate the remote collector certificate.
     otelCollectorCertificateSecret: ""
     # telemetry.custom.otelCollectorClientCertificateSecret secret is optional. It's
     # only required when the remote collector requires client authentication

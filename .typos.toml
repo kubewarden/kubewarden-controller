@@ -1,0 +1,20 @@
+[files]
+extend-exclude = [
+  "audit-scanner/config/crd/*",
+  "charts/*/templates/",
+  "config/*",
+]
+
+[default.extend-words]
+# in-toto is a legitimate security framework
+intoto = "intoto"
+
+[default.extend-identifiers]
+# Technical terms that are not typos
+ANDed = "ANDed"
+
+[default]
+extend-ignore-re = [
+  # Ignore base64 encoded strings (certificates, keys, etc.)
+  '[A-Za-z0-9+/]{20,}={0,2}',
+]

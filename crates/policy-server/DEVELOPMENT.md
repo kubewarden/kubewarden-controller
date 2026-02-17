@@ -297,7 +297,7 @@ $ ls -l
 config         dev            etc            pki            policy-server  proc           sys            tmp            var
 ```
 
-> **Note:** the filesytem of the policy-server container is read-only. This is set inside of the Deployment of the Policy Server.
+> **Note:** the filesystem of the policy-server container is read-only. This is set inside of the Deployment of the Policy Server.
 
 ### Attaching with strace to the policy-server process
 

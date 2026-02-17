@@ -30,7 +30,7 @@ type CertReconciler struct {
 }
 
 // Start begins the periodic reconciler.
-// Implements the Runnable inteface, see https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/manager#Runnable.
+// Implements the Runnable interface, see https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/manager#Runnable.
 func (r *CertReconciler) Start(ctx context.Context) error {
 	r.Log.Info("Starting CertController ticker")
 

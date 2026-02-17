@@ -46,7 +46,7 @@ type policyServerConfigEntry struct {
 // The following MarshalJSON and UnmarshalJSON methods are used to serialize
 // and deserialize the policyServerConfigEntry struct to and from JSON. This is
 // necessary because each policy type has different fields and we need to
-// handle them differently. It's not beatiful, but we do not need to change
+// handle them differently. It's not beautiful, but we do not need to change
 // other parts of the code to make it work.
 func (p *policyServerConfigEntry) UnmarshalJSON(b []byte) error {
 	type configEntry *policyServerConfigEntry

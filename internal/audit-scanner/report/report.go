@@ -39,7 +39,7 @@ func getCategoryAndMessage(policy policiesv1.Policy, admissionReview *admissionv
 	if admissionReview != nil &&
 		admissionReview.Response != nil &&
 		admissionReview.Response.Result != nil {
-		// Mesage contains the human-readable error message if Response.Result.Code == 500
+		// Message contains the human-readable error message if Response.Result.Code == 500
 		// or the reason why the policy returned a failure
 		message = admissionReview.Response.Result.Message
 	}

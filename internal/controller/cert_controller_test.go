@@ -283,7 +283,7 @@ var _ = Describe("Cert controller", func() {
 			err = certs.VerifyCA(caCert, caPrivateKey, time.Now())
 			Expect(err).ToNot(HaveOccurred())
 
-			By("checking whether the old CA cert has beeen added to the secret")
+			By("checking whether the old CA cert has been added to the secret")
 			_, found := caRootSecret.Data[constants.OldCARootCert]
 			Expect(found).To(BeTrue())
 		})
