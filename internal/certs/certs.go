@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -215,6 +216,19 @@ func VerifyCert(certPEM, privateKeyPEM []byte, certPool *x509.CertPool, dnsName 
 
 	// Verify the private key
 	if privateKeyPEM != nil {
+		block, _ := pem.Decode(privateKeyPEM)
+		if block == nil {
+			return errors.New("failed to decode private key PEM")
+		}
+		// We've always created EC keys, but in the past we made the mistake of encoding them with the wrong PEM header,
+		// which lead to PolicyServer crashing at boot after we upgraded to a more restrictive crate for parsing
+		// private keys.
+		// We have to force the regeneration of the private key if the PEM header is wrong, otherwise clusters
+		// that are running with a wrong key pair will have a PolicyServer stuck in crash loop after the upgrade.
+		if block.Type != "EC PRIVATE KEY" {
+			return errors.New("private key has invalid PEM header, expected 'EC PRIVATE KEY'")
+		}
+
 		if _, err = tls.X509KeyPair(certPEM, privateKeyPEM); err != nil {
 			return fmt.Errorf("key pair is invalid: %w", err)
 		}
