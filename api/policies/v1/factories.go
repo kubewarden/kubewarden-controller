@@ -545,6 +545,16 @@ func (f *PolicyServerBuilder) Build() *PolicyServer {
 			ImagePullSecret: f.imagePullSecret,
 			Limits:          f.limits,
 			Requests:        f.requests,
+			Env: []corev1.EnvVar{
+				{
+					Name:  "KUBEWARDEN_LOG_LEVEL",
+					Value: "debug",
+				},
+				{
+					Name:  "RUST_BACKTRACE",
+					Value: "1",
+				},
+			},
 		},
 	}
 
@@ -562,7 +572,7 @@ func policyServerRepository() string {
 func policyServerVersion() string {
 	version, ok := os.LookupEnv("POLICY_SERVER_VERSION")
 	if !ok {
-		return "latest"
+		return "dev"
 	}
 
 	return version

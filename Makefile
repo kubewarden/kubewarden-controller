@@ -14,7 +14,7 @@ ENVTEST_DIR ?= $(shell pwd)/.envtest
 
 REGISTRY ?= ghcr.io
 REPO ?= kubewarden
-TAG ?= latest
+TAG ?= dev
 
 # Detect architecture for Rust builds
 ARCH ?= $(shell uname -m)

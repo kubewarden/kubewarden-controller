@@ -19,14 +19,7 @@ static START: Once = Once::new();
 /// Common setup for tests. This function should be called at the beginning of each test.
 pub(crate) fn setup() {
     START.call_once(|| {
-        // Starting from rustls 0.22, each application must set its default crypto provider.
-        // This setup is done inside of the `main` function of the policy server,
-        // which is not called in this test.
-        // Hence we have to setup the crypto provider here.
-        let crypto_provider = rustls::crypto::ring::default_provider();
-        crypto_provider
-            .install_default()
-            .expect("Failed to install crypto provider");
+        // Add common setup code here
     });
 }
 
