@@ -33,6 +33,7 @@ func NewClusterReportOfKind(kind CrdKind, runUID string, resource unstructured.U
 }
 
 // NewPolicyReport creates a new PolicyReport from a given resource.
+//
 // Deprecated: use NewReport instead. wgpolicy.PolicyReport is deprecated in favor of openreports.Report.
 func NewPolicyReport(runUID string, resource unstructured.Unstructured) *PolicyReport {
 	objMeta := getReportObjectMeta(runUID, resource)
@@ -79,6 +80,7 @@ func (r *PolicyReport) SetErrorPolicies(erroredPoliciesNumber int) {
 }
 
 // NewClusterPolicyReport creates a new ClusterPolicyReport from a given resource.
+//
 // Deprecated: use NewClusterReport instead. wgpolicy.ClusterPolicyReport is deprecated in favor of openreports.ClusterReport.
 func NewClusterPolicyReport(runUID string, resource unstructured.Unstructured) *ClusterPolicyReport {
 	return &ClusterPolicyReport{
