@@ -1,15 +1,19 @@
+use std::{collections::BTreeSet, hash::Hash};
+
 use anyhow::Result;
 use futures::{Stream, StreamExt, TryStreamExt, future::ready};
-use kube::{Resource, runtime::reflector::store};
 use kube::{
-    ResourceExt,
-    runtime::{WatchStreamExt, reflector::store::Writer, watcher},
+    Resource, ResourceExt,
+    runtime::{
+        WatchStreamExt,
+        reflector::store::{self, Writer},
+        watcher,
+    },
 };
-use std::hash::Hash;
 use tokio::{sync::watch, time::Instant};
 use tracing::{debug, info, warn};
 
-use crate::callback_handler::kubernetes::KubeResource;
+use crate::callback_handler::kubernetes::{KubeResource, field_mask};
 
 /// Like `kube::runtime::reflector::reflector`, but also sends the time of the last change to a
 /// watch channel
@@ -62,9 +66,10 @@ impl Reflector {
         namespace: Option<&str>,
         label_selector: Option<&str>,
         field_selector: Option<&str>,
+        field_masks: Option<&BTreeSet<String>>,
     ) -> String {
         format!(
-            "{}|{}|{namespace:?}|{label_selector:?}|{field_selector:?}",
+            "{}|{}|{namespace:?}|{label_selector:?}|{field_selector:?}|{field_masks:?}",
             resource.resource.api_version, resource.resource.kind
         )
     }
@@ -77,6 +82,7 @@ impl Reflector {
         namespace: Option<String>,
         label_selector: Option<String>,
         field_selector: Option<String>,
+        field_masks: Option<BTreeSet<String>>,
     ) -> Result<Self> {
         let group = resource.resource.group.clone();
         let version = resource.resource.version.clone();
@@ -112,13 +118,13 @@ impl Reflector {
             field_selector: field_selector.clone(),
             ..Default::default()
         };
-        let stream = watcher(api, filter).map_ok(|ev| {
+
+        let field_masker: Option<field_mask::FieldMaskNode> =
+            field_masks.map(|masks| field_mask::FieldMaskNode::new(masks.into_iter()));
+
+        let stream = watcher(api, filter).map_ok(move |ev| {
             ev.modify(|obj| {
-                // clear managed fields to reduce memory usage
-                obj.managed_fields_mut().clear();
-                // clear last-applied-configuration to reduce memory usage
-                obj.annotations_mut()
-                    .remove("kubectl.kubernetes.io/last-applied-configuration");
+                modify_object(obj, field_masker.as_ref());
             })
         });
 
@@ -167,5 +173,172 @@ impl Reflector {
     /// Get the last time a change was seen by the reflector
     pub async fn last_change_seen_at(&self) -> Instant {
         *self.last_change_seen_at.borrow()
+    }
+}
+
+fn modify_object(
+    obj: &mut kube::core::DynamicObject,
+    field_masker: Option<&field_mask::FieldMaskNode>,
+) {
+    // clear managed fields to reduce memory usage
+    obj.managed_fields_mut().clear();
+    // clear last-applied-configuration to reduce memory usage
+    obj.annotations_mut()
+        .remove("kubectl.kubernetes.io/last-applied-configuration");
+    // apply field masks, if any
+    if let Some(mask) = field_masker {
+        field_mask::prune_in_place(&mut obj.data, mask);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use k8s_openapi::apimachinery::pkg::apis::meta::v1::ManagedFieldsEntry;
+    use kube::core::{DynamicObject, ObjectMeta};
+    use serde_json::json;
+    use std::collections::{BTreeMap, BTreeSet};
+
+    #[test]
+    fn test_modify_object_clears_managed_fields() {
+        let mut obj = DynamicObject {
+            metadata: ObjectMeta {
+                managed_fields: Some(vec![ManagedFieldsEntry::default()]),
+                ..Default::default()
+            },
+            types: None,
+            data: json!({}),
+        };
+
+        modify_object(&mut obj, None);
+
+        assert!(obj.metadata.managed_fields.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_modify_object_removes_last_applied_configuration() {
+        let mut annotations = BTreeMap::new();
+        annotations.insert(
+            "kubectl.kubernetes.io/last-applied-configuration".to_string(),
+            "{}".to_string(),
+        );
+        annotations.insert("other-annotation".to_string(), "value".to_string());
+
+        let mut obj = DynamicObject {
+            metadata: ObjectMeta {
+                annotations: Some(annotations),
+                ..Default::default()
+            },
+            types: None,
+            data: json!({}),
+        };
+
+        modify_object(&mut obj, None);
+
+        let annotations = obj.metadata.annotations.unwrap();
+        assert!(!annotations.contains_key("kubectl.kubernetes.io/last-applied-configuration"));
+        assert!(annotations.contains_key("other-annotation"));
+    }
+
+    #[test]
+    fn test_modify_object_applies_field_masks() {
+        let mut obj = DynamicObject::new(
+            "Pod",
+            &kube::api::ApiResource::erase::<k8s_openapi::api::core::v1::Pod>(&()),
+        );
+        obj.types = None;
+        obj.data = json!({
+            "spec": {
+                "containers": [
+                    {
+                        "name": "nginx",
+                        "image": "nginx:latest"
+                    }
+                ]
+            },
+            "status": {
+                "phase": "Running"
+            }
+        });
+
+        let mut masks = BTreeSet::new();
+        masks.insert("spec.containers.image".to_string());
+
+        let field_masker = field_mask::FieldMaskNode::new(masks);
+
+        modify_object(&mut obj, Some(&field_masker));
+
+        let expected_data = json!({
+            "spec": {
+                "containers": [
+                    {
+                        "image": "nginx:latest"
+                    }
+                ]
+            }
+        });
+
+        assert_eq!(obj.data, expected_data);
+    }
+
+    #[test]
+    fn test_modify_object_applies_field_masks_with_sbomscanner_vulnerability_report() {
+        let sbom_data = std::fs::read_to_string("tests/data/sbomscanner_vulnerability_report.json")
+            .expect("Failed to read sbomscanner_vulnerability_report.json");
+        let vulnerability_report_json: serde_json::Value =
+            serde_json::from_str(&sbom_data).expect("Failed to parse JSON");
+
+        let mut obj = DynamicObject::new(
+            "VulnerabilityReport",
+            // Wrong resource, but it doesn't matter for this test, we just want to check that the field masking works as expected
+            &kube::api::ApiResource::erase::<k8s_openapi::api::core::v1::Pod>(&()),
+        );
+        obj.types = None;
+        obj.data = vulnerability_report_json;
+
+        let field_masks: BTreeSet<String> = BTreeSet::from([
+            "report.results.vulnerabilities.cve".to_string(),
+            "report.results.vulnerabilities.fixedVersions".to_string(),
+            "report.results.vulnerabilities.severity".to_string(),
+            "report.results.vulnerabilities.suppressed".to_string(),
+        ]);
+        let field_masker = field_mask::FieldMaskNode::new(field_masks);
+
+        modify_object(&mut obj, Some(&field_masker));
+
+        // Validation
+        let report = obj.data.get("report").expect("report field missing");
+
+        assert!(
+            report.get("imageMetadata").is_none(),
+            "imageMetadata should be removed"
+        );
+
+        let results = report.get("results").expect("results field missing");
+        let results_arr = results.as_array().expect("results should be an array");
+
+        for result in results_arr {
+            let vulnerabilities = result
+                .get("vulnerabilities")
+                .expect("vulnerabilities field missing");
+            let vulns_arr = vulnerabilities
+                .as_array()
+                .expect("vulnerabilities should be an array");
+
+            for vuln in vulns_arr {
+                let vuln_obj = vuln.as_object().expect("vulnerability should be an object");
+
+                assert!(
+                    vuln_obj.keys().count() == 4,
+                    "vulnerability should only have 4 fields"
+                );
+
+                // Check expected fields exist
+                assert!(vuln.get("cve").is_some(), "cve missing");
+                assert!(vuln.get("fixedVersions").is_some(), "fixedVersions missing");
+                assert!(vuln.get("severity").is_some(), "severity missing");
+                assert!(vuln.get("suppressed").is_some(), "suppressed missing");
+            }
+        }
     }
 }
