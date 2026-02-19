@@ -59,9 +59,11 @@ const (
 	TimeToRequeuePolicyReconciliation = 2 * time.Second
 	MetricsShutdownTimeout            = 5 * time.Second
 
-	WebhookServerCertSecretName = "kubewarden-webhook-server-cert" //nolint:gosec // This is not a credential
-	ServerCert                  = "tls.crt"
-	ServerPrivateKey            = "tls.key"
+	WebhookServerCertSecretName      = "kubewarden-webhook-server-cert" //nolint:gosec // This is not a credential
+	ServerCert                       = "tls.crt"
+	ServerPrivateKey                 = "tls.key"
+	ServerCertSecretFormatVersion    = "1"
+	ServerCertSecretFormatAnnotation = "kubewarden.io/cert-format-version" //nolint:gosec // This is not a credential
 
 	CARootSecretName = "kubewarden-ca"
 	CARootCert       = "ca.crt"
