@@ -1,6 +1,6 @@
 [![Kubewarden Core Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-core.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#core-scope)
 [![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
-[![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-controller)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller)
+[![Artifact HUB](https://img.shields.io/badge/ArtifactHub-Helm_Charts-blue?style=flat&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fsearch%3Frepo%3Dkubewarden%26kind%3D0%26verified_publisher%3Dtrue%26official%3Dtrue%26cncf%3Dtrue%26sort%3Drelevance%26page%3D1)](https://artifacthub.io/packages/search?repo=kubewarden&kind=0&verified_publisher=true&official=true&cncf=true&sort=relevance&page=1)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/6502/badge)](https://www.bestpractices.dev/projects/6502)
 [![FOSSA license scan](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller.svg?type=shield)](https://app.fossa.com/projects/custom%252B25850%252Fgithub.com%252Fkubewarden%252Fkubewarden-controller?ref=badge_shield)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/kubewarden-controller/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/kubewarden-controller)
