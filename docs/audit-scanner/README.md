@@ -1,7 +1,9 @@
 ## Audit scanner
 
-> **Note well:** don't forget to checkout [Kubewarden's Audit Scanner documentation](https://docs.kubewarden.io/explanations/audit-scanner)
-> for more information
+> [!NOTE]
+> Don't forget to checkout [Kubewarden's Audit Scanner
+> documentation](https://docs.kubewarden.io/explanations/audit-scanner) for
+> more information
 
 The Audit scanner inspects the resources defined in the cluster and
 identifies the ones that are violating Kubewarden policies.
@@ -10,6 +12,9 @@ The results of the scan are stored in `PolicyReport` and `ClusterPolicyReports` 
 Each resource has its own dedicated `PolicyReport` or `ClusterPolicyReport`, depending on the type of the resource.
 
 See [Querying the reports](#querying-the-reports) for more information.
+
+For implementation details, see [RFC-11](https://github.com/kubewarden/rfc/blob/main/rfc/0011-audit-checks.md),
+[RFC-12](https://github.com/kubewarden/rfc/blob/main/rfc/0012-policy-report.md).
 
 # Usage
 
@@ -173,11 +178,6 @@ summary:
   warn: 0
 ```
 
-# Deployment
-
-The Audit Scanner is deployed as a part of the [Kubewarden Controller helm chart](https://github.com/kubewarden/helm-charts).
-Please refer to the [Kubewarden Controller documentation](https://docs.kubewarden.io/installation/installation) for more information.
-
 # Building
 
 You can use the container image we maintain inside of our
@@ -188,8 +188,3 @@ Alternatively, the `audit-scanner` binary can be built in this way:
 ```shell
 make build
 ```
-
-Please refer [CONTRIBUTING.md](CONTRIBUTING.md) for more information on how to contribute to this project.
-
-For implementation details, see [RFC-11](https://github.com/kubewarden/rfc/blob/main/rfc/0011-audit-checks.md),
-[RFC-12](https://github.com/kubewarden/rfc/blob/main/rfc/0012-policy-report.md).

@@ -56,7 +56,7 @@ There is also:
 These are the commands currently supported by kwctl.
 
 If you want a complete list of the available commands, you can read the
-[cli-docs.md](./cli-docs.md) file.
+[cli-docs.md](../../crates/kwctl/cli-docs.md) file.
 
 ### List policies
 
@@ -105,8 +105,10 @@ to quickly evaluate a policy and find the right settings for it.
 
 The evaluation is done against a pre-recorded [`AdmissionReview`](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#request).
 
-> **Note:** it's possible to scaffodl an `AdmissionReview` object from a Kubernetes resource.
-> Take a look at [this section](#scaffold-kubernetes-custom-resources) for more details.
+> [!NOTE]
+> It's possible to scaffold an `AdmissionReview` object from a Kubernetes
+> resource. Take a look at [this
+> section](#scaffold-kubernetes-custom-resources) for more details.
 
 #### Run a local policy
 
@@ -193,7 +195,8 @@ kwctl push registry://ghcr.io/kubewarden/policies/safe-labels:v0.1.5 \
 The above command copies a local policy that was downloaded from the GitHub
 Container Registry, into a local registry.
 
-> **Note well:** the policy must be previously downloaded locally via `kwctl pull`
+> [!NOTE]
+> The policy must be previously downloaded locally via `kwctl pull`
 
 ### Remove a local policy
 
@@ -338,25 +341,3 @@ rm ~/.zcompdump*
 ```
 
 Then start a new shell or run `source ~/.zshrc` once.
-
-## Verify kwctl binaries
-
-kwctl binaries are signed using [Sigstore's blog signing](https://docs.sigstore.dev/signing/signing_with_blobs/).
-When you download a [kwctl release](https://github.com/kubewarden/kwctl/releases/) each zip file contains two
-files that can be used for verification: `kwctl.sig` and `kwctl.pem`.
-
-In order to verify kwctl you need cosign installed, and then execute the following command:
-
-```
-cosign verify-blob \
-  --signature kwctl-linux-x86_64.sig \
-  --cert kwctl-linux-x86_64.pem kwctl-linux-x86_64 \
-  --certificate-identity-regexp 'https://github.com/kubewarden/*' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-```
-
-The output should be:
-
-```
-Verified OK
-```

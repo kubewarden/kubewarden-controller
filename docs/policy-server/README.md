@@ -1,8 +1,5 @@
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-defaults)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-defaults)
 
-> **Note well:** don't forget to checkout [Kubewarden's documentation](https://docs.kubewarden.io)
-> for more information
-
 # policy-server
 
 `policy-server` is a
@@ -217,4 +214,4 @@ $ make build
 # CLI documentation
 
 If you want a complete list of the available commands, you can read the
-[cli-docs.md](./cli-docs.md) file.
+[cli-docs.md](../../crates/policy-server/cli-docs.md) file.

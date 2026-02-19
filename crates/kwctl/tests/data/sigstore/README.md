@@ -11,6 +11,7 @@ Verification tests are performed by signing with
 ### Recreating the image under test
 
 Obtain the same image under test, under our control:
+
 ```console
 $ kwctl pull registry://ghcr.io/kubewarden/policies/pod-privileged:v0.1.9
 $ kwctl push \

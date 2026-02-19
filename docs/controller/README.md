@@ -1,10 +1,5 @@
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-controller)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller)
 
-Kubewarden is a Kubernetes Dynamic Admission Controller that uses policies written
-in WebAssembly.
-
-For more information refer to the [official Kubewarden website](https://kubewarden.io/).
-
 # kubewarden-controller
 
 `kubewarden-controller` is a Kubernetes controller that allows you to
@@ -13,11 +8,6 @@ dynamically register Kubewarden admission policies.
 The `kubewarden-controller` reconciles the admission policies you
 have registered with the Kubernetes webhooks of the cluster where
 it's deployed.
-
-## Installation
-
-The kubewarden-controller can be deployed using a Helm chart. For instructions,
-see https://charts.kubewarden.io.
 
 ## Usage
 
@@ -28,7 +18,8 @@ The documentation of this Custom Resource can be found
 [here](https://github.com/kubewarden/kubewarden-controller/blob/main/docs/crds/README.asciidoc)
 or on [docs.crds.dev](https://doc.crds.dev/github.com/kubewarden/kubewarden-controller).
 
-**Note:** `ClusterAdmissionPolicy` resources are cluster-wide.
+> [!NOTE]
+> `ClusterAdmissionPolicy` resources are cluster-wide.
 
 ### Deploy your first admission policy
 
