@@ -42,7 +42,7 @@ Please refer to our [quickstart](https://docs.kubewarden.io/quick-start) for mor
 
 # Software bill of materials & provenance
 
-Kubewarden controller has its software bill of materials (SBOM) and build
+All Kubewarden components has its software bill of materials (SBOM) and build
 [Provenance](https://slsa.dev/spec/v1.0/provenance) information published every
 release. It follows the [SPDX](https://spdx.dev/) format and
 [SLSA](https://slsa.dev/provenance/v0.2#schema) provenance schema.
@@ -65,7 +65,7 @@ You can verify the container image with:
 
 ```shell
 cosign verify-blob --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     --bundle kubewarden-controller-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore \
     kubewarden-controller-attestation-amd64-provenance.intoto.jsonl
 ```
@@ -74,9 +74,14 @@ To verify the attestation manifest and its layer signatures:
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     ghcr.io/kubewarden/kubewarden-controller@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
 ```
+
+> [!NOTE]
+> All the commands and file locations used in this section to validate the
+> controller components can be used to verify all the others Kubewarden
+> components as well.
 
 That sha256 hash is the digest of the attestation manifest or its layers.
 Therefore, you need to find this hash in the registry using the UI or tools
@@ -118,7 +123,7 @@ layers signatures.
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
 
 crane manifest  ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
@@ -175,7 +180,7 @@ crane manifest  ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeff
 }
 
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/${{github.repository_owner}}/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
     ghcr.io/kubewarden/kubewarden-controller@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
 ```
 
