@@ -290,6 +290,29 @@ jobs:
         run: sudo apt install -y bats
       - name: Run integration tests
         run: make -C crates/policy-evaluator integration-tests
+        
+  coverage-rust:
+    name: coverage-rust
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@0e76c5c569f13f7eb21e8e5b26fe710062b57b62 # v2.65.13
+        with:
+          tool: cargo-llvm-cov
+      - name: Install cosign # this is needed by some of the e2e tests
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+      - run: cargo llvm-cov --ignore-run-fail --doctests --lcov --output-path coverage/rust/lcov.info
+      - name: Upload Rust test coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: rust-tests
+          files: coverage/lcov.info
+          flags: rust-tests
+          verbose: true
 
   build-kwctl:
     name: Build kwctl
