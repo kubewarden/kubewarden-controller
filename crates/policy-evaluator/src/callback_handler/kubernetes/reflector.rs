@@ -200,7 +200,7 @@ mod tests {
     use k8s_openapi::apimachinery::pkg::apis::meta::v1::ManagedFieldsEntry;
     use kube::core::{DynamicObject, ObjectMeta};
     use serde_json::json;
-    use std::collections::{BTreeMap, BTreeSet};
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_modify_object_clears_managed_fields() {
@@ -264,8 +264,7 @@ mod tests {
             }
         });
 
-        let mut masks = BTreeSet::new();
-        masks.insert("spec.containers.image".to_string());
+        let masks = ["spec.containers.image"];
 
         let field_masker = field_mask::FieldMaskNode::new(masks);
 
@@ -299,12 +298,12 @@ mod tests {
         obj.types = None;
         obj.data = vulnerability_report_json;
 
-        let field_masks: BTreeSet<String> = BTreeSet::from([
-            "report.results.vulnerabilities.cve".to_string(),
-            "report.results.vulnerabilities.fixedVersions".to_string(),
-            "report.results.vulnerabilities.severity".to_string(),
-            "report.results.vulnerabilities.suppressed".to_string(),
-        ]);
+        let field_masks = [
+            "report.results.vulnerabilities.cve",
+            "report.results.vulnerabilities.fixedVersions",
+            "report.results.vulnerabilities.severity",
+            "report.results.vulnerabilities.suppressed",
+        ];
         let field_masker = field_mask::FieldMaskNode::new(field_masks);
 
         modify_object(&mut obj, Some(&field_masker));

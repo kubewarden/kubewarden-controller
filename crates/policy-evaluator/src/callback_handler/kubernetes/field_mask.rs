@@ -134,7 +134,7 @@ mod tests {
             },
             "d": 3
         }),
-        vec!["a.b", "d"])
+        &["a.b", "d"])
     ]
     #[case::nested_objects(
         json!({
@@ -156,7 +156,7 @@ mod tests {
                 }
             }
         }),
-        vec!["user.name", "user.metadata.id"]
+        &["user.name", "user.metadata.id"]
     )]
     #[case::arrays(
         json!({
@@ -174,7 +174,7 @@ mod tests {
                 {"name": "Bob"}
             ]
         }),
-        vec!["users.name"]
+        &["users.name"]
     )]
     #[case::arrays_with_nested_objects(
         json!({
@@ -198,7 +198,7 @@ mod tests {
                 }
             ]
         }),
-        vec!["users.name", "users.metadata"]
+        &["users.name", "users.metadata"]
     )]
     #[case::keep_all_below(
         json!({
@@ -222,12 +222,12 @@ mod tests {
                 }
             }
         }),
-        vec!["user"]
+        &["user"]
     )]
     fn test_prune_in_place(
         #[case] mut input: Value,
         #[case] expected: Value,
-        #[case] mask: Vec<&str>,
+        #[case] mask: &[&str],
     ) {
         let root = FieldMaskNode::new(mask);
 
