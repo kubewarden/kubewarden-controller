@@ -1,9 +1,3 @@
-[![Kubewarden Core Repository](https://github.com/kubewarden/community/blob/main/badges/kubewarden-core.svg)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#core-scope)
-[![Stable](https://img.shields.io/badge/status-stable-brightgreen?style=for-the-badge)](https://github.com/kubewarden/community/blob/main/REPOSITORIES.md#stable)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9180/badge)](https://www.bestpractices.dev/projects/9180)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl.svg?type=shield)](https://app.fossa.com/projects/cjustom%2B25850%2Fgithub.com%2Fkubewarden%2Fkwctl?ref=badge_shield)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/kwctl/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/kwctl)
-
 # `kwctl`
 
 `kwctl` is the go-to CLI tool for [Kubewarden](https://kubewarden.io)
@@ -62,7 +56,7 @@ There is also:
 These are the commands currently supported by kwctl.
 
 If you want a complete list of the available commands, you can read the
-[cli-docs.md](./cli-docs.md) file.
+[cli-docs.md](../../crates/kwctl/cli-docs.md) file.
 
 ### List policies
 
@@ -111,8 +105,10 @@ to quickly evaluate a policy and find the right settings for it.
 
 The evaluation is done against a pre-recorded [`AdmissionReview`](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#request).
 
-> **Note:** it's possible to scaffodl an `AdmissionReview` object from a Kubernetes resource.
-> Take a look at [this section](#scaffold-kubernetes-custom-resources) for more details.
+> [!NOTE]
+> It's possible to scaffold an `AdmissionReview` object from a Kubernetes
+> resource. Take a look at [this
+> section](#scaffold-kubernetes-custom-resources) for more details.
 
 #### Run a local policy
 
@@ -199,7 +195,8 @@ kwctl push registry://ghcr.io/kubewarden/policies/safe-labels:v0.1.5 \
 The above command copies a local policy that was downloaded from the GitHub
 Container Registry, into a local registry.
 
-> **Note well:** the policy must be previously downloaded locally via `kwctl pull`
+> [!NOTE]
+> The policy must be previously downloaded locally via `kwctl pull`
 
 ### Remove a local policy
 
@@ -344,47 +341,3 @@ rm ~/.zcompdump*
 ```
 
 Then start a new shell or run `source ~/.zshrc` once.
-
-## Verify kwctl binaries
-
-kwctl binaries are signed using [Sigstore's blog signing](https://docs.sigstore.dev/signing/signing_with_blobs/).
-When you download a [kwctl release](https://github.com/kubewarden/kwctl/releases/) each zip file contains two
-files that can be used for verification: `kwctl.sig` and `kwctl.pem`.
-
-In order to verify kwctl you need cosign installed, and then execute the following command:
-
-```
-cosign verify-blob \
-  --signature kwctl-linux-x86_64.sig \
-  --cert kwctl-linux-x86_64.pem kwctl-linux-x86_64 \
-  --certificate-identity-regexp 'https://github.com/kubewarden/*' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-```
-
-The output should be:
-
-```
-Verified OK
-```
-
-# Software bill of materials & provenance
-
-Kwctl has its software bill of materials (SBOM) published every release. They
-follow the [SPDX](https://spdx.dev/) format, you can find them together with
-the signature and certificate used to sign it in the [releases
-assets](https://github.com/kubewarden/kwctl/releases).
-
-The build [Provenance](https://slsa.dev/spec/v1.0/provenance) files are
-following the [SLSA](https://slsa.dev/provenance/v0.2#schema) provenance schema
-and are accessible at the GitHub Actions'
-[provenance](https://github.com/kubewarden/kwctl/attestations) tab. For
-information on their format and how to verify them, see the [GitHub
-documentation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/verifying-attestations-offline).
-
-## Security disclosure
-
-See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md) on the kubewarden/community repo.
-
-## Changelog
-
-See [GitHub Releases content](https://github.com/kubewarden/kwctl/releases).
