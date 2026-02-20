@@ -1,4 +1,4 @@
-CONTROLLER_TOOLS_VERSION := v0.16.5
+CONTROLLER_TOOLS_VERSION := v0.18.0
 ENVTEST_VERSION := release-0.19
 ENVTEST_K8S_VERSION := 1.31.0
 HELM_VALUES_SCHEMA_JSON_VERSION := v2.3.1
@@ -146,7 +146,7 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=charts/kubewarden-crds/templates output:rbac:artifacts:config=charts/kubewarden-controller/templates
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=config/crd/bases output:rbac:artifacts:config=config/rbac
 
 .PHONY: generate-chart
 generate-chart: ## Generate Helm chart values schema.

@@ -26,6 +26,12 @@ const (
 	PolicyServerVerificationConfigEntry         = "verification-config"
 	PolicyServerVerificationConfigContainerPath = "/verification"
 
+	PolicyServerSigstoreTrustConfigEntry         = "sigstore-trust-config"
+	PolicyServerSigstoreTrustConfigContainerPath = "/sigstore-trust"
+	PolicyServerSigstoreTrustConfigVolumeName    = "sigstore-trust-config"
+	PolicyServerSigstoreTrustConfigFilename      = "sigstore-trust-config.json"
+	PolicyServerSigstoreTrustConfigEnvVar        = "KUBEWARDEN_SIGSTORE_TRUST_CONFIG_PATH"
+
 	// Policy Server Labels.
 
 	// AppLabelKey is the label used to identify the pod template in the deployment

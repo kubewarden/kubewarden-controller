@@ -121,9 +121,15 @@ policyServer:
     repository: "kubewarden/policy-server"
     tag: v1.32.1
   serviceAccountName: policy-server
-  # verificationConfig: your_configmap
   # Configmap containing a Sigstore verification configuration under a key
   # named `verification-config`. Must be on the same ns as the PolicyServer.
+  # verificationConfig: your_configmap
+  
+  # Configmap containing a Sigstore trust configuration (ClientTrustConfig JSON)
+  # under a key named `sigstore-trust-config`. Must be on the same ns as the
+  # PolicyServer. This is used to configure a custom Sigstore instance.
+  # sigstoreTrustConfig: your_configmap
+  
   permissions:
     # All permissions are cluster-wide. Even namespaced resources are
     # granted access in all namespaces at this time.
