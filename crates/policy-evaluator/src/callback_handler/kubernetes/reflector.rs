@@ -35,10 +35,13 @@ where
     })
 }
 
-/// A reflector fetches kubernetes objects based on filtering criteria.
+/// A reflector fetches Kubernetes objects based on filtering criteria.
 /// When created, the list is populated slowly, to prevent hammering the Kubernetes API server.
 /// The items are stored in-memory. The `managedFields` attribute is stripped from all the objects
-/// to reduce memory consumption. All the other fields are retained.
+/// to reduce memory consumption. All the other fields are retained unless field masks
+/// are provided by the caller. When that happens, only the fields specified by the field masks are retained in the objects, all the
+/// other fields are pruned. The field masks are applied in-place, so the objects stored in the Reflector
+/// only contain the fields specified by the field masks.
 /// A Kubernetes Watch is then created to keep the contents of the list updated.
 ///
 /// This is code relies heavily on the `kube::runtime::reflector` module.

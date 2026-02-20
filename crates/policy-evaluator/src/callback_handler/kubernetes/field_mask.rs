@@ -9,8 +9,6 @@ use serde_json::Value;
 #[derive(Default)]
 pub struct FieldMaskNode {
     children: BTreeMap<String, FieldMaskNode>,
-    // If true, we keep everything below this point (e.g. user asked for "metadata")
-    is_terminal: bool,
 }
 
 impl FieldMaskNode {
@@ -30,7 +28,6 @@ impl FieldMaskNode {
         for part in parts {
             current = current.children.entry(part.to_string()).or_default();
         }
-        current.is_terminal = true;
     }
 }
 
@@ -42,7 +39,7 @@ impl std::fmt::Debug for FieldMaskNode {
             f: &mut std::fmt::Formatter<'_>,
         ) -> std::fmt::Result {
             let prefix = " ".repeat(indent);
-            writeln!(f, "{}is_terminal: {}", prefix, node.is_terminal)?;
+            writeln!(f, "{}", prefix)?;
             for (key, child) in &node.children {
                 writeln!(f, "{}- {}", prefix, key)?;
                 debug_recursive(child, indent + 2, f)?;
@@ -85,7 +82,7 @@ impl std::fmt::Debug for FieldMaskNode {
 /// Returns nothing; modifies the value directly.
 pub fn prune_in_place(val: &mut Value, node: &FieldMaskNode) {
     // Optimization: If the mask says "keep everything below this point", stop working.
-    if node.is_terminal && node.children.is_empty() {
+    if node.children.is_empty() {
         return;
     }
 
@@ -236,25 +233,5 @@ mod tests {
 
         prune_in_place(&mut input, &root);
         assert_eq!(input, expected);
-    }
-
-    #[test]
-    fn test_fieldmasknode_debug() {
-        let root = FieldMaskNode::new(vec!["a.b.c", "d.e"]);
-        let expected_debug = r"is_terminal: false
-- a
-  is_terminal: false
-  - b
-    is_terminal: false
-    - c
-      is_terminal: true
-- d
-  is_terminal: false
-  - e
-    is_terminal: true
-";
-
-        let debug_output = format!("{:?}", root);
-        assert_eq!(debug_output, expected_debug);
     }
 }
