@@ -131,11 +131,36 @@ pub(crate) fn default_test_config() -> Config {
         ),
     ]);
 
+    let mut config = default_config();
+    config.policies.extend(policies);
+    config
+}
+
+pub(crate) fn pod_privileged_test_config() -> Config {
+    let policies = HashMap::from([(
+        "pod-privileged".to_owned(),
+        PolicyOrPolicyGroup::Policy {
+            module: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: None,
+            context_aware_resources: BTreeSet::new(),
+            message: None,
+            timeout_eval_seconds: None,
+        },
+    )]);
+
+    let mut config = default_config();
+    config.policies.extend(policies);
+    config
+}
+
+fn default_config() -> Config {
     Config {
         addr: get_available_address_with_port(),
         readiness_probe_addr: get_available_address_with_port(),
         sources: None,
-        policies,
+        policies: HashMap::new(),
         policies_download_dir: tempdir().unwrap().keep(),
         ignore_kubernetes_connection_failure: true,
         always_accept_admission_reviews_on_namespace: None,

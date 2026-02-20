@@ -102,7 +102,8 @@ Only the following attributes of the Custom Resource Definition (CRD) are evalua
 
 Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
 
-A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates
+each policy in the file using the same request during each evaluation.
 
 
 **Usage:** `kwctl bench [OPTIONS] --request-path <PATH> <uri_or_sha_prefix_or_yaml_file>`
@@ -247,6 +248,12 @@ Lists all downloaded policies
 ## `kwctl pull`
 
 Pulls a Kubewarden policy from a given URI
+            
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+
 
 **Usage:** `kwctl pull [OPTIONS] <uri>`
 
@@ -337,7 +344,14 @@ Only the following attributes of the Custom Resource Definition (CRD) are evalua
 
 Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
 
-A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates
+each policy in the file using the same request during each evaluation.
+
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
 
 
 **Usage:** `kwctl run [OPTIONS] --request-path <PATH> <uri_or_sha_prefix_or_yaml_file>`
@@ -504,6 +518,12 @@ Output a default Sigstore verification configuration file
 ## `kwctl verify`
 
 Verify a Kubewarden policy from a given URI using Sigstore
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+
 
 **Usage:** `kwctl verify [OPTIONS] <uri>`
 
