@@ -51,6 +51,7 @@ x509-parser = "0.18"
 anyhow = { workspace = true }
 rcgen = "0.14"
 rstest = { workspace = true }
+temp-env = "0.3"
 tempfile = { workspace = true }
 testcontainers = { version = "0.27", default-features = false, features = [
   "aws-lc-rs",

@@ -570,4 +570,34 @@ mod tests {
             !success
         );
     }
+
+    #[test]
+    fn test_get_proxy_env_vars_case_insensitivity() {
+        temp_env::with_vars(
+            [
+                ("http_proxy", Some("http://lowercase-http")),
+                ("https_proxy", Some("http://lowercase-https")),
+                ("no_proxy", Some("localhost,127.0.0.1")),
+            ],
+            || {
+                let (http, https, no) = get_proxy_env_vars();
+                assert_eq!(http, Some("http://lowercase-http".to_string()));
+                assert_eq!(https, Some("http://lowercase-https".to_string()));
+                assert_eq!(no, Some("localhost,127.0.0.1".to_string()));
+            },
+        );
+        temp_env::with_vars(
+            [
+                ("HTTP_PROXY", Some("http://uppercase-http")),
+                ("HTTPS_PROXY", Some("http://uppercase-https")),
+                ("NO_PROXY", Some("our.example")),
+            ],
+            || {
+                let (http, https, no) = get_proxy_env_vars();
+                assert_eq!(http, Some("http://uppercase-http".to_string()));
+                assert_eq!(https, Some("http://uppercase-https".to_string()));
+                assert_eq!(no, Some("our.example".to_string()));
+            },
+        );
+    }
 }
