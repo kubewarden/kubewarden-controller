@@ -1,6 +1,7 @@
-use std::time::Duration;
+use std::{collections::BTreeSet, time::Duration};
 
 mod client;
+pub(crate) mod field_mask;
 mod reflector;
 
 use anyhow::{Result, anyhow};
@@ -31,6 +32,7 @@ pub(crate) async fn list_resources_by_namespace(
     namespace: &str,
     label_selector: Option<String>,
     field_selector: Option<String>,
+    field_masks: Option<BTreeSet<String>>,
 ) -> Result<cached::Return<ObjectList<kube::core::DynamicObject>>> {
     if client.is_none() {
         return Err(anyhow!("kube::Client was not initialized properly")).map(cached::Return::new);
@@ -38,7 +40,14 @@ pub(crate) async fn list_resources_by_namespace(
 
     client
         .unwrap()
-        .list_resources_by_namespace(api_version, kind, namespace, label_selector, field_selector)
+        .list_resources_by_namespace(
+            api_version,
+            kind,
+            namespace,
+            label_selector,
+            field_selector,
+            field_masks,
+        )
         .await
         .map(cached::Return::new)
 }
@@ -49,6 +58,7 @@ pub(crate) async fn list_resources_all(
     kind: &str,
     label_selector: Option<String>,
     field_selector: Option<String>,
+    field_masks: Option<BTreeSet<String>>,
 ) -> Result<cached::Return<ObjectList<kube::core::DynamicObject>>> {
     if client.is_none() {
         return Err(anyhow!("kube::Client was not initialized properly")).map(cached::Return::new);
@@ -56,7 +66,13 @@ pub(crate) async fn list_resources_all(
 
     client
         .unwrap()
-        .list_resources_all(api_version, kind, label_selector, field_selector)
+        .list_resources_all(
+            api_version,
+            kind,
+            label_selector,
+            field_selector,
+            field_masks,
+        )
         .await
         .map(cached::Return::new)
 }
@@ -129,6 +145,7 @@ pub(crate) async fn has_list_resources_all_result_changed_since_instant(
     kind: &str,
     label_selector: Option<String>,
     field_selector: Option<String>,
+    field_masks: Option<BTreeSet<String>>,
     since: tokio::time::Instant,
 ) -> Result<cached::Return<bool>> {
     if client.is_none() {
@@ -142,6 +159,7 @@ pub(crate) async fn has_list_resources_all_result_changed_since_instant(
             kind,
             label_selector,
             field_selector,
+            field_masks,
             since,
         )
         .await
