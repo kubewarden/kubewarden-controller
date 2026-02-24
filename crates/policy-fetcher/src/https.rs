@@ -64,6 +64,23 @@ impl PolicyFetcher for Https {
             }
         };
 
+        let (http_proxy, https_proxy, no_proxy) = crate::get_proxy_env_vars();
+        // Disable reqwest's automatic env-based proxy detection so our behaviour
+        // doesn't depend on the `system-proxy` feature being enabled.
+        client_builder = client_builder.no_proxy();
+        if let Some(proxy_url) = &https_proxy {
+            // configure an https proxy, and honour no_proxy too
+            let proxy = reqwest::Proxy::https(proxy_url)?
+                .no_proxy(no_proxy.as_deref().and_then(reqwest::NoProxy::from_string));
+            client_builder = client_builder.proxy(proxy);
+        }
+        if let Some(proxy_url) = &http_proxy {
+            // configure an http proxy, and honour no_proxy too
+            let proxy = reqwest::Proxy::http(proxy_url)?
+                .no_proxy(no_proxy.as_deref().and_then(reqwest::NoProxy::from_string));
+            client_builder = client_builder.proxy(proxy);
+        }
+
         let client = client_builder.build()?;
         Ok(client
             .get(url.as_ref())

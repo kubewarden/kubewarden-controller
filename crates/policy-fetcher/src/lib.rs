@@ -222,6 +222,10 @@ pub(crate) fn host_and_port(url: &Url) -> std::result::Result<String, errors::In
 
 /// Helper function, reads proxy configuration from environment variables.
 /// Checks both uppercase and lowercase variants (HTTP_PROXY/http_proxy, etc.)
+///
+/// We have elected to implement all proxy features for all clients explicitly.
+/// Some clients like reqwest already support proxy env vars via their system-proxy crate
+/// feature, while others such as oci-client or sigstore don't.
 pub(crate) fn get_proxy_env_vars() -> (Option<String>, Option<String>, Option<String>) {
     let http_proxy = std::env::var("HTTP_PROXY")
         .or_else(|_| std::env::var("http_proxy"))
