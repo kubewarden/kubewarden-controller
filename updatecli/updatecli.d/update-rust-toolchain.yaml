@@ -1,0 +1,57 @@
+name: Update Rust version inside of rust-toolchain file
+
+# {{ if .pipelineid }}
+pipelineid: "{{ .pipelineid }}"
+# {{ end }}
+
+scms:
+  github:
+    kind: github
+    spec:
+      user: "{{ .github.author }}"
+      email: "{{ .github.email }}"
+      owner: "{{ requiredEnv .github.owner }}"
+      repository: "kubewarden-controller"
+      branch: "{{ .github.branch }}"
+      commitusingapi: true
+      commitmessage:
+        type: "chore"
+        scope: deps
+        title: "update Rust toolchain version"
+        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
+        hidecredit: true
+
+sources:
+  rust-lang:
+    name: Get the latest release of Rust from rust-lang
+    kind: githubrelease
+    spec:
+      owner: rust-lang
+      repository: rust
+      versionfilter:
+        kind: semver
+        pattern: "*"
+
+targets:
+  dataFile:
+    name: 'deps(rust): update Rust version to {{ source "rust-lang" }}'
+    kind: toml
+    scmid: github
+    spec:
+      file: "rust-toolchain.toml"
+      key: toolchain.channel
+
+actions:
+  default:
+    title: 'deps(rust): update Rust toolchain to {{ source "rust-lang" }}'
+    kind: github/pullrequest
+    scmid: github
+    spec:
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic Rust toolchain update.
+      draft: false
+      labels:
+        - "kind/chore"
+        - "area/dependencies"
