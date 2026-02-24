@@ -220,6 +220,22 @@ pub(crate) fn host_and_port(url: &Url) -> std::result::Result<String, errors::In
     ))
 }
 
+/// Helper function, reads proxy configuration from environment variables.
+/// Checks both uppercase and lowercase variants (HTTP_PROXY/http_proxy, etc.)
+pub(crate) fn get_proxy_env_vars() -> (Option<String>, Option<String>, Option<String>) {
+    let http_proxy = std::env::var("HTTP_PROXY")
+        .or_else(|_| std::env::var("http_proxy"))
+        .ok();
+    let https_proxy = std::env::var("HTTPS_PROXY")
+        .or_else(|_| std::env::var("https_proxy"))
+        .ok();
+    let no_proxy = std::env::var("NO_PROXY")
+        .or_else(|_| std::env::var("no_proxy"))
+        .ok();
+
+    (http_proxy, https_proxy, no_proxy)
+}
+
 // Each Wasm file begins with a well known bytes sequence, known as
 // "magic bytes" (see https://en.wikipedia.org/wiki/List_of_file_signatures).
 //
@@ -552,6 +568,36 @@ mod tests {
         assert_eq!(
             matches!(outcome, Err(FetcherError::InvalidWasmFileError),),
             !success
+        );
+    }
+
+    #[test]
+    fn test_get_proxy_env_vars_case_insensitivity() {
+        temp_env::with_vars(
+            [
+                ("http_proxy", Some("http://lowercase-http")),
+                ("https_proxy", Some("http://lowercase-https")),
+                ("no_proxy", Some("localhost,127.0.0.1")),
+            ],
+            || {
+                let (http, https, no) = get_proxy_env_vars();
+                assert_eq!(http, Some("http://lowercase-http".to_string()));
+                assert_eq!(https, Some("http://lowercase-https".to_string()));
+                assert_eq!(no, Some("localhost,127.0.0.1".to_string()));
+            },
+        );
+        temp_env::with_vars(
+            [
+                ("HTTP_PROXY", Some("http://uppercase-http")),
+                ("HTTPS_PROXY", Some("http://uppercase-https")),
+                ("NO_PROXY", Some("our.example")),
+            ],
+            || {
+                let (http, https, no) = get_proxy_env_vars();
+                assert_eq!(http, Some("http://uppercase-http".to_string()));
+                assert_eq!(https, Some("http://uppercase-https".to_string()));
+                assert_eq!(no, Some("our.example".to_string()));
+            },
         );
     }
 }

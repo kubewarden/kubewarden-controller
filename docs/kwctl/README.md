@@ -98,6 +98,21 @@ This value can be obtained using a tool like [crane](https://github.com/google/g
 crane digest ghcr.io/kubewarden/policies/psp-capabilities:v0.1.6
 ```
 
+#### Using a proxy
+
+`kwctl` respects standard proxy environment variables when downloading policies:
+
+- `HTTP_PROXY` or `http_proxy`: proxy server for HTTP requests
+- `HTTPS_PROXY` or `https_proxy`: proxy server for HTTPS requests
+- `NO_PROXY` or `no_proxy`: comma-separated list of hosts to exclude from proxying
+
+Example:
+
+```console
+export HTTPS_PROXY=http://proxy.example.com:8080
+kwctl pull registry://ghcr.io/kubewarden/policies/psp-capabilities:latest
+```
+
 ### Run
 
 `kwctl` can be used to run a policy locally, outside of Kubernetes. This can be used

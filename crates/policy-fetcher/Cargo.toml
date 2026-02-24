@@ -8,7 +8,7 @@ authors = [
 ]
 edition = "2024"
 name = "policy-fetcher"
-version = "0.11.0"
+version = "0.12.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -51,6 +51,7 @@ x509-parser = "0.18"
 anyhow = { workspace = true }
 rcgen = "0.14"
 rstest = { workspace = true }
+temp-env = "0.3"
 tempfile = { workspace = true }
 testcontainers = { version = "0.27", default-features = false, features = [
   "aws-lc-rs",

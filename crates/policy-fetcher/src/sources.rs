@@ -230,13 +230,15 @@ impl From<Sources> for sigstore::registry::ClientConfig {
             })
             .collect();
 
+        let (http_proxy, https_proxy, no_proxy) = crate::get_proxy_env_vars();
+
         sigstore::registry::ClientConfig {
             accept_invalid_certificates: false,
             protocol,
             extra_root_certificates,
-            https_proxy: None,
-            no_proxy: None,
-            http_proxy: None,
+            http_proxy,
+            https_proxy,
+            no_proxy,
         }
     }
 }

@@ -61,14 +61,30 @@ impl From<ClientProtocol> for OciClientProtocol {
 
 impl From<ClientProtocol> for ClientConfig {
     fn from(client_protocol: ClientProtocol) -> ClientConfig {
+        let (http_proxy, https_proxy, no_proxy) = crate::get_proxy_env_vars();
+        if http_proxy.is_some() || https_proxy.is_some() {
+            debug!(
+                ?http_proxy,
+                ?https_proxy,
+                ?no_proxy,
+                "Proxy configuration loaded from environment"
+            );
+        }
+
         match client_protocol {
             ClientProtocol::Http => ClientConfig {
                 protocol: client_protocol.into(),
+                http_proxy,
+                https_proxy,
+                no_proxy,
                 ..Default::default()
             },
             ClientProtocol::Https(ref tls_fetch_mode) => {
                 let mut client_config = ClientConfig {
                     protocol: client_protocol.clone().into(),
+                    http_proxy,
+                    https_proxy,
+                    no_proxy,
                     ..Default::default()
                 };
 
