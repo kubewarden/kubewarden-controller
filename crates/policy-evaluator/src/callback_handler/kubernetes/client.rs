@@ -1,3 +1,8 @@
+use std::{
+    collections::{BTreeSet, HashMap},
+    sync::Arc,
+};
+
 use anyhow::{Result, anyhow};
 use k8s_openapi::api::authorization::v1::{SubjectAccessReview, SubjectAccessReviewStatus};
 use kube::{
@@ -6,7 +11,6 @@ use kube::{
     core::{DynamicObject, ObjectList},
 };
 use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
-use std::{collections::HashMap, sync::Arc};
 use tokio::{sync::RwLock, time::Instant};
 
 use crate::callback_handler::kubernetes::{ApiVersionKind, KubeResource, reflector::Reflector};
@@ -99,6 +103,7 @@ impl Client {
         namespace: Option<String>,
         label_selector: Option<String>,
         field_selector: Option<String>,
+        field_masks: Option<BTreeSet<String>>,
     ) -> Result<kube::runtime::reflector::Store<kube::core::DynamicObject>> {
         let reader = {
             let reflectors = self.reflectors.read().await;
@@ -116,6 +121,7 @@ impl Client {
             namespace,
             label_selector,
             field_selector,
+            field_masks,
         )
         .await?;
         let reader = reflector.reader.clone();
@@ -135,6 +141,7 @@ impl Client {
         namespace: &str,
         label_selector: Option<String>,
         field_selector: Option<String>,
+        field_masks: Option<BTreeSet<String>>,
     ) -> Result<ObjectList<kube::core::DynamicObject>> {
         let resource = self.build_kube_resource(api_version, kind).await?;
         if !resource.namespaced {
@@ -148,6 +155,7 @@ impl Client {
             Some(namespace.to_owned()),
             label_selector,
             field_selector,
+            field_masks,
         )
         .await
     }
@@ -158,11 +166,18 @@ impl Client {
         kind: &str,
         label_selector: Option<String>,
         field_selector: Option<String>,
+        field_masks: Option<BTreeSet<String>>,
     ) -> Result<ObjectList<kube::core::DynamicObject>> {
         let resource = self.build_kube_resource(api_version, kind).await?;
 
-        self.list_resources_from_reflector(resource, None, label_selector, field_selector)
-            .await
+        self.list_resources_from_reflector(
+            resource,
+            None,
+            label_selector,
+            field_selector,
+            field_masks,
+        )
+        .await
     }
 
     pub async fn has_list_resources_all_result_changed_since_instant(
@@ -171,6 +186,7 @@ impl Client {
         kind: &str,
         label_selector: Option<String>,
         field_selector: Option<String>,
+        field_masks: Option<BTreeSet<String>>,
         since: Instant,
     ) -> Result<bool> {
         let resource = self.build_kube_resource(api_version, kind).await?;
@@ -181,6 +197,7 @@ impl Client {
                 None,
                 label_selector,
                 field_selector,
+                field_masks,
                 since,
             )
             .await)
@@ -192,6 +209,7 @@ impl Client {
         namespace: Option<String>,
         label_selector: Option<String>,
         field_selector: Option<String>,
+        field_masks: Option<BTreeSet<String>>,
     ) -> Result<ObjectList<kube::core::DynamicObject>> {
         let api_version = resource.resource.api_version.clone();
         let kind = resource.resource.kind.clone();
@@ -201,6 +219,7 @@ impl Client {
             namespace.as_deref(),
             label_selector.as_deref(),
             field_selector.as_deref(),
+            field_masks.as_ref(),
         );
 
         let reader = self
@@ -210,6 +229,7 @@ impl Client {
                 namespace,
                 label_selector,
                 field_selector,
+                field_masks,
             )
             .await?;
 
@@ -234,6 +254,7 @@ impl Client {
         namespace: Option<String>,
         label_selector: Option<String>,
         field_selector: Option<String>,
+        field_masks: Option<BTreeSet<String>>,
         since: Instant,
     ) -> bool {
         let reflector_id = Reflector::compute_id(
@@ -241,6 +262,7 @@ impl Client {
             namespace.as_deref(),
             label_selector.as_deref(),
             field_selector.as_deref(),
+            field_masks.as_ref(),
         );
 
         let last_change_seen_at = {

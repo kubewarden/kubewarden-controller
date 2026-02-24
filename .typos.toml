@@ -3,6 +3,7 @@ extend-exclude = [
   "audit-scanner/config/crd/*",
   "charts/*/templates/",
   "config/*",
+  "crates/policy-evaluator/tests/data/sbomscanner_vulnerability_report.json",
 ]
 
 [default.extend-words]
@@ -18,3 +19,4 @@ extend-ignore-re = [
   # Ignore base64 encoded strings (certificates, keys, etc.)
   '[A-Za-z0-9+/]{20,}={0,2}',
 ]
+

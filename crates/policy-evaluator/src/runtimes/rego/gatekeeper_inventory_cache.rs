@@ -162,6 +162,7 @@ pub(crate) mod tests {
                         kind,
                         label_selector,
                         field_selector,
+                        field_masks: _,
                     } => {
                         assert_eq!(api_version, expected_resource.api_version);
                         assert_eq!(kind, expected_resource.kind);
@@ -247,6 +248,7 @@ pub(crate) mod tests {
                         label_selector,
                         field_selector,
                         since: _,
+                        field_masks: _,
                     } => {
                         assert_eq!(api_version, expected_resource.api_version);
                         assert_eq!(kind, expected_resource.kind);
@@ -321,6 +323,7 @@ pub(crate) mod tests {
                         kind,
                         label_selector,
                         field_selector,
+                        field_masks: _,
                     } => {
                         assert_eq!(api_version, expected_resource.api_version);
                         assert_eq!(kind, expected_resource.kind);
@@ -336,6 +339,7 @@ pub(crate) mod tests {
                         label_selector,
                         field_selector,
                         since: _,
+                        field_masks: _,
                     } => {
                         assert_eq!(api_version, expected_resource.api_version);
                         assert_eq!(kind, expected_resource.kind);

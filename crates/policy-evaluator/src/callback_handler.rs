@@ -5,6 +5,7 @@ use kubewarden_policy_sdk::host_capabilities::net::LookupResponse;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, warn};
 
+use crate::callback_handler::kubernetes::field_mask;
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 
 mod builder;
@@ -209,6 +210,7 @@ impl CallbackHandler {
                     namespace,
                     label_selector,
                     field_selector,
+                    field_masks,
                 } => {
                     handle_callback!(
                         req,
@@ -222,6 +224,7 @@ impl CallbackHandler {
                                 &namespace,
                                 label_selector,
                                 field_selector,
+                                field_masks,
                             )
                         }
                     )
@@ -231,6 +234,7 @@ impl CallbackHandler {
                     kind,
                     label_selector,
                     field_selector,
+                    field_masks,
                 } => {
                     handle_callback!(
                         req,
@@ -243,6 +247,7 @@ impl CallbackHandler {
                                 &kind,
                                 label_selector,
                                 field_selector,
+                                field_masks,
                             )
                         }
                     )
@@ -253,6 +258,7 @@ impl CallbackHandler {
                     name,
                     namespace,
                     disable_cache,
+                    field_masks,
                 } => {
                     if disable_cache {
                         handle_callback!(
@@ -260,13 +266,23 @@ impl CallbackHandler {
                             format!("{api_version}/{kind}"),
                             "Get Kubernetes resource - no cache",
                             {
-                                kubernetes::get_resource(
+                                let res = kubernetes::get_resource(
                                     kubernetes_client.as_mut(),
                                     &api_version,
                                     &kind,
                                     &name,
                                     namespace.as_deref(),
                                 )
+                                .await
+                                .map(|mut obj| {
+                                    if let Some(field_masks) = field_masks {
+                                        let field_masker =
+                                            field_mask::FieldMaskNode::new(field_masks.into_iter());
+                                        field_mask::prune_in_place(&mut obj.data, &field_masker);
+                                    }
+                                    obj
+                                });
+                                async { res }
                             }
                         )
                     } else {
@@ -275,13 +291,24 @@ impl CallbackHandler {
                             format!("{api_version}/{kind}"),
                             "Get Kubernetes resource",
                             {
-                                kubernetes::get_resource_cached(
+                                let res = kubernetes::get_resource_cached(
                                     kubernetes_client.as_mut(),
                                     &api_version,
                                     &kind,
                                     &name,
                                     namespace.as_deref(),
                                 )
+                                .await
+                                .map(|mut obj| {
+                                    if let Some(field_masks) = field_masks {
+                                        let field_masker =
+                                            field_mask::FieldMaskNode::new(field_masks.into_iter());
+                                        field_mask::prune_in_place(&mut obj.data, &field_masker);
+                                    }
+                                    obj
+                                });
+
+                                async { res }
                             }
                         )
                     }
@@ -305,6 +332,7 @@ impl CallbackHandler {
                     kind,
                     label_selector,
                     field_selector,
+                    field_masks,
                     since,
                 } => {
                     handle_callback!(
@@ -318,6 +346,7 @@ impl CallbackHandler {
                                 &kind,
                                 label_selector,
                                 field_selector,
+                                field_masks,
                                 since,
                             )
                         }

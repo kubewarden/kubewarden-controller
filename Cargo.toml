@@ -12,7 +12,7 @@ itertools = "0.14.0"
 k8s-openapi = { version = "0.27.0", default-features = false, features = [
   "v1_33",
 ] }
-kubewarden-policy-sdk = { version = "0.15.1" }
+kubewarden-policy-sdk = "0.16.0"
 lazy_static = "1.5"
 rayon = "1.11"
 regex = "1"

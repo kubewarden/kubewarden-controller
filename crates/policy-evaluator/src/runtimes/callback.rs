@@ -342,6 +342,7 @@ pub(crate) fn host_callback(
                     kind: "Ingress".to_string(),
                     label_selector: None,
                     field_selector: None,
+                    field_masks: None,
                 };
 
                 warn!(
@@ -369,6 +370,7 @@ pub(crate) fn host_callback(
                     kind: "Namespace".to_string(),
                     label_selector: None,
                     field_selector: None,
+                    field_masks: None,
                 };
 
                 warn!(
@@ -396,6 +398,7 @@ pub(crate) fn host_callback(
                     kind: "Service".to_string(),
                     label_selector: None,
                     field_selector: None,
+                    field_masks: None,
                 };
 
                 warn!(
