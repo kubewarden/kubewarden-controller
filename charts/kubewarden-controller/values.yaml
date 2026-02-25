@@ -255,6 +255,13 @@ resources:
     requests:
       cpu: 50m
       memory: 64Mi
+  postInstallCleanReportsJob:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
 mTLS:
   # Enable mutual TLS authentication. This will require TLS connections with both
   # the server and client being authenticated, between the kubewarden

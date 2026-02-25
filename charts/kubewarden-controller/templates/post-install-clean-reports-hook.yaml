@@ -1,0 +1,84 @@
+# Deletes all ClusterPolicyReports and PolicyReports from wgpolicyk8s.io that are
+# labelled app.kubernetes.io/managed-by=kubewarden.
+# Used for migrating from PolicyReports wgpolicyk8s.io to OpenReports.
+#
+# The hook only runs succesfully once, and the Job object persists on the cluster.
+# Delete the Job manually to force a re-run.
+{{ if eq .Values.auditScanner.reportCRDsKind "openreports" }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-clean-reports"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    # We want "run once":
+    # On first install the hook run succeeds, and is not deleted on sucess,
+    # leaving the Job in a Complete state.
+    #
+    # For subsequent hook runs, Helm atttempts to apply the Job (no-op patch
+    # since the spec is unchanged), finds it already Complete, and considers
+    # the hook satisfied, skipping re-execution.
+    # To force a re-run, delete the Job manually.
+    "helm.sh/hook-delete-policy": hook-failed
+    
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      name: "{{ .Release.Name }}-clean-reports"
+      labels:
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+      annotations:
+        {{- include "kubewarden-controller.annotations" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      # for deletecollection verb on policyreports
+      serviceAccountName: {{ .Values.auditScanner.serviceAccountName }}
+      {{- if .Values.preDeleteHook.podSecurityContext }}
+      securityContext:
+{{ toYaml .Values.preDeleteHook.podSecurityContext | indent 8 }}
+      {{- end }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+      {{- include "imagePullSecrets" .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: clean-reports-job
+          image: '{{ template "system_default_registry" . }}{{ .Values.preDeleteJob.image.repository }}:{{ .Values.preDeleteJob.image.tag }}'
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Delete resources with deletecollection verb instead of delete, for performance.
+              # This can only be ensured with kubectl delete --raw
+              kubectl delete --raw \
+                "/apis/wgpolicyk8s.io/v1beta1/clusterpolicyreports?labelSelector=app.kubernetes.io%2Fmanaged-by%3Dkubewarden" \
+                || true
+              for ns in $(kubectl get namespaces -o jsonpath='{.items[*].metadata.name}'); do
+                kubectl delete --raw \
+                  "/apis/wgpolicyk8s.io/v1beta1/namespaces/${ns}/policyreports?labelSelector=app.kubernetes.io%2Fmanaged-by%3Dkubewarden" \
+                  || true
+              done
+          env:
+            - name: KUBERLR_ALLOWDOWNLOAD
+              value: "1"
+          {{- if .Values.preDeleteHook.containerSecurityContext }}
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+{{ toYaml .Values.preDeleteHook.containerSecurityContext | indent 12 }}
+          {{- end }}
+          {{- if and .Values.resources .Values.resources.postInstallCleanReportsJob }}
+          resources:
+{{ toYaml .Values.resources.postInstallCleanReportsJob | indent 12 }}
+          {{- end }}
+{{ end }}

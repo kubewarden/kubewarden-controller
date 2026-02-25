@@ -1,0 +1,80 @@
+suite: post-install clean reports hook
+templates:
+  - post-install-clean-reports-hook.yaml
+tests:
+  - it: "should not render when reportCRDsKind is policyreport (default)"
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "should render the Job when reportCRDsKind is openreports"
+    set:
+      auditScanner:
+        reportCRDsKind: openreports
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Job
+
+  - it: "should have post-install and post-upgrade hook annotations"
+    set:
+      auditScanner:
+        reportCRDsKind: openreports
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+
+  - it: "should have hook-failed delete policy for run-once behavior"
+    set:
+      auditScanner:
+        reportCRDsKind: openreports
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: hook-failed
+
+  - it: "should delete clusterpolicyreports via deletecollection raw API with label selector"
+    set:
+      auditScanner:
+        reportCRDsKind: openreports
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: "kubectl delete --raw"
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: "/apis/wgpolicyk8s.io/v1beta1/clusterpolicyreports\\?labelSelector=app\\.kubernetes\\.io%2Fmanaged-by%3Dkubewarden"
+
+  - it: "should delete policyreports per-namespace via deletecollection raw API with label selector"
+    set:
+      auditScanner:
+        reportCRDsKind: openreports
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: "kubectl get namespaces"
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: "/apis/wgpolicyk8s.io/v1beta1/namespaces/.*policyreports\\?labelSelector=app\\.kubernetes\\.io%2Fmanaged-by%3Dkubewarden"
+
+  - it: "should apply resource limits and requests from values"
+    set:
+      auditScanner:
+        reportCRDsKind: openreports
+      resources:
+        postInstallCleanReportsJob:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: 200m
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 128Mi
