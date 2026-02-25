@@ -10,6 +10,7 @@ use x509_parser::pem::parse_x509_pem;
 use x509_parser::prelude::*;
 
 use crate::errors::FailedToParseYamlDataError;
+use crate::proxy::ProxyConfig;
 
 pub type SourceResult<T> = std::result::Result<T, SourceError>;
 
@@ -107,6 +108,10 @@ impl TryFrom<RawSourceAuthorities> for SourceAuthorities {
 pub struct Sources {
     pub insecure_sources: HashSet<String>,
     pub source_authorities: SourceAuthorities,
+    /// Proxy settings for all outbound HTTP/HTTPS connections made using this
+    /// source configuration. When `None`, `ProxyConfig::from_env()` is used as
+    /// a fallback so existing callers that never set this field continue to work.
+    pub proxies: Option<ProxyConfig>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -122,6 +127,9 @@ impl TryFrom<RawSources> for Sources {
         Ok(Sources {
             insecure_sources: sources.insecure_sources.clone(),
             source_authorities: sources.source_authorities.try_into()?,
+            // TODO implement RawProxyConfig{} to serialize proxy configuration
+            // from sources.yaml
+            proxies: None,
         })
     }
 }
