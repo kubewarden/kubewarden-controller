@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
@@ -42,19 +43,28 @@ func DeleteAllLegacyPolicyReports(ctx context.Context, c client.Client, logger *
 
 	clusterReportList := &wgpolicy.ClusterPolicyReportList{}
 	err = c.List(ctx, clusterReportList, listOpts)
-	if err != nil {
-		return fmt.Errorf("failed to list legacy ClusterPolicyReports: %w", err)
-	}
-	if len(clusterReportList.Items) > 0 {
-		logger.InfoContext(ctx, "Deleting legacy wgpolicyk8s.io ClusterPolicyReports")
-		err = store.DeleteOldClusterReports(ctx, ephemeralRunUID)
+	if meta.IsNoMatchError(err) {
+		logger.DebugContext(ctx, "wgpolicyk8s.io CRDs not installed, skipping legacy clusterreport cleanup")
+	} else {
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to list legacy ClusterPolicyReports: %w", err)
 		}
+		if len(clusterReportList.Items) > 0 {
+			logger.InfoContext(ctx, "Deleting legacy wgpolicyk8s.io ClusterPolicyReports")
+			err = store.DeleteOldClusterReports(ctx, ephemeralRunUID)
+			if err != nil {
+				return err
+			}
+		}
+
 	}
 
 	policyReportList := &wgpolicy.PolicyReportList{}
 	err = c.List(ctx, policyReportList, listOpts)
+	if meta.IsNoMatchError(err) {
+		logger.DebugContext(ctx, "wgpolicyk8s.io CRDs not installed, skipping legacy report cleanup")
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("failed to list legacy PolicyReports: %w", err)
 	}
