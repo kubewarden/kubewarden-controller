@@ -7,6 +7,7 @@ use std::{
 };
 use url::Url;
 
+use crate::Sources;
 use crate::fetcher::{ClientProtocol, PolicyFetcher, TlsVerificationMode};
 use crate::sources::Certificate;
 use crate::sources::SourceError;
@@ -41,7 +42,12 @@ impl TryFrom<&Certificate> for reqwest::Certificate {
 
 #[async_trait]
 impl PolicyFetcher for Https {
-    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> SourceResult<Vec<u8>> {
+    async fn fetch(
+        &self,
+        url: &Url,
+        client_protocol: ClientProtocol,
+        sources: &Sources,
+    ) -> SourceResult<Vec<u8>> {
         let mut client_builder = reqwest::Client::builder();
         match client_protocol {
             ClientProtocol::Http => {}
@@ -64,20 +70,28 @@ impl PolicyFetcher for Https {
             }
         };
 
-        let (http_proxy, https_proxy, no_proxy) = crate::get_proxy_env_vars();
+        let proxy_sources = sources.proxies();
         // Disable reqwest's automatic env-based proxy detection so our behaviour
         // doesn't depend on the `system-proxy` feature being enabled.
         client_builder = client_builder.no_proxy();
-        if let Some(proxy_url) = &https_proxy {
+        if let Some(proxy_url) = &proxy_sources.https_proxy {
             // configure an https proxy, and honour no_proxy too
-            let proxy = reqwest::Proxy::https(proxy_url)?
-                .no_proxy(no_proxy.as_deref().and_then(reqwest::NoProxy::from_string));
+            let proxy = reqwest::Proxy::https(proxy_url)?.no_proxy(
+                proxy_sources
+                    .no_proxy
+                    .as_deref()
+                    .and_then(reqwest::NoProxy::from_string),
+            );
             client_builder = client_builder.proxy(proxy);
         }
-        if let Some(proxy_url) = &http_proxy {
+        if let Some(proxy_url) = &proxy_sources.http_proxy {
             // configure an http proxy, and honour no_proxy too
-            let proxy = reqwest::Proxy::http(proxy_url)?
-                .no_proxy(no_proxy.as_deref().and_then(reqwest::NoProxy::from_string));
+            let proxy = reqwest::Proxy::http(proxy_url)?.no_proxy(
+                proxy_sources
+                    .no_proxy
+                    .as_deref()
+                    .and_then(reqwest::NoProxy::from_string),
+            );
             client_builder = client_builder.proxy(proxy);
         }
 

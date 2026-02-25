@@ -61,46 +61,52 @@ impl From<ClientProtocol> for OciClientProtocol {
 
 impl From<ClientProtocol> for ClientConfig {
     fn from(client_protocol: ClientProtocol) -> ClientConfig {
-        let (http_proxy, https_proxy, no_proxy) = crate::get_proxy_env_vars();
-        if http_proxy.is_some() || https_proxy.is_some() {
-            debug!(
-                ?http_proxy,
-                ?https_proxy,
-                ?no_proxy,
-                "Proxy configuration loaded from environment"
-            );
-        }
+        client_config(client_protocol, &Sources::default())
+    }
+}
 
-        match client_protocol {
-            ClientProtocol::Http => ClientConfig {
-                protocol: client_protocol.into(),
-                http_proxy,
-                https_proxy,
-                no_proxy,
+/// Build an OCI [`ClientConfig`] from a [`ClientProtocol`] and proxy/TLS
+/// settings derived from `sources`.
+pub(crate) fn client_config(client_protocol: ClientProtocol, sources: &Sources) -> ClientConfig {
+    let proxy = sources.proxies();
+    if proxy.http_proxy.is_some() || proxy.https_proxy.is_some() {
+        debug!(
+            http_proxy = ?proxy.http_proxy,
+            https_proxy = ?proxy.https_proxy,
+            no_proxy = ?proxy.no_proxy,
+            "Proxy configuration loaded"
+        );
+    }
+
+    match client_protocol {
+        ClientProtocol::Http => ClientConfig {
+            protocol: client_protocol.into(),
+            http_proxy: proxy.http_proxy,
+            https_proxy: proxy.https_proxy,
+            no_proxy: proxy.no_proxy,
+            ..Default::default()
+        },
+        ClientProtocol::Https(ref tls_fetch_mode) => {
+            let mut client_config = ClientConfig {
+                protocol: client_protocol.clone().into(),
+                http_proxy: proxy.http_proxy,
+                https_proxy: proxy.https_proxy,
+                no_proxy: proxy.no_proxy,
                 ..Default::default()
-            },
-            ClientProtocol::Https(ref tls_fetch_mode) => {
-                let mut client_config = ClientConfig {
-                    protocol: client_protocol.clone().into(),
-                    http_proxy,
-                    https_proxy,
-                    no_proxy,
-                    ..Default::default()
-                };
+            };
 
-                match tls_fetch_mode {
-                    TlsVerificationMode::SystemCa => {}
-                    TlsVerificationMode::CustomCaCertificates(certificates) => {
-                        client_config.extra_root_certificates =
-                            certificates.iter().map(OciCertificate::from).collect();
-                    }
-                    TlsVerificationMode::NoTlsVerification => {
-                        client_config.accept_invalid_certificates = true;
-                    }
-                };
+            match tls_fetch_mode {
+                TlsVerificationMode::SystemCa => {}
+                TlsVerificationMode::CustomCaCertificates(certificates) => {
+                    client_config.extra_root_certificates =
+                        certificates.iter().map(OciCertificate::from).collect();
+                }
+                TlsVerificationMode::NoTlsVerification => {
+                    client_config.accept_invalid_certificates = true;
+                }
+            };
 
-                client_config
-            }
+            client_config
         }
     }
 }
@@ -149,8 +155,8 @@ impl Registry {
         Registry {}
     }
 
-    fn client(client_protocol: ClientProtocol) -> Client {
-        Client::new(client_protocol.into())
+    fn client(client_protocol: ClientProtocol, sources: &Sources) -> Client {
+        Client::new(client_config(client_protocol, sources))
     }
 
     pub fn auth(registry: &str) -> RegistryAuth {
@@ -190,11 +196,12 @@ impl Registry {
         let sources: Sources = sources.cloned().unwrap_or_default();
 
         let (oci_manifest, _) = try_with_protocols(&url, &sources, |client_protocol| {
+            let sources_clone = sources.clone();
             Box::pin({
                 let reference = reference.clone();
                 let registry_auth = registry_auth.clone();
                 async move {
-                    let res = Registry::client(client_protocol)
+                    let res = Registry::client(client_protocol, &sources_clone)
                         .pull_manifest(&reference, &registry_auth)
                         .await?;
                     Ok(res)
@@ -221,11 +228,12 @@ impl Registry {
         let sources: Sources = sources.cloned().unwrap_or_default();
 
         let digest = try_with_protocols(&url, &sources, |client_protocol| {
+            let sources_clone = sources.clone();
             Box::pin({
                 let reference = reference.clone();
                 let registry_auth = registry_auth.clone();
                 async move {
-                    let res = Registry::client(client_protocol)
+                    let res = Registry::client(client_protocol, &sources_clone)
                         .fetch_manifest_digest(&reference, &registry_auth)
                         .await?;
                     Ok(res)
@@ -256,12 +264,19 @@ impl Registry {
             .ok_or_else(|| RegistryError::InvalidDestinationError)?;
 
         let manifest_url = try_with_protocols(&url.clone(), &sources, |client_protocol| {
+            let sources_clone = sources.clone();
             Box::pin({
                 let url = url.clone();
                 let annotations = annotations.clone();
                 async move {
                     let res = self
-                        .do_push(policy, &url, annotations.as_ref(), client_protocol.clone())
+                        .do_push(
+                            policy,
+                            &url,
+                            annotations.as_ref(),
+                            client_protocol.clone(),
+                            &sources_clone,
+                        )
                         .await?;
                     Ok(res)
                 }
@@ -277,6 +292,7 @@ impl Registry {
         url: &Url,
         annotations: Option<&BTreeMap<String, String>>,
         client_protocol: ClientProtocol,
+        sources: &Sources,
     ) -> RegistryResult<String> {
         debug!(client_protocol = ?client_protocol, "pushing policy");
         let reference =
@@ -299,7 +315,7 @@ impl Registry {
         let image_manifest =
             manifest::OciImageManifest::build(&layers, &config, annotations.cloned());
 
-        Ok(Registry::client(client_protocol)
+        Ok(Registry::client(client_protocol, sources)
             .push(
                 &reference,
                 &layers,
@@ -327,11 +343,12 @@ impl Registry {
         let sources: Sources = sources.cloned().unwrap_or_default();
 
         let (manifest, digest, config) = try_with_protocols(&url, &sources, |client_protocol| {
+            let sources_clone = sources.clone();
             Box::pin({
                 let reference = reference.clone();
                 let registry_auth = registry_auth.clone();
                 async move {
-                    let res = Registry::client(client_protocol)
+                    let res = Registry::client(client_protocol, &sources_clone)
                         .pull_manifest_and_config(&reference, &registry_auth)
                         .await?;
                     Ok(res)
@@ -353,12 +370,17 @@ pub(crate) fn build_fully_resolved_reference(url: &str) -> RegistryResult<Refere
 
 #[async_trait]
 impl PolicyFetcher for Registry {
-    async fn fetch(&self, url: &Url, client_protocol: ClientProtocol) -> SourceResult<Vec<u8>> {
+    async fn fetch(
+        &self,
+        url: &Url,
+        client_protocol: ClientProtocol,
+        sources: &Sources,
+    ) -> SourceResult<Vec<u8>> {
         let reference =
             Reference::from_str(url.as_ref().strip_prefix("registry://").unwrap_or_default())?;
         debug!(image=?reference, ?client_protocol, "fetching policy");
 
-        let image_content = Registry::client(client_protocol)
+        let image_content = Registry::client(client_protocol, sources)
             .pull(
                 &reference,
                 &Registry::auth(&crate::host_and_port(url)?),
@@ -560,5 +582,42 @@ mod tests {
             }
             Err(err) => panic!("unknown error: {err:?}"),
         }
+    }
+
+    #[test]
+    fn test_client_config_proxy_fields_propagated_to_oci_client() {
+        let sources = Sources {
+            proxies: Some(crate::proxy::ProxyConfig {
+                http_proxy: Some("http://http-proxy:3128".to_string()),
+                https_proxy: Some("http://https-proxy:3128".to_string()),
+                no_proxy: Some("internal.corp".to_string()),
+            }),
+            ..Default::default()
+        };
+
+        let cfg = client_config(ClientProtocol::Http, &sources);
+        assert_eq!(cfg.http_proxy.as_deref(), Some("http://http-proxy:3128"));
+        assert_eq!(cfg.https_proxy.as_deref(), Some("http://https-proxy:3128"));
+        assert_eq!(cfg.no_proxy.as_deref(), Some("internal.corp"));
+
+        let cfg = client_config(
+            ClientProtocol::Https(TlsVerificationMode::SystemCa),
+            &sources,
+        );
+        assert_eq!(cfg.http_proxy.as_deref(), Some("http://http-proxy:3128"));
+        assert_eq!(cfg.https_proxy.as_deref(), Some("http://https-proxy:3128"));
+        assert_eq!(cfg.no_proxy.as_deref(), Some("internal.corp"));
+    }
+
+    #[test]
+    fn test_client_config_no_proxy_when_sources_empty() {
+        let sources = Sources::default();
+        // Ensure no proxy leaks in from the environment
+        temp_env::with_vars_unset(["HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY"], || {
+            let cfg = client_config(ClientProtocol::Http, &sources);
+            assert!(cfg.http_proxy.is_none());
+            assert!(cfg.https_proxy.is_none());
+            assert!(cfg.no_proxy.is_none());
+        });
     }
 }
