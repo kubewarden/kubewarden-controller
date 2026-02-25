@@ -14,7 +14,7 @@ pub enum WapcRuntimeError {
     CreateProtocolVersion {
         res: std::vec::Vec<u8>,
         #[source]
-        error: wasmtime::Error,
+        error: anyhow::Error,
     },
 
     #[error("cannot invoke 'protocol_version' waPC function : {0}")]

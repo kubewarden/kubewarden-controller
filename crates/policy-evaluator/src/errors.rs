@@ -50,6 +50,9 @@ pub enum PolicyEvaluatorBuilderError {
     #[error("cannot convert given path to String")]
     ConvertPath,
 
+    #[error("execution mode not convertible to a Rego based execution mode")]
+    ExecutionModeNotRegoCompatible,
+
     #[error("protocol_version is only applicable to a Kubewarden policy")]
     InvokeWapcProtocolVersion(#[source] crate::runtimes::wapc::errors::WapcRuntimeError),
 

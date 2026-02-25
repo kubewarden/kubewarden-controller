@@ -1,5 +1,6 @@
-use kube::api::ObjectList;
 use std::collections::{BTreeMap, BTreeSet};
+
+use kube::api::ObjectList;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
@@ -123,7 +124,7 @@ fn make_request_via_callback_channel(
     request_type: CallbackRequestType,
     callback_channel: &mpsc::Sender<CallbackRequest>,
 ) -> Result<CallbackResponse> {
-    let (tx, rx) = oneshot::channel::<std::result::Result<CallbackResponse, wasmtime::Error>>();
+    let (tx, rx) = oneshot::channel::<anyhow::Result<CallbackResponse>>();
     let req = CallbackRequest {
         request: request_type,
         response_channel: tx,
