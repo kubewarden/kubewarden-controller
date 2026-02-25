@@ -101,6 +101,7 @@ serial_test      = "3.3"
 tempfile         = { workspace = true }
 test-context     = "0.5"
 test-log         = "0.2"
+testcontainers   = { version = "0.27", default-features = false, features = ["aws-lc-rs"] }
 tower-test       = "0.4"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of policy-fetcher

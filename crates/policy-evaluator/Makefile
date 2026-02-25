@@ -50,7 +50,9 @@ coverage-unit-tests:
 coverage-integration-tests:
 	# use --skip-clean to not recompile on CI if not needed
 	cargo tarpaulin --verbose --skip-clean --engine=llvm \
-		--test integration_test --follow-exec \
+		--test integration_test \
+		--test proxy \
+		--follow-exec \
 		--out xml --out html --output-dir coverage/integration-tests
 
 .PHONY: clean

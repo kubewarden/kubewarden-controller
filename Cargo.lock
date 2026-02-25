@@ -4581,6 +4581,7 @@ dependencies = [
  "tempfile",
  "test-context",
  "test-log",
+ "testcontainers",
  "thiserror 2.0.18",
  "time",
  "tokio",
