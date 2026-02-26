@@ -75,6 +75,7 @@ impl TryFrom<RawSourceAuthority> for RawCertificate {
 struct RawSources {
     insecure_sources: HashSet<String>,
     source_authorities: RawSourceAuthorities,
+    proxies: Option<ProxyConfig>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -127,9 +128,7 @@ impl TryFrom<RawSources> for Sources {
         Ok(Sources {
             insecure_sources: sources.insecure_sources.clone(),
             source_authorities: sources.source_authorities.try_into()?,
-            // TODO implement RawProxyConfig{} to serialize proxy configuration
-            // from sources.yaml
-            proxies: None,
+            proxies: sources.proxies,
         })
     }
 }
@@ -343,6 +342,27 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
                 "Expected {bc:?} to fail, got instead {actual:?}"
             );
         }
+    }
+
+    #[test]
+    fn test_deserialization_of_proxy_config() {
+        let yaml = r#"
+proxies:
+  http_proxy: "http://proxy.corp:3128"
+  https_proxy: "http://proxy.corp:3129"
+  no_proxy: "localhost,.corp"
+"#;
+        let raw: RawSources = serde_yaml::from_str(yaml).expect("failed to deserialize");
+        let sources: Sources = raw.try_into().expect("failed to convert");
+        let cfg = sources.proxies;
+        assert_eq!(
+            cfg,
+            Some(ProxyConfig {
+                http_proxy: Some("http://proxy.corp:3128".to_string()),
+                https_proxy: Some("http://proxy.corp:3129".to_string()),
+                no_proxy: Some("localhost,.corp".to_string()),
+            })
+        );
     }
 
     #[test]
