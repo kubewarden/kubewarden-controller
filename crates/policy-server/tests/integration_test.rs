@@ -747,8 +747,11 @@ mod certificate_reload_helpers {
     }
 
     pub async fn policy_server_is_ready(address: &str) -> anyhow::Result<StatusCode> {
-        // wait for the server to start
-        let client = reqwest::Client::builder().build().unwrap();
+        // wait for the server to start.
+        // no_proxy() is required because other tests in this suite set HTTP_PROXY/HTTPS_PROXY
+        // via temp_env (process-global), which would cause reqwest to route this localhost
+        // request through an external proxy (tinyproxy in Docker), making it fail with 500.
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
 
         let url = reqwest::Url::parse(&format!("http://{address}/readiness")).unwrap();
         let response = client.get(url).send().await?;
