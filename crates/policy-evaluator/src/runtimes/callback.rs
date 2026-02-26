@@ -9,7 +9,7 @@ use kubewarden_policy_sdk::host_capabilities::{
     },
 };
 use tokio::sync::{mpsc, oneshot, oneshot::Receiver};
-use tracing::{debug, error, warn};
+use tracing::{debug, error};
 
 use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
 use crate::evaluation_context::EvaluationContext;
@@ -333,93 +333,6 @@ pub(crate) fn host_callback(
                 }
                 _ => unknown_operation(namespace, operation),
             },
-            _ => unknown_namespace(namespace),
-        },
-        "kubernetes" => match namespace {
-            "ingresses" => {
-                let req = CallbackRequestType::KubernetesListResourceAll {
-                    api_version: "networking.k8s.io/v1".to_string(),
-                    kind: "Ingress".to_string(),
-                    label_selector: None,
-                    field_selector: None,
-                    field_masks: None,
-                };
-
-                warn!(
-                    eval_ctx.policy_id,
-                    ?req,
-                    "Usage of deprecated `ClusterContext`"
-                );
-                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                let req = CallbackRequest {
-                    request: req,
-                    response_channel: tx,
-                };
-                send_request_and_wait_for_response(
-                    &eval_ctx.policy_id,
-                    binding,
-                    operation,
-                    req,
-                    rx,
-                    eval_ctx,
-                )
-            }
-            "namespaces" => {
-                let req = CallbackRequestType::KubernetesListResourceAll {
-                    api_version: "v1".to_string(),
-                    kind: "Namespace".to_string(),
-                    label_selector: None,
-                    field_selector: None,
-                    field_masks: None,
-                };
-
-                warn!(
-                    eval_ctx.policy_id,
-                    ?req,
-                    "Usage of deprecated `ClusterContext`"
-                );
-                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                let req = CallbackRequest {
-                    request: req,
-                    response_channel: tx,
-                };
-                send_request_and_wait_for_response(
-                    &eval_ctx.policy_id,
-                    binding,
-                    operation,
-                    req,
-                    rx,
-                    eval_ctx,
-                )
-            }
-            "services" => {
-                let req = CallbackRequestType::KubernetesListResourceAll {
-                    api_version: "v1".to_string(),
-                    kind: "Service".to_string(),
-                    label_selector: None,
-                    field_selector: None,
-                    field_masks: None,
-                };
-
-                warn!(
-                    eval_ctx.policy_id,
-                    ?req,
-                    "Usage of deprecated `ClusterContext`"
-                );
-                let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
-                let req = CallbackRequest {
-                    request: req,
-                    response_channel: tx,
-                };
-                send_request_and_wait_for_response(
-                    &eval_ctx.policy_id,
-                    binding,
-                    operation,
-                    req,
-                    rx,
-                    eval_ctx,
-                )
-            }
             _ => unknown_namespace(namespace),
         },
         _ => {
