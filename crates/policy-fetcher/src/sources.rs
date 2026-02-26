@@ -402,16 +402,24 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
 
     #[test]
     fn test_proxy_config_explicit_takes_precedence_over_env() {
-        let explicit = crate::proxy::ProxyConfig {
-            https_proxy: Some("http://explicit-proxy:3128".to_string()),
-            no_proxy: Some("internal.corp".to_string()),
-            ..Default::default()
-        };
-        let sources = Sources {
-            proxies: Some(explicit.clone()),
-            ..Default::default()
-        };
-        assert_eq!(sources.proxies(), explicit);
+        temp_env::with_vars(
+            [
+                ("HTTPS_PROXY", Some("http://env-proxy:3128")),
+                ("NO_PROXY", Some("env-proxy")),
+            ],
+            || {
+                let explicit = crate::proxy::ProxyConfig {
+                    https_proxy: Some("http://explicit-proxy:3128".to_string()),
+                    no_proxy: Some("internal.corp".to_string()),
+                    ..Default::default()
+                };
+                let sources = Sources {
+                    proxies: Some(explicit.clone()),
+                    ..Default::default()
+                };
+                assert_eq!(sources.proxies(), explicit);
+            },
+        );
     }
 
     #[test]
