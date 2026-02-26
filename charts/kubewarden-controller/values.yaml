@@ -276,7 +276,7 @@ auditScanner:
   # - view: Allows read-only access to most objects in a namespace.
   #   Does not allow viewing secrets, roles or role bindings.
   # - audit-scanner-cluster-role: Allows read-write to Kubewarden resources
-  #   and PolicyReports
+  #   and Reports
   serviceAccountName: audit-scanner
   image:
     # The registry is defined in the common.cattle.systemDefaultRegistry value
@@ -292,18 +292,14 @@ auditScanner:
   # Audit scanner allow users to use Kubernetes policy working group
   # PolicyReports CRDs or OpenReports CRDs to store the results of the
   # audits. Therefore, user can choose between: openreports or policyreport.
-  # If not defined, the audit scanner default value is used. Which is
-  # "policyreport"
+  # If not defined, the audit scanner default value is used.
   #
   # The CRDs used to store the audit scanner results must be installed in the
   # cluster. You can install both of them enabling the right flags in the
   # kubewarden-crds installation. If you want to use the PolicyReports CRDs,
   # enable the installPolicyReportCRDs flag. If you want to use the
   # OpenReports CRDs, enable the installOpenReportCRDs flag.
-  #
-  # Rancher users must use "policyreport" as the reportCRDsKind, as Rancher
-  # UI does not support the OpenReports CRDs yet.
-  reportCRDsKind: "policyreport"
+  reportCRDsKind: "openreports"
   # Additional namespaces that the audit scanner will not scan:
   skipAdditionalNamespaces: []
   # level of logs. One of trace, debug, info, warn, error, fatal

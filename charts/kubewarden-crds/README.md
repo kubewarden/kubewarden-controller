@@ -11,13 +11,14 @@ This chart installs Kubewarden CRDs:
   `clusteradmissionpolicies.policies.kubewarden.io`
   `policyservers.policies.kubewarden.io`
 
-It also installs PolicyReports CRDs:
+It also installs PolicyReports and OpenReport CRDs:
+  `reports.openreports.io`
+  `clusterreports.openreports.io`
   `policyreports.wgpolicyk8s.io`
   `clusterpolicyreports.wgpolicyk8s.io`
 
-To skip installing these (maybe because for example they are already installed
-and owned by a different Helm Release), set the value `policyReports.enable` to
-`false`.
+You can skip installing these (maybe because for example they are already installed
+and owned by a different Helm Release), by configuring the appropriate chart values.
 
 ## Installing
 
