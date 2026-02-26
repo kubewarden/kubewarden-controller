@@ -43,46 +43,36 @@ func DeleteAllLegacyPolicyReports(ctx context.Context, c client.Client, logger *
 
 	clusterReportList := &wgpolicy.ClusterPolicyReportList{}
 	err = c.List(ctx, clusterReportList, listOpts)
-	if meta.IsNoMatchError(err) {
+	switch {
+	case meta.IsNoMatchError(err):
 		logger.DebugContext(ctx, "wgpolicyk8s.io CRDs not installed, skipping legacy clusterreport cleanup")
-	} else {
-		if err != nil {
-			return fmt.Errorf("failed to list legacy ClusterPolicyReports: %w", err)
+	case err != nil:
+		return fmt.Errorf("failed to list legacy ClusterPolicyReports: %w", err)
+	case len(clusterReportList.Items) > 0:
+		logger.InfoContext(ctx, "Deleting legacy wgpolicyk8s.io ClusterPolicyReports")
+		if err = store.DeleteOldClusterReports(ctx, ephemeralRunUID); err != nil {
+			return err
 		}
-		if len(clusterReportList.Items) > 0 {
-			logger.InfoContext(ctx, "Deleting legacy wgpolicyk8s.io ClusterPolicyReports")
-			err = store.DeleteOldClusterReports(ctx, ephemeralRunUID)
-			if err != nil {
-				return err
-			}
-		}
-
 	}
 
 	policyReportList := &wgpolicy.PolicyReportList{}
 	err = c.List(ctx, policyReportList, listOpts)
-	if meta.IsNoMatchError(err) {
+	switch {
+	case meta.IsNoMatchError(err):
 		logger.DebugContext(ctx, "wgpolicyk8s.io CRDs not installed, skipping legacy report cleanup")
-		return nil
-	}
-	if err != nil {
+	case err != nil:
 		return fmt.Errorf("failed to list legacy PolicyReports: %w", err)
-	}
-	if len(policyReportList.Items) == 0 {
-		return nil
-	}
-
-	namespaceList := &corev1.NamespaceList{}
-	err = c.List(ctx, namespaceList)
-	if err != nil {
-		return fmt.Errorf("failed to list namespaces: %w", err)
-	}
-	for _, ns := range namespaceList.Items {
-		logger.InfoContext(ctx, "Deleting legacy wgpolicyk8s.io PolicyReports",
-			slog.String("namespace", ns.Name))
-		err = store.DeleteOldReports(ctx, ephemeralRunUID, ns.Name)
-		if err != nil {
-			return err
+	case len(policyReportList.Items) > 0:
+		namespaceList := &corev1.NamespaceList{}
+		if err = c.List(ctx, namespaceList); err != nil {
+			return fmt.Errorf("failed to list namespaces: %w", err)
+		}
+		for _, ns := range namespaceList.Items {
+			logger.InfoContext(ctx, "Deleting legacy wgpolicyk8s.io PolicyReports",
+				slog.String("namespace", ns.Name))
+			if err = store.DeleteOldReports(ctx, ephemeralRunUID, ns.Name); err != nil {
+				return err
+			}
 		}
 	}
 
