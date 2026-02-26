@@ -183,9 +183,7 @@ impl PolicyEvaluatorBuilder {
                     engine,
                     module,
                     0, // currently the entrypoint is hard coded to this value
-                    execution_mode
-                        .try_into()
-                        .map_err(PolicyEvaluatorBuilderError::NewRegoStackPre)?,
+                    execution_mode.try_into()?,
                 );
                 StackPre::from(rego_stack_pre)
             }

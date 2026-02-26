@@ -20,7 +20,7 @@ pub enum RegoRuntimeError {
     CallbackResponse(String),
 
     #[error("cannot perform a request via callback channel: {0}")]
-    CallbackRequest(#[source] wasmtime::Error),
+    CallbackRequest(#[source] anyhow::Error),
 
     #[error("get plural name failure, cannot convert callback response: {0}")]
     CallbackGetPluralName(#[source] serde_json::Error),
