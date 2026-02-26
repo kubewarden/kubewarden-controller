@@ -29,11 +29,19 @@ mod proxy_tests {
     }
 
     async fn proxy_log_contains(container: &ContainerAsync<GenericImage>, needle: &str) -> bool {
-        let stdout = String::from_utf8(container.stdout_to_vec().await.unwrap_or_default())
-            .unwrap_or_default();
-        let stderr = String::from_utf8(container.stderr_to_vec().await.unwrap_or_default())
-            .unwrap_or_default();
-        stdout.contains(needle) || stderr.contains(needle)
+        // tinyproxy may not flush its log immediately after handling a request,
+        // so retry for a second before giving up.
+        for _ in 0..10 {
+            let stdout = String::from_utf8(container.stdout_to_vec().await.unwrap_or_default())
+                .unwrap_or_default();
+            let stderr = String::from_utf8(container.stderr_to_vec().await.unwrap_or_default())
+                .unwrap_or_default();
+            if stdout.contains(needle) || stderr.contains(needle) {
+                return true;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        false
     }
 
     /// Tests that OCI manifest context-aware calls are routed through the proxy when
