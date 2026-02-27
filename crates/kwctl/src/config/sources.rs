@@ -3,6 +3,7 @@ use std::{env, path::Path};
 use anyhow::Result;
 use clap::ArgMatches;
 use policy_evaluator::policy_fetcher::{
+    proxy::ProxyConfig,
     sources::{Sources, read_sources_file},
     store::DEFAULT_ROOT,
 };
@@ -21,6 +22,13 @@ pub(crate) fn remote_server_options(matches: &ArgMatches) -> Result<Option<Sourc
             None
         }
     };
+
+    // Inject proxy settings read from the environment so every HTTP client
+    // inside policy-fetcher honours them without needing system-proxy feature.
+    let sources = sources.map(|mut s| {
+        s.proxies = Some(ProxyConfig::from_env());
+        s
+    });
 
     if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
         // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility

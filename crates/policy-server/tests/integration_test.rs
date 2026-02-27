@@ -1304,6 +1304,9 @@ fn build_request_client(
 
 // helper functions for testing proxy functionality
 mod proxy_helpers {
+    use std::time::Duration;
+
+    use backon::{ExponentialBuilder, Retryable};
     use testcontainers::{
         ContainerAsync, GenericImage,
         core::{IntoContainerPort, WaitFor},
@@ -1322,17 +1325,33 @@ mod proxy_helpers {
             .expect("Failed to get proxy port");
         (container, port)
     }
+
     /// Used to verify that traffic was (or was not) routed through the proxy.
     /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
+    /// Retries with exponential backoff because tinyproxy may not flush its log immediately.
     pub async fn proxy_log_contains(
         container: &ContainerAsync<GenericImage>,
         needle: &str,
     ) -> bool {
-        let stdout = String::from_utf8(container.stdout_to_vec().await.unwrap_or_default())
-            .unwrap_or_default();
-        let stderr = String::from_utf8(container.stderr_to_vec().await.unwrap_or_default())
-            .unwrap_or_default();
-        stdout.contains(needle) || stderr.contains(needle)
+        let check = || async {
+            let stdout = String::from_utf8(container.stdout_to_vec().await.unwrap_or_default())
+                .unwrap_or_default();
+            let stderr = String::from_utf8(container.stderr_to_vec().await.unwrap_or_default())
+                .unwrap_or_default();
+            if stdout.contains(needle) || stderr.contains(needle) {
+                Ok(())
+            } else {
+                Err(())
+            }
+        };
+        check
+            .retry(
+                ExponentialBuilder::default()
+                    .with_min_delay(Duration::from_millis(100))
+                    .with_max_times(5),
+            )
+            .await
+            .is_ok()
     }
 }
 

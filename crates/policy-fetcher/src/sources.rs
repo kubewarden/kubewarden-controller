@@ -10,6 +10,7 @@ use x509_parser::pem::parse_x509_pem;
 use x509_parser::prelude::*;
 
 use crate::errors::FailedToParseYamlDataError;
+use crate::proxy::ProxyConfig;
 
 pub type SourceResult<T> = std::result::Result<T, SourceError>;
 
@@ -107,6 +108,10 @@ impl TryFrom<RawSourceAuthorities> for SourceAuthorities {
 pub struct Sources {
     pub insecure_sources: HashSet<String>,
     pub source_authorities: SourceAuthorities,
+    /// Proxy settings for all outbound HTTP/HTTPS connections made using this
+    /// source configuration. When `None`, `ProxyConfig::from_env()` is used as
+    /// a fallback so existing callers that never set this field continue to work.
+    pub proxies: Option<ProxyConfig>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -122,6 +127,9 @@ impl TryFrom<RawSources> for Sources {
         Ok(Sources {
             insecure_sources: sources.insecure_sources.clone(),
             source_authorities: sources.source_authorities.try_into()?,
+            // TODO implement RawProxyConfig{} to serialize proxy configuration
+            // from sources.yaml
+            proxies: None,
         })
     }
 }
@@ -230,15 +238,15 @@ impl From<Sources> for sigstore::registry::ClientConfig {
             })
             .collect();
 
-        let (http_proxy, https_proxy, no_proxy) = crate::get_proxy_env_vars();
+        let proxy_sources = sources.proxies();
 
         sigstore::registry::ClientConfig {
             accept_invalid_certificates: false,
             protocol,
             extra_root_certificates,
-            http_proxy,
-            https_proxy,
-            no_proxy,
+            http_proxy: proxy_sources.http_proxy,
+            https_proxy: proxy_sources.https_proxy,
+            no_proxy: proxy_sources.no_proxy,
         }
     }
 }
@@ -250,6 +258,12 @@ impl Sources {
 
     pub fn source_authority(&self, host: &str) -> Option<Vec<Certificate>> {
         self.source_authorities.0.get(host).cloned()
+    }
+
+    /// Returns the effective proxy configuration: the explicitly set one if
+    /// present, otherwise a fresh `ProxyConfig::from_env()`.
+    pub fn proxies(&self) -> ProxyConfig {
+        self.proxies.clone().unwrap_or_else(ProxyConfig::from_env)
     }
 }
 
@@ -384,5 +398,44 @@ Wm7DCfrPNGVwFWUQOmsPue9rZBgO
         for actual_cert in actual_certs {
             assert_eq!(actual_cert, &expected_cert);
         }
+    }
+
+    #[test]
+    fn test_proxy_config_explicit_takes_precedence_over_env() {
+        temp_env::with_vars(
+            [
+                ("HTTPS_PROXY", Some("http://env-proxy:3128")),
+                ("NO_PROXY", Some("env-proxy")),
+            ],
+            || {
+                let explicit = crate::proxy::ProxyConfig {
+                    https_proxy: Some("http://explicit-proxy:3128".to_string()),
+                    no_proxy: Some("internal.corp".to_string()),
+                    ..Default::default()
+                };
+                let sources = Sources {
+                    proxies: Some(explicit.clone()),
+                    ..Default::default()
+                };
+                assert_eq!(sources.proxies(), explicit);
+            },
+        );
+    }
+
+    #[test]
+    fn test_proxy_config_falls_back_to_env() {
+        // Without Sources.proxy set, proxy_config() should read from env vars.
+        temp_env::with_vars(
+            [
+                ("HTTPS_PROXY", Some("http://env-proxy:3128")),
+                ("NO_PROXY", Some("localhost")),
+            ],
+            || {
+                let sources = Sources::default();
+                let cfg = sources.proxies();
+                assert_eq!(cfg.https_proxy.as_deref(), Some("http://env-proxy:3128"));
+                assert_eq!(cfg.no_proxy.as_deref(), Some("localhost"));
+            },
+        );
     }
 }

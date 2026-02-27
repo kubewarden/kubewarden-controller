@@ -1,4 +1,6 @@
-use common::setup_command;
+use std::time::Duration;
+
+use backon::{BlockingRetryable, ExponentialBuilder};
 use predicates::str::contains;
 use rstest::rstest;
 use tempfile::tempdir;
@@ -8,6 +10,7 @@ use testcontainers::{
     runners::SyncRunner,
 };
 
+use common::setup_command;
 mod common;
 
 const POLICY_URI: &str = "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5";
@@ -26,14 +29,29 @@ fn start_proxy() -> (Container<GenericImage>, u16) {
     (container, port)
 }
 
-/// Used to verify that traffic was actually routed through the proxy.
+/// Used to verify that traffic was (or was not) routed through the proxy.
 /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
+/// Retries with exponential backoff because tinyproxy may not flush its log immediately.
 fn proxy_log_contains(container: &Container<GenericImage>, needle: &str) -> bool {
-    let stdout =
-        String::from_utf8(container.stdout_to_vec().unwrap_or_default()).unwrap_or_default();
-    let stderr =
-        String::from_utf8(container.stderr_to_vec().unwrap_or_default()).unwrap_or_default();
-    stdout.contains(needle) || stderr.contains(needle)
+    let check = || {
+        let stdout =
+            String::from_utf8(container.stdout_to_vec().unwrap_or_default()).unwrap_or_default();
+        let stderr =
+            String::from_utf8(container.stderr_to_vec().unwrap_or_default()).unwrap_or_default();
+        if stdout.contains(needle) || stderr.contains(needle) {
+            Ok(())
+        } else {
+            Err(())
+        }
+    };
+    check
+        .retry(
+            ExponentialBuilder::default()
+                .with_min_delay(Duration::from_millis(100))
+                .with_max_times(5),
+        )
+        .call()
+        .is_ok()
 }
 
 /// Tests that HTTPS traffic is routed through the proxy when HTTPS_PROXY is set.

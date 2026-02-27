@@ -8,7 +8,7 @@ authors = [
 ]
 edition = "2024"
 name = "policy-evaluator"
-version = "0.30.4"
+version = "0.31.0"
 
 [dependencies]
 anyhow = { workspace = true }
@@ -94,14 +94,18 @@ wasmtime = { workspace = true, features = [
 
 [dev-dependencies]
 assert-json-diff = "2.0"
-hyper            = { version = "1" }
-rcgen            = { version = "0.14", features = ["x509-parser"] }
-rstest           = { workspace = true }
-serial_test      = "3.3"
-tempfile         = { workspace = true }
-test-context     = "0.5"
-test-log         = "0.2"
-tower-test       = "0.4"
+backon = { version = "1.6", features = ["tokio-sleep"] }
+hyper = { version = "1" }
+rcgen = { version = "0.14", features = ["x509-parser"] }
+rstest = { workspace = true }
+serial_test = "3.3"
+tempfile = { workspace = true }
+test-context = "0.5"
+test-log = "0.2"
+testcontainers = { version = "0.27", default-features = false, features = [
+  "aws-lc-rs",
+] }
+tower-test = "0.4"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of policy-fetcher
 # This is required to have the integration tests use the system certificates instead of the
