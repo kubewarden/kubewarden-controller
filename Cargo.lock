@@ -3440,6 +3440,7 @@ version = "1.32.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
+ "backon",
  "clap",
  "clap-markdown",
  "clap_complete",
@@ -4550,6 +4551,7 @@ version = "0.31.0"
 dependencies = [
  "anyhow",
  "assert-json-diff",
+ "backon",
  "base64 0.22.1",
  "burrego",
  "cached",

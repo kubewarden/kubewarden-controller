@@ -54,6 +54,7 @@ sigstore_protobuf_specs = "0.5"
 
 [dev-dependencies]
 assert_cmd     = "2.1.2"
+backon         = { version = "1.6", features = ["std-blocking-sleep"] }
 hyper          = { version = "1.8.1" }
 predicates     = "3.1"
 rstest         = { workspace = true }

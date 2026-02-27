@@ -4,7 +4,9 @@ mod common;
 // have Docker installed.
 #[cfg(not(target_os = "macos"))]
 mod proxy_tests {
-    use crate::common::setup_callback_handler;
+    use std::time::Duration;
+
+    use backon::{ExponentialBuilder, Retryable};
     use policy_evaluator::callback_requests::{CallbackRequest, CallbackRequestType};
     use policy_fetcher::{proxy::ProxyConfig, sources::Sources};
     use testcontainers::{
@@ -13,6 +15,8 @@ mod proxy_tests {
         runners::AsyncRunner,
     };
     use tokio::sync::oneshot;
+
+    use crate::common::setup_callback_handler;
 
     async fn start_proxy() -> (ContainerAsync<GenericImage>, u16) {
         let container = GenericImage::new("kalaksi/tinyproxy", "1.7")
@@ -28,20 +32,29 @@ mod proxy_tests {
         (container, port)
     }
 
+    /// Used to verify that traffic was (or was not) routed through the proxy.
+    /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
+    /// Retries with exponential backoff because tinyproxy may not flush its log immediately.
     async fn proxy_log_contains(container: &ContainerAsync<GenericImage>, needle: &str) -> bool {
-        // tinyproxy may not flush its log immediately after handling a request,
-        // so retry for a second before giving up.
-        for _ in 0..10 {
+        let check = || async {
             let stdout = String::from_utf8(container.stdout_to_vec().await.unwrap_or_default())
                 .unwrap_or_default();
             let stderr = String::from_utf8(container.stderr_to_vec().await.unwrap_or_default())
                 .unwrap_or_default();
             if stdout.contains(needle) || stderr.contains(needle) {
-                return true;
+                Ok(())
+            } else {
+                Err(())
             }
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-        }
-        false
+        };
+        check
+            .retry(
+                ExponentialBuilder::default()
+                    .with_min_delay(Duration::from_millis(100))
+                    .with_max_times(5),
+            )
+            .await
+            .is_ok()
     }
 
     /// Tests that OCI manifest context-aware calls are routed through the proxy when
