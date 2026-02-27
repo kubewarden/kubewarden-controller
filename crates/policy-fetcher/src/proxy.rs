@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
+
 /// Proxy configuration for outbound HTTP/HTTPS connections.
 ///
 /// Mirrors the conventional `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`
 /// environment variables. All three fields are optional; an absent value means
 /// "no proxy" for that protocol.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
 pub struct ProxyConfig {
     /// Proxy URL for plain HTTP requests (e.g. `http://proxy.corp:3128`).
     pub http_proxy: Option<String>,
