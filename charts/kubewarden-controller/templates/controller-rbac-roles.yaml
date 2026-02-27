@@ -2,6 +2,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  labels:
+    {{- include "kubewarden-controller.labels" . | nindent 4 }}
+  annotations:
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
   name: kubewarden-controller-manager
 rules:
 - apiGroups:
@@ -69,13 +73,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  labels:
+    {{- include "kubewarden-controller.labels" . | nindent 4 }}
+  annotations:
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
   name: kubewarden-controller-manager
-  namespace: kubewarden
+  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups:
   - ""
   resources:
-  - configmap
   - configmaps
   - secrets
   - services
@@ -90,7 +97,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - event
+  - events
   verbs:
   - create
   - patch
