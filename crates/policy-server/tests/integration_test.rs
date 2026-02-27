@@ -1307,7 +1307,7 @@ fn build_request_client(
 mod proxy_helpers {
     use std::time::Duration;
 
-    use backon::{ExponentialBuilder, Retryable};
+    use backon::{ConstantBuilder, Retryable};
     use testcontainers::{
         ContainerAsync, GenericImage,
         core::{IntoContainerPort, WaitFor},
@@ -1329,7 +1329,7 @@ mod proxy_helpers {
 
     /// Used to verify that traffic was (or was not) routed through the proxy.
     /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
-    /// Retries with exponential backoff because tinyproxy may not flush its log immediately.
+    /// Retries with a constant backoff to give tinyproxy time to flush its log.
     pub async fn proxy_log_contains(
         container: &ContainerAsync<GenericImage>,
         needle: &str,
@@ -1347,8 +1347,8 @@ mod proxy_helpers {
         };
         check
             .retry(
-                ExponentialBuilder::default()
-                    .with_min_delay(Duration::from_millis(100))
+                ConstantBuilder::default()
+                    .with_delay(std::time::Duration::from_millis(100))
                     .with_max_times(5),
             )
             .await

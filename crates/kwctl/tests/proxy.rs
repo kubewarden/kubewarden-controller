@@ -1,6 +1,3 @@
-use std::time::Duration;
-
-use backon::{BlockingRetryable, ExponentialBuilder};
 use predicates::str::contains;
 use rstest::rstest;
 use tempfile::tempdir;
@@ -10,6 +7,7 @@ use testcontainers::{
     runners::SyncRunner,
 };
 
+use backon::{BlockingRetryable, ConstantBuilder};
 use common::setup_command;
 mod common;
 
@@ -31,7 +29,8 @@ fn start_proxy() -> (Container<GenericImage>, u16) {
 
 /// Used to verify that traffic was (or was not) routed through the proxy.
 /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
-/// Retries with exponential backoff because tinyproxy may not flush its log immediately.
+/// Retries with a constant backoff to handle testcontainers' log collection latency.
+/// The container should be stopped before calling this to ensure tinyproxy has flushed its logs.
 fn proxy_log_contains(container: &Container<GenericImage>, needle: &str) -> bool {
     let check = || {
         let stdout =
@@ -46,9 +45,9 @@ fn proxy_log_contains(container: &Container<GenericImage>, needle: &str) -> bool
     };
     check
         .retry(
-            ExponentialBuilder::default()
-                .with_min_delay(Duration::from_millis(100))
-                .with_max_times(5),
+            ConstantBuilder::default()
+                .with_delay(std::time::Duration::from_millis(100))
+                .with_max_times(10),
         )
         .call()
         .is_ok()
