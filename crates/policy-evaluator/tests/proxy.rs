@@ -119,7 +119,9 @@ mod proxy_tests {
         cb_channel
             .try_send(CallbackRequest {
                 request: CallbackRequestType::OciManifest {
-                    image: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.5".to_owned(),
+                    // Use a different image than the https_proxy test to avoid a process-wide
+                    // cache hit (the `#[cached]` key is the image URL only, not the proxy config).
+                    image: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
                 },
                 response_channel: resp_tx,
             })
