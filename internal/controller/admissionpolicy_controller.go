@@ -74,10 +74,10 @@ func (r *AdmissionPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.policySubReconciler = &policySubReconciler{
-		r.Client,
-		r.Log,
-		r.DeploymentsNamespace,
-		r.FeatureGateAdmissionWebhookMatchConditions,
+		Client:               r.Client,
+		Log:                  r.Log,
+		deploymentsNamespace: r.DeploymentsNamespace,
+		featureGateAdmissionWebhookMatchConditions: r.FeatureGateAdmissionWebhookMatchConditions,
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).

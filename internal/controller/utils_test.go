@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	integrationTestsFinalizer = "integration-tests-safety-net-finalizer"
+	integrationTestsFinalizer = "kubewarden.io/integration-tests-safety-net-finalizer"
 	clientCAConfigMapName     = "client-ca"
 	fakeSigstoreTrustConfig   = `{"trusted_root": {"version": "test"}}`
 )
