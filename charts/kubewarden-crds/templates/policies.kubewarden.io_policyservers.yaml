@@ -1,3 +1,4 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -1641,7 +1642,7 @@ spec:
                   Name of SigstoreTrustConfig configmap in the kubewarden namespace (same
                   namespace as the controller deployment), containing Sigstore trust
                   configuration (ClientTrustConfig JSON). The configuration must be under a
-                  key named sigstore-trust-config in the Configmap. This is used to configure
+                  key named sigstore-trust-config in the ConfigMap. This is used to configure
                   a custom Sigstore instance instead of the default public Sigstore infrastructure.
                   WARNING: This feature requires strict access control. Users with write access
                   to this ConfigMap can influence policy signature verification.
