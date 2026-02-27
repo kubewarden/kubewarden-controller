@@ -79,6 +79,17 @@ spec:
             description: ClusterAdmissionPolicyGroupSpec defines the desired state
               of ClusterAdmissionPolicyGroup.
             properties:
+              allowInsideKubewardenNamespace:
+                description: |-
+                  AllowInsideKubewardenNamespace controls whether the policy should also be
+                  evaluated for resources in the namespace where Kubewarden is deployed.
+                  By default (false), an exclusion rule is added to the webhook so that the
+                  Kubewarden namespace is never targeted, protecting against an accidental
+                  lockout. Set this to true only if you deliberately want the policy to apply
+                  inside the Kubewarden namespace.
+                  Warning: setting this to true may cause a deadlock if the policy prevents
+                  Kubewarden components from starting.
+                type: boolean
               backgroundAudit:
                 default: true
                 description: |-

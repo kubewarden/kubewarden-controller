@@ -118,6 +118,7 @@ type PolicySelectors interface {
 	GetNamespaceSelector() *metav1.LabelSelector
 	GetObjectSelector() *metav1.LabelSelector
 	GetObjectMeta() *metav1.ObjectMeta
+	GetAllowInsideKubewardenNamespace() bool
 }
 
 // +kubebuilder:object:generate:=false

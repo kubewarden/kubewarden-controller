@@ -157,6 +157,10 @@ func (r *AdmissionPolicyGroup) GetNamespaceSelector() *metav1.LabelSelector {
 	}
 }
 
+func (r *AdmissionPolicyGroup) GetAllowInsideKubewardenNamespace() bool {
+	return false
+}
+
 func (r *AdmissionPolicyGroup) GetObjectSelector() *metav1.LabelSelector {
 	return r.Spec.ObjectSelector
 }

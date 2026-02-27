@@ -193,6 +193,10 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfigurationDeletion(ctx 
 func (r *policySubReconciler) namespaceSelector(policy policiesv1.Policy) *metav1.LabelSelector {
 	switch policy.(type) {
 	case *policiesv1.ClusterAdmissionPolicyGroup, *policiesv1.ClusterAdmissionPolicy:
+		if policy.GetAllowInsideKubewardenNamespace() {
+			return policy.GetNamespaceSelector()
+		}
+
 		namespaceSelector := &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
