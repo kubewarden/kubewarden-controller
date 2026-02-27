@@ -20,6 +20,7 @@ use policy_evaluator::admission_response::{self, StatusCause, StatusDetails};
 use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     admission_response_handler::policy_mode::PolicyMode, policy_evaluator::PolicySettings,
+    policy_fetcher::proxy::ProxyConfig, policy_fetcher::sources::Sources,
     policy_fetcher::verify::config::VerificationConfigV1,
 };
 use policy_server::{api::admission_review::AdmissionReviewResponse, config::PolicyOrPolicyGroup};
@@ -1356,10 +1357,10 @@ mod proxy_helpers {
 }
 
 #[rstest]
-#[case::both_http_and_https_proxy("HTTP_PROXY", "HTTPS_PROXY")]
-#[case::https_proxy_only("", "HTTPS_PROXY")]
+#[case::both_http_and_https_proxy(true)]
+#[case::https_proxy_only(false)]
 #[tokio::test]
-async fn test_policy_server_with_https_proxy(#[case] http_var: &str, #[case] https_var: &str) {
+async fn test_policy_server_with_https_proxy(#[case] set_http_proxy: bool) {
     use proxy_helpers::*;
 
     setup();
@@ -1367,36 +1368,38 @@ async fn test_policy_server_with_https_proxy(#[case] http_var: &str, #[case] htt
     let (proxy_container, proxy_port) = start_proxy().await;
     let proxy_url = format!("http://127.0.0.1:{proxy_port}");
 
-    let mut vars: Vec<(&str, Option<&str>)> = vec![(https_var, Some(proxy_url.as_str()))];
-    if !http_var.is_empty() {
-        vars.push((http_var, Some(proxy_url.as_str())));
-    }
+    let mut config = pod_privileged_test_config();
+    config.sources = Some(Sources {
+        proxies: Some(ProxyConfig {
+            http_proxy: if set_http_proxy {
+                Some(proxy_url.clone())
+            } else {
+                None
+            },
+            https_proxy: Some(proxy_url.clone()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    let app = app(config).await;
 
-    // safe way of setting env vars for concurrency
-    temp_env::async_with_vars(vars, async {
-        let config = pod_privileged_test_config();
-        let app = app(config).await;
+    let request = http::Request::builder()
+        .method(http::Method::POST)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
 
-        let request = http::Request::builder()
-            .method(http::Method::POST)
-            .header(http::header::CONTENT_TYPE, "application/json")
-            .uri("/validate/pod-privileged")
-            .body(Body::from(include_str!(
-                "data/pod_with_privileged_containers.json"
-            )))
-            .unwrap();
+    let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
 
-        let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
+    assert_eq!(response.status(), 200);
 
-        assert_eq!(response.status(), 200);
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
 
-        let admission_review_response: AdmissionReviewResponse =
-            serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
-                .unwrap();
-
-        assert!(!admission_review_response.response.allowed);
-    })
-    .await;
+    assert!(!admission_review_response.response.allowed);
 
     // Verify traffic actually went through the proxy
     assert!(
@@ -1450,12 +1453,13 @@ async fn test_policy_server_with_http_proxy() {
         .expect("Failed to read policy bytes");
 
     // Configure insecure (HTTP) access to the local registry
-    let sources = policy_evaluator::policy_fetcher::sources::Sources {
+    let mut sources = policy_evaluator::policy_fetcher::sources::Sources {
         insecure_sources: HashSet::from([registry_addr.clone()]),
         ..Default::default()
     };
 
-    // Push the policy to the local registry
+    // Push the policy to the local registry (without proxy — tinyproxy runs in Docker
+    // and cannot reach the host's localhost)
     policy_evaluator::policy_fetcher::registry::Registry::default()
         .push(&policy_bytes, &local_policy_uri, Some(&sources), None)
         .await
@@ -1467,6 +1471,11 @@ async fn test_policy_server_with_http_proxy() {
 
     // Build a config that pulls the policy from the local insecure registry
     let mut config = pod_privileged_test_config();
+    // Add proxy config after the push so the push itself is not routed through the proxy
+    sources.proxies = Some(ProxyConfig {
+        http_proxy: Some(proxy_url.clone()),
+        ..Default::default()
+    });
     config.sources = Some(sources);
     if let Some(PolicyOrPolicyGroup::Policy { module, .. }) =
         config.policies.get_mut("pod-privileged")
@@ -1474,32 +1483,27 @@ async fn test_policy_server_with_http_proxy() {
         *module = local_policy_uri.clone();
     }
 
-    // safe way of setting env vars for concurrency
-    temp_env::async_with_vars([("HTTP_PROXY", Some(proxy_url.as_str()))], async {
-        let app_instance = app(config).await;
+    let app_instance = app(config).await;
 
-        let request = http::Request::builder()
-            .method(http::Method::POST)
-            .header(http::header::CONTENT_TYPE, "application/json")
-            .uri("/validate/pod-privileged")
-            .body(Body::from(include_str!(
-                "data/pod_with_privileged_containers.json"
-            )))
-            .unwrap();
+    let request = http::Request::builder()
+        .method(http::Method::POST)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
 
-        let response = tower::ServiceExt::oneshot(app_instance, request)
-            .await
-            .unwrap();
+    let response = tower::ServiceExt::oneshot(app_instance, request)
+        .await
+        .unwrap();
 
-        assert_eq!(response.status(), 200);
+    assert_eq!(response.status(), 200);
 
-        let admission_review_response: AdmissionReviewResponse =
-            serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
-                .unwrap();
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
 
-        assert!(!admission_review_response.response.allowed);
-    })
-    .await;
+    assert!(!admission_review_response.response.allowed);
 
     // Verify traffic actually went through the proxy
     assert!(
@@ -1523,37 +1527,34 @@ async fn test_policy_server_with_no_proxy() {
     let (proxy_container, proxy_port) = start_proxy().await;
     let proxy_url = format!("http://127.0.0.1:{proxy_port}");
 
-    // safe way of setting env vars for concurrency
-    temp_env::async_with_vars(
-        [
-            ("HTTPS_PROXY", Some(proxy_url.as_str())),
-            ("NO_PROXY", Some("ghcr.io")),
-        ],
-        async {
-            let config = pod_privileged_test_config();
-            let app = app(config).await;
+    let mut config = pod_privileged_test_config();
+    config.sources = Some(Sources {
+        proxies: Some(ProxyConfig {
+            https_proxy: Some(proxy_url.clone()),
+            no_proxy: Some("ghcr.io".to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    let app = app(config).await;
 
-            let request = http::Request::builder()
-                .method(http::Method::POST)
-                .header(http::header::CONTENT_TYPE, "application/json")
-                .uri("/validate/pod-privileged")
-                .body(Body::from(include_str!(
-                    "data/pod_with_privileged_containers.json"
-                )))
-                .unwrap();
+    let request = http::Request::builder()
+        .method(http::Method::POST)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
 
-            let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
+    let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
 
-            assert_eq!(response.status(), 200);
+    assert_eq!(response.status(), 200);
 
-            let admission_review_response: AdmissionReviewResponse =
-                serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
-                    .unwrap();
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
 
-            assert!(!admission_review_response.response.allowed);
-        },
-    )
-    .await;
+    assert!(!admission_review_response.response.allowed);
 
     // Verify traffic did NOT go through the proxy
     assert!(
