@@ -196,6 +196,20 @@ impl PolicyServer {
             let engine = engine.clone();
             tokio::spawn(async move {
                 let mut interval = time::interval(time::Duration::from_secs(1));
+
+                // The default MissedTickBehavior::Burst behaves like so:
+                //   Expected ticks: |     1     |     2     |     3     |     4     |     5     |     6     |
+                //   Actual ticks:   | work -----|          delay          | work | work | work -| work -----|
+                //
+                // This means that in loaded systems, the engine will increment epochs too fast,
+                // without giving time to the wasm host to perform work. This is usually triggered
+                // as a timeout when performing an init in rehydrate(), as the init suddenly goes
+                // through several ticks.
+                //
+                // Instead, use MissedTickBehavior::Skip:
+                //   Expected ticks: |     1     |     2     |     3     |     4     |     5     |     6     |
+                //   Actual ticks:   | work -----|          delay          | work ---| work -----| work -----|
+                interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
                 loop {
                     interval.tick().await;
                     engine.increment_epoch();
