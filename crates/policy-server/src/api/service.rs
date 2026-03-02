@@ -86,6 +86,20 @@ pub(crate) fn evaluate(
             ));
         }
 
+        // The epoch deadline fired during WASM module initialization (inside rehydrate).
+        // This surfaces as a WebAssemblyError rather than the normal guest-call timeout path,
+        // so we must detect it here and return a proper rejection instead of HTTP 500.
+        Err(EvaluationError::WebAssemblyError(ref error))
+            if error.contains("init interrupted, execution deadline exceeded") =>
+        {
+            return Ok(AdmissionResponse::reject(
+                validate_request.uid().to_owned(),
+                "Policy execution interrupted because it exceeded the allowed execution time"
+                    .to_owned(),
+                500,
+            ));
+        }
+
         Err(error) => return Err(error),
     };
 
