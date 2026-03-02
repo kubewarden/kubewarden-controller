@@ -14,7 +14,7 @@ pub enum WapcRuntimeError {
     CreateProtocolVersion {
         res: std::vec::Vec<u8>,
         #[source]
-        error: anyhow::Error,
+        error: kubewarden_policy_sdk::Error,
     },
 
     #[error("cannot invoke 'protocol_version' waPC function : {0}")]
