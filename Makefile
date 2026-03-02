@@ -47,6 +47,7 @@ test-rust:
 .PHONY: helm-unittest
 helm-unittest:
 	helm unittest charts/kubewarden-controller --file "tests/**/*_test.yaml"
+	helm unittest charts/kubewarden-crds --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
 test-e2e: controller-image audit-scanner-image policy-server-image
@@ -145,8 +146,13 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 	$(GO_BUILD_ENV) $(CONTROLLER_GEN) object paths="./api/policies/v1"
 
 .PHONY: manifests
-manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=config/crd/bases output:rbac:artifacts:config=config/rbac
+manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=kubewarden-controller-manager,fileName=controller-rbac-roles.yaml crd webhook \
+			paths="./api/policies/v1"  paths="./internal/controller" paths="./cmd/controller" \
+			output:crd:artifacts:config=charts/kubewarden-crds/templates \
+			output:rbac:artifacts:config=charts/kubewarden-controller/templates
+	sed -i '/^metadata:/a\  labels:\n    {{- include "kubewarden-controller.labels" . | nindent 4 }}\n  annotations:\n    {{- include "kubewarden-controller.annotations" . | nindent 4 }}' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
+	sed -i 's/  namespace: kubewarden/  namespace: {{ .Release.Namespace }}/' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
 
 .PHONY: generate-chart
 generate-chart: ## Generate Helm chart values schema.

@@ -53,6 +53,14 @@ import (
 	//+kubebuilder:scaffold:imports
 )
 
+// Kubewarden controller required permissions
+//
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete,namespace="kubewarden"
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete,namespace="kubewarden"
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch,namespace="kubewarden"
+//+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
+//+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
+
 //nolint:gochecknoglobals // Following the kubebuilder pattern
 var (
 	scheme   = runtime.NewScheme()

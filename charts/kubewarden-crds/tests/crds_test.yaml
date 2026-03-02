@@ -1,0 +1,66 @@
+suite: Kubewarden CRDs
+tests:
+  - it: "admissionpolicies CRD should be a CustomResourceDefinition"
+    template: policies.kubewarden.io_admissionpolicies.yaml
+    asserts:
+      - equal:
+          path: kind
+          value: CustomResourceDefinition
+      - equal:
+          path: metadata.name
+          value: admissionpolicies.policies.kubewarden.io
+      - equal:
+          path: spec.group
+          value: policies.kubewarden.io
+
+  - it: "admissionpolicygroups CRD should be a CustomResourceDefinition"
+    template: policies.kubewarden.io_admissionpolicygroups.yaml
+    asserts:
+      - equal:
+          path: kind
+          value: CustomResourceDefinition
+      - equal:
+          path: metadata.name
+          value: admissionpolicygroups.policies.kubewarden.io
+      - equal:
+          path: spec.group
+          value: policies.kubewarden.io
+
+  - it: "clusteradmissionpolicies CRD should be a CustomResourceDefinition"
+    template: policies.kubewarden.io_clusteradmissionpolicies.yaml
+    asserts:
+      - equal:
+          path: kind
+          value: CustomResourceDefinition
+      - equal:
+          path: metadata.name
+          value: clusteradmissionpolicies.policies.kubewarden.io
+      - equal:
+          path: spec.group
+          value: policies.kubewarden.io
+
+  - it: "clusteradmissionpolicygroups CRD should be a CustomResourceDefinition"
+    template: policies.kubewarden.io_clusteradmissionpolicygroups.yaml
+    asserts:
+      - equal:
+          path: kind
+          value: CustomResourceDefinition
+      - equal:
+          path: metadata.name
+          value: clusteradmissionpolicygroups.policies.kubewarden.io
+      - equal:
+          path: spec.group
+          value: policies.kubewarden.io
+
+  - it: "policyservers CRD should be a CustomResourceDefinition"
+    template: policies.kubewarden.io_policyservers.yaml
+    asserts:
+      - equal:
+          path: kind
+          value: CustomResourceDefinition
+      - equal:
+          path: metadata.name
+          value: policyservers.policies.kubewarden.io
+      - equal:
+          path: spec.group
+          value: policies.kubewarden.io
