@@ -16,7 +16,7 @@ spec:
       certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.1
     - name: ghcr.io/kubewarden/kubewarden-controller:v1.32.1
       certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.1
-    - name: ghcr.io/kubewarden/policy-server:v1.32.1
+    - name: ghcr.io/kubewarden/policy-server:v1.33.0-rc1
       certificate-identity-regexp: https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags/v1.32.1
 ---
 # The policies are in a separated definition just to allow a better keyless validation
