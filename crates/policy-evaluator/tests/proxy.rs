@@ -82,7 +82,7 @@ mod proxy_tests {
                 },
                 response_channel: resp_tx,
             })
-            .expect("cannot send callback request q");
+            .expect("cannot send callback request");
 
         resp_rx
             .await
