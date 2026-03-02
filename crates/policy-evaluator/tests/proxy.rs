@@ -6,7 +6,7 @@ mod common;
 mod proxy_tests {
     use std::time::Duration;
 
-    use backon::{ExponentialBuilder, Retryable};
+    use backon::{ConstantBuilder, Retryable};
     use policy_evaluator::callback_requests::{CallbackRequest, CallbackRequestType};
     use policy_fetcher::{proxy::ProxyConfig, sources::Sources};
     use testcontainers::{
@@ -34,7 +34,7 @@ mod proxy_tests {
 
     /// Used to verify that traffic was (or was not) routed through the proxy.
     /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
-    /// Retries with exponential backoff because tinyproxy may not flush its log immediately.
+    /// Retries with a constant backoff to give tinyproxy time to flush its log.
     async fn proxy_log_contains(container: &ContainerAsync<GenericImage>, needle: &str) -> bool {
         let check = || async {
             let stdout = String::from_utf8(container.stdout_to_vec().await.unwrap_or_default())
@@ -49,9 +49,9 @@ mod proxy_tests {
         };
         check
             .retry(
-                ExponentialBuilder::default()
-                    .with_min_delay(Duration::from_millis(100))
-                    .with_max_times(5),
+                ConstantBuilder::default()
+                    .with_delay(std::time::Duration::from_millis(100))
+                    .with_max_times(10),
             )
             .await
             .is_ok()
@@ -119,7 +119,9 @@ mod proxy_tests {
         cb_channel
             .try_send(CallbackRequest {
                 request: CallbackRequestType::OciManifest {
-                    image: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.5".to_owned(),
+                    // Use a different image than the https_proxy test to avoid a process-wide
+                    // cache hit (the `#[cached]` key is the image URL only, not the proxy config).
+                    image: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
                 },
                 response_channel: resp_tx,
             })

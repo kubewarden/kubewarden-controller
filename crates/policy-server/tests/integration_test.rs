@@ -1305,9 +1305,7 @@ fn build_request_client(
 
 // helper functions for testing proxy functionality
 mod proxy_helpers {
-    use std::time::Duration;
-
-    use backon::{ExponentialBuilder, Retryable};
+    use backon::{ConstantBuilder, Retryable};
     use testcontainers::{
         ContainerAsync, GenericImage,
         core::{IntoContainerPort, WaitFor},
@@ -1329,7 +1327,7 @@ mod proxy_helpers {
 
     /// Used to verify that traffic was (or was not) routed through the proxy.
     /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
-    /// Retries with exponential backoff because tinyproxy may not flush its log immediately.
+    /// Retries with a constant backoff to give tinyproxy time to flush its log.
     pub async fn proxy_log_contains(
         container: &ContainerAsync<GenericImage>,
         needle: &str,
@@ -1347,9 +1345,9 @@ mod proxy_helpers {
         };
         check
             .retry(
-                ExponentialBuilder::default()
-                    .with_min_delay(Duration::from_millis(100))
-                    .with_max_times(5),
+                ConstantBuilder::default()
+                    .with_delay(std::time::Duration::from_millis(500))
+                    .with_max_times(20),
             )
             .await
             .is_ok()
@@ -1359,6 +1357,7 @@ mod proxy_helpers {
 #[rstest]
 #[case::both_http_and_https_proxy(true)]
 #[case::https_proxy_only(false)]
+#[serial_test::serial]
 #[tokio::test]
 async fn test_policy_server_with_https_proxy(#[case] set_http_proxy: bool) {
     use proxy_helpers::*;
@@ -1415,6 +1414,7 @@ async fn test_policy_server_with_https_proxy(#[case] set_http_proxy: bool) {
 /// source. The policy is first fetched from ghcr.io, pushed to the local registry, then the policy
 /// server is started with HTTP_PROXY pointing at tinyproxy. Both containers share the default
 /// docker bridge network so the proxy can forward requests to the registry by its bridge IP.
+#[serial_test::serial]
 #[tokio::test]
 async fn test_policy_server_with_http_proxy() {
     use proxy_helpers::*;
@@ -1518,6 +1518,7 @@ async fn test_policy_server_with_http_proxy() {
 /// A real tinyproxy is started and set as HTTPS_PROXY. With NO_PROXY=ghcr.io the policy server
 /// must connect directly to ghcr.io, so startup and validation succeed and the proxy logs must not
 /// contain any reference to ghcr.io.
+#[serial_test::serial]
 #[tokio::test]
 async fn test_policy_server_with_no_proxy() {
     use proxy_helpers::*;
