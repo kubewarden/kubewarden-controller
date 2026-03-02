@@ -1,3 +1,4 @@
+use backon::{BlockingRetryable, ConstantBuilder};
 use predicates::str::contains;
 use rstest::rstest;
 use tempfile::tempdir;
@@ -7,7 +8,6 @@ use testcontainers::{
     runners::SyncRunner,
 };
 
-use backon::{BlockingRetryable, ConstantBuilder};
 use common::setup_command;
 mod common;
 
