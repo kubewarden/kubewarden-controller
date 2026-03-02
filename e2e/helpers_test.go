@@ -50,14 +50,18 @@ func createPolicyServerAndWaitForItsService(ctx context.Context, cfg *envconf.Co
 
 	// Wait for the Service associated with the PolicyServer to be created
 	serviceName := policyServer.NameWithPrefix()
-	if err := wait.For(func(context.Context) (bool, error) {
-		service := &corev1.Service{}
-		err := cfg.Client().Resources(namespace).Get(ctx, serviceName, namespace, service)
-		if err != nil {
-			return false, err
-		}
-		return true, nil
-	}, wait.WithTimeout(testTimeout), wait.WithInterval(testPollInterval)); err != nil {
+	service := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: namespace,
+		},
+	}
+	serviceList := &corev1.ServiceList{
+		Items: []corev1.Service{service},
+	}
+	err = wait.For(conditions.New(cfg.Client().Resources()).ResourcesFound(serviceList),
+		wait.WithTimeout(testTimeout), wait.WithInterval(testPollInterval))
+	if err != nil {
 		return err
 	}
 
