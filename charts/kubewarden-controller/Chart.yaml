@@ -23,7 +23,7 @@ maintainers:
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
-version: 5.11.0
+version: 5.11.0-rc1
 # This is the version of Kubewarden stack
 appVersion: v1.33.0-rc1
 annotations:
@@ -35,7 +35,7 @@ annotations:
   catalog.cattle.io/display-name: Kubewarden # Only for Charts with custom UI
   catalog.cattle.io/os: linux # this means linux only, other choice here is "windows". For charts that support both, don't add this annotation
   # optional ones:
-  catalog.cattle.io/auto-install: kubewarden-crds=1.25.0
+  catalog.cattle.io/auto-install: kubewarden-crds=1.25.0-rc1
   catalog.cattle.io/provides-gvr: "policyservers.policies.kubewarden.io/v1" # Declare that this chart provides a type, which other charts may use in `requires-gvr`. Only add to parent, not CRD chart.
   # The following two will create a UI warning if the request is not available in cluster
   # Assume the most standard setup for your chart. These can be strings with amounts, ie 64Mi or 2Gi are both valid.
