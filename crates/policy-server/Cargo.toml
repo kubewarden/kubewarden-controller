@@ -9,7 +9,7 @@ authors = [
 ]
 edition = "2024"
 name = "policy-server"
-version = "1.32.1"
+version = "1.33.0-rc1"
 
 [dependencies]
 anyhow = { workspace = true }
