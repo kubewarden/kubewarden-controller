@@ -11,9 +11,11 @@ This chart installs Kubewarden CRDs:
   `clusteradmissionpolicies.policies.kubewarden.io`
   `policyservers.policies.kubewarden.io`
 
-It also installs PolicyReports and OpenReport CRDs:
+And OpenReport CRDs:
   `reports.openreports.io`
   `clusterreports.openreports.io`
+
+It also installs PolicyReports CRDs (marked as deprecated):
   `policyreports.wgpolicyk8s.io`
   `clusterpolicyreports.wgpolicyk8s.io`
 
