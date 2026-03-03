@@ -145,6 +145,12 @@ preDeleteHook:
     runAsNonRoot: true
     seccompProfile:
       type: RuntimeDefault
+# If true, the controller will always accept admission reviews in the
+# deployment namespace. It is recommended to keep this value true unless you
+# have a specific reason to disable it. This is a safety flag to avoid policy
+# evaluations that could interfere with the Kubewarden stack running in the
+# admission controller namespace.
+alwaysAcceptAdmissionReviewsOnDeploymentsNamespace: true
 # Verbosity of logging. Can be one of 'debug', 'info', 'error'.
 logLevel: info
 # open-telemetry options
