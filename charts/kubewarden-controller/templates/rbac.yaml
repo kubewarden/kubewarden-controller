@@ -167,20 +167,6 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kubewarden-controller-metrics-reader
-  labels:
-    {{- include "kubewarden-controller.labels" . | nindent 4 }}
-  annotations:
-    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
-rules:
-- nonResourceURLs:
-  - /metrics
-  verbs:
-  - get
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
   name: kubewarden-controller-proxy-role
   labels:
     {{- include "kubewarden-controller.labels" . | nindent 4 }}
