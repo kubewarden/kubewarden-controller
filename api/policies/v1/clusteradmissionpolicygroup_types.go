@@ -84,7 +84,7 @@ type ClusterAdmissionPolicyGroupSpec struct {
 	// +optional
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 
-	// AllowInsideKubewardenNamespace controls whether the policy should also be
+	// AllowInsideAdmissionControllerNamespace controls whether the policy should also be
 	// evaluated for resources in the namespace where Kubewarden is deployed.
 	// By default (false), an exclusion rule is added to the webhook so that the
 	// Kubewarden namespace is never targeted, protecting against an accidental
@@ -93,7 +93,7 @@ type ClusterAdmissionPolicyGroupSpec struct {
 	// Warning: setting this to true may cause a deadlock if the policy prevents
 	// Kubewarden components from starting.
 	// +optional
-	AllowInsideKubewardenNamespace bool `json:"allowInsideKubewardenNamespace,omitempty"`
+	AllowInsideAdmissionControllerNamespace bool `json:"allowInsideAdmissionControllerNamespace,omitempty"`
 }
 
 // ClusterAdmissionPolicyGroup is the Schema for the clusteradmissionpolicies API
@@ -209,8 +209,8 @@ func (r *ClusterAdmissionPolicyGroup) GetNamespaceSelector() *metav1.LabelSelect
 	return r.Spec.NamespaceSelector
 }
 
-func (r *ClusterAdmissionPolicyGroup) GetAllowInsideKubewardenNamespace() bool {
-	return r.Spec.AllowInsideKubewardenNamespace
+func (r *ClusterAdmissionPolicyGroup) GetAllowInsideAdmissionControllerNamespace() bool {
+	return r.Spec.AllowInsideAdmissionControllerNamespace
 }
 
 func (r *ClusterAdmissionPolicyGroup) GetObjectSelector() *metav1.LabelSelector {

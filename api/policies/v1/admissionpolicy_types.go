@@ -133,7 +133,7 @@ func (r *AdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
 	}
 }
 
-func (r *AdmissionPolicy) GetAllowInsideKubewardenNamespace() bool {
+func (r *AdmissionPolicy) GetAllowInsideAdmissionControllerNamespace() bool {
 	return false
 }
 
