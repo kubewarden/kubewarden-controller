@@ -51,7 +51,9 @@ spec:
         - --leader-elect
         - --deployments-namespace={{ .Release.Namespace }}
         - --webhook-service-name={{ include "kubewarden-controller.fullname" . }}-webhook-service
+        {{- if .Values.alwaysAcceptAdmissionReviewsOnDeploymentsNamespace }}
         - --always-accept-admission-reviews-on-deployments-namespace
+        {{- end }}
         - --zap-log-level={{ .Values.logLevel }}
        {{- if .Values.mTLS.enable }}
         - --client-ca-configmap-name={{ .Values.mTLS.configMapName }}
