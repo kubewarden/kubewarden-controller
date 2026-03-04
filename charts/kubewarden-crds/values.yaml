@@ -5,7 +5,7 @@
 #
 # These reports are marked as DEPRECATED and its support will be removed in a
 # future release, in favour of OpenReports.
-installPolicyReportCRDs: true
+installPolicyReportCRDs: false
 
 # deploy reports.openreports.io, clusterreports.openreports.io CRDs
 # Set to false if they are already defined inside of the cluster
