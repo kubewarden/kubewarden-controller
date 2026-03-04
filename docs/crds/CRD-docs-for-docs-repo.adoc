@@ -308,6 +308,15 @@ for more examples of label selectors. +
 <br/><br/> +
 Default to the empty LabelSelector, which matches everything. + |  | Optional: \{} +
 
+| *`allowInsideAdmissionControllerNamespace`* __boolean__ | AllowInsideAdmissionControllerNamespace controls whether the policy should also be +
+evaluated for resources in the namespace where Kubewarden is deployed. +
+By default (false), an exclusion rule is added to the webhook so that the +
+Kubewarden namespace is never targeted, protecting against an accidental +
+lockout. Set this to true only if you deliberately want the policy to apply +
+inside the Kubewarden namespace. +
+Warning: setting this to true may cause a deadlock if the policy prevents +
+Kubewarden components from starting. + |  | Optional: \{} +
+
 |===
 
 
@@ -400,6 +409,15 @@ Default to the empty LabelSelector, which matches everything. + |  | Optional: \
 | *`contextAwareResources`* __xref:{anchor_prefix}-github-com-kubewarden-kubewarden-controller-api-policies-v1-contextawareresource[$$ContextAwareResource$$] array__ | List of Kubernetes resources the policy is allowed to access at evaluation time. +
 Access to these resources is done using the `ServiceAccount` of the PolicyServer +
 the policy is assigned to. + |  | Optional: \{} +
+
+| *`allowInsideAdmissionControllerNamespace`* __boolean__ | AllowInsideAdmissionControllerNamespace controls whether the policy should also be +
+evaluated for resources in the namespace where Kubewarden is deployed. +
+By default (false), an exclusion rule is added to the webhook so that the +
+Kubewarden namespace is never targeted, protecting against an accidental +
+lockout. Set this to true only if you deliberately want the policy to apply +
+inside the Kubewarden namespace. +
+Warning: setting this to true may cause a deadlock if the policy prevents +
+Kubewarden components from starting. + |  | Optional: \{} +
 
 |===
 
