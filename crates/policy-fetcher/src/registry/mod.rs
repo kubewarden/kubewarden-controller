@@ -393,7 +393,7 @@ impl PolicyFetcher for Registry {
             .map(|layer| layer.data);
 
         match image_content {
-            Some(image_content) => Ok(image_content.into()),
+            Some(image_content) => Ok(image_content),
             None => Err(SourceError::EmptyLayersError(url.to_string())),
         }
     }
