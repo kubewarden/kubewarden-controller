@@ -89,7 +89,7 @@ type ClusterAdmissionPolicySpec struct {
 	// +optional
 	ContextAwareResources []ContextAwareResource `json:"contextAwareResources,omitempty"`
 
-	// AllowInsideKubewardenNamespace controls whether the policy should also be
+	// AllowInsideAdmissionControllerNamespace controls whether the policy should also be
 	// evaluated for resources in the namespace where Kubewarden is deployed.
 	// By default (false), an exclusion rule is added to the webhook so that the
 	// Kubewarden namespace is never targeted, protecting against an accidental
@@ -98,7 +98,7 @@ type ClusterAdmissionPolicySpec struct {
 	// Warning: setting this to true may cause a deadlock if the policy prevents
 	// Kubewarden components from starting.
 	// +optional
-	AllowInsideKubewardenNamespace bool `json:"allowInsideKubewardenNamespace,omitempty"`
+	AllowInsideAdmissionControllerNamespace bool `json:"allowInsideAdmissionControllerNamespace,omitempty"`
 }
 
 // ClusterAdmissionPolicy is the Schema for the clusteradmissionpolicies API
@@ -223,8 +223,8 @@ func (r *ClusterAdmissionPolicy) GetContextAwareResources() []ContextAwareResour
 	return r.Spec.ContextAwareResources
 }
 
-func (r *ClusterAdmissionPolicy) GetAllowInsideKubewardenNamespace() bool {
-	return r.Spec.AllowInsideKubewardenNamespace
+func (r *ClusterAdmissionPolicy) GetAllowInsideAdmissionControllerNamespace() bool {
+	return r.Spec.AllowInsideAdmissionControllerNamespace
 }
 
 func (r *ClusterAdmissionPolicy) GetBackgroundAudit() bool {

@@ -21,15 +21,15 @@ var expectedExcludeExpr = metav1.LabelSelectorRequirement{
 
 func TestNamespaceSelectorClusterAdmissionTypePolicies(t *testing.T) {
 	tests := []struct {
-		name                           string
-		allowInsideKubewardenNamespace bool
-		policyNSSel                    *metav1.LabelSelector
-		expected                       *metav1.LabelSelector
+		name                                    string
+		allowInsideAdmissionControllerNamespace bool
+		policyNSSel                             *metav1.LabelSelector
+		expected                                *metav1.LabelSelector
 	}{
 		{
-			name:                           "adds NotIn expression when allowInsideKubewardenNamespace is false and policy has no NamespaceSelector",
-			allowInsideKubewardenNamespace: false,
-			policyNSSel:                    nil,
+			name:                                    "adds NotIn expression when allowInsideAdmissionControllerNamespace is false and policy has no NamespaceSelector",
+			allowInsideAdmissionControllerNamespace: false,
+			policyNSSel:                             nil,
 			expected: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					expectedExcludeExpr,
@@ -37,8 +37,8 @@ func TestNamespaceSelectorClusterAdmissionTypePolicies(t *testing.T) {
 			},
 		},
 		{
-			name:                           "merges existing MatchExpressions with the NotIn expression when allowInsideKubewardenNamespace is false",
-			allowInsideKubewardenNamespace: false,
+			name:                                    "merges existing MatchExpressions with the NotIn expression when allowInsideAdmissionControllerNamespace is false",
+			allowInsideAdmissionControllerNamespace: false,
 			policyNSSel: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{Key: "env", Operator: metav1.LabelSelectorOpIn, Values: []string{"prod"}},
@@ -52,8 +52,8 @@ func TestNamespaceSelectorClusterAdmissionTypePolicies(t *testing.T) {
 			},
 		},
 		{
-			name:                           "returns the policy NamespaceSelector unchanged when allowInsideKubewardenNamespace is true",
-			allowInsideKubewardenNamespace: true,
+			name:                                    "returns the policy NamespaceSelector unchanged when allowInsideAdmissionControllerNamespace is true",
+			allowInsideAdmissionControllerNamespace: true,
 			policyNSSel: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"env": "prod"},
 			},
@@ -62,10 +62,10 @@ func TestNamespaceSelectorClusterAdmissionTypePolicies(t *testing.T) {
 			},
 		},
 		{
-			name:                           "returns nil when allowInsideKubewardenNamespace is true and policy has no NamespaceSelector",
-			allowInsideKubewardenNamespace: true,
-			policyNSSel:                    nil,
-			expected:                       nil,
+			name:                                    "returns nil when allowInsideAdmissionControllerNamespace is true and policy has no NamespaceSelector",
+			allowInsideAdmissionControllerNamespace: true,
+			policyNSSel:                             nil,
+			expected:                                nil,
 		},
 	}
 
@@ -76,14 +76,14 @@ func TestNamespaceSelectorClusterAdmissionTypePolicies(t *testing.T) {
 			}
 			policy := policiesv1.NewClusterAdmissionPolicyFactory().Build()
 			policy.Spec.NamespaceSelector = tc.policyNSSel
-			policy.Spec.AllowInsideKubewardenNamespace = tc.allowInsideKubewardenNamespace
+			policy.Spec.AllowInsideAdmissionControllerNamespace = tc.allowInsideAdmissionControllerNamespace
 
 			got := r.namespaceSelector(policy)
 			require.Equal(t, tc.expected, got)
 
 			policyGroup := policiesv1.NewClusterAdmissionPolicyGroupFactory().Build()
 			policyGroup.Spec.NamespaceSelector = tc.policyNSSel
-			policyGroup.Spec.AllowInsideKubewardenNamespace = tc.allowInsideKubewardenNamespace
+			policyGroup.Spec.AllowInsideAdmissionControllerNamespace = tc.allowInsideAdmissionControllerNamespace
 
 			got = r.namespaceSelector(policyGroup)
 			require.Equal(t, tc.expected, got)
