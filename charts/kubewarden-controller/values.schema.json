@@ -8,6 +8,9 @@
         "additionalLabels": {
             "type": "object"
         },
+        "alwaysAcceptAdmissionReviewsOnDeploymentsNamespace": {
+            "type": "boolean"
+        },
         "auditScanner": {
             "type": "object",
             "properties": {
