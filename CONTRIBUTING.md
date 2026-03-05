@@ -263,6 +263,49 @@ var _ = Describe("Controller test", func() {
 })
 ```
 
+### Testing with Sigstore
+
+The script `scripts/test-sigstore-e2e.sh` provides an script allowing the test of
+Kubewarden with a private Sigstore instance. It runs three sequential stages:
+
+1. **Setup** — Spins up a KinD cluster with the full Sigstore stack (Fulcio,
+   Rekor, CTLog, TUF) using
+   [sigstore/scaffolding](https://github.com/sigstore/scaffolding), and
+   generates trust configuration files in the current directory
+   (`trusted_root.json`, `trust_config.json`, `verification_config.yaml`, etc.).
+2. **Sign** — Copies a test policy to the local registry, signs it with cosign
+   against the private Sigstore instance, then verifies with both cosign and
+   kwctl.
+3. **Deploy** — Installs Kubewarden from local charts, configures the
+   PolicyServer with the private Sigstore trust root, deploys a
+   ClusterAdmissionPolicy, and exercises the webhook to confirm allow/deny
+   behaviour.
+
+#### Usage
+
+Run all three stages end-to-end:
+
+```console
+./scripts/test-sigstore-e2e.sh
+```
+
+Each stage can be skipped independently, which is useful when iterating
+without recreating the full environment:
+
+```console
+# Cluster already running — skip setup
+./scripts/test-sigstore-e2e.sh --skip-setup
+
+# Policy already signed — skip signing
+./scripts/test-sigstore-e2e.sh --skip-sign
+
+# Only set up the Sigstore stack, skip Kubewarden
+./scripts/test-sigstore-e2e.sh --skip-kubewarden
+```
+
+To learn more about the script, refer to its `--help` cli flag or read the
+file.
+
 ## Commit subjects
 
 The commit messages may follow the [conventional commits
