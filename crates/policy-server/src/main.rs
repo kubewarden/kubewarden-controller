@@ -10,6 +10,7 @@ use clap::ArgMatches;
 use policy_server::PolicyServer;
 use policy_server::metrics::setup_metrics;
 use policy_server::tracing::setup_tracing;
+use rustls::crypto::aws_lc_rs::default_provider;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,6 +22,16 @@ async fn main() -> Result<()> {
     let config = policy_server::config::Config::from_args(&matches)?;
 
     let tracer_provider = setup_tracing(&config.log_level, &config.log_fmt, config.log_no_color)?;
+
+    // This is necessary to ensure that we are using proper initializing the crypto provider.
+    // Without this initialization step, depending on which cli flags policy server has, the
+    // kubernetes client is initialized before the crypto provider causing a crash. In other
+    // scenarios the client is initialized after other dependencies which set the provider for us.
+    // Therefore, the following install_default() call ensure that we will have always a crypto
+    // provider initialized before any operation may require it.
+    if let Err(e) = default_provider().install_default() {
+        tracing::warn!("Failed to install rustls crypto provider: {:?}", e);
+    }
 
     if config.metrics_enabled {
         setup_metrics()?;
