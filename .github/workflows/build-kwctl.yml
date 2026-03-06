@@ -117,7 +117,7 @@ jobs:
 
       - name: Generate attestations
         if: ${{ !inputs.build_only }}
-        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         id: attestations
         with:
           subject-path: kwctl-linux-${{ matrix.targetarch }}
@@ -134,7 +134,7 @@ jobs:
 
       - name: Upload binary
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
@@ -163,7 +163,7 @@ jobs:
 
       - name: Upload kwctl SBOM files
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: kwctl-linux-${{ matrix.targetarch }}-sbom
           path: |
@@ -172,7 +172,7 @@ jobs:
 
       - name: Upload kwctl air gap scripts
         if: ${{ !inputs.build_only && matrix.targetarch == 'x86_64' }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: kwctl-airgap-scripts
           path: |
@@ -211,7 +211,7 @@ jobs:
 
       - name: Generate attestations
         if: ${{ !inputs.build_only }}
-        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         id: attestations
         with:
           subject-path: kwctl-darwin-${{ matrix.targetarch }}
@@ -228,7 +228,7 @@ jobs:
 
       - name: Upload binary
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
@@ -259,7 +259,7 @@ jobs:
 
       - name: Upload kwctl SBOM files
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}-sbom
           path: |
@@ -306,7 +306,7 @@ jobs:
 
       - name: Generate attestations
         if: ${{ !inputs.build_only }}
-        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         id: attestations
         with:
           subject-path: kwctl-windows-${{ matrix.targetarch }}.exe
@@ -326,7 +326,7 @@ jobs:
 
       - name: Upload binary
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: kwctl-windows-x86_64
           path: kwctl-windows-x86_64.exe.zip
@@ -358,7 +358,7 @@ jobs:
 
       - name: Upload kwctl SBOM files
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: kwctl-windows-x86_64-sbom
           path: |
