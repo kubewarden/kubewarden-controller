@@ -1,0 +1,73 @@
+name: Inherit Milestone from Parent Issue
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  inherit-milestone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inherit milestone from parent issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+
+            // Do not override an existing milestone
+            if (issue.milestone) {
+              console.log("Issue already has a milestone, skipping.");
+              return;
+            }
+
+            // Query parent issue via GraphQL
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $number) {
+                    parent {
+                      number
+                      milestone {
+                        number
+                        title
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: issue.number,
+            });
+
+            const parent = result.repository.issue.parent;
+
+            if (!parent) {
+              console.log("No parent issue found, skipping.");
+              return;
+            }
+
+            console.log(`Parent issue detected: #${parent.number}`);
+            
+            if (!parent.milestone) {
+              console.log("Parent has no milestone, skipping.");
+              return;
+            }
+
+            console.log(`Applying milestone "${parent.milestone.title}" from parent #${parent.number}`);
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              milestone: parent.milestone.number,
+            });
+
+            console.log("Milestone inherited successfully.");
