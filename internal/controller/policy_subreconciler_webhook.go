@@ -16,7 +16,7 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
 
-//+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;delete;list;patch;watch
+//+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=create;delete;get;list;patch;watch
 
 //nolint:dupl // This function is similar to the other reconcileMutatingWebhookConfiguration
 func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
@@ -104,7 +104,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfigurationDeletion(ct
 	return nil
 }
 
-//+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;delete;list;patch;watch
+//+kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs=create;delete;get;list;patch;watch
 
 //nolint:dupl // This function is similar to the other reconcileValidatingWebhookConfiguration
 func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
