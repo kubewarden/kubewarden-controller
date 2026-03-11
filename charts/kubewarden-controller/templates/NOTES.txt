@@ -4,25 +4,6 @@ You can now start defining admission policies by using the cluster-wide
 
 For more information check out https://docs.kubewarden.io.
 
-{{- if (lookup "rbac.authorization.k8s.io/v1" "ClusterRole" "" "kubewarden-controller-manager-cluster-role") }}
-⚠️  **Upgrade notice: RBAC resource consolidation**
-
-Starting with this release, all controller RBAC permissions have been
-consolidated into a single ClusterRole and a single Role, simplifying the
-permission model. The following resources from previous versions are no longer
-used and should be manually deleted after a successful upgrade:
-
-  kubectl delete clusterrole kubewarden-controller-manager-cluster-role
-  kubectl delete clusterrole kubewarden-controller-proxy-role
-  kubectl delete clusterrolebinding kubewarden-controller-manager-cluster-role
-  kubectl delete clusterrolebinding kubewarden-controller-proxy-rolebinding
-  kubectl delete rolebinding kubewarden-controller-leader-election-rolebinding -n {{ .Release.Namespace }}
-  kubectl delete rolebinding kubewarden-controller-manager-namespaced-rolebinding -n {{ .Release.Namespace }}
-  kubectl delete role kubewarden-controller-leader-election-role -n {{ .Release.Namespace }}
-  kubectl delete role kubewarden-controller-manager-namespaced-role -n {{ .Release.Namespace }}
-{{- end }}
-
-
 🚀 **Kubewarden is applying to become a CNCF incubation project!** 🚀  
 
 If you'd like to support us, we'd love to hear from you as one of our adopters. 
