@@ -91,7 +91,7 @@ type PolicyServerSpec struct {
 	// Name of VerificationConfig configmap in the kubewarden namespace (same
 	// namespace as the controller deployment), containing Sigstore verification
 	// configuration. The configuration must be under a key named
-	// verification-config in the Configmap.
+	// verification-config in the ConfigMap.
 	// +optional
 	VerificationConfig string `json:"verificationConfig,omitempty"`
 

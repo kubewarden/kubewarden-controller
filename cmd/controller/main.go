@@ -28,19 +28,13 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	k8spoliciesv1 "k8s.io/api/policy/v1"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -52,6 +46,14 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/metrics"
 	//+kubebuilder:scaffold:imports
 )
+
+// Kubewarden controller required permissions
+//
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete,namespace="kubewarden"
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete,namespace="kubewarden"
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch,namespace="kubewarden"
+//+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
+//+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 
 //nolint:gochecknoglobals // Following the kubebuilder pattern
 var (
@@ -202,10 +204,6 @@ func main() {
 }
 
 func setupManager(mgrOpts ManagerOptions) (ctrl.Manager, error) {
-	namespaceSelector := cache.ByObject{
-		Field: fields.ParseSelectorOrDie("metadata.namespace=" + mgrOpts.DeploymentsNamespace),
-	}
-
 	clientCAName := ""
 	if mgrOpts.EnableMutualTLS {
 		// The WebhookServer shares the same CertDir for both the server
@@ -223,40 +221,7 @@ func setupManager(mgrOpts ManagerOptions) (ctrl.Manager, error) {
 		HealthProbeBindAddress: mgrOpts.ProbeAddr,
 		LeaderElection:         mgrOpts.EnableLeaderElection,
 		LeaderElectionID:       "a4ddbf36.kubewarden.io",
-		// Warning: the manager creates a client, which then uses Watches to monitor
-		// certain resources. By default, the client is not going to be namespaced,
-		// it will be able to watch resources across the entire cluster. This is of
-		// course constrained by the RBAC rules applied to the ServiceAccount that
-		// runs the controller.
-		// *However*, even when accessing a resource inside a specific Namespace,
-		// the default behavior of the cache is to create a Watch that is not namespaced;
-		// hence requires the privilege to access all the resources of that type inside
-		// of the cluster. That can cause runtime error if the ServiceAccount lacking
-		// this privilege.
-		// For example, when we access a secret inside the `kubewarden`
-		// namespace, the cache will create a Watch against Secrets, that will require
-		// privileged to access ALL the secrets of the cluster.
-		//
-		// To be able to have stricter RBAC rules, we need to instruct the cache to
-		// only watch objects inside of the namespace where the controller is running.
-		// That applies ONLY to the namespaced resources that we know the controller
-		// is going to own inside of a specific namespace.
-		// For example, Secret resources are going to be defined by the controller
-		// only inside of the `kubewarden` namespace; hence their watch can be namespaced.
-		// On the other hand, AdmissionPolicy resources are namespaced, but the controller
-		// requires to access them across all the namespaces of the cluster; hence the
-		// cache must not be namespaced.
-		Cache: cache.Options{
-			ByObject: map[client.Object]cache.ByObject{
-				&appsv1.ReplicaSet{}:                 namespaceSelector,
-				&corev1.Secret{}:                     namespaceSelector,
-				&corev1.Pod{}:                        namespaceSelector,
-				&corev1.Service{}:                    namespaceSelector,
-				&k8spoliciesv1.PodDisruptionBudget{}: namespaceSelector,
-				&corev1.ConfigMap{}:                  namespaceSelector,
-				&appsv1.Deployment{}:                 namespaceSelector,
-			},
-		},
+		Cache:                  controller.NamespacedCacheOptions(mgrOpts.DeploymentsNamespace),
 		WebhookServer: webhook.NewServer(webhook.Options{
 			ClientCAName: clientCAName,
 		}),

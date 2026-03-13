@@ -1,0 +1,55 @@
+{{- if eq .Values.auditScanner.serviceAccountName  "audit-scanner" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: audit-scanner-cluster-role
+  labels:
+    {{- include "kubewarden-controller.labels" . | nindent 4 }}
+  annotations:
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
+rules:
+- apiGroups:
+  - policies.kubewarden.io
+  resources:
+  - clusteradmissionpolicies
+  - clusteradmissionpolicygroups
+  - admissionpolicies
+  - admissionpolicygroups
+  - clusteradmissionpolicies/status
+  - clusteradmissionpolicygroups/status
+  - admissionpolicies/status
+  - admissionpolicygroups/status
+  - policyservers
+  - policyservers/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+    - wgpolicyk8s.io
+  resources:
+    - policyreports
+    - clusterpolicyreports
+  verbs:
+    - create
+    - deletecollection
+    - get
+    - list
+    - patch
+    - update
+    - watch
+- apiGroups:
+    - openreports.io
+  resources:
+    - reports
+    - clusterreports
+  verbs:
+    - create
+    - deletecollection
+    - get
+    - list
+    - patch
+    - update
+    - watch
+{{ end }}
