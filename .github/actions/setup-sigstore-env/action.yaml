@@ -6,7 +6,7 @@ branding:
 runs:
   using: "composite"
   steps:
-    - uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+    - uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
     - uses: sigstore/scaffolding/actions/setup@8bd68672d418e5bd1b0ee1f2e2981874c3a30967 # v0.7.33
     - name: Initialize cosign to use local Sigstore instance
       shell: bash
