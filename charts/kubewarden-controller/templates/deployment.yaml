@@ -58,6 +58,10 @@ spec:
        {{- if .Values.mTLS.enable }}
         - --client-ca-configmap-name={{ .Values.mTLS.configMapName }}
        {{- end }}
+       {{- $imagePullSecretNames := include "policyServerImagePullSecretNames" . }}
+       {{- if $imagePullSecretNames }}
+        - --image-pull-secrets={{ $imagePullSecretNames }}
+       {{- end }}
        {{- if or .Values.telemetry.metrics .Values.telemetry.tracing }}
        {{- if eq .Values.telemetry.mode "sidecar" }}
         - --enable-otel-sidecar
