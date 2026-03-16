@@ -136,6 +136,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 		configMapVersion,
 		templateAnnotations,
 		podSecurityContext,
+		r.ImagePullSecrets,
 	)
 	r.adaptDeploymentForMetricsAndTracingConfiguration(policyServerDeployment, templateAnnotations)
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
@@ -414,6 +415,7 @@ func buildPolicyServerDeploymentSpec(
 	configMapVersion string,
 	templateAnnotations map[string]string,
 	podSecurityContext *corev1.PodSecurityContext,
+	imagePullSecrets []corev1.LocalObjectReference,
 ) appsv1.DeploymentSpec {
 	templateLabels := map[string]string{
 		//nolint:staticcheck // this label will remove soon when policy lifecycle is revisited
@@ -444,6 +446,7 @@ func buildPolicyServerDeploymentSpec(
 			Spec: corev1.PodSpec{
 				SecurityContext:    podSecurityContext,
 				Containers:         []corev1.Container{admissionContainer},
+				ImagePullSecrets:   imagePullSecrets,
 				ServiceAccountName: policyServer.Spec.ServiceAccountName,
 				Tolerations:        policyServer.Spec.Tolerations,
 				Affinity:           &policyServer.Spec.Affinity,

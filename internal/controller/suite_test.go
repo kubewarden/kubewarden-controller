@@ -126,6 +126,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		Scheme:                k8sManager.GetScheme(),
 		DeploymentsNamespace:  deploymentsNamespace,
 		ClientCAConfigMapName: clientCAConfigMapName,
+		ImagePullSecrets:      []corev1.LocalObjectReference{{Name: reconcilerImagePullSecret}},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

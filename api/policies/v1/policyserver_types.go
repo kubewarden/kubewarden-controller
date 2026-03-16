@@ -67,8 +67,11 @@ type PolicyServerSpec struct {
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// Name of ImagePullSecret secret in the same namespace, used for pulling
-	// policies from repositories.
+	// Name of ImagePullSecret secret in the same namespace. It is mounted
+	// inside the policy-server container so that the policy-server binary can
+	// pull OCI policy artifacts from private registries at runtime. Note: this
+	// secret is not used to pull the policy-server container image itself; use
+	// the controller's --image-pull-secrets flag for that purpose.
 	// +optional
 	ImagePullSecret string `json:"imagePullSecret,omitempty"`
 

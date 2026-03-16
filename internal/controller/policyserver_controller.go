@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,6 +63,10 @@ type PolicyServerReconciler struct {
 	DeploymentsNamespace                               string
 	AlwaysAcceptAdmissionReviewsInDeploymentsNamespace bool
 	ClientCAConfigMapName                              string
+	// ImagePullSecrets is the list of image pull secrets to add to every
+	// policy-server Deployment, sourced from the controller's own
+	// --image-pull-secrets flag.
+	ImagePullSecrets []corev1.LocalObjectReference
 }
 
 // TelemetryConfiguration is a struct that contains the configuration for the
