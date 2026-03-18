@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8spoliciesv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -1296,6 +1297,90 @@ var _ = Describe("PolicyServer controller", func() {
 									"Value": Equal(expectedPath),
 								})),
 							})),
+						}),
+					}),
+				}),
+			})))
+		})
+	})
+
+	When("a PolicyServer has spec.imagePullSecret set", func() {
+		It("should mount the Docker config volume but NOT add it to Deployment imagePullSecrets", func() {
+			secretName := newName("pull-secret")
+			pullSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: deploymentsNamespace,
+				},
+				Type: corev1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{}}`),
+				},
+			}
+			Expect(k8sClient.Create(ctx, pullSecret)).To(haveSucceededOrAlreadyExisted())
+
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).WithImagePullSecret(secretName).Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"ImagePullSecrets": Not(ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(secretName),
+							}))),
+							"Volumes": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(imagePullSecretVolumeName),
+								"VolumeSource": MatchFields(IgnoreExtras, Fields{
+									"Secret": PointTo(MatchFields(IgnoreExtras, Fields{
+										"SecretName": Equal(secretName),
+									})),
+								}),
+							})),
+							"Containers": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"VolumeMounts": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":      Equal(imagePullSecretVolumeName),
+									"MountPath": Equal(dockerConfigJSONPolicyServerPath),
+								})),
+								"Env": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":  Equal("KUBEWARDEN_DOCKER_CONFIG_JSON_PATH"),
+									"Value": Equal(dockerConfigJSONPolicyServerPath),
+								})),
+							})),
+						}),
+					}),
+				}),
+			})))
+		})
+	})
+
+	When("a PolicyServer has no spec.imagePullSecret but reconciler has ImagePullSecrets", func() {
+		It("should set reconciler secrets in Deployment imagePullSecrets without mounting a Docker config volume", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"ImagePullSecrets": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(reconcilerImagePullSecret),
+							})),
+							"Volumes": Not(ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(imagePullSecretVolumeName),
+							}))),
 						}),
 					}),
 				}),

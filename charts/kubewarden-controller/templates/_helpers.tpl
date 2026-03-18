@@ -112,6 +112,24 @@ Create the name of the service account to use for kubewarden-controller
 {{- end -}}
 {{- end -}}
 
+{{/*
+Build a comma-separated list of Secret names from .Values.imagePullSecrets,
+for use with the controller --image-pull-secrets flag. Handles both string
+entries and {name: ...} objects. Returns an empty string when no secrets
+are configured.
+*/}}
+{{- define "policyServerImagePullSecretNames" -}}
+{{- $names := list -}}
+{{- range .Values.imagePullSecrets -}}
+  {{- if kindIs "string" . -}}
+    {{- $names = append $names . -}}
+  {{- else -}}
+    {{- $names = append $names .name -}}
+  {{- end -}}
+{{- end -}}
+{{- join "," $names -}}
+{{- end -}}
+
 {{- define "audit-scanner.command" -}}
 {{- $parallelNamespaces := .Values.auditScanner.parallelNamespaces | int -}}
 {{- $parallelResources := .Values.auditScanner.parallelResources | int -}}

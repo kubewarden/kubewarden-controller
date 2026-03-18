@@ -42,6 +42,7 @@ const (
 	integrationTestsFinalizer = "kubewarden.io/integration-tests-safety-net-finalizer"
 	clientCAConfigMapName     = "client-ca"
 	fakeSigstoreTrustConfig   = `{"trusted_root": {"version": "test"}}`
+	reconcilerImagePullSecret = "reconciler-pull-secret"
 )
 
 func getTestClusterAdmissionPolicy(ctx context.Context, name string) (*policiesv1.ClusterAdmissionPolicy, error) {
