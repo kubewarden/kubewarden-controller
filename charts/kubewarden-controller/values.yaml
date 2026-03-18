@@ -109,9 +109,7 @@ global:
 nameOverride: ""
 # fullnameOverride completely replaces the generated release name
 fullnameOverride: ""
-# Secrets to pull container images from private registries. When set, the
-# secret names are passed to the controller via --image-pull-secrets and added
-# to the spec.template.spec.imagePullSecrets of every policy-server Deployment.
+# Secrets to pull container images from private registries
 imagePullSecrets: []
 # -- Additional labels to add to all resources
 additionalLabels: {}
