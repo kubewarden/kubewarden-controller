@@ -67,7 +67,7 @@ type PolicyServerSpec struct {
 	// +optional
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 
-	// Name of ImagePullSecret secret in the same namespace. used for pulling
+	// Name of ImagePullSecret secret in the same namespace, used for pulling
 	// policies from repositories.
 	// +optional
 	ImagePullSecret string `json:"imagePullSecret,omitempty"`
