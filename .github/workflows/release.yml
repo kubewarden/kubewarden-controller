@@ -113,7 +113,6 @@ jobs:
   attestation:
     name: Generate attestations
     needs: build-containers
-    runs-on: ubuntu-latest
     permissions:
       packages: write
       id-token: write
@@ -121,13 +120,10 @@ jobs:
       matrix:
         component: [kubewarden-controller, audit-scanner, policy-server]
         arch: [amd64, arm64]
-    steps:
-      - name: Generate and sign attestations
-        uses: kubewarden/github-actions/attestation@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
-        with:
-          component: ${{ matrix.component }}
-          arch: ${{ matrix.arch }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: ./.github/workflows/attestation.yml
+    with:
+      component: ${{ matrix.component }}
+      arch: ${{ matrix.arch }}
 
   release:
     name: Create release
