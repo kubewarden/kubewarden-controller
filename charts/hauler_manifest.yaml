@@ -58,13 +58,13 @@ spec:
   charts:
     - name: kubewarden-crds
       repoURL: https://charts.kubewarden.io
-      version: 1.26.0
+      version: 1.25.1
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
-      version: 5.12.0
+      version: 5.11.1
     - name: kubewarden-defaults
       repoURL: https://charts.kubewarden.io
-      version: 3.12.0
+      version: 3.11.1
     - name: policy-reporter
       version: 3.7.3
       repoURL: https://kyverno.github.io/policy-reporter
