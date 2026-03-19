@@ -15,7 +15,7 @@ const POLICY_URI: &str = "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.
 const LOCAL_POLICY_PATH: &str = "kubewarden/tests/pod-privileged:v0.2.5";
 
 fn start_proxy() -> (Container<GenericImage>, u16) {
-    let proxy_image = GenericImage::new("registry.gitlab.com/kalaksi-containers/tinyproxy", "1.7")
+    let proxy_image = GenericImage::new("ghcr.io/kubewarden/tests/kalaksi-tinyproxy", "1.7")
         .with_wait_for(WaitFor::message_on_stdout("Starting main loop"))
         .with_exposed_port(8888.tcp());
     let container = proxy_image

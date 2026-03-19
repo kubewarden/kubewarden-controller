@@ -1312,13 +1312,12 @@ mod proxy_helpers {
         runners::AsyncRunner,
     };
     pub async fn start_proxy() -> (ContainerAsync<GenericImage>, u16) {
-        let container =
-            GenericImage::new("registry.gitlab.com/kalaksi-containers/tinyproxy", "1.7")
-                .with_wait_for(WaitFor::message_on_stdout("Starting main loop"))
-                .with_exposed_port(8888.tcp())
-                .start()
-                .await
-                .expect("Failed to start proxy container");
+        let container = GenericImage::new("ghcr.io/kubewarden/tests/kalaksi-tinyproxy", "1.7")
+            .with_wait_for(WaitFor::message_on_stdout("Starting main loop"))
+            .with_exposed_port(8888.tcp())
+            .start()
+            .await
+            .expect("Failed to start proxy container");
         let port = container
             .get_host_port_ipv4(8888)
             .await
