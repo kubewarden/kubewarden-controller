@@ -79,8 +79,14 @@ jobs:
       - name: Find SBOM manifest layer digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
-            jq -r '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}}  | \
+            jq -r '.layers 
+              | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document"))
+              | map(.digest)
+              | if length == 0 then empty 
+                elif length == 1 then .[0]
+                else error("ERROR: Multiple SBOM layers found in attestation manifest")
+                end')
           if [[ -z "${DIGEST}" ]]; then
             echo "ERROR: No SBOM layer found in attestation manifest for ${{ inputs.component }} (${{ inputs.arch }})"
             exit 1
