@@ -1,3 +1,4 @@
+# .github/workflows/inherit-milestone.yml
 name: Inherit Milestone from Parent Issue
 
 on:
@@ -41,13 +42,22 @@ jobs:
               }
             `;
 
-            const result = await github.graphql(query, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              number: issue.number,
-            });
+            let result;
+            try {
+              result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: issue.number,
+              });
+            } catch (error) {
+              console.warn(
+                "Warning: Failed to query parent issue via GraphQL. Skipping milestone inheritance.",
+                error
+              );
+              return;
+            }
 
-            const parent = result.repository.issue.parent;
+            const parent = result?.repository?.issue?.parent;
 
             if (!parent) {
               console.log("No parent issue found, skipping.");
@@ -55,7 +65,7 @@ jobs:
             }
 
             console.log(`Parent issue detected: #${parent.number}`);
-            
+
             if (!parent.milestone) {
               console.log("Parent has no milestone, skipping.");
               return;
