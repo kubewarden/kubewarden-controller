@@ -22,7 +22,7 @@ use crate::{
     },
     load::load,
     save::save,
-    utils::{LookupError, find_file_matching_file},
+    utils::{LookupError, find_file_matching_file, normalize_uri},
 };
 
 mod annotate;
@@ -119,7 +119,8 @@ async fn main() -> Result<()> {
         Some("info") => info::info(),
         Some("pull") => {
             if let Some(matches) = matches.subcommand_matches("pull") {
-                let uri = matches.get_one::<String>("uri").unwrap();
+                let uri = normalize_uri(matches.get_one::<String>("uri").unwrap());
+                let uri = &uri;
                 let destination = matches
                     .get_one::<String>("output-path")
                     .map(|output| PathBuf::from_str(output).unwrap());
@@ -133,7 +134,8 @@ async fn main() -> Result<()> {
         }
         Some("verify") => {
             if let Some(matches) = matches.subcommand_matches("verify") {
-                let uri = matches.get_one::<String>("uri").unwrap();
+                let uri = normalize_uri(matches.get_one::<String>("uri").unwrap());
+                let uri = uri.as_str();
                 let sources = remote_server_options(matches)?;
                 let verification_options = build_verification_options(matches)?
                     .ok_or_else(|| anyhow!("could not retrieve sigstore options"))?;
@@ -193,8 +195,9 @@ async fn main() -> Result<()> {
         }
         Some("rm") => {
             if let Some(matches) = matches.subcommand_matches("rm") {
-                let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
-                rm::rm(uri_or_sha_prefix)?;
+                let uri_or_sha_prefix =
+                    normalize_uri(matches.get_one::<String>("uri_or_sha_prefix").unwrap());
+                rm::rm(&uri_or_sha_prefix)?;
             }
             Ok(())
         }
@@ -233,7 +236,8 @@ async fn main() -> Result<()> {
         }
         Some("inspect") => {
             if let Some(matches) = matches.subcommand_matches("inspect") {
-                let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
+                let uri_or_sha_prefix =
+                    normalize_uri(matches.get_one::<String>("uri_or_sha_prefix").unwrap());
                 let output = inspect::OutputType::try_from(
                     matches.get_one::<String>("output").map(|s| s.as_str()),
                 )?;
@@ -242,7 +246,7 @@ async fn main() -> Result<()> {
                     .get_one::<bool>("show-signatures")
                     .unwrap_or(&false)
                     .to_owned();
-                inspect::inspect(uri_or_sha_prefix, output, sources, no_color, no_signatures)
+                inspect::inspect(&uri_or_sha_prefix, output, sources, no_color, no_signatures)
                     .await?;
             };
             Ok(())
@@ -446,7 +450,8 @@ async fn pull_command(
  * This function will pull the policy if it is not already present in the local store.
  */
 async fn scaffold_manifest_command(matches: &ArgMatches) -> Result<()> {
-    let uri_or_sha_prefix = matches.get_one::<String>("uri_or_sha_prefix").unwrap();
+    let uri_or_sha_prefix = normalize_uri(matches.get_one::<String>("uri_or_sha_prefix").unwrap());
+    let uri_or_sha_prefix = uri_or_sha_prefix.as_str();
 
     pull_if_needed(uri_or_sha_prefix, matches).await?;
 
