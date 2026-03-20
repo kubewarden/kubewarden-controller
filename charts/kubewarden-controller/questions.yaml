@@ -24,9 +24,9 @@ questions:
     show_if: auditScanner.enable=true
     type: boolean
     default: false
-    label: Don't store (Cluster)PolicyReports in etcd
+    label: Don't store (Cluster)Reports in etcd
     description: |
-      If true, (Cluster)PolicyReports are not stored in etcd but using an in-memory cache.
+      If true, (Cluster)Reports are not stored in etcd but using an in-memory cache.
       Note that you may need to adjust `resources.auditScanner` when using the
       in-memory store.
     group: "Audit checks"
@@ -39,7 +39,7 @@ questions:
       The default audit-scanner ServiceAccount is bound to the ClusterRoles
       "view" (allows read-only access to most objects in a namespace, does not
       allow viewing secrets, roles or role bindings), and "audit-scanner-cluster-role"
-      (allows read-write to Kubewarden resources and PolicyReports).
+      (allows read-write to Kubewarden resources and Reports).
     group: "Audit checks"
   - variable: "auditScanner.policyReporter"
     type: boolean
@@ -132,8 +132,8 @@ questions:
     required: true
     label: Telemetry mode
     description: |
-      Choose the telemetry mode. 
-      Sidecar mode will deploy an OpenTelemetry Collector as a sidecar container in the Kubewarden Controller pod. 
+      Choose the telemetry mode.
+      Sidecar mode will deploy an OpenTelemetry Collector as a sidecar container in the Kubewarden Controller pod.
       Custom mode will allow you to configure the OpenTelemetry Collector by your own and Kubewarden will send data to it.
     group: "OpenTelemetry"
   - variable: "telemetry.metrics"

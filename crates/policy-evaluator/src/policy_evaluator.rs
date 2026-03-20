@@ -7,13 +7,13 @@ mod stack_pre;
 pub use evaluator::PolicyEvaluator;
 pub use policy_evaluator_pre::PolicyEvaluatorPre;
 
-use anyhow::{Result, anyhow};
+use std::{convert::TryFrom, fmt, result::Result};
+
 use k8s_openapi::apimachinery::pkg::runtime::RawExtension;
 use serde::{Deserialize, Serialize};
 use serde_json::value;
-use std::{convert::TryFrom, fmt};
 
-use crate::admission_request::AdmissionRequest;
+use crate::{admission_request::AdmissionRequest, errors::PolicyEvaluatorBuilderError};
 
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum PolicyExecutionMode {
@@ -65,15 +65,17 @@ pub(crate) enum RegoPolicyExecutionMode {
 }
 
 impl TryFrom<PolicyExecutionMode> for RegoPolicyExecutionMode {
-    type Error = anyhow::Error;
+    type Error = PolicyEvaluatorBuilderError;
 
-    fn try_from(execution_mode: PolicyExecutionMode) -> Result<RegoPolicyExecutionMode> {
+    fn try_from(
+        execution_mode: PolicyExecutionMode,
+    ) -> Result<RegoPolicyExecutionMode, Self::Error> {
         match execution_mode {
             PolicyExecutionMode::Opa => Ok(RegoPolicyExecutionMode::Opa),
             PolicyExecutionMode::OpaGatekeeper => Ok(RegoPolicyExecutionMode::Gatekeeper),
-            PolicyExecutionMode::KubewardenWapc | PolicyExecutionMode::Wasi => Err(anyhow!(
-                "execution mode not convertible to a Rego based execution mode"
-            )),
+            PolicyExecutionMode::KubewardenWapc | PolicyExecutionMode::Wasi => {
+                Err(PolicyEvaluatorBuilderError::ExecutionModeNotRegoCompatible)
+            }
         }
     }
 }

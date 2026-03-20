@@ -124,9 +124,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           check-latest: true # Always check for the latest patch release
       - run: make test-go
       - name: Upload Go test coverage to Codecov
@@ -146,9 +146,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           check-latest: true # Always check for the latest patch release
       - run: make test-e2e
 
@@ -159,14 +159,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           check-latest: true # Always check for the latest patch release
       - name: golangci-lint
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
-          version: v2.4.0
+          version: v2.11.3
 
   # Rust jobs
   calculate-crates-matrix:
@@ -261,6 +261,18 @@ jobs:
       - name: Run kwctl Sigstore E2E tests
         run: make -C crates/kwctl e2e-tests-sigstore
 
+  e2e-tests-sigstore-policy-server:
+    needs: [changes, calculate-crates-matrix]
+    if: needs.changes.outputs.rust == 'true'
+    name: E2E tests sigstore (policy-server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare sigstore environment for testing
+        uses: ./.github/actions/setup-sigstore-env
+      - name: Run policy-server Sigstore E2E tests
+        run: make -C crates/policy-server e2e-tests-sigstore
+
   integration-tests-policy-server:
     needs: [changes, calculate-crates-matrix]
     if: needs.changes.outputs.rust == 'true'
@@ -290,6 +302,29 @@ jobs:
         run: sudo apt install -y bats
       - name: Run integration tests
         run: make -C crates/policy-evaluator integration-tests
+        
+  coverage-rust:
+    name: coverage-rust
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cbb1dcaa26e1459e2876c39f61c1e22a1258aac5 # v2.68.33
+        with:
+          tool: cargo-llvm-cov
+      - name: Install cosign # this is needed by some of the e2e tests
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
+      - run: cargo llvm-cov --ignore-run-fail --doctests --lcov --output-path coverage/rust/lcov.info
+      - name: Upload Rust test coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+        with:
+          name: rust-tests
+          files: coverage/lcov.info
+          flags: rust-tests
+          verbose: true
 
   build-kwctl:
     name: Build kwctl
@@ -318,7 +353,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Check spelling with typos
-        uses: crate-ci/typos@v1.43.4   
+        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0   
         
   charts:
     name: Helm unittest
@@ -395,6 +430,7 @@ jobs:
       - integration-tests-burrego
       - integration-tests-kwctl
       - e2e-tests-sigstore-kwctl
+      - e2e-tests-sigstore-policy-server
       - integration-tests-policy-server
       - integration-tests-policy-evaluator
       - build-kwctl

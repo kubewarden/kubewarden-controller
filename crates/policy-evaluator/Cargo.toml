@@ -8,13 +8,13 @@ authors = [
 ]
 edition = "2024"
 name = "policy-evaluator"
-version = "0.30.4"
+version = "0.31.0"
 
 [dependencies]
 anyhow = { workspace = true }
 base64 = { workspace = true }
 burrego = { path = "../burrego" }
-cached = { version = "0.56", features = ["async_tokio_rt_multi_thread"] }
+cached = { version = "0.58", features = ["async_tokio_rt_multi_thread"] }
 chrono = { version = "0.4", default-features = false }
 dns-lookup = "3.0"
 email_address = { version = "0.2", features = ["serde"] }
@@ -51,8 +51,8 @@ url = { workspace = true }
 validator = { version = "0.20", features = ["derive"] }
 wapc = "2.1"
 wasi-common = { workspace = true }
-wasmparser = "0.244"
-wasmtime-provider = { version = "2.16.0", features = ["cache"] }
+wasmparser = "0.245"
+wasmtime-provider = { version = "2.17.0", features = ["cache"] }
 wasmtime-wasi = { workspace = true }
 webpki-roots = "1"
 
@@ -94,14 +94,18 @@ wasmtime = { workspace = true, features = [
 
 [dev-dependencies]
 assert-json-diff = "2.0"
-hyper            = { version = "1" }
-rcgen            = { version = "0.14", features = ["x509-parser"] }
-rstest           = { workspace = true }
-serial_test      = "3.3"
-tempfile         = { workspace = true }
-test-context     = "0.5"
-test-log         = "0.2"
-tower-test       = "0.4"
+backon = { version = "1.6", features = ["tokio-sleep"] }
+hyper = { version = "1" }
+rcgen = { version = "0.14", features = ["x509-parser"] }
+rstest = { workspace = true }
+serial_test = "3.3"
+tempfile = { workspace = true }
+test-context = "0.5"
+test-log = "0.2"
+testcontainers = { version = "0.27", default-features = false, features = [
+  "aws-lc-rs",
+] }
+tower-test = "0.4"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
 # feature across all the transitive dependencies of policy-fetcher
 # This is required to have the integration tests use the system certificates instead of the

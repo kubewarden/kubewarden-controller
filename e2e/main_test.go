@@ -24,9 +24,9 @@ var (
 	testenv           env.Environment
 	kindClusterName   string
 	namespace         = "kubewarden"
-	controllerImage   = "ghcr.io/kubewarden/kubewarden-controller:latest"
-	auditScannerImage = "ghcr.io/kubewarden/audit-scanner:latest"
-	policyServerImage = "ghcr.io/kubewarden/policy-server:latest"
+	controllerImage   = "ghcr.io/kubewarden/kubewarden-controller:dev"
+	auditScannerImage = "ghcr.io/kubewarden/audit-scanner:dev"
+	policyServerImage = "ghcr.io/kubewarden/policy-server:dev"
 )
 
 func TestMain(m *testing.M) {
@@ -65,8 +65,8 @@ func TestMain(m *testing.M) {
 				helm.WithChart(kubewardenControllerChartPath),
 				helm.WithWait(),
 				helm.WithArgs(
-					"--set", "image.tag=latest",
-					"--set", "auditScanner.image.tag=latest",
+					"--set", "image.tag=dev",
+					"--set", "auditScanner.image.tag=dev",
 					"--set", "logLevel=debug",
 					"--set", "auditScanner.logLevel=debug",
 				),

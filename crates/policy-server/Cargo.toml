@@ -9,7 +9,7 @@ authors = [
 ]
 edition = "2024"
 name = "policy-server"
-version = "1.32.1"
+version = "1.33.1"
 
 [dependencies]
 anyhow = { workspace = true }
@@ -41,13 +41,14 @@ policy-evaluator = { path = "../policy-evaluator" }
 pprof = { version = "0.15", features = ["prost-codec"] }
 rayon = { workspace = true }
 regex = { workspace = true }
-rustls = { workspace = true, features = ["logging", "ring", "std", "tls12"] }
+rustls = { workspace = true }
 rustls-pki-types = { workspace = true }
 semver = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 sha2 = { workspace = true }
+sigstore_protobuf_specs = "0.5"
 thiserror = { workspace = true }
 tikv-jemalloc-ctl = "0.6"
 tikv-jemallocator = { version = "0.6", features = [
@@ -66,6 +67,7 @@ tokio-stream = "0.1.18"
 
 [dev-dependencies]
 backon         = { version = "1.6", features = ["tokio-sleep"] }
+serial_test    = "3"
 http-body-util = "0.1.3"
 mockall        = "0.14"
 rcgen          = { version = "0.14", features = ["crypto"] }
@@ -82,4 +84,5 @@ reqwest = { version = "0.13", default-features = false, features = [
 ] }
 
 [features]
-otel_tests = []
+otel_tests       = []
+sigstore-testing = []

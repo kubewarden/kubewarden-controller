@@ -27,9 +27,11 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8spoliciesv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -836,6 +838,89 @@ var _ = Describe("PolicyServer controller", func() {
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
 		})
+
+		It("should not have sigstore configuration when SigstoreTrustConfig is not set", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.SigstoreTrustConfig = ""
+
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"Volumes": Not(ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(constants.PolicyServerSigstoreTrustConfigVolumeName),
+							}))),
+							"Containers": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(getPolicyServerNameWithPrefix(policyServerName)),
+								"VolumeMounts": Not(ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name": Equal(constants.PolicyServerSigstoreTrustConfigVolumeName),
+								}))),
+								"Env": Not(ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name": Equal(constants.PolicyServerSigstoreTrustConfigEnvVar),
+								}))),
+							})),
+						}),
+					}),
+				}),
+			})))
+		})
+
+		It("should configure sigstore settings when SigstoreTrustConfig is provided", func() {
+			configMapName := newName("sigstore-config")
+			createConfigMapWithSigstoreTrustConfig(ctx, configMapName)
+
+			policyServer := policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				WithSigstoreTrustConfigMap(configMapName).
+				Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			expectedPath := filepath.Join(constants.PolicyServerSigstoreTrustConfigContainerPath, constants.PolicyServerSigstoreTrustConfigFilename)
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"Volumes": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(constants.PolicyServerSigstoreTrustConfigVolumeName),
+								"VolumeSource": MatchFields(IgnoreExtras, Fields{
+									"ConfigMap": PointTo(MatchFields(IgnoreExtras, Fields{
+										"LocalObjectReference": MatchFields(IgnoreExtras, Fields{
+											"Name": Equal(configMapName),
+										}),
+									})),
+								}),
+							})),
+							"Containers": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(getPolicyServerNameWithPrefix(policyServerName)),
+								"VolumeMounts": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":      Equal(constants.PolicyServerSigstoreTrustConfigVolumeName),
+									"MountPath": Equal(constants.PolicyServerSigstoreTrustConfigContainerPath),
+									"ReadOnly":  BeTrue(),
+								})),
+								"Env": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":  Equal(constants.PolicyServerSigstoreTrustConfigEnvVar),
+									"Value": Equal(expectedPath),
+								})),
+							})),
+						}),
+					}),
+				}),
+			})))
+		})
 	})
 
 	When("updating the PolicyServer", func() {
@@ -1117,6 +1202,189 @@ var _ = Describe("PolicyServer controller", func() {
 					HaveField("Resources.Limits", Equal(policyServer.Spec.Limits)),
 				),
 			)
+		})
+
+		It("should update deployment when SigstoreTrustConfig changes", func() {
+			configMapName1 := newName("sigstore-config-1")
+			createConfigMapWithSigstoreTrustConfig(ctx, configMapName1)
+
+			Eventually(func() error {
+				ps, err := getTestPolicyServer(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				ps.Spec.SigstoreTrustConfig = configMapName1
+				return k8sClient.Update(ctx, ps)
+			}, timeout, pollInterval).Should(Succeed())
+
+			expectedPath := filepath.Join(constants.PolicyServerSigstoreTrustConfigContainerPath, constants.PolicyServerSigstoreTrustConfigFilename)
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"Volumes": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(constants.PolicyServerSigstoreTrustConfigVolumeName),
+								"VolumeSource": MatchFields(IgnoreExtras, Fields{
+									"ConfigMap": PointTo(MatchFields(IgnoreExtras, Fields{
+										"LocalObjectReference": MatchFields(IgnoreExtras, Fields{
+											"Name": Equal(configMapName1),
+										}),
+									})),
+								}),
+							})),
+							"Containers": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(getPolicyServerNameWithPrefix(policyServerName)),
+								"Env": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":  Equal(constants.PolicyServerSigstoreTrustConfigEnvVar),
+									"Value": Equal(expectedPath),
+								})),
+							})),
+						}),
+					}),
+				}),
+			})))
+
+			configMapName2 := newName("sigstore-config-2")
+			createConfigMapWithSigstoreTrustConfig(ctx, configMapName2)
+
+			Eventually(func() error {
+				ps, err := getTestPolicyServer(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				ps.Spec.SigstoreTrustConfig = configMapName2
+				return k8sClient.Update(ctx, ps)
+			}, timeout, pollInterval).Should(Succeed())
+
+			Eventually(func() string {
+				ps, err := getTestPolicyServer(ctx, policyServerName)
+				if err != nil {
+					return ""
+				}
+				return ps.Spec.SigstoreTrustConfig
+			}, timeout, pollInterval).Should(Equal(configMapName2))
+
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"Volumes": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(constants.PolicyServerSigstoreTrustConfigVolumeName),
+								"VolumeSource": MatchFields(IgnoreExtras, Fields{
+									"ConfigMap": PointTo(MatchFields(IgnoreExtras, Fields{
+										"LocalObjectReference": MatchFields(IgnoreExtras, Fields{
+											"Name": Equal(configMapName2),
+										}),
+									})),
+								}),
+							})),
+							"Containers": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(getPolicyServerNameWithPrefix(policyServerName)),
+								"Env": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":  Equal(constants.PolicyServerSigstoreTrustConfigEnvVar),
+									"Value": Equal(expectedPath),
+								})),
+							})),
+						}),
+					}),
+				}),
+			})))
+		})
+	})
+
+	When("a PolicyServer has spec.imagePullSecret set", func() {
+		It("should mount the Docker config volume but NOT add it to Deployment imagePullSecrets", func() {
+			secretName := newName("pull-secret")
+			pullSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: deploymentsNamespace,
+				},
+				Type: corev1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{}}`),
+				},
+			}
+			Expect(k8sClient.Create(ctx, pullSecret)).To(haveSucceededOrAlreadyExisted())
+
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).WithImagePullSecret(secretName).Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"ImagePullSecrets": Not(ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(secretName),
+							}))),
+							"Volumes": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(imagePullSecretVolumeName),
+								"VolumeSource": MatchFields(IgnoreExtras, Fields{
+									"Secret": PointTo(MatchFields(IgnoreExtras, Fields{
+										"SecretName": Equal(secretName),
+									})),
+								}),
+							})),
+							"Containers": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"VolumeMounts": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":      Equal(imagePullSecretVolumeName),
+									"MountPath": Equal(dockerConfigJSONPolicyServerPath),
+								})),
+								"Env": ContainElement(MatchFields(IgnoreExtras, Fields{
+									"Name":  Equal("KUBEWARDEN_DOCKER_CONFIG_JSON_PATH"),
+									"Value": Equal(dockerConfigJSONPolicyServerPath),
+								})),
+							})),
+						}),
+					}),
+				}),
+			})))
+		})
+	})
+
+	When("a PolicyServer has no spec.imagePullSecret but reconciler has ImagePullSecrets", func() {
+		It("should set reconciler secrets in Deployment imagePullSecrets without mounting a Docker config volume", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() *appsv1.Deployment {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return nil
+				}
+				return deployment
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Spec": MatchFields(IgnoreExtras, Fields{
+					"Template": MatchFields(IgnoreExtras, Fields{
+						"Spec": MatchFields(IgnoreExtras, Fields{
+							"ImagePullSecrets": ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(reconcilerImagePullSecret),
+							})),
+							"Volumes": Not(ContainElement(MatchFields(IgnoreExtras, Fields{
+								"Name": Equal(imagePullSecretVolumeName),
+							}))),
+						}),
+					}),
+				}),
+			})))
 		})
 	})
 

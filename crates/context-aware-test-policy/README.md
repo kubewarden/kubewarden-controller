@@ -1,7 +1,5 @@
 # Kubewarden policy context-aware-test-policy
 
-## Description
-
 This is a test policy used in the policy-evaluator integration tests.
 Every time a deployment with the label `app.kubernetes.io/component: "api"` is created or updated it checks the following:
 

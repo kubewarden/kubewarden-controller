@@ -23,7 +23,6 @@ use policy_fetcher::oci_client::manifest::{OciDescriptor, OciManifest};
 use policy_evaluator::{
     admission_request::AdmissionRequest,
     admission_response::AdmissionResponseStatus,
-    callback_handler::CallbackHandlerBuilder,
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     evaluation_context::EvaluationContext,
     policy_evaluator::PolicySettings,
@@ -33,32 +32,9 @@ use policy_evaluator::{
 
 use crate::common::{
     CONTEXT_AWARE_POLICY_FILE, build_policy_evaluator, fetch_policy, load_request_data,
+    setup_callback_handler,
 };
 use crate::k8s_mock::{rego_scenario, wapc_and_wasi_scenario};
-
-async fn setup_callback_handler(
-    client: Option<Client>,
-) -> (oneshot::Sender<()>, mpsc::Sender<CallbackRequest>) {
-    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
-        oneshot::channel();
-    let mut callback_builder = CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx);
-    if let Some(client) = client {
-        callback_builder = callback_builder.kube_client(client);
-    }
-    let mut callback_handler = callback_builder
-        .build()
-        .await
-        .expect("cannot build callback handler");
-    let callback_handler_channel = callback_handler.sender_channel();
-
-    tokio::spawn(async move {
-        callback_handler.loop_eval().await;
-    });
-    (
-        callback_handler_shutdown_channel_tx,
-        callback_handler_channel,
-    )
-}
 
 #[rstest]
 #[case::wapc(
@@ -296,7 +272,7 @@ async fn test_runtime_context_aware<F, Fut>(
     scenario(handle).await;
 
     let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
-        setup_callback_handler(Some(client)).await;
+        setup_callback_handler(Some(client), None).await;
 
     let eval_ctx = EvaluationContext {
         policy_id: "test".to_owned(),
@@ -349,7 +325,7 @@ async fn test_oci_manifest_capability(
     #[case] expected_manifest_type: OciManifest,
 ) {
     let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
-        setup_callback_handler(None).await;
+        setup_callback_handler(None, None).await;
     let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
     let req = CallbackRequest {
         request: CallbackRequestType::OciManifest {
@@ -439,7 +415,7 @@ async fn test_oci_manifest_and_config_capability(
     #[case] expected_config: Option<serde_json::Value>,
 ) {
     let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
-        setup_callback_handler(None).await;
+        setup_callback_handler(None, None).await;
 
     let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
     let req = CallbackRequest {
@@ -507,7 +483,7 @@ async fn test_oci_manifest_and_config_capability(
 #[tokio::test(flavor = "multi_thread")]
 async fn test_oci_digest_capability() {
     let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
-        setup_callback_handler(None).await;
+        setup_callback_handler(None, None).await;
 
     let (tx, rx) = oneshot::channel::<Result<CallbackResponse>>();
     let req = CallbackRequest {

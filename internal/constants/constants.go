@@ -26,6 +26,12 @@ const (
 	PolicyServerVerificationConfigEntry         = "verification-config"
 	PolicyServerVerificationConfigContainerPath = "/verification"
 
+	PolicyServerSigstoreTrustConfigEntry         = "sigstore-trust-config"
+	PolicyServerSigstoreTrustConfigContainerPath = "/sigstore-trust"
+	PolicyServerSigstoreTrustConfigVolumeName    = "sigstore-trust-config"
+	PolicyServerSigstoreTrustConfigFilename      = "sigstore-trust-config.json"
+	PolicyServerSigstoreTrustConfigEnvVar        = "KUBEWARDEN_SIGSTORE_TRUST_CONFIG_PATH"
+
 	// Policy Server Labels.
 
 	// AppLabelKey is the label used to identify the pod template in the deployment
@@ -59,9 +65,11 @@ const (
 	TimeToRequeuePolicyReconciliation = 2 * time.Second
 	MetricsShutdownTimeout            = 5 * time.Second
 
-	WebhookServerCertSecretName = "kubewarden-webhook-server-cert" //nolint:gosec // This is not a credential
-	ServerCert                  = "tls.crt"
-	ServerPrivateKey            = "tls.key"
+	WebhookServerCertSecretName      = "kubewarden-webhook-server-cert" //nolint:gosec // This is not a credential
+	ServerCert                       = "tls.crt"
+	ServerPrivateKey                 = "tls.key"
+	ServerCertSecretFormatVersion    = "1"
+	ServerCertSecretFormatAnnotation = "kubewarden.io/cert-format-version" //nolint:gosec // This is not a credential
 
 	CARootSecretName = "kubewarden-ca"
 	CARootCert       = "ca.crt"

@@ -6,6 +6,7 @@ use policy_evaluator::{
     admission_response_handler::policy_mode::PolicyMode,
     policy_evaluator::PolicySettings,
     policy_fetcher::{
+        proxy::ProxyConfig,
         sources::{Sources, read_sources_file},
         verify::config::{LatestVerificationConfig, VerificationConfigV1, read_verification_file},
     },
@@ -42,6 +43,7 @@ pub struct Config {
     pub pool_size: usize,
     pub metrics_enabled: bool,
     pub sigstore_cache_dir: PathBuf,
+    pub sigstore_trust_config_path: Option<PathBuf>,
     pub verification_config: Option<VerificationConfigV1>,
     pub log_level: String,
     pub log_fmt: String,
@@ -108,6 +110,8 @@ impl Config {
             .get_one::<String>("sigstore-cache-dir")
             .map(PathBuf::from)
             .expect("This should not happen, there's a default value for sigstore-cache-dir");
+        let sigstore_trust_config_path =
+            matches.get_one::<PathBuf>("sigstore-trust-config").cloned();
 
         let daemon = matches
             .get_one::<bool>("daemon")
@@ -158,6 +162,7 @@ impl Config {
             pool_size,
             metrics_enabled,
             sigstore_cache_dir,
+            sigstore_trust_config_path,
             verification_config,
             log_level,
             log_fmt,
@@ -278,6 +283,13 @@ fn remote_server_options(matches: &clap::ArgMatches) -> Result<Option<Sources>> 
         ),
         None => None,
     };
+
+    // Inject proxy settings read from the environment so every HTTP client
+    // inside policy-fetcher honours them without needing system-proxy feature.
+    let sources = sources.map(|mut s| {
+        s.proxies = Some(ProxyConfig::from_env());
+        s
+    });
 
     if let Some(docker_config_json_path) = matches.get_one::<String>("docker-config-json-path") {
         // docker_credential crate expects the config path in the $DOCKER_CONFIG. Keep docker-config-json-path parameter for backwards compatibility

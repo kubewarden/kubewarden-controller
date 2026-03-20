@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	integrationTestsFinalizer          = "integration-tests-safety-net-finalizer"
+	integrationTestsFinalizer          = "kubewarden.io/integration-tests-safety-net-finalizer"
 	defaultKubewardenRepository        = "ghcr.io/kubewarden/policy-server"
 	maxNameSuffixLength                = 8
 	defaultPolicyGroupRejectionMessage = "policy group default rejection message"
@@ -479,18 +479,24 @@ func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGrou
 }
 
 type PolicyServerBuilder struct {
-	name            string
-	minAvailable    *intstr.IntOrString
-	maxUnavailable  *intstr.IntOrString
-	imagePullSecret string
-	limits          corev1.ResourceList
-	requests        corev1.ResourceList
+	name                   string
+	minAvailable           *intstr.IntOrString
+	maxUnavailable         *intstr.IntOrString
+	imagePullSecret        string
+	limits                 corev1.ResourceList
+	requests               corev1.ResourceList
+	sigstoreTrustConfigMap string
 }
 
 func NewPolicyServerFactory() *PolicyServerBuilder {
 	return &PolicyServerBuilder{
 		name: newName("policy-server"),
 	}
+}
+
+func (f *PolicyServerBuilder) WithSigstoreTrustConfigMap(configMapName string) *PolicyServerBuilder {
+	f.sigstoreTrustConfigMap = configMapName
+	return f
 }
 
 func (f *PolicyServerBuilder) WithName(name string) *PolicyServerBuilder {
@@ -538,13 +544,24 @@ func (f *PolicyServerBuilder) Build() *PolicyServer {
 			},
 		},
 		Spec: PolicyServerSpec{
-			Image:           policyServerRepository() + ":" + policyServerVersion(),
-			Replicas:        1,
-			MinAvailable:    f.minAvailable,
-			MaxUnavailable:  f.maxUnavailable,
-			ImagePullSecret: f.imagePullSecret,
-			Limits:          f.limits,
-			Requests:        f.requests,
+			Image:               policyServerRepository() + ":" + policyServerVersion(),
+			Replicas:            1,
+			MinAvailable:        f.minAvailable,
+			MaxUnavailable:      f.maxUnavailable,
+			ImagePullSecret:     f.imagePullSecret,
+			Limits:              f.limits,
+			Requests:            f.requests,
+			SigstoreTrustConfig: f.sigstoreTrustConfigMap,
+			Env: []corev1.EnvVar{
+				{
+					Name:  "KUBEWARDEN_LOG_LEVEL",
+					Value: "debug",
+				},
+				{
+					Name:  "RUST_BACKTRACE",
+					Value: "1",
+				},
+			},
 		},
 	}
 
@@ -562,7 +579,7 @@ func policyServerRepository() string {
 func policyServerVersion() string {
 	version, ok := os.LookupEnv("POLICY_SERVER_VERSION")
 	if !ok {
-		return "latest"
+		return "dev"
 	}
 
 	return version

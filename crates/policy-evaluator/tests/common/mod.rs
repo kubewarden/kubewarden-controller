@@ -1,10 +1,13 @@
 use std::path::PathBuf;
 
+use kube::Client;
 use policy_evaluator::{
+    callback_handler::CallbackHandlerBuilder, callback_requests::CallbackRequest,
     evaluation_context::EvaluationContext, policy_evaluator::PolicyEvaluator,
     policy_evaluator::PolicyExecutionMode, policy_evaluator_builder::PolicyEvaluatorBuilder,
 };
-use policy_fetcher::{PullDestination, policy::Policy};
+use policy_fetcher::{PullDestination, policy::Policy, sources::Sources};
+use tokio::sync::{mpsc, oneshot};
 
 use lazy_static::lazy_static;
 
@@ -58,4 +61,31 @@ pub(crate) fn load_request_data(request_file_name: &str) -> Vec<u8> {
         .join("tests/data")
         .join(request_file_name);
     std::fs::read(request_file_path).expect("cannot read request file")
+}
+
+pub(crate) async fn setup_callback_handler(
+    client: Option<Client>,
+    sources: Option<Sources>,
+) -> (oneshot::Sender<()>, mpsc::Sender<CallbackRequest>) {
+    let (callback_handler_shutdown_channel_tx, callback_handler_shutdown_channel_rx) =
+        oneshot::channel();
+    let mut callback_builder = CallbackHandlerBuilder::new(callback_handler_shutdown_channel_rx);
+    if let Some(client) = client {
+        callback_builder = callback_builder.kube_client(client);
+    }
+    if let Some(sources) = sources {
+        callback_builder = callback_builder.registry_config(Some(sources));
+    }
+    let mut callback_handler = callback_builder
+        .build()
+        .await
+        .expect("cannot build callback handler");
+    let callback_handler_channel = callback_handler.sender_channel();
+    tokio::spawn(async move {
+        callback_handler.loop_eval().await;
+    });
+    (
+        callback_handler_shutdown_channel_tx,
+        callback_handler_channel,
+    )
 }

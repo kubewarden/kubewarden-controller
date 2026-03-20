@@ -1,7 +1,8 @@
 policies:
-  - name: Update Go version, Helm chart dependencies and Hauler manifest
+  - name: Update Go version, Rust toolchain, Helm chart dependencies and Hauler manifest
     config:
       - ./updatecli.d/go.yaml
+      - ./updatecli.d/update-rust-toolchain.yaml
       - ./updatecli.d/update-chart-deps.yaml
       - ./updatecli.d/update-hauler-manifest.yaml
     values:

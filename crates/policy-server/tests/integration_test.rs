@@ -20,6 +20,7 @@ use policy_evaluator::admission_response::{self, StatusCause, StatusDetails};
 use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     admission_response_handler::policy_mode::PolicyMode, policy_evaluator::PolicySettings,
+    policy_fetcher::proxy::ProxyConfig, policy_fetcher::sources::Sources,
     policy_fetcher::verify::config::VerificationConfigV1,
 };
 use policy_server::{api::admission_review::AdmissionReviewResponse, config::PolicyOrPolicyGroup};
@@ -30,6 +31,7 @@ use tokio::fs;
 use tower::ServiceExt;
 
 use crate::common::default_test_config;
+use crate::common::pod_privileged_test_config;
 
 #[tokio::test]
 async fn test_validate() {
@@ -1299,4 +1301,266 @@ fn build_request_client(
         builder = builder.identity(identity)
     }
     builder.build().expect("failed to build client")
+}
+
+// helper functions for testing proxy functionality
+mod proxy_helpers {
+    use backon::{ConstantBuilder, Retryable};
+    use testcontainers::{
+        ContainerAsync, GenericImage,
+        core::{IntoContainerPort, WaitFor},
+        runners::AsyncRunner,
+    };
+    pub async fn start_proxy() -> (ContainerAsync<GenericImage>, u16) {
+        let container = GenericImage::new("ghcr.io/kubewarden/tests/kalaksi-tinyproxy", "1.7")
+            .with_wait_for(WaitFor::message_on_stdout("Starting main loop"))
+            .with_exposed_port(8888.tcp())
+            .start()
+            .await
+            .expect("Failed to start proxy container");
+        let port = container
+            .get_host_port_ipv4(8888)
+            .await
+            .expect("Failed to get proxy port");
+        (container, port)
+    }
+
+    /// Used to verify that traffic was (or was not) routed through the proxy.
+    /// Returns true if the proxy container's logs (stdout or stderr) contain `needle`.
+    /// Retries with a constant backoff to give tinyproxy time to flush its log.
+    pub async fn proxy_log_contains(
+        container: &ContainerAsync<GenericImage>,
+        needle: &str,
+    ) -> bool {
+        let check = || async {
+            let stdout = String::from_utf8(container.stdout_to_vec().await.unwrap_or_default())
+                .unwrap_or_default();
+            let stderr = String::from_utf8(container.stderr_to_vec().await.unwrap_or_default())
+                .unwrap_or_default();
+            if stdout.contains(needle) || stderr.contains(needle) {
+                Ok(())
+            } else {
+                Err(())
+            }
+        };
+        check
+            .retry(
+                ConstantBuilder::default()
+                    .with_delay(std::time::Duration::from_millis(500))
+                    .with_max_times(20),
+            )
+            .await
+            .is_ok()
+    }
+}
+
+#[rstest]
+#[case::both_http_and_https_proxy(true)]
+#[case::https_proxy_only(false)]
+#[serial_test::serial]
+#[tokio::test]
+async fn test_policy_server_with_https_proxy(#[case] set_http_proxy: bool) {
+    use proxy_helpers::*;
+
+    setup();
+
+    let (proxy_container, proxy_port) = start_proxy().await;
+    let proxy_url = format!("http://127.0.0.1:{proxy_port}");
+
+    let mut config = pod_privileged_test_config();
+    config.sources = Some(Sources {
+        proxies: Some(ProxyConfig {
+            http_proxy: if set_http_proxy {
+                Some(proxy_url.clone())
+            } else {
+                None
+            },
+            https_proxy: Some(proxy_url.clone()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    let app = app(config).await;
+
+    let request = http::Request::builder()
+        .method(http::Method::POST)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
+
+    let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+
+    // Verify traffic actually went through the proxy
+    assert!(
+        proxy_log_contains(&proxy_container, "ghcr.io").await,
+        "Expected 'ghcr.io' in proxy logs, indicating HTTPS traffic was routed through the proxy"
+    );
+}
+
+/// Tests that HTTP traffic is routed through the proxy when HTTP_PROXY is set.
+///
+/// Since our official images are hosted over HTTPS, the policy is first pulled from ghcr.io,
+/// the pushed to the local registry. A local insecure OCI registry is used as the HTTP policy
+/// source. The policy is first fetched from ghcr.io, pushed to the local registry, then the policy
+/// server is started with HTTP_PROXY pointing at tinyproxy. Both containers share the default
+/// docker bridge network so the proxy can forward requests to the registry by its bridge IP.
+#[serial_test::serial]
+#[tokio::test]
+async fn test_policy_server_with_http_proxy() {
+    use proxy_helpers::*;
+    use std::collections::HashSet;
+    use testcontainers::{GenericImage, core::WaitFor, runners::AsyncRunner};
+
+    setup();
+
+    // Start local insecure OCI registry
+    let registry_container = GenericImage::new("docker.io/library/registry", "2")
+        .with_wait_for(WaitFor::message_on_stderr("listening on "))
+        .start()
+        .await
+        .expect("Failed to start registry container");
+    let registry_bridge_ip = registry_container
+        .get_bridge_ip_address()
+        .await
+        .expect("Failed to get registry bridge IP");
+    let registry_addr = format!("{registry_bridge_ip}:5000");
+    let local_policy_uri =
+        format!("registry://{registry_addr}/kubewarden/tests/pod-privileged:v0.2.1");
+
+    // Fetch pod-privileged policy bytes from ghcr.io (without proxy)
+    let download_dir = tempfile::tempdir().expect("cannot create tempdir");
+    let policy = policy_evaluator::policy_fetcher::fetch_policy(
+        "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.1",
+        policy_evaluator::policy_fetcher::PullDestination::LocalFile(
+            download_dir.path().join("pod-privileged.wasm"),
+        ),
+        None,
+    )
+    .await
+    .expect("Failed to fetch policy from ghcr.io");
+    let policy_bytes = tokio::fs::read(&policy.local_path)
+        .await
+        .expect("Failed to read policy bytes");
+
+    // Configure insecure (HTTP) access to the local registry
+    let mut sources = policy_evaluator::policy_fetcher::sources::Sources {
+        insecure_sources: HashSet::from([registry_addr.clone()]),
+        ..Default::default()
+    };
+
+    // Push the policy to the local registry (without proxy — tinyproxy runs in Docker
+    // and cannot reach the host's localhost)
+    policy_evaluator::policy_fetcher::registry::Registry::default()
+        .push(&policy_bytes, &local_policy_uri, Some(&sources), None)
+        .await
+        .expect("Failed to push policy to local registry");
+
+    // Start proxy
+    let (proxy_container, proxy_port) = start_proxy().await;
+    let proxy_url = format!("http://127.0.0.1:{proxy_port}");
+
+    // Build a config that pulls the policy from the local insecure registry
+    let mut config = pod_privileged_test_config();
+    // Add proxy config after the push so the push itself is not routed through the proxy
+    sources.proxies = Some(ProxyConfig {
+        http_proxy: Some(proxy_url.clone()),
+        ..Default::default()
+    });
+    config.sources = Some(sources);
+    if let Some(PolicyOrPolicyGroup::Policy { module, .. }) =
+        config.policies.get_mut("pod-privileged")
+    {
+        *module = local_policy_uri.clone();
+    }
+
+    let app_instance = app(config).await;
+
+    let request = http::Request::builder()
+        .method(http::Method::POST)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
+
+    let response = tower::ServiceExt::oneshot(app_instance, request)
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+
+    // Verify traffic actually went through the proxy
+    assert!(
+        proxy_log_contains(&proxy_container, &registry_bridge_ip.to_string()).await,
+        "Expected registry IP '{registry_bridge_ip}' in proxy logs, \
+         indicating HTTP traffic was routed through the proxy"
+    );
+}
+
+/// Tests that NO_PROXY bypasses the proxy for matching hosts.
+///
+/// A real tinyproxy is started and set as HTTPS_PROXY. With NO_PROXY=ghcr.io the policy server
+/// must connect directly to ghcr.io, so startup and validation succeed and the proxy logs must not
+/// contain any reference to ghcr.io.
+#[serial_test::serial]
+#[tokio::test]
+async fn test_policy_server_with_no_proxy() {
+    use proxy_helpers::*;
+
+    setup();
+
+    let (proxy_container, proxy_port) = start_proxy().await;
+    let proxy_url = format!("http://127.0.0.1:{proxy_port}");
+
+    let mut config = pod_privileged_test_config();
+    config.sources = Some(Sources {
+        proxies: Some(ProxyConfig {
+            https_proxy: Some(proxy_url.clone()),
+            no_proxy: Some("ghcr.io".to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    let app = app(config).await;
+
+    let request = http::Request::builder()
+        .method(http::Method::POST)
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .uri("/validate/pod-privileged")
+        .body(Body::from(include_str!(
+            "data/pod_with_privileged_containers.json"
+        )))
+        .unwrap();
+
+    let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
+
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    assert!(!admission_review_response.response.allowed);
+
+    // Verify traffic did NOT go through the proxy
+    assert!(
+        !proxy_log_contains(&proxy_container, "ghcr.io").await,
+        "Expected 'ghcr.io' to be absent from proxy logs, \
+         indicating traffic bypassed the proxy via NO_PROXY"
+    );
 }

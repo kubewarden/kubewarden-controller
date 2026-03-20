@@ -102,7 +102,8 @@ Only the following attributes of the Custom Resource Definition (CRD) are evalua
 
 Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
 
-A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates
+each policy in the file using the same request during each evaluation.
 
 
 **Usage:** `kwctl bench [OPTIONS] --request-path <PATH> <uri_or_sha_prefix_or_yaml_file>`
@@ -250,6 +251,11 @@ Pulls a Kubewarden policy from a given URI
 
 **Usage:** `kwctl pull [OPTIONS] <uri>`
 
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
+
 ###### **Arguments:**
 
 * `<URI>` — Policy URI. Supported schemes: registry://, https://, file://
@@ -280,6 +286,11 @@ The annotations found inside of policy's metadata are going to be part of the OC
 The multi-line annotations are skipped because they are not compatible with the OCI specification.
 The 'io.kubewarden.policy.source' annotation is propagated as 'org.opencontainers.image.source' to allow tools like
 renovatebot to detect policy updates.
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
 
 ###### **Arguments:**
 
@@ -337,10 +348,16 @@ Only the following attributes of the Custom Resource Definition (CRD) are evalua
 
 Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
 
-A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates
+each policy in the file using the same request during each evaluation.
 
 
 **Usage:** `kwctl run [OPTIONS] --request-path <PATH> <uri_or_sha_prefix_or_yaml_file>`
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
 
 ###### **Arguments:**
 
@@ -506,6 +523,11 @@ Output a default Sigstore verification configuration file
 Verify a Kubewarden policy from a given URI using Sigstore
 
 **Usage:** `kwctl verify [OPTIONS] <uri>`
+
+It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying
 
 ###### **Arguments:**
 

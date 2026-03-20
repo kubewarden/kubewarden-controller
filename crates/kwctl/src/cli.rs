@@ -43,9 +43,15 @@ Only the following attributes of the Custom Resource Definition (CRD) are evalua
 
 Other fields, such as `rules`, `matchConditions`, `objectSelector`, and `namespaceSelector`, are ignored.
 
-A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates each policy in the file using the same request during each evaluation.
+A YAML file may contain multiple Custom Resource declarations. In this case, `kwctl` evaluates
+each policy in the file using the same request during each evaluation.
 "#
 );
+
+static PROXY_ENV_VARS_COMMON_LONG_ABOUT: &str = r#"It respects standard proxy environment variables when downloading policies:
+- HTTP_PROXY or http_proxy: proxy server for HTTP requests
+- HTTPS_PROXY or https_proxy: proxy server for HTTPS requests
+- NO_PROXY or no_proxy: comma-separated list of hosts to exclude from proxying"#;
 
 // Minimum set of flags required to pull a policy from a registry
 fn pull_shared_flags() -> Vec<Arg> {
@@ -121,6 +127,7 @@ fn subcommand_pull() -> Command {
 
     Command::new("pull")
         .about("Pulls a Kubewarden policy from a given URI")
+        .after_long_help(PROXY_ENV_VARS_COMMON_LONG_ABOUT.to_string())
         .args(args)
 }
 
@@ -188,6 +195,7 @@ fn subcommand_verify() -> Command {
 
     Command::new("verify")
         .about("Verify a Kubewarden policy from a given URI using Sigstore")
+        .after_long_help(PROXY_ENV_VARS_COMMON_LONG_ABOUT.to_string())
         .args(args)
 }
 
@@ -230,11 +238,15 @@ fn subcommand_push() -> Command {
     Command::new("push")
         .about("Pushes a Kubewarden policy to an OCI registry")
         .after_long_help(
+            format!(
             r#"The annotations found inside of policy's metadata are going to be part of the OCI manifest.
 The multi-line annotations are skipped because they are not compatible with the OCI specification.
 The 'io.kubewarden.policy.source' annotation is propagated as 'org.opencontainers.image.source' to allow tools like
-renovatebot to detect policy updates."#,
-        )
+renovatebot to detect policy updates.
+
+{}"#,
+            PROXY_ENV_VARS_COMMON_LONG_ABOUT
+        ))
         .args(args)
 }
 
@@ -359,6 +371,7 @@ fn subcommand_run() -> Command {
 {}"#,
             RUN_AND_BENCH_COMMON_LONG_ABOUT
         ))
+        .after_long_help(PROXY_ENV_VARS_COMMON_LONG_ABOUT.to_string())
         .args(args)
         .group(
             // these flags cannot be used at the same time

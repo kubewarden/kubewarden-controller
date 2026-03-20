@@ -1,13 +1,13 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use anyhow::Result;
-use kubewarden_policy_sdk::host_capabilities::crypto_v1::CertificateVerificationRequest;
-use kubewarden_policy_sdk::host_capabilities::kubernetes::CanIRequest;
-use kubewarden_policy_sdk::host_capabilities::kubernetes::SubjectAccessReview as KWSubjectAccessReview;
 use kubewarden_policy_sdk::host_capabilities::{
     SigstoreVerificationInputV1, SigstoreVerificationInputV2,
+    crypto_v1::CertificateVerificationRequest,
+    kubernetes::{CanIRequest, SubjectAccessReview as KWSubjectAccessReview},
     verification::{KeylessInfo, KeylessPrefixInfo},
 };
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use tokio::{sync::oneshot, time::Instant};
 
 /// Holds the response to a waPC evaluation request
@@ -141,6 +141,28 @@ pub enum CallbackRequestType {
         /// A selector to restrict the list of returned objects by their fields.
         /// Defaults to everything if `None`
         field_selector: Option<String>,
+        /// A list of fields to include in the response.
+        ///
+        /// If strictly defined, the host will prune the Kubernetes resource to contain *only*
+        /// the specified fields, reducing memory usage and serialization overhead.
+        ///
+        /// # Behavior
+        /// - **Dot Notation:** Use `.` to traverse nested objects (e.g., `metadata.name`).
+        /// - **Implicit Arrays:** Paths automatically traverse through arrays. A path like
+        ///   `spec.containers.image` will include the `image` field for *every* item in the
+        ///   `spec.containers` list.
+        /// - **Allow-List:** Fields not specified in the mask are discarded. If the list is
+        ///   empty or `None`, the full resource is returned.
+        ///
+        /// # Example
+        /// ```json
+        /// [
+        ///   "metadata.name",
+        ///   "metadata.namespace",
+        ///   "spec.containers.image"
+        /// ]
+        /// ```
+        field_masks: Option<BTreeSet<String>>,
     },
 
     /// Get all the Kubernetes resources defined inside of the given
@@ -157,6 +179,28 @@ pub enum CallbackRequestType {
         /// A selector to restrict the list of returned objects by their fields.
         /// Defaults to everything if `None`
         field_selector: Option<String>,
+        /// A list of fields to include in the response.
+        ///
+        /// If strictly defined, the host will prune the Kubernetes resource to contain *only*
+        /// the specified fields, reducing memory usage and serialization overhead.
+        ///
+        /// # Behavior
+        /// - **Dot Notation:** Use `.` to traverse nested objects (e.g., `metadata.name`).
+        /// - **Implicit Arrays:** Paths automatically traverse through arrays. A path like
+        ///   `spec.containers.image` will include the `image` field for *every* item in the
+        ///   `spec.containers` list.
+        /// - **Allow-List:** Fields not specified in the mask are discarded. If the list is
+        ///   empty or `None`, the full resource is returned.
+        ///
+        /// # Example
+        /// ```json
+        /// [
+        ///   "metadata.name",
+        ///   "metadata.namespace",
+        ///   "spec.containers.image"
+        /// ]
+        /// ```
+        field_masks: Option<BTreeSet<String>>,
     },
 
     /// Get a Kubernetes resource with the specified `name`.
@@ -171,13 +215,34 @@ pub enum CallbackRequestType {
         /// The namespace used to search namespaced resources. Cluster level resources
         /// must set this parameter to `None`
         namespace: Option<String>,
-
         /// Disable caching of results obtained from Kubernetes API Server
         /// By default query results are cached for 5 seconds, that might cause
         /// stale data to be returned.
         /// However, making too many requests against the Kubernetes API Server
         /// might cause issues to the cluster
         disable_cache: bool,
+        /// A list of fields to include in the response.
+        ///
+        /// If strictly defined, the host will prune the Kubernetes resource to contain *only*
+        /// the specified fields, reducing memory usage and serialization overhead.
+        ///
+        /// # Behavior
+        /// - **Dot Notation:** Use `.` to traverse nested objects (e.g., `metadata.name`).
+        /// - **Implicit Arrays:** Paths automatically traverse through arrays. A path like
+        ///   `spec.containers.image` will include the `image` field for *every* item in the
+        ///   `spec.containers` list.
+        /// - **Allow-List:** Fields not specified in the mask are discarded. If the list is
+        ///   empty or `None`, the full resource is returned.
+        ///
+        /// # Example
+        /// ```json
+        /// [
+        ///   "metadata.name",
+        ///   "metadata.namespace",
+        ///   "spec.containers.image"
+        /// ]
+        /// ```
+        field_masks: Option<BTreeSet<String>>,
     },
 
     /// Get the plural name of a Kubernetes resource. E.g. `v1/Service` -> `services`
@@ -200,6 +265,28 @@ pub enum CallbackRequestType {
         /// A selector to restrict the list of returned objects by their fields.
         /// Defaults to everything if `None`
         field_selector: Option<String>,
+        /// A list of fields to include in the response.
+        ///
+        /// If strictly defined, the host will prune the Kubernetes resource to contain *only*
+        /// the specified fields, reducing memory usage and serialization overhead.
+        ///
+        /// # Behavior
+        /// - **Dot Notation:** Use `.` to traverse nested objects (e.g., `metadata.name`).
+        /// - **Implicit Arrays:** Paths automatically traverse through arrays. A path like
+        ///   `spec.containers.image` will include the `image` field for *every* item in the
+        ///   `spec.containers` list.
+        /// - **Allow-List:** Fields not specified in the mask are discarded. If the list is
+        ///   empty or `None`, the full resource is returned.
+        ///
+        /// # Example
+        /// ```json
+        /// [
+        ///   "metadata.name",
+        ///   "metadata.namespace",
+        ///   "spec.containers.image"
+        /// ]
+        /// ```
+        field_masks: Option<BTreeSet<String>>,
         /// The instant in time to compare the last change of the resources
         #[serde(with = "tokio_instant_serializer")]
         since: Instant,
@@ -353,6 +440,7 @@ impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::ListResourcesByN
             namespace: req.namespace,
             label_selector: req.label_selector,
             field_selector: req.field_selector,
+            field_masks: req.field_masks,
         }
     }
 }
@@ -368,6 +456,7 @@ impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::ListAllResources
             kind: req.kind,
             label_selector: req.label_selector,
             field_selector: req.field_selector,
+            field_masks: req.field_masks,
         }
     }
 }
@@ -382,6 +471,7 @@ impl From<kubewarden_policy_sdk::host_capabilities::kubernetes::GetResourceReque
             name: req.name,
             namespace: req.namespace,
             disable_cache: req.disable_cache,
+            field_masks: req.field_masks,
         }
     }
 }

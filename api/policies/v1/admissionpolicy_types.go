@@ -133,6 +133,10 @@ func (r *AdmissionPolicy) GetNamespaceSelector() *metav1.LabelSelector {
 	}
 }
 
+func (r *AdmissionPolicy) GetAllowInsideAdmissionControllerNamespace() bool {
+	return false
+}
+
 func (r *AdmissionPolicy) GetObjectSelector() *metav1.LabelSelector {
 	return r.Spec.ObjectSelector
 }

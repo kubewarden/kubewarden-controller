@@ -2,7 +2,10 @@
 
 # deploy policyreports.wgpolicyk8s.io, clusterpolicyreports.wgpolicyk8s.io CRDs
 # Set to false if they are already defined inside of the cluster
-installPolicyReportCRDs: true
+#
+# These reports are marked as DEPRECATED and its support will be removed in a
+# future release, in favour of OpenReports.
+installPolicyReportCRDs: false
 
 # deploy reports.openreports.io, clusterreports.openreports.io CRDs
 # Set to false if they are already defined inside of the cluster

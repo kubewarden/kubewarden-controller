@@ -19,14 +19,7 @@ static START: Once = Once::new();
 /// Common setup for tests. This function should be called at the beginning of each test.
 pub(crate) fn setup() {
     START.call_once(|| {
-        // Starting from rustls 0.22, each application must set its default crypto provider.
-        // This setup is done inside of the `main` function of the policy server,
-        // which is not called in this test.
-        // Hence we have to setup the crypto provider here.
-        let crypto_provider = rustls::crypto::ring::default_provider();
-        crypto_provider
-            .install_default()
-            .expect("Failed to install crypto provider");
+        // Add common setup code here
     });
 }
 
@@ -138,11 +131,36 @@ pub(crate) fn default_test_config() -> Config {
         ),
     ]);
 
+    let mut config = default_config();
+    config.policies.extend(policies);
+    config
+}
+
+pub(crate) fn pod_privileged_test_config() -> Config {
+    let policies = HashMap::from([(
+        "pod-privileged".to_owned(),
+        PolicyOrPolicyGroup::Policy {
+            module: "ghcr.io/kubewarden/tests/pod-privileged:v0.2.1".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: None,
+            context_aware_resources: BTreeSet::new(),
+            message: None,
+            timeout_eval_seconds: None,
+        },
+    )]);
+
+    let mut config = default_config();
+    config.policies.extend(policies);
+    config
+}
+
+fn default_config() -> Config {
     Config {
         addr: get_available_address_with_port(),
         readiness_probe_addr: get_available_address_with_port(),
         sources: None,
-        policies,
+        policies: HashMap::new(),
         policies_download_dir: tempdir().unwrap().keep(),
         ignore_kubernetes_connection_failure: true,
         always_accept_admission_reviews_on_namespace: None,
@@ -151,6 +169,7 @@ pub(crate) fn default_test_config() -> Config {
         pool_size: 2,
         metrics_enabled: false,
         sigstore_cache_dir: tempdir().unwrap().keep(),
+        sigstore_trust_config_path: None,
         verification_config: None,
         log_level: "info".to_owned(),
         log_fmt: "json".to_owned(),

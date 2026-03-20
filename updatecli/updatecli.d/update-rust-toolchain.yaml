@@ -1,5 +1,9 @@
 name: Update Rust version inside of rust-toolchain file
 
+# {{ if .pipelineid }}
+pipelineid: "{{ .pipelineid }}"
+# {{ end }}
+
 scms:
   github:
     kind: github
@@ -7,12 +11,14 @@ scms:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
       owner: "{{ requiredEnv .github.owner }}"
-      repository: "policy-evaluator"
-      token: "{{ requiredEnv .github.token }}"
-      username: "{{ requiredEnv .github.user }}"
+      repository: "kubewarden-controller"
       branch: "{{ .github.branch }}"
-      commitusingapi: true # enable cryptographically signed commits
+      commitusingapi: true
       commitmessage:
+        type: "chore"
+        scope: deps
+        title: "update Rust toolchain version"
+        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
         hidecredit: true
 
 sources:
@@ -22,7 +28,6 @@ sources:
     spec:
       owner: rust-lang
       repository: rust
-      token: "{{ requiredEnv .github.token }}"
       versionfilter:
         kind: semver
         pattern: "*"
@@ -38,8 +43,15 @@ targets:
 
 actions:
   default:
+    title: 'deps(rust): update Rust toolchain to {{ source "rust-lang" }}'
     kind: github/pullrequest
     scmid: github
     spec:
+      automerge: false
+      mergemethod: squash
+      description: |
+        Automatic Rust toolchain update.
+      draft: false
       labels:
-        - kind/chore
+        - "kind/chore"
+        - "area/dependencies"

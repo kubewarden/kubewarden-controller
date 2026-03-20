@@ -108,6 +108,7 @@ fn validate(payload: &[u8]) -> CallResult {
         kind: "Namespace".to_owned(),
         label_selector: Some(format!("customer-id={customer_id}")),
         field_selector: None,
+        field_masks: None,
     };
 
     let namespaces: List<Namespace> = list_all_resources(&kube_request)?;
@@ -149,6 +150,7 @@ fn validate(payload: &[u8]) -> CallResult {
         namespace: namespace.clone(),
         label_selector: None,
         field_selector: None,
+        field_masks: None,
     };
     let deployments: List<Deployment> = list_resources_by_namespace(&kube_request)?;
 
@@ -190,6 +192,7 @@ fn validate(payload: &[u8]) -> CallResult {
         namespace: Some(namespace.clone()),
         name: "api-auth-service".to_owned(),
         disable_cache: false,
+        field_masks: None,
     };
 
     let service: Service = get_resource(&kube_request)?;

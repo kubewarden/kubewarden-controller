@@ -1,4 +1,4 @@
-CONTROLLER_TOOLS_VERSION := v0.16.5
+CONTROLLER_TOOLS_VERSION := v0.18.0
 ENVTEST_VERSION := release-0.19
 ENVTEST_K8S_VERSION := 1.31.0
 HELM_VALUES_SCHEMA_JSON_VERSION := v2.3.1
@@ -14,7 +14,7 @@ ENVTEST_DIR ?= $(shell pwd)/.envtest
 
 REGISTRY ?= ghcr.io
 REPO ?= kubewarden
-TAG ?= latest
+TAG ?= dev
 
 # Detect architecture for Rust builds
 ARCH ?= $(shell uname -m)
@@ -87,6 +87,10 @@ lint: lint-go lint-rust
 advisories-rust:
 	cargo deny check advisories
 
+.PHONY: coverage-rust
+coverage-rust:
+	cargo llvm-cov --ignore-run-fail --doctests --html --output-dir coverage/rust/
+
 CONTROLLER_SRC_DIRS := cmd/controller api internal/controller
 CONTROLLER_GO_SRCS := $(shell find $(CONTROLLER_SRC_DIRS) -type f -name '*.go')
 CONTROLLER_SRCS := $(GO_MOD_SRCS) $(CONTROLLER_GO_SRCS)
@@ -142,7 +146,7 @@ generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyIn
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. We use yq to modify the generated files to match our naming and labels conventions.
-	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=charts/kubewarden-crds/templates output:rbac:artifacts:config=charts/kubewarden-controller/templates
+	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=controller-role crd webhook paths="./api/policies/v1"  paths="./internal/controller" output:crd:artifacts:config=config/crd/bases output:rbac:artifacts:config=config/rbac
 
 .PHONY: generate-chart
 generate-chart: ## Generate Helm chart values schema.
@@ -176,7 +180,7 @@ $(LOCALBIN):
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
 ## Tool Versions
-GOLANGCI_LINT_VERSION ?= v2.5.0
+GOLANGCI_LINT_VERSION ?= v2.9.0
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.

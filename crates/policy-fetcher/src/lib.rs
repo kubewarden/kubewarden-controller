@@ -13,6 +13,7 @@ pub mod errors;
 pub mod fetcher;
 mod https;
 pub mod policy;
+pub mod proxy;
 pub mod registry;
 pub mod sources;
 pub mod store;
@@ -132,7 +133,7 @@ pub async fn fetch_policy(
     let sources = sources.unwrap_or(&sources_default);
 
     match policy_fetcher
-        .fetch(&url, client_protocol(&url, sources)?)
+        .fetch(&url, client_protocol(&url, sources)?, sources)
         .await
     {
         Err(err) => {
@@ -146,13 +147,17 @@ pub async fn fetch_policy(
         .fetch(
             &url,
             ClientProtocol::Https(TlsVerificationMode::NoTlsVerification),
+            sources,
         )
         .await
     {
         return create_file_if_valid(&bytes, &destination, url.to_string());
     }
 
-    match policy_fetcher.fetch(&url, ClientProtocol::Http).await {
+    match policy_fetcher
+        .fetch(&url, ClientProtocol::Http, sources)
+        .await
+    {
         Ok(bytes) => create_file_if_valid(&bytes, &destination, url.to_string()),
         Err(e) => Err(FetcherError::SourceError(e)),
     }

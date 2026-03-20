@@ -44,8 +44,8 @@ FROM alpine:3.23.3 AS cfg
 RUN echo "policy-server:x:65533:65533::/tmp:/sbin/nologin" >> /etc/passwd && \
     echo "policy-server:x:65533:policy-server" >> /etc/group
 
-# Final stage with scratch image
-FROM scratch
+# Final stage with distroless image
+FROM gcr.io/distroless/static:nonroot
 COPY --from=builder /usr/src/policy-server/target/*/release/policy-server /policy-server
 COPY --from=cfg /etc/passwd /etc/passwd
 COPY --from=cfg /etc/group /etc/group

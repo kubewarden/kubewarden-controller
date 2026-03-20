@@ -123,6 +123,12 @@ There will be a ClusterPolicyReport with results for cluster-wide resources.`,
 			k8sClient := k8s.NewClient(dynamicClient, clientset, kubewardenNamespace, skippedNs, int64(pageSize), logger)
 			reportStore := report.NewReportStoreOfKind(reportKind, client, logger)
 
+			if reportKind == report.ReportKindOpenReport {
+				if err = report.DeleteAllLegacyPolicyReports(context.Background(), client, logger); err != nil {
+					logger.Warn("Failed to delete legacy wgpolicyk8s.io PolicyReports, continuing", "error", err)
+				}
+			}
+
 			scannerConfig := scanner.Config{
 				PoliciesClient: policiesClient,
 				K8sClient:      k8sClient,

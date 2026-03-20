@@ -123,7 +123,7 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Generate and sign attestations
-        uses: kubewarden/github-actions/attestation@f1695ca9a575bf58b85d6c3652c7ff7d1d12ec24 # v4.5.16
+        uses: kubewarden/github-actions/attestation@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
@@ -277,7 +277,7 @@ jobs:
     needs: release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: generate-token
         with:
           app-id: ${{ secrets.APP_ID }}

@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Install cosign
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
       - name: Install the crane command
         run: |
           set -e
@@ -59,20 +59,38 @@ jobs:
           | jq -r '.manifests[]
             | select(.annotations["vnd.docker.reference.type"] == "attestation-manifest")
             | .digest')
+          if [[ -z "${DIGEST}" ]]; then
+            echo "ERROR: No attestation manifest found for ${{ inputs.component }} (${{ inputs.arch }})"
+            exit 1
+          fi
           echo "ATTESTATION_MANIFEST_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
       - name: Find provenance manifest digest
         run: |
           set -e
           DIGEST=$(crane manifest ghcr.io/${{ github.repository_owner }}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST }} |
                       jq -r '.layers[]
-                        | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v0.2")
+                        | select(.annotations["in-toto.io/predicate-type"] == "https://slsa.dev/provenance/v1")
                         | .digest')
+          if [[ -z "${DIGEST}" ]]; then
+            echo "ERROR: No SLSA provenance layer found in attestation manifest for ${{ inputs.component }} (${{ inputs.arch }})"
+            exit 1
+          fi
           echo "PROVENANCE_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
       - name: Find SBOM manifest layer digest
         run: |
           set -e
-          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}} |  \
-            jq '.layers | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document")) | map(.digest) | join(" ")')
+          DIGEST=$(crane manifest ghcr.io/${{github.repository_owner}}/${{ inputs.component }}@${{ env.ATTESTATION_MANIFEST_DIGEST}}  | \
+            jq -r '.layers 
+              | map(select(.annotations["in-toto.io/predicate-type"] == "https://spdx.dev/Document"))
+              | map(.digest)
+              | if length == 0 then empty 
+                elif length == 1 then .[0]
+                else error("ERROR: Multiple SBOM layers found in attestation manifest")
+                end')
+          if [[ -z "${DIGEST}" ]]; then
+            echo "ERROR: No SBOM layer found in attestation manifest for ${{ inputs.component }} (${{ inputs.arch }})"
+            exit 1
+          fi
           echo "SBOM_DIGEST=${DIGEST}" >> "$GITHUB_ENV"
 
       # We need to upload provenance and SBOM files, plus their signatures under the GitHub Release page.

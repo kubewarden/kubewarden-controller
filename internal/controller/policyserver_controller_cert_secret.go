@@ -39,15 +39,23 @@ func (r *PolicyServerReconciler) reconcilePolicyServerCertSecret(ctx context.Con
 			return errors.Join(errors.New("failed to set policy server secret owner reference"), err)
 		}
 
-		policyServerSecret.ObjectMeta.Labels = map[string]string{
+		policyServerSecret.Labels = map[string]string{
 			constants.PartOfLabelKey:    constants.PartOfLabelValue,
 			constants.ComponentLabelKey: constants.ComponentPolicyServerLabelValue,
 		}
 
-		// check if secret has the required data
+		if policyServerSecret.Annotations == nil {
+			policyServerSecret.Annotations = make(map[string]string)
+		}
+		currentFormatVersion := policyServerSecret.Annotations[constants.ServerCertSecretFormatAnnotation]
 		_, hasTLSCert := policyServerSecret.Data[constants.ServerCert]
 		_, hasTLSKey := policyServerSecret.Data[constants.ServerPrivateKey]
-		if !hasTLSCert || !hasTLSKey {
+
+		// Check if secret has the required data and correct format version
+		// Secrets without this annotation or with an outdated version need regeneration
+		needsRegeneration := !hasTLSCert || !hasTLSKey || currentFormatVersion != constants.ServerCertSecretFormatVersion
+
+		if needsRegeneration {
 			var caCert, caPrivateKey []byte
 			caCert, caPrivateKey, err = certs.ExtractCARootFromSecret(caSecret)
 			if err != nil {
@@ -71,6 +79,8 @@ func (r *PolicyServerReconciler) reconcilePolicyServerCertSecret(ctx context.Con
 				constants.ServerCert:       string(cert),
 				constants.ServerPrivateKey: string(privateKey),
 			}
+
+			policyServerSecret.Annotations[constants.ServerCertSecretFormatAnnotation] = constants.ServerCertSecretFormatVersion
 		}
 
 		return nil

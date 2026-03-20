@@ -39,8 +39,10 @@ import (
 )
 
 const (
-	integrationTestsFinalizer = "integration-tests-safety-net-finalizer"
+	integrationTestsFinalizer = "kubewarden.io/integration-tests-safety-net-finalizer"
 	clientCAConfigMapName     = "client-ca"
+	fakeSigstoreTrustConfig   = `{"trusted_root": {"version": "test"}}`
+	reconcilerImagePullSecret = "reconciler-pull-secret"
 )
 
 func getTestClusterAdmissionPolicy(ctx context.Context, name string) (*policiesv1.ClusterAdmissionPolicy, error) {
@@ -192,4 +194,17 @@ func createPolicyServerAndWaitForItsService(ctx context.Context, policyServer *p
 		_, err := getTestPolicyServerService(ctx, policyServer.GetName())
 		return err
 	}, timeout, pollInterval).Should(Succeed())
+}
+
+func createConfigMapWithSigstoreTrustConfig(ctx context.Context, name string) {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: deploymentsNamespace,
+		},
+		Data: map[string]string{
+			constants.PolicyServerSigstoreTrustConfigEntry: fakeSigstoreTrustConfig,
+		},
+	}
+	Expect(k8sClient.Create(ctx, configMap)).To(haveSucceededOrAlreadyExisted())
 }

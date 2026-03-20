@@ -1,6 +1,6 @@
 FROM alpine AS cfg
 
-FROM scratch
+FROM gcr.io/distroless/static:nonroot
 COPY --from=cfg /etc/passwd /etc/passwd
 COPY --from=cfg /etc/group /etc/group
 USER 65533:65533

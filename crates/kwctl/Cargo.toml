@@ -3,7 +3,7 @@ authors     = ["Kubewarden Developers <cncf-kubewarden-maintainers@lists.cncf.io
 description = "Tool to manage Kubewarden policies"
 edition     = "2024"
 name        = "kwctl"
-version     = "1.32.1"
+version     = "1.33.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -39,7 +39,7 @@ tokio              = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { workspace = true }
 url                = { workspace = true }
-walrus             = "0.24.5"
+walrus             = "0.25.0"
 
 hostname-validator = "1.1.1"
 # This is required to have reqwest built using the `rustls-tls-native-roots`
@@ -54,6 +54,7 @@ sigstore_protobuf_specs = "0.5"
 
 [dev-dependencies]
 assert_cmd     = "2.1.2"
+backon         = { version = "1.6", features = ["std-blocking-sleep"] }
 hyper          = { version = "1.8.1" }
 predicates     = "3.1"
 rstest         = { workspace = true }

@@ -31,7 +31,8 @@ use policy_evaluator::{
 };
 use profiling::activate_memory_profiling;
 use rayon::prelude::*;
-use std::{fs, net::SocketAddr, sync::Arc};
+use sigstore_protobuf_specs::dev::sigstore::trustroot::v1::ClientTrustConfig;
+use std::{fs, net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::{
     sync::{Notify, Semaphore, oneshot},
     time,
@@ -195,6 +196,20 @@ impl PolicyServer {
             let engine = engine.clone();
             tokio::spawn(async move {
                 let mut interval = time::interval(time::Duration::from_secs(1));
+
+                // The default MissedTickBehavior::Burst behaves like so:
+                //   Expected ticks: |     1     |     2     |     3     |     4     |     5     |     6     |
+                //   Actual ticks:   | work -----|          delay          | work | work | work -| work -----|
+                //
+                // This means that in loaded systems, the engine will increment epochs too fast,
+                // without giving time to the wasm host to perform work. This is usually triggered
+                // as a timeout when performing an init in rehydrate(), as the init suddenly goes
+                // through several ticks.
+                //
+                // Instead, use MissedTickBehavior::Skip:
+                //   Expected ticks: |     1     |     2     |     3     |     4     |     5     |     6     |
+                //   Actual ticks:   | work -----|          delay          | work ---| work -----| work -----|
+                interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
                 loop {
                     interval.tick().await;
                     engine.increment_epoch();
@@ -320,12 +335,62 @@ fn precompile_policies(
 }
 
 async fn create_sigstore_trustroot(config: &Config) -> Result<Arc<SigstoreTrustRoot>> {
+    // If user provided a trust config file, use it
+    if let Some(trust_config_path) = &config.sigstore_trust_config_path {
+        return build_sigstore_trust_root_from_config(trust_config_path);
+    }
+
+    // Otherwise, use default Sigstore TUF repository
     if !config.sigstore_cache_dir.exists() {
         fs::create_dir_all(&config.sigstore_cache_dir)
             .map_err(|e| anyhow!("Cannot create directory to cache sigstore data: {}", e))?;
     }
 
     let trust_root = SigstoreTrustRoot::new(Some(config.sigstore_cache_dir.as_path())).await?;
+
+    Ok(Arc::new(trust_root))
+}
+
+/// Build a Sigstore trust root from a user-provided ClientTrustConfig JSON file.
+///
+/// # Security Note
+/// This function uses `from_trusted_root_json_unchecked` which does not perform
+/// cryptographic validation of the trust root. The caller must ensure that the
+/// source ConfigMap is properly protected with RBAC to prevent unauthorized
+/// modifications. Users with write access to this ConfigMap can influence
+/// policy signature verification.
+fn build_sigstore_trust_root_from_config(pki_file: &PathBuf) -> Result<Arc<SigstoreTrustRoot>> {
+    debug!(
+        "Using user specified Sigstore trust root location: {}",
+        pki_file.display()
+    );
+    let json_bytes = fs::read(pki_file).map_err(|e| {
+        anyhow!(
+            "could not read Sigstore trust config file {}: {:?}",
+            pki_file.display(),
+            e
+        )
+    })?;
+
+    let client_trust_config: ClientTrustConfig = serde_json::from_slice(json_bytes.as_slice())
+        .map_err(|e| {
+            anyhow!(
+                "could not parse Sigstore trust config file {}: {:?}",
+                pki_file.display(),
+                e
+            )
+        })?;
+
+    let trust_root = client_trust_config.trusted_root.ok_or_else(|| {
+        anyhow!(
+            "Sigstore trust config file {} missing trusted_root field",
+            pki_file.display()
+        )
+    })?;
+
+    let trust_root_bytes = serde_json::to_vec(&trust_root)?;
+    let trust_root =
+        SigstoreTrustRoot::from_trusted_root_json_unchecked(trust_root_bytes.as_slice())?;
 
     Ok(Arc::new(trust_root))
 }

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -72,6 +73,7 @@ type Configuration struct {
 	ClientCAConfigMapName                              string
 	FeatureGateAdmissionWebhookMatchConditions         bool
 	WebhookServiceName                                 string
+	ImagePullSecrets                                   []corev1.LocalObjectReference
 }
 
 func init() {
@@ -93,6 +95,7 @@ func main() {
 	var enableOtelSidecar bool
 	var openTelemetryClientCertificateSecret string
 	var openTelemetryCertificateSecret string
+	var imagePullSecretsFlag string
 
 	flag.StringVar(&mgrOpts.MetricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&mgrOpts.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -120,11 +123,16 @@ func main() {
 		false,
 		"Always accept admission reviews targeting the deployments-namespace.")
 	flag.StringVar(&config.ClientCAConfigMapName, "client-ca-configmap-name", "", "The name of the ConfigMap containing the client CA certificate. If provided, mTLS will be enabled.")
+	flag.StringVar(&imagePullSecretsFlag,
+		"image-pull-secrets",
+		"",
+		"Comma-separated list of Secret names to use as imagePullSecrets on every policy-server Deployment. The secrets must exist in the deployments namespace.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 	mgrOpts.EnableMutualTLS = config.ClientCAConfigMapName != ""
+	config.ImagePullSecrets = parseImagePullSecrets(imagePullSecretsFlag)
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	if enableMetrics {
@@ -290,6 +298,7 @@ func setupReconcilers(mgr ctrl.Manager,
 		AlwaysAcceptAdmissionReviewsInDeploymentsNamespace: config.AlwaysAcceptAdmissionReviewsOnDeploymentsNamespace,
 		TelemetryConfiguration:                             otelConfiguration,
 		ClientCAConfigMapName:                              config.ClientCAConfigMapName,
+		ImagePullSecrets:                                   config.ImagePullSecrets,
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create PolicyServer controller"), err)
 	}
@@ -364,4 +373,21 @@ func setupWebhooks(mgr ctrl.Manager, deploymentsNamespace string) error {
 		return errors.Join(errors.New("unable to create webhook for cluster admission policies groups"), err)
 	}
 	return nil
+}
+
+// parseImagePullSecrets converts a comma-separated list of secret names into a
+// slice of LocalObjectReferences. Empty names are ignored. An empty or blank
+// input string returns nil.
+func parseImagePullSecrets(s string) []corev1.LocalObjectReference {
+	if s == "" {
+		return nil
+	}
+	var refs []corev1.LocalObjectReference
+	for _, name := range strings.Split(s, ",") {
+		name = strings.TrimSpace(name)
+		if name != "" {
+			refs = append(refs, corev1.LocalObjectReference{Name: name})
+		}
+	}
+	return refs
 }

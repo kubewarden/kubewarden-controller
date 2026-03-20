@@ -1,0 +1,25 @@
+suite: alwaysAcceptAdmissionReviewsOnDeploymentsNamespace flag
+templates:
+  - deployment.yaml
+tests:
+  - it: "should include the flag when alwaysAcceptAdmissionReviewsOnDeploymentsNamespace is true (default)"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--always-accept-admission-reviews-on-deployments-namespace"
+
+  - it: "should include the flag when alwaysAcceptAdmissionReviewsOnDeploymentsNamespace is explicitly true"
+    set:
+      alwaysAcceptAdmissionReviewsOnDeploymentsNamespace: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--always-accept-admission-reviews-on-deployments-namespace"
+
+  - it: "should not include the flag when alwaysAcceptAdmissionReviewsOnDeploymentsNamespace is false"
+    set:
+      alwaysAcceptAdmissionReviewsOnDeploymentsNamespace: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: "--always-accept-admission-reviews-on-deployments-namespace"

@@ -1,5 +1,6 @@
-use kube::api::ObjectList;
 use std::collections::{BTreeMap, BTreeSet};
+
+use kube::api::ObjectList;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
@@ -48,6 +49,7 @@ fn get_all_resources_by_type(
         kind: resource_type.kind.to_owned(),
         label_selector: None,
         field_selector: None,
+        field_masks: None,
     };
 
     let response = make_request_via_callback_channel(req_type, callback_channel)?;
@@ -71,7 +73,7 @@ pub(crate) fn have_allowed_resources_changed_since_instant(
 }
 
 /// Check if the "list all resources" result changed since the given instant
-/// Note: this function doesn't take label_selector and field_selector into account because
+/// Note: this function doesn't take label_selector, field_selector and field_masks into account because
 /// it's used only by gatekeeper policies, which don't use these selectors.
 fn has_resource_changed_since(
     callback_channel: &mpsc::Sender<CallbackRequest>,
@@ -83,6 +85,7 @@ fn has_resource_changed_since(
         kind: resource_type.kind.to_owned(),
         label_selector: None,
         field_selector: None,
+        field_masks: None,
         since,
     };
 
@@ -121,7 +124,7 @@ fn make_request_via_callback_channel(
     request_type: CallbackRequestType,
     callback_channel: &mpsc::Sender<CallbackRequest>,
 ) -> Result<CallbackResponse> {
-    let (tx, rx) = oneshot::channel::<std::result::Result<CallbackResponse, wasmtime::Error>>();
+    let (tx, rx) = oneshot::channel::<anyhow::Result<CallbackResponse>>();
     let req = CallbackRequest {
         request: request_type,
         response_channel: tx,
@@ -196,6 +199,7 @@ pub(crate) mod tests {
                     kind,
                     label_selector,
                     field_selector,
+                    field_masks: _,
                 } => {
                     assert_eq!(api_version, expected_resource.api_version);
                     assert_eq!(kind, expected_resource.kind);
@@ -316,6 +320,7 @@ pub(crate) mod tests {
                     label_selector,
                     field_selector,
                     since: _,
+                    field_masks: _,
                 } => {
                     let resource = ContextAwareResource {
                         api_version: api_version.clone(),

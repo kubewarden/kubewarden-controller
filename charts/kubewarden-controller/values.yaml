@@ -145,6 +145,12 @@ preDeleteHook:
     runAsNonRoot: true
     seccompProfile:
       type: RuntimeDefault
+# If true, the controller will always accept admission reviews in the
+# deployment namespace. It is recommended to keep this value true unless you
+# have a specific reason to disable it. This is a safety flag to avoid policy
+# evaluations that could interfere with the Kubewarden stack running in the
+# admission controller namespace.
+alwaysAcceptAdmissionReviewsOnDeploymentsNamespace: true
 # Verbosity of logging. Can be one of 'debug', 'info', 'error'.
 logLevel: info
 # open-telemetry options
@@ -213,14 +219,14 @@ image:
   # controller image to be used
   repository: "kubewarden/kubewarden-controller"
   # image tag
-  tag: v1.32.1
+  tag: v1.33.1
   pullPolicy: IfNotPresent
 preDeleteJob:
   image:
     # The registry is defined in the global.cattle.systemDefaultRegistry value
     # kuberlr-kubectl image to be used in the pre-delete helm hook.
     repository: "rancher/kuberlr-kubectl"
-    tag: v7.0.0
+    tag: v8.0.0
 # kubewarden-controller deployment settings:
 podAnnotations: {}
 nodeSelector: {}
@@ -276,13 +282,13 @@ auditScanner:
   # - view: Allows read-only access to most objects in a namespace.
   #   Does not allow viewing secrets, roles or role bindings.
   # - audit-scanner-cluster-role: Allows read-write to Kubewarden resources
-  #   and PolicyReports
+  #   and Reports
   serviceAccountName: audit-scanner
   image:
     # The registry is defined in the common.cattle.systemDefaultRegistry value
     # kubectl image to be used in the pre-delete helm hook
     repository: "kubewarden/audit-scanner"
-    tag: v1.32.1
+    tag: v1.33.1
     pullPolicy: IfNotPresent
   cronJob:
     schedule: "*/60 * * * *" # every 60 minutes
@@ -292,18 +298,14 @@ auditScanner:
   # Audit scanner allow users to use Kubernetes policy working group
   # PolicyReports CRDs or OpenReports CRDs to store the results of the
   # audits. Therefore, user can choose between: openreports or policyreport.
-  # If not defined, the audit scanner default value is used. Which is
-  # "policyreport"
+  # If not defined, the audit scanner default value is used.
   #
   # The CRDs used to store the audit scanner results must be installed in the
   # cluster. You can install both of them enabling the right flags in the
   # kubewarden-crds installation. If you want to use the PolicyReports CRDs,
   # enable the installPolicyReportCRDs flag. If you want to use the
   # OpenReports CRDs, enable the installOpenReportCRDs flag.
-  #
-  # Rancher users must use "policyreport" as the reportCRDsKind, as Rancher
-  # UI does not support the OpenReports CRDs yet.
-  reportCRDsKind: "policyreport"
+  reportCRDsKind: "openreports"
   # Additional namespaces that the audit scanner will not scan:
   skipAdditionalNamespaces: []
   # level of logs. One of trace, debug, info, warn, error, fatal
