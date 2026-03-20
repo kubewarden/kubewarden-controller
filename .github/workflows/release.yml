@@ -5,7 +5,8 @@ on:
       - "v*"
 
 # Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   version-check:
@@ -14,11 +15,15 @@ jobs:
     steps:
       - name: Download source code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Check cargo file version
+        env:
+          GIT_REF_NAME: ${{ github.ref_name }}
         run: |
           CARGO_VERSION=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' crates/kwctl/Cargo.toml)
           POLICY_SERVER_VERSION=$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' crates/policy-server/Cargo.toml)
-          TAG_VERSION=$(echo ${{ github.ref_name }} | sed 's/v//')
+          TAG_VERSION="${GIT_REF_NAME#v}"
 
           if [ "$CARGO_VERSION" != "$TAG_VERSION" ];then
               echo "::error title=Invalid Cargo.toml version::crates/kwctl/Cargo.toml version does not match the tag version"
@@ -74,6 +79,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Build, sign, and upload digest
         uses: kubewarden/github-actions/container-build@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
         with:
@@ -146,8 +153,10 @@ jobs:
     steps:
       - name: Retrieve tag name
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GIT_REF_NAME: ${{ github.ref_name }}
         run: |
-          echo TAG_NAME=$(echo ${{ github.ref_name }}) >> $GITHUB_ENV
+          echo TAG_NAME=$(echo "$GIT_REF_NAME") >> $GITHUB_ENV
       - name: Get latest release tag
         id: get_last_release_tag
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
@@ -280,22 +289,23 @@ jobs:
       - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: generate-token
         with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.APP_ID }} # zizmor: ignore[secrets-outside-env]
+          private-key: ${{ secrets.APP_PRIVATE_KEY }} # zizmor: ignore[secrets-outside-env]
           owner: ${{ github.repository_owner }}
           repositories: |
             helm-charts
       - name: Trigger chart update
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          SOURCE_REPO: ${{ github.repository }}
+          GIT_REF_NAME: ${{ github.ref_name }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          echo '{
-            "event_type": "release-adm-controller",
-            "client_payload": {
-              "source_repo": "${{ github.repository }}",
-              "tag": "${{ github.ref_name }}"
-            }
-          }' > payload.json
-          gh api repos/${{ github.repository_owner }}/helm-charts/dispatches \
+          jq -n \
+            --arg source_repo "$SOURCE_REPO" \
+            --arg tag "$GIT_REF_NAME" \
+            '{"event_type":"release-adm-controller","client_payload":{"source_repo":$source_repo,"tag":$tag}}' \
+            > payload.json
+          gh api "repos/$REPO_OWNER/helm-charts/dispatches" \
             -X POST \
             --input payload.json

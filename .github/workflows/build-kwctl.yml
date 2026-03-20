@@ -36,12 +36,15 @@ jobs:
   changes:
     name: Detect kwctl changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       kwctl: ${{ steps.changed-files.outputs.kwctl }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Detect kwctl-related file changes
         id: changed-files
         run: |
@@ -91,6 +94,8 @@ jobs:
 
       - name: checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Install cross-rs
         run: |
@@ -194,6 +199,8 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
         if: ${{ !inputs.build_only }}
@@ -281,6 +288,8 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
         if: ${{ !inputs.build_only }}

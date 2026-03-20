@@ -9,9 +9,13 @@ jobs:
   update-dependencies:
     name: Update Go version, Helm charts dependencies and Hauler manifest
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@4b17f4ea784de29f71f85f9bc4955402ba1ae53c # v2.100.0
@@ -24,14 +28,13 @@ jobs:
       - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: generate-token
         with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.APP_ID }} # zizmor: ignore[secrets-outside-env]
+          private-key: ${{ secrets.APP_PRIVATE_KEY }} # zizmor: ignore[secrets-outside-env]
 
       - name: Update all dependencies
         env:
           UPDATECLI_GITHUB_OWNER: ${{ github.repository_owner }}
-          UPDATECLI_GITHUB_APP_CLIENT_ID: ${{ secrets.APP_ID }}
-          UPDATECLI_GITHUB_APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-          UPDATECLI_GITHUB_APP_INSTALLATION_ID: "${{ secrets.APP_INSTALLATION_ID }}"
+          UPDATECLI_GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          UPDATECLI_GITHUB_APP_INSTALLATION_ID: "${{ secrets.APP_INSTALLATION_ID }}" # zizmor: ignore[secrets-outside-env]
         run: |-
           updatecli compose apply --file ./updatecli/update-deps.yaml

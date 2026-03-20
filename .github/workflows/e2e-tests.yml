@@ -72,6 +72,8 @@ jobs:
   e2e:
     # x86: ubuntu-latest, arm64: ubuntu-24.04-arm
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -87,6 +89,8 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         if: ${{ matrix.version == 'local' }}
+        with:
+          persist-credentials: false
       - run: helm repo add kubewarden https://charts.kubewarden.io
         if: ${{ matrix.version != 'local' || matrix.mode == 'upgrade' }}
 
@@ -95,22 +99,26 @@ jobs:
           repository: ${{ github.repository_owner }}/kubewarden-end-to-end-tests
           path: e2e-tests
           submodules: "true"
+          persist-credentials: false
 
       - name: "Install kwctl"
-        uses: kubewarden/github-actions/kwctl-installer@main
+        uses: kubewarden/github-actions/kwctl-installer@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
         with:
           KWCTL_VERSION: latest
 
       - run: sudo npm install -g bats
 
       - name: "Create k3d cluster"
-        run: |
-          wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ env.K3D_VERSION }} sudo --preserve-env=TAG bash
-          # Use k3d as placehoholder for default (empty) k3s version
-          [[ "${{ matrix.k3s }}" != "k3d" ]] && export K3S=${{ matrix.k3s }}
-          make --directory e2e-tests cluster DOCKERHUB_USERNAME="${{ secrets.DOCKERHUB_USERNAME }}" DOCKERHUB_PASSWORD="${{ secrets.DOCKERHUB_PASSWORD }}"
         env:
           CLUSTER_NAME: ${{ env.K3D_CLUSTER_NAME }}
+          K3S_MATRIX: ${{ matrix.k3s }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }} # zizmor: ignore[secrets-outside-env]
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }} # zizmor: ignore[secrets-outside-env]
+        run: |
+          wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$K3D_VERSION sudo --preserve-env=TAG bash
+          # Use k3d as placeholder for default (empty) k3s version
+          [[ "$K3S_MATRIX" != "k3d" ]] && export K3S="$K3S_MATRIX"
+          make --directory e2e-tests cluster DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME" DOCKERHUB_PASSWORD="$DOCKERHUB_PASSWORD"
 
       - name: Install previous kubewarden
         if: ${{ matrix.mode == 'upgrade' }}
@@ -122,28 +130,30 @@ jobs:
 
       - name: Install kubewarden and run tests
         working-directory: ./e2e-tests
-        run: |
-          if [[ "${{ matrix.version }}" == 'local' ]]; then
-            export CHARTS_LOCATION=../charts
-            # Chart images are updated during release, use latest for nightly jobs
-            [[ "${{ github.event_name }}" == 'pull_request' ]] && export LATEST=true
-          fi
-
-          # mTLS should have been enabled during installation
-          make ${{ matrix.mode }} # MTLS="{{ matrix.mode == 'upgrade' && false || env.MTLS }}" # TODO: Uncomment after prev supports mTLS (kw >= 1.24-alpha)
-          ./scripts/helmer.sh debug
-
-          # Run tests
-          make tests audit-scanner-installation.bats
-          make uninstall
         env:
           CLUSTER_NAME: ${{ env.K3D_CLUSTER_NAME }}
           VERSION: ${{ matrix.version }}
+          MATRIX_MODE: ${{ matrix.mode }}
+          EVENT_NAME: ${{ github.event_name }}
           LATEST: ${{ inputs.LATEST }}
           DEFAULTS_ARGS: ${{ inputs.DEFAULTS_ARGS }}
           CONTROLLER_ARGS: ${{ inputs.CONTROLLER_ARGS }}
           # Override OTEL operator version by github variable
           OTEL_OPERATOR: ${{ vars.OTEL_OPERATOR }}
+        run: |
+          if [[ "$VERSION" == 'local' ]]; then
+            export CHARTS_LOCATION=../charts
+            # Chart images are updated during release, use latest for nightly jobs
+            [[ "$EVENT_NAME" == 'pull_request' ]] && export LATEST=true
+          fi
+
+          # mTLS should have been enabled during installation
+          make $MATRIX_MODE # MTLS="{{ matrix.mode == 'upgrade' && false || env.MTLS }}" # TODO: Uncomment after prev supports mTLS (kw >= 1.24-alpha)
+          ./scripts/helmer.sh debug
+
+          # Run tests
+          make tests audit-scanner-installation.bats
+          make uninstall
 
       - name: Clean Up
         if: always()
