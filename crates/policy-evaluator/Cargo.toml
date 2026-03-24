@@ -14,7 +14,7 @@ version = "0.31.0"
 anyhow = { workspace = true }
 base64 = { workspace = true }
 burrego = { path = "../burrego" }
-cached = { version = "0.58", features = ["async_tokio_rt_multi_thread"] }
+cached = { version = "0.59", features = ["async_tokio_rt_multi_thread"] }
 chrono = { version = "0.4", default-features = false }
 dns-lookup = "3.0"
 email_address = { version = "0.2", features = ["serde"] }
