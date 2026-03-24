@@ -1,19 +1,19 @@
 categories:
-  - title: '⚠️  Breaking changes'
+  - title: "⚠️  Breaking changes"
     labels:
-      - 'kind/major'
-      - 'kind/breaking-change'
-  - title: '🚀 Features'
+      - "kind/major"
+      - "kind/breaking-change"
+  - title: "🚀 Features"
     labels:
-      - 'kind/enhancement'
-      - 'kind/feature'
-  - title: '🐛 Bug Fixes'
+      - "kind/enhancement"
+      - "kind/feature"
+  - title: "🐛 Bug Fixes"
     labels:
-      - 'kind/bug'
-  - title: '🧰 Maintenance'
+      - "kind/bug"
+  - title: "🧰 Maintenance"
     labels:
-      - 'kind/chore'
-      - 'area/dependencies'
+      - "kind/chore"
+      - "area/dependencies"
 
 exclude-labels:
   - duplicate
@@ -23,44 +23,51 @@ exclude-labels:
   - kind/question
   - release/skip-changelog
 
-change-template: '- $TITLE (#$NUMBER)'
+change-template: "- $TITLE (#$NUMBER)"
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
-name-template: 'v$RESOLVED_VERSION'
+name-template: "v$RESOLVED_VERSION"
 template: |
   $CHANGES
 
 autolabeler:
-    # Tag any PR with "!" in the subject as major update. In other words, breaking change
-  - label: 'kind/breaking-change'
-    title: '/.*!:.*/'
-  - label: 'area/dependencies'
-    title: 'chore(deps)'
-  - label: 'area/dependencies'
-    title: 'fix(deps)'
-  - label: 'area/dependencies'
-    title: 'build(deps)'
-  - label: 'kind/feature'
-    title: 'feat'
-  - label: 'kind/bug'
-    title: 'fix'
-  - label: 'kind/chore'
-    title: 'chore'
+  # Tag any PR with "!" in the subject as major update. In other words, breaking change
+  - label: "kind/breaking-change"
+    title:
+      - "/.*!:.*/"
+  - label: "area/dependencies"
+    title:
+      - "chore(deps)"
+  - label: "area/dependencies"
+    title:
+      - "fix(deps)"
+  - label: "area/dependencies"
+    title:
+      - "build(deps)"
+  - label: "kind/feature"
+    title:
+      - "feat"
+  - label: "kind/bug"
+    title:
+      - "fix"
+  - label: "kind/chore"
+    title:
+      - "chore"
 
 version-resolver:
   major:
     labels:
-      - 'kind/major'
-      - 'kind/breaking-change'
+      - "kind/major"
+      - "kind/breaking-change"
   minor:
     labels:
-      - 'kind/minor'
-      - 'kind/feature'
-      - 'kind/enhancement'
+      - "kind/minor"
+      - "kind/feature"
+      - "kind/enhancement"
   patch:
     labels:
-      - 'kind/patch'
-      - 'kind/fix'
-      - 'kind/bug'
-      - 'kind/chore'
-      - 'area/dependencies'
+      - "kind/patch"
+      - "kind/fix"
+      - "kind/bug"
+      - "kind/chore"
+      - "area/dependencies"
   default: patch
