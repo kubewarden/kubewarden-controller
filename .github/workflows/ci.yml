@@ -19,8 +19,8 @@ on:
         type: boolean
         default: false
 
-# Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   # Detect which files changed to run appropriate checks
@@ -35,11 +35,20 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Detect changed files
         id: changed-files
+        env:
+          RUN_ALL: ${{ inputs.run_all }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+          EVENT_ACTION: ${{ github.event.action }}
+          EVENT_LABEL_NAME: ${{ github.event.label.name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVENT_BEFORE: ${{ github.event.before }}
         run: |
           # If run_all input is true (from workflow_call or workflow_dispatch), run everything
-          if [ "${{ inputs.run_all }}" = "true" ]; then
+          if [ "$RUN_ALL" = "true" ]; then
             echo "run_all=true, running all checks"
             echo "go=true" >> $GITHUB_OUTPUT
             echo "rust=true" >> $GITHUB_OUTPUT
@@ -48,8 +57,8 @@ jobs:
           fi
 
           # Check for CI trigger labels on PRs
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            LABELS="$PR_LABELS"
             echo "PR Labels: $LABELS"
             
             if echo "$LABELS" | grep -q "ci-full"; then
@@ -71,8 +80,8 @@ jobs:
             fi
             
             # If triggered by label event and we found a matching label, skip path detection
-            if [ "${{ github.event.action }}" = "labeled" ]; then
-              LABEL_NAME='${{ github.event.label.name }}'
+            if [ "$EVENT_ACTION" = "labeled" ]; then
+              LABEL_NAME="$EVENT_LABEL_NAME"
               if [ "$LABEL_NAME" = "ci-full" ] || [ "$LABEL_NAME" = "ci-go" ] || [ "$LABEL_NAME" = "ci-rust" ]; then
                 echo "Triggered by label event, skipping path detection"
                 exit 0
@@ -81,11 +90,11 @@ jobs:
           fi
 
           # Determine base ref for comparison
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_REF="${{ github.event.pull_request.base.sha }}"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE_REF="$PR_BASE_SHA"
           else
             # For push events, compare with previous commit
-            BASE_REF="${{ github.event.before }}"
+            BASE_REF="$EVENT_BEFORE"
             # If first push to branch, compare with parent
             if [ "$BASE_REF" = "0000000000000000000000000000000000000000" ]; then
               BASE_REF="HEAD^"
@@ -124,6 +133,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: "1.26"
@@ -132,7 +143,7 @@ jobs:
       - name: Upload Go test coverage to Codecov
         uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }} # zizmor: ignore[secrets-outside-env]
         with:
           name: go-tests
           files: coverage/cover.out
@@ -146,6 +157,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: "1.26"
@@ -159,6 +172,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: "1.26"
@@ -179,6 +194,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: List crate folders
         id: set-matrix
@@ -195,9 +212,13 @@ jobs:
       matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: "Run cargo fmt"
+        env:
+          CRATE: ${{ matrix.crate }}
         run: |
-          make -C crates/${{ matrix.crate }} fmt
+          make -C crates/$CRATE fmt
 
   clippy-rust-per-crate:
     needs: calculate-crates-matrix
@@ -207,9 +228,13 @@ jobs:
       matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: "Run cargo clippy"
+        env:
+          CRATE: ${{ matrix.crate }}
         run: |
-          make -C crates/${{ matrix.crate }} lint
+          make -C crates/$CRATE lint
 
   unit-tests-rust-per-crate:
     needs: calculate-crates-matrix
@@ -219,9 +244,13 @@ jobs:
       matrix: ${{fromJson(needs.calculate-crates-matrix.outputs.matrix)}}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: "Run cargo test"
+        env:
+          CRATE: ${{ matrix.crate }}
         run: |
-          make -C crates/${{ matrix.crate }} unit-tests
+          make -C crates/$CRATE unit-tests
 
   integration-tests-burrego:
     needs: [changes, calculate-crates-matrix]
@@ -230,6 +259,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Install opa
         uses: kubewarden/github-actions/opa-installer@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
         with:
@@ -246,6 +277,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Run e2e tests
         run: make -C crates/kwctl e2e-tests
 
@@ -256,6 +289,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Prepare sigstore environment for testing
         uses: ./.github/actions/setup-sigstore-env
       - name: Run kwctl Sigstore E2E tests
@@ -268,6 +303,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Prepare sigstore environment for testing
         uses: ./.github/actions/setup-sigstore-env
       - name: Run policy-server Sigstore E2E tests
@@ -280,6 +317,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Run integration tests
         run: make -C crates/policy-server integration-tests
 
@@ -290,6 +329,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Build kwctl
         run: make -C crates/kwctl build-release
       - name: Setup kwctl
@@ -302,13 +343,15 @@ jobs:
         run: sudo apt install -y bats
       - name: Run integration tests
         run: make -C crates/policy-evaluator integration-tests
-        
+
   coverage-rust:
     name: coverage-rust
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@06203676c62f0d3c765be3f2fcfbebbcb02d09f5 # v2.69.6
         with:
@@ -319,7 +362,7 @@ jobs:
       - name: Upload Rust test coverage to Codecov
         uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }} # zizmor: ignore[secrets-outside-env]
         with:
           name: rust-tests
           files: coverage/lcov.info
@@ -333,6 +376,7 @@ jobs:
     permissions:
       id-token: write
       attestations: write
+      contents: read
     uses: ./.github/workflows/build-kwctl.yml
     with:
       force_build: true
@@ -344,6 +388,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - run: shellcheck $(find scripts/ -name '*.sh')
 
   spelling:
@@ -352,14 +398,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Check spelling with typos
-        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0   
-        
+        uses: crate-ci/typos@631208b7aac2daa8b707f55e7331f9112b0e062d # v1.44.0
+
   charts:
     name: Helm unittest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Install helm
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
       # Disable plugin verification until the following issue is addressed https://github.com/helm-unittest/helm-unittest/issues/777
@@ -377,6 +427,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Run validation script
         run: ./scripts/validate-hauler-manifest.sh
 
@@ -388,6 +440,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - run: |
           make -C crates/kwctl build-docs
@@ -406,7 +460,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      
+        with:
+          persist-credentials: false
+
       - name: enable git long paths on Windows
         if: matrix.os == 'windows-latest'
         run: git config --global core.longpaths true
@@ -435,7 +491,7 @@ jobs:
       - integration-tests-policy-evaluator
       - build-kwctl
       - shellcheck
-      - spelling 
+      - spelling
       - charts
       - validate-hauler-manifest
       - kwctl-docs

@@ -83,6 +83,7 @@ fmt-rust:
 .PHONY: lint
 lint: lint-go lint-rust
 
+
 .PHONY: advisories-rust
 advisories-rust:
 	cargo deny check advisories
@@ -176,11 +177,25 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-## Tool Binaries
-GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
-
 ## Tool Versions
 GOLANGCI_LINT_VERSION ?= v2.9.0
+ZIZMOR_VERSION ?= 1.23.1
+
+## Tool Binaries
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
+ZIZMOR_LINT = $(LOCALBIN)/zizmor-$(ZIZMOR_VERSION)
+
+.PHONY: zizmor
+zizmor: $(ZIZMOR_LINT) ## Run zizmor static analysis on GitHub Actions workflows
+	$(ZIZMOR_LINT) .github/
+$(ZIZMOR_LINT): $(LOCALBIN)
+	@[ -f $(ZIZMOR_LINT) ] || { \
+	set -e; \
+	echo "Installing zizmor@$(ZIZMOR_VERSION)" ;\
+	cargo install --locked --root $(shell pwd) zizmor@$(ZIZMOR_VERSION) ;\
+	mv $(LOCALBIN)/zizmor $(ZIZMOR_LINT) ;\
+	}
+
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
