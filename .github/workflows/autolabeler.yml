@@ -5,13 +5,10 @@ on:
     # Only following types are handled by the action, but one can default to all as well
     types: [opened, reopened, synchronize, edited]
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   autolabeler:
     permissions:
+      contents: read
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
