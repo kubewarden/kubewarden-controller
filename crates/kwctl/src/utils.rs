@@ -24,10 +24,23 @@ pub(crate) enum LookupError {
     IoError(#[from] std::io::Error),
 }
 
+/// Normalizes a `registry://` URI to include an explicit tag.
+/// If no tag is specified, defaults to `:latest`, making the URI consistent
+/// with how the local store paths are keyed.
+/// Non-registry URIs (e.g. `file://`, `http://`) are returned unchanged.
+pub(crate) fn normalize_uri(uri: &str) -> String {
+    if let Some(image) = uri.strip_prefix("registry://")
+        && let Ok(reference) = Reference::from_str(image)
+    {
+        return format!("registry://{}", reference.whole());
+    }
+    uri.to_string()
+}
+
 pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> std::result::Result<String, LookupError> {
     let uri_has_schema = Regex::new(r"^\w+://").unwrap();
     if uri_has_schema.is_match(uri_or_sha_prefix) {
-        return Ok(String::from(uri_or_sha_prefix));
+        return Ok(normalize_uri(uri_or_sha_prefix));
     }
 
     let path = PathBuf::from(uri_or_sha_prefix);
@@ -46,8 +59,9 @@ pub(crate) fn map_path_to_uri(uri_or_sha_prefix: &str) -> std::result::Result<St
 }
 
 pub(crate) fn get_uri(uri_or_sha_prefix: &String) -> std::result::Result<String, LookupError> {
-    map_path_to_uri(uri_or_sha_prefix).or_else(|_| {
-        Reference::from_str(uri_or_sha_prefix)
+    let normalized = normalize_uri(uri_or_sha_prefix);
+    map_path_to_uri(&normalized).or_else(|_| {
+        Reference::from_str(&normalized)
             .map(|oci_reference| format!("registry://{}", oci_reference.whole()))
             .map_err(|_| LookupError::PolicyMissing(uri_or_sha_prefix.to_string()))
     })
@@ -103,7 +117,28 @@ pub(crate) fn find_file_matching_file(possible_names: &[&str]) -> Option<PathBuf
 mod tests {
     use std::collections::HashMap;
 
+    use rstest::rstest;
+
     use super::*;
+
+    #[rstest]
+    #[case(
+        "registry://ghcr.io/kubewarden/policies/pod-privileged",
+        "registry://ghcr.io/kubewarden/policies/pod-privileged:latest"
+    )]
+    #[case(
+        "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.2.2",
+        "registry://ghcr.io/kubewarden/policies/pod-privileged:v0.2.2"
+    )]
+    #[case(
+        "registry://ghcr.io/kubewarden/policies/pod-privileged@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registry://ghcr.io/kubewarden/policies/pod-privileged@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    )]
+    #[case("file:///some/path/policy.wasm", "file:///some/path/policy.wasm")]
+    #[case("https://example.com/policy.wasm", "https://example.com/policy.wasm")]
+    fn test_normalize_uri(#[case] input: &str, #[case] expected: &str) {
+        assert_eq!(normalize_uri(input), expected);
+    }
 
     #[test]
     fn test_map_path_to_uri_remote_scheme() -> Result<()> {
