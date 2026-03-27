@@ -311,35 +311,27 @@ func (r *PolicyServerReconciler) enqueueClusterAdmissionPolicyGroup(_ context.Co
 	}
 }
 
-// getPolicies returns all admission policies, cluster admission policy,
-// admission policies groups and cluster admission policy groups bound to the
+// getPolicies returns all admission policies, cluster admission policies,
+// admission policy groups and cluster admission policy groups bound to the
 // given policyServer.
 func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *policiesv1.PolicyServer) ([]policiesv1.Policy, error) {
 	var clusterAdmissionPolicies policiesv1.ClusterAdmissionPolicyList
-	err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
-	if err != nil && apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
-		return nil, err
+	if err := r.Client.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return nil, fmt.Errorf("failed obtaining ClusterAdmissionPolicies: %w", err)
 	}
 	var admissionPolicies policiesv1.AdmissionPolicyList
-	err = r.Client.List(ctx, &admissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
-	if err != nil && apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed obtaining AdmissionPolicies: %w", err)
-		return nil, err
+	if err := r.Client.List(ctx, &admissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return nil, fmt.Errorf("failed obtaining AdmissionPolicies: %w", err)
 	}
 
 	var admissionPolicyGroupList policiesv1.AdmissionPolicyGroupList
-	err = r.Client.List(ctx, &admissionPolicyGroupList, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
-	if err != nil && apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed obtaining AdmissionPolicyGroups: %w", err)
-		return nil, err
+	if err := r.Client.List(ctx, &admissionPolicyGroupList, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return nil, fmt.Errorf("failed obtaining AdmissionPolicyGroups: %w", err)
 	}
 
 	var clusterAdmissionPolicyGroupList policiesv1.ClusterAdmissionPolicyGroupList
-	err = r.Client.List(ctx, &clusterAdmissionPolicyGroupList, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name})
-	if err != nil && apierrors.IsNotFound(err) {
-		err = fmt.Errorf("failed obtaining ClusterAdmissionPolicyGroups: %w", err)
-		return nil, err
+	if err := r.Client.List(ctx, &clusterAdmissionPolicyGroupList, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return nil, fmt.Errorf("failed obtaining ClusterAdmissionPolicyGroups: %w", err)
 	}
 
 	policies := make([]policiesv1.Policy, 0)
