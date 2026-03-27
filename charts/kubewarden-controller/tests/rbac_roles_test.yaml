@@ -1,0 +1,84 @@
+suite: controller RBAC roles
+templates:
+  - controller-rbac-roles.yaml
+release:
+  namespace: "kubewarden"
+tests:
+  - it: "ClusterRole should have Helm labels"
+    documentSelector:
+      path: kind
+      value: ClusterRole
+    asserts:
+      - isNotNullOrEmpty:
+          path: metadata.labels
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: controller
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: kubewarden
+      - equal:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+          value: Helm
+
+  - it: "Role should have Helm labels"
+    documentSelector:
+      path: kind
+      value: Role
+    asserts:
+      - isNotNullOrEmpty:
+          path: metadata.labels
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: controller
+      - equal:
+          path: metadata.labels["app.kubernetes.io/part-of"]
+          value: kubewarden
+
+  - it: "ClusterRole should include additionalLabels when specified"
+    set:
+      additionalLabels:
+        custom-label: "test-value"
+    documentSelector:
+      path: kind
+      value: ClusterRole
+    asserts:
+      - equal:
+          path: metadata.labels["custom-label"]
+          value: "test-value"
+
+  - it: "Role should include additionalLabels when specified"
+    set:
+      additionalLabels:
+        custom-label: "test-value"
+    documentSelector:
+      path: kind
+      value: Role
+    asserts:
+      - equal:
+          path: metadata.labels["custom-label"]
+          value: "test-value"
+
+  - it: "ClusterRole should include additionalAnnotations when specified"
+    set:
+      additionalAnnotations:
+        custom-annotation: "test-annotation"
+    documentSelector:
+      path: kind
+      value: ClusterRole
+    asserts:
+      - equal:
+          path: metadata.annotations["custom-annotation"]
+          value: "test-annotation"
+
+  - it: "Role should include additionalAnnotations when specified"
+    set:
+      additionalAnnotations:
+        custom-annotation: "test-annotation"
+    documentSelector:
+      path: kind
+      value: Role
+    asserts:
+      - equal:
+          path: metadata.annotations["custom-annotation"]
+          value: "test-annotation"
