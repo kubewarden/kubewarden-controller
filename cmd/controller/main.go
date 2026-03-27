@@ -29,12 +29,12 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	k8spoliciesv1 "k8s.io/api/policy/v1"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	k8spoliciesv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -53,6 +53,14 @@ import (
 	"github.com/kubewarden/kubewarden-controller/internal/metrics"
 	//+kubebuilder:scaffold:imports
 )
+
+// Kubewarden controller required permissions
+//
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete,namespace="kubewarden"
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete,namespace="kubewarden"
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch,namespace="kubewarden"
+//+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
+//+kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews,verbs=create
 
 //nolint:gochecknoglobals // Following the kubebuilder pattern
 var (
@@ -223,7 +231,7 @@ func setupManager(mgrOpts ManagerOptions) (ctrl.Manager, error) {
 		clientCAName = filepath.Join("client-ca", constants.ClientCACert)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgrOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: mgrOpts.MetricsAddr,
@@ -268,7 +276,9 @@ func setupManager(mgrOpts ManagerOptions) (ctrl.Manager, error) {
 		WebhookServer: webhook.NewServer(webhook.Options{
 			ClientCAName: clientCAName,
 		}),
-	})
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOptions)
 	if err != nil {
 		return mgr, fmt.Errorf("failed to setup manager: %w", err)
 	}
