@@ -462,13 +462,30 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-
       - name: enable git long paths on Windows
         if: matrix.os == 'windows-latest'
         run: git config --global core.longpaths true
 
       - name: Run cargo check
         run: make -C crates/kwctl check
+
+  check-manifests:
+    name: Check if the controller-gen generated manifests are up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version: "1.26"
+          check-latest: true
+      - run: |
+          make manifests
+          if ! git diff --quiet -- charts/; then
+            echo "Changes detected in charts/. Please run 'make manifests' and commit the changes."
+            exit 1
+          fi
 
   # Rollup job for branch protection - single stable job name that depends on all checks
   ci-success:
@@ -496,6 +513,7 @@ jobs:
       - validate-hauler-manifest
       - kwctl-docs
       - check-kwctl-cross-platform
+      - check-manifests
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status
