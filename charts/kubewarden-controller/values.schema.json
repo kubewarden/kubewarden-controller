@@ -5,6 +5,9 @@
         "additionalAnnotations": {
             "type": "object"
         },
+        "additionalEnvironmentVariables": {
+            "type": "array"
+        },
         "additionalLabels": {
             "type": "object"
         },

@@ -230,6 +230,14 @@ preDeleteJob:
 # kubewarden-controller deployment settings:
 podAnnotations: {}
 nodeSelector: {}
+# additionalEnvironmentVariables is a list of additional environment variables
+# to inject into the controller container.
+# Each entry is a standard Kubernetes EnvVar object (name, value, valueFrom, …).
+# Example:
+#   additionalEnvironmentVariables:
+#     - name: MY_VAR
+#       value: "my-value"
+additionalEnvironmentVariables: []
 # Resource limits & requests
 # Ref: https://kubernetes.io/docs/user-guide/compute-resources/
 resources:

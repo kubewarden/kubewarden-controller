@@ -1,0 +1,42 @@
+suite: additionalEnvironmentVariables configuration
+templates:
+  - deployment.yaml
+tests:
+  - it: "should not add extra env vars when additionalEnvironmentVariables is empty (default)"
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.spec.containers[0].env
+
+  - it: "should inject a single env var with a plain value"
+    set:
+      additionalEnvironmentVariables:
+        - name: MY_VAR
+          value: "my-value"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: MY_VAR
+            value: "my-value"
+
+  - it: "should inject multiple env vars"
+    set:
+      additionalEnvironmentVariables:
+        - name: FIRST_VAR
+          value: "first"
+        - name: SECOND_VAR
+          value: "second"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: FIRST_VAR
+            value: "first"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: SECOND_VAR
+            value: "second"
