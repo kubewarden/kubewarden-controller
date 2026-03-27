@@ -226,7 +226,9 @@ func (r *policySubReconciler) isPolicyUniquelyReachable(ctx context.Context, pol
 	}
 
 	replicaSets := appsv1.ReplicaSetList{}
-	if err = r.List(ctx, &replicaSets, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
+	if err = r.List(ctx, &replicaSets,
+		client.InNamespace(policyServerDeployment.Namespace),
+		client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
 		return false
 	}
 	podTemplateHash := ""
@@ -240,7 +242,9 @@ func (r *policySubReconciler) isPolicyUniquelyReachable(ctx context.Context, pol
 		return false
 	}
 	pods := corev1.PodList{}
-	if err = r.List(ctx, &pods, client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
+	if err = r.List(ctx, &pods,
+		client.InNamespace(policyServerDeployment.Namespace),
+		client.MatchingLabels{constants.PolicyServerLabelKey: policyServerDeployment.Labels[constants.PolicyServerLabelKey]}); err != nil {
 		return false
 	}
 	if len(pods.Items) == 0 {
