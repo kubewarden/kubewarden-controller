@@ -4,7 +4,6 @@ You can now start defining admission policies by using the cluster-wide
 
 For more information check out https://docs.kubewarden.io.
 
-
 🚀 **Kubewarden is applying to become a CNCF incubation project!** 🚀  
 
 If you'd like to support us, we'd love to hear from you as one of our adopters. 
