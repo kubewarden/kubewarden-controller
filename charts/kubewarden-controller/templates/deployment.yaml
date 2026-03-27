@@ -108,6 +108,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- with .Values.additionalEnvironmentVariables }}
+        {{- toYaml . | nindent 10 }}
+        {{- end }}
 
         image: '{{ template "system_default_registry" . }}{{ .Values.image.repository }}:{{ .Values.image.tag }}'
         imagePullPolicy: {{ .Values.image.pullPolicy }}
