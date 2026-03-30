@@ -28,7 +28,7 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }} # zizmor: ignore[secrets-outside-env]
 
       - name: Install cargo-set-version
-        run: cargo install cargo-edit
+        run: cargo install --version 0.13.9 cargo-edit
 
       - name: Install Updatecli in the runner
         uses: updatecli/updatecli-action@2cc8e6d8e356d76b0280cdd03766c36596a0614e # v3.0.0
