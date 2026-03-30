@@ -46,6 +46,8 @@ NC='\033[0m'
 
 # ── Versions ──────────────────────────────────────────────────────────────────
 SCAFFOLDING_VERSION=v0.7.31
+SETUP_KIND_SHA256=a739e49ee8f98c8e966a1e6fddf38598acf09cf27ada2a0ebb3901fd366cecad
+SETUP_SCAFFOLDING_SHA256=8861da880cb8f4ddc22fb83e92975dd6744bd6cea8f1d4025183d740ddbb2222
 
 # ── Image references ──────────────────────────────────────────────────────────
 SOURCE_POLICY_IMAGE=ghcr.io/kubewarden/tests/pod-privileged:v0.2.5
@@ -122,8 +124,8 @@ function check_prerequisites() {
         echo "  kind:    https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
         echo "  kubectl: https://kubernetes.io/docs/tasks/tools/"
         echo "  docker:  https://docs.docker.com/get-docker/"
-        echo "  ko:      go install github.com/google/ko@latest"
-        echo "  yq:      go install github.com/mikefarah/yq/v4@latest"
+        echo "  ko:      go install github.com/ko-build/ko/cmd/ko@v0.18.1"
+        echo "  yq:      go install github.com/mikefarah/yq/v4@v4.52.5"
         echo "  cosign:  https://docs.sigstore.dev/cosign/system_config/installation/"
         echo "  skopeo:  https://github.com/containers/skopeo/blob/main/install.md"
         echo "  kwctl:   https://github.com/kubewarden/kwctl#installation"
@@ -147,6 +149,7 @@ function setup_kind_cluster() {
 
     curl -fLo /tmp/setup-kind.sh \
         "https://github.com/sigstore/scaffolding/releases/download/${SCAFFOLDING_VERSION}/setup-kind.sh"
+    echo "${SETUP_KIND_SHA256}  /tmp/setup-kind.sh" | sha256sum -c - || exit 1
     chmod u+x /tmp/setup-kind.sh
     /tmp/setup-kind.sh
 }
@@ -158,6 +161,7 @@ function install_sigstore_scaffolding() {
 
     curl -fLo /tmp/setup-scaffolding-from-release.sh \
         "https://github.com/sigstore/scaffolding/releases/download/${SCAFFOLDING_VERSION}/setup-scaffolding-from-release.sh"
+    echo "${SETUP_SCAFFOLDING_SHA256}  /tmp/setup-scaffolding-from-release.sh" | sha256sum -c - || exit 1
     chmod u+x /tmp/setup-scaffolding-from-release.sh
     /tmp/setup-scaffolding-from-release.sh
 }
