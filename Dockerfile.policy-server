@@ -1,4 +1,4 @@
-FROM alpine:3.23.3 AS builder
+FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS builder
 
 # Install build dependencies for Rust and C libraries
 RUN apk add --no-cache \
@@ -27,7 +27,7 @@ COPY ./Cargo.toml ./Cargo.lock ./
 COPY crates/ ./crates
 
 # Install cargo-auditable
-RUN cargo install cargo-auditable
+RUN cargo install --version 0.7.4 cargo-auditable
 
 # Enable static linking after cargo-audit is installed,
 # apparetnly it cannot be statically linked.
