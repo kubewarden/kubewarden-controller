@@ -89,7 +89,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
+      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
         if: ${{ !inputs.build_only }}
 
       - name: checkout code
@@ -146,7 +146,7 @@ jobs:
 
       - name: Install the syft command
         if: ${{ !inputs.build_only }}
-        uses: kubewarden/github-actions/syft-installer@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
+        uses: kubewarden/github-actions/syft-installer@7bc76e326b9c29582dd89eaf1b9efad1da3d3872 # v4.6.3
 
       - name: Create SBOM file
         if: ${{ !inputs.build_only }}
@@ -202,7 +202,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
+      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
         if: ${{ !inputs.build_only }}
 
       - run: rustup target add ${{ matrix.targetarch }}-apple-darwin
@@ -242,7 +242,7 @@ jobs:
 
       - name: Install the syft command
         if: ${{ !inputs.build_only }}
-        uses: kubewarden/github-actions/syft-installer@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
+        uses: kubewarden/github-actions/syft-installer@7bc76e326b9c29582dd89eaf1b9efad1da3d3872 # v4.6.3
         with:
           arch: darwin_amd64
 
@@ -291,7 +291,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
+      - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
         if: ${{ !inputs.build_only }}
 
       - name: enable git long paths on Windows
@@ -342,7 +342,7 @@ jobs:
 
       - name: Install the syft command
         if: ${{ !inputs.build_only }}
-        uses: kubewarden/github-actions/syft-installer@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
+        uses: kubewarden/github-actions/syft-installer@7bc76e326b9c29582dd89eaf1b9efad1da3d3872 # v4.6.3
         with:
           arch: windows_amd64
 
