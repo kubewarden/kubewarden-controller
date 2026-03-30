@@ -141,7 +141,7 @@ jobs:
           check-latest: true # Always check for the latest patch release
       - run: make test-go
       - name: Upload Go test coverage to Codecov
-        uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }} # zizmor: ignore[secrets-outside-env]
         with:
@@ -360,7 +360,7 @@ jobs:
         uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
       - run: cargo llvm-cov --ignore-run-fail --doctests --lcov --output-path coverage/rust/lcov.info
       - name: Upload Rust test coverage to Codecov
-        uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5.5.3
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }} # zizmor: ignore[secrets-outside-env]
         with:
