@@ -1,5 +1,7 @@
 FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS builder
 
+ARG TARGETARCH
+
 # Install build dependencies for Rust and C libraries
 RUN apk add --no-cache \
     curl \
@@ -7,16 +9,32 @@ RUN apk add --no-cache \
     musl-dev \
     pkgconfig
 
-# Detect architecture and set Rust target
-RUN case "$(uname -m)" in \
-    x86_64) echo "x86_64-unknown-linux-musl" > /tmp/rust_target ;; \
-    aarch64) echo "aarch64-unknown-linux-musl" > /tmp/rust_target ;; \
-    *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;; \
-    esac
+# Download rustup-init, verify checksum, and install Rust
+RUN <<EOF
+  case "${TARGETARCH}" in \
+    amd64)
+      RUST_TARGET="x86_64-unknown-linux-musl"
+      CHECKSUM="9cd3fda5fd293890e36ab271af6a786ee22084b5f6c2b83fd8323cec6f0992c1"
+      ;;
+    arm64)
+      RUST_TARGET="aarch64-unknown-linux-musl"
+      CHECKSUM="88761caacddb92cd79b0b1f939f3990ba1997d701a38b3e8dd6746a562f2a759"
+      ;;
+    *)
+      echo "Unsupported architecture: ${TARGETARCH}" && exit 1
+      ;;
+  esac
 
-# Install Rust with musl target
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
-    sh -s -- -y --default-toolchain stable --profile minimal --target $(cat /tmp/rust_target)
+  curl --proto '=https' --tlsv1.2 --output rustup-init -sSf \
+    "https://static.rust-lang.org/rustup/archive/1.29.0/${RUST_TARGET}/rustup-init"
+  echo "${CHECKSUM} *./rustup-init" | sha256sum -c - || exit 1
+
+  chmod +x ./rustup-init
+  ./rustup-init -y --default-toolchain stable --profile minimal --target "${RUST_TARGET}"
+  rm ./rustup-init
+
+  echo "${RUST_TARGET}" > /tmp/rust_target
+EOF
 
 ENV PATH=/root/.cargo/bin:$PATH
 
