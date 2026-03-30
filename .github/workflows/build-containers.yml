@@ -34,7 +34,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build, sign, and upload digest
-        uses: kubewarden/github-actions/container-build@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
+        uses: kubewarden/github-actions/container-build@ff49d7af0447a59fe9a58a82805713e1a25539f2 # v4.6.2
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
@@ -66,7 +66,7 @@ jobs:
         run: |
           echo TAG_NAME=$INPUT_VERSION >> $GITHUB_ENV
       - name: Merge multi-arch images
-        uses: kubewarden/github-actions/merge-multiarch@f301a7874dd642510fff54a89e4329881bf871ef # v4.6.0
+        uses: kubewarden/github-actions/merge-multiarch@ff49d7af0447a59fe9a58a82805713e1a25539f2 # v4.6.2
         with:
           component: ${{ matrix.component }}
           tag: ${{ env.TAG_NAME }}
