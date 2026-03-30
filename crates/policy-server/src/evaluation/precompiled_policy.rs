@@ -61,7 +61,7 @@ impl PrecompiledPolicy {
         Ok(Self {
             precompiled_module,
             execution_mode,
-            digest: format!("{digest:x}"),
+            digest: hex::encode(digest),
         })
     }
 }

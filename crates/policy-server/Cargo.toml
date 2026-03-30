@@ -19,6 +19,7 @@ clap = { workspace = true }
 clap-markdown = { workspace = true }
 daemonize = "0.5"
 futures = { workspace = true }
+hex = { workspace = true }
 itertools = { workspace = true }
 jemalloc_pprof = "0.8"
 k8s-openapi = { workspace = true }
@@ -67,11 +68,11 @@ tokio-stream = "0.1.18"
 
 [dev-dependencies]
 backon         = { version = "1.6", features = ["tokio-sleep"] }
-serial_test    = "3"
 http-body-util = "0.1.3"
 mockall        = "0.14"
 rcgen          = { version = "0.14", features = ["crypto"] }
 rstest         = { workspace = true }
+serial_test    = "3"
 tempfile       = { workspace = true }
 testcontainers = { version = "0.27", features = ["watchdog"] }
 tower          = { version = "0.5", features = ["util"] }

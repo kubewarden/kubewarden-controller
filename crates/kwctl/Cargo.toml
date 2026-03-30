@@ -15,6 +15,7 @@ clap_complete      = "4.5"
 color-print        = "0.3"
 directories        = "6.0.0"
 flate2             = "1.1"
+hex                = { workspace = true }
 humansize          = "2.1"
 indicatif          = "0.18"
 is-terminal        = "0.4.17"
