@@ -45,7 +45,7 @@ COPY ./Cargo.toml ./Cargo.lock ./
 COPY crates/ ./crates
 
 # Install cargo-auditable
-RUN cargo install --version 0.7.4 cargo-auditable
+RUN cargo install --locked --version 0.7.4 cargo-auditable
 
 # Enable static linking after cargo-audit is installed,
 # apparetnly it cannot be statically linked.
