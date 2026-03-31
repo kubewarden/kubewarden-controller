@@ -64,7 +64,9 @@ defaults:
     shell: bash
 
 env:
-  K3D_VERSION: # 'v5.6.3' - optionally pin version
+  K3D_VERSION: v5.8.3
+  K3D_CHECKSUM_AMD64: dbaa79a76ace7f4ca230a1ff41dc7d8a5036a8ad0309e9c54f9bf3836dbe853e
+  K3D_CHECKSUM_ARM64: 0b8110f2229631af7402fb828259330985918b08fefd38b7f1b788a1c8687216
   K3D_CLUSTER_NAME: ${{ github.repository_owner }}-${{ github.event.repository.name }}
   MTLS: ${{ github.event_name == 'pull_request' && 'true' || inputs.MTLS }}
 
@@ -112,10 +114,24 @@ jobs:
         env:
           CLUSTER_NAME: ${{ env.K3D_CLUSTER_NAME }}
           K3S_MATRIX: ${{ matrix.k3s }}
+          MATRIX_ARCH: ${{ matrix.arch }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }} # zizmor: ignore[secrets-outside-env]
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }} # zizmor: ignore[secrets-outside-env]
         run: |
-          wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$K3D_VERSION sudo --preserve-env=TAG bash
+          if [[ "$MATRIX_ARCH" == "arm64" ]]; then
+            K3D_BINARY="k3d-linux-arm64"
+            K3D_CHECKSUM="${K3D_CHECKSUM_ARM64}"
+          else
+            K3D_BINARY="k3d-linux-amd64"
+            K3D_CHECKSUM="${K3D_CHECKSUM_AMD64}"
+          fi
+
+          curl -sSfL -o /tmp/k3d "https://github.com/k3d-io/k3d/releases/download/${K3D_VERSION}/${K3D_BINARY}"
+          echo "${K3D_CHECKSUM}  /tmp/k3d" | sha256sum -c - || exit 1
+          mkdir -p "$HOME/.local/bin"
+          install /tmp/k3d "$HOME/.local/bin/k3d"
+          rm /tmp/k3d
+
           # Use k3d as placeholder for default (empty) k3s version
           [[ "$K3S_MATRIX" != "k3d" ]] && export K3S="$K3S_MATRIX"
           make --directory e2e-tests cluster DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME" DOCKERHUB_PASSWORD="$DOCKERHUB_PASSWORD"
