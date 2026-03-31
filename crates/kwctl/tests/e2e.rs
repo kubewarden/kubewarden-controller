@@ -1034,7 +1034,7 @@ fn test_admission_request_scaffold_without_k8s_connectivity() {
 fn calculate_file_checksum(path: &Path) -> Result<String> {
     let mut hasher = Sha256::new();
     hasher.update(std::fs::read(path)?);
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hex::encode(hasher.finalize()))
 }
 
 fn get_wasm_annotations(dir: &Path, oci_ref: &str) -> Result<BTreeMap<String, String>> {

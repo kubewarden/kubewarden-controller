@@ -734,7 +734,7 @@ mod tests {
         PrecompiledPolicy {
             precompiled_module: module.serialize().unwrap(),
             execution_mode: policy_evaluator::policy_evaluator::PolicyExecutionMode::OpaGatekeeper,
-            digest: format!("{digest:x}"),
+            digest: hex::encode(digest),
         }
     }
 

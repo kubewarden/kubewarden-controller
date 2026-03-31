@@ -19,6 +19,7 @@ chrono = { version = "0.4", default-features = false }
 dns-lookup = "3.0"
 email_address = { version = "0.2", features = ["serde"] }
 futures = { workspace = true }
+hex = { workspace = true }
 itertools = { workspace = true }
 json-patch = "4.1"
 k8s-openapi = { workspace = true }

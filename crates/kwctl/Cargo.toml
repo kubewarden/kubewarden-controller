@@ -15,6 +15,7 @@ clap_complete      = "4.5"
 color-print        = "0.3"
 directories        = "6.0.0"
 flate2             = "1.1"
+hex                = { workspace = true }
 humansize          = "2.1"
 indicatif          = "0.18"
 is-terminal        = "0.4.17"
@@ -39,7 +40,7 @@ tokio              = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { workspace = true }
 url                = { workspace = true }
-walrus             = "0.25.0"
+walrus             = "0.26.0"
 
 hostname-validator = "1.1.1"
 # This is required to have reqwest built using the `rustls-tls-native-roots`

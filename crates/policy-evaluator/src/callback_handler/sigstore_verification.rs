@@ -399,7 +399,7 @@ fn get_sigstore_certificate_verification_cache_key(
         }
     };
 
-    format!("{:x}", hasher.finalize())
+    hex::encode(hasher.finalize())
 }
 
 #[cached(
