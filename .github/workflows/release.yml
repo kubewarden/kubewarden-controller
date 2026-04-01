@@ -112,6 +112,7 @@ jobs:
     name: Build kwctl binaries
     uses: ./.github/workflows/build-kwctl.yml
     permissions:
+      contents: read
       id-token: write
       attestations: write
     with:
