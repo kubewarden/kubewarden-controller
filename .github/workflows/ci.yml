@@ -469,8 +469,8 @@ jobs:
       - name: Run cargo check
         run: make -C crates/kwctl check
 
-  check-manifests:
-    name: Check if the controller-gen generated manifests are up to date
+  check-generated-code:
+    name: Check if the generated code is up to date
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -481,11 +481,7 @@ jobs:
           go-version: "1.26"
           check-latest: true
       - run: |
-          make manifests
-          if ! git diff --quiet -- charts/; then
-            echo "Changes detected in charts/. Please run 'make manifests' and commit the changes."
-            exit 1
-          fi
+          make check-generate
 
   # Rollup job for branch protection - single stable job name that depends on all checks
   ci-success:
@@ -513,7 +509,7 @@ jobs:
       - validate-hauler-manifest
       - kwctl-docs
       - check-kwctl-cross-platform
-      - check-manifests
+      - check-generated-code
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs status

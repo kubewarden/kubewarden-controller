@@ -140,11 +140,19 @@ kwctl: $(KWCTL_SRCS) lint-rust
 	cp ./target/$(RUST_TARGET)/release/kwctl ./bin/kwctl
 
 .PHONY: generate
-generate: generate-controller generate-chart
+generate: generate-controller generate-chart generate-crd-docs generate-kwctl-cli-docs
 
 .PHONY: generate-controller
 generate-controller: manifests  ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(GO_BUILD_ENV) $(CONTROLLER_GEN) object paths="./api/policies/v1"
+	
+.PHONY: generate-crd-docs
+generate-crd-docs:
+	$(MAKE) -C docs/crds all
+	
+.PHONY: generate-kwctl-cli-docs
+generate-kwctl-cli-docs:
+	$(MAKE) -C crates/kwctl build-docs
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -159,6 +167,9 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 generate-chart: ## Generate Helm chart values schema.
 	$(HELM_SCHEMA) --values charts/kubewarden-controller/values.yaml --output charts/kubewarden-controller/values.schema.json
 
+.PHONY: check-generate
+check-generate: generate
+	@./hack/check-for-auto-generated-changes.sh
 
 .PHONY: charts-check-common-values
 charts-check-common-values:
