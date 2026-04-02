@@ -4,6 +4,7 @@ extend-exclude = [
   "charts/*/templates/",
   "config/*",
   "crates/policy-evaluator/tests/data/sbomscanner_vulnerability_report.json",
+  "hack/check-for-auto-generated-changes.sh",
 ]
 
 [default.extend-words]
@@ -19,4 +20,3 @@ extend-ignore-re = [
   # Ignore base64 encoded strings (certificates, keys, etc.)
   '[A-Za-z0-9+/]{20,}={0,2}',
 ]
-
