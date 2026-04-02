@@ -48,6 +48,7 @@ test-rust:
 helm-unittest:
 	helm unittest charts/kubewarden-crds --file "tests/**/*_test.yaml"
 	helm unittest charts/kubewarden-controller --file "tests/**/*_test.yaml"
+	helm unittest charts/kubewarden-defaults --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
 test-e2e: controller-image audit-scanner-image policy-server-image
