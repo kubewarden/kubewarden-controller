@@ -899,7 +899,7 @@ documentation in the reference section. + |  | Optional: \{} +
 | *`verificationConfig`* __string__ | Name of VerificationConfig configmap in the kubewarden namespace (same +
 namespace as the controller deployment), containing Sigstore verification +
 configuration. The configuration must be under a key named +
-verification-config in the Configmap. + |  | Optional: \{} +
+verification-config in the ConfigMap. + |  | Optional: \{} +
 
 | *`sigstoreTrustConfig`* __string__ | Name of SigstoreTrustConfig configmap in the kubewarden namespace (same +
 namespace as the controller deployment), containing Sigstore trust +
