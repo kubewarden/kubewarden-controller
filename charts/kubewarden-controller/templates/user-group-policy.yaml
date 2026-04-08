@@ -6,6 +6,9 @@ metadata:
     {{- include "kubewarden-defaults.labels" . | nindent 4 }}
     app.kubernetes.io/component: policy
   annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
     io.kubewarden.policy.category: PSP
     io.kubewarden.policy.severity: medium
     {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
