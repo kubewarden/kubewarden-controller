@@ -46,9 +46,7 @@ test-rust:
 
 .PHONY: helm-unittest
 helm-unittest:
-	helm unittest charts/kubewarden-crds --file "tests/**/*_test.yaml"
 	helm unittest charts/kubewarden-controller --file "tests/**/*_test.yaml"
-	helm unittest charts/kubewarden-defaults --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
 test-e2e: controller-image audit-scanner-image policy-server-image
@@ -159,7 +157,7 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=kubewarden-controller-manager,fileName=controller-rbac-roles.yaml crd webhook \
 			paths="./api/policies/v1" paths="./api/policies/v1alpha2" \
 			paths="./internal/controller" paths="./cmd/controller" \
-			output:crd:artifacts:config=charts/kubewarden-crds/templates \
+			output:crd:artifacts:config=charts/kubewarden-controller/templates \
 			output:rbac:artifacts:config=charts/kubewarden-controller/templates
 	sed -i '/^metadata:/a\  labels:\n    {{- include "kubewarden-controller.labels" . | nindent 4 }}\n  annotations:\n    {{- include "kubewarden-controller.annotations" . | nindent 4 }}' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
 	sed -i 's/  namespace: kubewarden/  namespace: {{ .Release.Namespace }}/' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
@@ -171,10 +169,6 @@ generate-chart: ## Generate Helm chart values schema.
 .PHONY: check-generate
 check-generate: generate
 	@./hack/check-for-auto-generated-changes.sh
-
-.PHONY: charts-check-common-values
-charts-check-common-values:
-	@./scripts/charts-check-common-values.sh
 
 .PHONY: charts-generate-images-file
 charts-generate-images-file:

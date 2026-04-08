@@ -105,6 +105,9 @@
                 }
             }
         },
+        "crdVersion": {
+            "type": "string"
+        },
         "fullnameOverride": {
             "type": "string"
         },
@@ -149,6 +152,12 @@
         },
         "imagePullSecrets": {
             "type": "array"
+        },
+        "installOpenReportsCRDs": {
+            "type": "boolean"
+        },
+        "installPolicyReportCRDs": {
+            "type": "boolean"
         },
         "logLevel": {
             "type": "string"
@@ -234,6 +243,120 @@
                 }
             }
         },
+        "policyServer": {
+            "anyOf": [
+                {
+                    "oneOf": [
+                        {
+                            "required": [
+                                "minAvailable"
+                            ]
+                        },
+                        {
+                            "required": [
+                                "maxUnavailable"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "not": {
+                        "allOf": [
+                            {
+                                "required": [
+                                    "minAvailable"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "maxUnavailable"
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ],
+            "properties": {
+                "annotations": {
+                    "type": "object"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "env": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "value": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "image": {
+                    "type": "object",
+                    "properties": {
+                        "repository": {
+                            "type": "string"
+                        },
+                        "tag": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "imagePullSecret": {
+                    "type": "string"
+                },
+                "insecureSources": {
+                    "type": "array"
+                },
+                "limits": {
+                    "type": "object"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "apiGroup": {
+                                "type": "string"
+                            },
+                            "resources": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "verbs": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "replicaCount": {
+                    "type": "integer"
+                },
+                "requests": {
+                    "type": "object"
+                },
+                "securityContexts": {
+                    "type": "object"
+                },
+                "serviceAccountName": {
+                    "type": "string"
+                },
+                "sourceAuthorities": {
+                    "type": "object"
+                }
+            }
+        },
         "preDeleteHook": {
             "type": "object",
             "properties": {
@@ -285,6 +408,241 @@
                         },
                         "tag": {
                             "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "recommendedPolicies": {
+            "type": "object",
+            "properties": {
+                "allowPrivilegeEscalationPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allowPrivilegeEscalation": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                },
+                "capabilitiesPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allowed_capabilities": {
+                                    "type": "array"
+                                },
+                                "default_add_capabilities": {
+                                    "type": "array"
+                                },
+                                "required_drop_capabilities": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "defaultPoliciesRegistry": {
+                    "type": "string"
+                },
+                "defaultPolicyMode": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "hostNamespacePolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allow_host_ipc": {
+                                    "type": "boolean"
+                                },
+                                "allow_host_network": {
+                                    "type": "boolean"
+                                },
+                                "allow_host_pid": {
+                                    "type": "boolean"
+                                },
+                                "allow_host_ports": {
+                                    "type": "array"
+                                }
+                            }
+                        }
+                    }
+                },
+                "hostPathsPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allowedHostPaths": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "pathPrefix": {
+                                                "type": "string"
+                                            },
+                                            "readOnly": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "podPrivilegedPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "skip_ephemeral_containers": {
+                                    "type": "boolean"
+                                },
+                                "skip_init_containers": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                },
+                "skipAdditionalNamespaces": {
+                    "type": "array"
+                },
+                "userGroupPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "run_as_group": {
+                                    "type": "object",
+                                    "properties": {
+                                        "rule": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "run_as_user": {
+                                    "type": "object",
+                                    "properties": {
+                                        "rule": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "supplemental_groups": {
+                                    "type": "object",
+                                    "properties": {
+                                        "rule": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "validate_container_image_configuration": {
+                                    "type": "boolean"
+                                }
+                            }
                         }
                     }
                 }

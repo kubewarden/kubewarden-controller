@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    {{- include "kubewarden-defaults.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy-server
+  annotations:
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
+  name: {{ .Values.policyServer.serviceAccountName }}
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "kubewarden-defaults.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy-server
+  annotations:
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
+  name: kubewarden-context-watcher
+rules:
+{{- range .Values.policyServer.permissions }}
+- apiGroups:
+  - {{ .apiGroup | quote }}
+  resources: {{ .resources | toJson }}
+  verbs:
+  {{- if .verbs }}
+    {{- toYaml .verbs | nindent 2 }}
+  {{- else }}
+    - get
+    - list
+    - watch
+  {{- end }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    {{- include "kubewarden-defaults.labels" . | nindent 4 }}
+    app.kubernetes.io/component: policy-server
+  annotations:
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
+  name: kubewarden-context-watcher
+subjects:
+- kind: ServiceAccount
+  name: {{ .Values.policyServer.serviceAccountName }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: kubewarden-context-watcher
+  apiGroup: rbac.authorization.k8s.io

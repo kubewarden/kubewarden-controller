@@ -350,3 +350,162 @@ policy-reporter:
   sourceFilters:
     - selector:
         source: kubewarden
+
+# deploy policyreports.wgpolicyk8s.io, clusterpolicyreports.wgpolicyk8s.io CRDs
+# Set to false if they are already defined inside of the cluster
+#
+# These reports are marked as DEPRECATED and its support will be removed in a
+# future release, in favour of OpenReports.
+installPolicyReportCRDs: false
+
+# deploy reports.openreports.io, clusterreports.openreports.io CRDs
+# Set to false if they are already defined inside of the cluster
+installOpenReportsCRDs: true
+
+# Policy Server settings
+# @schema anyOf:[ { "oneOf": [ { "required": ["minAvailable"] }, { "required": ["maxUnavailable"] } ] }, { "not": { "allOf": [ { "required": ["minAvailable"] }, { "required": ["maxUnavailable"] } ] } } ]
+policyServer: 
+  enabled: false
+  replicaCount: 1
+  # Only one of minAvailable,maxUnavailable can be enabled:
+  # minAvailable: 30%
+  # maxUnavailable: 1
+  image:
+    # The registry is defined in the global.cattle.systemDefaultRegistry value
+    repository: "kubewarden/policy-server"
+    tag: v1.34.0
+  serviceAccountName: policy-server
+  # Configmap containing a Sigstore verification configuration under a key
+  # named `verification-config`. Must be on the same ns as the PolicyServer.
+  # verificationConfig: your_configmap
+
+  # Configmap containing a Sigstore trust configuration (ClientTrustConfig JSON)
+  # under a key named `sigstore-trust-config`. Must be on the same ns as the
+  # PolicyServer. This is used to configure a custom Sigstore instance.
+  # sigstoreTrustConfig: your_configmap
+
+  permissions:
+    # All permissions are cluster-wide. Even namespaced resources are
+    # granted access in all namespaces at this time.
+    # By default, permissions are given for get,list,watch unless verbs
+    # are specified.
+    - apiGroup: ""
+      resources:
+        - namespaces
+        - pods
+        - services
+    - apiGroup: "networking.k8s.io"
+      resources:
+        - ingresses
+    - apiGroup: "authorization.k8s.io"
+      resources:
+        - "subjectaccessreviews"
+      verbs:
+        - create
+  env:
+    - name: KUBEWARDEN_LOG_LEVEL
+      value: info
+  annotations: {}
+  # follows the format of https://docs.kubewarden.io/reference/CRDs#policyserversecurity
+  securityContexts: {}
+  # imagePullSecret stores the secret name used to pull images from repositories.
+  # The secret should be in the same namespace of the Policy Server
+  #
+  # Example of usage:
+  # imagePullSecret: "mysecret"
+  imagePullSecret: ""
+  # insecureSources stores a list of allowed insecure registries.
+  #
+  # Example of usage:
+  #insecureSources:
+  #  - "source1"
+  #  - "source2"
+  insecureSources: []
+  # sourceAuthorities is a list of the URIs and their PEM encoded certificates
+  # used to authenticate them
+  #
+  # Example of usage:
+  # sourceAuthorities:
+  #   - uri: "uri1"
+  #     certs:
+  #       - "cert1"
+  #       - "cert2"
+  #   - uri: "uri2"
+  #     certs:
+  #       - "cert3"
+  #   - uri: "uri3"
+  #     certs:
+  #       - "cert4"
+  sourceAuthorities: {}
+  # limits and requests, see https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  limits: {}
+  requests: {}
+
+crdVersion: "policies.kubewarden.io/v1"
+recommendedPolicies:
+  enabled: false
+  # Used to define the registry where the Kubewarden policies are mirrored.
+  # This can be useful if the registry used to mirror container images does
+  # not support OCI artifacts.
+  # If this field is not defined, the systemDefaultRegistry is used by default.
+  defaultPoliciesRegistry: ""
+  # Additional namespaces that recommended policies will not apply to:
+  skipAdditionalNamespaces: []
+  defaultPolicyMode: "monitor"
+  allowPrivilegeEscalationPolicy:
+    module:
+      repository: "kubewarden/policies/allow-privilege-escalation-psp"
+      tag: v1.0.10
+    name: "no-privilege-escalation"
+    settings:
+      allowPrivilegeEscalation: false
+  hostNamespacePolicy:
+    module:
+      repository: "kubewarden/policies/host-namespaces-psp"
+      tag: v1.1.8
+    name: "no-host-namespace-sharing"
+    settings:
+      allow_host_ipc: false
+      allow_host_network: false
+      allow_host_pid: false
+      allow_host_ports: []
+  podPrivilegedPolicy:
+    module:
+      repository: "kubewarden/policies/pod-privileged"
+      tag: v1.0.10
+    name: "no-privileged-pod"
+    settings:
+      skip_init_containers: false
+      skip_ephemeral_containers: false
+  userGroupPolicy:
+    module:
+      repository: "kubewarden/policies/user-group-psp"
+      tag: v1.1.5
+    name: "do-not-run-as-root"
+    settings:
+      run_as_user:
+        rule: "MustRunAsNonRoot"
+      run_as_group:
+        rule: "RunAsAny"
+      supplemental_groups:
+        rule: "RunAsAny"
+      validate_container_image_configuration: false
+  hostPathsPolicy:
+    module:
+      repository: "kubewarden/policies/hostpaths-psp"
+      tag: v1.1.7
+    name: "do-not-share-host-paths"
+    settings:
+      allowedHostPaths:
+        - pathPrefix: "/tmp"
+          readOnly: true
+  capabilitiesPolicy:
+    module:
+      repository: "kubewarden/policies/capabilities-psp"
+      tag: v1.0.10
+    name: "drop-capabilities"
+    settings:
+      allowed_capabilities: []
+      required_drop_capabilities:
+        - ALL
+      default_add_capabilities: []

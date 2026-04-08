@@ -11,3 +11,55 @@ If you'd like to support us, we'd love to hear from you as one of our adopters.
 Adopters can be public or private. 
 
 Learn how to add your organization as a Kubewarden adopter by checking out the ADOPTERS.md file here: https://github.com/kubewarden/community/blob/main/ADOPTERS.md
+
+Kubewarden CRDs now available:
+  clusteradmissionpolicies.policies.kubewarden.io
+  admissionpolicies.policies.kubewarden.io
+  clusteradmissionpolicygroups.policies.kubewarden.io
+  admissionpolicygroups.policies.kubewarden.io
+  policyservers.policies.kubewarden.io
+{{- if .Values.installPolicyReportCRDs }}
+
+Policy report CRDs now available:
+  policyreports.wgpolicyk8s.io
+  clusterpolicyreports.wgpolicyk8s.io
+  
+  **WARNING**:
+  PolicyReport CRDs are deprecated and will be dropped in a future release.
+{{- end }}
+{{- if .Values.installOpenReportsCRDs }}
+
+OpenReport CRDs now available:
+  reports.openreports.io
+  clusterreports.openreports.io
+{{- end }}
+{{- if .Values.policyServer.enabled }}
+
+You now have a `PolicyServer` named `default` running in your cluster.
+It is ready to run any `clusteradmissionpolicies.policies.kubewarden.io` or
+`admissionpolicies.policies.kubewarden.io` resources.
+{{ if .Values.recommendedPolicies.enabled }}
+Installed recommended policies:
+- {{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.name }}
+  module: registry://{{ include "policy_default_registry" . }}/{{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.module.repository }}:{{ .Values.recommendedPolicies.allowPrivilegeEscalationPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.hostNamespacePolicy.name }}
+  module: registry://{{ include "policy_default_registry" . }}/{{ .Values.recommendedPolicies.hostNamespacePolicy.module.repository }}:{{ .Values.recommendedPolicies.hostNamespacePolicy.module.tag }}
+- {{ .Values.recommendedPolicies.podPrivilegedPolicy.name }}
+  module: registry://{{ include "policy_default_registry" . }}/{{ .Values.recommendedPolicies.podPrivilegedPolicy.module.repository }}:{{ .Values.recommendedPolicies.podPrivilegedPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.userGroupPolicy.name }}
+  module: registry://{{ include "policy_default_registry" . }}/{{ .Values.recommendedPolicies.userGroupPolicy.module.repository }}:{{ .Values.recommendedPolicies.userGroupPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.hostPathsPolicy.name }}
+  module: registry://{{ include "policy_default_registry" . }}/{{ .Values.recommendedPolicies.hostPathsPolicy.module.repository }}:{{ .Values.recommendedPolicies.hostPathsPolicy.module.tag }}
+- {{ .Values.recommendedPolicies.capabilitiesPolicy.name }}
+  module: registry://{{ include "policy_default_registry" . }}/{{ .Values.recommendedPolicies.capabilitiesPolicy.module.repository }}:{{ .Values.recommendedPolicies.capabilitiesPolicy.module.tag }}
+{{- if eq .Values.recommendedPolicies.defaultPolicyMode "monitor" }}
+
+Note: all these policies have been installed in `monitor` mode, you can enforce them
+by changing their `mode` to `protect`.
+
+{{- end }}
+{{- end }}
+
+For more information check out https://docs.kubewarden.io/quick-start.
+Discover ready to use policies at https://artifacthub.io/packages/search?kind=13.
+{{- end }}
