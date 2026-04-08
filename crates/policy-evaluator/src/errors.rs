@@ -105,3 +105,13 @@ pub enum ResponseError {
     #[error("cannot deserialize JSONPatch: {0}")]
     Deserialize(#[source] serde_json::Error),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum HostCapabilitiesPatternError {
+    #[error(
+        "invalid pattern {pattern:?}: wildcard '*' must be the entire last path segment (e.g. 'oci/*'), not a partial match"
+    )]
+    InvalidWildcard { pattern: String },
+    #[error("invalid pattern {pattern:?}: pattern must not be empty")]
+    Empty { pattern: String },
+}
