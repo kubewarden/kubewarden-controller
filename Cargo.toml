@@ -8,6 +8,7 @@ base64 = "0.22"
 clap = { version = "4.5", features = ["cargo", "env"] }
 clap-markdown = "0.1.5"
 futures = "0.3"
+hex = "0.4"
 itertools = "0.14.0"
 k8s-openapi = { version = "0.27.0", default-features = false, features = [
   "v1_33",
@@ -24,16 +25,15 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 sha2 = "0.11"
-hex = "0.4"
 tempfile = "3"
 thiserror = "2.0"
 tokio = { version = "^1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 url = { version = "2.5", features = ["serde"] }
-wasi-common = "42.0"
+wasi-common = "43.0"
 # We need to disable the default features here to be able to provide a specific
 # set of features for kwctl on macOS x86_64
 # Workaround for https://github.com/bytecodealliance/wasmtime/issues/12217
-wasmtime      = { version = "42.0", default-features = false }
-wasmtime-wasi = "42.0"
+wasmtime      = { version = "43.0", default-features = false }
+wasmtime-wasi = "43.0"
