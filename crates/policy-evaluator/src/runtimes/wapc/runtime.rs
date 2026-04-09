@@ -162,7 +162,9 @@ impl Runtime<'_> {
 mod tests {
     use super::*;
     use crate::{
-        evaluation_context::EvaluationContext, runtimes::wapc::callback::new_host_callback,
+        evaluation_context::EvaluationContext,
+        host_capabilities_allow_list::HostCapabilitiesAllowList,
+        runtimes::wapc::callback::new_host_callback,
     };
     use std::{
         sync::{self, Arc},
@@ -207,6 +209,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: Default::default(),
             epoch_deadline: Some(epoch_deadline),
+            host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
         };
 
         let eval_ctx = Arc::new(eval_ctx);

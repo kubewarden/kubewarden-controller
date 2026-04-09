@@ -25,6 +25,7 @@ use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     evaluation_context::EvaluationContext,
+    host_capabilities_allow_list::HostCapabilitiesAllowList,
     policy_evaluator::PolicySettings,
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_metadata::ContextAwareResource,
@@ -179,6 +180,7 @@ async fn test_policy_evaluator(
         callback_channel: None,
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
     };
 
     let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
@@ -292,6 +294,7 @@ async fn test_runtime_context_aware<F, Fut>(
             },
         ]),
         epoch_deadline: Some(2),
+        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
     };
 
     let request_data = load_request_data(request_file_path);
@@ -339,6 +342,7 @@ async fn test_oci_manifest_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -430,6 +434,7 @@ async fn test_oci_manifest_and_config_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -498,6 +503,7 @@ async fn test_oci_digest_capability() {
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx

@@ -71,6 +71,11 @@ impl HostCapabilitiesAllowList {
         })
     }
 
+    /// Creates an allow list that allows all capabilities (`*`).
+    pub fn allow_all() -> Self {
+        HostCapabilitiesAllowList::new(vec!["*".to_string()]).unwrap()
+    }
+
     /// Returns `true` if the given capability path is allowed by this allow list.
     ///
     /// The capability path is constructed as `{namespace}/{operation}`, matching

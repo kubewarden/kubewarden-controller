@@ -3,6 +3,7 @@ use std::fmt;
 use tokio::sync::mpsc;
 
 use crate::callback_requests::CallbackRequest;
+use crate::host_capabilities_allow_list::HostCapabilitiesAllowList;
 use crate::policy_metadata::ContextAwareResource;
 
 /// A struct that holds metadata and other data that are needed when a policy
@@ -29,6 +30,11 @@ pub struct EvaluationContext {
     /// This could either be the global epoch deadline, or the one
     /// specific to the policy
     pub epoch_deadline: Option<u64>,
+
+    /// The set of host capabilities this policy is allowed to invoke.
+    /// An empty list means no host capabilities are allowed (deny by default).
+    /// A list containing `*` means all capabilities are allowed.
+    pub host_capabilities_allow_list: HostCapabilitiesAllowList,
 }
 
 impl EvaluationContext {
@@ -54,8 +60,11 @@ impl fmt::Debug for EvaluationContext {
 
         write!(
             f,
-            r#"EvaluationContext {{ policy_id: "{}", callback_channel: {}, allowed_kubernetes_resources: {:?} }}"#,
-            self.policy_id, callback_channel, self.ctx_aware_resources_allow_list,
+            r#"EvaluationContext {{ policy_id: "{}", callback_channel: {}, allowed_kubernetes_resources: {:?}, host_capabilities: {} }}"#,
+            self.policy_id,
+            callback_channel,
+            self.ctx_aware_resources_allow_list,
+            self.host_capabilities_allow_list,
         )
     }
 }
@@ -102,6 +111,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: allowed_resources,
             epoch_deadline: None,
+            host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
         };
 
         let requested_resource = ContextAwareResource {
