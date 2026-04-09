@@ -141,6 +141,11 @@ pub(crate) async fn rego_scenario(handle: Handle<Request<Body>, Response<Body>>)
     });
 }
 
+/// A no-op scenario that immediately drops the mock handle.
+/// Use for test cases where no Kubernetes callbacks are expected
+/// (e.g., when host capabilities are denied before any k8s call is made).
+pub(crate) async fn no_op_scenario(_handle: Handle<Request<Body>, Response<Body>>) {}
+
 fn send_response<T: Serialize>(send: SendResponse<Response<Body>>, response: T) {
     let response = serde_json::to_vec(&response).unwrap();
     send.send_response(Response::builder().body(Body::from(response)).unwrap());
