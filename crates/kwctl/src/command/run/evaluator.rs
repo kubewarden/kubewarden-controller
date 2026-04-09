@@ -5,6 +5,7 @@ use policy_evaluator::{
     admission_request::AdmissionRequest,
     admission_response::AdmissionResponse,
     evaluation_context::EvaluationContext,
+    host_capabilities_allow_list::HostCapabilitiesAllowList,
     kube,
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
     policy_evaluator::{PolicyEvaluator, PolicySettings, ValidateRequest},
@@ -120,6 +121,7 @@ impl Evaluator {
                     callback_channel: Some(callback_handler.sender_channel()),
                     ctx_aware_resources_allow_list: context_aware_allowed_resources.clone(),
                     epoch_deadline: None,
+                    host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(), // FIXME implement later on
                 };
                 let policy_evaluator =
                     policy_evaluator_builder.build_pre()?.rehydrate(&eval_ctx)?;
