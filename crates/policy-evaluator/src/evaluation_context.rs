@@ -49,6 +49,16 @@ impl EvaluationContext {
         self.ctx_aware_resources_allow_list
             .contains(&wanted_resource)
     }
+
+    /// Checks if a policy has access to a host capability, based on the
+    /// `host_capabilities` allow list configured for this policy.
+    ///
+    /// The capability path is constructed as `{namespace}/{operation}`,
+    /// matching the waPC host callback namespace and operation parameters.
+    pub(crate) fn can_access_host_capability(&self, capability_path: &str) -> bool {
+        self.host_capabilities_allow_list
+            .is_capability_allowed(capability_path)
+    }
 }
 
 impl fmt::Debug for EvaluationContext {
@@ -126,5 +136,27 @@ mod tests {
                 &requested_resource.kind
             )
         );
+    }
+
+    #[rstest]
+    #[case("deny all", vec![], "oci/v1/verify", false)]
+    #[case("allow all", vec!["*".to_string()], "oci/v1/verify", true)]
+    #[case("exact match", vec!["oci/v1/verify".to_string()], "oci/v1/verify", true)]
+    #[case("prefix match", vec!["oci/*".to_string()], "oci/v2/verify", true)]
+    #[case("no match", vec!["net/v1/dns_lookup_host".to_string()], "oci/v1/verify", false)]
+    fn can_access_host_capability(
+        #[case] name: &str,
+        #[case] patterns: Vec<String>,
+        #[case] capability: &str,
+        #[case] allowed: bool,
+    ) {
+        let ctx = EvaluationContext {
+            policy_id: name.to_string(),
+            callback_channel: None,
+            ctx_aware_resources_allow_list: BTreeSet::new(),
+            epoch_deadline: None,
+            host_capabilities_allow_list: HostCapabilitiesAllowList::new(patterns).unwrap(),
+        };
+        assert_eq!(ctx.can_access_host_capability(capability), allowed);
     }
 }
