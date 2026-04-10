@@ -55,11 +55,17 @@ async fn build_callback_handler(
 
 pub(crate) enum Evaluator {
     Policy {
-        policy_evaluator: PolicyEvaluator,
+        // This enum uses the `Box` type to avoid the need for a large enum size causing memory layout
+        // problems. https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+        policy_evaluator: Box<PolicyEvaluator>,
         settings: PolicySettings,
         request: ValidateRequest,
     },
     GroupPolicy {
+        // This enum uses the `Arc` type to avoid the need for a large enum size causing memory layout
+        // problems. https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+        // Contrary to PolicyEvaluator, PolicyGroupEvaluator is shared across closures in
+        // rhai_eval_env.clone(), which requires +Send+Sync
         policy_group_evaluator: Arc<PolicyGroupEvaluator>,
         request: ValidateRequest,
     },
@@ -128,7 +134,7 @@ impl Evaluator {
 
                 Ok((
                     Self::Policy {
-                        policy_evaluator,
+                        policy_evaluator: policy_evaluator.into(),
                         request,
                         settings: settings.clone(),
                     },
@@ -192,7 +198,7 @@ impl Evaluator {
 
                 Ok((
                     Self::GroupPolicy {
-                        policy_group_evaluator: Arc::new(policy_group_evaluator),
+                        policy_group_evaluator: policy_group_evaluator.into(),
                         request,
                     },
                     callback_handler,

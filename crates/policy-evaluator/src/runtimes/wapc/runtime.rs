@@ -130,7 +130,7 @@ impl Runtime<'_> {
         }
     }
 
-    pub fn validate_settings(&mut self, settings: String) -> SettingsValidationResponse {
+    pub fn validate_settings(&self, settings: String) -> SettingsValidationResponse {
         match self.0.call("validate_settings", settings.as_bytes()) {
             Ok(res) => {
                 let vr: Result<SettingsValidationResponse> = serde_json::from_slice(&res)

@@ -216,7 +216,7 @@ impl Runtime<'_> {
             .evaluate(self.0.entrypoint_id, &input, data_raw)
     }
 
-    pub fn validate_settings(&mut self, _settings: String) -> SettingsValidationResponse {
+    pub fn validate_settings(&self, _settings: String) -> SettingsValidationResponse {
         // The burrego backend is mainly for compatibility with
         // existing OPA policies. Those policies don't have a generic
         // way of validating settings. Return true
