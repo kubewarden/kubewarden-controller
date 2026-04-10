@@ -357,6 +357,9 @@ pub enum PolicyOrPolicyGroup {
         message: Option<String>,
         /// Timeout for the evaluation of the policy
         timeout_eval_seconds: Option<u64>,
+        /// The list of host capabilities granted to this policy
+        #[serde(default)]
+        host_capabilities: Vec<String>,
     },
     /// A group of policies that are evaluated together using a given expression
     #[serde(rename_all = "camelCase")]
@@ -470,6 +473,8 @@ example:
           kind: Namespace
         - apiVersion: v1
           kind: Pod
+    hostCapabilities:
+      - kubernetes/*
 group_policy:
     policyMode: monitor
     expression: "true"
@@ -509,6 +514,7 @@ group_policy:
                     ]),
                     message: Some("my custom error message".to_owned()),
                     timeout_eval_seconds: None,
+                    host_capabilities: vec!["kubernetes/*".to_owned()],
                 },
             ),
             (
