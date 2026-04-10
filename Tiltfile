@@ -8,14 +8,6 @@ update_settings(k8s_upsert_timeout_secs=300)
 load("ext://namespace", "namespace_create")
 namespace_create("kubewarden")
 
-# Install the CRDs Helm chart first
-crds_yaml = helm(
-    "./charts/kubewarden-crds",
-    name="kubewarden-crds",
-    namespace="kubewarden",
-)
-k8s_yaml(crds_yaml)
-
 # Group all CRDs under a single resource name for dependency tracking
 k8s_resource(
     new_name='kubewarden-crds',
@@ -45,7 +37,11 @@ kubewarden_controller_yaml = helm(
         "podSecurityContext=null",
         "containerSecurityContext=null",
         "auditScanner.image.repository=" + registry + "/" + audit_scanner_image,
-        "auditScanner.logLevel=debug", 
+        "auditScanner.logLevel=debug",
+        "policyServer.enabled=true",
+        "policyServer.image.repository=" + registry + "/" + policy_server_image,
+        "policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL",
+        "policyServer.env[0].value=debug",
     ],
 )
 k8s_yaml(kubewarden_controller_yaml)
@@ -57,19 +53,6 @@ k8s_resource(
     new_name='kubewarden-controller',
     resource_deps=['kubewarden-crds'],
 )
-
-kubewarden_defaults_yaml = helm(
-    "./charts/kubewarden-defaults",
-    name="kubewarden-defaults",
-    namespace="kubewarden",
-    set=[
-        "global.cattle.systemDefaultRegistry=null",
-        "policyServer.image.repository=" + registry + "/" + policy_server_image,
-        "policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL",
-        "policyServer.env[0].value=debug",
-    ],
-)
-k8s_yaml(kubewarden_defaults_yaml)
 
 k8s_resource(
     'default',
