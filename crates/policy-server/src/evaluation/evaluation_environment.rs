@@ -311,6 +311,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                                 .context_aware_resources
                                 .to_owned(),
                             epoch_deadline,
+                            host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(), // FIXME
                         };
 
                         if let Err(e) = self.bootstrap_policy(
