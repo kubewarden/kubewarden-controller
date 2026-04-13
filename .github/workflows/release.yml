@@ -82,7 +82,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build, sign, and upload digest
-        uses: kubewarden/github-actions/container-build@a97c0700ad65b276f15fda9195937bb0db850dcf # v4.6.4
+        uses: kubewarden/github-actions/container-build@0f1672d63bd3572f204917d68390d87f7430069a # v5.0.0
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
@@ -101,7 +101,7 @@ jobs:
         component: [policy-server, kubewarden-controller, audit-scanner]
     steps:
       - name: Merge multi-arch images
-        uses: kubewarden/github-actions/merge-multiarch@a97c0700ad65b276f15fda9195937bb0db850dcf # v4.6.4
+        uses: kubewarden/github-actions/merge-multiarch@0f1672d63bd3572f204917d68390d87f7430069a # v5.0.0
         with:
           component: ${{ matrix.component }}
           tag: ${{ github.ref_name }}
@@ -131,7 +131,7 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Generate and sign attestations
-        uses: kubewarden/github-actions/attestation@a97c0700ad65b276f15fda9195937bb0db850dcf # v4.6.4
+        uses: kubewarden/github-actions/attestation@0f1672d63bd3572f204917d68390d87f7430069a # v5.0.0
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
@@ -160,7 +160,7 @@ jobs:
           echo TAG_NAME=$(echo "$GIT_REF_NAME") >> $GITHUB_ENV
       - name: Get latest release tag
         id: get_last_release_tag
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             let release = await github.rest.repos.getLatestRelease({
@@ -174,7 +174,7 @@ jobs:
             }
             core.setFailed("Cannot find latest release")
       - name: Get release ID from the release created by release drafter
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             let releases = await github.rest.repos.listReleases({
@@ -203,7 +203,7 @@ jobs:
         run: ls -R
       - name: Upload release assets
         id: upload_release_assets
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             let fs = require('fs');
@@ -265,7 +265,7 @@ jobs:
               });
             }
       - name: Publish release
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const {RELEASE_ID} = process.env
