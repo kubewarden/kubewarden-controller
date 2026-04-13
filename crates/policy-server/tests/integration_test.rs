@@ -30,6 +30,7 @@ use serde_json::json;
 use tokio::fs;
 use tower::ServiceExt;
 
+use crate::common::context_aware_policy_test_config;
 use crate::common::default_test_config;
 use crate::common::pod_privileged_test_config;
 
@@ -516,6 +517,128 @@ async fn test_timeout_protection_policy_specific_reject() {
             code: Some(500),
             ..Default::default()
         })
+    );
+}
+
+#[tokio::test]
+async fn test_context_aware_policy_host_capability_denied() {
+    use policy_evaluator::policy_metadata::ContextAwareResource;
+    use std::collections::BTreeSet;
+
+    setup();
+
+    let context_aware_resources = BTreeSet::from([
+        ContextAwareResource {
+            api_version: "apps/v1".to_owned(),
+            kind: "Deployment".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Namespace".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Service".to_owned(),
+        },
+    ]);
+
+    let config = context_aware_policy_test_config(
+        "context-aware-test-policy",
+        vec![],
+        context_aware_resources,
+    );
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/context-aware-test-policy")
+        .body(Body::from(include_str!(
+            "data/deployment_admission_review.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    // Invoking a host capability (e.g. `kubernetes/list_resources_by_namespace`) must
+    // be blocked by the policy-server before the call reaches the Kubernetes client.
+    // The resulting admission response must be denied and the status message must
+    // contain the capability-denial text.
+    assert!(
+        !admission_review_response.response.allowed,
+        "expected admission to be denied when host capabilities are empty"
+    );
+
+    let message = admission_review_response
+        .response
+        .status
+        .and_then(|s| s.message)
+        .unwrap_or_default();
+    assert!(
+        message.contains("has not been granted access"),
+        "expected host capability denial message, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn test_context_aware_policy_host_capability_allowed() {
+    use policy_evaluator::policy_metadata::ContextAwareResource;
+    use std::collections::BTreeSet;
+
+    setup();
+
+    let context_aware_resources = BTreeSet::from([
+        ContextAwareResource {
+            api_version: "apps/v1".to_owned(),
+            kind: "Deployment".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Namespace".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Service".to_owned(),
+        },
+    ]);
+
+    let config = context_aware_policy_test_config(
+        "context-aware-test-policy",
+        vec!["*".to_owned()],
+        context_aware_resources,
+    );
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/context-aware-test-policy")
+        .body(Body::from(include_str!(
+            "data/deployment_admission_review.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    // The capability check passed, so the policy may fail for other reasons
+    // (no Kubernetes cluster available in tests), but it must NOT be rejected
+    // because of a capability-denial.
+    let message = admission_review_response
+        .response
+        .status
+        .and_then(|s| s.message)
+        .unwrap_or_default();
+    assert!(
+        !message.contains("has not been granted access"),
+        "expected no capability-denial message when host capabilities are allowed, got: {message}"
     );
 }
 

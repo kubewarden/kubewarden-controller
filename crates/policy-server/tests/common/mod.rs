@@ -7,6 +7,7 @@ use std::{
 use axum::Router;
 use policy_evaluator::admission_response_handler::policy_mode::PolicyMode;
 use policy_evaluator::policy_evaluator::PolicySettings;
+use policy_evaluator::policy_metadata::ContextAwareResource;
 use policy_server::{
     PolicyServer,
     config::{Config, PolicyGroupMember, PolicyOrPolicyGroup},
@@ -153,6 +154,33 @@ pub(crate) fn pod_privileged_test_config() -> Config {
             message: None,
             timeout_eval_seconds: None,
             host_capabilities: vec![],
+        },
+    )]);
+
+    let mut config = default_config();
+    config.policies.extend(policies);
+    config
+}
+
+/// Returns a Config with the context-aware test policy registered under
+/// the given `policy_id`, using the provided `host_capabilities` and
+/// `context_aware_resources`.
+pub(crate) fn context_aware_policy_test_config(
+    policy_id: &str,
+    host_capabilities: Vec<String>,
+    context_aware_resources: BTreeSet<ContextAwareResource>,
+) -> Config {
+    let policies = HashMap::from([(
+        policy_id.to_owned(),
+        PolicyOrPolicyGroup::Policy {
+            module: "ghcr.io/kubewarden/tests/context-aware-test-policy:latest".to_owned(),
+            policy_mode: PolicyMode::Protect,
+            allowed_to_mutate: None,
+            settings: None,
+            context_aware_resources,
+            message: None,
+            timeout_eval_seconds: None,
+            host_capabilities,
         },
     )]);
 
