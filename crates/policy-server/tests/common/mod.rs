@@ -35,6 +35,7 @@ pub(crate) fn default_test_config() -> Config {
                 context_aware_resources: BTreeSet::new(),
                 message: None,
                 timeout_eval_seconds: None,
+                host_capabilities: vec![],
             },
         ),
         (
@@ -53,6 +54,7 @@ pub(crate) fn default_test_config() -> Config {
                 context_aware_resources: BTreeSet::new(),
                 message: None,
                 timeout_eval_seconds: None,
+                host_capabilities: vec![],
             },
         ),
         (
@@ -62,6 +64,7 @@ pub(crate) fn default_test_config() -> Config {
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: None,
                 timeout_eval_seconds: None,
+                host_capabilities: vec![],
                 settings: Some(
                     PolicySettings::try_from(&json!({
                         "sleepMilliseconds": 2
@@ -108,6 +111,7 @@ pub(crate) fn default_test_config() -> Config {
                         ),
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        // host_capabilities: vec![],
                     },
                 )]),
             },
@@ -119,6 +123,7 @@ pub(crate) fn default_test_config() -> Config {
                 policy_mode: PolicyMode::Protect,
                 allowed_to_mutate: None,
                 timeout_eval_seconds: Some(1),
+                host_capabilities: vec![],
                 settings: Some(
                     PolicySettings::try_from(&json!({
                         "sleepMilliseconds": 2
@@ -147,6 +152,7 @@ pub(crate) fn pod_privileged_test_config() -> Config {
             context_aware_resources: BTreeSet::new(),
             message: None,
             timeout_eval_seconds: None,
+            host_capabilities: vec![],
         },
     )]);
 
