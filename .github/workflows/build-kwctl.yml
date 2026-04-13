@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload binary
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kwctl-linux-${{ matrix.targetarch }}
           path: kwctl-linux-${{ matrix.targetarch }}.zip
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload kwctl SBOM files
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kwctl-linux-${{ matrix.targetarch }}-sbom
           path: |
@@ -177,7 +177,7 @@ jobs:
 
       - name: Upload kwctl air gap scripts
         if: ${{ !inputs.build_only && matrix.targetarch == 'x86_64' }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kwctl-airgap-scripts
           path: |
@@ -235,7 +235,7 @@ jobs:
 
       - name: Upload binary
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}
           path: kwctl-darwin-${{ matrix.targetarch }}.zip
@@ -266,7 +266,7 @@ jobs:
 
       - name: Upload kwctl SBOM files
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kwctl-darwin-${{ matrix.targetarch }}-sbom
           path: |
@@ -335,7 +335,7 @@ jobs:
 
       - name: Upload binary
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kwctl-windows-x86_64
           path: kwctl-windows-x86_64.exe.zip
@@ -367,7 +367,7 @@ jobs:
 
       - name: Upload kwctl SBOM files
         if: ${{ !inputs.build_only }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: kwctl-windows-x86_64-sbom
           path: |
