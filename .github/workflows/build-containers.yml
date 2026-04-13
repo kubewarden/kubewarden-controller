@@ -39,7 +39,7 @@ jobs:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
           platform: ${{ matrix.platform }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   merge:
     runs-on: ubuntu-latest
@@ -71,4 +71,4 @@ jobs:
           component: ${{ matrix.component }}
           tag: ${{ env.TAG_NAME }}
           arch: amd64,arm64
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
