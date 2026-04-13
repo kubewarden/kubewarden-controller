@@ -87,7 +87,7 @@ jobs:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
           platform: ${{ matrix.platform }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   merge-containers:
     name: Merge multi-arch manifests
@@ -106,7 +106,7 @@ jobs:
           component: ${{ matrix.component }}
           tag: ${{ github.ref_name }}
           arch: amd64,arm64
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build-kwctl:
     name: Build kwctl binaries
@@ -135,7 +135,7 @@ jobs:
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     name: Create release
