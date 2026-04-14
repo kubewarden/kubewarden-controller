@@ -139,6 +139,17 @@ type PolicyServerSpec struct {
 	// remain unchanged, but new pods that reference it cannot be created.
 	// +optional
 	PriorityClassName string `json:"priorityClassName,omitempty"`
+
+	// NamespacedPoliciesCapabilities lists host capability API calls allowed
+	// for namespaced policies running on this PolicyServer. When not set,
+	// no host capabilities are granted to namespaced policies.
+	// Supported wildcard patterns:
+	// - "*": allow all host capabilities
+	// - "category/*": allow all capabilities in a category (e.g. "oci/*")
+	// - "category/version/*": allow all capabilities of a specific version (e.g. "oci/v1/*")
+	// - Specific capability paths (e.g. "oci/v1/verify", "net/v1/dns_lookup_host")
+	// +optional
+	NamespacedPoliciesCapabilities []string `json:"namespacedPoliciesCapabilities,omitempty"`
 }
 
 type ReconciliationTransitionReason string
