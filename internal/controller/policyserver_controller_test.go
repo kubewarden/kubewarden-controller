@@ -341,6 +341,7 @@ var _ = Describe("PolicyServer controller", func() {
 				ContextAwareResources: admissionPolicy.GetContextAwareResources(),
 				Message:               admissionPolicy.GetMessage(),
 				TimeoutEvalSeconds:    admissionPolicy.GetTimeoutEvalSeconds(),
+				HostCapabilities:      []string{},
 			}
 			policiesMap[clusterAdmissionPolicy.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -353,6 +354,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Settings:              clusterAdmissionPolicy.GetSettings(),
 				ContextAwareResources: clusterAdmissionPolicy.GetContextAwareResources(),
 				TimeoutEvalSeconds:    clusterAdmissionPolicy.GetTimeoutEvalSeconds(),
+				HostCapabilities:      []string{"*"},
 			}
 			policiesMap[admissionPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -409,9 +411,10 @@ var _ = Describe("PolicyServer controller", func() {
 									"Namespace": Equal(admissionPolicy.GetNamespace()),
 									"Name":      Equal(admissionPolicy.GetName()),
 								}),
-								"module":     Equal(admissionPolicy.GetModule()),
-								"policyMode": Equal(string(admissionPolicy.GetPolicyMode())),
-								"message":    Equal(admissionPolicy.GetMessage()),
+								"module":           Equal(admissionPolicy.GetModule()),
+								"policyMode":       Equal(string(admissionPolicy.GetPolicyMode())),
+								"message":          Equal(admissionPolicy.GetMessage()),
+								"hostCapabilities": BeEmpty(),
 							}),
 								Not(MatchAllKeys(Keys{
 									"timeoutEvalSeconds": Ignore(),
@@ -426,6 +429,7 @@ var _ = Describe("PolicyServer controller", func() {
 								"allowedToMutate":    Equal(clusterAdmissionPolicy.IsMutating()),
 								"timeoutEvalSeconds": BeNumerically("==", *clusterAdmissionPolicy.GetTimeoutEvalSeconds()),
 								"settings":           BeNil(),
+								"hostCapabilities":   ConsistOf("*"),
 								"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 									"apiVersion": Equal("v1"),
 									"kind":       Equal("Pod"),
