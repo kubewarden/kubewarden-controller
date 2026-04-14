@@ -279,3 +279,130 @@ func TestPolicyServerValidateSigstoreTrustConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestPolicyServerValidateNamespacedPoliciesCapabilities(t *testing.T) {
+	tests := []struct {
+		name         string
+		capabilities []string
+		valid        bool
+		error        string
+	}{
+		{
+			name:         "nil capabilities (not set)",
+			capabilities: nil,
+			valid:        true,
+		},
+		{
+			name:         "empty capabilities",
+			capabilities: []string{},
+			valid:        true,
+		},
+		{
+			name:         "wildcard all",
+			capabilities: []string{"*"},
+			valid:        true,
+		},
+		{
+			name:         "category wildcard",
+			capabilities: []string{"oci/*"},
+			valid:        true,
+		},
+		{
+			name:         "versioned category wildcard",
+			capabilities: []string{"oci/v1/*"},
+			valid:        true,
+		},
+		{
+			name:         "specific capability",
+			capabilities: []string{"oci/v1/verify"},
+			valid:        true,
+		},
+		{
+			name:         "multiple valid capabilities",
+			capabilities: []string{"oci/*", "net/v1/dns_lookup_host", "crypto/v1/is_certificate_trusted"},
+			valid:        true,
+		},
+		{
+			name:         "all known categories",
+			capabilities: []string{"oci/*", "kubernetes/*", "net/*", "crypto/*"},
+			valid:        true,
+		},
+		{
+			name:         "empty string",
+			capabilities: []string{""},
+			valid:        false,
+			error:        "capability must not be empty",
+		},
+		{
+			name:         "invalid category",
+			capabilities: []string{"unknown/v1/foo"},
+			valid:        false,
+			error:        "unknown segment",
+		},
+		{
+			name:         "invalid wildcard at category level",
+			capabilities: []string{"oci*"},
+			valid:        false,
+			error:        "wildcard \"*\" is only allowed as the last path segment",
+		},
+		{
+			name:         "invalid wildcard in middle",
+			capabilities: []string{"oci/*/verify"},
+			valid:        false,
+			error:        "wildcard \"*\" is only allowed as the last path segment",
+		},
+		{
+			name:         "invalid partial wildcard",
+			capabilities: []string{"oci/v1/oci_*"},
+			valid:        false,
+			error:        "wildcard \"*\" is only allowed as the last path segment",
+		},
+		{
+			name:         "unknown version segment",
+			capabilities: []string{"oci/v3/verify"},
+			valid:        false,
+			error:        "unknown segment \"v3\"",
+		},
+		{
+			name:         "unknown operation",
+			capabilities: []string{"oci/v1/unknown_op"},
+			valid:        false,
+			error:        "unknown segment \"unknown_op\"",
+		},
+		{
+			name:         "incomplete path without wildcard",
+			capabilities: []string{"oci/v1"},
+			valid:        false,
+			error:        "not a complete capability path",
+		},
+		{
+			name:         "kubernetes with spurious version segment",
+			capabilities: []string{"kubernetes/v1/can_i"},
+			valid:        false,
+			error:        "unknown segment \"v1\"",
+		},
+		{
+			name:         "valid kubernetes operation",
+			capabilities: []string{"kubernetes/can_i"},
+			valid:        true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			policyServer := NewPolicyServerFactory().
+				WithNamespacedPoliciesCapabilities(test.capabilities).
+				Build()
+
+			policyServerValidator := policyServerValidator{logger: logr.Discard()}
+			err := policyServerValidator.validate(t.Context(), policyServer)
+
+			if test.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.ErrorContains(t, err, test.error)
+			}
+		})
+	}
+}
