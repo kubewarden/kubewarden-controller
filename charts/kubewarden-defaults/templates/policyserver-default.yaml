@@ -74,6 +74,12 @@ spec:
   {{- end }}
   {{- end }}
   {{- end }}
+  {{- if .Values.policyServer.namespacedPoliciesCapabilities }}
+  namespacedPoliciesCapabilities:
+  {{- range .Values.policyServer.namespacedPoliciesCapabilities }}
+    - {{ . | quote }}
+  {{- end }}
+  {{- end }}
   {{- if .Values.policyServer.securityContexts }}
   securityContexts: {{ toYaml .Values.policyServer.securityContexts | nindent 4 }}
   {{- end }}
