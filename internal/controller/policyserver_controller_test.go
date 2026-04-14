@@ -370,6 +370,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Expression:            admissionPolicyGroup.GetExpression(),
 				Message:               admissionPolicyGroup.GetMessage(),
 				TimeoutEvalSeconds:    &timeoutEvalSeconds,
+				// HostCapabilities:      []string{}, // FIXME
 			}
 			policiesMap[clusterPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -385,6 +386,7 @@ var _ = Describe("PolicyServer controller", func() {
 				Expression:            clusterPolicyGroup.GetExpression(),
 				Message:               clusterPolicyGroup.GetMessage(),
 				TimeoutEvalSeconds:    &timeoutEvalSeconds,
+				// HostCapabilities:      []string{"*"}, // FIXME
 			}
 
 			policies, err := json.Marshal(policiesMap)
@@ -452,6 +454,7 @@ var _ = Describe("PolicyServer controller", func() {
 										"module": Equal(admissionPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
 									}), Not(MatchAllKeys(Keys{
 										"timeoutEvalSeconds": Ignore(),
+										// "hostCapabilities":   ConsistOf("*"), // FIXME
 									}))),
 								}),
 								"policyMode": Equal(string(admissionPolicyGroup.GetPolicyMode())),
@@ -470,6 +473,7 @@ var _ = Describe("PolicyServer controller", func() {
 										"module":             Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
 										"settings":           Ignore(),
 										"timeoutEvalSeconds": BeNumerically("==", timeoutEvalSeconds),
+										// "hostCapabilities":   ConsistOf("*"), // FIXME
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
 											"kind":       Equal("Pod"),
@@ -478,6 +482,7 @@ var _ = Describe("PolicyServer controller", func() {
 									"user_group_psp": And(MatchAllKeys(Keys{
 										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["user_group_psp"].Module),
 										"settings": Ignore(),
+										// "hostCapabilities": ConsistOf("*"), // FIXME
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
 											"kind":       Equal("Deployment"),

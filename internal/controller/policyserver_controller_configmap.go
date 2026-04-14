@@ -27,6 +27,7 @@ type policyGroupMemberWithContext struct {
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 	TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
+	// HostCapabilities      []string                          `json:"hostCapabilities"` // FIXME
 }
 
 type policyServerConfigEntry struct {
@@ -203,6 +204,7 @@ func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWi
 			Settings:              policy.Settings,
 			ContextAwareResources: policy.ContextAwareResources,
 			TimeoutEvalSeconds:    policy.TimeoutEvalSeconds,
+			// HostCapabilities:      hostCapabilities, // FIXME
 		}
 	}
 	return policyGroupMembers
