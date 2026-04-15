@@ -53,26 +53,30 @@ pub(crate) fn host_callback(
     eval_ctx: &Arc<EvaluationContext>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     match binding {
-        "kubewarden" => match namespace {
-            "tracing" => match operation {
-                "log" => {
-                    if let Err(e) = eval_ctx.log(payload) {
-                        error!(
-                            payload = String::from_utf8_lossy(payload).to_string(),
-                            error = e.to_string(),
-                            "Cannot log event"
-                        );
-                    }
-                    Ok(Vec::new())
-                }
-                _ => unknown_operation(namespace, operation),
-            },
-            "oci" => {
-                let capability_path = format!("oci/{operation}");
+        "kubewarden" => {
+            // "tracing" is not gated by host capabilities; all other namespaces are.
+            // Check if host capability is allowed.
+            if namespace != "tracing" {
+                let capability_path = format!("{namespace}/{operation}");
                 if !eval_ctx.can_access_host_capability(&capability_path) {
                     return host_capability_denied(&eval_ctx.policy_id, &capability_path, eval_ctx);
                 }
-                match operation {
+            }
+            match namespace {
+                "tracing" => match operation {
+                    "log" => {
+                        if let Err(e) = eval_ctx.log(payload) {
+                            error!(
+                                payload = String::from_utf8_lossy(payload).to_string(),
+                                error = e.to_string(),
+                                "Cannot log event"
+                            );
+                        }
+                        Ok(Vec::new())
+                    }
+                    _ => unknown_operation(namespace, operation),
+                },
+                "oci" => match operation {
                     "v1/verify" => {
                         let req: SigstoreVerificationInputV1 = serde_json::from_slice(payload)?;
                         let req_type: CallbackRequestType = req.into();
@@ -170,14 +174,8 @@ pub(crate) fn host_callback(
                         )
                     }
                     _ => unknown_operation(namespace, operation),
-                }
-            }
-            "net" => {
-                let capability_path = format!("net/{operation}");
-                if !eval_ctx.can_access_host_capability(&capability_path) {
-                    return host_capability_denied(&eval_ctx.policy_id, &capability_path, eval_ctx);
-                }
-                match operation {
+                },
+                "net" => match operation {
                     "v1/dns_lookup_host" => {
                         let host: String = serde_json::from_slice(payload)?;
                         debug!(
@@ -199,14 +197,8 @@ pub(crate) fn host_callback(
                         )
                     }
                     _ => unknown_operation(namespace, operation),
-                }
-            }
-            "crypto" => {
-                let capability_path = format!("crypto/{operation}");
-                if !eval_ctx.can_access_host_capability(&capability_path) {
-                    return host_capability_denied(&eval_ctx.policy_id, &capability_path, eval_ctx);
-                }
-                match operation {
+                },
+                "crypto" => match operation {
                     "v1/is_certificate_trusted" => {
                         let req: CertificateVerificationRequest = serde_json::from_slice(payload)?;
 
@@ -232,14 +224,8 @@ pub(crate) fn host_callback(
                         )
                     }
                     _ => unknown_operation(namespace, operation),
-                }
-            }
-            "kubernetes" => {
-                let capability_path = format!("kubernetes/{operation}");
-                if !eval_ctx.can_access_host_capability(&capability_path) {
-                    return host_capability_denied(&eval_ctx.policy_id, &capability_path, eval_ctx);
-                }
-                match operation {
+                },
+                "kubernetes" => match operation {
                     "list_resources_by_namespace" => {
                         let req: ListResourcesByNamespaceRequest = serde_json::from_slice(payload)?;
 
@@ -372,10 +358,10 @@ pub(crate) fn host_callback(
                         )
                     }
                     _ => unknown_operation(namespace, operation),
-                }
+                },
+                _ => unknown_namespace(namespace),
             }
-            _ => unknown_namespace(namespace),
-        },
+        }
         _ => {
             error!(binding, "unknown binding");
             Err(format!("unknown binding: {binding}").into())
