@@ -140,13 +140,13 @@ mod tests {
 
     #[rstest]
     #[case("deny all", vec![], "oci/v1/verify", false)]
-    #[case("allow all", vec!["*".to_string()], "oci/v1/verify", true)]
-    #[case("exact match", vec!["oci/v1/verify".to_string()], "oci/v1/verify", true)]
-    #[case("prefix match", vec!["oci/*".to_string()], "oci/v2/verify", true)]
-    #[case("no match", vec!["net/v1/dns_lookup_host".to_string()], "oci/v1/verify", false)]
+    #[case("allow all", vec!["*"], "oci/v1/verify", true)]
+    #[case("exact match", vec!["oci/v1/verify"], "oci/v1/verify", true)]
+    #[case("prefix match", vec!["oci/*"], "oci/v2/verify", true)]
+    #[case("no match", vec!["net/v1/dns_lookup_host"], "oci/v1/verify", false)]
     fn can_access_host_capability(
         #[case] name: &str,
-        #[case] patterns: Vec<String>,
+        #[case] patterns: Vec<&str>,
         #[case] capability: &str,
         #[case] allowed: bool,
     ) {
@@ -155,7 +155,8 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::new(patterns).unwrap(),
+            host_capabilities_allow_list: HostCapabilitiesAllowList::try_from(patterns)
+                .expect("valid patterns"),
         };
         assert_eq!(ctx.can_access_host_capability(capability), allowed);
     }

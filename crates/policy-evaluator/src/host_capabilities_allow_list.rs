@@ -109,6 +109,14 @@ impl TryFrom<Vec<String>> for HostCapabilitiesAllowList {
     }
 }
 
+impl<'a> TryFrom<Vec<&'a str>> for HostCapabilitiesAllowList {
+    type Error = HostCapabilitiesPatternError;
+
+    fn try_from(patterns: Vec<&'a str>) -> Result<Self, Self::Error> {
+        Self::new(patterns.into_iter().map(String::from).collect())
+    }
+}
+
 impl From<HostCapabilitiesAllowList> for Vec<String> {
     fn from(allow_list: HostCapabilitiesAllowList) -> Self {
         let mut result = Vec::new();
@@ -144,53 +152,53 @@ mod tests {
 
     #[rstest]
     #[case::empty_allows_nothing(vec![], "oci/v1/verify", false)]
-    #[case::wildcard_allows_all(vec!["*".into()], "oci/v1/verify", true)]
-    #[case::wildcard_allows_all_2(vec!["*".into()], "kubernetes/can_i", true)]
-    #[case::exact_match(vec!["oci/v1/verify".into()], "oci/v1/verify", true)]
-    #[case::exact_no_match(vec!["oci/v1/verify".into()], "oci/v2/verify", false)]
-    #[case::prefix_oci(vec!["oci/*".into()], "oci/v1/verify", true)]
-    #[case::prefix_oci_v2(vec!["oci/*".into()], "oci/v2/verify", true)]
-    #[case::prefix_oci_manifest(vec!["oci/*".into()], "oci/v1/manifest_digest", true)]
-    #[case::prefix_no_match(vec!["oci/*".into()], "net/v1/dns_lookup_host", false)]
-    #[case::prefix_versioned(vec!["oci/v2/*".into()], "oci/v2/verify", true)]
-    #[case::prefix_versioned_no_match(vec!["oci/v2/*".into()], "oci/v1/verify", false)]
+    #[case::wildcard_allows_all(vec!["*"], "oci/v1/verify", true)]
+    #[case::wildcard_allows_all_2(vec!["*"], "kubernetes/can_i", true)]
+    #[case::exact_match(vec!["oci/v1/verify"], "oci/v1/verify", true)]
+    #[case::exact_no_match(vec!["oci/v1/verify"], "oci/v2/verify", false)]
+    #[case::prefix_oci(vec!["oci/*"], "oci/v1/verify", true)]
+    #[case::prefix_oci_v2(vec!["oci/*"], "oci/v2/verify", true)]
+    #[case::prefix_oci_manifest(vec!["oci/*"], "oci/v1/manifest_digest", true)]
+    #[case::prefix_no_match(vec!["oci/*"], "net/v1/dns_lookup_host", false)]
+    #[case::prefix_versioned(vec!["oci/v2/*"], "oci/v2/verify", true)]
+    #[case::prefix_versioned_no_match(vec!["oci/v2/*"], "oci/v1/verify", false)]
     #[case::multiple_patterns(
-        vec!["oci/v1/verify".into(), "net/v1/dns_lookup_host".into()],
+        vec!["oci/v1/verify", "net/v1/dns_lookup_host"],
         "oci/v1/verify",
         true
     )]
     #[case::multiple_patterns_second(
-        vec!["oci/v1/verify".into(), "net/v1/dns_lookup_host".into()],
+        vec!["oci/v1/verify", "net/v1/dns_lookup_host"],
         "net/v1/dns_lookup_host",
         true
     )]
     #[case::multiple_patterns_no_match(
-        vec!["oci/v1/verify".into(), "net/v1/dns_lookup_host".into()],
+        vec!["oci/v1/verify", "net/v1/dns_lookup_host"],
         "kubernetes/can_i",
         false
     )]
     #[case::mixed_prefix_and_exact(
-        vec!["oci/*".into(), "kubernetes/can_i".into()],
+        vec!["oci/*", "kubernetes/can_i"],
         "oci/v1/manifest_digest",
         true
     )]
     #[case::mixed_prefix_and_exact_2(
-        vec!["oci/*".into(), "kubernetes/can_i".into()],
+        vec!["oci/*", "kubernetes/can_i"],
         "kubernetes/can_i",
         true
     )]
     #[case::mixed_no_match(
-        vec!["oci/*".into(), "kubernetes/can_i".into()],
+        vec!["oci/*", "kubernetes/can_i"],
         "net/v1/dns_lookup_host",
         false
     )]
     fn is_capability_allowed(
-        #[case] patterns: Vec<String>,
+        #[case] patterns: Vec<&str>,
         #[case] capability: &str,
         #[case] expected: bool,
     ) {
         let allow_list =
-            HostCapabilitiesAllowList::new(patterns).expect("patterns should be valid");
+            HostCapabilitiesAllowList::try_from(patterns).expect("patterns should be valid");
         assert_eq!(
             allow_list.is_capability_allowed(capability),
             expected,
