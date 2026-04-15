@@ -85,9 +85,8 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case("nothing allowed", BTreeSet::new(), "v1", "Secret", false)]
-    #[case(
-        "try to access denied resource",
+    #[case::nothing_allowed(BTreeSet::new(), "v1", "Secret", false)]
+    #[case::try_to_access_denied_resource(
         BTreeSet::from([
             ContextAwareResource{
                 api_version: "v1".to_string(),
@@ -97,8 +96,7 @@ mod tests {
         "Secret",
         false,
     )]
-    #[case(
-        "access allowed resource",
+    #[case::access_allowed_resource(
         BTreeSet::from([
             ContextAwareResource{
                 api_version: "v1".to_string(),
@@ -110,14 +108,13 @@ mod tests {
     )]
 
     fn can_access_kubernetes_resource(
-        #[case] name: &str,
         #[case] allowed_resources: BTreeSet<ContextAwareResource>,
         #[case] api_version: &str,
         #[case] kind: &str,
         #[case] allowed: bool,
     ) {
         let ctx = EvaluationContext {
-            policy_id: name.to_string(),
+            policy_id: "a-context-aware-kubernetes-policy".to_string(),
             callback_channel: None,
             ctx_aware_resources_allow_list: allowed_resources,
             epoch_deadline: None,
@@ -139,19 +136,18 @@ mod tests {
     }
 
     #[rstest]
-    #[case("deny all", vec![], "oci/v1/verify", false)]
-    #[case("allow all", vec!["*"], "oci/v1/verify", true)]
-    #[case("exact match", vec!["oci/v1/verify"], "oci/v1/verify", true)]
-    #[case("prefix match", vec!["oci/*"], "oci/v2/verify", true)]
-    #[case("no match", vec!["net/v1/dns_lookup_host"], "oci/v1/verify", false)]
+    #[case::deny_all(vec![], "oci/v1/verify", false)]
+    #[case::allow_all(vec!["*"], "oci/v1/verify", true)]
+    #[case::exact_match(vec!["oci/v1/verify"], "oci/v1/verify", true)]
+    #[case::prefix_match(vec!["oci/*"], "oci/v2/verify", true)]
+    #[case::no_match(vec!["net/v1/dns_lookup_host"], "oci/v1/verify", false)]
     fn can_access_host_capability(
-        #[case] name: &str,
         #[case] patterns: Vec<&str>,
         #[case] capability: &str,
         #[case] allowed: bool,
     ) {
         let ctx = EvaluationContext {
-            policy_id: name.to_string(),
+            policy_id: "a-context-aware-policy".to_string(),
             callback_channel: None,
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
