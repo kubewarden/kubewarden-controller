@@ -346,11 +346,16 @@ the host replays back the answers found inside of the provided file.
 This is useful to test policies in a reproducible way, given no external
 interactions with OCI registries, DNS, Kubernetes are performed."#),
        Arg::new("sigstore-trust-config")
-           .long("sigstore-trust-config")
-           .value_parser(value_parser!(PathBuf))
-           .value_name("PATH")
-           .help("JSON-formatted file conforming to the ClientTrustConfig message in the Sigstore protobuf specs. This file configures the entire Sigstore instance state, including the URIs used to access the CA and artifact transparency services as well as the cryptographic root of trust itself"),
-    ]
+            .long("sigstore-trust-config")
+            .value_parser(value_parser!(PathBuf))
+            .value_name("PATH")
+            .help("JSON-formatted file conforming to the ClientTrustConfig message in the Sigstore protobuf specs. This file configures the entire Sigstore instance state, including the URIs used to access the CA and artifact transparency services as well as the cryptographic root of trust itself"),
+        Arg::new("allowed-host-capabilities")
+            .long("allowed-host-capabilities")
+            .num_args(0..)
+            .default_values(["*"])
+            .help("Host capabilities the policy is allowed to use. Use '*' to allow all. Can be repeated multiple times. Examples: 'oci/*', 'net/v1/dns_lookup_host'"),
+     ]
 }
 
 fn subcommand_run() -> Command {

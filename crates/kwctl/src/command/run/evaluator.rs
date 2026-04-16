@@ -86,6 +86,7 @@ impl Evaluator {
                 raw,
                 settings,
                 ctx_aware_cfg,
+                allowed_host_capabilities,
                 ..
             } => {
                 let metadata = local_data.metadata(uri);
@@ -127,7 +128,10 @@ impl Evaluator {
                     callback_channel: Some(callback_handler.sender_channel()),
                     ctx_aware_resources_allow_list: context_aware_allowed_resources.clone(),
                     epoch_deadline: None,
-                    host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(), // FIXME implement later on
+                    host_capabilities_allow_list: HostCapabilitiesAllowList::new(
+                        allowed_host_capabilities.clone(),
+                    )
+                    .map_err(|e| anyhow::anyhow!("Invalid host capabilities pattern: {e}"))?,
                 };
                 let policy_evaluator =
                     policy_evaluator_builder.build_pre()?.rehydrate(&eval_ctx)?;

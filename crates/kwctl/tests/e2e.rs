@@ -495,6 +495,64 @@ fn test_run_context_from_yaml(
         .stdout(contains(format!("\"allowed\":{}", allowed)));
 }
 
+#[rstest]
+#[case::from_cli(false)]
+#[case::from_yaml(true)]
+fn test_run_ctx_aware_policy_host_capability_denied(#[case] from_yaml: bool) {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    // Use a replay session to avoid attempting a real Kubernetes connection.
+    // The replay never fires because the host capability gate blocks the
+    // kubernetes/* call before it reaches the replay handler.
+    let session_path = test_data(
+        "host-capabilities-sessions/context-aware-demo-namespace-found.yml",
+    );
+
+    // Only constructed for the from_yaml case; must outlive cmd.assert()
+    // so the tempfile is not dropped before kwctl reads it.
+    let yaml_file = from_yaml.then(|| {
+        let crd = cluster_admission_policy(
+            "ctx-aware-policy",
+            "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0",
+            &[ContextAwareResourceSdk {
+                api_version: "v1".to_string(),
+                kind: "Namespace".to_string(),
+            }],
+        );
+        write_tmp_yaml_file(
+            serde_yaml::to_string(&crd)
+                .expect("cannot serialize CRD")
+                .as_bytes(),
+        )
+    });
+
+    let policy_arg: String = match &yaml_file {
+        Some(f) => f.path().to_string_lossy().into_owned(),
+        None => {
+            "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0".to_owned()
+        }
+    };
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--allow-context-aware")
+        .arg("--allowed-host-capabilities")
+        .arg("oci/*")
+        .arg("--request-path")
+        .arg(test_data(
+            "context-aware-policy-request-pod-creation-all-labels.json",
+        ))
+        .arg("--replay-host-capabilities-interactions")
+        .arg(session_path)
+        .arg(policy_arg);
+
+    cmd.assert().success();
+    cmd.assert()
+        .stdout(contains("\"allowed\":false"))
+        .stdout(contains("has not been granted access"));
+}
+
 #[test]
 fn test_run_ctx_aware_group_policy() {
     let tempdir = tempdir().expect("cannot create tempdir");
@@ -549,6 +607,79 @@ fn test_run_ctx_aware_group_policy() {
     cmd.assert().success();
     cmd.assert()
         .stdout(contains(format!("\"allowed\":{}", true)));
+}
+
+#[rstest]
+#[case::host_capabilities_denied(true, false)]
+#[case::host_capabilities_allowed(false, true)]
+fn test_run_ctx_aware_group_policy_host_capability(
+    #[case] restrict_caps: bool,
+    #[case] expected_allowed: bool,
+) {
+    let tempdir = tempdir().expect("cannot create tempdir");
+    pull_policies(tempdir.path(), POLICIES);
+
+    let crd = cluster_admission_policy_group::ClusterAdmissionPolicyGroup {
+        metadata: k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+            name: Some("group-policy".to_string()),
+            ..Default::default()
+        },
+        spec: Some(
+            cluster_admission_policy_group::ClusterAdmissionPolicyGroupSpec {
+                expression: "demo_policy() && true".to_string(),
+                message: "you shall not pass!".to_string(),
+                policies: HashMap::from([(
+                    "demo_policy".to_string(),
+                    cluster_admission_policy_group::PolicyGroupMemberWithContext {
+                        module:
+                            "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0"
+                                .to_string(),
+                        context_aware_resources: vec![ContextAwareResourceSdk {
+                            api_version: "v1".to_string(),
+                            kind: "Namespace".to_string(),
+                        }],
+                        ..Default::default()
+                    },
+                )]),
+                ..Default::default()
+            },
+        ),
+        ..Default::default()
+    };
+    let yaml_file = write_tmp_yaml_file(
+        serde_yaml::to_string(&crd)
+            .expect("cannot serialize CRD")
+            .as_bytes(),
+    );
+
+    let session_path = test_data("host-capabilities-sessions/context-aware-demo-namespace-found.yml");
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("run")
+        .arg("--allow-context-aware")
+        .arg("--request-path")
+        .arg(test_data(
+            "context-aware-policy-request-pod-creation-all-labels.json",
+        ))
+        .arg("--replay-host-capabilities-interactions")
+        .arg(session_path);
+
+    if restrict_caps {
+        cmd.arg("--allowed-host-capabilities")
+            .arg("oci/*")
+            .arg("--");
+    }
+
+    cmd.arg(yaml_file.path());
+
+    cmd.assert().success();
+    if expected_allowed {
+        cmd.assert().stdout(contains("\"allowed\":true"));
+    } else {
+        cmd.assert()
+            .stdout(contains("\"allowed\":false"))
+            .stdout(contains("has not been granted access"));
+    }
 }
 
 #[test]

@@ -9,6 +9,7 @@ use clap::ArgMatches;
 use k8s_openapi::api::core::v1::ObjectReference;
 use policy_evaluator::{
     admission_response_handler::{policy_id::PolicyID, policy_mode::PolicyMode},
+    host_capabilities_allow_list::HostCapabilitiesAllowList,
     kubewarden_policy_sdk::crd::policies::{
         AdmissionPolicy, AdmissionPolicyGroup, ClusterAdmissionPolicy, ClusterAdmissionPolicyGroup,
     },
@@ -45,6 +46,9 @@ pub(crate) enum PolicyDefinition {
         // determined after the policy is downloaded locally and its
         // metadata is inspected.
         ctx_aware_cfg: ContextAwareConfiguration,
+        // The list of host capabilities the policy is allowed to use.
+        // An empty list means no host capabilities are allowed.
+        allowed_host_capabilities: Vec<String>,
     },
     /// This is a group of policies. This can be defined only by providing a Kubewarden CRD
     /// file.
@@ -164,6 +168,7 @@ impl TryFrom<AdmissionPolicy> for PolicyDefinition {
             custom_rejection_message,
             settings,
             ctx_aware_cfg: ContextAwareConfiguration::NoAccess,
+            allowed_host_capabilities: vec![],
         })
     }
 }
@@ -204,6 +209,7 @@ impl TryFrom<ClusterAdmissionPolicy> for PolicyDefinition {
             custom_rejection_message,
             settings,
             ctx_aware_cfg: ContextAwareConfiguration::AllowList(ctx_aware_allow_list),
+            allowed_host_capabilities: vec![],
         })
     }
 }
@@ -316,7 +322,10 @@ impl PolicyDefinition {
 
     /// reads all the CRDs defined inside of the given file and returns a
     /// list of PolicyDefinition
-    pub fn from_yaml_file(yaml_path: &str) -> Result<Vec<PolicyDefinition>> {
+    pub fn from_yaml_file(
+        yaml_path: &str,
+        allowed_host_capabilities: &[String],
+    ) -> Result<Vec<PolicyDefinition>> {
         let deserializer = serde_yaml::Deserializer::from_reader(
             std::fs::File::open(yaml_path)
                 .map_err(|e| anyhow!("Cannot open YAML file {:?}: {}", yaml_path, e))?,
@@ -328,7 +337,26 @@ impl PolicyDefinition {
             let value_yaml = serde_yaml::Value::deserialize(document)
                 .map_err(|e| anyhow!("Cannot parse YAML file {:?}: {}", yaml_path, e))?;
 
-            let policy = PolicyDefinition::new(value_yaml)?;
+            let mut policy = PolicyDefinition::new(value_yaml)?;
+            // Overwrite the host capabilities with the value provided by the caller.
+            // For individual policies this sets the field directly. For group policies
+            // the same list is applied uniformly to all members, because host capabilities
+            // are not part of the Kubewarden CRD spec and must therefore come from the CLI.
+            let hc_allow_list = HostCapabilitiesAllowList::new(allowed_host_capabilities.to_vec())
+                .map_err(|e| anyhow!("Invalid host capabilities pattern: {e}"))?;
+            match &mut policy {
+                PolicyDefinition::Policy {
+                    allowed_host_capabilities: caps,
+                    ..
+                } => {
+                    *caps = allowed_host_capabilities.to_vec();
+                }
+                PolicyDefinition::PolicyGroup { policy_members, .. } => {
+                    for member in policy_members.values_mut() {
+                        member.settings.host_capabilities_allow_list = hc_allow_list.clone();
+                    }
+                }
+            }
             policies.push(policy);
         }
 
@@ -394,6 +422,12 @@ impl PolicyDefinition {
         let policy_mode = PolicyMode::Protect;
         let custom_rejection_message = None;
 
+        let allowed_host_capabilities: Vec<String> = matches
+            .get_many::<String>("allowed-host-capabilities")
+            .unwrap_or_default()
+            .cloned()
+            .collect();
+
         Ok(PolicyDefinition::Policy {
             id: "policy-from-cli".to_string(),
             policy_mode,
@@ -404,6 +438,7 @@ impl PolicyDefinition {
             raw,
             settings,
             ctx_aware_cfg,
+            allowed_host_capabilities,
         })
     }
 
@@ -471,6 +506,7 @@ mod tests {
                 policy_mode,
                 allowed_to_mutate,
                 custom_rejection_message,
+                allowed_host_capabilities,
             } => {
                 assert_eq!(id, name);
                 assert_eq!(uri, module_uri);
@@ -557,6 +593,7 @@ mod tests {
                 policy_mode,
                 allowed_to_mutate,
                 custom_rejection_message,
+                allowed_host_capabilities,
             } => {
                 assert_eq!(id, name);
                 assert_eq!(uri, module_uri);
@@ -669,6 +706,7 @@ mod tests {
                                 .expect("Failed to convert settings for member 1"),
                             ctx_aware_resources_allow_list: pgm_1_expected_context_aware_resources,
                             epoch_deadline: None,
+                            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
                         },
                     },
                 ),
@@ -681,6 +719,7 @@ mod tests {
                                 .expect("Failed to convert settings for member 2"),
                             ctx_aware_resources_allow_list: BTreeSet::new(),
                             epoch_deadline: None,
+                            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
                         },
                     },
                 ),
