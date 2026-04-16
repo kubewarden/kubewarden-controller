@@ -330,7 +330,7 @@ async fn test_runtime_context_aware<F, Fut>(
     &CONTEXT_AWARE_POLICY_FILE,
     "app_deployment.json",
     no_op_scenario,
-    HostCapabilitiesAllowList::default(),
+    HostCapabilitiesAllowList::deny_all(),
     false,
 )]
 #[tokio::test(flavor = "multi_thread")]

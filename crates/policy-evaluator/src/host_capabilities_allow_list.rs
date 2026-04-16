@@ -17,7 +17,7 @@ use crate::errors::HostCapabilitiesPatternError;
 /// Invalid patterns (rejected at parse time):
 /// - `oci*`: wildcard must follow a `/`
 /// - `oci/v1/oci_*`: wildcard must be the entire last segment
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "Vec<String>", into = "Vec<String>")]
 pub struct HostCapabilitiesAllowList {
     /// When true, all capabilities are allowed (the `*` pattern was specified)
@@ -78,7 +78,11 @@ impl HostCapabilitiesAllowList {
 
     /// Creates an allow list that denies all capabilities (empty list).
     pub fn deny_all() -> Self {
-        Self::default()
+        Self {
+            allow_all: false,
+            prefixes: Vec::new(),
+            exact: Vec::new(),
+        }
     }
 
     /// Returns `true` if the given capability path is allowed by this allow list.
@@ -240,8 +244,8 @@ mod tests {
     }
 
     #[test]
-    fn default_denies_all() {
-        let allow_list = HostCapabilitiesAllowList::default();
+    fn deny_all_denies_all() {
+        let allow_list = HostCapabilitiesAllowList::deny_all();
         assert!(!allow_list.is_capability_allowed("oci/v1/verify"));
         assert!(!allow_list.is_capability_allowed("kubernetes/can_i"));
     }
@@ -260,7 +264,7 @@ mod tests {
         let allow_list = HostCapabilitiesAllowList::new(vec!["*".into()]).unwrap();
         assert_eq!(allow_list.to_string(), "[*]");
 
-        let allow_list = HostCapabilitiesAllowList::default();
+        let allow_list = HostCapabilitiesAllowList::deny_all();
         assert_eq!(allow_list.to_string(), "[]");
 
         let allow_list =

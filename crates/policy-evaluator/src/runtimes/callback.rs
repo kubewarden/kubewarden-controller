@@ -440,7 +440,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::default(), // deny all
+            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
         })
     }
 

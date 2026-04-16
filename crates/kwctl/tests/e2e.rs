@@ -505,9 +505,8 @@ fn test_run_ctx_aware_policy_host_capability_denied(#[case] from_yaml: bool) {
     // Use a replay session to avoid attempting a real Kubernetes connection.
     // The replay never fires because the host capability gate blocks the
     // kubernetes/* call before it reaches the replay handler.
-    let session_path = test_data(
-        "host-capabilities-sessions/context-aware-demo-namespace-found.yml",
-    );
+    let session_path =
+        test_data("host-capabilities-sessions/context-aware-demo-namespace-found.yml");
 
     // Only constructed for the from_yaml case; must outlive cmd.assert()
     // so the tempfile is not dropped before kwctl reads it.
@@ -529,9 +528,7 @@ fn test_run_ctx_aware_policy_host_capability_denied(#[case] from_yaml: bool) {
 
     let policy_arg: String = match &yaml_file {
         Some(f) => f.path().to_string_lossy().into_owned(),
-        None => {
-            "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0".to_owned()
-        }
+        None => "registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0".to_owned(),
     };
 
     let mut cmd = setup_command(tempdir.path());
@@ -652,7 +649,8 @@ fn test_run_ctx_aware_group_policy_host_capability(
             .as_bytes(),
     );
 
-    let session_path = test_data("host-capabilities-sessions/context-aware-demo-namespace-found.yml");
+    let session_path =
+        test_data("host-capabilities-sessions/context-aware-demo-namespace-found.yml");
 
     let mut cmd = setup_command(tempdir.path());
     cmd.arg("run")

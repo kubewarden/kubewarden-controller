@@ -571,7 +571,7 @@ impl EvaluationEnvironment {
             .policy_id_to_host_capabilities
             .get(policy_id)
             .cloned()
-            .unwrap_or_default();
+            .unwrap_or_else(HostCapabilitiesAllowList::deny_all);
 
         let eval_ctx = EvaluationContext {
             policy_id: policy_id.to_string(),
@@ -677,7 +677,7 @@ impl EvaluationEnvironment {
                 .policy_id_to_host_capabilities
                 .get(&policy_id)
                 .cloned()
-                .unwrap_or_default();
+                .unwrap_or_else(HostCapabilitiesAllowList::deny_all);
 
             let policy_settings = self.get_policy_settings(&policy_id)?;
             let settings = match policy_settings.settings {
