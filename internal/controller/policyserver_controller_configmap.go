@@ -27,7 +27,7 @@ type policyGroupMemberWithContext struct {
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 	TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
-	// HostCapabilities      []string                          `json:"hostCapabilities"` // FIXME
+	HostCapabilities      []string                          `json:"hostCapabilities"`
 }
 
 type policyServerConfigEntry struct {
@@ -67,9 +67,8 @@ func (p *policyServerConfigEntry) UnmarshalJSON(b []byte) error {
 
 func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 	if len(p.Policies) > 0 {
-		// HostCapabilities is not included for policy groups. Individual group
-		// members will carry their own capabilities once that feature is
-		// implemented (see buildPolicyGroupMembersWithContext FIXME).
+		// For policy groups, hostCapabilities is not emitted at the group level.
+		// Each group member carries its own hostCapabilities field instead.
 		bytes, err := json.Marshal(struct {
 			NamespacedName types.NamespacedName                    `json:"namespacedName"`
 			PolicyMode     string                                  `json:"policyMode"`
@@ -196,7 +195,7 @@ func (r *PolicyServerReconciler) policyServerConfigMapVersion(ctx context.Contex
 	return unstructuredObj.GetResourceVersion(), nil
 }
 
-func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWithContext) map[string]policyGroupMemberWithContext {
+func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWithContext, hostCaps []string) map[string]policyGroupMemberWithContext {
 	policyGroupMembers := map[string]policyGroupMemberWithContext{}
 	for name, policy := range policies {
 		policyGroupMembers[name] = policyGroupMemberWithContext{
@@ -204,7 +203,7 @@ func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWi
 			Settings:              policy.Settings,
 			ContextAwareResources: policy.ContextAwareResources,
 			TimeoutEvalSeconds:    policy.TimeoutEvalSeconds,
-			// HostCapabilities:      hostCapabilities, // FIXME
+			HostCapabilities:      hostCaps,
 		}
 	}
 	return policyGroupMembers
@@ -247,7 +246,7 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy, policyServer *polic
 		}
 
 		if policyGroup, ok := admissionPolicy.(policiesv1.PolicyGroup); ok {
-			configEntry.Policies = buildPolicyGroupMembersWithContext(policyGroup.GetPolicyGroupMembersWithContext())
+			configEntry.Policies = buildPolicyGroupMembersWithContext(policyGroup.GetPolicyGroupMembersWithContext(), hostCaps)
 			configEntry.Expression = policyGroup.GetExpression()
 		}
 

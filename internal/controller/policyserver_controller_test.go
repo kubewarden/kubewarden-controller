@@ -366,11 +366,10 @@ var _ = Describe("PolicyServer controller", func() {
 				AllowedToMutate:       admissionPolicyGroup.IsMutating(),
 				Settings:              admissionPolicyGroup.GetSettings(),
 				ContextAwareResources: admissionPolicyGroup.GetContextAwareResources(),
-				Policies:              buildPolicyGroupMembersWithContext(admissionPolicyGroup.GetPolicyGroupMembersWithContext()),
+				Policies:              buildPolicyGroupMembersWithContext(admissionPolicyGroup.GetPolicyGroupMembersWithContext(), []string{}),
 				Expression:            admissionPolicyGroup.GetExpression(),
 				Message:               admissionPolicyGroup.GetMessage(),
 				TimeoutEvalSeconds:    &timeoutEvalSeconds,
-				// HostCapabilities:      []string{}, // FIXME
 			}
 			policiesMap[clusterPolicyGroup.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -382,11 +381,10 @@ var _ = Describe("PolicyServer controller", func() {
 				Settings:              clusterPolicyGroup.GetSettings(),
 				ContextAwareResources: clusterPolicyGroup.GetContextAwareResources(),
 				PolicyMode:            string(clusterPolicyGroup.GetPolicyMode()),
-				Policies:              buildPolicyGroupMembersWithContext(clusterPolicyGroup.GetPolicyGroupMembersWithContext()),
+				Policies:              buildPolicyGroupMembersWithContext(clusterPolicyGroup.GetPolicyGroupMembersWithContext(), []string{"*"}),
 				Expression:            clusterPolicyGroup.GetExpression(),
 				Message:               clusterPolicyGroup.GetMessage(),
 				TimeoutEvalSeconds:    &timeoutEvalSeconds,
-				// HostCapabilities:      []string{"*"}, // FIXME
 			}
 
 			policies, err := json.Marshal(policiesMap)
@@ -451,10 +449,10 @@ var _ = Describe("PolicyServer controller", func() {
 								}),
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod_privileged": And(MatchKeys(IgnoreExtras, Keys{
-										"module": Equal(admissionPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
+										"module":           Equal(admissionPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
+										"hostCapabilities": BeEmpty(),
 									}), Not(MatchAllKeys(Keys{
 										"timeoutEvalSeconds": Ignore(),
-										// "hostCapabilities":   ConsistOf("*"), // FIXME
 									}))),
 								}),
 								"policyMode": Equal(string(admissionPolicyGroup.GetPolicyMode())),
@@ -473,16 +471,16 @@ var _ = Describe("PolicyServer controller", func() {
 										"module":             Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
 										"settings":           Ignore(),
 										"timeoutEvalSeconds": BeNumerically("==", timeoutEvalSeconds),
-										// "hostCapabilities":   ConsistOf("*"), // FIXME
+										"hostCapabilities":   ConsistOf("*"),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
 											"kind":       Equal("Pod"),
 										})), HaveLen(1)),
 									}),
 									"user_group_psp": And(MatchAllKeys(Keys{
-										"module":   Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["user_group_psp"].Module),
-										"settings": Ignore(),
-										// "hostCapabilities": ConsistOf("*"), // FIXME
+										"module":           Equal(clusterPolicyGroup.GetPolicyGroupMembersWithContext()["user_group_psp"].Module),
+										"settings":         Ignore(),
+										"hostCapabilities": ConsistOf("*"),
 										"contextAwareResources": And(ContainElement(MatchAllKeys(Keys{
 											"apiVersion": Equal("v1"),
 											"kind":       Equal("Deployment"),
@@ -501,6 +499,77 @@ var _ = Describe("PolicyServer controller", func() {
 								}))),
 						}),
 						)),
+					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
+				}),
+			})))
+		})
+
+		It("should set empty host capabilities on namespaced policy group members when PolicyServer has no NamespacedPoliciesCapabilities", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			admissionPolicyGroup := policiesv1.NewAdmissionPolicyGroupFactory().
+				WithPolicyServer(policyServerName).
+				Build()
+			Expect(k8sClient.Create(ctx, admissionPolicyGroup)).To(Succeed())
+
+			Eventually(func() *corev1.ConfigMap {
+				configMap, _ := getTestPolicyServerConfigMap(ctx, policyServerName)
+				return configMap
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: And(
+						WithTransform(func(data string) (map[string]interface{}, error) {
+							policiesData := map[string]interface{}{}
+							err := json.Unmarshal([]byte(data), &policiesData)
+							return policiesData, err
+						}, MatchKeys(IgnoreExtras, Keys{
+							admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+								"policies": MatchKeys(IgnoreExtras, Keys{
+									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
+										"hostCapabilities": BeEmpty(),
+									}),
+								}),
+							}),
+						})),
+					),
+					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
+				}),
+			})))
+		})
+
+		It("should set host capabilities on namespaced policy group members from PolicyServer NamespacedPoliciesCapabilities", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				WithNamespacedPoliciesCapabilities([]string{"net/*"}).
+				Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			admissionPolicyGroup := policiesv1.NewAdmissionPolicyGroupFactory().
+				WithPolicyServer(policyServerName).
+				Build()
+			Expect(k8sClient.Create(ctx, admissionPolicyGroup)).To(Succeed())
+
+			Eventually(func() *corev1.ConfigMap {
+				configMap, _ := getTestPolicyServerConfigMap(ctx, policyServerName)
+				return configMap
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: And(
+						WithTransform(func(data string) (map[string]interface{}, error) {
+							policiesData := map[string]interface{}{}
+							err := json.Unmarshal([]byte(data), &policiesData)
+							return policiesData, err
+						}, MatchKeys(IgnoreExtras, Keys{
+							admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+								"policies": MatchKeys(IgnoreExtras, Keys{
+									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
+										"hostCapabilities": ConsistOf("net/*"),
+									}),
+								}),
+							}),
+						})),
+					),
 					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
 				}),
 			})))
