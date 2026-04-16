@@ -262,7 +262,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install opa
-        uses: kubewarden/github-actions/opa-installer@0f1672d63bd3572f204917d68390d87f7430069a # v5.0.0
+        uses: kubewarden/github-actions/opa-installer@63e6bff6226bbdd84a4244892417eb27676b7a8c # v5.0.1
         with:
           opa-version: v1.12.2
           checksum: cd6b0b2d762571a746f0261890b155e6dd71cca90dad6b42b6fcf6dd7f619f08
@@ -354,7 +354,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@921a4027af787cda265c4f334a0f7f89b21d72e9 # v2.75.8
+        uses: taiki-e/install-action@5939f3337e40968c39aa70f5ecb1417a92fb25a0 # v2.75.15
         with:
           tool: cargo-llvm-cov
       - name: Install cosign # this is needed by some of the e2e tests
@@ -402,7 +402,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Check spelling with typos
-        uses: crate-ci/typos@02ea592e44b3a53c302f697cddca7641cd051c3d # v1.45.0
+        uses: crate-ci/typos@cf5f1c29a8ac336af8568821ec41919923b05a83 # v1.45.1
 
   charts:
     name: Helm unittest
