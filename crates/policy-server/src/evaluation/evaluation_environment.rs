@@ -12,7 +12,7 @@ use policy_evaluator::{
     },
     callback_requests::CallbackRequest,
     evaluation_context::EvaluationContext,
-    host_capabilities_allow_list::HostCapabilitiesAllowList,
+    host_capabilities::HostCapabilities,
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
     policy_evaluator::{PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
@@ -76,7 +76,7 @@ pub(crate) struct EvaluationEnvironment {
 
     /// A map with the ID of the policy as key, and the allowed host capabilities
     /// as value.
-    policy_id_to_host_capabilities: HashMap<PolicyID, HostCapabilitiesAllowList>,
+    policy_id_to_host_capabilities: HashMap<PolicyID, HostCapabilities>,
 
     /// Map a `policy_id` to the module's digest.
     /// This allows us to deduplicate the Wasm modules defined by the user.
@@ -227,8 +227,8 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                     let epoch_deadline =
                         timeout_eval_seconds.or(self.global_policy_evaluation_limit_seconds);
 
-                    let host_capabilities_allow_list =
-                        HostCapabilitiesAllowList::new(host_capabilities.clone()).map_err(|e| {
+                    let host_capabilities = HostCapabilities::new(host_capabilities.clone())
+                        .map_err(|e| {
                             EvaluationError::BootstrapFailure(format!(
                                 "invalid hostCapabilities pattern for policy {id}: {e}"
                             ))
@@ -239,7 +239,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                         callback_channel: Some(self.callback_handler_tx.clone()),
                         ctx_aware_resources_allow_list: context_aware_resources.to_owned(),
                         epoch_deadline,
-                        host_capabilities_allow_list,
+                        host_capabilities,
                     };
 
                     if let Err(e) = self.bootstrap_policy(
@@ -304,13 +304,14 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                             .timeout_eval_seconds
                             .or(self.global_policy_evaluation_limit_seconds);
 
-                        let host_capabilities_allow_list =
-                            HostCapabilitiesAllowList::new(policy.host_capabilities.clone())
-                                .map_err(|e| {
-                                    EvaluationError::BootstrapFailure(format!(
-                                        "invalid hostCapabilities pattern for policy {id}: {e}"
-                                    ))
-                                })?;
+                        let host_capabilities = HostCapabilities::new(
+                            policy.host_capabilities.clone(),
+                        )
+                        .map_err(|e| {
+                            EvaluationError::BootstrapFailure(format!(
+                                "invalid hostCapabilities pattern for policy {id}: {e}"
+                            ))
+                        })?;
 
                         let eval_ctx = EvaluationContext {
                             policy_id: policy_id.to_string(),
@@ -319,7 +320,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                                 .context_aware_resources
                                 .to_owned(),
                             epoch_deadline,
-                            host_capabilities_allow_list,
+                            host_capabilities,
                         };
 
                         if let Err(e) = self.bootstrap_policy(
@@ -444,7 +445,7 @@ impl EvaluationEnvironment {
         );
 
         self.policy_id_to_host_capabilities
-            .insert(policy_id.to_owned(), eval_ctx.host_capabilities_allow_list);
+            .insert(policy_id.to_owned(), eval_ctx.host_capabilities);
 
         Ok(())
     }
@@ -567,18 +568,18 @@ impl EvaluationEnvironment {
             .get(policy_id)
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-        let host_capabilities_allow_list = self
+        let host_capabilities = self
             .policy_id_to_host_capabilities
             .get(policy_id)
             .cloned()
-            .unwrap_or_else(HostCapabilitiesAllowList::deny_all);
+            .unwrap_or_else(HostCapabilities::deny_all);
 
         let eval_ctx = EvaluationContext {
             policy_id: policy_id.to_string(),
             callback_channel: self.callback_handler_tx.clone(),
             ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
             epoch_deadline,
-            host_capabilities_allow_list,
+            host_capabilities,
         };
 
         policy_evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
@@ -673,11 +674,11 @@ impl EvaluationEnvironment {
                 .get(&policy_id)
                 .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
-            let host_capabilities_allow_list = self
+            let host_capabilities = self
                 .policy_id_to_host_capabilities
                 .get(&policy_id)
                 .cloned()
-                .unwrap_or_else(HostCapabilitiesAllowList::deny_all);
+                .unwrap_or_else(HostCapabilities::deny_all);
 
             let policy_settings = self.get_policy_settings(&policy_id)?;
             let settings = match policy_settings.settings {
@@ -693,7 +694,7 @@ impl EvaluationEnvironment {
                 settings,
                 ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
                 epoch_deadline,
-                host_capabilities_allow_list,
+                host_capabilities,
             };
 
             evaluator.add_policy_member(

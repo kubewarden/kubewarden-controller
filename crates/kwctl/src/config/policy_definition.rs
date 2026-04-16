@@ -9,7 +9,7 @@ use clap::ArgMatches;
 use k8s_openapi::api::core::v1::ObjectReference;
 use policy_evaluator::{
     admission_response_handler::{policy_id::PolicyID, policy_mode::PolicyMode},
-    host_capabilities_allow_list::HostCapabilitiesAllowList,
+    host_capabilities::HostCapabilities,
     kubewarden_policy_sdk::crd::policies::{
         AdmissionPolicy, AdmissionPolicyGroup, ClusterAdmissionPolicy, ClusterAdmissionPolicyGroup,
     },
@@ -342,7 +342,7 @@ impl PolicyDefinition {
             // For individual policies this sets the field directly. For group policies
             // the same list is applied uniformly to all members, because host capabilities
             // are not part of the Kubewarden CRD spec and must therefore come from the CLI.
-            let hc_allow_list = HostCapabilitiesAllowList::new(allowed_host_capabilities.to_vec())
+            let hc_allow_list = HostCapabilities::new(allowed_host_capabilities.to_vec())
                 .map_err(|e| anyhow!("Invalid host capabilities pattern: {e}"))?;
             match &mut policy {
                 PolicyDefinition::Policy {
@@ -353,7 +353,7 @@ impl PolicyDefinition {
                 }
                 PolicyDefinition::PolicyGroup { policy_members, .. } => {
                     for member in policy_members.values_mut() {
-                        member.settings.host_capabilities_allow_list = hc_allow_list.clone();
+                        member.settings.host_capabilities = hc_allow_list.clone();
                     }
                 }
             }
@@ -706,7 +706,7 @@ mod tests {
                                 .expect("Failed to convert settings for member 1"),
                             ctx_aware_resources_allow_list: pgm_1_expected_context_aware_resources,
                             epoch_deadline: None,
-                            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
+                            host_capabilities: HostCapabilities::deny_all(),
                         },
                     },
                 ),
@@ -719,7 +719,7 @@ mod tests {
                                 .expect("Failed to convert settings for member 2"),
                             ctx_aware_resources_allow_list: BTreeSet::new(),
                             epoch_deadline: None,
-                            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
+                            host_capabilities: HostCapabilities::deny_all(),
                         },
                     },
                 ),

@@ -260,7 +260,7 @@ impl PolicyGroupEvaluator {
             callback_channel: self.callback_channel.clone(),
             ctx_aware_resources_allow_list: settings.ctx_aware_resources_allow_list.clone(),
             epoch_deadline: settings.epoch_deadline,
-            host_capabilities_allow_list: settings.host_capabilities_allow_list.clone(),
+            host_capabilities: settings.host_capabilities.clone(),
         };
         let mut evaluator = evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
             EvaluationError::CannotRehydratePolicyGroupMember(policy_id.to_owned(), e)
@@ -335,7 +335,7 @@ impl PolicyGroupEvaluator {
             callback_channel: self.callback_channel.clone(),
             ctx_aware_resources_allow_list: settings.ctx_aware_resources_allow_list.clone(),
             epoch_deadline: settings.epoch_deadline,
-            host_capabilities_allow_list: settings.host_capabilities_allow_list.clone(),
+            host_capabilities: settings.host_capabilities.clone(),
         };
         let mut evaluator = evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
             EvaluationError::CannotRehydratePolicyGroupMember(policy_id.to_owned(), e)
@@ -370,8 +370,7 @@ mod tests {
     use wasmtime::Engine;
 
     use crate::{
-        admission_request::AdmissionRequest,
-        host_capabilities_allow_list::HostCapabilitiesAllowList,
+        admission_request::AdmissionRequest, host_capabilities::HostCapabilities,
         policy_evaluator::policy_evaluator_builder::PolicyEvaluatorBuilder,
     };
 
@@ -476,7 +475,7 @@ mod tests {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
                     epoch_deadline: None,
-                    host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+                    host_capabilities: HostCapabilities::allow_all(),
                 },
             );
         }
@@ -555,7 +554,7 @@ mod tests {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
                     epoch_deadline: None,
-                    host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+                    host_capabilities: HostCapabilities::allow_all(),
                 },
             );
         }

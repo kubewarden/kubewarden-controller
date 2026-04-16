@@ -25,7 +25,7 @@ use policy_evaluator::{
     admission_response::AdmissionResponseStatus,
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     evaluation_context::EvaluationContext,
-    host_capabilities_allow_list::HostCapabilitiesAllowList,
+    host_capabilities::HostCapabilities,
     policy_evaluator::PolicySettings,
     policy_evaluator::{PolicyExecutionMode, ValidateRequest},
     policy_metadata::ContextAwareResource,
@@ -180,7 +180,7 @@ async fn test_policy_evaluator(
         callback_channel: None,
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+        host_capabilities: HostCapabilities::allow_all(),
     };
 
     let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
@@ -294,7 +294,7 @@ async fn test_runtime_context_aware<F, Fut>(
             },
         ]),
         epoch_deadline: Some(2),
-        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+        host_capabilities: HostCapabilities::allow_all(),
     };
 
     let request_data = load_request_data(request_file_path);
@@ -322,7 +322,7 @@ async fn test_runtime_context_aware<F, Fut>(
     &CONTEXT_AWARE_POLICY_FILE,
     "app_deployment.json",
     wapc_and_wasi_scenario,
-    HostCapabilitiesAllowList::allow_all(),
+    HostCapabilities::allow_all(),
     true,
 )]
 #[case::host_capability_denied(
@@ -330,16 +330,16 @@ async fn test_runtime_context_aware<F, Fut>(
     &CONTEXT_AWARE_POLICY_FILE,
     "app_deployment.json",
     no_op_scenario,
-    HostCapabilitiesAllowList::deny_all(),
+    HostCapabilities::deny_all(),
     false,
 )]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_host_capabilities_allow_list<F, Fut>(
+async fn test_host_capabilities<F, Fut>(
     #[case] execution_mode: PolicyExecutionMode,
     #[case] policy_uri: &str,
     #[case] request_file_path: &str,
     #[case] scenario: F,
-    #[case] host_capabilities_allow_list: HostCapabilitiesAllowList,
+    #[case] host_capabilities: HostCapabilities,
     #[case] expected_allowed: bool,
 ) where
     F: FnOnce(Handle<Request<Body>, Response<Body>>) -> Fut,
@@ -375,7 +375,7 @@ async fn test_host_capabilities_allow_list<F, Fut>(
             },
         ]),
         epoch_deadline: Some(2),
-        host_capabilities_allow_list,
+        host_capabilities,
     };
 
     let request_data = load_request_data(request_file_path);
@@ -440,7 +440,7 @@ async fn test_oci_manifest_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+        host_capabilities: HostCapabilities::allow_all(),
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -532,7 +532,7 @@ async fn test_oci_manifest_and_config_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+        host_capabilities: HostCapabilities::allow_all(),
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -601,7 +601,7 @@ async fn test_oci_digest_capability() {
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+        host_capabilities: HostCapabilities::allow_all(),
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx

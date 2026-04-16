@@ -3,7 +3,7 @@ use std::fmt;
 use tokio::sync::mpsc;
 
 use crate::callback_requests::CallbackRequest;
-use crate::host_capabilities_allow_list::HostCapabilitiesAllowList;
+use crate::host_capabilities::HostCapabilities;
 use crate::policy_metadata::ContextAwareResource;
 
 /// A struct that holds metadata and other data that are needed when a policy
@@ -34,7 +34,7 @@ pub struct EvaluationContext {
     /// The set of host capabilities this policy is allowed to invoke.
     /// An empty list means no host capabilities are allowed (deny by default).
     /// A list containing `*` means all capabilities are allowed.
-    pub host_capabilities_allow_list: HostCapabilitiesAllowList,
+    pub host_capabilities: HostCapabilities,
 }
 
 impl Default for EvaluationContext {
@@ -44,7 +44,7 @@ impl Default for EvaluationContext {
             callback_channel: None,
             ctx_aware_resources_allow_list: Default::default(),
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
+            host_capabilities: HostCapabilities::deny_all(),
         }
     }
 }
@@ -68,8 +68,7 @@ impl EvaluationContext {
     /// The capability path is constructed as `{namespace}/{operation}`,
     /// matching the waPC host callback namespace and operation parameters.
     pub(crate) fn can_access_host_capability(&self, capability_path: &str) -> bool {
-        self.host_capabilities_allow_list
-            .is_allowed(capability_path)
+        self.host_capabilities.is_allowed(capability_path)
     }
 }
 
@@ -86,7 +85,7 @@ impl fmt::Debug for EvaluationContext {
             self.policy_id,
             callback_channel,
             self.ctx_aware_resources_allow_list,
-            self.host_capabilities_allow_list,
+            self.host_capabilities,
         )
     }
 }
@@ -130,7 +129,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: allowed_resources,
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+            host_capabilities: HostCapabilities::allow_all(),
         };
 
         let requested_resource = ContextAwareResource {
@@ -163,8 +162,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::new(patterns)
-                .expect("valid patterns"),
+            host_capabilities: HostCapabilities::new(patterns).expect("valid patterns"),
         };
         assert_eq!(ctx.can_access_host_capability(capability), allowed);
     }

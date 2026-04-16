@@ -20,7 +20,7 @@ use crate::errors::HostCapabilitiesPatternError;
 /// - `oci/v1/oci_*`: wildcard must be the entire last segment
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "Vec<String>", into = "Vec<String>")]
-pub enum HostCapabilitiesAllowList {
+pub enum HostCapabilities {
     /// Deny all host capabilities (empty pattern list).
     DenyAll,
     /// Allow all host capabilities (the `*` pattern was specified).
@@ -34,7 +34,7 @@ pub enum HostCapabilitiesAllowList {
     },
 }
 
-impl HostCapabilitiesAllowList {
+impl HostCapabilities {
     /// Creates a new allow list from a list of patterns.
     ///
     /// Returns an error if any pattern is invalid.
@@ -104,7 +104,7 @@ impl HostCapabilitiesAllowList {
     }
 }
 
-impl TryFrom<Vec<String>> for HostCapabilitiesAllowList {
+impl TryFrom<Vec<String>> for HostCapabilities {
     type Error = HostCapabilitiesPatternError;
 
     fn try_from(patterns: Vec<String>) -> Result<Self, Self::Error> {
@@ -112,12 +112,12 @@ impl TryFrom<Vec<String>> for HostCapabilitiesAllowList {
     }
 }
 
-impl From<HostCapabilitiesAllowList> for Vec<String> {
-    fn from(allow_list: HostCapabilitiesAllowList) -> Self {
+impl From<HostCapabilities> for Vec<String> {
+    fn from(allow_list: HostCapabilities) -> Self {
         match allow_list {
-            HostCapabilitiesAllowList::AllowAll => vec!["*".to_string()],
-            HostCapabilitiesAllowList::DenyAll => vec![],
-            HostCapabilitiesAllowList::Patterns { prefixes, exact } => {
+            HostCapabilities::AllowAll => vec!["*".to_string()],
+            HostCapabilities::DenyAll => vec![],
+            HostCapabilities::Patterns { prefixes, exact } => {
                 let mut result: Vec<String> =
                     prefixes.into_iter().map(|p| format!("{p}*")).collect();
                 result.sort();
@@ -130,7 +130,7 @@ impl From<HostCapabilitiesAllowList> for Vec<String> {
     }
 }
 
-impl fmt::Display for HostCapabilitiesAllowList {
+impl fmt::Display for HostCapabilities {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::AllowAll => write!(f, "[*]"),
@@ -199,8 +199,7 @@ mod tests {
         #[case] capability: &str,
         #[case] expected: bool,
     ) {
-        let allow_list =
-            HostCapabilitiesAllowList::new(patterns).expect("patterns should be valid");
+        let allow_list = HostCapabilities::new(patterns).expect("patterns should be valid");
         assert_eq!(
             allow_list.is_allowed(capability),
             expected,
@@ -213,13 +212,13 @@ mod tests {
     #[case::mid_wildcard("oci/v1/oci_*")]
     #[case::wildcard_not_last("*/oci")]
     fn invalid_patterns(#[case] pattern: &str) {
-        let result = HostCapabilitiesAllowList::new(vec![pattern.to_string()]);
+        let result = HostCapabilities::new(vec![pattern.to_string()]);
         assert!(result.is_err(), "pattern {pattern:?} should be invalid");
     }
 
     #[test]
     fn empty_pattern_is_invalid() {
-        let result = HostCapabilitiesAllowList::new(vec!["".to_string()]);
+        let result = HostCapabilities::new(vec!["".to_string()]);
         assert!(result.is_err());
     }
 
@@ -227,8 +226,8 @@ mod tests {
     #[case::standalone(vec!["*"])]
     #[case::wildcard_with_others(vec!["*", "oci/*", "kubernetes/can_i"])]
     fn wildcard_parses_to_allow_all(#[case] patterns: Vec<&str>) {
-        let result = HostCapabilitiesAllowList::new(patterns);
-        assert_eq!(result.unwrap(), HostCapabilitiesAllowList::AllowAll);
+        let result = HostCapabilities::new(patterns);
+        assert_eq!(result.unwrap(), HostCapabilities::AllowAll);
     }
 
     #[test]
@@ -239,25 +238,19 @@ mod tests {
             "oci/v1/verify".to_string(),
             "kubernetes/can_i".to_string(),
         ];
-        let result = HostCapabilitiesAllowList::new(patterns);
+        let result = HostCapabilities::new(patterns);
         assert!(result.is_ok());
     }
 
     #[test]
     fn constructors_produce_correct_variants() {
-        assert_eq!(
-            HostCapabilitiesAllowList::deny_all(),
-            HostCapabilitiesAllowList::DenyAll
-        );
-        assert_eq!(
-            HostCapabilitiesAllowList::allow_all(),
-            HostCapabilitiesAllowList::AllowAll
-        );
+        assert_eq!(HostCapabilities::deny_all(), HostCapabilities::DenyAll);
+        assert_eq!(HostCapabilities::allow_all(), HostCapabilities::AllowAll);
     }
 
     #[test]
     fn deny_all_denies_all() {
-        let allow_list = HostCapabilitiesAllowList::deny_all();
+        let allow_list = HostCapabilities::deny_all();
         assert!(!allow_list.is_allowed("oci/v1/verify"));
         assert!(!allow_list.is_allowed("kubernetes/can_i"));
     }
@@ -265,21 +258,21 @@ mod tests {
     #[test]
     fn serde_roundtrip() {
         let patterns = vec!["oci/*".to_string(), "kubernetes/can_i".to_string()];
-        let allow_list = HostCapabilitiesAllowList::new(patterns.clone()).unwrap();
+        let allow_list = HostCapabilities::new(patterns.clone()).unwrap();
         let json = serde_json::to_string(&allow_list).unwrap();
-        let deserialized: HostCapabilitiesAllowList = serde_json::from_str(&json).unwrap();
+        let deserialized: HostCapabilities = serde_json::from_str(&json).unwrap();
         assert_eq!(allow_list, deserialized);
     }
 
     #[test]
     fn display() {
-        let allow_list = HostCapabilitiesAllowList::new(["*"]).unwrap();
+        let allow_list = HostCapabilities::new(["*"]).unwrap();
         assert_eq!(allow_list.to_string(), "[*]");
 
-        let allow_list = HostCapabilitiesAllowList::deny_all();
+        let allow_list = HostCapabilities::deny_all();
         assert_eq!(allow_list.to_string(), "[]");
 
-        let allow_list = HostCapabilitiesAllowList::new(["oci/*", "kubernetes/can_i"]).unwrap();
+        let allow_list = HostCapabilities::new(["oci/*", "kubernetes/can_i"]).unwrap();
         assert_eq!(allow_list.to_string(), "[oci/*, kubernetes/can_i]");
     }
 }

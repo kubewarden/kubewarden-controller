@@ -35,7 +35,7 @@ fn host_capability_denied(
     error!(
         policy = policy_id,
         capability = capability_path,
-        allowed_capabilities = %eval_ctx.host_capabilities_allow_list,
+        allowed_capabilities = %eval_ctx.host_capabilities,
         "Policy tried to use a host capability it doesn't have access to"
     );
     Err(format!(
@@ -430,7 +430,7 @@ mod tests {
     use rstest::rstest;
 
     use crate::evaluation_context::EvaluationContext;
-    use crate::host_capabilities_allow_list::HostCapabilitiesAllowList;
+    use crate::host_capabilities::HostCapabilities;
 
     use super::host_callback;
 
@@ -440,7 +440,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
+            host_capabilities: HostCapabilities::deny_all(),
         })
     }
 
@@ -450,7 +450,7 @@ mod tests {
             callback_channel: None, // None so allowed calls fail fast at channel send, not capability check
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(),
+            host_capabilities: HostCapabilities::allow_all(),
         })
     }
 
