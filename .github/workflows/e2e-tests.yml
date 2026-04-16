@@ -105,6 +105,8 @@ jobs:
 
       - name: "Install kwctl"
         uses: kubewarden/github-actions/kwctl-installer@63e6bff6226bbdd84a4244892417eb27676b7a8c # v5.0.1
+        with:
+          kwctl-version: latest
 
       - run: sudo npm install -g bats
 
