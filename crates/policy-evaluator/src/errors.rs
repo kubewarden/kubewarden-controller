@@ -112,6 +112,6 @@ pub enum HostCapabilitiesPatternError {
         "invalid pattern {pattern:?}: wildcard '*' must be the entire last path segment (e.g. 'oci/*'), not a partial match"
     )]
     InvalidWildcard { pattern: String },
-    #[error("invalid pattern {pattern:?}: pattern must not be empty")]
-    Empty { pattern: String },
+    #[error("invalid pattern: pattern must not be empty")]
+    Empty,
 }

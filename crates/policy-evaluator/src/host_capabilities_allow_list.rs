@@ -48,9 +48,7 @@ impl HostCapabilitiesAllowList {
             let pattern = pattern.as_ref();
             let trimmed = pattern.trim();
             if trimmed.is_empty() {
-                return Err(HostCapabilitiesPatternError::Empty {
-                    pattern: pattern.to_string(),
-                });
+                return Err(HostCapabilitiesPatternError::Empty);
             }
 
             if trimmed == "*" {
