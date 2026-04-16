@@ -128,7 +128,7 @@ impl Evaluator {
                     callback_channel: Some(callback_handler.sender_channel()),
                     ctx_aware_resources_allow_list: context_aware_allowed_resources.clone(),
                     epoch_deadline: None,
-                    host_capabilities: HostCapabilities::new(allowed_host_capabilities.clone())
+                    host_capabilities: HostCapabilities::new(allowed_host_capabilities)
                         .map_err(|e| anyhow::anyhow!("Invalid host capabilities pattern: {e}"))?,
                 };
                 let policy_evaluator =

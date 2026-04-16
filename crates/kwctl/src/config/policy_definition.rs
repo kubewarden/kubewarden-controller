@@ -342,7 +342,7 @@ impl PolicyDefinition {
             // For individual policies this sets the field directly. For group policies
             // the same list is applied uniformly to all members, because host capabilities
             // are not part of the Kubewarden CRD spec and must therefore come from the CLI.
-            let hc_allow_list = HostCapabilities::new(allowed_host_capabilities.to_vec())
+            let hc_allow_list = HostCapabilities::new(allowed_host_capabilities)
                 .map_err(|e| anyhow!("Invalid host capabilities pattern: {e}"))?;
             match &mut policy {
                 PolicyDefinition::Policy {

@@ -227,8 +227,8 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                     let epoch_deadline =
                         timeout_eval_seconds.or(self.global_policy_evaluation_limit_seconds);
 
-                    let host_capabilities = HostCapabilities::new(host_capabilities.clone())
-                        .map_err(|e| {
+                    let host_capabilities =
+                        HostCapabilities::new(host_capabilities).map_err(|e| {
                             EvaluationError::BootstrapFailure(format!(
                                 "invalid hostCapabilities pattern for policy {id}: {e}"
                             ))

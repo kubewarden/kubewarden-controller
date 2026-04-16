@@ -204,7 +204,7 @@ mod tests {
     #[case::wildcard_not_last("*/oci")]
     #[case::empty("")]
     fn invalid_patterns(#[case] pattern: &str) {
-        let result = HostCapabilities::new(vec![pattern.to_string()]);
+        let result = HostCapabilities::new([pattern]);
         assert!(result.is_err(), "pattern {pattern:?} should be invalid");
     }
 
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn serde_roundtrip() {
         let patterns = vec!["oci/*".to_string(), "kubernetes/can_i".to_string()];
-        let allow_list = HostCapabilities::new(patterns.clone()).unwrap();
+        let allow_list = HostCapabilities::new(patterns).unwrap();
         let json = serde_json::to_string(&allow_list).unwrap();
         let deserialized: HostCapabilities = serde_json::from_str(&json).unwrap();
         assert_eq!(allow_list, deserialized);
