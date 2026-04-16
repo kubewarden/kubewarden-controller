@@ -58,12 +58,12 @@ pub(crate) fn parse_policy_definitions(matches: &ArgMatches) -> Result<Vec<Polic
             );
         }
 
-        // If the URI is a YAML file, parse it as a policy definition
         let allowed_host_capabilities: Vec<String> = matches
             .get_many::<String>("allowed-host-capabilities")
             .unwrap_or_default()
             .cloned()
             .collect();
+        // If the URI is a YAML file, parse it as a policy definition
         return PolicyDefinition::from_yaml_file(uri, &allowed_host_capabilities);
     }
 
