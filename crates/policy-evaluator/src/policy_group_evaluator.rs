@@ -9,8 +9,8 @@ pub mod errors;
 pub mod evaluator;
 
 use crate::{
-    admission_response::AdmissionResponse, policy_evaluator::PolicySettings,
-    policy_metadata::ContextAwareResource,
+    admission_response::AdmissionResponse, host_capabilities_allow_list::HostCapabilitiesAllowList,
+    policy_evaluator::PolicySettings, policy_metadata::ContextAwareResource,
 };
 
 /// The settings of a policy group member
@@ -22,6 +22,8 @@ pub struct PolicyGroupMemberSettings {
     pub ctx_aware_resources_allow_list: BTreeSet<ContextAwareResource>,
     /// The epoch deadlines to be used when executing this policy member
     pub epoch_deadline: Option<u64>,
+    /// The list of host capabilities granted to this policy member
+    pub host_capabilities_allow_list: HostCapabilitiesAllowList,
 }
 
 /// This holds the a summary of the evaluation results of a policy group member
@@ -74,6 +76,7 @@ impl TryFrom<&PolicyGroupMemberWithContext> for PolicyGroupMemberSettings {
                 .timeout_eval_seconds
                 .as_ref()
                 .map(|t| Into::<i32>::into(t) as u64),
+            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
         })
     }
 }
@@ -91,6 +94,7 @@ impl TryFrom<&PolicyGroupMember> for PolicyGroupMemberSettings {
                 .timeout_eval_seconds
                 .as_ref()
                 .map(|t| Into::<i32>::into(t) as u64),
+            host_capabilities_allow_list: HostCapabilitiesAllowList::deny_all(),
         })
     }
 }

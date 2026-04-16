@@ -76,6 +76,11 @@ impl HostCapabilitiesAllowList {
         HostCapabilitiesAllowList::new(vec!["*".to_string()]).unwrap()
     }
 
+    /// Creates an allow list that denies all capabilities (empty list).
+    pub fn deny_all() -> Self {
+        Self::default()
+    }
+
     /// Returns `true` if the given capability path is allowed by this allow list.
     ///
     /// The capability path is constructed as `{namespace}/{operation}`, matching
