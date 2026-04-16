@@ -69,7 +69,7 @@ impl EvaluationContext {
     /// matching the waPC host callback namespace and operation parameters.
     pub(crate) fn can_access_host_capability(&self, capability_path: &str) -> bool {
         self.host_capabilities_allow_list
-            .is_capability_allowed(capability_path)
+            .is_allowed(capability_path)
     }
 }
 
@@ -163,7 +163,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities_allow_list: HostCapabilitiesAllowList::try_from(patterns)
+            host_capabilities_allow_list: HostCapabilitiesAllowList::new(patterns)
                 .expect("valid patterns"),
         };
         assert_eq!(ctx.can_access_host_capability(capability), allowed);

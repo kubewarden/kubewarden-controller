@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fmt;
 
 use crate::errors::HostCapabilitiesPatternError;
@@ -19,94 +20,89 @@ use crate::errors::HostCapabilitiesPatternError;
 /// - `oci/v1/oci_*`: wildcard must be the entire last segment
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "Vec<String>", into = "Vec<String>")]
-pub struct HostCapabilitiesAllowList {
-    /// When true, all capabilities are allowed (the `*` pattern was specified)
-    allow_all: bool,
-    /// Prefix patterns (e.g., `oci/` from `oci/*`, `oci/v2/` from `oci/v2/*`)
-    prefixes: Vec<String>,
-    /// Exact capability paths (e.g., `oci/v1/verify`)
-    exact: Vec<String>,
+pub enum HostCapabilitiesAllowList {
+    /// Deny all host capabilities (empty pattern list).
+    DenyAll,
+    /// Allow all host capabilities (the `*` pattern was specified).
+    AllowAll,
+    /// Allow specific capabilities matched by prefix or exact patterns.
+    Patterns {
+        /// Prefix patterns (e.g., `oci/` from `oci/*`, `oci/v2/` from `oci/v2/*`)
+        prefixes: HashSet<String>,
+        /// Exact capability paths (e.g., `oci/v1/verify`)
+        exact: HashSet<String>,
+    },
 }
 
 impl HostCapabilitiesAllowList {
     /// Creates a new allow list from a list of patterns.
     ///
     /// Returns an error if any pattern is invalid.
-    pub fn new(patterns: Vec<String>) -> Result<Self, HostCapabilitiesPatternError> {
-        let mut allow_all = false;
-        let mut prefixes = Vec::new();
-        let mut exact = Vec::new();
+    pub fn new(
+        patterns: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> Result<Self, HostCapabilitiesPatternError> {
+        let mut prefixes = HashSet::new();
+        let mut exact = HashSet::new();
 
-        for pattern in &patterns {
+        for pattern in patterns {
+            let pattern = pattern.as_ref();
             let trimmed = pattern.trim();
             if trimmed.is_empty() {
                 return Err(HostCapabilitiesPatternError::Empty {
-                    pattern: pattern.clone(),
+                    pattern: pattern.to_string(),
                 });
             }
 
             if trimmed == "*" {
-                allow_all = true;
-                continue; // check for invalid patterns
+                return Ok(Self::AllowAll);
             }
 
             if let Some(pos) = trimmed.find('*') {
                 // Wildcard must be at the end and preceded by '/'
                 if pos != trimmed.len() - 1 || !trimmed[..pos].ends_with('/') {
                     return Err(HostCapabilitiesPatternError::InvalidWildcard {
-                        pattern: pattern.clone(),
+                        pattern: pattern.to_string(),
                     });
                 }
                 // Store the prefix including trailing '/'
-                prefixes.push(trimmed[..pos].to_string());
+                prefixes.insert(trimmed[..pos].to_string());
             } else {
-                exact.push(trimmed.to_string());
+                exact.insert(trimmed.to_string());
             }
         }
 
-        Ok(Self {
-            allow_all,
-            prefixes,
-            exact,
-        })
+        if prefixes.is_empty() && exact.is_empty() {
+            return Ok(Self::DenyAll);
+        }
+
+        Ok(Self::Patterns { prefixes, exact })
     }
 
     /// Creates an allow list that allows all capabilities (`*`).
     pub fn allow_all() -> Self {
-        HostCapabilitiesAllowList::new(vec!["*".to_string()]).unwrap()
+        Self::AllowAll
     }
 
     /// Creates an allow list that denies all capabilities (empty list).
     pub fn deny_all() -> Self {
-        Self {
-            allow_all: false,
-            prefixes: Vec::new(),
-            exact: Vec::new(),
-        }
+        Self::DenyAll
     }
 
     /// Returns `true` if the given capability path is allowed by this allow list.
     ///
     /// The capability path is constructed as `{namespace}/{operation}`, matching
     /// the waPC host callback namespace and operation parameters.
-    pub fn is_capability_allowed(&self, capability_path: &str) -> bool {
-        if self.allow_all {
-            return true;
+    pub fn is_allowed(&self, capability_path: &str) -> bool {
+        match self {
+            Self::AllowAll => true,
+            Self::DenyAll => false,
+            Self::Patterns { exact, prefixes } => {
+                exact.contains(capability_path)
+                    || prefixes
+                        .iter()
+                        .any(|p| capability_path.starts_with(p.as_str()))
+            }
         }
-
-        if self.exact.iter().any(|e| e == capability_path) {
-            return true;
-        }
-
-        if self
-            .prefixes
-            .iter()
-            .any(|p| capability_path.starts_with(p.as_str()))
-        {
-            return true;
-        }
-
-        false
     }
 }
 
@@ -118,38 +114,37 @@ impl TryFrom<Vec<String>> for HostCapabilitiesAllowList {
     }
 }
 
-impl<'a> TryFrom<Vec<&'a str>> for HostCapabilitiesAllowList {
-    type Error = HostCapabilitiesPatternError;
-
-    fn try_from(patterns: Vec<&'a str>) -> Result<Self, Self::Error> {
-        Self::new(patterns.into_iter().map(String::from).collect())
-    }
-}
-
 impl From<HostCapabilitiesAllowList> for Vec<String> {
     fn from(allow_list: HostCapabilitiesAllowList) -> Self {
-        let mut result = Vec::new();
-        if allow_list.allow_all {
-            result.push("*".to_string());
+        match allow_list {
+            HostCapabilitiesAllowList::AllowAll => vec!["*".to_string()],
+            HostCapabilitiesAllowList::DenyAll => vec![],
+            HostCapabilitiesAllowList::Patterns { prefixes, exact } => {
+                let mut result: Vec<String> =
+                    prefixes.into_iter().map(|p| format!("{p}*")).collect();
+                result.sort();
+                let mut exact_sorted: Vec<String> = exact.into_iter().collect();
+                exact_sorted.sort();
+                result.extend(exact_sorted);
+                result
+            }
         }
-        for prefix in allow_list.prefixes {
-            result.push(format!("{prefix}*"));
-        }
-        result.extend(allow_list.exact);
-        result
     }
 }
 
 impl fmt::Display for HostCapabilitiesAllowList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.allow_all {
-            return write!(f, "[*]");
-        }
-        let items: Vec<String> = self.clone().into();
-        if items.is_empty() {
-            write!(f, "[]")
-        } else {
-            write!(f, "[{}]", items.join(", "))
+        match self {
+            Self::AllowAll => write!(f, "[*]"),
+            Self::DenyAll => write!(f, "[]"),
+            Self::Patterns { prefixes, exact } => {
+                let mut items: Vec<String> = prefixes.iter().map(|p| format!("{p}*")).collect();
+                items.sort();
+                let mut exact_sorted: Vec<&String> = exact.iter().collect();
+                exact_sorted.sort();
+                items.extend(exact_sorted.into_iter().cloned());
+                write!(f, "[{}]", items.join(", "))
+            }
         }
     }
 }
@@ -207,9 +202,9 @@ mod tests {
         #[case] expected: bool,
     ) {
         let allow_list =
-            HostCapabilitiesAllowList::try_from(patterns).expect("patterns should be valid");
+            HostCapabilitiesAllowList::new(patterns).expect("patterns should be valid");
         assert_eq!(
-            allow_list.is_capability_allowed(capability),
+            allow_list.is_allowed(capability),
             expected,
             "capability={capability}"
         );
@@ -230,10 +225,17 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[rstest]
+    #[case::standalone(vec!["*"])]
+    #[case::wildcard_with_others(vec!["*", "oci/*", "kubernetes/can_i"])]
+    fn wildcard_parses_to_allow_all(#[case] patterns: Vec<&str>) {
+        let result = HostCapabilitiesAllowList::new(patterns);
+        assert_eq!(result.unwrap(), HostCapabilitiesAllowList::AllowAll);
+    }
+
     #[test]
     fn valid_patterns_parse() {
         let patterns = vec![
-            "*".to_string(),
             "oci/*".to_string(),
             "oci/v2/*".to_string(),
             "oci/v1/verify".to_string(),
@@ -244,10 +246,22 @@ mod tests {
     }
 
     #[test]
+    fn constructors_produce_correct_variants() {
+        assert_eq!(
+            HostCapabilitiesAllowList::deny_all(),
+            HostCapabilitiesAllowList::DenyAll
+        );
+        assert_eq!(
+            HostCapabilitiesAllowList::allow_all(),
+            HostCapabilitiesAllowList::AllowAll
+        );
+    }
+
+    #[test]
     fn deny_all_denies_all() {
         let allow_list = HostCapabilitiesAllowList::deny_all();
-        assert!(!allow_list.is_capability_allowed("oci/v1/verify"));
-        assert!(!allow_list.is_capability_allowed("kubernetes/can_i"));
+        assert!(!allow_list.is_allowed("oci/v1/verify"));
+        assert!(!allow_list.is_allowed("kubernetes/can_i"));
     }
 
     #[test]
@@ -261,15 +275,13 @@ mod tests {
 
     #[test]
     fn display() {
-        let allow_list = HostCapabilitiesAllowList::new(vec!["*".into()]).unwrap();
+        let allow_list = HostCapabilitiesAllowList::new(["*"]).unwrap();
         assert_eq!(allow_list.to_string(), "[*]");
 
         let allow_list = HostCapabilitiesAllowList::deny_all();
         assert_eq!(allow_list.to_string(), "[]");
 
-        let allow_list =
-            HostCapabilitiesAllowList::new(vec!["oci/*".into(), "kubernetes/can_i".into()])
-                .unwrap();
+        let allow_list = HostCapabilitiesAllowList::new(["oci/*", "kubernetes/can_i"]).unwrap();
         assert_eq!(allow_list.to_string(), "[oci/*, kubernetes/can_i]");
     }
 }
