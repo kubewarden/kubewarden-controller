@@ -265,7 +265,7 @@ jobs:
         uses: kubewarden/github-actions/opa-installer@63e6bff6226bbdd84a4244892417eb27676b7a8c # v5.0.1
         with:
           opa-version: v1.12.2
-          checksum: cd6b0b2d762571a746f0261890b155e6dd71cca90dad6b42b6fcf6dd7f619f08
+          checksum: a4ba8734ed95ceaac850c12684a42467ed6b0dc9633a9db8dd14d47d05e37751
       - name: Install bats
         run: sudo apt-get install -y bats
       - name: Run e2e tests
