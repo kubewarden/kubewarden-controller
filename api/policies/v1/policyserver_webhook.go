@@ -301,8 +301,8 @@ func validateSingleCapability(pattern string, path *field.Path) *field.Error {
 			return nil
 		}
 
-		child, ok := node[part]
-		if !ok {
+		child, found := node[part]
+		if !found {
 			return field.Invalid(path, pattern,
 				fmt.Sprintf("unknown segment %q, valid options at this level are: %s",
 					part, strings.Join(slices.Sorted(maps.Keys(node)), ", ")))
