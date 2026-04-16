@@ -1,7 +1,6 @@
 use std::path::Path;
 
-use assert_cmd::Command;
-use assert_cmd::cargo::cargo_bin_cmd;
+use assert_cmd::{Command, cargo::cargo_bin_cmd};
 
 #[allow(dead_code)]
 pub fn setup_command(path: &Path) -> Command {

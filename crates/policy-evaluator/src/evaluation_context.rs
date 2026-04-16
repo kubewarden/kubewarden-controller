@@ -1,10 +1,11 @@
-use std::collections::BTreeSet;
-use std::fmt;
+use std::{collections::BTreeSet, fmt};
+
 use tokio::sync::mpsc;
 
-use crate::callback_requests::CallbackRequest;
-use crate::host_capabilities::HostCapabilities;
-use crate::policy_metadata::ContextAwareResource;
+use crate::{
+    callback_requests::CallbackRequest, host_capabilities::HostCapabilities,
+    policy_metadata::ContextAwareResource,
+};
 
 /// A struct that holds metadata and other data that are needed when a policy
 /// is being evaluated

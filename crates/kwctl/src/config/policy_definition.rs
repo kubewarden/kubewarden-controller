@@ -1,7 +1,7 @@
-use std::str::FromStr;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     fmt,
+    str::FromStr,
 };
 
 use anyhow::{Result, anyhow};

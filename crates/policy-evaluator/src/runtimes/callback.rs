@@ -11,8 +11,10 @@ use kubewarden_policy_sdk::host_capabilities::{
 use tokio::sync::{mpsc, oneshot, oneshot::Receiver};
 use tracing::{debug, error};
 
-use crate::callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse};
-use crate::evaluation_context::EvaluationContext;
+use crate::{
+    callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
+    evaluation_context::EvaluationContext,
+};
 
 fn unknown_operation(
     namespace: &str,

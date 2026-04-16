@@ -9,13 +9,15 @@ use rhai::EvalAltResult;
 use tokio::sync::mpsc;
 use tracing::debug;
 
-use crate::admission_response::{self, AdmissionResponse, AdmissionResponseStatus};
-use crate::callback_requests::CallbackRequest;
-use crate::evaluation_context::EvaluationContext;
-use crate::policy_evaluator::{PolicyEvaluatorPre, ValidateRequest};
-use crate::policy_group_evaluator::{
-    PolicyGroupMemberEvaluationResult, PolicyGroupMemberSettings,
-    errors::{EvaluationError, Result},
+use crate::{
+    admission_response::{self, AdmissionResponse, AdmissionResponseStatus},
+    callback_requests::CallbackRequest,
+    evaluation_context::EvaluationContext,
+    policy_evaluator::{PolicyEvaluatorPre, ValidateRequest},
+    policy_group_evaluator::{
+        PolicyGroupMemberEvaluationResult, PolicyGroupMemberSettings,
+        errors::{EvaluationError, Result},
+    },
 };
 
 /// PolicyGroupEvaluator is an evaluator that can evaluate a group of policies

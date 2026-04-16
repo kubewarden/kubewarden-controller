@@ -1,14 +1,10 @@
-mod common;
-
-use std::path::PathBuf;
 use std::{
     collections::{BTreeSet, HashMap},
+    path::PathBuf,
     time::Duration,
 };
 #[cfg(feature = "otel_tests")]
 use std::{fs::File, io::BufRead};
-
-use common::{app, setup};
 
 use axum::{
     body::Body,
@@ -16,12 +12,11 @@ use axum::{
 };
 use backon::{ExponentialBuilder, Retryable};
 use http_body_util::BodyExt;
-use policy_evaluator::admission_response::{self, StatusCause, StatusDetails};
 use policy_evaluator::{
-    admission_response::AdmissionResponseStatus,
-    admission_response_handler::policy_mode::PolicyMode, policy_evaluator::PolicySettings,
-    policy_fetcher::proxy::ProxyConfig, policy_fetcher::sources::Sources,
-    policy_fetcher::verify::config::VerificationConfigV1,
+    admission_response::{self, AdmissionResponseStatus, StatusCause, StatusDetails},
+    admission_response_handler::policy_mode::PolicyMode,
+    policy_evaluator::PolicySettings,
+    policy_fetcher::{proxy::ProxyConfig, sources::Sources, verify::config::VerificationConfigV1},
 };
 use policy_server::{api::admission_review::AdmissionReviewResponse, config::PolicyOrPolicyGroup};
 use regex::Regex;
@@ -30,10 +25,12 @@ use serde_json::json;
 use tokio::fs;
 use tower::ServiceExt;
 
-use crate::common::context_aware_policy_group_test_config;
-use crate::common::context_aware_policy_test_config;
-use crate::common::default_test_config;
-use crate::common::pod_privileged_test_config;
+mod common;
+
+use crate::common::{
+    app, context_aware_policy_group_test_config, context_aware_policy_test_config,
+    default_test_config, pod_privileged_test_config, setup,
+};
 
 #[tokio::test]
 async fn test_validate() {

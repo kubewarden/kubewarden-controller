@@ -1,6 +1,6 @@
+use std::{collections::HashSet, fmt};
+
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::fmt;
 
 use crate::errors::HostCapabilitiesPatternError;
 

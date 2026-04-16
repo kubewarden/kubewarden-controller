@@ -4,13 +4,15 @@ use serde::Deserialize;
 use serde_json::json;
 use tracing::{error, warn};
 
-use crate::runtimes::rego::{
-    Stack, context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError,
-};
 use crate::{
     admission_request,
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
     policy_evaluator::{PolicySettings, RegoPolicyExecutionMode, ValidateRequest},
+    runtimes::rego::{
+        Stack,
+        context_aware::{self, KubernetesContext},
+        errors::RegoRuntimeError,
+    },
 };
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut Stack);

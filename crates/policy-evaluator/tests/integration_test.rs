@@ -1,24 +1,17 @@
 #![allow(clippy::too_many_arguments)]
-mod common;
-mod k8s_mock;
+use std::{collections::BTreeSet, future::Future};
 
 use anyhow::Result;
 use core::panic;
 use hyper::{Request, Response};
-use kube::Client;
-use kube::client::Body;
+use kube::{Client, client::Body};
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
 use policy_evaluator::admission_response::PatchType;
-use policy_fetcher::oci_client::manifest::OciImageManifest;
+use policy_fetcher::oci_client::manifest::{OciDescriptor, OciImageManifest, OciManifest};
 use rstest::*;
 use serde_json::json;
-use std::collections::BTreeSet;
-use std::future::Future;
-use tokio::sync::mpsc;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tower_test::mock::Handle;
-
-use policy_fetcher::oci_client::manifest::{OciDescriptor, OciManifest};
 
 use policy_evaluator::{
     admission_request::AdmissionRequest,
@@ -26,16 +19,20 @@ use policy_evaluator::{
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     evaluation_context::EvaluationContext,
     host_capabilities::HostCapabilities,
-    policy_evaluator::PolicySettings,
-    policy_evaluator::{PolicyExecutionMode, ValidateRequest},
+    policy_evaluator::{PolicyExecutionMode, PolicySettings, ValidateRequest},
     policy_metadata::ContextAwareResource,
 };
 
-use crate::common::{
-    CONTEXT_AWARE_POLICY_FILE, build_policy_evaluator, fetch_policy, load_request_data,
-    setup_callback_handler,
+mod common;
+mod k8s_mock;
+
+use crate::{
+    common::{
+        CONTEXT_AWARE_POLICY_FILE, build_policy_evaluator, fetch_policy, load_request_data,
+        setup_callback_handler,
+    },
+    k8s_mock::{no_op_scenario, rego_scenario, wapc_and_wasi_scenario},
 };
-use crate::k8s_mock::{no_op_scenario, rego_scenario, wapc_and_wasi_scenario};
 
 #[rstest]
 #[case::wapc(

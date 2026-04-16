@@ -1,14 +1,17 @@
-use crate::builtins;
-use crate::errors::{BurregoError, Result};
-use crate::host_callbacks::HostCallbacks;
-use crate::opa_host_functions;
-use crate::policy::Policy;
-use crate::stack_helper::StackHelper;
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
 use tracing::debug;
 use wasmtime::{Engine, Instance, Linker, Memory, MemoryType, Module, Store};
+
+use crate::{
+    builtins,
+    errors::{BurregoError, Result},
+    host_callbacks::HostCallbacks,
+    opa_host_functions,
+    policy::Policy,
+    stack_helper::StackHelper,
+};
 
 macro_rules! set_epoch_deadline_and_call_guest {
     ($epoch_deadline:expr, $store:expr, $code:block) => {{

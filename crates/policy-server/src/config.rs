@@ -1,3 +1,11 @@
+use std::{
+    collections::{BTreeSet, HashMap},
+    env,
+    fs::{self, File},
+    net::SocketAddr,
+    path::{Path, PathBuf},
+};
+
 use anyhow::{Result, anyhow};
 use clap::ArgMatches;
 use lazy_static::lazy_static;
@@ -13,13 +21,6 @@ use policy_evaluator::{
     policy_metadata::ContextAwareResource,
 };
 use serde::Deserialize;
-use std::{
-    collections::{BTreeSet, HashMap},
-    env,
-    fs::{self, File},
-    net::SocketAddr,
-    path::{Path, PathBuf},
-};
 
 pub static SERVICE_NAME: &str = "kubewarden-policy-server";
 const DOCKER_CONFIG_ENV_VAR: &str = "DOCKER_CONFIG";
