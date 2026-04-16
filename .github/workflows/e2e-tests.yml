@@ -67,7 +67,7 @@ env:
   K3D_VERSION: v5.8.3
   K3D_CHECKSUM_AMD64: dbaa79a76ace7f4ca230a1ff41dc7d8a5036a8ad0309e9c54f9bf3836dbe853e
   K3D_CHECKSUM_ARM64: 0b8110f2229631af7402fb828259330985918b08fefd38b7f1b788a1c8687216
-  K3D_CLUSTER_NAME: ${{ github.repository_owner }}-${{ github.event.repository.name }}
+  K3D_CLUSTER_NAME: ${{ github.repository_owner }}-${{ github.run_id }}
   MTLS: ${{ github.event_name == 'pull_request' && 'true' || inputs.MTLS }}
 
 jobs:
