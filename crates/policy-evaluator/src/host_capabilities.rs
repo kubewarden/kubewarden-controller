@@ -18,10 +18,11 @@ use crate::errors::HostCapabilitiesPatternError;
 /// Invalid patterns (rejected at parse time):
 /// - `oci*`: wildcard must follow a `/`
 /// - `oci/v1/oci_*`: wildcard must be the entire last segment
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "Vec<String>", into = "Vec<String>")]
 pub enum HostCapabilities {
     /// Deny all host capabilities (empty pattern list).
+    #[default]
     DenyAll,
     /// Allow all host capabilities (the `*` pattern was specified).
     AllowAll,
@@ -83,7 +84,7 @@ impl HostCapabilities {
 
     /// Creates an allow list that denies all capabilities (empty list).
     pub fn deny_all() -> Self {
-        Self::DenyAll
+        Self::default()
     }
 
     /// Returns `true` if the given capability path is allowed by this allow list.

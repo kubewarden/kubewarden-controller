@@ -8,7 +8,7 @@ use crate::policy_metadata::ContextAwareResource;
 
 /// A struct that holds metadata and other data that are needed when a policy
 /// is being evaluated
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct EvaluationContext {
     /// The policy identifier. This is mostly relevant for Policy Server,
     /// which uses the identifier provided by the user inside of the `policy.yml`
@@ -35,18 +35,6 @@ pub struct EvaluationContext {
     /// An empty list means no host capabilities are allowed (deny by default).
     /// A list containing `*` means all capabilities are allowed.
     pub host_capabilities: HostCapabilities,
-}
-
-impl Default for EvaluationContext {
-    fn default() -> Self {
-        Self {
-            policy_id: String::default(),
-            callback_channel: None,
-            ctx_aware_resources_allow_list: Default::default(),
-            epoch_deadline: None,
-            host_capabilities: HostCapabilities::deny_all(),
-        }
-    }
 }
 
 impl EvaluationContext {
