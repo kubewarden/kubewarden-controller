@@ -304,6 +304,14 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                             .timeout_eval_seconds
                             .or(self.global_policy_evaluation_limit_seconds);
 
+                        let host_capabilities_allow_list =
+                            HostCapabilitiesAllowList::new(policy.host_capabilities.clone())
+                                .map_err(|e| {
+                                    EvaluationError::BootstrapFailure(format!(
+                                        "invalid hostCapabilities pattern for policy {id}: {e}"
+                                    ))
+                                })?;
+
                         let eval_ctx = EvaluationContext {
                             policy_id: policy_id.to_string(),
                             callback_channel: Some(self.callback_handler_tx.clone()),
@@ -311,7 +319,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                                 .context_aware_resources
                                 .to_owned(),
                             epoch_deadline,
-                            host_capabilities_allow_list: HostCapabilitiesAllowList::allow_all(), // FIXME
+                            host_capabilities_allow_list,
                         };
 
                         if let Err(e) = self.bootstrap_policy(
@@ -665,6 +673,12 @@ impl EvaluationEnvironment {
                 .get(&policy_id)
                 .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
+            let host_capabilities_allow_list = self
+                .policy_id_to_host_capabilities
+                .get(&policy_id)
+                .cloned()
+                .unwrap_or_default();
+
             let policy_settings = self.get_policy_settings(&policy_id)?;
             let settings = match policy_settings.settings {
                 PolicyOrPolicyGroupSettings::Policy(settings) => settings,
@@ -679,6 +693,7 @@ impl EvaluationEnvironment {
                 settings,
                 ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
                 epoch_deadline,
+                host_capabilities_allow_list,
             };
 
             evaluator.add_policy_member(
@@ -841,6 +856,7 @@ mod tests {
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        host_capabilities: vec![],
                     },
                 )]
                 .into_iter()
@@ -869,6 +885,7 @@ mod tests {
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        host_capabilities: vec![],
                     },
                 )]
                 .into_iter()
@@ -907,6 +924,7 @@ mod tests {
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        host_capabilities: vec![],
                     },
                 )]
                 .into_iter()
@@ -927,6 +945,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -936,6 +955,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -945,6 +965,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                 ]
@@ -968,6 +989,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -977,6 +999,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -986,6 +1009,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                 ]

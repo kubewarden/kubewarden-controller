@@ -30,6 +30,7 @@ use serde_json::json;
 use tokio::fs;
 use tower::ServiceExt;
 
+use crate::common::context_aware_policy_group_test_config;
 use crate::common::context_aware_policy_test_config;
 use crate::common::default_test_config;
 use crate::common::pod_privileged_test_config;
@@ -640,6 +641,104 @@ async fn test_context_aware_policy_host_capability_allowed() {
         !message.contains("has not been granted access"),
         "expected no capability-denial message when host capabilities are allowed, got: {message}"
     );
+}
+
+#[tokio::test]
+#[rstest]
+#[case::host_capabilities_denied(vec![], true)]
+#[case::host_capabilities_allowed(vec!["*".to_owned()], false)]
+async fn test_context_aware_group_policy_host_capability(
+    #[case] host_capabilities: Vec<String>,
+    #[case] expect_cap_denied: bool,
+) {
+    use policy_evaluator::policy_metadata::ContextAwareResource;
+    use std::collections::BTreeSet;
+
+    setup();
+
+    let context_aware_resources = BTreeSet::from([
+        ContextAwareResource {
+            api_version: "apps/v1".to_owned(),
+            kind: "Deployment".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Namespace".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Service".to_owned(),
+        },
+    ]);
+
+    let config = context_aware_policy_group_test_config(
+        "ctx-aware-group",
+        host_capabilities,
+        context_aware_resources,
+    );
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/ctx-aware-group")
+        .body(Body::from(include_str!(
+            "data/deployment_admission_review.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    if expect_cap_denied {
+        assert!(
+            !admission_review_response.response.allowed,
+            "expected admission to be denied when group member has no host capabilities"
+        );
+        // The host capability denial detail is in status.details.causes, because the
+        // group policy wraps the member error with its own top-level message.
+        let causes = admission_review_response
+            .response
+            .status
+            .and_then(|s| s.details)
+            .map(|d| d.causes)
+            .unwrap_or_default();
+        assert!(
+            causes.iter().any(|c| c
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("has not been granted access")),
+            "expected 'has not been granted access' in a status cause for group policy, got: {causes:?}"
+        );
+    } else {
+        // The host capability gate must have passed: no cause or top-level message should
+        // contain the capability-denial text. (The policy itself may still be denied because
+        // there is no live Kubernetes cluster in the test environment.)
+        let status = admission_review_response.response.status;
+        let top_message = status
+            .as_ref()
+            .and_then(|s| s.message.as_deref())
+            .unwrap_or_default()
+            .to_owned();
+        let causes = status
+            .and_then(|s| s.details)
+            .map(|d| d.causes)
+            .unwrap_or_default();
+        assert!(
+            !top_message.contains("has not been granted access")
+                && !causes.iter().any(|c| c
+                    .message
+                    .as_deref()
+                    .unwrap_or_default()
+                    .contains("has not been granted access")),
+            "expected no capability-denial in group policy when all host capabilities are allowed, \
+             got top_message: {top_message:?}, causes: {causes:?}"
+        );
+    }
 }
 
 #[tokio::test]

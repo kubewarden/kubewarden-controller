@@ -89,6 +89,7 @@ pub(crate) fn default_test_config() -> Config {
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        host_capabilities: vec![],
                     },
                 )]),
             },
@@ -112,7 +113,7 @@ pub(crate) fn default_test_config() -> Config {
                         ),
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
-                        // host_capabilities: vec![],
+                        host_capabilities: vec![],
                     },
                 )]),
             },
@@ -181,6 +182,38 @@ pub(crate) fn context_aware_policy_test_config(
             message: None,
             timeout_eval_seconds: None,
             host_capabilities,
+        },
+    )]);
+
+    let mut config = default_config();
+    config.policies.extend(policies);
+    config
+}
+
+/// Returns a Config with the context-aware test policy registered as a group policy
+/// under the given `policy_id`. The single group member uses the provided
+/// `host_capabilities` and `context_aware_resources`.
+pub(crate) fn context_aware_policy_group_test_config(
+    policy_id: &str,
+    host_capabilities: Vec<String>,
+    context_aware_resources: BTreeSet<ContextAwareResource>,
+) -> Config {
+    let policies = HashMap::from([(
+        policy_id.to_owned(),
+        PolicyOrPolicyGroup::PolicyGroup {
+            expression: "ctx_aware_policy() && true".to_string(),
+            message: "group policy rejected".to_string(),
+            policy_mode: PolicyMode::Protect,
+            policies: HashMap::from([(
+                "ctx_aware_policy".to_string(),
+                PolicyGroupMember {
+                    module: "ghcr.io/kubewarden/tests/context-aware-test-policy:latest".to_owned(),
+                    settings: None,
+                    context_aware_resources,
+                    timeout_eval_seconds: None,
+                    host_capabilities,
+                },
+            )]),
         },
     )]);
 

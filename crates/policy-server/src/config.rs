@@ -324,6 +324,9 @@ pub struct PolicyGroupMember {
     pub context_aware_resources: BTreeSet<ContextAwareResource>,
     /// Timeout for the evaluation of the policy
     pub timeout_eval_seconds: Option<u64>,
+    /// List of host capabilities granted to this policy
+    #[serde(default)]
+    pub host_capabilities: Vec<String>,
 }
 
 impl PolicyGroupMember {
@@ -531,6 +534,7 @@ group_policy:
                                 settings: Some(PolicySettings::default()),
                                 context_aware_resources: BTreeSet::new(),
                                 timeout_eval_seconds: None,
+                                host_capabilities: vec![],
                             },
                         ),
                         (
@@ -540,6 +544,7 @@ group_policy:
                                 settings: Some(PolicySettings::default()),
                                 context_aware_resources: BTreeSet::new(),
                                 timeout_eval_seconds: None,
+                                host_capabilities: vec![],
                             },
                         ),
                     ]),
