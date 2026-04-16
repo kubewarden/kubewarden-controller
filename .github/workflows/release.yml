@@ -82,7 +82,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Build, sign, and upload digest
-        uses: kubewarden/github-actions/container-build@0f1672d63bd3572f204917d68390d87f7430069a # v5.0.0
+        uses: kubewarden/github-actions/container-build@63e6bff6226bbdd84a4244892417eb27676b7a8c # v5.0.1
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
@@ -101,7 +101,7 @@ jobs:
         component: [policy-server, kubewarden-controller, audit-scanner]
     steps:
       - name: Merge multi-arch images
-        uses: kubewarden/github-actions/merge-multiarch@0f1672d63bd3572f204917d68390d87f7430069a # v5.0.0
+        uses: kubewarden/github-actions/merge-multiarch@63e6bff6226bbdd84a4244892417eb27676b7a8c # v5.0.1
         with:
           component: ${{ matrix.component }}
           tag: ${{ github.ref_name }}
@@ -131,7 +131,7 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Generate and sign attestations
-        uses: kubewarden/github-actions/attestation@0f1672d63bd3572f204917d68390d87f7430069a # v5.0.0
+        uses: kubewarden/github-actions/attestation@63e6bff6226bbdd84a4244892417eb27676b7a8c # v5.0.1
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
