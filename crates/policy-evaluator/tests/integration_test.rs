@@ -180,7 +180,7 @@ async fn test_policy_evaluator(
         callback_channel: None,
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities: HostCapabilities::allow_all(),
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
@@ -294,7 +294,7 @@ async fn test_runtime_context_aware<F, Fut>(
             },
         ]),
         epoch_deadline: Some(2),
-        host_capabilities: HostCapabilities::allow_all(),
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let request_data = load_request_data(request_file_path);
@@ -322,7 +322,7 @@ async fn test_runtime_context_aware<F, Fut>(
     &CONTEXT_AWARE_POLICY_FILE,
     "app_deployment.json",
     wapc_and_wasi_scenario,
-    HostCapabilities::allow_all(),
+    HostCapabilities::AllowAll,
     true,
 )]
 #[case::host_capability_denied(
@@ -330,7 +330,7 @@ async fn test_runtime_context_aware<F, Fut>(
     &CONTEXT_AWARE_POLICY_FILE,
     "app_deployment.json",
     no_op_scenario,
-    HostCapabilities::deny_all(),
+    HostCapabilities::DenyAll,
     false,
 )]
 #[tokio::test(flavor = "multi_thread")]
@@ -440,7 +440,7 @@ async fn test_oci_manifest_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities: HostCapabilities::allow_all(),
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -532,7 +532,7 @@ async fn test_oci_manifest_and_config_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities: HostCapabilities::allow_all(),
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -601,7 +601,7 @@ async fn test_oci_digest_capability() {
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
-        host_capabilities: HostCapabilities::allow_all(),
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx

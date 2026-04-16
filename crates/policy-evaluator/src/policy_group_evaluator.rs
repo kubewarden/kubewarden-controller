@@ -76,7 +76,7 @@ impl TryFrom<&PolicyGroupMemberWithContext> for PolicyGroupMemberSettings {
                 .timeout_eval_seconds
                 .as_ref()
                 .map(|t| Into::<i32>::into(t) as u64),
-            host_capabilities: HostCapabilities::deny_all(),
+            host_capabilities: HostCapabilities::DenyAll,
         })
     }
 }
@@ -94,7 +94,7 @@ impl TryFrom<&PolicyGroupMember> for PolicyGroupMemberSettings {
                 .timeout_eval_seconds
                 .as_ref()
                 .map(|t| Into::<i32>::into(t) as u64),
-            host_capabilities: HostCapabilities::deny_all(),
+            host_capabilities: HostCapabilities::DenyAll,
         })
     }
 }

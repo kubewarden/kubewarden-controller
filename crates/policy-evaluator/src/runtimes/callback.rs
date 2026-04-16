@@ -440,7 +440,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities: HostCapabilities::deny_all(),
+            host_capabilities: HostCapabilities::DenyAll,
         })
     }
 
@@ -450,7 +450,7 @@ mod tests {
             callback_channel: None, // None so allowed calls fail fast at channel send, not capability check
             ctx_aware_resources_allow_list: BTreeSet::new(),
             epoch_deadline: None,
-            host_capabilities: HostCapabilities::allow_all(),
+            host_capabilities: HostCapabilities::AllowAll,
         })
     }
 

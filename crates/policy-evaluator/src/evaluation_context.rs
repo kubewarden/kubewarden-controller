@@ -117,7 +117,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: allowed_resources,
             epoch_deadline: None,
-            host_capabilities: HostCapabilities::allow_all(),
+            host_capabilities: HostCapabilities::AllowAll,
         };
 
         let requested_resource = ContextAwareResource {

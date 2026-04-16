@@ -208,7 +208,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: Default::default(),
             epoch_deadline: Some(epoch_deadline),
-            host_capabilities: HostCapabilities::allow_all(),
+            host_capabilities: HostCapabilities::AllowAll,
         };
 
         let eval_ctx = Arc::new(eval_ctx);

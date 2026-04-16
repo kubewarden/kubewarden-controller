@@ -77,16 +77,6 @@ impl HostCapabilities {
         Ok(Self::Patterns { prefixes, exact })
     }
 
-    /// Creates an allow list that allows all capabilities (`*`).
-    pub fn allow_all() -> Self {
-        Self::AllowAll
-    }
-
-    /// Creates an allow list that denies all capabilities (empty list).
-    pub fn deny_all() -> Self {
-        Self::default()
-    }
-
     /// Returns `true` if the given capability path is allowed by this allow list.
     ///
     /// The capability path is constructed as `{namespace}/{operation}`, matching
@@ -244,14 +234,8 @@ mod tests {
     }
 
     #[test]
-    fn constructors_produce_correct_variants() {
-        assert_eq!(HostCapabilities::deny_all(), HostCapabilities::DenyAll);
-        assert_eq!(HostCapabilities::allow_all(), HostCapabilities::AllowAll);
-    }
-
-    #[test]
     fn deny_all_denies_all() {
-        let allow_list = HostCapabilities::deny_all();
+        let allow_list = HostCapabilities::DenyAll;
         assert!(!allow_list.is_allowed("oci/v1/verify"));
         assert!(!allow_list.is_allowed("kubernetes/can_i"));
     }
@@ -270,7 +254,7 @@ mod tests {
         let allow_list = HostCapabilities::new(["*"]).unwrap();
         assert_eq!(allow_list.to_string(), "[*]");
 
-        let allow_list = HostCapabilities::deny_all();
+        let allow_list = HostCapabilities::DenyAll;
         assert_eq!(allow_list.to_string(), "[]");
 
         let allow_list = HostCapabilities::new(["oci/*", "kubernetes/can_i"]).unwrap();

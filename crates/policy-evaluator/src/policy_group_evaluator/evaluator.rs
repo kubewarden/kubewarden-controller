@@ -475,7 +475,7 @@ mod tests {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
                     epoch_deadline: None,
-                    host_capabilities: HostCapabilities::allow_all(),
+                    host_capabilities: HostCapabilities::AllowAll,
                 },
             );
         }
@@ -554,7 +554,7 @@ mod tests {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
                     epoch_deadline: None,
-                    host_capabilities: HostCapabilities::allow_all(),
+                    host_capabilities: HostCapabilities::AllowAll,
                 },
             );
         }
