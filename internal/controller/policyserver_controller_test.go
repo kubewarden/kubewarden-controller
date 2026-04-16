@@ -504,7 +504,7 @@ var _ = Describe("PolicyServer controller", func() {
 			})))
 		})
 
-		It("should set empty host capabilities on namespaced policy group members when PolicyServer has no NamespacedPoliciesCapabilities", func() {
+		It("should set empty host capabilities on namespaced policy group members and * on cluster-wide group members when PolicyServer has no NamespacedPoliciesCapabilities", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
@@ -512,6 +512,11 @@ var _ = Describe("PolicyServer controller", func() {
 				WithPolicyServer(policyServerName).
 				Build()
 			Expect(k8sClient.Create(ctx, admissionPolicyGroup)).To(Succeed())
+
+			clusterPolicyGroup := policiesv1.NewClusterAdmissionPolicyGroupFactory().
+				WithPolicyServer(policyServerName).
+				Build()
+			Expect(k8sClient.Create(ctx, clusterPolicyGroup)).To(Succeed())
 
 			Eventually(func() *corev1.ConfigMap {
 				configMap, _ := getTestPolicyServerConfigMap(ctx, policyServerName)
@@ -528,6 +533,13 @@ var _ = Describe("PolicyServer controller", func() {
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
 										"hostCapabilities": BeEmpty(),
+									}),
+								}),
+							}),
+							clusterPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+								"policies": MatchKeys(IgnoreExtras, Keys{
+									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
+										"hostCapabilities": ConsistOf("*"),
 									}),
 								}),
 							}),
