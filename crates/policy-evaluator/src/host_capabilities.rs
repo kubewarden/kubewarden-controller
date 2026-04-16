@@ -202,15 +202,10 @@ mod tests {
     #[case::partial_wildcard("oci*")]
     #[case::mid_wildcard("oci/v1/oci_*")]
     #[case::wildcard_not_last("*/oci")]
+    #[case::empty("")]
     fn invalid_patterns(#[case] pattern: &str) {
         let result = HostCapabilities::new(vec![pattern.to_string()]);
         assert!(result.is_err(), "pattern {pattern:?} should be invalid");
-    }
-
-    #[test]
-    fn empty_pattern_is_invalid() {
-        let result = HostCapabilities::new(vec!["".to_string()]);
-        assert!(result.is_err());
     }
 
     #[rstest]
@@ -233,11 +228,11 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn deny_all_denies_all() {
-        let allow_list = HostCapabilities::DenyAll;
-        assert!(!allow_list.is_allowed("oci/v1/verify"));
-        assert!(!allow_list.is_allowed("kubernetes/can_i"));
+    #[rstest]
+    #[case::oci("oci/v1/verify")]
+    #[case::kubernetes("kubernetes/can_i")]
+    fn deny_all_denies_all(#[case] capability: &str) {
+        assert!(!HostCapabilities::DenyAll.is_allowed(capability));
     }
 
     #[test]
@@ -249,15 +244,14 @@ mod tests {
         assert_eq!(allow_list, deserialized);
     }
 
-    #[test]
-    fn display() {
-        let allow_list = HostCapabilities::new(["*"]).unwrap();
-        assert_eq!(allow_list.to_string(), "[*]");
-
-        let allow_list = HostCapabilities::DenyAll;
-        assert_eq!(allow_list.to_string(), "[]");
-
-        let allow_list = HostCapabilities::new(["oci/*", "kubernetes/can_i"]).unwrap();
-        assert_eq!(allow_list.to_string(), "[oci/*, kubernetes/can_i]");
+    #[rstest]
+    #[case::allow_all(HostCapabilities::AllowAll, "[*]")]
+    #[case::deny_all(HostCapabilities::DenyAll, "[]")]
+    #[case::patterns(
+        HostCapabilities::new(["oci/*", "kubernetes/can_i"]).unwrap(),
+        "[oci/*, kubernetes/can_i]"
+    )]
+    fn display(#[case] allow_list: HostCapabilities, #[case] expected: &str) {
+        assert_eq!(allow_list.to_string(), expected);
     }
 }
