@@ -24,19 +24,6 @@ targets:
     spec:
       file: go.mod
 
-  dockerfile:
-    name: "deps(go): update Docker image tag"
-    kind: dockerfile
-    sourceid: go
-    scmid: default
-    spec:
-      files:
-        - Dockerfile.kubewarden-controller
-        - Dockerfile.audit-scanner
-      instruction:
-        keyword: FROM
-        matcher: golang
-
 actions:
   default:
     title: 'deps(go): update Go to {{ source "go" }} version'
