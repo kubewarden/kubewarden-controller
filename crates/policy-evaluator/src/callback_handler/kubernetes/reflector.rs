@@ -123,7 +123,7 @@ impl Reflector {
         };
 
         let field_masker: Option<field_mask::FieldMaskNode> =
-            field_masks.map(|masks| field_mask::FieldMaskNode::new(masks.into_iter()));
+            field_masks.map(field_mask::FieldMaskNode::new);
 
         let stream = watcher(api, filter).map_ok(move |ev| {
             ev.modify(|obj| {

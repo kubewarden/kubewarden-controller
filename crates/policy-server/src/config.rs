@@ -249,8 +249,8 @@ fn validate_policies(policies: &HashMap<String, PolicyOrPolicyGroup>) -> Result<
         }
         if let PolicyOrPolicyGroup::PolicyGroup { policies, .. } = policy {
             let policies_with_invalid_name: Vec<String> = policies
-                .iter()
-                .filter_map(|(id, _)| if id.contains('/') { Some(id) } else { None })
+                .keys()
+                .filter(|id| id.contains('/'))
                 .cloned()
                 .collect();
             if !policies_with_invalid_name.is_empty() {
