@@ -196,8 +196,8 @@ impl HostCapabilities {
 
             validate_against_tree(trimmed)?;
 
-            if trimmed.ends_with('*') {
-                prefixes.insert(trimmed[..trimmed.len() - 1].to_string());
+            if let Some(prefix) = trimmed.strip_suffix("*") {
+                prefixes.insert(prefix.to_string());
             } else {
                 exact.insert(trimmed.to_string());
             }
