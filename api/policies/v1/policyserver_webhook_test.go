@@ -386,6 +386,12 @@ func TestPolicyServerValidateNamespacedPoliciesCapabilities(t *testing.T) {
 			capabilities: []string{"kubernetes/can_i"},
 			valid:        true,
 		},
+		{
+			name:         "valid kubernetes operation",
+			capabilities: []string{"kubernetes/can_i/have_dessert"},
+			valid:        false,
+			error:        "is a complete capability path and cannot have further segments",
+		},
 	}
 
 	for _, test := range tests {
