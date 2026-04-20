@@ -197,8 +197,8 @@ impl From<Sources> for oci_client::client::ClientConfig {
         let extra_root_certificates: Vec<oci_client::client::Certificate> = sources
             .source_authorities
             .0
-            .iter()
-            .flat_map(|(_, certs)| {
+            .values()
+            .flat_map(|certs| {
                 certs
                     .iter()
                     .map(|c| c.into())
@@ -228,8 +228,8 @@ impl From<Sources> for sigstore::registry::ClientConfig {
         let extra_root_certificates: Vec<sigstore::registry::Certificate> = sources
             .source_authorities
             .0
-            .iter()
-            .flat_map(|(_, certs)| {
+            .values()
+            .flat_map(|certs| {
                 certs
                     .iter()
                     .map(|c| c.into())
