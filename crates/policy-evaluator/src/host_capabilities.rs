@@ -1,8 +1,138 @@
-use std::{collections::HashSet, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    sync::LazyLock,
+};
 
 use serde::{Deserialize, Serialize};
 
 use crate::errors::HostCapabilitiesPatternError;
+
+/// A node in the host-capability path tree.
+/// Leaf nodes (complete, addressable operations) have a `None` value.
+/// Intermediate nodes carry a `Some` map of named children.
+struct CapabilityNode(HashMap<&'static str, Option<Box<CapabilityNode>>>);
+
+impl CapabilityNode {
+    fn leaf() -> Option<Box<Self>> {
+        None
+    }
+
+    fn node(children: HashMap<&'static str, Option<Box<Self>>>) -> Option<Box<Self>> {
+        Some(Box::new(Self(children)))
+    }
+}
+
+static CAPABILITY_TREE: LazyLock<CapabilityNode> = LazyLock::new(|| {
+    CapabilityNode(HashMap::from([
+        (
+            "oci",
+            CapabilityNode::node(HashMap::from([
+                (
+                    "v1",
+                    CapabilityNode::node(HashMap::from([
+                        ("verify", CapabilityNode::leaf()),
+                        ("manifest_digest", CapabilityNode::leaf()),
+                        ("oci_manifest", CapabilityNode::leaf()),
+                        ("oci_manifest_config", CapabilityNode::leaf()),
+                    ])),
+                ),
+                (
+                    "v2",
+                    CapabilityNode::node(HashMap::from([("verify", CapabilityNode::leaf())])),
+                ),
+            ])),
+        ),
+        (
+            "net",
+            CapabilityNode::node(HashMap::from([(
+                "v1",
+                CapabilityNode::node(HashMap::from([("dns_lookup_host", CapabilityNode::leaf())])),
+            )])),
+        ),
+        (
+            "crypto",
+            CapabilityNode::node(HashMap::from([(
+                "v1",
+                CapabilityNode::node(HashMap::from([(
+                    "is_certificate_trusted",
+                    CapabilityNode::leaf(),
+                )])),
+            )])),
+        ),
+        (
+            "kubernetes",
+            CapabilityNode::node(HashMap::from([
+                ("list_resources_by_namespace", CapabilityNode::leaf()),
+                ("list_resources_all", CapabilityNode::leaf()),
+                ("get_resource", CapabilityNode::leaf()),
+                ("can_i", CapabilityNode::leaf()),
+            ])),
+        ),
+    ]))
+});
+
+/// Validates one capability pattern against `CAPABILITY_TREE`.
+///
+/// `*` (global wildcard) is accepted without tree lookup — it is handled by
+/// the caller before this function is reached.
+///
+/// For prefix wildcards (`oci/*`, `oci/v1/*`) every segment *before* the
+/// wildcard is verified to be a known intermediate node; the wildcard itself
+/// is then accepted without further checking (the user is intentionally broad).
+///
+/// For exact paths every segment must lead to a known node, and the final
+/// segment must be a leaf.
+fn validate_against_tree(pattern: &str) -> Result<(), HostCapabilitiesPatternError> {
+    let parts: Vec<&str> = pattern.split('/').collect();
+    let mut node: &CapabilityNode = &CAPABILITY_TREE;
+
+    for (i, &part) in parts.iter().enumerate() {
+        if part == "*" {
+            // Already guaranteed to be the last segment by the wildcard syntax
+            // check that runs before this function.  The parent node exists
+            // (we reached this point), so the wildcard is valid.
+            return Ok(());
+        }
+
+        match node.0.get(part) {
+            None => {
+                let mut valid: Vec<&str> = node.0.keys().copied().collect();
+                valid.sort_unstable();
+                return Err(HostCapabilitiesPatternError::UnknownSegment {
+                    pattern: pattern.to_string(),
+                    segment: part.to_string(),
+                    valid_options: valid.join(", "),
+                });
+            }
+            Some(None) => {
+                // Leaf reached; the path must end here.
+                if i != parts.len() - 1 {
+                    // There are more segments after the leaf — already caught
+                    // by the wildcard-syntax check, but guard here for safety.
+                    return Err(HostCapabilitiesPatternError::UnknownSegment {
+                        pattern: pattern.to_string(),
+                        segment: parts[i + 1].to_string(),
+                        valid_options: String::new(),
+                    });
+                }
+                return Ok(());
+            }
+            Some(Some(child)) => {
+                if i == parts.len() - 1 {
+                    // Stopped at an intermediate node without a wildcard.
+                    return Err(HostCapabilitiesPatternError::IncompleteCapabilityPath {
+                        pattern: pattern.to_string(),
+                        suggestion: format!("{pattern}/*"),
+                    });
+                }
+                node = child;
+            }
+        }
+    }
+
+    Ok(())
+}
 
 /// Represents the set of host capabilities a policy is allowed to use.
 ///
@@ -18,6 +148,7 @@ use crate::errors::HostCapabilitiesPatternError;
 /// Invalid patterns (rejected at parse time):
 /// - `oci*`: wildcard must follow a `/`
 /// - `oci/v1/oci_*`: wildcard must be the entire last segment
+/// - `unknown/v1/op`: unknown segments are rejected against the capability tree
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "Vec<String>", into = "Vec<String>")]
 pub enum HostCapabilities {
@@ -38,7 +169,8 @@ pub enum HostCapabilities {
 impl HostCapabilities {
     /// Creates a new allow list from a list of patterns.
     ///
-    /// Returns an error if any pattern is invalid.
+    /// Returns an error if any pattern is syntactically invalid or refers to
+    /// an unknown capability namespace/operation.
     pub fn new(
         patterns: impl IntoIterator<Item = impl AsRef<str>>,
     ) -> Result<Self, HostCapabilitiesPatternError> {
@@ -63,9 +195,12 @@ impl HostCapabilities {
                         pattern: pattern.to_string(),
                     });
                 }
+                // Validate that the prefix segments are known before accepting.
+                validate_against_tree(trimmed)?;
                 // Store the prefix including trailing '/'
                 prefixes.insert(trimmed[..pos].to_string());
             } else {
+                validate_against_tree(trimmed)?;
                 exact.insert(trimmed.to_string());
             }
         }
@@ -203,9 +338,53 @@ mod tests {
     #[case::mid_wildcard("oci/v1/oci_*")]
     #[case::wildcard_not_last("*/oci")]
     #[case::empty("")]
-    fn invalid_patterns(#[case] pattern: &str) {
+    fn invalid_syntax_patterns(#[case] pattern: &str) {
         let result = HostCapabilities::new([pattern]);
         assert!(result.is_err(), "pattern {pattern:?} should be invalid");
+    }
+
+    #[rstest]
+    #[case::unknown_namespace("unknown/v1/op")]
+    #[case::unknown_version("oci/v99/verify")]
+    #[case::unknown_operation("oci/v1/nonexistent")]
+    #[case::unknown_kubernetes_op("kubernetes/nonexistent")]
+    #[case::unknown_namespace_wildcard("unknown/*")]
+    #[case::unknown_version_wildcard("oci/v99/*")]
+    #[case::incomplete_path_oci("oci")]
+    #[case::incomplete_path_oci_v1("oci/v1")]
+    #[case::incomplete_path_net("net")]
+    #[case::incomplete_path_kubernetes("kubernetes")]
+    fn invalid_tree_patterns(#[case] pattern: &str) {
+        let result = HostCapabilities::new([pattern]);
+        assert!(result.is_err(), "pattern {pattern:?} should be invalid");
+    }
+
+    #[test]
+    fn unknown_segment_error_lists_valid_options() {
+        let err = HostCapabilities::new(["oci/v99/verify"]).unwrap_err();
+        assert!(
+            matches!(err, HostCapabilitiesPatternError::UnknownSegment { ref segment, .. } if segment == "v99"),
+            "unexpected error: {err}"
+        );
+        // The error message should mention the valid versions
+        let msg = err.to_string();
+        assert!(msg.contains("v1"), "error should mention v1: {msg}");
+        assert!(msg.contains("v2"), "error should mention v2: {msg}");
+    }
+
+    #[test]
+    fn incomplete_path_error_suggests_wildcard() {
+        let err = HostCapabilities::new(["oci/v1"]).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                HostCapabilitiesPatternError::IncompleteCapabilityPath {
+                    ref suggestion,
+                    ..
+                } if suggestion == "oci/v1/*"
+            ),
+            "unexpected error: {err}"
+        );
     }
 
     #[rstest]
@@ -219,13 +398,28 @@ mod tests {
     #[test]
     fn valid_patterns_parse() {
         let patterns = vec![
-            "oci/*".to_string(),
-            "oci/v2/*".to_string(),
-            "oci/v1/verify".to_string(),
-            "kubernetes/can_i".to_string(),
+            "oci/*",
+            "oci/v2/*",
+            "oci/v1/verify",
+            "oci/v1/manifest_digest",
+            "oci/v1/oci_manifest",
+            "oci/v1/oci_manifest_config",
+            "net/v1/dns_lookup_host",
+            "net/*",
+            "crypto/v1/is_certificate_trusted",
+            "crypto/*",
+            "kubernetes/can_i",
+            "kubernetes/get_resource",
+            "kubernetes/list_resources_all",
+            "kubernetes/list_resources_by_namespace",
+            "kubernetes/*",
         ];
         let result = HostCapabilities::new(patterns);
-        assert!(result.is_ok());
+        assert!(
+            result.is_ok(),
+            "unexpected error: {:?}",
+            result.unwrap_err()
+        );
     }
 
     #[rstest]

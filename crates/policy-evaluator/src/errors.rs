@@ -114,4 +114,16 @@ pub enum HostCapabilitiesPatternError {
     InvalidWildcard { pattern: String },
     #[error("invalid pattern: pattern must not be empty")]
     Empty,
+    #[error(
+        "invalid pattern {pattern:?}: unknown segment {segment:?}, valid options at this level are: {valid_options}"
+    )]
+    UnknownSegment {
+        pattern: String,
+        segment: String,
+        valid_options: String,
+    },
+    #[error(
+        "invalid pattern {pattern:?}: not a complete capability path; use {suggestion:?} to allow all capabilities under it"
+    )]
+    IncompleteCapabilityPath { pattern: String, suggestion: String },
 }
