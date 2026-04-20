@@ -1,0 +1,133 @@
+suite: namespacedPoliciesCapabilities schema validation
+templates:
+  - policyserver-default.yaml
+tests:
+  # --- Valid inputs ---
+  - it: "should accept the global wildcard (*)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "*"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept a category wildcard (oci/*)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci/*"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept a sub-category wildcard (oci/v1/*)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci/v1/*"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept a fully-qualified path (oci/v1/bla)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci/v1/bla"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept the exact values from the bug report (oci/v1/bla and oci/*)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci/v1/bla"
+        - "oci/*"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept hyphens and underscores in path segments (my-cat/sub_path/leaf-node)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "my-cat/sub_path/leaf-node"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept a deeply nested sub-category wildcard (oci/v1/sub/*)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci/v1/sub/*"
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept null (feature disabled)"
+    set:
+      policyServer.namespacedPoliciesCapabilities: null
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept an empty array"
+    set:
+      policyServer.namespacedPoliciesCapabilities: []
+    asserts:
+      - notFailedTemplate: {}
+
+  - it: "should accept a mix of all valid forms"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "*"
+        - "oci/*"
+        - "oci/v1/*"
+        - "oci/v1/bla"
+    asserts:
+      - notFailedTemplate: {}
+
+  # --- Invalid inputs ---
+  - it: "should reject a path with a leading slash (/oci/v1/bla)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "/oci/v1/bla"
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespacedPoliciesCapabilities"
+
+  - it: "should reject a single segment with no slash (oci)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci"
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespacedPoliciesCapabilities"
+
+  - it: "should reject uppercase letters in segments (OCI/v1/bla)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "OCI/v1/bla"
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespacedPoliciesCapabilities"
+
+  - it: "should reject dots in segments (oci/v1.0/bla)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci/v1.0/bla"
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespacedPoliciesCapabilities"
+
+  - it: "should reject an empty string entry"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespacedPoliciesCapabilities"
+
+  - it: "should reject a trailing slash (oci/v1/)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "oci/v1/"
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespacedPoliciesCapabilities"
+
+  - it: "should reject a bare slash (/)"
+    set:
+      policyServer.namespacedPoliciesCapabilities:
+        - "/"
+    asserts:
+      - failedTemplate:
+          errorPattern: "namespacedPoliciesCapabilities"

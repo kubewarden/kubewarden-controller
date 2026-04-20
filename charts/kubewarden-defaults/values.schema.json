@@ -29,15 +29,15 @@
               },
               {
                 "description": "Category wildcard: <category>/*",
-                "pattern": "^(/[a-z0-9_-]+)/\\*$"
+                "pattern": "^[a-z0-9_-]+/\\*$"
               },
               {
                 "description": "Sub-category wildcard: <category>/<path...>/*",
-                "pattern": "^(/[a-z0-9_-]+)(/[a-z0-9_-]+)+/\\*$"
+                "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+/\\*$"
               },
               {
                 "description": "Fully-qualified capability path: <category>/<path...>",
-                "pattern": "^(/[a-z0-9_-]+)(/[a-z0-9_-]+)+$"
+                "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+$"
               }
             ]
           }
