@@ -188,19 +188,17 @@ impl HostCapabilities {
                 return Ok(Self::AllowAll);
             }
 
-            if let Some(pos) = trimmed.find('*') {
-                // Wildcard must be at the end and preceded by '/'
-                if pos != trimmed.len() - 1 || !trimmed[..pos].ends_with('/') {
-                    return Err(HostCapabilitiesPatternError::InvalidWildcard {
-                        pattern: pattern.to_string(),
-                    });
-                }
-                // Validate that the prefix segments are known before accepting.
-                validate_against_tree(trimmed)?;
-                // Store the prefix including trailing '/'
-                prefixes.insert(trimmed[..pos].to_string());
+            if trimmed.contains('*') && !trimmed.ends_with("/*") {
+                return Err(HostCapabilitiesPatternError::InvalidWildcard {
+                    pattern: pattern.to_string(),
+                });
+            }
+
+            validate_against_tree(trimmed)?;
+
+            if trimmed.ends_with('*') {
+                prefixes.insert(trimmed[..trimmed.len() - 1].to_string());
             } else {
-                validate_against_tree(trimmed)?;
                 exact.insert(trimmed.to_string());
             }
         }
