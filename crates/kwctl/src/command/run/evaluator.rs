@@ -62,8 +62,6 @@ pub(crate) enum Evaluator {
         request: ValidateRequest,
     },
     GroupPolicy {
-        // This enum uses the `Arc` type to avoid the need for a large enum size causing memory layout
-        // problems. https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
         // Contrary to PolicyEvaluator, PolicyGroupEvaluator is shared across closures in
         // rhai_eval_env.clone(), which requires +Send+Sync
         policy_group_evaluator: Arc<PolicyGroupEvaluator>,
