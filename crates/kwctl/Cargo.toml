@@ -22,6 +22,7 @@ is-terminal        = "0.4.17"
 itertools          = { workspace = true }
 k8s-openapi        = { workspace = true }
 lazy_static        = { workspace = true }
+memchr             = "2.8"
 pem                = "3"
 policy-evaluator   = { path = "../policy-evaluator" }
 prettytable-rs     = "^0.10"
@@ -63,6 +64,7 @@ sha2           = { workspace = true }
 tempfile       = { workspace = true }
 testcontainers = { version = "0.27", features = ["blocking"] }
 tower-test     = "0.4"
+wasm-encoder   = "0.227"
 
 
 [features]

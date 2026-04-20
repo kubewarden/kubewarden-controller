@@ -216,6 +216,8 @@ pub struct Metadata {
     #[validate(nested)]
     pub context_aware_resources: BTreeSet<ContextAwareResource>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub host_capabilities: Option<BTreeSet<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub minimum_kubewarden_version: Option<Version>,
 }
 
@@ -234,6 +236,7 @@ impl Default for Metadata {
             execution_mode: PolicyExecutionMode::KubewardenWapc,
             policy_type: PolicyType::Kubernetes,
             context_aware_resources: BTreeSet::new(),
+            host_capabilities: None,
             minimum_kubewarden_version: None,
         }
     }

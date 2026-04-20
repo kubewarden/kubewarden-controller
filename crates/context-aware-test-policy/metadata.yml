@@ -12,6 +12,10 @@ contextAwareResources:
   - apiVersion: v1
     kind: Service
 executionMode: kubewarden-wapc
+hostCapabilities:
+  - kubernetes/list_resources_by_namespace
+  - kubernetes/list_resources_all
+  - kubernetes/get_resource
 # Consider the policy for the background audit scans. Default is true. Note the
 # intrinsic limitations of the background audit feature on docs.kubewarden.io;
 # If your policy hits any limitations, set to false for the audit feature to

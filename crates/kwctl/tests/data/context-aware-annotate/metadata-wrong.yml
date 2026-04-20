@@ -1,0 +1,11 @@
+rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+    operations: ["CREATE"]
+mutating: false
+executionMode: kubewarden-wapc
+hostCapabilities:
+  - oci/v1/verify
+annotations:
+  io.kubewarden.policy.title: context-aware-policy-demo

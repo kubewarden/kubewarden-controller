@@ -167,6 +167,38 @@ pub enum HostCapabilities {
 }
 
 impl HostCapabilities {
+    /// Returns all known host-capability operations as `(namespace, operation)` pairs,
+    /// e.g. `("oci", "v1/verify")`, `("kubernetes", "can_i")`.
+    ///
+    /// The list is derived by recursively walking `CAPABILITY_TREE` and collecting
+    /// every leaf path.
+    pub fn enumerate_operations() -> Vec<(String, String)> {
+        fn walk(
+            node: &CapabilityNode,
+            path: &mut Vec<&'static str>,
+            out: &mut Vec<(String, String)>,
+        ) {
+            for (&segment, child) in &node.0 {
+                path.push(segment);
+                match child {
+                    None => {
+                        // Leaf: first segment is the namespace, the rest is the operation.
+                        let namespace = path[0].to_string();
+                        let operation = path[1..].join("/");
+                        out.push((namespace, operation));
+                    }
+                    Some(inner) => walk(inner, path, out),
+                }
+                path.pop();
+            }
+        }
+
+        let mut out = Vec::new();
+        walk(&CAPABILITY_TREE, &mut vec![], &mut out);
+        out.sort();
+        out
+    }
+
     /// Creates a new allow list from a list of patterns.
     ///
     /// Returns an error if any pattern is syntactically invalid or refers to
@@ -434,6 +466,41 @@ mod tests {
         let json = serde_json::to_string(&allow_list).unwrap();
         let deserialized: HostCapabilities = serde_json::from_str(&json).unwrap();
         assert_eq!(allow_list, deserialized);
+    }
+
+    #[test]
+    fn enumerate_operations_returns_all_known_leaf_paths() {
+        let ops = HostCapabilities::enumerate_operations();
+
+        // Every result must be parseable as a valid exact pattern.
+        for (ns, op) in &ops {
+            let path = format!("{ns}/{op}");
+            assert!(
+                HostCapabilities::new([&path]).is_ok(),
+                "{path:?} returned by enumerate_operations is not a valid capability path"
+            );
+        }
+
+        // The expected complete set of leaf paths, kept in sync with CAPABILITY_TREE.
+        let mut expected: Vec<(String, String)> = vec![
+            ("crypto", "v1/is_certificate_trusted"),
+            ("kubernetes", "can_i"),
+            ("kubernetes", "get_resource"),
+            ("kubernetes", "list_resources_all"),
+            ("kubernetes", "list_resources_by_namespace"),
+            ("net", "v1/dns_lookup_host"),
+            ("oci", "v1/manifest_digest"),
+            ("oci", "v1/oci_manifest"),
+            ("oci", "v1/oci_manifest_config"),
+            ("oci", "v1/verify"),
+            ("oci", "v2/verify"),
+        ]
+        .into_iter()
+        .map(|(ns, op)| (ns.to_string(), op.to_string()))
+        .collect();
+        expected.sort();
+
+        assert_eq!(ops, expected);
     }
 
     #[rstest]

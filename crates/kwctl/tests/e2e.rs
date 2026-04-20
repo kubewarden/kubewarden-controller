@@ -13,7 +13,7 @@ use policy_evaluator::{
     },
     policy_fetcher, policy_metadata,
 };
-use predicates::{prelude::*, str::contains, str::is_empty};
+use predicates::{prelude::*, str::contains, str::is_empty, str::is_match};
 use rstest::rstest;
 use sha2::{Digest, Sha256};
 use tempfile::tempdir;
@@ -1030,6 +1030,57 @@ fn test_scaffold_from_vap(
 
     cmd.assert().stdout(stdout_predicate);
     cmd.assert().stderr(stderr_predicate);
+}
+
+#[rstest]
+#[case::matching_capabilities("context-aware-annotate/metadata-correct.yml", false)]
+#[case::mismatched_capabilities("context-aware-annotate/metadata-wrong.yml", true)]
+fn test_annotate_host_capabilities(#[case] metadata_path: &str, #[case] expect_warning: bool) {
+    let tempdir = tempdir().unwrap();
+    let wasm_path = tempdir.path().join("context-aware-policy-demo.wasm");
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("pull")
+        .arg("--output-path")
+        .arg(&wasm_path)
+        .arg("registry://ghcr.io/kubewarden/tests/context-aware-policy-demo:v0.1.0");
+    cmd.assert().success();
+
+    let mut cmd = setup_command(tempdir.path());
+    cmd.arg("--no-color")
+        .arg("annotate")
+        .arg("-m")
+        .arg(test_data(metadata_path))
+        .arg(&wasm_path)
+        .arg("-o")
+        .arg("annotated-policy.wasm");
+
+    cmd.assert().success();
+
+    if expect_warning {
+        cmd.assert()
+            .stderr(
+                is_match(
+                    r#"host capabilities used by the policy but not declared in metadata.*\{"kubernetes/get_resource", "kubernetes/list_resources_by_namespace"\}"#,
+                )
+                .unwrap(),
+            )
+            .stderr(
+                is_match(
+                    r#"host capabilities declared in metadata but not detected in the policy.*\{"oci/v1/verify"\}"#,
+                )
+                .unwrap(),
+            );
+    } else {
+        cmd.assert()
+            .stderr(
+                contains("host capabilities used by the policy but not declared in metadata").not(),
+            )
+            .stderr(
+                contains("host capabilities declared in metadata but not detected in the policy")
+                    .not(),
+            );
+    }
 }
 
 #[rstest]
