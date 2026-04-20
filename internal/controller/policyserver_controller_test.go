@@ -524,26 +524,7 @@ var _ = Describe("PolicyServer controller", func() {
 			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Data": MatchAllKeys(Keys{
 					constants.PolicyServerConfigPoliciesEntry: And(
-						WithTransform(func(data string) (map[string]interface{}, error) {
-							policiesData := map[string]interface{}{}
-							err := json.Unmarshal([]byte(data), &policiesData)
-							return policiesData, err
-						}, MatchKeys(IgnoreExtras, Keys{
-							admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
-								"policies": MatchKeys(IgnoreExtras, Keys{
-									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
-										"hostCapabilities": BeEmpty(),
-									}),
-								}),
-							}),
-							clusterPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
-								"policies": MatchKeys(IgnoreExtras, Keys{
-									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
-										"hostCapabilities": ConsistOf("*"),
-									}),
-								}),
-							}),
-						})),
+						policyGroupHostCapabilitiesMatcher(admissionPolicyGroup, clusterPolicyGroup, BeEmpty(), ConsistOf("*")),
 					),
 					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
 				}),
@@ -573,26 +554,7 @@ var _ = Describe("PolicyServer controller", func() {
 			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Data": MatchAllKeys(Keys{
 					constants.PolicyServerConfigPoliciesEntry: And(
-						WithTransform(func(data string) (map[string]interface{}, error) {
-							policiesData := map[string]interface{}{}
-							err := json.Unmarshal([]byte(data), &policiesData)
-							return policiesData, err
-						}, MatchKeys(IgnoreExtras, Keys{
-							admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
-								"policies": MatchKeys(IgnoreExtras, Keys{
-									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
-										"hostCapabilities": ConsistOf("net/*"),
-									}),
-								}),
-							}),
-							clusterPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
-								"policies": MatchKeys(IgnoreExtras, Keys{
-									"pod_privileged": MatchKeys(IgnoreExtras, Keys{
-										"hostCapabilities": ConsistOf("*"),
-									}),
-								}),
-							}),
-						})),
+						policyGroupHostCapabilitiesMatcher(admissionPolicyGroup, clusterPolicyGroup, ConsistOf("net/*"), ConsistOf("*")),
 					),
 					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
 				}),
