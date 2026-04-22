@@ -176,6 +176,8 @@ var _ = Describe("PolicyServer controller", func() {
 			By("checking the deployment spec")
 			Expect(deployment.Spec.Template.Spec).To(MatchFields(IgnoreExtras, Fields{
 				"Tolerations": BeEmpty(),
+				"HostNetwork": BeFalse(),
+				"DNSPolicy":   Not(Equal(corev1.DNSClusterFirstWithHostNet)),
 				"SecurityContext": PointTo(MatchFields(IgnoreExtras, Fields{
 					"SELinuxOptions":      BeNil(),
 					"WindowsOptions":      BeNil(),

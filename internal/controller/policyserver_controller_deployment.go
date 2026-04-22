@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -130,6 +131,11 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 
 	configureLabelsAndAnnotations(policyServerDeployment, policyServer, configMapVersion)
 
+	controllerPorts, conflictingPSNames, err := r.computeHostNetworkConflicts(ctx, policyServer)
+	if err != nil {
+		return fmt.Errorf("cannot compute host network conflicts: %w", err)
+	}
+
 	policyServerDeployment.Spec = buildPolicyServerDeploymentSpec(
 		policyServer,
 		admissionContainer,
@@ -137,15 +143,18 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 		templateAnnotations,
 		podSecurityContext,
 		r.ImagePullSecrets,
+		r.HostNetwork,
+		controllerPorts,
+		conflictingPSNames,
 	)
 	r.adaptDeploymentForMetricsAndTracingConfiguration(policyServerDeployment, templateAnnotations)
 	r.adaptDeploymentSettingsForPolicyServer(policyServerDeployment, policyServer)
 
-	if err := r.configureMutualTLS(ctx, policyServerDeployment); err != nil {
-		return fmt.Errorf("failed to configure mutual TLS: %w", err)
+	if mtlsErr := r.configureMutualTLS(ctx, policyServerDeployment); mtlsErr != nil {
+		return fmt.Errorf("failed to configure mutual TLS: %w", mtlsErr)
 	}
-	if err := controllerutil.SetOwnerReference(policyServer, policyServerDeployment, r.Client.Scheme()); err != nil {
-		return errors.Join(errors.New("failed to set policy server deployment owner reference"), err)
+	if ownerErr := controllerutil.SetOwnerReference(policyServer, policyServerDeployment, r.Client.Scheme()); ownerErr != nil {
+		return errors.Join(errors.New("failed to set policy server deployment owner reference"), ownerErr)
 	}
 
 	return nil
@@ -416,6 +425,9 @@ func buildPolicyServerDeploymentSpec(
 	templateAnnotations map[string]string,
 	podSecurityContext *corev1.PodSecurityContext,
 	imagePullSecrets []corev1.LocalObjectReference,
+	hostNetwork bool,
+	controllerPorts []int32,
+	conflictingPolicyServerNames []string,
 ) appsv1.DeploymentSpec {
 	templateLabels := map[string]string{
 		//nolint:staticcheck // this label will remove soon when policy lifecycle is revisited
@@ -425,6 +437,60 @@ func buildPolicyServerDeploymentSpec(
 	}
 	for key, value := range policyServer.CommonLabels() {
 		templateLabels[key] = value
+	}
+
+	podSpec := corev1.PodSpec{
+		SecurityContext:    podSecurityContext,
+		Containers:         []corev1.Container{admissionContainer},
+		ImagePullSecrets:   imagePullSecrets,
+		ServiceAccountName: policyServer.Spec.ServiceAccountName,
+		Tolerations:        policyServer.Spec.Tolerations,
+		Affinity:           &policyServer.Spec.Affinity,
+		PriorityClassName:  policyServer.Spec.PriorityClassName,
+		Volumes: []corev1.Volume{
+			{
+				Name: policyStoreVolume,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
+			},
+			{
+				Name: certsVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: policyServer.NameWithPrefix(),
+					},
+				},
+			},
+			{
+				Name: policiesVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: policyServer.NameWithPrefix(),
+						},
+						Items: []corev1.KeyToPath{
+							{
+								Key:  constants.PolicyServerConfigPoliciesEntry,
+								Path: policiesFilename,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if hostNetwork {
+		podSpec.HostNetwork = true
+		podSpec.DNSPolicy = corev1.DNSClusterFirstWithHostNet
+		podSpec.Affinity = mergeAffinityWithHostNetworkAntiAffinity(
+			&policyServer.Spec.Affinity,
+			policyServer.Name,
+			[]int32{policyServer.EffectiveWebhookPort(), policyServer.EffectiveReadinessProbePort(), policyServer.EffectiveMetricsPort()},
+			controllerPorts,
+			conflictingPolicyServerNames,
+		)
 	}
 
 	return appsv1.DeploymentSpec{
@@ -443,47 +509,7 @@ func buildPolicyServerDeploymentSpec(
 				Labels:      templateLabels,
 				Annotations: templateAnnotations,
 			},
-			Spec: corev1.PodSpec{
-				SecurityContext:    podSecurityContext,
-				Containers:         []corev1.Container{admissionContainer},
-				ImagePullSecrets:   imagePullSecrets,
-				ServiceAccountName: policyServer.Spec.ServiceAccountName,
-				Tolerations:        policyServer.Spec.Tolerations,
-				Affinity:           &policyServer.Spec.Affinity,
-				PriorityClassName:  policyServer.Spec.PriorityClassName,
-				Volumes: []corev1.Volume{
-					{
-						Name: policyStoreVolume,
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
-					},
-					{
-						Name: certsVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: policyServer.NameWithPrefix(),
-							},
-						},
-					},
-					{
-						Name: policiesVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: policyServer.NameWithPrefix(),
-								},
-								Items: []corev1.KeyToPath{
-									{
-										Key:  constants.PolicyServerConfigPoliciesEntry,
-										Path: policiesFilename,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Spec: podSpec,
 		},
 	}
 }
@@ -640,11 +666,11 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 			},
 			{
 				Name:  "KUBEWARDEN_PORT",
-				Value: strconv.Itoa(constants.PolicyServerListenPort),
+				Value: strconv.Itoa(int(policyServer.EffectiveWebhookPort())),
 			},
 			{
 				Name:  "KUBEWARDEN_READINESS_PROBE_PORT",
-				Value: strconv.Itoa(constants.PolicyServerReadinessProbePort),
+				Value: strconv.Itoa(int(policyServer.EffectiveReadinessProbePort())),
 			},
 			{
 				Name:  "KUBEWARDEN_POLICIES_DOWNLOAD_DIR",
@@ -663,7 +689,7 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   constants.PolicyServerReadinessProbe,
-					Port:   intstr.FromInt(constants.PolicyServerReadinessProbePort),
+					Port:   intstr.FromInt32(policyServer.EffectiveReadinessProbePort()),
 					Scheme: corev1.URISchemeHTTP,
 				},
 			},
@@ -673,4 +699,130 @@ func getPolicyServerContainer(policyServer *policiesv1.PolicyServer) corev1.Cont
 			Limits:   policyServer.Spec.Limits,
 		},
 	}
+}
+
+// mergeAffinityWithHostNetworkAntiAffinity builds the effective Affinity for a
+// PolicyServer Deployment when hostNetwork is enabled. It injects targeted
+// podAntiAffinity rules to prevent host-port conflicts:
+//
+//   - A required rule always prevents replicas of the same PolicyServer from
+//     landing on the same node (matched by kubewarden/policy-server=<name>).
+//   - A required rule prevents co-location with the controller pod only when
+//     the PolicyServer's effective ports overlap with the controller's ports.
+//   - A required rule prevents co-location with each other PolicyServer whose
+//     effective ports overlap with this one.
+//
+// The user-supplied podAntiAffinity (from spec.affinity) takes full precedence:
+// if it is non-nil it replaces all auto-generated rules. Other affinity sections
+// (podAffinity, nodeAffinity) are carried over unchanged so they remain additive.
+func mergeAffinityWithHostNetworkAntiAffinity(
+	userAffinity *corev1.Affinity,
+	policyServerName string,
+	psPorts []int32,
+	controllerPorts []int32,
+	conflictingPolicyServerNames []string,
+) *corev1.Affinity {
+	// Always prevent same-PS replicas from landing on the same node.
+	antiAffinityTerms := []corev1.PodAffinityTerm{
+		{
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constants.PolicyServerLabelKey: policyServerName,
+				},
+			},
+			TopologyKey: "kubernetes.io/hostname",
+		},
+	}
+
+	// Prevent co-location with the controller when ports overlap.
+	if portsOverlap(psPorts, controllerPorts) {
+		antiAffinityTerms = append(antiAffinityTerms, corev1.PodAffinityTerm{
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constants.ComponentLabelKey: "controller",
+					constants.PartOfLabelKey:    constants.PartOfLabelValue,
+				},
+			},
+			TopologyKey: "kubernetes.io/hostname",
+		})
+	}
+
+	// Prevent co-location with each conflicting PolicyServer.
+	for _, name := range conflictingPolicyServerNames {
+		antiAffinityTerms = append(antiAffinityTerms, corev1.PodAffinityTerm{
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					constants.PolicyServerLabelKey: name,
+				},
+			},
+			TopologyKey: "kubernetes.io/hostname",
+		})
+	}
+
+	effective := &corev1.Affinity{
+		PodAntiAffinity: &corev1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: antiAffinityTerms,
+		},
+	}
+
+	if userAffinity == nil {
+		return effective
+	}
+
+	if userAffinity.PodAntiAffinity != nil {
+		effective.PodAntiAffinity = userAffinity.PodAntiAffinity
+	}
+	if userAffinity.PodAffinity != nil {
+		effective.PodAffinity = userAffinity.PodAffinity
+	}
+	if userAffinity.NodeAffinity != nil {
+		effective.NodeAffinity = userAffinity.NodeAffinity
+	}
+
+	return effective
+}
+
+// portsOverlap returns true if any port in a also appears in b.
+func portsOverlap(a, b []int32) bool {
+	for _, p := range a {
+		if slices.Contains(b, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// computeHostNetworkConflicts returns the controller ports and the names of
+// other PolicyServers whose effective ports overlap with the given one.
+// When hostNetwork is disabled, it returns empty results (no conflicts to consider).
+func (r *PolicyServerReconciler) computeHostNetworkConflicts(ctx context.Context, policyServer *policiesv1.PolicyServer) ([]int32, []string, error) {
+	if !r.HostNetwork {
+		return nil, nil, nil
+	}
+
+	controllerPorts := []int32{
+		r.ControllerWebhookPort,
+		r.ControllerHealthProbePort,
+		r.ControllerMetricsPort,
+	}
+
+	var policyServerList policiesv1.PolicyServerList
+	if err := r.Client.List(ctx, &policyServerList); err != nil {
+		return nil, nil, fmt.Errorf("cannot list PolicyServers: %w", err)
+	}
+
+	psPorts := []int32{policyServer.EffectiveWebhookPort(), policyServer.EffectiveReadinessProbePort(), policyServer.EffectiveMetricsPort()}
+	var conflicting []string
+	for i := range policyServerList.Items {
+		other := &policyServerList.Items[i]
+		if other.Name == policyServer.Name {
+			continue
+		}
+		otherPorts := []int32{other.EffectiveWebhookPort(), other.EffectiveReadinessProbePort(), other.EffectiveMetricsPort()}
+		if portsOverlap(psPorts, otherPorts) {
+			conflicting = append(conflicting, other.Name)
+		}
+	}
+
+	return controllerPorts, conflicting, nil
 }

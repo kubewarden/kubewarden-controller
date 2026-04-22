@@ -67,6 +67,17 @@ type PolicyServerReconciler struct {
 	// policy-server Deployment, sourced from the controller's own
 	// --image-pull-secrets flag.
 	ImagePullSecrets []corev1.LocalObjectReference
+	// HostNetwork enables host network mode on PolicyServer Deployments.
+	// When true, the controller also sets dnsPolicy to ClusterFirstWithHostNet
+	// so that in-cluster DNS resolution keeps working.
+	HostNetwork bool
+	// ControllerWebhookPort is the port the controller webhook server listens on.
+	// Used for port-conflict detection when injecting anti-affinity.
+	ControllerWebhookPort int32
+	// ControllerHealthProbePort is the port the controller health probe binds to.
+	ControllerHealthProbePort int32
+	// ControllerMetricsPort is the port the controller metrics endpoint binds to.
+	ControllerMetricsPort int32
 }
 
 // TelemetryConfiguration is a struct that contains the configuration for the

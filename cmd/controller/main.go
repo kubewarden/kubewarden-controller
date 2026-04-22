@@ -21,8 +21,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -74,6 +76,7 @@ type ManagerOptions struct {
 	EnableMutualTLS      bool
 	MetricsAddr          string
 	ProbeAddr            string
+	WebhookServerPort    int
 }
 
 type Configuration struct {
@@ -82,6 +85,21 @@ type Configuration struct {
 	FeatureGateAdmissionWebhookMatchConditions         bool
 	WebhookServiceName                                 string
 	ImagePullSecrets                                   []corev1.LocalObjectReference
+	// HostNetwork enables host network mode for PolicyServer deployments.
+	// WARNING: enabling this increases the attack surface. Use only when
+	// the Kubernetes API server cannot reach pod-network webhook endpoints
+	// (e.g. clusters using a non-VPC CNI with NAT).
+	HostNetwork bool
+	// WebhookServerPort is the port the controller webhook server listens on.
+	WebhookServerPort int
+	// ProbeAddr is the address the probe endpoint binds to (e.g. ":8081").
+	ProbeAddr string
+	// MetricsAddr is the address the metrics endpoint binds to (e.g. ":8088").
+	MetricsAddr string
+	// ControllerHealthProbePort is the parsed port from ProbeAddr.
+	ControllerHealthProbePort int32
+	// ControllerMetricsPort is the parsed port from MetricsAddr.
+	ControllerMetricsPort int32
 }
 
 func init() {
@@ -107,6 +125,7 @@ func main() {
 
 	flag.StringVar(&mgrOpts.MetricsAddr, "metrics-bind-address", ":8088", "The address the metric endpoint binds to.")
 	flag.StringVar(&mgrOpts.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.IntVar(&mgrOpts.WebhookServerPort, "webhook-server-port", 9443, "The port the webhook server listens on.")
 	flag.BoolVar(&mgrOpts.EnableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -135,13 +154,41 @@ func main() {
 		"image-pull-secrets",
 		"",
 		"Comma-separated list of Secret names to use as imagePullSecrets on every policy-server Deployment. The secrets must exist in the deployments namespace.")
+	flag.BoolVar(&config.HostNetwork,
+		"host-network",
+		false,
+		"Enable host network mode for all PolicyServer deployments. "+
+			"WARNING: enabling this increases the attack surface by exposing webhook endpoints "+
+			"on the host network and giving pods visibility of all node network interfaces. "+
+			"Use only when the Kubernetes API server cannot reach pod-network webhook endpoints.")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 	mgrOpts.EnableMutualTLS = config.ClientCAConfigMapName != ""
 	config.ImagePullSecrets = parseImagePullSecrets(imagePullSecretsFlag)
+	config.WebhookServerPort = mgrOpts.WebhookServerPort
+	config.ProbeAddr = mgrOpts.ProbeAddr
+	config.MetricsAddr = mgrOpts.MetricsAddr
+	config.ControllerHealthProbePort = parsePortFromAddress(mgrOpts.ProbeAddr)
+	config.ControllerMetricsPort = parsePortFromAddress(mgrOpts.MetricsAddr)
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if config.ControllerHealthProbePort == 0 {
+		setupLog.Error(fmt.Errorf("cannot extract port from %q", mgrOpts.ProbeAddr), "invalid --health-probe-bind-address")
+		retcode = 1
+		return
+	}
+	if config.ControllerMetricsPort == 0 {
+		setupLog.Error(fmt.Errorf("cannot extract port from %q", mgrOpts.MetricsAddr), "invalid --metrics-bind-address")
+		retcode = 1
+		return
+	}
+	if config.WebhookServerPort < 1 || config.WebhookServerPort > 65535 {
+		setupLog.Error(fmt.Errorf("port %d is out of range 1-65535", config.WebhookServerPort), "invalid --webhook-server-port")
+		retcode = 1
+		return
+	}
 
 	if enableMetrics {
 		shutdown, err := metrics.New()
@@ -275,6 +322,7 @@ func setupManager(mgrOpts ManagerOptions) (ctrl.Manager, error) {
 		},
 		WebhookServer: webhook.NewServer(webhook.Options{
 			ClientCAName: clientCAName,
+			Port:         mgrOpts.WebhookServerPort,
 		}),
 	}
 
@@ -309,6 +357,10 @@ func setupReconcilers(mgr ctrl.Manager,
 		TelemetryConfiguration:                             otelConfiguration,
 		ClientCAConfigMapName:                              config.ClientCAConfigMapName,
 		ImagePullSecrets:                                   config.ImagePullSecrets,
+		HostNetwork:                                        config.HostNetwork,
+		ControllerWebhookPort:                              int32(config.WebhookServerPort), //nolint:gosec // validated above: 1-65535
+		ControllerHealthProbePort:                          config.ControllerHealthProbePort,
+		ControllerMetricsPort:                              config.ControllerMetricsPort,
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create PolicyServer controller"), err)
 	}
@@ -400,4 +452,18 @@ func parseImagePullSecrets(s string) []corev1.LocalObjectReference {
 		}
 	}
 	return refs
+}
+
+// parsePortFromAddress extracts the port number from an address string like
+// ":8081" or "0.0.0.0:8088". Returns 0 if parsing fails.
+func parsePortFromAddress(addr string) int32 {
+	_, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 0
+	}
+	port, err := strconv.ParseInt(portStr, 10, 32)
+	if err != nil {
+		return 0
+	}
+	return int32(port)
 }
