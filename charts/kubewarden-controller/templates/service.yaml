@@ -13,11 +13,11 @@ spec:
   {{- if .Values.telemetry.metrics }}
   - name: metrics
     port: 8080
-    targetPort: 8080
+    targetPort: {{ .Values.ports.metrics }}
   {{- end}}
   - name: https
     port: 8443
-    targetPort: https
+    targetPort: {{ .Values.ports.webhook }}
   selector:
     {{- include "kubewarden-controller.selectorLabels" . | nindent 4 }}
 ---
@@ -33,6 +33,6 @@ metadata:
 spec:
   ports:
   - port: 443
-    targetPort: 9443
+    targetPort: {{ .Values.ports.webhook }}
   selector:
 {{- include "kubewarden-controller.selectorLabels" . | nindent 4 }}

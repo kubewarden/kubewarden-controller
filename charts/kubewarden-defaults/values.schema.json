@@ -12,6 +12,24 @@
         "minAvailable": {
           "type": "string",
           "minLength": 1
+        },
+        "webhookPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port for the PolicyServer webhook listener. When omitted, the controller uses the default (8443)."
+        },
+        "readinessProbePort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port for the PolicyServer readiness probe. When omitted, the controller uses the default (8081)."
+        },
+        "metricsPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port for the PolicyServer metrics endpoint. When omitted, the controller uses the default (8080)."
         }
       },
       "anyOf": [

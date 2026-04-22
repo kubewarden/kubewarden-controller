@@ -1,0 +1,74 @@
+suite: host-network configuration
+templates:
+  - deployment.yaml
+tests:
+  - it: "should not set hostNetwork and should not pass --host-network flag by default"
+    asserts:
+      - notExists:
+          path: spec.template.spec.hostNetwork
+      - notExists:
+          path: spec.template.spec.dnsPolicy
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: "--host-network"
+          any: true
+
+  - it: "should set hostNetwork, dnsPolicy and pass --host-network flag when hostNetwork is true"
+    set:
+      hostNetwork: true
+    asserts:
+      - equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: ClusterFirstWithHostNet
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--host-network"
+
+  - it: "should inject required podAntiAffinity using controller selector labels when hostNetwork is true"
+    set:
+      hostNetwork: true
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey
+          value: kubernetes.io/hostname
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels["app.kubernetes.io/name"]
+          value: kubewarden-controller
+      - exists:
+          path: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels["app.kubernetes.io/instance"]
+
+  - it: "should not inject podAntiAffinity when hostNetwork is false and no affinity is set"
+    asserts:
+      - notExists:
+          path: spec.template.spec.affinity
+
+  - it: "should use custom ports when overridden in values"
+    set:
+      ports.webhook: 10443
+      ports.healthProbe: 10081
+      ports.metrics: 10088
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 10443
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 10081
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: 10081
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --webhook-server-port=10443
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --health-probe-bind-address=:10081
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --metrics-bind-address=:10088

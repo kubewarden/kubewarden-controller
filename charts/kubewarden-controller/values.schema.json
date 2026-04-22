@@ -108,6 +108,34 @@
         "fullnameOverride": {
             "type": "string"
         },
+        "hostNetwork": {
+            "type": "boolean",
+            "description": "Enables host network mode for the controller pod and all PolicyServer pods. WARNING: increases attack surface."
+        },
+        "ports": {
+            "type": "object",
+            "description": "Network ports used by the controller pod. Override these when hostNetwork is enabled to avoid conflicts with other workloads.",
+            "properties": {
+                "webhook": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "Port the controller webhook server listens on."
+                },
+                "healthProbe": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "Port for liveness and readiness probes."
+                },
+                "metrics": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "Port for the Prometheus metrics endpoint."
+                }
+            }
+        },
         "global": {
             "type": "object",
             "properties": {

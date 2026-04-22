@@ -1,0 +1,75 @@
+suite: service ports configuration
+templates:
+  - service.yaml
+tests:
+  - it: "should use default ports in services"
+    set:
+      telemetry.metrics: true
+    asserts:
+      # Webhook service
+      - equal:
+          path: spec.ports[0].port
+          value: 443
+        documentIndex: 1
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 9443
+        documentIndex: 1
+      # Metrics service - metrics port
+      - equal:
+          path: spec.ports[0].port
+          value: 8080
+        documentIndex: 0
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 8088
+        documentIndex: 0
+      # Metrics service - https port
+      - equal:
+          path: spec.ports[1].port
+          value: 8443
+        documentIndex: 0
+      - equal:
+          path: spec.ports[1].targetPort
+          value: 9443
+        documentIndex: 0
+
+  - it: "should use custom webhook port in both webhook and metrics services"
+    set:
+      ports.webhook: 10443
+      telemetry.metrics: true
+    asserts:
+      # Webhook service
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 10443
+        documentIndex: 1
+      # Metrics service - https port
+      - equal:
+          path: spec.ports[1].targetPort
+          value: 10443
+        documentIndex: 0
+
+  - it: "should use custom metrics port in metrics service"
+    set:
+      ports.metrics: 10088
+      telemetry.metrics: true
+    asserts:
+      # Metrics service - metrics port
+      - equal:
+          path: spec.ports[0].targetPort
+          value: 10088
+        documentIndex: 0
+
+  - it: "should not include metrics port when telemetry is disabled"
+    set:
+      telemetry.metrics: false
+    asserts:
+      - equal:
+          path: spec.ports[0].name
+          value: https
+        documentIndex: 0
+      - equal:
+          path: spec.ports[0].port
+          value: 8443
+        documentIndex: 0

@@ -32,8 +32,9 @@ spec:
       {{- include "imagePullSecrets" .Values.imagePullSecrets | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "kubewarden-controller.serviceAccountName" . }}
-      {{- if .Values.global.affinity }}
-      affinity: {{ .Values.global.affinity | toYaml | nindent 8 }}
+      {{- $effectiveAffinity := include "kubewarden-controller.effectiveAffinity" . }}
+      {{- if $effectiveAffinity }}
+      affinity: {{ $effectiveAffinity | nindent 8 }}
       {{- end }}
       {{- if .Values.global.tolerations }}
       tolerations: {{ .Values.global.tolerations | toYaml | nindent 8 }}
@@ -45,12 +46,19 @@ spec:
       {{- if .Values.global.priorityClassName }}
       priorityClassName: {{ .Values.global.priorityClassName | toYaml | nindent 8 }}
       {{- end }}
+      {{- if .Values.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
       containers:
       - name: controller
         args:
         - --leader-elect
         - --deployments-namespace={{ .Release.Namespace }}
         - --webhook-service-name={{ include "kubewarden-controller.fullname" . }}-webhook-service
+        - --webhook-server-port={{ .Values.ports.webhook }}
+        - --health-probe-bind-address=:{{ .Values.ports.healthProbe }}
+        - --metrics-bind-address=:{{ .Values.ports.metrics }}
         {{- if .Values.alwaysAcceptAdmissionReviewsOnDeploymentsNamespace }}
         - --always-accept-admission-reviews-on-deployments-namespace
         {{- end }}
@@ -61,6 +69,9 @@ spec:
        {{- $imagePullSecretNames := include "policyServerImagePullSecretNames" . }}
        {{- if $imagePullSecretNames }}
         - --image-pull-secrets={{ $imagePullSecretNames }}
+       {{- end }}
+       {{- if .Values.hostNetwork }}
+        - --host-network
        {{- end }}
        {{- if or .Values.telemetry.metrics .Values.telemetry.tracing }}
        {{- if eq .Values.telemetry.mode "sidecar" }}
@@ -117,13 +128,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8081
+            port: {{ .Values.ports.healthProbe }}
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 8081
+            port: {{ .Values.ports.healthProbe }}
           initialDelaySeconds: 5
           periodSeconds: 10
         {{- if and .Values.resources .Values.resources.controller }}
@@ -154,7 +165,7 @@ spec:
           readOnly: true
         {{- end }}
         ports:
-        - containerPort: 9443
+        - containerPort: {{ .Values.ports.webhook }}
           name: webhook-server
           protocol: TCP
       volumes:

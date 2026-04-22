@@ -77,4 +77,13 @@ spec:
   {{- if .Values.policyServer.securityContexts }}
   securityContexts: {{ toYaml .Values.policyServer.securityContexts | nindent 4 }}
   {{- end }}
+  {{- if .Values.policyServer.webhookPort }}
+  webhookPort: {{ .Values.policyServer.webhookPort }}
+  {{- end }}
+  {{- if .Values.policyServer.readinessProbePort }}
+  readinessProbePort: {{ .Values.policyServer.readinessProbePort }}
+  {{- end }}
+  {{- if .Values.policyServer.metricsPort }}
+  metricsPort: {{ .Values.policyServer.metricsPort }}
+  {{- end }}
 {{- end }}

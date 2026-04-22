@@ -1,0 +1,52 @@
+suite: host-network port configuration for default PolicyServer
+templates:
+  - policyserver-default.yaml
+tests:
+  - it: "should not set port fields by default (zero values are omitted)"
+    asserts:
+      - notExists:
+          path: spec.webhookPort
+      - notExists:
+          path: spec.readinessProbePort
+      - notExists:
+          path: spec.metricsPort
+
+  - it: "should set webhookPort when overridden in values"
+    set:
+      policyServer.webhookPort: 9443
+    asserts:
+      - equal:
+          path: spec.webhookPort
+          value: 9443
+
+  - it: "should set readinessProbePort when overridden in values"
+    set:
+      policyServer.readinessProbePort: 9081
+    asserts:
+      - equal:
+          path: spec.readinessProbePort
+          value: 9081
+
+  - it: "should set metricsPort when overridden in values"
+    set:
+      policyServer.metricsPort: 9080
+    asserts:
+      - equal:
+          path: spec.metricsPort
+          value: 9080
+
+  - it: "should set all port fields when all are overridden"
+    set:
+      policyServer.webhookPort: 9443
+      policyServer.readinessProbePort: 9081
+      policyServer.metricsPort: 9080
+    asserts:
+      - equal:
+          path: spec.webhookPort
+          value: 9443
+      - equal:
+          path: spec.readinessProbePort
+          value: 9081
+      - equal:
+          path: spec.metricsPort
+          value: 9080

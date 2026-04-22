@@ -181,3 +181,42 @@ are configured.
 - {{ .Values.auditScanner.reportCRDsKind }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Compute the effective affinity for the controller deployment.
+When hostNetwork is enabled, a required podAntiAffinity rule is injected to
+forbid multiple controller pods from being scheduled on the same node, avoiding
+host-port conflicts between controller replicas. The rule matches only
+controller pods using the chart's selector labels.
+
+PolicyServer anti-affinity (same-PS replicas, cross-PS conflicts, and
+controller-PS port overlap) is managed separately by the controller reconciler
+at runtime, not by this helper.
+
+When global.affinity is provided by the user:
+  - podAntiAffinity fully replaces the auto-generated rule.
+  - podAffinity and nodeAffinity are carried through unchanged.
+When hostNetwork is disabled, global.affinity is passed through as-is.
+*/}}
+{{- define "kubewarden-controller.effectiveAffinity" -}}
+{{- if .Values.hostNetwork -}}
+  {{- $matchLabels := (include "kubewarden-controller.selectorLabels" . | fromYaml) -}}
+  {{- $affinityTerm := dict "labelSelector" (dict "matchLabels" $matchLabels) "topologyKey" "kubernetes.io/hostname" -}}
+  {{- $autoAntiAffinity := dict "requiredDuringSchedulingIgnoredDuringExecution" (list $affinityTerm) -}}
+  {{- $affinity := dict "podAntiAffinity" $autoAntiAffinity -}}
+  {{- if .Values.global.affinity -}}
+    {{- if hasKey .Values.global.affinity "podAntiAffinity" -}}
+      {{- $_ := set $affinity "podAntiAffinity" .Values.global.affinity.podAntiAffinity -}}
+    {{- end -}}
+    {{- if hasKey .Values.global.affinity "podAffinity" -}}
+      {{- $_ := set $affinity "podAffinity" .Values.global.affinity.podAffinity -}}
+    {{- end -}}
+    {{- if hasKey .Values.global.affinity "nodeAffinity" -}}
+      {{- $_ := set $affinity "nodeAffinity" .Values.global.affinity.nodeAffinity -}}
+    {{- end -}}
+  {{- end -}}
+  {{- toYaml $affinity -}}
+{{- else if .Values.global.affinity -}}
+  {{- toYaml .Values.global.affinity -}}
+{{- end -}}
+{{- end -}}

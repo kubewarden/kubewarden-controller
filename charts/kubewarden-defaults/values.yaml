@@ -186,6 +186,19 @@ policyServer:
   # limits and requests, see https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   limits: {}
   requests: {}
+  # Port configuration for the policy server.
+  # These ports are used for the webhook, readiness probe, and metrics endpoints.
+  # Important when hostNetwork is enabled or when running multiple PolicyServers
+  # on the same node, as they must not conflict.
+  #
+  # Default values (if not specified):
+  # - webhookPort: 8443
+  # - readinessProbePort: 8081
+  # - metricsPort: 8080
+  #
+  # webhookPort: 9443
+  # readinessProbePort: 9081
+  # metricsPort: 9080
 crdVersion: "policies.kubewarden.io/v1"
 recommendedPolicies:
   enabled: False
