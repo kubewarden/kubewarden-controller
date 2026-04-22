@@ -212,17 +212,22 @@ func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWi
 // hostCapabilitiesForPolicy returns the host capabilities for a policy based on
 // whether it is namespaced or cluster-wide.
 // Cluster-wide policies always get all host capabilities ("*").
-// Namespaced policies get the capabilities configured on the PolicyServer.
+// Namespaced policies get the capabilities configured on the PolicyServer. If it
+// is not configured on the PolicyServer, they get all host capabilities ("*").
 func hostCapabilitiesForPolicy(admissionPolicy policiesv1.Policy, policyServer *policiesv1.PolicyServer) []string {
 	if admissionPolicy.GetNamespace() == "" {
 		// Cluster-wide policy: grant all host capabilities
 		return []string{"*"}
 	}
+
 	// Namespaced policy: use the PolicyServer's configured capabilities
 	if policyServer.Spec.NamespacedPoliciesCapabilities != nil {
 		return policyServer.Spec.NamespacedPoliciesCapabilities
 	}
-	return []string{}
+
+	// Namespaced policy and no PolicyServer.spec.NamespacedPoliciesCapabilities,
+	// default to grant all host capabilities
+	return []string{"*"}
 }
 
 func buildPoliciesMap(admissionPolicies []policiesv1.Policy, policyServer *policiesv1.PolicyServer) policyConfigEntryMap {

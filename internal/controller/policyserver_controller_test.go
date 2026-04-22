@@ -341,7 +341,7 @@ var _ = Describe("PolicyServer controller", func() {
 				ContextAwareResources: admissionPolicy.GetContextAwareResources(),
 				Message:               admissionPolicy.GetMessage(),
 				TimeoutEvalSeconds:    admissionPolicy.GetTimeoutEvalSeconds(),
-				HostCapabilities:      []string{},
+				HostCapabilities:      []string{"*"},
 			}
 			policiesMap[clusterAdmissionPolicy.GetUniqueName()] = policyServerConfigEntry{
 				NamespacedName: types.NamespacedName{
@@ -366,7 +366,7 @@ var _ = Describe("PolicyServer controller", func() {
 				AllowedToMutate:       admissionPolicyGroup.IsMutating(),
 				Settings:              admissionPolicyGroup.GetSettings(),
 				ContextAwareResources: admissionPolicyGroup.GetContextAwareResources(),
-				Policies:              buildPolicyGroupMembersWithContext(admissionPolicyGroup.GetPolicyGroupMembersWithContext(), []string{}),
+				Policies:              buildPolicyGroupMembersWithContext(admissionPolicyGroup.GetPolicyGroupMembersWithContext(), []string{"*"}),
 				Expression:            admissionPolicyGroup.GetExpression(),
 				Message:               admissionPolicyGroup.GetMessage(),
 				TimeoutEvalSeconds:    &timeoutEvalSeconds,
@@ -414,7 +414,7 @@ var _ = Describe("PolicyServer controller", func() {
 								"module":           Equal(admissionPolicy.GetModule()),
 								"policyMode":       Equal(string(admissionPolicy.GetPolicyMode())),
 								"message":          Equal(admissionPolicy.GetMessage()),
-								"hostCapabilities": BeEmpty(),
+								"hostCapabilities": ConsistOf("*"),
 							}),
 								Not(MatchAllKeys(Keys{
 									"timeoutEvalSeconds": Ignore(),
@@ -450,7 +450,7 @@ var _ = Describe("PolicyServer controller", func() {
 								"policies": MatchKeys(IgnoreExtras, Keys{
 									"pod_privileged": And(MatchKeys(IgnoreExtras, Keys{
 										"module":           Equal(admissionPolicyGroup.GetPolicyGroupMembersWithContext()["pod_privileged"].Module),
-										"hostCapabilities": BeEmpty(),
+										"hostCapabilities": ConsistOf("*"),
 									}), Not(MatchAllKeys(Keys{
 										"timeoutEvalSeconds": Ignore(),
 									}))),
@@ -504,7 +504,7 @@ var _ = Describe("PolicyServer controller", func() {
 			})))
 		})
 
-		It("should set empty host capabilities on namespaced policy group members and * on cluster-wide group members when PolicyServer has no NamespacedPoliciesCapabilities", func() {
+		It("should set * on namespaced and cluster-wide policy group members when PolicyServer has no NamespacedPoliciesCapabilities", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
 
@@ -524,7 +524,7 @@ var _ = Describe("PolicyServer controller", func() {
 			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Data": MatchAllKeys(Keys{
 					constants.PolicyServerConfigPoliciesEntry: And(
-						policyGroupHostCapabilitiesMatcher(admissionPolicyGroup, clusterPolicyGroup, BeEmpty(), ConsistOf("*")),
+						policyGroupHostCapabilitiesMatcher(admissionPolicyGroup, clusterPolicyGroup, ConsistOf("*"), ConsistOf("*")),
 					),
 					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
 				}),
