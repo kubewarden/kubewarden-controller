@@ -230,6 +230,31 @@ func policyGroupHostCapabilitiesMatcher(
 	}))
 }
 
+// admissionPolicyHostCapabilitiesMatcher builds a matcher that verifies the
+// hostCapabilities field for both an AdmissionPolicy and a
+// ClusterAdmissionPolicy entry of the policy server configmap.
+// Cluster-wide policies always expect ["*"]; the expected matcher for the
+// namespaced policy is supplied by the caller.
+func admissionPolicyHostCapabilitiesMatcher(
+	admissionPolicy *policiesv1.AdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy,
+	namespacedHostCapsMatcher types.GomegaMatcher,
+	clusterHostCapsMatcher types.GomegaMatcher,
+) types.GomegaMatcher {
+	return WithTransform(func(data string) (map[string]interface{}, error) {
+		policiesData := map[string]interface{}{}
+		err := json.Unmarshal([]byte(data), &policiesData)
+		return policiesData, err
+	}, MatchKeys(IgnoreExtras, Keys{
+		admissionPolicy.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+			"hostCapabilities": namespacedHostCapsMatcher,
+		}),
+		clusterAdmissionPolicy.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+			"hostCapabilities": clusterHostCapsMatcher,
+		}),
+	}))
+}
+
 func createConfigMapWithSigstoreTrustConfig(ctx context.Context, name string) {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

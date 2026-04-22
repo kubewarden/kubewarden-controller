@@ -561,6 +561,63 @@ var _ = Describe("PolicyServer controller", func() {
 			})))
 		})
 
+		It("should set * on namespaced and cluster-wide admission policies when PolicyServer has no NamespacedPoliciesCapabilities", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			admissionPolicy := policiesv1.NewAdmissionPolicyFactory().
+				WithPolicyServer(policyServerName).
+				Build()
+			Expect(k8sClient.Create(ctx, admissionPolicy)).To(Succeed())
+
+			clusterAdmissionPolicy := policiesv1.NewClusterAdmissionPolicyFactory().
+				WithPolicyServer(policyServerName).
+				Build()
+			Expect(k8sClient.Create(ctx, clusterAdmissionPolicy)).To(Succeed())
+
+			Eventually(func() *corev1.ConfigMap {
+				configMap, _ := getTestPolicyServerConfigMap(ctx, policyServerName)
+				return configMap
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: And(
+						admissionPolicyHostCapabilitiesMatcher(admissionPolicy, clusterAdmissionPolicy, ConsistOf("*"), ConsistOf("*")),
+					),
+					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
+				}),
+			})))
+		})
+
+		It("should set host capabilities on namespaced admission policies from PolicyServer NamespacedPoliciesCapabilities and * on cluster-wide admission policies", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				WithNamespacedPoliciesCapabilities([]string{"net/*"}).
+				Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			admissionPolicy := policiesv1.NewAdmissionPolicyFactory().
+				WithPolicyServer(policyServerName).
+				Build()
+			Expect(k8sClient.Create(ctx, admissionPolicy)).To(Succeed())
+
+			clusterAdmissionPolicy := policiesv1.NewClusterAdmissionPolicyFactory().
+				WithPolicyServer(policyServerName).
+				Build()
+			Expect(k8sClient.Create(ctx, clusterAdmissionPolicy)).To(Succeed())
+
+			Eventually(func() *corev1.ConfigMap {
+				configMap, _ := getTestPolicyServerConfigMap(ctx, policyServerName)
+				return configMap
+			}, timeout, pollInterval).Should(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Data": MatchAllKeys(Keys{
+					constants.PolicyServerConfigPoliciesEntry: And(
+						admissionPolicyHostCapabilitiesMatcher(admissionPolicy, clusterAdmissionPolicy, ConsistOf("net/*"), ConsistOf("*")),
+					),
+					constants.PolicyServerConfigSourcesEntry: Equal("{}"),
+				}),
+			})))
+		})
+
 		It("should create the policy server configmap with the sources authorities", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			policyServer.Spec.InsecureSources = []string{"localhost:5000"}
