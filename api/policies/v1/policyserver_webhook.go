@@ -131,6 +131,7 @@ func (v *policyServerValidator) validate(ctx context.Context, policyServer *Poli
 	}
 
 	allErrs = append(allErrs, validateLimitsAndRequests(policyServer.Spec.Limits, policyServer.Spec.Requests)...)
+	allErrs = append(allErrs, validatePorts(policyServer)...)
 
 	if len(allErrs) == 0 {
 		return nil
@@ -204,6 +205,41 @@ func validateLimitsAndRequests(limits, requests corev1.ResourceList) field.Error
 		if requestQuantity.Cmp(limitQuantity) > 0 {
 			allErrs = append(allErrs, field.Invalid(fieldPath, requestQuantity.String(), fmt.Sprintf("must be less than or equal to %s limit of %s", requestName, limitQuantity.String())))
 		}
+	}
+
+	return allErrs
+}
+
+// validatePorts checks that the port fields in the PolicyServer spec do not
+// conflict with each other. Effective ports (field value or constant default)
+// are compared so that partial overrides are also caught.
+func validatePorts(policyServer *PolicyServer) field.ErrorList {
+	var allErrs field.ErrorList
+
+	webhookPort := policyServer.EffectiveWebhookPort()
+	readinessPort := policyServer.EffectiveReadinessProbePort()
+	metricsPort := policyServer.EffectiveMetricsPort()
+
+	if webhookPort == readinessPort {
+		allErrs = append(allErrs, field.Invalid(
+			field.NewPath("spec").Child("readinessProbePort"),
+			readinessPort,
+			fmt.Sprintf("readinessProbePort must differ from webhookPort (%d)", webhookPort),
+		))
+	}
+	if webhookPort == metricsPort {
+		allErrs = append(allErrs, field.Invalid(
+			field.NewPath("spec").Child("metricsPort"),
+			metricsPort,
+			fmt.Sprintf("metricsPort must differ from webhookPort (%d)", webhookPort),
+		))
+	}
+	if readinessPort == metricsPort {
+		allErrs = append(allErrs, field.Invalid(
+			field.NewPath("spec").Child("metricsPort"),
+			metricsPort,
+			fmt.Sprintf("metricsPort must differ from readinessProbePort (%d)", readinessPort),
+		))
 	}
 
 	return allErrs

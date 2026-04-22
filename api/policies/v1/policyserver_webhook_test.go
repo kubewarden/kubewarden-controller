@@ -279,3 +279,80 @@ func TestPolicyServerValidateSigstoreTrustConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePorts(t *testing.T) {
+	tests := []struct {
+		name        string
+		webhookPort *int32
+		readiness   *int32
+		metrics     *int32
+		errContains string
+	}{
+		{
+			name:        "all defaults, no conflict",
+			errContains: "",
+		},
+		{
+			name:        "webhookPort equals readinessProbePort",
+			webhookPort: ptr.To[int32](8081),
+			readiness:   ptr.To[int32](8081),
+			errContains: "readinessProbePort must differ from webhookPort",
+		},
+		{
+			name:        "webhookPort equals metricsPort",
+			webhookPort: ptr.To[int32](8080),
+			metrics:     ptr.To[int32](8080),
+			errContains: "metricsPort must differ from webhookPort",
+		},
+		{
+			name:        "readinessProbePort equals metricsPort",
+			readiness:   ptr.To[int32](9000),
+			metrics:     ptr.To[int32](9000),
+			errContains: "metricsPort must differ from readinessProbePort",
+		},
+		{
+			name:        "all three ports the same",
+			webhookPort: ptr.To[int32](9999),
+			readiness:   ptr.To[int32](9999),
+			metrics:     ptr.To[int32](9999),
+			errContains: "readinessProbePort must differ from webhookPort",
+		},
+		{
+			name:        "all three ports distinct custom values",
+			webhookPort: ptr.To[int32](9443),
+			readiness:   ptr.To[int32](9081),
+			metrics:     ptr.To[int32](9080),
+			errContains: "",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			k8sClient := fake.NewClientBuilder().Build()
+			builder := NewPolicyServerFactory()
+			if test.webhookPort != nil {
+				builder = builder.WithWebhookPort(*test.webhookPort)
+			}
+			if test.readiness != nil {
+				builder = builder.WithReadinessProbePort(*test.readiness)
+			}
+			if test.metrics != nil {
+				builder = builder.WithMetricsPort(*test.metrics)
+			}
+			policyServer := builder.Build()
+
+			validator := policyServerValidator{
+				deploymentsNamespace: "default",
+				k8sClient:            k8sClient,
+				logger:               logr.Discard(),
+			}
+			err := validator.validate(t.Context(), policyServer)
+
+			if test.errContains != "" {
+				require.ErrorContains(t, err, test.errContains)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
