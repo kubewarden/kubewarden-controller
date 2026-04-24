@@ -145,7 +145,9 @@ impl PolicyServer {
             )
             .await;
 
-        let mut wasmtime_config = wasmtime::Config::new();
+        let mut wasmtime_config = wasmtime::Config::default();
+        // required by policies built by the official go compiler >= 1.26.0
+        wasmtime_config.wasm_function_references(true);
 
         let any_policy_has_timeout = config.policies.values().any(|policy| match policy {
             config::PolicyOrPolicyGroup::Policy {
