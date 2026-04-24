@@ -205,6 +205,8 @@ impl PolicyEvaluatorBuilder {
                     if self.epoch_deadlines.is_some() {
                         wasmtime_config.epoch_interruption(true);
                     }
+                    // required by policies built by the official go compiler >= 1.26.0
+                    wasmtime_config.wasm_function_references(true);
 
                     wasmtime::Engine::new(&wasmtime_config)
                 },
