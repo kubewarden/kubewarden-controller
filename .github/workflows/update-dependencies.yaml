@@ -7,7 +7,7 @@ on:
 
 jobs:
   update-dependencies:
-    name: Update Go version, Helm charts dependencies and Hauler manifest
+    name: Update Rust toolchain, Helm chart dependencies and Hauler manifest
     runs-on: ubuntu-latest
     permissions:
       contents: read
