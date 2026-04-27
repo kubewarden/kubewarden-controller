@@ -1,14 +1,10 @@
-mod common;
-
-use std::path::PathBuf;
 use std::{
     collections::{BTreeSet, HashMap},
+    path::PathBuf,
     time::Duration,
 };
 #[cfg(feature = "otel_tests")]
 use std::{fs::File, io::BufRead};
-
-use common::{app, setup};
 
 use axum::{
     body::Body,
@@ -16,12 +12,11 @@ use axum::{
 };
 use backon::{ExponentialBuilder, Retryable};
 use http_body_util::BodyExt;
-use policy_evaluator::admission_response::{self, StatusCause, StatusDetails};
 use policy_evaluator::{
-    admission_response::AdmissionResponseStatus,
-    admission_response_handler::policy_mode::PolicyMode, policy_evaluator::PolicySettings,
-    policy_fetcher::proxy::ProxyConfig, policy_fetcher::sources::Sources,
-    policy_fetcher::verify::config::VerificationConfigV1,
+    admission_response::{self, AdmissionResponseStatus, StatusCause, StatusDetails},
+    admission_response_handler::policy_mode::PolicyMode,
+    policy_evaluator::PolicySettings,
+    policy_fetcher::{proxy::ProxyConfig, sources::Sources, verify::config::VerificationConfigV1},
 };
 use policy_server::{api::admission_review::AdmissionReviewResponse, config::PolicyOrPolicyGroup};
 use regex::Regex;
@@ -30,8 +25,12 @@ use serde_json::json;
 use tokio::fs;
 use tower::ServiceExt;
 
-use crate::common::default_test_config;
-use crate::common::pod_privileged_test_config;
+mod common;
+
+use crate::common::{
+    app, context_aware_policy_group_test_config, context_aware_policy_test_config,
+    default_test_config, pod_privileged_test_config, setup,
+};
 
 #[tokio::test]
 async fn test_validate() {
@@ -84,6 +83,7 @@ async fn test_validate_custom_rejection_message() {
             context_aware_resources: BTreeSet::new(),
             message: Some("Custom error message".to_owned()),
             timeout_eval_seconds: None,
+            host_capabilities: vec![],
         },
     );
     let app = app(config).await;
@@ -519,6 +519,226 @@ async fn test_timeout_protection_policy_specific_reject() {
 }
 
 #[tokio::test]
+async fn test_context_aware_policy_host_capability_denied() {
+    use policy_evaluator::policy_metadata::ContextAwareResource;
+    use std::collections::BTreeSet;
+
+    setup();
+
+    let context_aware_resources = BTreeSet::from([
+        ContextAwareResource {
+            api_version: "apps/v1".to_owned(),
+            kind: "Deployment".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Namespace".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Service".to_owned(),
+        },
+    ]);
+
+    let config = context_aware_policy_test_config(
+        "context-aware-test-policy",
+        vec![],
+        context_aware_resources,
+    );
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/context-aware-test-policy")
+        .body(Body::from(include_str!(
+            "data/deployment_admission_review.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    // Invoking a host capability (e.g. `kubernetes/list_resources_by_namespace`) must
+    // be blocked by the policy-server before the call reaches the Kubernetes client.
+    // The resulting admission response must be denied and the status message must
+    // contain the capability-denial text.
+    assert!(
+        !admission_review_response.response.allowed,
+        "expected admission to be denied when host capabilities are empty"
+    );
+
+    let message = admission_review_response
+        .response
+        .status
+        .and_then(|s| s.message)
+        .unwrap_or_default();
+    assert!(
+        message.contains("has not been granted access"),
+        "expected host capability denial message, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn test_context_aware_policy_host_capability_allowed() {
+    use policy_evaluator::policy_metadata::ContextAwareResource;
+    use std::collections::BTreeSet;
+
+    setup();
+
+    let context_aware_resources = BTreeSet::from([
+        ContextAwareResource {
+            api_version: "apps/v1".to_owned(),
+            kind: "Deployment".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Namespace".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Service".to_owned(),
+        },
+    ]);
+
+    let config = context_aware_policy_test_config(
+        "context-aware-test-policy",
+        vec!["*".to_owned()],
+        context_aware_resources,
+    );
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/context-aware-test-policy")
+        .body(Body::from(include_str!(
+            "data/deployment_admission_review.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    // The capability check passed, so the policy may fail for other reasons
+    // (no Kubernetes cluster available in tests), but it must NOT be rejected
+    // because of a capability-denial.
+    let message = admission_review_response
+        .response
+        .status
+        .and_then(|s| s.message)
+        .unwrap_or_default();
+    assert!(
+        !message.contains("has not been granted access"),
+        "expected no capability-denial message when host capabilities are allowed, got: {message}"
+    );
+}
+
+#[tokio::test]
+#[rstest]
+#[case::host_capabilities_denied(vec![], true)]
+#[case::host_capabilities_allowed(vec!["*".to_owned()], false)]
+async fn test_context_aware_group_policy_host_capability(
+    #[case] host_capabilities: Vec<String>,
+    #[case] expect_cap_denied: bool,
+) {
+    use policy_evaluator::policy_metadata::ContextAwareResource;
+    use std::collections::BTreeSet;
+
+    setup();
+
+    let context_aware_resources = BTreeSet::from([
+        ContextAwareResource {
+            api_version: "apps/v1".to_owned(),
+            kind: "Deployment".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Namespace".to_owned(),
+        },
+        ContextAwareResource {
+            api_version: "v1".to_owned(),
+            kind: "Service".to_owned(),
+        },
+    ]);
+
+    let config = context_aware_policy_group_test_config(
+        "ctx-aware-group",
+        host_capabilities,
+        context_aware_resources,
+    );
+    let app = app(config).await;
+
+    let request = Request::builder()
+        .method(http::Method::POST)
+        .header(header::CONTENT_TYPE, "application/json")
+        .uri("/validate/ctx-aware-group")
+        .body(Body::from(include_str!(
+            "data/deployment_admission_review.json"
+        )))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), 200);
+
+    let admission_review_response: AdmissionReviewResponse =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+
+    if expect_cap_denied {
+        assert!(
+            !admission_review_response.response.allowed,
+            "expected admission to be denied when group member has no host capabilities"
+        );
+        // The host capability denial detail is in status.details.causes, because the
+        // group policy wraps the member error with its own top-level message.
+        let causes = admission_review_response
+            .response
+            .status
+            .and_then(|s| s.details)
+            .map(|d| d.causes)
+            .unwrap_or_default();
+        assert!(
+            causes.iter().any(|c| c
+                .message
+                .as_deref()
+                .unwrap_or_default()
+                .contains("has not been granted access")),
+            "expected 'has not been granted access' in a status cause for group policy, got: {causes:?}"
+        );
+    } else {
+        // The host capability gate must have passed: no cause or top-level message should
+        // contain the capability-denial text. (The policy itself may still be denied because
+        // there is no live Kubernetes cluster in the test environment.)
+        let status = admission_review_response.response.status;
+        let top_message = status
+            .as_ref()
+            .and_then(|s| s.message.as_deref())
+            .unwrap_or_default()
+            .to_owned();
+        let causes = status
+            .and_then(|s| s.details)
+            .map(|d| d.causes)
+            .unwrap_or_default();
+        assert!(
+            !top_message.contains("has not been granted access")
+                && !causes.iter().any(|c| c
+                    .message
+                    .as_deref()
+                    .unwrap_or_default()
+                    .contains("has not been granted access")),
+            "expected no capability-denial in group policy when all host capabilities are allowed, \
+             got top_message: {top_message:?}, causes: {causes:?}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn test_verified_policy() {
     setup();
 
@@ -558,6 +778,7 @@ async fn test_verified_policy() {
             context_aware_resources: BTreeSet::new(),
             message: None,
             timeout_eval_seconds: None,
+            host_capabilities: vec![],
         },
     )]);
     config.verification_config = Some(verification_config);
@@ -597,6 +818,7 @@ async fn test_policy_with_invalid_settings() {
             context_aware_resources: BTreeSet::new(),
             message: None,
             timeout_eval_seconds: None,
+            host_capabilities: vec![],
         },
     );
     config.continue_on_errors = true;
@@ -644,6 +866,7 @@ async fn test_policy_with_wrong_url() {
             context_aware_resources: BTreeSet::new(),
             message: None,
             timeout_eval_seconds: None,
+            host_capabilities: vec![],
         },
     );
     config.continue_on_errors = true;

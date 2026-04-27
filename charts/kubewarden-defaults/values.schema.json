@@ -12,16 +12,49 @@
         "minAvailable": {
           "type": "string",
           "minLength": 1
+        },
+        "namespacedPoliciesCapabilities": {
+          "description": "Host capability paths allowed for namespaced policies on this PolicyServer. Catch obvious errors",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "anyOf": [
+              {
+                "description": "Global wildcard",
+                "const": "*"
+              },
+              {
+                "description": "Category wildcard: <category>/*",
+                "pattern": "^[a-z0-9_-]+/\\*$"
+              },
+              {
+                "description": "Sub-category wildcard: <category>/<path...>/*",
+                "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+/\\*$"
+              },
+              {
+                "description": "Fully-qualified capability path: <category>/<path...>",
+                "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+$"
+              }
+            ]
+          }
         }
       },
       "anyOf": [
         {
           "oneOf": [
             {
-              "required": ["minAvailable"]
+              "required": [
+                "minAvailable"
+              ]
             },
             {
-              "required": ["maxUnavailable"]
+              "required": [
+                "maxUnavailable"
+              ]
             }
           ]
         },
@@ -29,10 +62,14 @@
           "not": {
             "allOf": [
               {
-                "required": ["minAvailable"]
+                "required": [
+                  "minAvailable"
+                ]
               },
               {
-                "required": ["maxUnavailable"]
+                "required": [
+                  "maxUnavailable"
+                ]
               }
             ]
           }

@@ -115,6 +115,9 @@ each policy in the file using the same request during each evaluation.
 ###### **Options:**
 
 * `--allow-context-aware <ALLOW-CONTEXT-AWARE>` — Grant access to the Kubernetes resources defined inside of the policy's `contextAwareResources` section. Warning: review the list of resources carefully to avoid abuses. Disabled by default
+* `--allowed-host-capabilities <ALLOWED-HOST-CAPABILITIES>` — Host capabilities the policy is allowed to use. Use '*' to allow all. Can be repeated multiple times. Examples: 'oci/*', 'net/v1/dns_lookup_host'
+
+  Default value: `*`
 * `--cert-email <VALUE>` — Expected email in Fulcio certificate
 * `--cert-oidc-issuer <VALUE>` — Expected OIDC issuer in Fulcio certificates
 * `--disable-wasmtime-cache <DISABLE-WASMTIME-CACHE>` — Turn off usage of wasmtime cache
@@ -366,6 +369,9 @@ It respects standard proxy environment variables when downloading policies:
 ###### **Options:**
 
 * `--allow-context-aware <ALLOW-CONTEXT-AWARE>` — Grant access to the Kubernetes resources defined inside of the policy's `contextAwareResources` section. Warning: review the list of resources carefully to avoid abuses. Disabled by default
+* `--allowed-host-capabilities <ALLOWED-HOST-CAPABILITIES>` — Host capabilities the policy is allowed to use. Use '*' to allow all. Can be repeated multiple times. Examples: 'oci/*', 'net/v1/dns_lookup_host'
+
+  Default value: `*`
 * `--cert-email <VALUE>` — Expected email in Fulcio certificate
 * `--cert-oidc-issuer <VALUE>` — Expected OIDC issuer in Fulcio certificates
 * `--disable-wasmtime-cache <DISABLE-WASMTIME-CACHE>` — Turn off usage of wasmtime cache

@@ -1,40 +1,38 @@
 #![allow(clippy::too_many_arguments)]
-mod common;
-mod k8s_mock;
+use std::{collections::BTreeSet, future::Future};
 
 use anyhow::Result;
 use core::panic;
 use hyper::{Request, Response};
-use kube::Client;
-use kube::client::Body;
+use kube::{Client, client::Body};
 use kubewarden_policy_sdk::host_capabilities::oci::ManifestDigestResponse;
 use policy_evaluator::admission_response::PatchType;
-use policy_fetcher::oci_client::manifest::OciImageManifest;
+use policy_fetcher::oci_client::manifest::{OciDescriptor, OciImageManifest, OciManifest};
 use rstest::*;
 use serde_json::json;
-use std::collections::BTreeSet;
-use std::future::Future;
-use tokio::sync::mpsc;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tower_test::mock::Handle;
-
-use policy_fetcher::oci_client::manifest::{OciDescriptor, OciManifest};
 
 use policy_evaluator::{
     admission_request::AdmissionRequest,
     admission_response::AdmissionResponseStatus,
     callback_requests::{CallbackRequest, CallbackRequestType, CallbackResponse},
     evaluation_context::EvaluationContext,
-    policy_evaluator::PolicySettings,
-    policy_evaluator::{PolicyExecutionMode, ValidateRequest},
+    host_capabilities::HostCapabilities,
+    policy_evaluator::{PolicyExecutionMode, PolicySettings, ValidateRequest},
     policy_metadata::ContextAwareResource,
 };
 
-use crate::common::{
-    CONTEXT_AWARE_POLICY_FILE, build_policy_evaluator, fetch_policy, load_request_data,
-    setup_callback_handler,
+mod common;
+mod k8s_mock;
+
+use crate::{
+    common::{
+        CONTEXT_AWARE_POLICY_FILE, build_policy_evaluator, fetch_policy, load_request_data,
+        setup_callback_handler,
+    },
+    k8s_mock::{no_op_scenario, rego_scenario, wapc_and_wasi_scenario},
 };
-use crate::k8s_mock::{rego_scenario, wapc_and_wasi_scenario};
 
 #[rstest]
 #[case::wapc(
@@ -179,6 +177,7 @@ async fn test_policy_evaluator(
         callback_channel: None,
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
@@ -292,6 +291,7 @@ async fn test_runtime_context_aware<F, Fut>(
             },
         ]),
         epoch_deadline: Some(2),
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let request_data = load_request_data(request_file_path);
@@ -307,6 +307,104 @@ async fn test_runtime_context_aware<F, Fut>(
 
         assert!(admission_response.allowed, "the admission request should have been accepted, it has been rejected with this details: {:?}", admission_response);
     }).await.unwrap();
+
+    callback_handler_shutdown_channel_tx
+        .send(())
+        .expect("cannot send shutdown signal");
+}
+
+#[test_log::test(rstest)]
+#[case::host_capability_allowed(
+    PolicyExecutionMode::KubewardenWapc,
+    &CONTEXT_AWARE_POLICY_FILE,
+    "app_deployment.json",
+    wapc_and_wasi_scenario,
+    HostCapabilities::AllowAll,
+    true,
+)]
+#[case::host_capability_denied(
+    PolicyExecutionMode::KubewardenWapc,
+    &CONTEXT_AWARE_POLICY_FILE,
+    "app_deployment.json",
+    no_op_scenario,
+    HostCapabilities::DenyAll,
+    false,
+)]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_host_capabilities<F, Fut>(
+    #[case] execution_mode: PolicyExecutionMode,
+    #[case] policy_uri: &str,
+    #[case] request_file_path: &str,
+    #[case] scenario: F,
+    #[case] host_capabilities: HostCapabilities,
+    #[case] expected_allowed: bool,
+) where
+    F: FnOnce(Handle<Request<Body>, Response<Body>>) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    use kube::client::Body;
+
+    let tempdir = tempfile::TempDir::new().expect("cannot create tempdir");
+    let policy = fetch_policy(policy_uri, tempdir.path().to_owned()).await;
+
+    let (mocksvc, handle) = tower_test::mock::pair::<Request<Body>, Response<Body>>();
+    let client = Client::new(mocksvc, "default");
+    scenario(handle).await;
+
+    let (callback_handler_shutdown_channel_tx, callback_handler_channel) =
+        setup_callback_handler(Some(client), None).await;
+
+    let eval_ctx = EvaluationContext {
+        policy_id: "test".to_owned(),
+        callback_channel: Some(callback_handler_channel),
+        ctx_aware_resources_allow_list: BTreeSet::from([
+            ContextAwareResource {
+                api_version: "v1".to_owned(),
+                kind: "Namespace".to_owned(),
+            },
+            ContextAwareResource {
+                api_version: "apps/v1".to_owned(),
+                kind: "Deployment".to_owned(),
+            },
+            ContextAwareResource {
+                api_version: "v1".to_owned(),
+                kind: "Service".to_owned(),
+            },
+        ]),
+        epoch_deadline: Some(2),
+        host_capabilities,
+    };
+
+    let request_data = load_request_data(request_file_path);
+    let request: AdmissionRequest =
+        serde_json::from_slice(&request_data).expect("cannot deserialize request");
+
+    tokio::task::spawn_blocking(move || {
+        let mut policy_evaluator = build_policy_evaluator(execution_mode, &policy, &eval_ctx);
+        let admission_response = policy_evaluator.validate(
+            ValidateRequest::AdmissionRequest(Box::new(request)),
+            &PolicySettings::default(),
+        );
+
+        assert_eq!(
+            expected_allowed, admission_response.allowed,
+            "unexpected admission response: {:?}",
+            admission_response
+        );
+
+        if !expected_allowed {
+            let message = admission_response
+                .status
+                .and_then(|s| s.message)
+                .unwrap_or_default();
+            assert!(
+                message.contains("has not been granted access"),
+                "expected host capability denial message, got: {message}"
+            );
+        }
+    })
+    .await
+    .unwrap();
 
     callback_handler_shutdown_channel_tx
         .send(())
@@ -339,6 +437,7 @@ async fn test_oci_manifest_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -430,6 +529,7 @@ async fn test_oci_manifest_and_config_capability(
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx
@@ -498,6 +598,7 @@ async fn test_oci_digest_capability() {
         callback_channel: Some(callback_handler_channel),
         ctx_aware_resources_allow_list: Default::default(),
         epoch_deadline: None,
+        host_capabilities: HostCapabilities::AllowAll,
     };
 
     let cb_channel: mpsc::Sender<CallbackRequest> = eval_ctx

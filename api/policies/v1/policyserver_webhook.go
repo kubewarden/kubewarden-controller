@@ -19,6 +19,9 @@ package v1
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +37,46 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kubewarden/kubewarden-controller/internal/constants"
 )
+
+// capabilityNode is a node in the host-capability path tree.
+// Leaf nodes (complete, addressable operations) have a nil value.
+// Intermediate nodes carry a non-nil map of named children.
+type capabilityNode map[string]capabilityNode
+
+// capabilityTree is the authoritative tree of all recognised host capability
+// paths. It mirrors the namespaces and operations handled by the policy-server
+// callback (crates/policy-server/src/evaluation/callback.rs).
+//
+//nolint:gochecknoglobals // effectively a constant, not used anywhere else
+var capabilityTree = capabilityNode{
+	"oci": {
+		"v1": {
+			"verify":              nil,
+			"manifest_digest":     nil,
+			"oci_manifest":        nil,
+			"oci_manifest_config": nil,
+		},
+		"v2": {
+			"verify": nil,
+		},
+	},
+	"net": {
+		"v1": {
+			"dns_lookup_host": nil,
+		},
+	},
+	"crypto": {
+		"v1": {
+			"is_certificate_trusted": nil,
+		},
+	},
+	"kubernetes": {
+		"list_resources_by_namespace": nil,
+		"list_resources_all":          nil,
+		"get_resource":                nil,
+		"can_i":                       nil,
+	},
+}
 
 // SetupWebhookWithManager registers the PolicyServer webhook with the controller manager.
 func (ps *PolicyServer) SetupWebhookWithManager(mgr ctrl.Manager, deploymentsNamespace string) error {
@@ -131,6 +174,7 @@ func (v *policyServerValidator) validate(ctx context.Context, policyServer *Poli
 	}
 
 	allErrs = append(allErrs, validateLimitsAndRequests(policyServer.Spec.Limits, policyServer.Spec.Requests)...)
+	allErrs = append(allErrs, validateNamespacedPoliciesCapabilities(policyServer.Spec.NamespacedPoliciesCapabilities)...)
 
 	if len(allErrs) == 0 {
 		return nil
@@ -207,4 +251,79 @@ func validateLimitsAndRequests(limits, requests corev1.ResourceList) field.Error
 	}
 
 	return allErrs
+}
+
+// validateNamespacedPoliciesCapabilities validates each capability pattern
+// against the authoritative capability tree.
+//
+// Valid formats:
+//   - "*"                (allow all capabilities)
+//   - "category/*"       (e.g. "oci/*", "kubernetes/*")
+//   - "category/sub/*"   (e.g. "oci/v1/*")
+//   - full path          (e.g. "oci/v1/verify", "kubernetes/can_i")
+//
+// Every segment is validated against the tree, so unknown categories,
+// unknown versions, and unknown operations are all rejected with an error
+// listing the valid options at that level.
+func validateNamespacedPoliciesCapabilities(capabilities []string) field.ErrorList {
+	var allErrs field.ErrorList
+	fieldPath := field.NewPath("spec").Child("namespacedPoliciesCapabilities")
+
+	for i, pattern := range capabilities {
+		if err := validateSingleCapability(pattern, fieldPath.Index(i)); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	return allErrs
+}
+
+// validateSingleCapability validates one capability pattern against the capability tree.
+func validateSingleCapability(pattern string, path *field.Path) *field.Error {
+	if pattern == "" {
+		return field.Invalid(path, pattern, "capability must not be empty")
+	}
+	if pattern == "*" {
+		return nil
+	}
+
+	parts := strings.Split(pattern, "/")
+	node := capabilityTree
+
+	for i, part := range parts {
+		// Wildcard handling: "*" is only valid as the final segment.
+		if strings.Contains(part, "*") {
+			if part != "*" || i != len(parts)-1 {
+				return field.Invalid(path, pattern,
+					"wildcard \"*\" is only allowed as the last path segment (e.g. \"oci/*\" or \"oci/v1/*\")")
+			}
+			// Valid wildcard termination; parent node is already confirmed.
+			return nil
+		}
+
+		child, found := node[part]
+		if !found {
+			return field.Invalid(path, pattern,
+				fmt.Sprintf("unknown segment %q, valid options at this level are: %s",
+					part, strings.Join(slices.Sorted(maps.Keys(node)), ", ")))
+		}
+
+		if child == nil {
+			// Leaf reached, path must end here.
+			if i != len(parts)-1 {
+				return field.Invalid(path, pattern,
+					fmt.Sprintf("%q is a complete capability path and cannot have further segments",
+						strings.Join(parts[:i+1], "/")))
+			}
+			return nil
+		}
+
+		node = child
+	}
+
+	// Consumed all parts but stopped at an intermediate node: the path is
+	// incomplete. Guide the user toward the wildcard form.
+	return field.Invalid(path, pattern,
+		fmt.Sprintf("%q is not a complete capability path; use %q to allow all capabilities under it",
+			pattern, pattern+"/*"))
 }

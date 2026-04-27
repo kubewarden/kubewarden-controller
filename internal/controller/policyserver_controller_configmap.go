@@ -27,6 +27,7 @@ type policyGroupMemberWithContext struct {
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	ContextAwareResources []policiesv1.ContextAwareResource `json:"contextAwareResources,omitempty"`
 	TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
+	HostCapabilities      []string                          `json:"hostCapabilities"`
 }
 
 type policyServerConfigEntry struct {
@@ -38,6 +39,7 @@ type policyServerConfigEntry struct {
 	Settings              runtime.RawExtension              `json:"settings,omitempty"`
 	Message               string                            `json:"message,omitempty"`
 	TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
+	HostCapabilities      []string                          `json:"hostCapabilities"`
 	// The following fields are used by policy groups only.
 	Policies   map[string]policyGroupMemberWithContext `json:"policies,omitempty"`
 	Expression string                                  `json:"expression,omitempty"`
@@ -65,6 +67,8 @@ func (p *policyServerConfigEntry) UnmarshalJSON(b []byte) error {
 
 func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 	if len(p.Policies) > 0 {
+		// For policy groups, hostCapabilities is not emitted at the group level.
+		// Each group member carries its own hostCapabilities field instead.
 		bytes, err := json.Marshal(struct {
 			NamespacedName types.NamespacedName                    `json:"namespacedName"`
 			PolicyMode     string                                  `json:"policyMode"`
@@ -93,6 +97,7 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 		Settings              runtime.RawExtension              `json:"settings,omitempty"`
 		Message               string                            `json:"message,omitempty"`
 		TimeoutEvalSeconds    *int32                            `json:"timeoutEvalSeconds,omitempty"`
+		HostCapabilities      []string                          `json:"hostCapabilities"`
 	}{
 		NamespacedName:        p.NamespacedName,
 		Module:                p.Module,
@@ -102,6 +107,7 @@ func (p policyServerConfigEntry) MarshalJSON() ([]byte, error) {
 		Settings:              p.Settings,
 		Message:               p.Message,
 		TimeoutEvalSeconds:    p.TimeoutEvalSeconds,
+		HostCapabilities:      p.HostCapabilities,
 	})
 	if err != nil {
 		return nil, errors.New("failed to encode policy server configuration")
@@ -143,7 +149,7 @@ func (r *PolicyServerReconciler) reconcilePolicyServerConfigMap(
 
 // Function used to update the ConfigMap data when creating or updating it.
 func (r *PolicyServerReconciler) updateConfigMapData(cfg *corev1.ConfigMap, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) error {
-	policiesMap := buildPoliciesMap(policies)
+	policiesMap := buildPoliciesMap(policies, policyServer)
 	policiesYML, err := json.Marshal(policiesMap)
 	if err != nil {
 		return fmt.Errorf("cannot marshal policies: %w", err)
@@ -189,7 +195,7 @@ func (r *PolicyServerReconciler) policyServerConfigMapVersion(ctx context.Contex
 	return unstructuredObj.GetResourceVersion(), nil
 }
 
-func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWithContext) map[string]policyGroupMemberWithContext {
+func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWithContext, hostCaps []string) map[string]policyGroupMemberWithContext {
 	policyGroupMembers := map[string]policyGroupMemberWithContext{}
 	for name, policy := range policies {
 		policyGroupMembers[name] = policyGroupMemberWithContext{
@@ -197,14 +203,38 @@ func buildPolicyGroupMembersWithContext(policies policiesv1.PolicyGroupMembersWi
 			Settings:              policy.Settings,
 			ContextAwareResources: policy.ContextAwareResources,
 			TimeoutEvalSeconds:    policy.TimeoutEvalSeconds,
+			HostCapabilities:      hostCaps,
 		}
 	}
 	return policyGroupMembers
 }
 
-func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMap {
+// hostCapabilitiesForPolicy returns the host capabilities for a policy based on
+// whether it is namespaced or cluster-wide.
+// Cluster-wide policies always get all host capabilities ("*").
+// Namespaced policies get the capabilities configured on the PolicyServer. If it
+// is not configured on the PolicyServer, they get all host capabilities ("*").
+func hostCapabilitiesForPolicy(admissionPolicy policiesv1.Policy, policyServer *policiesv1.PolicyServer) []string {
+	if admissionPolicy.GetNamespace() == "" {
+		// Cluster-wide policy: grant all host capabilities
+		return []string{"*"}
+	}
+
+	// Namespaced policy: use the PolicyServer's configured capabilities
+	if policyServer.Spec.NamespacedPoliciesCapabilities != nil {
+		return policyServer.Spec.NamespacedPoliciesCapabilities
+	}
+
+	// Namespaced policy and no PolicyServer.spec.NamespacedPoliciesCapabilities,
+	// default to grant all host capabilities
+	return []string{"*"}
+}
+
+func buildPoliciesMap(admissionPolicies []policiesv1.Policy, policyServer *policiesv1.PolicyServer) policyConfigEntryMap {
 	policies := policyConfigEntryMap{}
 	for _, admissionPolicy := range admissionPolicies {
+		hostCaps := hostCapabilitiesForPolicy(admissionPolicy, policyServer)
+
 		configEntry := policyServerConfigEntry{
 			NamespacedName: types.NamespacedName{
 				Namespace: admissionPolicy.GetNamespace(),
@@ -217,10 +247,11 @@ func buildPoliciesMap(admissionPolicies []policiesv1.Policy) policyConfigEntryMa
 			ContextAwareResources: admissionPolicy.GetContextAwareResources(),
 			Message:               admissionPolicy.GetMessage(),
 			TimeoutEvalSeconds:    admissionPolicy.GetTimeoutEvalSeconds(),
+			HostCapabilities:      hostCaps,
 		}
 
 		if policyGroup, ok := admissionPolicy.(policiesv1.PolicyGroup); ok {
-			configEntry.Policies = buildPolicyGroupMembersWithContext(policyGroup.GetPolicyGroupMembersWithContext())
+			configEntry.Policies = buildPolicyGroupMembersWithContext(policyGroup.GetPolicyGroupMembersWithContext(), hostCaps)
 			configEntry.Expression = policyGroup.GetExpression()
 		}
 

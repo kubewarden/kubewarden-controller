@@ -130,7 +130,7 @@ impl Runtime<'_> {
         }
     }
 
-    pub fn validate_settings(&mut self, settings: String) -> SettingsValidationResponse {
+    pub fn validate_settings(&self, settings: String) -> SettingsValidationResponse {
         match self.0.call("validate_settings", settings.as_bytes()) {
             Ok(res) => {
                 let vr: Result<SettingsValidationResponse> = serde_json::from_slice(&res)
@@ -162,7 +162,8 @@ impl Runtime<'_> {
 mod tests {
     use super::*;
     use crate::{
-        evaluation_context::EvaluationContext, runtimes::wapc::callback::new_host_callback,
+        evaluation_context::EvaluationContext, host_capabilities::HostCapabilities,
+        runtimes::wapc::callback::new_host_callback,
     };
     use std::{
         sync::{self, Arc},
@@ -207,6 +208,7 @@ mod tests {
             callback_channel: None,
             ctx_aware_resources_allow_list: Default::default(),
             epoch_deadline: Some(epoch_deadline),
+            host_capabilities: HostCapabilities::AllowAll,
         };
 
         let eval_ctx = Arc::new(eval_ctx);

@@ -1,9 +1,19 @@
-use crate::backend::{Backend, BackendDetector};
+use std::{
+    collections::BTreeSet,
+    fs::{self, File},
+    path::PathBuf,
+};
+
 use anyhow::{Result, anyhow};
-use policy_evaluator::validator::Validate;
-use policy_evaluator::{ProtocolVersion, constants::*, policy_metadata::Metadata};
-use std::fs::{self, File};
-use std::path::PathBuf;
+use policy_evaluator::{
+    ProtocolVersion, constants::*, policy_metadata::Metadata, validator::Validate,
+};
+use tracing::warn;
+
+use crate::{
+    backend::{Backend, BackendDetector},
+    wasm_scanner,
+};
 
 pub(crate) fn write_annotation(
     wasm_path: PathBuf,
@@ -16,14 +26,19 @@ pub(crate) fn write_annotation(
             fs::read_to_string(path).map_err(|e| anyhow!("Error reading usage file: {}", e))
         })
         .transpose()?;
+
+    let wasm_bytes =
+        std::fs::read(&wasm_path).map_err(|e| anyhow!("Error reading wasm file: {}", e))?;
+
+    let mut module = walrus::Module::from_buffer(&wasm_bytes)
+        .map_err(|e| anyhow!("Error parsing wasm module: {}", e))?;
+
+    let detected_capabilities =
+        wasm_scanner::scan(&module).map_err(|e| anyhow!("Error scanning wasm module: {}", e))?;
+
     let backend_detector = BackendDetector::default();
-    let metadata = prepare_metadata(
-        wasm_path.clone(),
-        metadata_path,
-        backend_detector,
-        usage.as_deref(),
-    )?;
-    write_annotated_wasm_file(wasm_path, destination, metadata)
+    let metadata = prepare_metadata(wasm_path, metadata_path, backend_detector, usage.as_deref())?;
+    write_annotated_wasm_file(&mut module, destination, metadata, &detected_capabilities)
 }
 
 fn prepare_metadata(
@@ -67,15 +82,48 @@ fn prepare_metadata(
         .and(Ok(metadata))
 }
 
+fn warn_on_capabilities_mismatch(
+    detected: &[wasm_scanner::DetectedHostCapability],
+    metadata: &Metadata,
+) {
+    let detected_set: BTreeSet<String> = detected
+        .iter()
+        .map(|c| format!("{}/{}", c.namespace, c.operation))
+        .collect();
+
+    let declared_set: BTreeSet<String> = metadata
+        .host_capabilities
+        .as_ref()
+        .cloned()
+        .unwrap_or_default();
+
+    let used_but_undeclared: BTreeSet<&String> = detected_set.difference(&declared_set).collect();
+    let declared_but_unused: BTreeSet<&String> = declared_set.difference(&detected_set).collect();
+
+    if !used_but_undeclared.is_empty() {
+        warn!(
+            capabilities = ?used_but_undeclared,
+            "host capabilities used by the policy but not declared in metadata"
+        );
+    }
+
+    if !declared_but_unused.is_empty() {
+        warn!(
+            capabilities = ?declared_but_unused,
+            "host capabilities declared in metadata but not detected in the policy"
+        );
+    }
+}
+
 fn write_annotated_wasm_file(
-    input_path: PathBuf,
+    module: &mut walrus::Module,
     output_path: PathBuf,
     metadata: Metadata,
+    detected_capabilities: &[wasm_scanner::DetectedHostCapability],
 ) -> Result<()> {
-    let buf: Vec<u8> = std::fs::read(input_path)?;
-    let metadata_json = serde_json::to_vec(&metadata)?;
+    warn_on_capabilities_mismatch(detected_capabilities, &metadata);
 
-    let mut module = walrus::Module::from_buffer(buf.as_slice())?;
+    let metadata_json = serde_json::to_vec(&metadata)?;
 
     let custom_section = walrus::RawCustomSection {
         name: String::from(KUBEWARDEN_CUSTOM_SECTION_METADATA),

@@ -12,6 +12,7 @@ use policy_evaluator::{
     },
     callback_requests::CallbackRequest,
     evaluation_context::EvaluationContext,
+    host_capabilities::HostCapabilities,
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
     policy_evaluator::{PolicyEvaluator, PolicyEvaluatorPre, PolicyExecutionMode, ValidateRequest},
     policy_evaluator_builder::PolicyEvaluatorBuilder,
@@ -72,6 +73,10 @@ pub(crate) struct EvaluationEnvironment {
     /// A map with the ID of the policy as value, and the list of ContextAwareResource the
     /// policy is allowed to access.
     policy_id_to_ctx_aware_allowed_resources: HashMap<PolicyID, BTreeSet<ContextAwareResource>>,
+
+    /// A map with the ID of the policy as key, and the allowed host capabilities
+    /// as value.
+    policy_id_to_host_capabilities: HashMap<PolicyID, HostCapabilities>,
 
     /// Map a `policy_id` to the module's digest.
     /// This allows us to deduplicate the Wasm modules defined by the user.
@@ -208,6 +213,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                     allowed_to_mutate,
                     context_aware_resources,
                     timeout_eval_seconds,
+                    host_capabilities,
                     ..
                 } => {
                     let policy_evaluation_settings = PolicyEvaluationSettings {
@@ -221,11 +227,19 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                     let epoch_deadline =
                         timeout_eval_seconds.or(self.global_policy_evaluation_limit_seconds);
 
+                    let host_capabilities =
+                        HostCapabilities::new(host_capabilities).map_err(|e| {
+                            EvaluationError::BootstrapFailure(format!(
+                                "invalid hostCapabilities pattern for policy {id}: {e}"
+                            ))
+                        })?;
+
                     let eval_ctx = EvaluationContext {
                         policy_id: id.to_string(),
                         callback_channel: Some(self.callback_handler_tx.clone()),
                         ctx_aware_resources_allow_list: context_aware_resources.to_owned(),
                         epoch_deadline,
+                        host_capabilities,
                     };
 
                     if let Err(e) = self.bootstrap_policy(
@@ -290,6 +304,15 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                             .timeout_eval_seconds
                             .or(self.global_policy_evaluation_limit_seconds);
 
+                        let host_capabilities = HostCapabilities::new(
+                            policy.host_capabilities.clone(),
+                        )
+                        .map_err(|e| {
+                            EvaluationError::BootstrapFailure(format!(
+                                "invalid hostCapabilities pattern for policy {id}: {e}"
+                            ))
+                        })?;
+
                         let eval_ctx = EvaluationContext {
                             policy_id: policy_id.to_string(),
                             callback_channel: Some(self.callback_handler_tx.clone()),
@@ -297,6 +320,7 @@ impl<'engine, 'precompiled_policies> EvaluationEnvironmentBuilder<'engine, 'prec
                                 .context_aware_resources
                                 .to_owned(),
                             epoch_deadline,
+                            host_capabilities,
                         };
 
                         if let Err(e) = self.bootstrap_policy(
@@ -420,6 +444,9 @@ impl EvaluationEnvironment {
             eval_ctx.ctx_aware_resources_allow_list,
         );
 
+        self.policy_id_to_host_capabilities
+            .insert(policy_id.to_owned(), eval_ctx.host_capabilities);
+
         Ok(())
     }
 
@@ -541,11 +568,18 @@ impl EvaluationEnvironment {
             .get(policy_id)
             .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
+        let host_capabilities = self
+            .policy_id_to_host_capabilities
+            .get(policy_id)
+            .cloned()
+            .unwrap_or(HostCapabilities::DenyAll);
+
         let eval_ctx = EvaluationContext {
             policy_id: policy_id.to_string(),
             callback_channel: self.callback_handler_tx.clone(),
             ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
             epoch_deadline,
+            host_capabilities,
         };
 
         policy_evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
@@ -640,6 +674,12 @@ impl EvaluationEnvironment {
                 .get(&policy_id)
                 .ok_or(EvaluationError::PolicyNotFound(policy_id.to_string()))?;
 
+            let host_capabilities = self
+                .policy_id_to_host_capabilities
+                .get(&policy_id)
+                .cloned()
+                .unwrap_or(HostCapabilities::DenyAll);
+
             let policy_settings = self.get_policy_settings(&policy_id)?;
             let settings = match policy_settings.settings {
                 PolicyOrPolicyGroupSettings::Policy(settings) => settings,
@@ -654,6 +694,7 @@ impl EvaluationEnvironment {
                 settings,
                 ctx_aware_resources_allow_list: ctx_aware_resources_allow_list.clone(),
                 epoch_deadline,
+                host_capabilities,
             };
 
             evaluator.add_policy_member(
@@ -783,6 +824,7 @@ mod tests {
                     context_aware_resources: BTreeSet::new(),
                     message: None,
                     timeout_eval_seconds: None,
+                    host_capabilities: vec![],
                 },
             );
             precompiled_policies.insert(policy_url, Ok(precompiled_policy.clone()));
@@ -799,6 +841,7 @@ mod tests {
                 context_aware_resources: BTreeSet::new(),
                 message: None,
                 timeout_eval_seconds: Some(5),
+                host_capabilities: vec![],
             },
         );
 
@@ -814,6 +857,7 @@ mod tests {
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        host_capabilities: vec![],
                     },
                 )]
                 .into_iter()
@@ -842,6 +886,7 @@ mod tests {
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        host_capabilities: vec![],
                     },
                 )]
                 .into_iter()
@@ -880,6 +925,7 @@ mod tests {
                         settings: None,
                         context_aware_resources: BTreeSet::new(),
                         timeout_eval_seconds: None,
+                        host_capabilities: vec![],
                     },
                 )]
                 .into_iter()
@@ -900,6 +946,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -909,6 +956,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -918,6 +966,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                 ]
@@ -941,6 +990,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -950,6 +1000,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                     (
@@ -959,6 +1010,7 @@ mod tests {
                             settings: None,
                             context_aware_resources: BTreeSet::new(),
                             timeout_eval_seconds: None,
+                            host_capabilities: vec![],
                         },
                     ),
                 ]

@@ -103,6 +103,7 @@ mod sigstore_tests {
                 context_aware_resources: BTreeSet::new(),
                 message: None,
                 timeout_eval_seconds: None,
+                host_capabilities: vec![],
             },
         )]);
 

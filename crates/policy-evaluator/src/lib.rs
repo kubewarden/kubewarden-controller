@@ -8,6 +8,7 @@ pub mod callback_requests;
 pub mod constants;
 pub mod errors;
 pub mod evaluation_context;
+pub mod host_capabilities;
 pub mod policy_artifacthub;
 pub mod policy_evaluator;
 pub mod policy_group_evaluator;

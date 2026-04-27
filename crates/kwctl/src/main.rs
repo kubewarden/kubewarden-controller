@@ -43,6 +43,7 @@ mod save;
 mod scaffold;
 mod utils;
 mod verify;
+mod wasm_scanner;
 
 pub(crate) const KWCTL_VERIFICATION_CONFIG: &str = "verification-config.yml";
 

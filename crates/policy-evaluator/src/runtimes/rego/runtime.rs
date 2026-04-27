@@ -4,13 +4,15 @@ use serde::Deserialize;
 use serde_json::json;
 use tracing::{error, warn};
 
-use crate::runtimes::rego::{
-    Stack, context_aware, context_aware::KubernetesContext, errors::RegoRuntimeError,
-};
 use crate::{
     admission_request,
     admission_response::{AdmissionResponse, AdmissionResponseStatus},
     policy_evaluator::{PolicySettings, RegoPolicyExecutionMode, ValidateRequest},
+    runtimes::rego::{
+        Stack,
+        context_aware::{self, KubernetesContext},
+        errors::RegoRuntimeError,
+    },
 };
 
 pub(crate) struct Runtime<'a>(pub(crate) &'a mut Stack);
@@ -216,7 +218,7 @@ impl Runtime<'_> {
             .evaluate(self.0.entrypoint_id, &input, data_raw)
     }
 
-    pub fn validate_settings(&mut self, _settings: String) -> SettingsValidationResponse {
+    pub fn validate_settings(&self, _settings: String) -> SettingsValidationResponse {
         // The burrego backend is mainly for compatibility with
         // existing OPA policies. Those policies don't have a generic
         // way of validating settings. Return true

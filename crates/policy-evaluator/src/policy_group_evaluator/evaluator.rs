@@ -9,13 +9,15 @@ use rhai::EvalAltResult;
 use tokio::sync::mpsc;
 use tracing::debug;
 
-use crate::admission_response::{self, AdmissionResponse, AdmissionResponseStatus};
-use crate::callback_requests::CallbackRequest;
-use crate::evaluation_context::EvaluationContext;
-use crate::policy_evaluator::{PolicyEvaluatorPre, ValidateRequest};
-use crate::policy_group_evaluator::{
-    PolicyGroupMemberEvaluationResult, PolicyGroupMemberSettings,
-    errors::{EvaluationError, Result},
+use crate::{
+    admission_response::{self, AdmissionResponse, AdmissionResponseStatus},
+    callback_requests::CallbackRequest,
+    evaluation_context::EvaluationContext,
+    policy_evaluator::{PolicyEvaluatorPre, ValidateRequest},
+    policy_group_evaluator::{
+        PolicyGroupMemberEvaluationResult, PolicyGroupMemberSettings,
+        errors::{EvaluationError, Result},
+    },
 };
 
 /// PolicyGroupEvaluator is an evaluator that can evaluate a group of policies
@@ -260,6 +262,7 @@ impl PolicyGroupEvaluator {
             callback_channel: self.callback_channel.clone(),
             ctx_aware_resources_allow_list: settings.ctx_aware_resources_allow_list.clone(),
             epoch_deadline: settings.epoch_deadline,
+            host_capabilities: settings.host_capabilities.clone(),
         };
         let mut evaluator = evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
             EvaluationError::CannotRehydratePolicyGroupMember(policy_id.to_owned(), e)
@@ -334,6 +337,7 @@ impl PolicyGroupEvaluator {
             callback_channel: self.callback_channel.clone(),
             ctx_aware_resources_allow_list: settings.ctx_aware_resources_allow_list.clone(),
             epoch_deadline: settings.epoch_deadline,
+            host_capabilities: settings.host_capabilities.clone(),
         };
         let mut evaluator = evaluator_pre.rehydrate(&eval_ctx).map_err(|e| {
             EvaluationError::CannotRehydratePolicyGroupMember(policy_id.to_owned(), e)
@@ -368,7 +372,7 @@ mod tests {
     use wasmtime::Engine;
 
     use crate::{
-        admission_request::AdmissionRequest,
+        admission_request::AdmissionRequest, host_capabilities::HostCapabilities,
         policy_evaluator::policy_evaluator_builder::PolicyEvaluatorBuilder,
     };
 
@@ -473,6 +477,7 @@ mod tests {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
                     epoch_deadline: None,
+                    host_capabilities: HostCapabilities::AllowAll,
                 },
             );
         }
@@ -551,6 +556,7 @@ mod tests {
                     settings: Default::default(),
                     ctx_aware_resources_allow_list: Default::default(),
                     epoch_deadline: None,
+                    host_capabilities: HostCapabilities::AllowAll,
                 },
             );
         }

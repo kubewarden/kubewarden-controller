@@ -5,6 +5,7 @@ use policy_evaluator::{
     admission_request::AdmissionRequest,
     admission_response::AdmissionResponse,
     evaluation_context::EvaluationContext,
+    host_capabilities::HostCapabilities,
     kube,
     kubewarden_policy_sdk::settings::SettingsValidationResponse,
     policy_evaluator::{PolicyEvaluator, PolicySettings, ValidateRequest},
@@ -54,11 +55,15 @@ async fn build_callback_handler(
 
 pub(crate) enum Evaluator {
     Policy {
-        policy_evaluator: PolicyEvaluator,
+        // This enum uses the `Box` type to avoid the need for a large enum size causing memory layout
+        // problems. https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
+        policy_evaluator: Box<PolicyEvaluator>,
         settings: PolicySettings,
         request: ValidateRequest,
     },
     GroupPolicy {
+        // Contrary to PolicyEvaluator, PolicyGroupEvaluator is shared across closures in
+        // rhai_eval_env.clone(), which requires +Send+Sync
         policy_group_evaluator: Arc<PolicyGroupEvaluator>,
         request: ValidateRequest,
     },
@@ -79,6 +84,7 @@ impl Evaluator {
                 raw,
                 settings,
                 ctx_aware_cfg,
+                allowed_host_capabilities,
                 ..
             } => {
                 let metadata = local_data.metadata(uri);
@@ -120,13 +126,15 @@ impl Evaluator {
                     callback_channel: Some(callback_handler.sender_channel()),
                     ctx_aware_resources_allow_list: context_aware_allowed_resources.clone(),
                     epoch_deadline: None,
+                    host_capabilities: HostCapabilities::new(allowed_host_capabilities)
+                        .map_err(|e| anyhow::anyhow!("Invalid host capabilities pattern: {e}"))?,
                 };
                 let policy_evaluator =
                     policy_evaluator_builder.build_pre()?.rehydrate(&eval_ctx)?;
 
                 Ok((
                     Self::Policy {
-                        policy_evaluator,
+                        policy_evaluator: policy_evaluator.into(),
                         request,
                         settings: settings.clone(),
                     },
@@ -190,7 +198,7 @@ impl Evaluator {
 
                 Ok((
                     Self::GroupPolicy {
-                        policy_group_evaluator: Arc::new(policy_group_evaluator),
+                        policy_group_evaluator: policy_group_evaluator.into(),
                         request,
                     },
                     callback_handler,

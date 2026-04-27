@@ -533,6 +533,7 @@ mod tests {
             execution_mode: Default::default(),
             policy_type: PolicyType::Kubernetes,
             minimum_kubewarden_version: None,
+            host_capabilities: None,
         }
     }
 
@@ -602,6 +603,7 @@ mod tests {
             execution_mode: Default::default(),
             minimum_kubewarden_version: None,
             policy_type: Default::default(),
+            host_capabilities: None,
         }
     }
 

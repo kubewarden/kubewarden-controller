@@ -105,3 +105,25 @@ pub enum ResponseError {
     #[error("cannot deserialize JSONPatch: {0}")]
     Deserialize(#[source] serde_json::Error),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum HostCapabilitiesPatternError {
+    #[error(
+        "invalid pattern {pattern:?}: wildcard '*' must be the entire last path segment (e.g. 'oci/*'), not a partial match"
+    )]
+    InvalidWildcard { pattern: String },
+    #[error("invalid pattern: pattern must not be empty")]
+    Empty,
+    #[error(
+        "invalid pattern {pattern:?}: unknown segment {segment:?}, valid options at this level are: {valid_options}"
+    )]
+    UnknownSegment {
+        pattern: String,
+        segment: String,
+        valid_options: String,
+    },
+    #[error(
+        "invalid pattern {pattern:?}: not a complete capability path; use {suggestion:?} to allow all capabilities under it"
+    )]
+    IncompleteCapabilityPath { pattern: String, suggestion: String },
+}

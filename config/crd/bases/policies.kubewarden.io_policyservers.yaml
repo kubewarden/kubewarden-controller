@@ -1173,6 +1173,19 @@ spec:
                   eviction. The value can be an absolute number or a percentage. Only one of
                   MinAvailable or Max MaxUnavailable can be set.
                 x-kubernetes-int-or-string: true
+              namespacedPoliciesCapabilities:
+                description: |-
+                  NamespacedPoliciesCapabilities lists host capability API calls allowed
+                  for namespaced policies running on this PolicyServer. When not set,
+                  no host capabilities are granted to namespaced policies.
+                  Supported wildcard patterns:
+                  - "*": allow all host capabilities
+                  - "category/*": allow all capabilities in a category (e.g. "oci/*")
+                  - "category/version/*": allow all capabilities of a specific version (e.g. "oci/v1/*")
+                  - Specific capability paths (e.g. "oci/v1/verify", "net/v1/dns_lookup_host")
+                items:
+                  type: string
+                type: array
               priorityClassName:
                 description: |-
                   PriorityClassName is the name of the PriorityClass to be used for the

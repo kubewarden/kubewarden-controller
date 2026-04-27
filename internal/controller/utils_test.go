@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -194,6 +195,64 @@ func createPolicyServerAndWaitForItsService(ctx context.Context, policyServer *p
 		_, err := getTestPolicyServerService(ctx, policyServer.GetName())
 		return err
 	}, timeout, pollInterval).Should(Succeed())
+}
+
+// policyGroupHostCapabilitiesMatcher builds a matcher that verifies the
+// hostCapabilities field for the "pod_privileged" member inside both an
+// AdmissionPolicyGroup and a ClusterAdmissionPolicyGroup entry of the policy
+// server configmap. Cluster-wide groups always expect ["*"]; the expected
+// matcher for the namespaced group is supplied by the caller.
+func policyGroupHostCapabilitiesMatcher(
+	admissionPolicyGroup *policiesv1.AdmissionPolicyGroup,
+	clusterPolicyGroup *policiesv1.ClusterAdmissionPolicyGroup,
+	namespacedHostCapsMatcher types.GomegaMatcher,
+	clusterHostCapsMatcher types.GomegaMatcher,
+) types.GomegaMatcher {
+	return WithTransform(func(data string) (map[string]interface{}, error) {
+		policiesData := map[string]interface{}{}
+		err := json.Unmarshal([]byte(data), &policiesData)
+		return policiesData, err
+	}, MatchKeys(IgnoreExtras, Keys{
+		admissionPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+			"policies": MatchKeys(IgnoreExtras, Keys{
+				"pod_privileged": MatchKeys(IgnoreExtras, Keys{
+					"hostCapabilities": namespacedHostCapsMatcher,
+				}),
+			}),
+		}),
+		clusterPolicyGroup.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+			"policies": MatchKeys(IgnoreExtras, Keys{
+				"pod_privileged": MatchKeys(IgnoreExtras, Keys{
+					"hostCapabilities": clusterHostCapsMatcher,
+				}),
+			}),
+		}),
+	}))
+}
+
+// admissionPolicyHostCapabilitiesMatcher builds a matcher that verifies the
+// hostCapabilities field for both an AdmissionPolicy and a
+// ClusterAdmissionPolicy entry of the policy server configmap.
+// Cluster-wide policies always expect ["*"]; the expected matcher for the
+// namespaced policy is supplied by the caller.
+func admissionPolicyHostCapabilitiesMatcher(
+	admissionPolicy *policiesv1.AdmissionPolicy,
+	clusterAdmissionPolicy *policiesv1.ClusterAdmissionPolicy,
+	namespacedHostCapsMatcher types.GomegaMatcher,
+	clusterHostCapsMatcher types.GomegaMatcher,
+) types.GomegaMatcher {
+	return WithTransform(func(data string) (map[string]interface{}, error) {
+		policiesData := map[string]interface{}{}
+		err := json.Unmarshal([]byte(data), &policiesData)
+		return policiesData, err
+	}, MatchKeys(IgnoreExtras, Keys{
+		admissionPolicy.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+			"hostCapabilities": namespacedHostCapsMatcher,
+		}),
+		clusterAdmissionPolicy.GetUniqueName(): MatchKeys(IgnoreExtras, Keys{
+			"hostCapabilities": clusterHostCapsMatcher,
+		}),
+	}))
 }
 
 func createConfigMapWithSigstoreTrustConfig(ctx context.Context, name string) {

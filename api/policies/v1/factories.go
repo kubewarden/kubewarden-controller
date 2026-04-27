@@ -479,13 +479,14 @@ func (f *ClusterAdmissionPolicyGroupFactory) Build() *ClusterAdmissionPolicyGrou
 }
 
 type PolicyServerBuilder struct {
-	name                   string
-	minAvailable           *intstr.IntOrString
-	maxUnavailable         *intstr.IntOrString
-	imagePullSecret        string
-	limits                 corev1.ResourceList
-	requests               corev1.ResourceList
-	sigstoreTrustConfigMap string
+	name                           string
+	minAvailable                   *intstr.IntOrString
+	maxUnavailable                 *intstr.IntOrString
+	imagePullSecret                string
+	limits                         corev1.ResourceList
+	requests                       corev1.ResourceList
+	sigstoreTrustConfigMap         string
+	namespacedPoliciesCapabilities []string
 }
 
 func NewPolicyServerFactory() *PolicyServerBuilder {
@@ -529,6 +530,11 @@ func (f *PolicyServerBuilder) WithRequests(requests corev1.ResourceList) *Policy
 	return f
 }
 
+func (f *PolicyServerBuilder) WithNamespacedPoliciesCapabilities(capabilities []string) *PolicyServerBuilder {
+	f.namespacedPoliciesCapabilities = capabilities
+	return f
+}
+
 func (f *PolicyServerBuilder) Build() *PolicyServer {
 	policyServer := PolicyServer{
 		ObjectMeta: metav1.ObjectMeta{
@@ -544,14 +550,15 @@ func (f *PolicyServerBuilder) Build() *PolicyServer {
 			},
 		},
 		Spec: PolicyServerSpec{
-			Image:               policyServerRepository() + ":" + policyServerVersion(),
-			Replicas:            1,
-			MinAvailable:        f.minAvailable,
-			MaxUnavailable:      f.maxUnavailable,
-			ImagePullSecret:     f.imagePullSecret,
-			Limits:              f.limits,
-			Requests:            f.requests,
-			SigstoreTrustConfig: f.sigstoreTrustConfigMap,
+			Image:                          policyServerRepository() + ":" + policyServerVersion(),
+			Replicas:                       1,
+			MinAvailable:                   f.minAvailable,
+			MaxUnavailable:                 f.maxUnavailable,
+			ImagePullSecret:                f.imagePullSecret,
+			Limits:                         f.limits,
+			Requests:                       f.requests,
+			SigstoreTrustConfig:            f.sigstoreTrustConfigMap,
+			NamespacedPoliciesCapabilities: f.namespacedPoliciesCapabilities,
 			Env: []corev1.EnvVar{
 				{
 					Name:  "KUBEWARDEN_LOG_LEVEL",

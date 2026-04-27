@@ -1,0 +1,12 @@
+rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+    operations: ["CREATE"]
+mutating: false
+executionMode: kubewarden-wapc
+hostCapabilities:
+  - kubernetes/get_resource
+  - kubernetes/list_resources_by_namespace
+annotations:
+  io.kubewarden.policy.title: context-aware-policy-demo
