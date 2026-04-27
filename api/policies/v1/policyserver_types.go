@@ -142,7 +142,7 @@ type PolicyServerSpec struct {
 
 	// NamespacedPoliciesCapabilities lists host capability API calls allowed
 	// for namespaced policies running on this PolicyServer. When not set,
-	// all host capabilities are granted to namespaced policies.
+	// no host capabilities are granted to namespaced policies.
 	// Supported wildcard patterns:
 	// - "*": allow all host capabilities
 	// - "category/*": allow all capabilities in a category (e.g. "oci/*")
