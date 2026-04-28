@@ -327,26 +327,28 @@ func configuresInsecureSources(policyServer *policiesv1.PolicyServer, admissionC
 }
 
 func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, policyServer *policiesv1.PolicyServer, configMapVersion string) {
-	if policyServerDeployment.ObjectMeta.Annotations == nil {
-		policyServerDeployment.ObjectMeta.Annotations = make(map[string]string)
-	}
+	// Build annotations from scratch each reconcile so that removed user annotations
+	// are not left behind on the Deployment metadata.
+	annotations := make(map[string]string, len(policyServer.Spec.Annotations)+1)
 	// Apply user-defined annotations first, then system annotations overwrite any conflicts.
 	for key, value := range policyServer.Spec.Annotations {
-		policyServerDeployment.ObjectMeta.Annotations[key] = value
+		annotations[key] = value
 	}
-	policyServerDeployment.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
+	annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
+	policyServerDeployment.ObjectMeta.Annotations = annotations
 
-	if policyServerDeployment.Labels == nil {
-		policyServerDeployment.Labels = make(map[string]string)
-	}
+	// Build labels from scratch each reconcile so that removed user labels
+	// are not left behind on the Deployment metadata.
+	labels := make(map[string]string, len(policyServer.Spec.Labels)+len(policyServer.CommonLabels())+1)
 	// Apply user-defined labels first, then system labels overwrite any conflicts.
 	for key, value := range policyServer.Spec.Labels {
-		policyServerDeployment.Labels[key] = value
+		labels[key] = value
 	}
-	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
+	labels[constants.PolicyServerLabelKey] = policyServer.Name
 	for key, value := range policyServer.CommonLabels() {
-		policyServerDeployment.Labels[key] = value
+		labels[key] = value
 	}
+	policyServerDeployment.Labels = labels
 }
 
 func (r *PolicyServerReconciler) configureMutualTLS(ctx context.Context, policyServerDeployment *appsv1.Deployment) error {

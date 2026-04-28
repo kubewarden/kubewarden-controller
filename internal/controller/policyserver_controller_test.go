@@ -943,6 +943,70 @@ var _ = Describe("PolicyServer controller", func() {
 			}).Should(Succeed())
 		})
 
+		It("should remove stale labels and annotations from the Deployment when they are removed from spec", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Labels = map[string]string{"stale-label": "value"}
+			policyServer.Spec.Annotations = map[string]string{"stale-annotation": "value"}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			// Confirm they appear initially on both Deployment ObjectMeta and Pod template
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Labels["stale-label"]; !ok {
+					return errors.New("stale-label not yet present on Deployment ObjectMeta")
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["stale-annotation"]; !ok {
+					return errors.New("stale-annotation not yet present on Deployment ObjectMeta")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Labels["stale-label"]; !ok {
+					return errors.New("stale-label not yet present on Pod template")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Annotations["stale-annotation"]; !ok {
+					return errors.New("stale-annotation not yet present on Pod template")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Remove both from spec
+			Eventually(func() error {
+				ps, err := getTestPolicyServer(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				ps.Spec.Labels = nil
+				ps.Spec.Annotations = nil
+				return k8sClient.Update(ctx, ps)
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Verify they are gone from both Deployment ObjectMeta and Pod template
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Labels["stale-label"]; ok {
+					return errors.New("stale-label still present on Deployment ObjectMeta after removal from spec")
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["stale-annotation"]; ok {
+					return errors.New("stale-annotation still present on Deployment ObjectMeta after removal from spec")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Labels["stale-label"]; ok {
+					return errors.New("stale-label still present on Pod template after removal from spec")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Annotations["stale-annotation"]; ok {
+					return errors.New("stale-annotation still present on Pod template after removal from spec")
+				}
+				// System labels and annotations must still be present
+				Expect(deployment.ObjectMeta.Labels).To(HaveKey(constants.PolicyServerLabelKey))
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKey(constants.PolicyServerDeploymentConfigVersionAnnotation))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKey(constants.PolicyServerLabelKey))
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
 		It("should set the configMap version as a deployment annotation", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
