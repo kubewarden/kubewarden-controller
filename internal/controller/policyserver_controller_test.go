@@ -888,6 +888,61 @@ var _ = Describe("PolicyServer controller", func() {
 			})))
 		})
 
+		It("should propagate custom labels from spec.labels to the Deployment and Pod template, with system labels taking precedence", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Labels = map[string]string{
+				"custom-label":                 "custom-value",
+				"another-label":                "another-value",
+				constants.PolicyServerLabelKey: "should-be-overridden",
+				"app.kubernetes.io/managed-by": "should-be-overridden",
+			}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				// Custom labels should appear on Deployment ObjectMeta
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue("custom-label", "custom-value"))
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue("another-label", "another-value"))
+				// Custom labels should appear on Pod template
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue("custom-label", "custom-value"))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue("another-label", "another-value"))
+				// System labels must not be overridden by user labels
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue(constants.PolicyServerLabelKey, policyServerName))
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "kubewarden-controller"))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue(constants.PolicyServerLabelKey, policyServerName))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "kubewarden-controller"))
+				return nil
+			}).Should(Succeed())
+		})
+
+		It("should propagate custom annotations from spec.annotations to the Deployment ObjectMeta and Pod template", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Annotations = map[string]string{
+				"custom-annotation":  "custom-value",
+				"another-annotation": "another-value",
+			}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				// Custom annotations should appear on Deployment ObjectMeta
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKeyWithValue("custom-annotation", "custom-value"))
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKeyWithValue("another-annotation", "another-value"))
+				// Custom annotations should appear on Pod template
+				Expect(deployment.Spec.Template.ObjectMeta.Annotations).To(HaveKeyWithValue("custom-annotation", "custom-value"))
+				Expect(deployment.Spec.Template.ObjectMeta.Annotations).To(HaveKeyWithValue("another-annotation", "another-value"))
+				// System annotation must still be present
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKey(constants.PolicyServerDeploymentConfigVersionAnnotation))
+				return nil
+			}).Should(Succeed())
+		})
+
 		It("should set the configMap version as a deployment annotation", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)

@@ -330,13 +330,20 @@ func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, po
 	if policyServerDeployment.ObjectMeta.Annotations == nil {
 		policyServerDeployment.ObjectMeta.Annotations = make(map[string]string)
 	}
+	// Apply user-defined annotations first, then system annotations overwrite any conflicts.
+	for key, value := range policyServer.Spec.Annotations {
+		policyServerDeployment.ObjectMeta.Annotations[key] = value
+	}
 	policyServerDeployment.ObjectMeta.Annotations[constants.PolicyServerDeploymentConfigVersionAnnotation] = configMapVersion
 
 	if policyServerDeployment.Labels == nil {
 		policyServerDeployment.Labels = make(map[string]string)
 	}
+	// Apply user-defined labels first, then system labels overwrite any conflicts.
+	for key, value := range policyServer.Spec.Labels {
+		policyServerDeployment.Labels[key] = value
+	}
 	policyServerDeployment.Labels[constants.PolicyServerLabelKey] = policyServer.Name
-
 	for key, value := range policyServer.CommonLabels() {
 		policyServerDeployment.Labels[key] = value
 	}
@@ -417,12 +424,15 @@ func buildPolicyServerDeploymentSpec(
 	podSecurityContext *corev1.PodSecurityContext,
 	imagePullSecrets []corev1.LocalObjectReference,
 ) appsv1.DeploymentSpec {
-	templateLabels := map[string]string{
-		//nolint:staticcheck // this label will remove soon when policy lifecycle is revisited
-		constants.AppLabelKey: policyServer.AppLabel(),
-		constants.PolicyServerDeploymentPodSpecConfigVersionLabel: configMapVersion,
-		constants.PolicyServerLabelKey:                            policyServer.Name,
+	templateLabels := map[string]string{}
+	// Apply user-defined labels first, then system labels overwrite any conflicts.
+	for key, value := range policyServer.Spec.Labels {
+		templateLabels[key] = value
 	}
+	//nolint:staticcheck // this label will remove soon when policy lifecycle is revisited
+	templateLabels[constants.AppLabelKey] = policyServer.AppLabel()
+	templateLabels[constants.PolicyServerDeploymentPodSpecConfigVersionLabel] = configMapVersion
+	templateLabels[constants.PolicyServerLabelKey] = policyServer.Name
 	for key, value := range policyServer.CommonLabels() {
 		templateLabels[key] = value
 	}

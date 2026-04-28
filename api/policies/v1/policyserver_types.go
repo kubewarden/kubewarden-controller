@@ -58,6 +58,13 @@ type PolicyServerSpec struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 
+	// Labels is a map of custom labels to be applied to the Deployment created by the
+	// PolicyServer and to the Pods managed by that Deployment. System labels set by
+	// the controller always take precedence over user-defined labels with the same key.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
 	// List of environment variables to set in the container.
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`

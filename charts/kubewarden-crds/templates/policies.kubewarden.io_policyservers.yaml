@@ -1145,6 +1145,15 @@ spec:
                 items:
                   type: string
                 type: array
+              labels:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Labels is a map of custom labels to be applied to the Deployment created by the
+                  PolicyServer and to the Pods managed by that Deployment. System labels set by
+                  the controller always take precedence over user-defined labels with the same key.
+                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+                type: object
               limits:
                 additionalProperties:
                   anyOf:

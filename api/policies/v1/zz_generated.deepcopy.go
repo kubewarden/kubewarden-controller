@@ -814,6 +814,13 @@ func (in *PolicyServerSpec) DeepCopyInto(out *PolicyServerSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.Env != nil {
 		in, out := &in.Env, &out.Env
 		*out = make([]corev1.EnvVar, len(*in))
