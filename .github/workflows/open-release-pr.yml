@@ -31,7 +31,7 @@ jobs:
         run: cargo install --locked --version 0.13.9 cargo-edit
 
       - name: Install Updatecli in the runner
-        uses: updatecli/updatecli-action@af341a800cdbcde3ddcebb7a62410ac06a78a207 # v3.1.2
+        uses: updatecli/updatecli-action@2c3221bc5f4499a99fec2c87d9de4a83cb30e990 # v3.1.3
         with:
           # Pinned to v0.109.0 due to a behavior change in newer versions that breaks the update script
           version: v0.109.0

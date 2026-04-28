@@ -104,7 +104,7 @@ jobs:
           persist-credentials: false
 
       - name: "Install kwctl"
-        uses: kubewarden/github-actions/kwctl-installer@63e6bff6226bbdd84a4244892417eb27676b7a8c # v5.0.1
+        uses: kubewarden/github-actions/kwctl-installer@e57db07ca384bf09ec40c4c49ff25d600c0d23d9 # v5.1.1
         with:
           kwctl-version: latest
 
