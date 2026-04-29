@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -339,10 +340,10 @@ func configureLabelsAndAnnotations(policyServerDeployment *appsv1.Deployment, po
 
 	// Build labels from scratch each reconcile so that removed user labels
 	// are not left behind on the Deployment metadata.
-	labels := make(map[string]string, len(policyServer.Spec.Labels)+len(policyServer.CommonLabels())+1)
 	// Apply user-defined labels first, then system labels overwrite any conflicts.
-	for key, value := range policyServer.Spec.Labels {
-		labels[key] = value
+	labels := maps.Clone(policyServer.Spec.Labels)
+	if labels == nil {
+		labels = make(map[string]string)
 	}
 	labels[constants.PolicyServerLabelKey] = policyServer.Name
 	for key, value := range policyServer.CommonLabels() {
@@ -426,10 +427,10 @@ func buildPolicyServerDeploymentSpec(
 	podSecurityContext *corev1.PodSecurityContext,
 	imagePullSecrets []corev1.LocalObjectReference,
 ) appsv1.DeploymentSpec {
-	templateLabels := map[string]string{}
 	// Apply user-defined labels first, then system labels overwrite any conflicts.
-	for key, value := range policyServer.Spec.Labels {
-		templateLabels[key] = value
+	templateLabels := maps.Clone(policyServer.Spec.Labels)
+	if templateLabels == nil {
+		templateLabels = make(map[string]string)
 	}
 	//nolint:staticcheck // this label will remove soon when policy lifecycle is revisited
 	templateLabels[constants.AppLabelKey] = policyServer.AppLabel()
