@@ -1,10 +1,10 @@
 github:
   token: "UPDATECLI_GITHUB_TOKEN"
   branch: "main" # change in pipeline call to `updatecli_main_release_pr`
-  author: "kubewarden-controller bot"
-  email: "kubewarden-controller-bot@users.noreply.github.com"
+  author: "adm-controller bot"
+  email: "adm-controller-bot@users.noreply.github.com"
   owner: "UPDATECLI_GITHUB_OWNER"
-  repo: "kubewarden-controller"
+  repo: "adm-controller"
 
 pipelineid: release_pr # PR branch will be named: updatecli_main_release_pr
 

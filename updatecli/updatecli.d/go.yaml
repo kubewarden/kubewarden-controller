@@ -34,7 +34,7 @@ actions:
       mergemethod: squash
       description: |
         Automatic Golang version {{ source "go" }} update.
-        This PR has been created by the automation used to automatically update the Golang version in the kubewarden-controller project
+        This PR has been created by the automation used to automatically update the Golang version in the adm-controller project
         REMEMBER IF YOU WANT TO MERGE IN A SINGLE COMMIT CHANGES AND VERSION BUMP, YOU MUST SQUASH THE COMMIT BEFORE MERGING THIS PR!
       draft: false
       labels:
@@ -48,12 +48,12 @@ scms:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
       owner: "{{ requiredEnv .github.owner }}"
-      repository: "kubewarden-controller"
+      repository: "adm-controller"
       branch: "{{ .github.branch }}"
       commitusingapi: true
       commitmessage:
         type: "chore"
         scope: deps
         title: "update Golang version"
-        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
+        footers: "Signed-off-by: adm-controller bot <adm-controller-bot@users.noreply.github.com>"
         hidecredit: true

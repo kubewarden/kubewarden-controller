@@ -13,18 +13,18 @@ ociArtifacts:
   # image defined in the release process
   - file: "charts/kubewarden-controller/values.yaml"
     key: "$.image.tag"
-    image: "ghcr.io/kubewarden/kubewarden-controller"
-    workflowUrl: "https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags"
+    image: "ghcr.io/kubewarden/controller"
+    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
     skipVersionFromRegistry: true
   - file: "charts/kubewarden-controller/values.yaml"
     key: "$.auditScanner.image.tag"
     image: "ghcr.io/kubewarden/audit-scanner"
-    workflowUrl: "https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags"
+    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
     skipVersionFromRegistry: true
   - file: "charts/kubewarden-defaults/values.yaml"
     key: "$.policyServer.image.tag"
     image: "ghcr.io/kubewarden/policy-server"
-    workflowUrl: "https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags"
+    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
     skipVersionFromRegistry: true
   # Policies
   - image: ghcr.io/kubewarden/policies/allow-privilege-escalation-psp
@@ -75,8 +75,8 @@ kubewardenContainerImage:
   - name: "controller"
     file: "charts/kubewarden-controller/values.yaml"
     key: "$.image.tag"
-    image: "ghcr.io/kubewarden/kubewarden-controller"
-    workflowUrl: "https://github.com/kubewarden/kubewarden-controller/.github/workflows/release.yml@refs/tags"
+    image: "ghcr.io/kubewarden/controller"
+    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
   - name: "auditScanner"
     file: "charts/kubewarden-controller/values.yaml"
     key: "$.auditScanner.image.tag"
