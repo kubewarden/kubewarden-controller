@@ -8,7 +8,7 @@
 # 
 # The script runs automatically in CI when the `ci-full` label is added to a
 # PR, on pushes to the main branch, and on manual workflow triggers. It
-# validates all container images (kubewarden-controller, audit-scanner,
+# validates all container images (controller, audit-scanner,
 # policy-server, kuberlr-kubectl, policy modules and third-party images:
 # policy-reporter, policy-reporter-ui ) and Helm charts (kubewarden-crds,
 # kubewarden-controller, kubewarden-defaults, policy-reporter, openreports).
@@ -75,10 +75,10 @@ echo "📦 Validating Container Images..."
 echo "=================================="
 echo
 
-# Validate kubewarden-controller image
+# Validate controller image
 CONTROLLER_CHART_VERSION=$(yq eval '.image.tag' "$CONTROLLER_VALUES")
-CONTROLLER_HAULER_VERSION=$(get_hauler_image_version "kubewarden-controller")
-compare_version "kubewarden-controller" "$CONTROLLER_CHART_VERSION" "$CONTROLLER_HAULER_VERSION" "$CONTROLLER_VALUES"
+CONTROLLER_HAULER_VERSION=$(get_hauler_image_version "controller")
+compare_version "controller" "$CONTROLLER_CHART_VERSION" "$CONTROLLER_HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate audit-scanner image
 AUDIT_SCANNER_CHART_VERSION=$(yq eval '.auditScanner.image.tag' "$CONTROLLER_VALUES")

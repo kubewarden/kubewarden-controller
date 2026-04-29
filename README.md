@@ -16,7 +16,7 @@ For more information refer to the [official Kubewarden website](https://kubeward
 This repository is a monorepo containing the source code for all the different
 components of the Kubewarden Admission Controller:
 
-- **kubewarden-controller**: A Kubernetes controller that allows you to dynamically register Kubewarden admission policies and reconcile them with the Kubernetes webhooks of the cluster where it's deployed
+- **adm-controller**: A Kubernetes controller that allows you to dynamically register Kubewarden admission policies and reconcile them with the Kubernetes webhooks of the cluster where it's deployed
 - **policy-server**: The runtime component that evaluates admission policies written in WebAssembly
 - **audit-scanner**: A component that scans existing resources in the cluster against registered policies
 - **kwctl**: A CLI tool for testing and managing Kubewarden policies
@@ -35,7 +35,7 @@ The [`docs/`](./docs) folder contains README files for each component:
 
 ## Installation
 
-The kubewarden-controller can be deployed using a Helm chart. For instructions,
+The adm-controller can be deployed using a Helm chart. For instructions,
 see https://charts.kubewarden.io.
 
 Please refer to our [quickstart](https://docs.kubewarden.io/quick-start) for more details.
