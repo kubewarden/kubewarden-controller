@@ -9,8 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
 var _ = Describe("PolicyServer certificate secret reconciliation", func() {

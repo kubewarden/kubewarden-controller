@@ -36,8 +36,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
 var _ = Describe("PolicyServer controller", func() {

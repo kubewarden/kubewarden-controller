@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/e2e-framework/klient/wait/conditions"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
 const (

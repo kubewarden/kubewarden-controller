@@ -14,8 +14,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kubewarden/kubewarden-controller/internal/certs"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	"github.com/kubewarden/adm-controller/internal/certs"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
 const tickerDuration = 12 * time.Hour

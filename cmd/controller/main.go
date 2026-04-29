@@ -45,12 +45,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/api/policies/v1alpha2"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/controller"
-	"github.com/kubewarden/kubewarden-controller/internal/featuregates"
-	"github.com/kubewarden/kubewarden-controller/internal/metrics"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/api/policies/v1alpha2"
+	"github.com/kubewarden/adm-controller/internal/constants"
+	"github.com/kubewarden/adm-controller/internal/controller"
+	"github.com/kubewarden/adm-controller/internal/featuregates"
+	"github.com/kubewarden/adm-controller/internal/metrics"
 	//+kubebuilder:scaffold:imports
 )
 

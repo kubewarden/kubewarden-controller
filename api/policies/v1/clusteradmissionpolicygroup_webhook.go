@@ -24,7 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/go-logr/logr"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
 func (r *ClusterAdmissionPolicyGroup) SetupWebhookWithManager(mgr ctrl.Manager) error {

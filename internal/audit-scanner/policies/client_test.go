@@ -12,8 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/testutils"
 )
 
 func TestGetPoliciesByNamespace(t *testing.T) {
