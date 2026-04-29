@@ -102,9 +102,9 @@ controller: $(CONTROLLER_SRCS) vet
 
 .PHONY: controller-image
 controller-image:
-	docker build -f ./Dockerfile.kubewarden-controller \
-		-t "$(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)" .
-	@echo "Built $(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)"
+	docker build -f ./Dockerfile.controller \
+		-t "$(REGISTRY)/$(REPO)/controller:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/controller:$(TAG)"
 
 AUDIT_SCANNER_SRC_DIRS := cmd/audit-scanner api internal/audit-scanner
 AUDIT_SCANNER_GO_SRCS := $(shell find $(AUDIT_SCANNER_SRC_DIRS) -type f -name '*.go')

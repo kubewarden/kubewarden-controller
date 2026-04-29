@@ -24,7 +24,7 @@ var (
 	testenv           env.Environment
 	kindClusterName   string
 	namespace         = "kubewarden"
-	controllerImage   = "ghcr.io/kubewarden/kubewarden-controller:dev"
+	controllerImage   = "ghcr.io/kubewarden/controller:dev"
 	auditScannerImage = "ghcr.io/kubewarden/audit-scanner:dev"
 	policyServerImage = "ghcr.io/kubewarden/policy-server:dev"
 )

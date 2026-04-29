@@ -15,7 +15,7 @@ jobs:
   build:
     strategy:
       matrix:
-        component: [policy-server, kubewarden-controller, audit-scanner]
+        component: [policy-server, controller, audit-scanner]
         arch: [amd64, arm64]
         include:
           - arch: amd64
@@ -49,7 +49,7 @@ jobs:
       id-token: write # Signing images with cosign
     strategy:
       matrix:
-        component: [policy-server, kubewarden-controller, audit-scanner]
+        component: [policy-server, controller, audit-scanner]
     steps:
       - name: Retrieve tag name (main)
         if: ${{ startsWith(github.ref, 'refs/heads/main') }}

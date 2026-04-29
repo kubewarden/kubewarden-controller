@@ -217,7 +217,7 @@ telemetry:
 image:
   # The registry is defined in the global.cattle.systemDefaultRegistry value
   # controller image to be used
-  repository: "kubewarden/kubewarden-controller"
+  repository: "kubewarden/controller"
   # image tag
   tag: v1.35.0
   pullPolicy: IfNotPresent
