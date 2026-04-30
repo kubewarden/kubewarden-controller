@@ -20,7 +20,7 @@
         "docker"
       ],
       "matchPackageNames": [
-        "kubewarden/kubewarden-controller",
+        "kubewarden/adm-controller",
         "kubewarden/audit-scanner"
       ],
       "matchPaths": [
