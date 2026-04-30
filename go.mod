@@ -1,4 +1,4 @@
-module github.com/kubewarden/kubewarden-controller
+module github.com/kubewarden/adm-controller
 
 go 1.26
 

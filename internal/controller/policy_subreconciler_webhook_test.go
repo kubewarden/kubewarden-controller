@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
 )
 
 const testDeploymentsNamespace = "kubewarden"

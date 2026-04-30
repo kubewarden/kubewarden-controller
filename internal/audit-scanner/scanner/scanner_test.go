@@ -11,12 +11,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	auditConstants "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/k8s"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/policies"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/report"
-	auditscheme "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/scheme"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	auditConstants "github.com/kubewarden/adm-controller/internal/audit-scanner/constants"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/k8s"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/policies"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/report"
+	auditscheme "github.com/kubewarden/adm-controller/internal/audit-scanner/scheme"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +34,7 @@ import (
 	testingclient "k8s.io/client-go/testing"
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/testutils"
 )
 
 const (

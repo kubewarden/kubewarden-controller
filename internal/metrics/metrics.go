@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	metricSDK "go.opentelemetry.io/otel/sdk/metric"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
 )
 
 const (
