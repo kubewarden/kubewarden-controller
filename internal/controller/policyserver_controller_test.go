@@ -1007,6 +1007,61 @@ var _ = Describe("PolicyServer controller", func() {
 			}, timeout, pollInterval).Should(Succeed())
 		})
 
+		It("should preserve non-user-managed annotations on the Deployment when reconciling", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Annotations = map[string]string{"user-annotation": "user-value"}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			// Wait for the user annotation to appear on the Deployment.
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["user-annotation"]; !ok {
+					return errors.New("user-annotation not yet present on Deployment ObjectMeta")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Simulate an external controller (e.g. Kubernetes deployment controller) adding
+			// an annotation directly to the Deployment.
+			const externalAnnotation = "some-external-tool/annotation"
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				deployment.ObjectMeta.Annotations[externalAnnotation] = "external-value"
+				return k8sClient.Update(ctx, deployment)
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Trigger a reconcile by updating the PolicyServer spec (remove the user annotation).
+			Eventually(func() error {
+				ps, err := getTestPolicyServer(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				ps.Spec.Annotations = nil
+				return k8sClient.Update(ctx, ps)
+			}, timeout, pollInterval).Should(Succeed())
+
+			// The user annotation must be gone, but the external annotation must survive.
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["user-annotation"]; ok {
+					return errors.New("user-annotation still present after removal from spec")
+				}
+				if _, ok := deployment.ObjectMeta.Annotations[externalAnnotation]; !ok {
+					return errors.New("external annotation was unexpectedly removed by the controller")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
 		It("should set the configMap version as a deployment annotation", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)

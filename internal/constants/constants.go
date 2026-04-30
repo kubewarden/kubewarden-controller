@@ -55,6 +55,20 @@ const (
 
 	OptelInjectAnnotation = "sidecar.opentelemetry.io/inject"
 
+	// PolicyServerDeploymentManagedAnnotationKeysAnnotation is the annotation used to track
+	// which annotation keys on a Deployment/Pod template are managed by the controller (i.e.,
+	// came from spec.annotations). On each reconcile the controller removes keys that were
+	// previously managed but are no longer present in the spec, without touching annotations
+	// set by Kubernetes itself or other tooling.
+	PolicyServerDeploymentManagedAnnotationKeysAnnotation = "kubewarden.io/managed-annotation-keys"
+
+	// PolicyServerDeploymentManagedLabelKeysAnnotation is the annotation used to track
+	// which label keys on a Deployment/Pod template are managed by the controller (i.e.,
+	// came from spec.labels). On each reconcile the controller removes keys that were
+	// previously managed but are no longer present in the spec, without touching labels
+	// set by Kubernetes itself or other tooling.
+	PolicyServerDeploymentManagedLabelKeysAnnotation = "kubewarden.io/managed-label-keys"
+
 	WebhookConfigurationPolicyNameAnnotationKey      = "kubewardenPolicyName"
 	WebhookConfigurationPolicyNamespaceAnnotationKey = "kubewardenPolicyNamespace"
 
