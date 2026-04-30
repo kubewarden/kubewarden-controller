@@ -159,7 +159,7 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=kubewarden-controller-manager,fileName=controller-rbac-roles.yaml crd webhook \
 			paths="./api/policies/v1" paths="./api/policies/v1alpha2" \
 			paths="./internal/controller" paths="./cmd/controller" \
-			output:crd:artifacts:config=charts/kubewarden-crds/templates \
+			output:crd:artifacts:config=charts/kubewarden-crds/templates/crds \
 			output:rbac:artifacts:config=charts/kubewarden-controller/templates
 	sed -i '/^metadata:/a\  labels:\n    {{- include "kubewarden-controller.labels" . | nindent 4 }}\n  annotations:\n    {{- include "kubewarden-controller.annotations" . | nindent 4 }}' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
 	sed -i 's/  namespace: kubewarden/  namespace: {{ .Release.Namespace }}/' charts/kubewarden-controller/templates/controller-rbac-roles.yaml

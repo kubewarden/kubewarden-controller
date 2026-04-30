@@ -67,7 +67,7 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	ctx, cancel := context.WithCancel(context.TODO())
 
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "charts", "kubewarden-crds", "templates", "crds")},
 		ErrorIfCRDPathMissing: true,
 	}
 
