@@ -15,7 +15,7 @@ import (
 
 const (
 	integrationTestsFinalizer          = "kubewarden.io/integration-tests-safety-net-finalizer"
-	defaultKubewardenRepository        = "ghcr.io/kubewarden/policy-server"
+	defaultKubewardenRepository        = "ghcr.io/kubewarden/adm-controller/policy-server"
 	maxNameSuffixLength                = 8
 	defaultPolicyGroupRejectionMessage = "policy group default rejection message"
 )

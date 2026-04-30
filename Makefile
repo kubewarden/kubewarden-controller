@@ -13,7 +13,7 @@ GO_BUILD_ENV := CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 ENVTEST_DIR ?= $(shell pwd)/.envtest
 
 REGISTRY ?= ghcr.io
-REPO ?= kubewarden
+REPO ?= kubewarden/adm-controller
 TAG ?= dev
 
 # Detect architecture for Rust builds

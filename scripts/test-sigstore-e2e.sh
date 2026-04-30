@@ -29,7 +29,7 @@
 #                         configuration. Skips policy deployment and webhook evaluation.
 #   --policy-server-image Full image reference (repository:tag) for the policy-server.
 #                         Overrides the default image in charts/kubewarden-defaults.
-#                         Example: --policy-server-image ghcr.io/kubewarden/policy-server:dev
+#                         Example: --policy-server-image ghcr.io/kubewarden/adm-controller/policy-server:dev
 #
 # Tools required (per stage):
 #   All stages:  kubectl, jq

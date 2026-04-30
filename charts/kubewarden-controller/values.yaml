@@ -217,7 +217,7 @@ telemetry:
 image:
   # The registry is defined in the global.cattle.systemDefaultRegistry value
   # controller image to be used
-  repository: "kubewarden/controller"
+  repository: "kubewarden/adm-controller/controller"
   # image tag
   tag: v1.35.0
   pullPolicy: IfNotPresent
@@ -295,7 +295,7 @@ auditScanner:
   image:
     # The registry is defined in the common.cattle.systemDefaultRegistry value
     # kubectl image to be used in the pre-delete helm hook
-    repository: "kubewarden/audit-scanner"
+    repository: "kubewarden/adm-controller/audit-scanner"
     tag: v1.35.0
     pullPolicy: IfNotPresent
   cronJob:

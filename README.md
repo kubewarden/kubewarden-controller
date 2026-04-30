@@ -75,7 +75,7 @@ To verify the attestation manifest and its layer signatures:
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
     --certificate-identity="https://github.com/kubewarden/adm-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    ghcr.io/kubewarden/controller@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
+    ghcr.io/kubewarden/adm-controller/controller@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
 ```
 
 > [!NOTE]
@@ -89,7 +89,7 @@ like `crane`. For example, the following command will show you all the
 attestation manifests of the `latest` tag:
 
 ```shell
-crane manifest  ghcr.io/kubewarden/controller:latest | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest")'
+crane manifest  ghcr.io/kubewarden/adm-controller/controller:latest | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest")'
 {
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
   "digest": "sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8",
@@ -124,9 +124,9 @@ layers signatures.
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
     --certificate-identity="https://github.com/kubewarden/adm-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    ghcr.io/kubewarden/controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
+    ghcr.io/kubewarden/adm-controller/controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
 
-crane manifest  ghcr.io/kubewarden/controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
+crane manifest  ghcr.io/kubewarden/adm-controller/controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
 {
   "schemaVersion": 2,
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
@@ -181,7 +181,7 @@ crane manifest  ghcr.io/kubewarden/controller@sha256:fc01fa6c82cffeffd23b737c7e6
 
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
     --certificate-identity="https://github.com/kubewarden/adm-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    ghcr.io/kubewarden/controller@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
+    ghcr.io/kubewarden/adm-controller/controller@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
 ```
 
 Note that each attestation manifest (for each architecture) has its own layers.
@@ -190,7 +190,7 @@ Buildx during the multi stage build process. You can also use `crane` to
 download the attestation file:
 
 ```shell
-crane blob ghcr.io/kubewarden/controller@sha256:7738d8d506c6482aaaef1d22ed920468ffaf4975afd28f49bb50dba2c20bf2ca
+crane blob ghcr.io/kubewarden/adm-controller/controller@sha256:7738d8d506c6482aaaef1d22ed920468ffaf4975afd28f49bb50dba2c20bf2ca
 ```
 
 ## Security disclosure
