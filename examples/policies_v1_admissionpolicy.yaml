@@ -2,7 +2,7 @@ apiVersion: policies.kubewarden.io/v1
 kind: AdmissionPolicy
 metadata:
   name: capabilities-psp
-  namespace: kubewarden
+  namespace: default
 spec:
   module: registry://ghcr.io/kubewarden/policies/capabilities-psp:v0.1.9
   rules:
