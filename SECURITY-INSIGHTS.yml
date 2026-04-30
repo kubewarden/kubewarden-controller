@@ -3,9 +3,9 @@ header:
   last-updated: "2024-08-12"
   last-reviewed: "2023-08-12"
   expiration-date: "2025-10-01T01:00:00.000Z"
-  project-url: https://github.com/kubewarden/kubewarden-controller/
-  changelog: https://github.com/kubewarden/kubewarden-controller/releases/latest
-  license: https://github.com/kubewarden/kubewarden-controller/blob/main/LICENSE
+  project-url: https://github.com/kubewarden/adm-controller/
+  changelog: https://github.com/kubewarden/adm-controller/releases/latest
+  license: https://github.com/kubewarden/adm-controller/blob/main/LICENSE
 project-lifecycle:
   bug-fixes-only: false
   core-maintainers:
@@ -15,13 +15,13 @@ project-lifecycle:
 contribution-policy:
   accepts-pull-requests: true
   accepts-automated-pull-requests: true
-  contributing-policy: https://github.com/kubewarden/kubewarden-controller/blob/main/CONTRIBUTING.md
+  contributing-policy: https://github.com/kubewarden/adm-controller/blob/main/CONTRIBUTING.md
   code-of-conduct: https://github.com/kubewarden/community/blob/main/CODE_OF_CONDUCT.md
 documentation:
   - https://docs.kubewarden.io
 distribution-points:
-  - https://github.com/kubewarden/kubewarden-controller/
   - https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller
+  - https://github.com/kubewarden/adm-controller/
   - https://github.com/orgs/kubewarden/packages?repo_name=helm-charts
 security-artifacts:
   threat-model:
@@ -50,9 +50,9 @@ vulnerability-reporting:
 dependencies:
   third-party-packages: true
   dependencies-lists:
-    - https://github.com/kubewarden/kubewarden-controller/blob/main/go.sum
+    - https://github.com/kubewarden/adm-controller/blob/main/go.sum
   sbom:
-    - sbom-file: https://github.com/kubewarden/kubewarden-controller/releases/latest/download/kubewarden-controller-sbom-adm64.spdx
+    - sbom-file: https://github.com/kubewarden/adm-controller/releases/latest/download/adm-controller-sbom-adm64.spdx
       sbom-format: SPDX
       sbom-url: https://github.com/anchore/sbom-action
   dependencies-lifecycle:
