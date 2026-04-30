@@ -335,7 +335,7 @@ specifically.
 1. Check that `:latest` builds of kubewarden-controller for main are fine,
    including kwctl
 1. Open an automated release PR with
-   https://github.com/kubewarden/kubewarden-controller/actions/workflows/open-release-pr.yml
+   https://github.com/kubewarden/adm-controller/actions/workflows/open-release-pr.yml
    Set the desired kubewarden version.
 1. Review & merge automated PR
 1. Tag version in kubewarden-controller repo

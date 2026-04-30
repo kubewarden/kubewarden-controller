@@ -36,7 +36,7 @@ Pipeline(s) run:
   * Total:      1
 
 One action to follow up:
-  * https://github.com/kubewarden/kubewarden-controller/pull/XXX
+  * https://github.com/kubewarden/adm-controller/pull/XXX
 ```
 
 ## Dependency Updates

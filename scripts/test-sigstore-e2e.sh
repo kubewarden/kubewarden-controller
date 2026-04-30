@@ -12,7 +12,7 @@
 #               and exercise the webhook to confirm allow/deny behaviour.
 #
 # Based on: https://github.com/sigstore/scaffolding/blob/main/getting-started.md
-# Related:  https://github.com/kubewarden/kubewarden-controller/pull/1485
+# Related:  https://github.com/kubewarden/adm-controller/pull/1485
 #
 # Usage:
 #   ./test-sigstore-e2e.sh [OPTIONS]

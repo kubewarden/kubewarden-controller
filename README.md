@@ -53,7 +53,7 @@ as well as upload in the release page.
 
 You can find them together with the signature and certificate used to sign it
 in the [release
-assets](https://github.com/kubewarden/kubewarden-controller/releases), and
+assets](https://github.com/kubewarden/adm-controller/releases), and
 attached to the image as JSON-encoded documents following the [in-toto SPDX
 predicate](https://github.com/in-toto/attestation/blob/main/spec/predicates/spdx.md)
 format. You can obtain them with
@@ -199,4 +199,4 @@ See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md)
 
 # Changelog
 
-See [GitHub Releases content](https://github.com/kubewarden/kubewarden-controller/releases).
+See [GitHub Releases content](https://github.com/kubewarden/adm-controller/releases).
