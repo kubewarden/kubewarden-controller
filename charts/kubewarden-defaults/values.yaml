@@ -118,7 +118,7 @@ policyServer:
   # maxUnavailable: 1
   image:
     # The registry is defined in the global.cattle.systemDefaultRegistry value
-    repository: "kubewarden/policy-server"
+    repository: "kubewarden/adm-controller/policy-server"
     tag: v1.35.0
   serviceAccountName: policy-server
   # Configmap containing a Sigstore verification configuration under a key

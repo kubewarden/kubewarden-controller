@@ -20,8 +20,8 @@
         "docker"
       ],
       "matchPackageNames": [
-        "kubewarden/kubewarden-controller",
-        "kubewarden/audit-scanner"
+        "kubewarden/adm-controller/controller",
+        "kubewarden/adm-controller/audit-scanner"
       ],
       "matchPaths": [
         "charts/kubewarden-controller/values.yaml"
@@ -33,7 +33,7 @@
         "docker"
       ],
       "matchPackageNames": [
-        "kubewarden/policy-server"
+        "kubewarden/adm-controller/policy-server"
       ],
       "matchPaths": [
         "charts/kubewarden-defaults/values.yaml"
