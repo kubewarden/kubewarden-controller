@@ -416,7 +416,7 @@ async fn test_host_capabilities<F, Fut>(
     "ghcr.io/kubewarden/tests/context-aware-test-policy:latest",
     OciManifest::Image(Default::default())
 )]
-#[case::container_image("ghcr.io/kubewarden/policy-server:latest", OciManifest::ImageIndex(policy_fetcher::oci_client::manifest::OciImageIndex{schema_version:2, media_type: None, manifests: vec![], annotations: None, artifact_type: None}))]
+#[case::container_image("ghcr.io/kubewarden/adm-controller/policy-server:latest", OciManifest::ImageIndex(policy_fetcher::oci_client::manifest::OciImageIndex{schema_version:2, media_type: None, manifests: vec![], annotations: None, artifact_type: None}))]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_oci_manifest_capability(
     #[case] policy_uri: &str,
