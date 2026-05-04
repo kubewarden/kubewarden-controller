@@ -888,6 +888,180 @@ var _ = Describe("PolicyServer controller", func() {
 			})))
 		})
 
+		It("should propagate custom labels from spec.labels to the Deployment and Pod template, with system labels taking precedence", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Labels = map[string]string{
+				"custom-label":                 "custom-value",
+				"another-label":                "another-value",
+				constants.PolicyServerLabelKey: "should-be-overridden",
+				"app.kubernetes.io/managed-by": "should-be-overridden",
+			}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				// Custom labels should appear on Deployment ObjectMeta
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue("custom-label", "custom-value"))
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue("another-label", "another-value"))
+				// Custom labels should appear on Pod template
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue("custom-label", "custom-value"))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue("another-label", "another-value"))
+				// System labels must not be overridden by user labels
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue(constants.PolicyServerLabelKey, policyServerName))
+				Expect(deployment.ObjectMeta.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "kubewarden-controller"))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue(constants.PolicyServerLabelKey, policyServerName))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKeyWithValue("app.kubernetes.io/managed-by", "kubewarden-controller"))
+				return nil
+			}).Should(Succeed())
+		})
+
+		It("should propagate custom annotations from spec.annotations to the Deployment ObjectMeta and Pod template", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Annotations = map[string]string{
+				"custom-annotation":  "custom-value",
+				"another-annotation": "another-value",
+			}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				// Custom annotations should appear on Deployment ObjectMeta
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKeyWithValue("custom-annotation", "custom-value"))
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKeyWithValue("another-annotation", "another-value"))
+				// Custom annotations should appear on Pod template
+				Expect(deployment.Spec.Template.ObjectMeta.Annotations).To(HaveKeyWithValue("custom-annotation", "custom-value"))
+				Expect(deployment.Spec.Template.ObjectMeta.Annotations).To(HaveKeyWithValue("another-annotation", "another-value"))
+				// System annotation must still be present
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKey(constants.PolicyServerDeploymentConfigVersionAnnotation))
+				return nil
+			}).Should(Succeed())
+		})
+
+		It("should remove stale labels and annotations from the Deployment when they are removed from spec", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Labels = map[string]string{"stale-label": "value"}
+			policyServer.Spec.Annotations = map[string]string{"stale-annotation": "value"}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			// Confirm they appear initially on both Deployment ObjectMeta and Pod template
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Labels["stale-label"]; !ok {
+					return errors.New("stale-label not yet present on Deployment ObjectMeta")
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["stale-annotation"]; !ok {
+					return errors.New("stale-annotation not yet present on Deployment ObjectMeta")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Labels["stale-label"]; !ok {
+					return errors.New("stale-label not yet present on Pod template")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Annotations["stale-annotation"]; !ok {
+					return errors.New("stale-annotation not yet present on Pod template")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Remove both from spec
+			Eventually(func() error {
+				ps, err := getTestPolicyServer(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				ps.Spec.Labels = nil
+				ps.Spec.Annotations = nil
+				return k8sClient.Update(ctx, ps)
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Verify they are gone from both Deployment ObjectMeta and Pod template
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Labels["stale-label"]; ok {
+					return errors.New("stale-label still present on Deployment ObjectMeta after removal from spec")
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["stale-annotation"]; ok {
+					return errors.New("stale-annotation still present on Deployment ObjectMeta after removal from spec")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Labels["stale-label"]; ok {
+					return errors.New("stale-label still present on Pod template after removal from spec")
+				}
+				if _, ok := deployment.Spec.Template.ObjectMeta.Annotations["stale-annotation"]; ok {
+					return errors.New("stale-annotation still present on Pod template after removal from spec")
+				}
+				// System labels and annotations must still be present
+				Expect(deployment.ObjectMeta.Labels).To(HaveKey(constants.PolicyServerLabelKey))
+				Expect(deployment.ObjectMeta.Annotations).To(HaveKey(constants.PolicyServerDeploymentConfigVersionAnnotation))
+				Expect(deployment.Spec.Template.ObjectMeta.Labels).To(HaveKey(constants.PolicyServerLabelKey))
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
+		It("should preserve non-user-managed annotations on the Deployment when reconciling", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
+			policyServer.Spec.Annotations = map[string]string{"user-annotation": "user-value"}
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			// Wait for the user annotation to appear on the Deployment.
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["user-annotation"]; !ok {
+					return errors.New("user-annotation not yet present on Deployment ObjectMeta")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Simulate an external controller (e.g. Kubernetes deployment controller) adding
+			// an annotation directly to the Deployment.
+			const externalAnnotation = "some-external-tool/annotation"
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				deployment.ObjectMeta.Annotations[externalAnnotation] = "external-value"
+				return k8sClient.Update(ctx, deployment)
+			}, timeout, pollInterval).Should(Succeed())
+
+			// Trigger a reconcile by updating the PolicyServer spec (remove the user annotation).
+			Eventually(func() error {
+				ps, err := getTestPolicyServer(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				ps.Spec.Annotations = nil
+				return k8sClient.Update(ctx, ps)
+			}, timeout, pollInterval).Should(Succeed())
+
+			// The user annotation must be gone, but the external annotation must survive.
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				if _, ok := deployment.ObjectMeta.Annotations["user-annotation"]; ok {
+					return errors.New("user-annotation still present after removal from spec")
+				}
+				if _, ok := deployment.ObjectMeta.Annotations[externalAnnotation]; !ok {
+					return errors.New("external annotation was unexpectedly removed by the controller")
+				}
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
 		It("should set the configMap version as a deployment annotation", func() {
 			policyServer := policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()
 			createPolicyServerAndWaitForItsService(ctx, policyServer)
