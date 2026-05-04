@@ -34,9 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/metrics"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/constants"
+	"github.com/kubewarden/adm-controller/internal/metrics"
 )
 
 type policySubReconciler struct {
@@ -359,7 +359,7 @@ func hasKubewardenLabel(labels map[string]string) bool {
 	// From v1.16.0 on we are using the recommended label "app.kubernetes.io/part-of"
 	partOfLabel := labels[constants.PartOfLabelKey]
 
-	return kubewardenLabel == "true" || partOfLabel == constants.PartOfLabelValue
+	return kubewardenLabel == "true" || partOfLabel == constants.PartOfLabelValue //nolint:goconst
 }
 
 func getPolicyMapFromConfigMap(configMap *corev1.ConfigMap) (policyConfigEntryMap, error) {

@@ -24,9 +24,9 @@ var (
 	testenv           env.Environment
 	kindClusterName   string
 	namespace         = "kubewarden"
-	controllerImage   = "ghcr.io/kubewarden/kubewarden-controller:dev"
-	auditScannerImage = "ghcr.io/kubewarden/audit-scanner:dev"
-	policyServerImage = "ghcr.io/kubewarden/policy-server:dev"
+	controllerImage   = "ghcr.io/kubewarden/adm-controller/controller:dev"
+	auditScannerImage = "ghcr.io/kubewarden/adm-controller/audit-scanner:dev"
+	policyServerImage = "ghcr.io/kubewarden/adm-controller/policy-server:dev"
 )
 
 func TestMain(m *testing.M) {

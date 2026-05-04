@@ -12,7 +12,7 @@
 #               and exercise the webhook to confirm allow/deny behaviour.
 #
 # Based on: https://github.com/sigstore/scaffolding/blob/main/getting-started.md
-# Related:  https://github.com/kubewarden/kubewarden-controller/pull/1485
+# Related:  https://github.com/kubewarden/adm-controller/pull/1485
 #
 # Usage:
 #   ./test-sigstore-e2e.sh [OPTIONS]
@@ -29,7 +29,7 @@
 #                         configuration. Skips policy deployment and webhook evaluation.
 #   --policy-server-image Full image reference (repository:tag) for the policy-server.
 #                         Overrides the default image in charts/kubewarden-defaults.
-#                         Example: --policy-server-image ghcr.io/kubewarden/policy-server:dev
+#                         Example: --policy-server-image ghcr.io/kubewarden/adm-controller/policy-server:dev
 #
 # Tools required (per stage):
 #   All stages:  kubectl, jq
@@ -403,13 +403,13 @@ function install_kubewarden() {
         -n "$KUBEWARDEN_NAMESPACE" \
         --wait
 
-    echo -e "${GREEN}  Installing kubewarden-controller...${NC}"
+    echo -e "${GREEN}  Installing adm-controller...${NC}"
     helm upgrade --install kubewarden-controller ./charts/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" \
         --set replicas=1 \
         --wait
 
-    echo -e "${GREEN}  Waiting for kubewarden-controller rollout...${NC}"
+    echo -e "${GREEN}  Waiting for adm-controller rollout...${NC}"
     kubectl rollout status deployment/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" --timeout=3m
 }

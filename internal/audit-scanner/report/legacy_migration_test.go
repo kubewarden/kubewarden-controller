@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"testing"
 
-	testutils "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/testutils"
+	testutils "github.com/kubewarden/adm-controller/internal/audit-scanner/testutils"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

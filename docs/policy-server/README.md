@@ -11,7 +11,7 @@ modules.
 
 # Deployment
 
-We recommend to rely on the [kubewarden-controller](https://github.com/kubewarden/kubewarden-controller)
+We recommend to rely on the [Kubewarden admission controller](https://github.com/kubewarden/adm-controller)
 and the [Kubernetes Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)
 provided by it to deploy the Kubewarden stack.
 

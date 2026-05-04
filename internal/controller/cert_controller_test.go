@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/kubewarden/kubewarden-controller/internal/certs"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	"github.com/kubewarden/adm-controller/internal/certs"
+	"github.com/kubewarden/adm-controller/internal/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 

@@ -16,11 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
-
-const dataType string = "Data" // only data type is supported
 
 type policyGroupMemberWithContext struct {
 	Module                string                            `json:"module"`
@@ -181,7 +179,7 @@ func (r *PolicyServerReconciler) policyServerConfigMapVersion(ctx context.Contex
 	// data from the API server
 	unstructuredObj := &unstructured.Unstructured{}
 	unstructuredObj.SetGroupVersionKind(schema.GroupVersionKind{
-		Kind:    "ConfigMap",
+		Kind:    "ConfigMap", //nolint:goconst
 		Version: "v1",
 	})
 	err := r.Client.Get(ctx, client.ObjectKey{
@@ -274,7 +272,7 @@ func buildSourcesMap(policyServer *policiesv1.PolicyServer) policyServerSourcesE
 		for _, cert := range certs {
 			sourcesEntry.SourceAuthorities[uri] = append(sourcesEntry.SourceAuthorities[uri],
 				policyServerSourceAuthority{
-					Type: dataType,
+					Type: "Data", //nolint: goconst
 					Data: cert,
 				})
 		}

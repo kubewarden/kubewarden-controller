@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"slices"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/constants"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -18,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const appInstanceLabelKey = "app.kubernetes.io/instance"
 
 // Client fetches Kubewarden policies from the Kubernetes cluster.
 type Client struct {
@@ -434,7 +436,7 @@ func (f *Client) getPolicyServerByName(ctx context.Context, policyServerName str
 
 func (f *Client) getServiceByInstanceLabel(ctx context.Context, instanceName string, namespace string) (*corev1.Service, error) {
 	serviceList := corev1.ServiceList{}
-	err := f.client.List(ctx, &serviceList, &client.ListOptions{Namespace: namespace}, &client.MatchingLabels{"app.kubernetes.io/instance": instanceName})
+	err := f.client.List(ctx, &serviceList, &client.ListOptions{Namespace: namespace}, &client.MatchingLabels{appInstanceLabelKey: instanceName})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list services for policy server instance %q in namespace %q: %w", instanceName, namespace, err)
 	}

@@ -3,7 +3,7 @@ package scheme
 import (
 	"fmt"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
 	openreports "github.com/openreports/reports-api/pkg/client/clientset/versioned/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"

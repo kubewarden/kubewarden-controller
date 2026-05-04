@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	auditConstants "github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
+	auditConstants "github.com/kubewarden/adm-controller/internal/audit-scanner/constants"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"

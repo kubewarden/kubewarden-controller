@@ -18,8 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
 const (
@@ -161,7 +161,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguration(policyServerDeployment *appsv1.Deployment, templateAnnotations map[string]string) {
 	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
 	if r.MetricsEnabled {
-		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
+		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"} //nolint:goconst
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
 			admissionContainer.Env[index] = envvar
 		} else {

@@ -1,22 +1,22 @@
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubewarden-controller)](https://artifacthub.io/packages/helm/kubewarden/kubewarden-controller)
 
-# kubewarden-controller
+# adm-controller
 
-`kubewarden-controller` is a Kubernetes controller that allows you to
+`adm-controller` is a Kubernetes controller that allows you to
 dynamically register Kubewarden admission policies.
 
-The `kubewarden-controller` reconciles the admission policies you
+The `adm-controller` reconciles the admission policies you
 have registered with the Kubernetes webhooks of the cluster where
 it's deployed.
 
 ## Usage
 
-Once the kubewarden-controller is up and running, you can define Kubewarden policies
+Once the adm-controller is up and running, you can define Kubewarden policies
 using the `ClusterAdmissionPolicy` resource.
 
 The documentation of this Custom Resource can be found
-[here](https://github.com/kubewarden/kubewarden-controller/blob/main/docs/crds/README.asciidoc)
-or on [docs.crds.dev](https://doc.crds.dev/github.com/kubewarden/kubewarden-controller).
+[here](https://github.com/kubewarden/adm-controller/blob/main/docs/crds/README.asciidoc)
+or on [docs.crds.dev](https://doc.crds.dev/github.com/kubewarden/adm-controller).
 
 > [!NOTE]
 > `ClusterAdmissionPolicy` resources are cluster-wide.
@@ -56,7 +56,7 @@ how this policy behaves.
 Creating the resource inside Kubernetes is sufficient to enforce the policy:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/kubewarden/kubewarden-controller/main/config/samples/policies_v1alpha2_clusteradmissionpolicy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubewarden/adm-controller/main/config/samples/policies_v1alpha2_clusteradmissionpolicy.yaml
 ```
 
 ### Remove your first admission policy

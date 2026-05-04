@@ -3,7 +3,7 @@ package report
 import (
 	"time"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

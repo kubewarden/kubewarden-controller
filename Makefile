@@ -13,7 +13,7 @@ GO_BUILD_ENV := CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 ENVTEST_DIR ?= $(shell pwd)/.envtest
 
 REGISTRY ?= ghcr.io
-REPO ?= kubewarden
+REPO ?= kubewarden/adm-controller
 TAG ?= dev
 
 # Detect architecture for Rust builds
@@ -102,9 +102,9 @@ controller: $(CONTROLLER_SRCS) vet
 
 .PHONY: controller-image
 controller-image:
-	docker build -f ./Dockerfile.kubewarden-controller \
-		-t "$(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)" .
-	@echo "Built $(REGISTRY)/$(REPO)/kubewarden-controller:$(TAG)"
+	docker build -f ./Dockerfile.controller \
+		-t "$(REGISTRY)/$(REPO)/controller:$(TAG)" .
+	@echo "Built $(REGISTRY)/$(REPO)/controller:$(TAG)"
 
 AUDIT_SCANNER_SRC_DIRS := cmd/audit-scanner api internal/audit-scanner
 AUDIT_SCANNER_GO_SRCS := $(shell find $(AUDIT_SCANNER_SRC_DIRS) -type f -name '*.go')
@@ -196,7 +196,7 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Versions
-GOLANGCI_LINT_VERSION ?= v2.9.0
+GOLANGCI_LINT_VERSION ?= v2.12.1
 ZIZMOR_VERSION ?= 1.23.1
 
 ## Tool Binaries

@@ -3,9 +3,9 @@ package scanner
 import (
 	"log/slog"
 
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/k8s"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/policies"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/report"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/k8s"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/policies"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/report"
 )
 
 type ParallelizationConfig struct {

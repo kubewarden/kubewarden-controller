@@ -38,7 +38,11 @@ var (
 	nonStrictStatelessCELCompiler = plugincel.NewCompiler(environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion()))
 )
 
-const maxMatchConditionsCount = 64
+const (
+	maxMatchConditionsCount = 64
+	wildcardAllResources    = "*/*"
+	protectMode             = "protect"
+)
 
 type sensitiveResource struct {
 	APIGroup string
@@ -60,7 +64,7 @@ func (sr sensitiveResource) MatchesRules(apiGroups []string, resource []string) 
 
 	resourceMatches := false
 	for _, res := range resource {
-		if res == sr.Resource || res == "*" || res == "*/*" || strings.HasPrefix(res, sr.Resource+"/") {
+		if res == sr.Resource || res == "*" || res == wildcardAllResources || strings.HasPrefix(res, sr.Resource+"/") {
 			resourceMatches = true
 			break
 		}
@@ -71,7 +75,7 @@ func (sr sensitiveResource) MatchesRules(apiGroups []string, resource []string) 
 
 func defaultSensitiveResources() []sensitiveResource {
 	return []sensitiveResource{
-		{APIGroup: "wgpolicyk8s.io", Resource: "policyreports"},
+		{APIGroup: "wgpolicyk8s.io", Resource: "policyreports"}, //nolint:goconst
 	}
 }
 
@@ -184,7 +188,7 @@ func checkRulesArrayForWildcardUsage(rulesAPIGroups []string, rulesResources []s
 	}
 
 	for i, resource := range rulesResources {
-		if resource == "*" || resource == "*/*" {
+		if resource == "*" || resource == wildcardAllResources {
 			resourceHasWildcard = true
 			resourceWildcardIndex = i
 			break
@@ -224,7 +228,7 @@ func validatePolicyServerField(oldPolicy, newPolicy Policy) *field.Error {
 }
 
 func validatePolicyModeField(oldPolicy, newPolicy Policy) *field.Error {
-	if oldPolicy.GetPolicyMode() == "protect" && newPolicy.GetPolicyMode() == "monitor" {
+	if oldPolicy.GetPolicyMode() == protectMode && newPolicy.GetPolicyMode() == "monitor" {
 		return field.Forbidden(field.NewPath("spec").Child("mode"), "field cannot transition from protect to monitor. Recreate instead.")
 	}
 

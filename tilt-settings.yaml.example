@@ -1,7 +1,7 @@
 registry: ghcr.io
 audit-scanner: 
-    image: <username>/admission-controller/audit-scanner
+    image: <username>/adm-controller/audit-scanner
 controller: 
-    image: <username>/admission-controller/controller
+    image: <username>/adm-controller/controller
 policy-server: 
-    image: <username>/admission-controller/policy-server
+    image: <username>/adm-controller/policy-server

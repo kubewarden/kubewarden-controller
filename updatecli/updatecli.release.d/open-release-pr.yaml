@@ -1,11 +1,11 @@
-name: Update kubewarden-controller chart versions
+name: Update adm-controller chart versions
 pipelineid: "{{ .pipelineid }}"
 
 # This updatecli pipeline receives as input a RELEASE_VERSION env var with the
 # desired Kubewarden admission controller stack version.
 #
 # Then bumps all charts and Cargo.* files following that version and opens a PR against
-# the kubewarden-controller repo.
+# the adm-controller repo.
 
 sources:
   desiredReleaseVersion:
@@ -251,16 +251,16 @@ scms:
       user: "{{ .github.author }}"
       email: "{{ .github.email }}"
       owner: "{{ requiredEnv .github.owner }}"
-      repository: "kubewarden-controller"
+      repository: "adm-controller"
       branch: "{{ .github.branch }}"
       token: "{{ requiredEnv .github.token }}"
       commitusingapi: true
       commitmessage:
         squash: true
         type: "chore"
-        title: "update kubewarden-controller Helm charts"
+        title: "update adm-controller Helm charts"
         hidecredit: true
-        footers: "Signed-off-by: kubewarden-controller bot <kubewarden-controller-bot@users.noreply.github.com>"
+        footers: "Signed-off-by: adm-controller bot <adm-controller-bot@users.noreply.github.com>"
 
 # {{ if not .pr.haulerUpdatePr }}
 actions:

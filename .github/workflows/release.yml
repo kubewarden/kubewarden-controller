@@ -63,7 +63,7 @@ jobs:
     name: Build container images
     strategy:
       matrix:
-        component: [policy-server, kubewarden-controller, audit-scanner]
+        component: [policy-server, controller, audit-scanner]
         arch: [amd64, arm64]
         include:
           - arch: amd64
@@ -82,12 +82,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Build, sign, and upload digest
-        uses: kubewarden/github-actions/container-build@7bee120924c03de60befb15d9932b960aca2f4d6 # v5.2.0
+        uses: kubewarden/github-actions/container-build@ec2a95226ad659e7e26277688a6c695fbd795e6f # v6.0.0
         with:
           component: ${{ matrix.component }}
           arch: ${{ matrix.arch }}
           platform: ${{ matrix.platform }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          namespace: adm-controller
 
   merge-containers:
     name: Merge multi-arch manifests
@@ -98,15 +99,16 @@ jobs:
       id-token: write # Signing images with cosign
     strategy:
       matrix:
-        component: [policy-server, kubewarden-controller, audit-scanner]
+        component: [policy-server, controller, audit-scanner]
     steps:
       - name: Merge multi-arch images
-        uses: kubewarden/github-actions/merge-multiarch@7bee120924c03de60befb15d9932b960aca2f4d6 # v5.2.0
+        uses: kubewarden/github-actions/merge-multiarch@ec2a95226ad659e7e26277688a6c695fbd795e6f # v6.0.0
         with:
           component: ${{ matrix.component }}
           tag: ${{ github.ref_name }}
           arch: amd64,arm64
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          namespace: adm-controller
 
   build-kwctl:
     name: Build kwctl binaries
@@ -127,7 +129,7 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        component: [kubewarden-controller, audit-scanner, policy-server]
+        component: [controller, audit-scanner, policy-server]
         arch: [amd64, arm64]
     steps:
       - name: Generate and sign attestations
@@ -210,14 +212,14 @@ jobs:
             let path = require('path');
 
             let files = [
-              'kubewarden-controller-attestation-amd64-provenance.intoto.jsonl',
-              'kubewarden-controller-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore',
-              'kubewarden-controller-attestation-arm64-provenance.intoto.jsonl',
-              'kubewarden-controller-attestation-arm64-provenance.intoto.jsonl.bundle.sigstore',
-              'kubewarden-controller-attestation-amd64-sbom.json',
-              'kubewarden-controller-attestation-amd64-sbom.json.bundle.sigstore',
-              'kubewarden-controller-attestation-arm64-sbom.json',
-              'kubewarden-controller-attestation-arm64-sbom.json.bundle.sigstore',
+              'controller-attestation-amd64-provenance.intoto.jsonl',
+              'controller-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore',
+              'controller-attestation-arm64-provenance.intoto.jsonl',
+              'controller-attestation-arm64-provenance.intoto.jsonl.bundle.sigstore',
+              'controller-attestation-amd64-sbom.json',
+              'controller-attestation-amd64-sbom.json.bundle.sigstore',
+              'controller-attestation-arm64-sbom.json',
+              'controller-attestation-arm64-sbom.json.bundle.sigstore',
               'audit-scanner-attestation-amd64-provenance.intoto.jsonl',
               'audit-scanner-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore',
               'audit-scanner-attestation-arm64-provenance.intoto.jsonl',

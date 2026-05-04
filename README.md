@@ -3,7 +3,7 @@
 [![Artifact HUB](https://img.shields.io/badge/ArtifactHub-Helm_Charts-blue?style=flat&logo=artifacthub&link=https%3A%2F%2Fartifacthub.io%2Fpackages%2Fsearch%3Frepo%3Dkubewarden%26kind%3D0%26verified_publisher%3Dtrue%26official%3Dtrue%26cncf%3Dtrue%26sort%3Drelevance%26page%3D1)](https://artifacthub.io/packages/search?repo=kubewarden&kind=0&verified_publisher=true&official=true&cncf=true&sort=relevance&page=1)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/6502/badge)](https://www.bestpractices.dev/projects/6502)
 [![FOSSA license scan](https://app.fossa.com/api/projects/custom%2B25850%2Fgithub.com%2Fkubewarden%2Fkubewarden-controller.svg?type=shield)](https://app.fossa.com/projects/custom%252B25850%252Fgithub.com%252Fkubewarden%252Fkubewarden-controller?ref=badge_shield)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/kubewarden-controller/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/kubewarden-controller)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/kubewarden/adm-controller/badge)](https://scorecard.dev/viewer/?uri=github.com/kubewarden/adm-controller)
 [![CLOMonitor](https://img.shields.io/endpoint?url=https://clomonitor.io/api/projects/cncf/kubewarden/badge)](https://clomonitor.io/projects/cncf/kubewarden)
 
 Kubewarden is a Kubernetes Dynamic Admission Controller that uses policies written
@@ -16,7 +16,7 @@ For more information refer to the [official Kubewarden website](https://kubeward
 This repository is a monorepo containing the source code for all the different
 components of the Kubewarden Admission Controller:
 
-- **kubewarden-controller**: A Kubernetes controller that allows you to dynamically register Kubewarden admission policies and reconcile them with the Kubernetes webhooks of the cluster where it's deployed
+- **adm-controller**: A Kubernetes controller that allows you to dynamically register Kubewarden admission policies and reconcile them with the Kubernetes webhooks of the cluster where it's deployed
 - **policy-server**: The runtime component that evaluates admission policies written in WebAssembly
 - **audit-scanner**: A component that scans existing resources in the cluster against registered policies
 - **kwctl**: A CLI tool for testing and managing Kubewarden policies
@@ -35,7 +35,7 @@ The [`docs/`](./docs) folder contains README files for each component:
 
 ## Installation
 
-The kubewarden-controller can be deployed using a Helm chart. For instructions,
+The adm-controller can be deployed using a Helm chart. For instructions,
 see https://charts.kubewarden.io.
 
 Please refer to our [quickstart](https://docs.kubewarden.io/quick-start) for more details.
@@ -53,7 +53,7 @@ as well as upload in the release page.
 
 You can find them together with the signature and certificate used to sign it
 in the [release
-assets](https://github.com/kubewarden/kubewarden-controller/releases), and
+assets](https://github.com/kubewarden/adm-controller/releases), and
 attached to the image as JSON-encoded documents following the [in-toto SPDX
 predicate](https://github.com/in-toto/attestation/blob/main/spec/predicates/spdx.md)
 format. You can obtain them with
@@ -65,17 +65,17 @@ You can verify the container image with:
 
 ```shell
 cosign verify-blob --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    --bundle kubewarden-controller-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore \
-    kubewarden-controller-attestation-amd64-provenance.intoto.jsonl
+    --certificate-identity="https://github.com/kubewarden/adm-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    --bundle controller-attestation-amd64-provenance.intoto.jsonl.bundle.sigstore \
+    controller-attestation-amd64-provenance.intoto.jsonl
 ```
 
 To verify the attestation manifest and its layer signatures:
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    ghcr.io/kubewarden/kubewarden-controller@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
+    --certificate-identity="https://github.com/kubewarden/adm-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    ghcr.io/kubewarden/adm-controller/controller@sha256:1abc0944378d9f3ee2963123fe84d045248d320d76325f4c2d4eb201304d4c4e
 ```
 
 > [!NOTE]
@@ -89,7 +89,7 @@ like `crane`. For example, the following command will show you all the
 attestation manifests of the `latest` tag:
 
 ```shell
-crane manifest  ghcr.io/kubewarden/kubewarden-controller:latest | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest")'
+crane manifest  ghcr.io/kubewarden/adm-controller/controller:latest | jq '.manifests[] | select(.annotations["vnd.docker.reference.type"]=="attestation-manifest")'
 {
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
   "digest": "sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8",
@@ -123,10 +123,10 @@ layers signatures.
 
 ```shell
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
+    --certificate-identity="https://github.com/kubewarden/adm-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    ghcr.io/kubewarden/adm-controller/controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
 
-crane manifest  ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
+crane manifest  ghcr.io/kubewarden/adm-controller/controller@sha256:fc01fa6c82cffeffd23b737c7e6b153357d1e499295818dad0c7d207f64e6ee8
 {
   "schemaVersion": 2,
   "mediaType": "application/vnd.oci.image.manifest.v1+json",
@@ -180,8 +180,8 @@ crane manifest  ghcr.io/kubewarden/kubewarden-controller@sha256:fc01fa6c82cffeff
 }
 
 cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com  \
-    --certificate-identity="https://github.com/kubewarden/kubewarden-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
-    ghcr.io/kubewarden/kubewarden-controller@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
+    --certificate-identity="https://github.com/kubewarden/adm-controller/.github/workflows/attestation.yml@<TAG TO VERIFY>" \
+    ghcr.io/kubewarden/adm-controller/controller@sha256:594da3e8bd8c6ee2682b0db35857933f9558fd98ec092344a6c1e31398082f4d
 ```
 
 Note that each attestation manifest (for each architecture) has its own layers.
@@ -190,7 +190,7 @@ Buildx during the multi stage build process. You can also use `crane` to
 download the attestation file:
 
 ```shell
-crane blob ghcr.io/kubewarden/kubewarden-controller@sha256:7738d8d506c6482aaaef1d22ed920468ffaf4975afd28f49bb50dba2c20bf2ca
+crane blob ghcr.io/kubewarden/adm-controller/controller@sha256:7738d8d506c6482aaaef1d22ed920468ffaf4975afd28f49bb50dba2c20bf2ca
 ```
 
 ## Security disclosure
@@ -199,4 +199,4 @@ See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md)
 
 # Changelog
 
-See [GitHub Releases content](https://github.com/kubewarden/kubewarden-controller/releases).
+See [GitHub Releases content](https://github.com/kubewarden/adm-controller/releases).

@@ -10,14 +10,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
 const (
 	integrationTestsFinalizer          = "kubewarden.io/integration-tests-safety-net-finalizer"
-	defaultKubewardenRepository        = "ghcr.io/kubewarden/policy-server"
+	defaultKubewardenRepository        = "ghcr.io/kubewarden/adm-controller/policy-server"
 	maxNameSuffixLength                = 8
 	defaultPolicyGroupRejectionMessage = "policy group default rejection message"
+	defaultNamespace                   = "default"
+	testPodPrivilegedModule            = "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5"
+	protectPolicyMode                  = "protect"
+	podPrivilegedPolicyName            = "pod_privileged"
 )
 
 type AdmissionPolicyFactory struct {
@@ -35,7 +39,7 @@ type AdmissionPolicyFactory struct {
 func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
 	return &AdmissionPolicyFactory{
 		name:         newName("admission-policy"),
-		namespace:    "default",
+		namespace:    defaultNamespace,
 		policyServer: "",
 		message:      "",
 		mutating:     false,
@@ -48,15 +52,15 @@ func NewAdmissionPolicyFactory() *AdmissionPolicyFactory {
 				Rule: admissionregistrationv1.Rule{
 					APIGroups:   []string{""},
 					APIVersions: []string{"v1"},
-					Resources:   []string{"Pods"},
+					Resources:   []string{"Pods"}, //nolint:goconst
 				},
 			},
 		},
-		module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+		module: testPodPrivilegedModule,
 		matchConds: []admissionregistrationv1.MatchCondition{
-			{Name: "noop", Expression: "true"},
+			{Name: "noop", Expression: "true"}, //nolint:goconst
 		},
-		mode: "protect",
+		mode: protectPolicyMode,
 	}
 }
 
@@ -161,12 +165,12 @@ func NewClusterAdmissionPolicyFactory() *ClusterAdmissionPolicyFactory {
 				},
 			},
 		},
-		module:                "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+		module:                testPodPrivilegedModule,
 		contextAwareResources: []ContextAwareResource{},
 		matchConds: []admissionregistrationv1.MatchCondition{
 			{Name: "noop", Expression: "true"},
 		},
-		mode: "protect",
+		mode: protectPolicyMode,
 	}
 }
 
@@ -260,7 +264,7 @@ type AdmissionPolicyGroupFactory struct {
 func NewAdmissionPolicyGroupFactory() *AdmissionPolicyGroupFactory {
 	return &AdmissionPolicyGroupFactory{
 		name:         newName("admissing-policy-group"),
-		namespace:    "default",
+		namespace:    defaultNamespace,
 		policyServer: "",
 		rules: []admissionregistrationv1.RuleWithOperations{
 			{
@@ -277,14 +281,14 @@ func NewAdmissionPolicyGroupFactory() *AdmissionPolicyGroupFactory {
 		},
 		expression: "pod_privileged()",
 		policyMembers: PolicyGroupMembers{
-			"pod_privileged": {
-				Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+			podPrivilegedPolicyName: {
+				Module: testPodPrivilegedModule,
 			},
 		},
 		matchConds: []admissionregistrationv1.MatchCondition{
 			{Name: "noop", Expression: "true"},
 		},
-		mode: "protect",
+		mode: protectPolicyMode,
 	}
 }
 
@@ -383,7 +387,7 @@ func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory
 		policyMembers: PolicyGroupMembersWithContext{
 			"pod_privileged": {
 				PolicyGroupMember: PolicyGroupMember{
-					Module: "registry://ghcr.io/kubewarden/tests/pod-privileged:v0.2.5",
+					Module: testPodPrivilegedModule,
 				},
 			},
 			"user_group_psp": {
@@ -395,7 +399,7 @@ func NewClusterAdmissionPolicyGroupFactory() *ClusterAdmissionPolicyGroupFactory
 		matchConds: []admissionregistrationv1.MatchCondition{
 			{Name: "noop", Expression: "true"},
 		},
-		mode: "protect",
+		mode: protectPolicyMode,
 	}
 }
 

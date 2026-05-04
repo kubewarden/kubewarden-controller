@@ -3,7 +3,7 @@ package certs
 import (
 	"fmt"
 
-	"github.com/kubewarden/kubewarden-controller/internal/constants"
+	"github.com/kubewarden/adm-controller/internal/constants"
 	corev1 "k8s.io/api/core/v1"
 )
 

@@ -12,9 +12,9 @@ import (
 	"os"
 	"time"
 
-	policiesv1 "github.com/kubewarden/kubewarden-controller/api/policies/v1"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/constants"
-	"github.com/kubewarden/kubewarden-controller/internal/audit-scanner/scheme"
+	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/constants"
+	"github.com/kubewarden/adm-controller/internal/audit-scanner/scheme"
 	openreports "github.com/openreports/reports-api/apis/openreports.io/v1alpha1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -25,6 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
+
+const testutilsDefaultNamespace = "default"
 
 func NewFakeClient(objects ...runtime.Object) (client.Client, error) {
 	groupVersion := []schema.GroupVersion{
@@ -217,7 +219,7 @@ func (factory *AdmissionPolicyFactory) Build() *policiesv1.AdmissionPolicy {
 		Spec: policiesv1.AdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				ObjectSelector:  factory.objectSelector,
-				PolicyServer:    "default",
+				PolicyServer:    testutilsDefaultNamespace,
 				Rules:           factory.rules,
 				BackgroundAudit: factory.backgroundAudit,
 			},
@@ -307,7 +309,7 @@ func (factory *AdmissionPolicyGroupFactory) Build() *policiesv1.AdmissionPolicyG
 			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
 				GroupSpec: policiesv1.GroupSpec{
 					ObjectSelector:  factory.objectSelector,
-					PolicyServer:    "default",
+					PolicyServer:    testutilsDefaultNamespace,
 					Rules:           factory.rules,
 					BackgroundAudit: factory.backgroundAudit,
 				},
