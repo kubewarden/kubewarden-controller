@@ -26,6 +26,8 @@ import (
 	wgpolicy "sigs.k8s.io/wg-policy-prototypes/policy-report/pkg/api/wgpolicyk8s.io/v1alpha2"
 )
 
+const testutilsDefaultNamespace = "default"
+
 func NewFakeClient(objects ...runtime.Object) (client.Client, error) {
 	groupVersion := []schema.GroupVersion{
 		{Group: "", Version: "v1"},
@@ -217,7 +219,7 @@ func (factory *AdmissionPolicyFactory) Build() *policiesv1.AdmissionPolicy {
 		Spec: policiesv1.AdmissionPolicySpec{
 			PolicySpec: policiesv1.PolicySpec{
 				ObjectSelector:  factory.objectSelector,
-				PolicyServer:    "default",
+				PolicyServer:    testutilsDefaultNamespace,
 				Rules:           factory.rules,
 				BackgroundAudit: factory.backgroundAudit,
 			},
@@ -307,7 +309,7 @@ func (factory *AdmissionPolicyGroupFactory) Build() *policiesv1.AdmissionPolicyG
 			PolicyGroupSpec: policiesv1.PolicyGroupSpec{
 				GroupSpec: policiesv1.GroupSpec{
 					ObjectSelector:  factory.objectSelector,
-					PolicyServer:    "default",
+					PolicyServer:    testutilsDefaultNamespace,
 					Rules:           factory.rules,
 					BackgroundAudit: factory.backgroundAudit,
 				},

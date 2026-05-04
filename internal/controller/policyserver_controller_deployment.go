@@ -161,7 +161,7 @@ func (r *PolicyServerReconciler) updatePolicyServerDeployment(ctx context.Contex
 func (r *PolicyServerReconciler) adaptDeploymentForMetricsAndTracingConfiguration(policyServerDeployment *appsv1.Deployment, templateAnnotations map[string]string) {
 	admissionContainer := &policyServerDeployment.Spec.Template.Spec.Containers[0]
 	if r.MetricsEnabled {
-		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"}
+		envvar := corev1.EnvVar{Name: constants.PolicyServerEnableMetricsEnvVar, Value: "true"} //nolint:goconst
 		if index := envVarsContainVariable(admissionContainer.Env, constants.PolicyServerEnableMetricsEnvVar); index >= 0 {
 			admissionContainer.Env[index] = envvar
 		} else {

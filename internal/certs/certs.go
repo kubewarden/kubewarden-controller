@@ -16,9 +16,11 @@ import (
 )
 
 const (
-	startValue   = 1
-	maxBitLength = 128
-	caCommonName = "kubewarden-controller-ca"
+	startValue          = 1
+	maxBitLength        = 128
+	caCommonName        = "kubewarden-controller-ca"
+	certificatePEMType  = "CERTIFICATE"
+	ecPrivateKeyPEMType = "EC PRIVATE KEY"
 )
 
 // GenerateCA generates a self-signed CA root certificate and private key in PEM format.
@@ -142,7 +144,7 @@ func pemEncodeCertificate(certificate []byte) ([]byte, error) {
 	certificatePEM := new(bytes.Buffer)
 
 	err := pem.Encode(certificatePEM, &pem.Block{
-		Type:  "CERTIFICATE",
+		Type:  certificatePEMType,
 		Bytes: certificate,
 	})
 	if err != nil {
@@ -161,7 +163,7 @@ func pemEncodePrivateKey(privateKey *ecdsa.PrivateKey) ([]byte, error) {
 	privateKeyPEM := new(bytes.Buffer)
 
 	err = pem.Encode(privateKeyPEM, &pem.Block{
-		Type:  "EC PRIVATE KEY",
+		Type:  ecPrivateKeyPEMType,
 		Bytes: privateKeyBytes,
 	})
 	if err != nil {

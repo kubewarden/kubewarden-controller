@@ -196,7 +196,7 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Versions
-GOLANGCI_LINT_VERSION ?= v2.9.0
+GOLANGCI_LINT_VERSION ?= v2.12.1
 ZIZMOR_VERSION ?= 1.23.1
 
 ## Tool Binaries
