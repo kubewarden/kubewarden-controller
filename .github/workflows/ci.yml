@@ -181,7 +181,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
-          version: v2.11.4
+          version: v2.12.1
 
   # Rust jobs
   calculate-crates-matrix:
@@ -262,7 +262,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install opa
-        uses: kubewarden/github-actions/opa-installer@e57db07ca384bf09ec40c4c49ff25d600c0d23d9 # v5.1.1
+        uses: kubewarden/github-actions/opa-installer@7bee120924c03de60befb15d9932b960aca2f4d6 # v5.2.0
         with:
           opa-version: v1.12.2
           checksum: a4ba8734ed95ceaac850c12684a42467ed6b0dc9633a9db8dd14d47d05e37751
@@ -354,7 +354,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@481c34c1cf3a84c68b5e46f4eccfc82af798415a # v2.75.23
+        uses: taiki-e/install-action@db5fb34fa772531a3ece57ca434f579eb334e0fb # v2.75.30
         with:
           tool: cargo-llvm-cov
       - name: Install cosign # this is needed by some of the e2e tests
@@ -402,7 +402,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Check spelling with typos
-        uses: crate-ci/typos@7c572958218557a3272c2d6719629443b5cc26fd # v1.45.2
+        uses: crate-ci/typos@bbaefadf97b0ec5fdc942684b647f1a6ab250274 # v1.46.0
 
   charts:
     name: Helm unittest
