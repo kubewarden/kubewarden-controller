@@ -47,7 +47,7 @@ All dependency updates are consolidated into a single weekly workflow.
 Runs weekly (Monday 3:30 AM) via `.github/workflows/update-dependencies.yaml` using `update-deps.yaml`.
 
 Updates the following dependencies:
-- Go version in `go.mod` and Dockerfiles
+- Rust toolchain version
 - Policy image tags in Helm chart values
 - Policy-reporter and openreports chart versions
 - Kuberlr-kubectl image version
