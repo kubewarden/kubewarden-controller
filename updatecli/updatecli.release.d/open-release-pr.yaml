@@ -240,9 +240,8 @@ targets:
         spec:
           files:
             - crates/policy-server/Cargo.toml
-            - crates/policy-server/Cargo.lock
             - crates/kwctl/Cargo.toml
-            - crates/kwctl/Cargo.lock
+            - Cargo.lock
 
 scms:
   default:
