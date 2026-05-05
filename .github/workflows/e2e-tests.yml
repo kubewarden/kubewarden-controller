@@ -1,4 +1,4 @@
-name: End-to-end tests
+name: Helm charts End-to-end tests
 
 run-name: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.display_title || '' }}
 
@@ -71,7 +71,8 @@ env:
   MTLS: ${{ github.event_name == 'pull_request' && 'true' || inputs.MTLS }}
 
 jobs:
-  e2e:
+  helm-charts-e2e:
+    name: Helm charts e2e tests
     # x86: ubuntu-latest, arm64: ubuntu-24.04-arm
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
