@@ -147,7 +147,7 @@ jobs:
 
       - name: Install the syft command
         if: ${{ !inputs.build_only }}
-        uses: kubewarden/github-actions/syft-installer@7bee120924c03de60befb15d9932b960aca2f4d6 # v5.2.0
+        uses: kubewarden/github-actions/syft-installer@76e132dd50cc7c1ac64c436338f0474af096a601 # v7.0.0
 
       - name: Create SBOM file
         if: ${{ !inputs.build_only }}
@@ -244,7 +244,7 @@ jobs:
 
       - name: Install the syft command
         if: ${{ !inputs.build_only }}
-        uses: kubewarden/github-actions/syft-installer@7bee120924c03de60befb15d9932b960aca2f4d6 # v5.2.0
+        uses: kubewarden/github-actions/syft-installer@76e132dd50cc7c1ac64c436338f0474af096a601 # v7.0.0
         with:
           arch: darwin_amd64
 
@@ -345,7 +345,7 @@ jobs:
 
       - name: Install the syft command
         if: ${{ !inputs.build_only }}
-        uses: kubewarden/github-actions/syft-installer@7bee120924c03de60befb15d9932b960aca2f4d6 # v5.2.0
+        uses: kubewarden/github-actions/syft-installer@76e132dd50cc7c1ac64c436338f0474af096a601 # v7.0.0
         with:
           arch: windows_amd64
 
