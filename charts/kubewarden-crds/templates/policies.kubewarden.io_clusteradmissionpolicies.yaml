@@ -147,7 +147,7 @@ spec:
                   properties:
                     expression:
                       description: |-
-                        Expression represents the expression which will be evaluated by CEL. Must evaluate to bool.
+                        expression represents the expression which will be evaluated by CEL. Must evaluate to bool.
                         CEL expressions have access to the contents of the AdmissionRequest and Authorizer, organized into CEL variables:
 
                         'object' - The object from the incoming request. The value is null for DELETE requests.
@@ -163,7 +163,7 @@ spec:
                       type: string
                     name:
                       description: |-
-                        Name is an identifier for this match condition, used for strategic merging of MatchConditions,
+                        name is an identifier for this match condition, used for strategic merging of MatchConditions,
                         as well as providing an identifier for logging purposes. A good name should be descriptive of
                         the associated expression.
                         Name must be a qualified name consisting of alphanumeric characters, '-', '_' or '.', and
@@ -396,7 +396,7 @@ spec:
                   properties:
                     apiGroups:
                       description: |-
-                        APIGroups is the API groups the resources belong to. '*' is all groups.
+                        apiGroups is the API groups the resources belong to. '*' is all groups.
                         If '*' is present, the length of the slice must be one.
                         Required.
                       items:
@@ -405,7 +405,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     apiVersions:
                       description: |-
-                        APIVersions is the API versions the resources belong to. '*' is all versions.
+                        apiVersions is the API versions the resources belong to. '*' is all versions.
                         If '*' is present, the length of the slice must be one.
                         Required.
                       items:
@@ -414,7 +414,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     operations:
                       description: |-
-                        Operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or *
+                        operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or *
                         for all of those operations and any future admission operations that are added.
                         If '*' is present, the length of the slice must be one.
                         Required.
@@ -425,7 +425,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     resources:
                       description: |-
-                        Resources is a list of resources this rule applies to.
+                        resources is a list of resources this rule applies to.
 
                         For example:
                         'pods' means pods.
@@ -865,7 +865,7 @@ spec:
                   properties:
                     apiGroups:
                       description: |-
-                        APIGroups is the API groups the resources belong to. '*' is all groups.
+                        apiGroups is the API groups the resources belong to. '*' is all groups.
                         If '*' is present, the length of the slice must be one.
                         Required.
                       items:
@@ -874,7 +874,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     apiVersions:
                       description: |-
-                        APIVersions is the API versions the resources belong to. '*' is all versions.
+                        apiVersions is the API versions the resources belong to. '*' is all versions.
                         If '*' is present, the length of the slice must be one.
                         Required.
                       items:
@@ -883,7 +883,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     operations:
                       description: |-
-                        Operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or *
+                        operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or *
                         for all of those operations and any future admission operations that are added.
                         If '*' is present, the length of the slice must be one.
                         Required.
@@ -894,7 +894,7 @@ spec:
                       x-kubernetes-list-type: atomic
                     resources:
                       description: |-
-                        Resources is a list of resources this rule applies to.
+                        resources is a list of resources this rule applies to.
 
                         For example:
                         'pods' means pods.
