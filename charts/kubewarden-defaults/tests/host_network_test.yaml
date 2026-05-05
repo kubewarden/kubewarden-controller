@@ -1,0 +1,66 @@
+suite: host-network port configuration for default PolicyServer
+templates:
+  - policyserver-default.yaml
+tests:
+  - it: "should not set port fields by default (zero values are omitted)"
+    asserts:
+      - notExists:
+          path: spec.webhookPort
+      - notExists:
+          path: spec.readinessProbePort
+      - notExists:
+          path: spec.metricsPort
+
+  - it: "should set all port fields when all are overridden"
+    set:
+      policyServer.webhookPort: 9443
+      policyServer.readinessProbePort: 9081
+      policyServer.metricsPort: 9080
+    asserts:
+      - equal:
+          path: spec.webhookPort
+          value: 9443
+      - equal:
+          path: spec.readinessProbePort
+          value: 9081
+      - equal:
+          path: spec.metricsPort
+          value: 9080
+
+  - it: "should not set affinity by default"
+    asserts:
+      - notExists:
+          path: spec.affinity
+
+  - it: "should use policyServer.affinity when set"
+    set:
+      policyServer.affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                kubewarden/policy-server: default
+            topologyKey: kubernetes.io/hostname
+    asserts:
+      - equal:
+          path: spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey
+          value: kubernetes.io/hostname
+      - equal:
+          path: spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels["kubewarden/policy-server"]
+          value: default
+
+  - it: "should fall back to global.affinity when policyServer.affinity is not set"
+    set:
+      global.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+    asserts:
+      - equal:
+          path: spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: kubernetes.io/os

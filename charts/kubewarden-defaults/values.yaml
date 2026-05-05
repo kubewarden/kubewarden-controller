@@ -196,6 +196,32 @@ policyServer:
   # limits and requests, see https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
   limits: {}
   requests: {}
+  # Port configuration for the policy server.
+  # These ports are used for the webhook, readiness probe, and metrics endpoints.
+  # Important when hostNetwork is enabled or when running multiple PolicyServers
+  # on the same node, as they must not conflict.
+  #
+  # Default values (if not specified):
+  # - webhookPort: 8443
+  # - readinessProbePort: 8081
+  # - metricsPort: controller-wide default (env var
+  #   KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT, falling back to 8080)
+  #
+  # webhookPort: 9443
+  # readinessProbePort: 9081
+  # metricsPort: 9080
+  # affinity configures affinity rules for the default PolicyServer.
+  # This takes precedence over global.affinity when set.
+  # When hostNetwork is enabled, users should set appropriate podAntiAffinity
+  # rules here to prevent host-port conflicts between PolicyServer replicas.
+  # affinity:
+  #   podAntiAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #     - labelSelector:
+  #         matchLabels:
+  #           kubewarden/policy-server: default
+  #       topologyKey: kubernetes.io/hostname
+  affinity: {}
 crdVersion: "policies.kubewarden.io/v1"
 recommendedPolicies:
   enabled: False

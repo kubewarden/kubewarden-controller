@@ -84,3 +84,15 @@ Fail
 Ignore
 {{- end -}}
 {{- end -}}
+
+{{/*
+Effective affinity for the default PolicyServer.
+Uses policyServer.affinity if set, otherwise falls back to global.affinity.
+*/}}
+{{- define "kubewarden-defaults.effectiveAffinity" -}}
+{{- if .Values.policyServer.affinity -}}
+  {{- toYaml .Values.policyServer.affinity -}}
+{{- else if .Values.global.affinity -}}
+  {{- toYaml .Values.global.affinity -}}
+{{- end -}}
+{{- end -}}

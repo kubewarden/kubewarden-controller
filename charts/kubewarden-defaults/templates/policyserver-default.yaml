@@ -20,8 +20,9 @@ spec:
   {{- if .Values.policyServer.maxUnavailable }}
   maxUnavailable: {{ .Values.policyServer.maxUnavailable  }}
   {{- end }}
-  {{- if .Values.global.affinity }}
-  affinity: {{ .Values.global.affinity | toYaml | nindent 4 }}
+  {{- $affinity := include "kubewarden-defaults.effectiveAffinity" . -}}
+  {{- if $affinity }}
+  affinity: {{ $affinity | nindent 4 }}
   {{- end }}
   {{- if .Values.global.tolerations }}
   tolerations: {{ .Values.global.tolerations | toYaml | nindent 4 }}
@@ -82,5 +83,14 @@ spec:
   {{- end }}
   {{- if .Values.policyServer.securityContexts }}
   securityContexts: {{ toYaml .Values.policyServer.securityContexts | nindent 4 }}
+  {{- end }}
+  {{- if .Values.policyServer.webhookPort }}
+  webhookPort: {{ .Values.policyServer.webhookPort }}
+  {{- end }}
+  {{- if .Values.policyServer.readinessProbePort }}
+  readinessProbePort: {{ .Values.policyServer.readinessProbePort }}
+  {{- end }}
+  {{- if .Values.policyServer.metricsPort }}
+  metricsPort: {{ .Values.policyServer.metricsPort }}
   {{- end }}
 {{- end }}
