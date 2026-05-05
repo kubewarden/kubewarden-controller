@@ -148,7 +148,3 @@ type PolicyServerList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PolicyServer `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&PolicyServer{}, &PolicyServerList{})
-}

@@ -100,10 +100,6 @@ type ClusterAdmissionPolicyList struct {
 	Items           []ClusterAdmissionPolicy `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ClusterAdmissionPolicy{}, &ClusterAdmissionPolicyList{})
-}
-
 func (r *ClusterAdmissionPolicy) SetStatus(status PolicyStatusEnum) {
 	r.Status.PolicyStatus = status
 }

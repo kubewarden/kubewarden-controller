@@ -58,10 +58,6 @@ type AdmissionPolicyList struct {
 	Items           []AdmissionPolicy `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&AdmissionPolicy{}, &AdmissionPolicyList{})
-}
-
 func (r *AdmissionPolicy) SetStatus(status PolicyStatusEnum) {
 	r.Status.PolicyStatus = status
 }
