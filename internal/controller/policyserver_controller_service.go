@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,23 +13,6 @@ import (
 	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
 	"github.com/kubewarden/adm-controller/internal/constants"
 )
-
-// This is the port where the Policy Server service will be exposing metrics. Can be overridden
-// by an environment variable KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT.
-func getMetricsPort() int32 {
-	metricsPort := int32(constants.PolicyServerMetricsPort)
-	envMetricsPort := os.Getenv(constants.PolicyServerMetricsPortEnvVar)
-	if envMetricsPort != "" {
-		var err error
-		metricsPortInt32, err := strconv.ParseInt(envMetricsPort, 10, 32)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "port %s provided in %s envvar cannot be parsed as integer: %v. Aborting.\n", envMetricsPort, constants.PolicyServerMetricsPortEnvVar, err)
-			os.Exit(1)
-		}
-		metricsPort = int32(metricsPortInt32)
-	}
-	return metricsPort
-}
 
 func (r *PolicyServerReconciler) reconcilePolicyServerService(ctx context.Context, policyServer *policiesv1.PolicyServer) error {
 	svc := corev1.Service{
@@ -67,7 +48,7 @@ func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer
 			{
 				Name:       "policy-server",
 				Port:       constants.PolicyServerServicePort,
-				TargetPort: intstr.FromInt(constants.PolicyServerListenPort),
+				TargetPort: intstr.FromInt32(policyServer.EffectiveWebhookPort()),
 				Protocol:   corev1.ProtocolTCP,
 			},
 		},
@@ -80,9 +61,17 @@ func (r *PolicyServerReconciler) updateService(svc *corev1.Service, policyServer
 		svc.Spec.Ports = append(
 			svc.Spec.Ports,
 			corev1.ServicePort{
-				Name:     "metrics",
-				Port:     getMetricsPort(),
-				Protocol: corev1.ProtocolTCP,
+				Name: "metrics",
+				// spec.metricsPort customizes the Service Port (the port Prometheus
+				// scrapes externally). It does not affect the pod-side port.
+				Port: policyServer.EffectiveMetricsPort(r.PolicyServerMetricsPort),
+				// TargetPort is intentionally fixed at the controller-wide default and
+				// does NOT follow spec.metricsPort. When the OpenTelemetry sidecar mode
+				// is enabled, the injected sidecar (one per pod) always exports
+				// Prometheus metrics on this fixed cluster-wide port. Routing traffic
+				// to a different pod port would break sidecar-mode metrics scraping.
+				TargetPort: intstr.FromInt32(r.PolicyServerMetricsPort),
+				Protocol:   corev1.ProtocolTCP,
 			},
 		)
 	}

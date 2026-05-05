@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -176,6 +177,8 @@ var _ = Describe("PolicyServer controller", func() {
 			By("checking the deployment spec")
 			Expect(deployment.Spec.Template.Spec).To(MatchFields(IgnoreExtras, Fields{
 				"Tolerations": BeEmpty(),
+				"HostNetwork": BeFalse(),
+				"DNSPolicy":   Not(Equal(corev1.DNSClusterFirstWithHostNet)),
 				"SecurityContext": PointTo(MatchFields(IgnoreExtras, Fields{
 					"SELinuxOptions":      BeNil(),
 					"WindowsOptions":      BeNil(),
@@ -707,6 +710,69 @@ var _ = Describe("PolicyServer controller", func() {
 					return err
 				}
 				Expect(deployment.Spec.Template.Spec.Containers[0].Resources.Limits).To(Equal(policyServer.Spec.Limits))
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+		})
+
+		It("should use all custom ports", func() {
+			policyServer := policiesv1.NewPolicyServerFactory().
+				WithName(policyServerName).
+				WithWebhookPort(9443).
+				WithReadinessProbePort(9081).
+				WithMetricsPort(9080).
+				Build()
+			createPolicyServerAndWaitForItsService(ctx, policyServer)
+
+			By("checking all custom port env vars in the deployment")
+			Eventually(func() error {
+				deployment, err := getTestPolicyServerDeployment(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				container := deployment.Spec.Template.Spec.Containers[0]
+				envMap := make(map[string]string)
+				for _, env := range container.Env {
+					envMap[env.Name] = env.Value
+				}
+
+				Expect(envMap).To(HaveKeyWithValue("KUBEWARDEN_PORT", strconv.Itoa(9443)))
+				Expect(envMap).To(HaveKeyWithValue("KUBEWARDEN_READINESS_PROBE_PORT", strconv.Itoa(9081)))
+				Expect(envMap).To(HaveKeyWithValue(constants.PolicyServerEnableMetricsEnvVar, "true"))
+
+				By("checking readiness probe port")
+				Expect(container.ReadinessProbe).ToNot(BeNil())
+				Expect(container.ReadinessProbe.HTTPGet).ToNot(BeNil())
+				Expect(container.ReadinessProbe.HTTPGet.Port).To(Equal(intstr.FromInt32(9081)))
+
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			By("checking the service targetPort matches custom webhook port")
+			Eventually(func() error {
+				service, err := getTestPolicyServerService(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				Expect(service.Spec.Ports).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Name":       Equal("policy-server"),
+					"Port":       Equal(int32(constants.PolicyServerServicePort)),
+					"TargetPort": Equal(intstr.FromInt32(9443)),
+				})))
+				return nil
+			}, timeout, pollInterval).Should(Succeed())
+
+			By("checking the service metrics port matches custom metrics port")
+			Eventually(func() error {
+				service, err := getTestPolicyServerService(ctx, policyServerName)
+				if err != nil {
+					return err
+				}
+				Expect(service.Spec.Ports).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Name":       Equal("metrics"),
+					"Port":       Equal(int32(9080)),
+					"TargetPort": Equal(intstr.FromInt32(constants.PolicyServerMetricsPort)),
+					"Protocol":   Equal(corev1.ProtocolTCP),
+				})))
 				return nil
 			}, timeout, pollInterval).Should(Succeed())
 		})
