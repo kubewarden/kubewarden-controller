@@ -1,9 +1,0 @@
-{
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "github>kubewarden/github-actions//renovate-config/default"
-  ],
-  "ignoreDeps": [
-    "sigs.k8s.io/wg-policy-prototypes"
-  ]
-}
