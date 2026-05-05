@@ -29,6 +29,10 @@ name-template: "v$RESOLVED_VERSION"
 template: |
   $CHANGES
 
+  ## Contributors
+
+  $CONTRIBUTORS
+
 autolabeler:
   # Tag any PR with "!" in the subject as major update. In other words, breaking change
   - label: "kind/breaking-change"
