@@ -3568,7 +3568,7 @@ dependencies = [
 
 [[package]]
 name = "kwctl"
-version = "1.35.0"
+version = "1.36.0-alpha"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -4804,7 +4804,7 @@ dependencies = [
 
 [[package]]
 name = "policy-server"
-version = "1.35.0"
+version = "1.36.0-alpha"
 dependencies = [
  "anyhow",
  "axum",
