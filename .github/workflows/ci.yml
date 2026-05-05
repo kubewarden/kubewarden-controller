@@ -170,7 +170,7 @@ jobs:
         with:
           name: e2e-test-cluster-logs
           path: e2e/logs
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
 
   golangci:
