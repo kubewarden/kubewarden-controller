@@ -491,6 +491,9 @@ type PolicyServerBuilder struct {
 	requests                       corev1.ResourceList
 	sigstoreTrustConfigMap         string
 	namespacedPoliciesCapabilities []string
+	webhookPort                    *int32
+	readinessProbePort             *int32
+	metricsPort                    *int32
 }
 
 func NewPolicyServerFactory() *PolicyServerBuilder {
@@ -539,6 +542,21 @@ func (f *PolicyServerBuilder) WithNamespacedPoliciesCapabilities(capabilities []
 	return f
 }
 
+func (f *PolicyServerBuilder) WithWebhookPort(port int32) *PolicyServerBuilder {
+	f.webhookPort = &port
+	return f
+}
+
+func (f *PolicyServerBuilder) WithReadinessProbePort(port int32) *PolicyServerBuilder {
+	f.readinessProbePort = &port
+	return f
+}
+
+func (f *PolicyServerBuilder) WithMetricsPort(port int32) *PolicyServerBuilder {
+	f.metricsPort = &port
+	return f
+}
+
 func (f *PolicyServerBuilder) Build() *PolicyServer {
 	policyServer := PolicyServer{
 		ObjectMeta: metav1.ObjectMeta{
@@ -563,6 +581,9 @@ func (f *PolicyServerBuilder) Build() *PolicyServer {
 			Requests:                       f.requests,
 			SigstoreTrustConfig:            f.sigstoreTrustConfigMap,
 			NamespacedPoliciesCapabilities: f.namespacedPoliciesCapabilities,
+			WebhookPort:                    f.webhookPort,
+			ReadinessProbePort:             f.readinessProbePort,
+			MetricsPort:                    f.metricsPort,
 			Env: []corev1.EnvVar{
 				{
 					Name:  "KUBEWARDEN_LOG_LEVEL",
