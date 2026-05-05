@@ -65,6 +65,14 @@
       "groupName": "Rust dependencies"
     },
     {
+      "description": "Update all jemalloc packages together",
+      "groupName": "Rust jemalloc packages",
+      "matchPackageNames": [
+        "tikv-jemalloc-ctl",
+        "jemalloc_pprof"
+      ]
+    },
+    {
       "matchManagers": [
         "github-actions"
       ],
