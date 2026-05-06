@@ -244,13 +244,19 @@
             "type": "object",
             "properties": {
                 "healthProbe": {
-                    "type": "integer"
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
                 },
                 "metrics": {
-                    "type": "integer"
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
                 },
                 "webhook": {
-                    "type": "integer"
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
                 }
             }
         },

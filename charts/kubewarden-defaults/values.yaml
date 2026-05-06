@@ -204,12 +204,12 @@ policyServer:
   # Default values (if not specified):
   # - webhookPort: 8443
   # - readinessProbePort: 8081
-  # - metricsPort: controller-wide default (env var
-  #   KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT, falling back to 8080)
+  # - metricsPort: default value defined in the controller (8080)
   #
   # webhookPort: 9443
   # readinessProbePort: 9081
   # metricsPort: 9080
+  
   # affinity configures affinity rules for the default PolicyServer.
   # This takes precedence over global.affinity when set.
   # When hostNetwork is enabled, users should set appropriate podAntiAffinity
