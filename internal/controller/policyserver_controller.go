@@ -94,18 +94,18 @@ func (r *PolicyServerReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
+	if policyServer.ObjectMeta.DeletionTimestamp != nil {
+		return r.reconcileDeletion(ctx, &policyServer)
+	}
+
+	err := r.reconcilePolicyServerCertSecret(ctx, &policyServer)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	policies, err := r.getPolicies(ctx, &policyServer)
 	if err != nil {
 		return ctrl.Result{}, errors.Join(errors.New("could not get policies"), err)
-	}
-
-	if policyServer.ObjectMeta.DeletionTimestamp != nil {
-		return r.reconcileDeletion(ctx, &policyServer, policies)
-	}
-
-	err = r.reconcilePolicyServerCertSecret(ctx, &policyServer)
-	if err != nil {
-		return ctrl.Result{}, err
 	}
 
 	if err = r.reconcilePolicyServerConfigMap(ctx, &policyServer, policies); err != nil {
@@ -350,13 +350,7 @@ func (r *PolicyServerReconciler) getPolicies(ctx context.Context, policyServer *
 	return policies, nil
 }
 
-func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) (ctrl.Result, error) {
-	if len(policies) != 0 {
-		// There are still policies scheduled on the PolicyServer, we have to
-		// wait for them to be completely removed before going further with the cleanup
-		return r.deletePoliciesAndRequeue(ctx, policyServer, policies)
-	}
-
+func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policyServer *policiesv1.PolicyServer) (ctrl.Result, error) {
 	// Remove the old finalizer used to ensure that the policy server created
 	// before this controller version is delete as well. As the upgrade path
 	// supported by the Kubewarden project does not allow jumping versions, we
@@ -372,26 +366,6 @@ func (r *PolicyServerReconciler) reconcileDeletion(ctx context.Context, policySe
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (r *PolicyServerReconciler) deletePoliciesAndRequeue(ctx context.Context, policyServer *policiesv1.PolicyServer, policies []policiesv1.Policy) (ctrl.Result, error) {
-	deleteError := make([]error, 0)
-	for _, policy := range policies {
-		if policy.GetDeletionTimestamp() != nil {
-			// the policy is already pending deletion
-			continue
-		}
-		if err := r.Delete(ctx, policy); err != nil && !apierrors.IsNotFound(err) {
-			deleteError = append(deleteError, err)
-		}
-	}
-
-	if len(deleteError) != 0 {
-		r.Log.Error(errors.Join(deleteError...), "could not remove all policies bound to policy server", "policy-server", policyServer.Name)
-		return ctrl.Result{}, fmt.Errorf("could not remove all policies bound to policy server %s", policyServer.Name)
-	}
-
-	return ctrl.Result{Requeue: true}, nil
 }
 
 func setFalseConditionType(
