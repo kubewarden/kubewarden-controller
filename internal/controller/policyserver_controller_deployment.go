@@ -492,6 +492,8 @@ func buildPolicyServerDeploymentSpec(
 		Tolerations:        policyServer.Spec.Tolerations,
 		Affinity:           &policyServer.Spec.Affinity,
 		PriorityClassName:  policyServer.Spec.PriorityClassName,
+		HostNetwork:        hostNetwork,
+		DNSPolicy:          corev1.DNSClusterFirst,
 		Volumes: []corev1.Volume{
 			{
 				Name: policyStoreVolume,
@@ -526,8 +528,6 @@ func buildPolicyServerDeploymentSpec(
 		},
 	}
 
-	podSpec.HostNetwork = hostNetwork
-	podSpec.DNSPolicy = corev1.DNSClusterFirst
 	if hostNetwork {
 		podSpec.DNSPolicy = corev1.DNSClusterFirstWithHostNet
 	}

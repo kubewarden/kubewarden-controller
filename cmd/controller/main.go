@@ -188,6 +188,13 @@ func main() {
 		return
 	}
 
+	// Warn when hostNetwork is enabled
+	if config.HostNetwork {
+		setupLog.Info("WARNING: enabling host-network increases the attack surface by exposing webhook endpoints " +
+			"on the host network and giving pods visibility of all node network interfaces. " +
+			"Use only when the Kubernetes API server cannot reach pod-network webhook endpoints.")
+	}
+
 	// Read the global default metrics port for PolicyServer services from the
 	// environment variable, falling back to the hardcoded constant.
 	policyServerMetricsPort := int32(constants.PolicyServerMetricsPort)
