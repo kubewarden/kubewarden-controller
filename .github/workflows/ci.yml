@@ -270,7 +270,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install opa
-        uses: kubewarden/github-actions/opa-installer@76e132dd50cc7c1ac64c436338f0474af096a601 # v7.0.0
+        uses: kubewarden/github-actions/opa-installer@143b9e4b11ddc47370482267383586e6f1bc7efe # v7.0.1
         with:
           opa-version: v1.12.2
           checksum: a4ba8734ed95ceaac850c12684a42467ed6b0dc9633a9db8dd14d47d05e37751
@@ -362,7 +362,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@db5fb34fa772531a3ece57ca434f579eb334e0fb # v2.75.30
+        uses: taiki-e/install-action@cca35edeb1d01366c2843b68fc3ca441446d73d3 # v2.77.1
         with:
           tool: cargo-llvm-cov
       - name: Install cosign # this is needed by some of the e2e tests
