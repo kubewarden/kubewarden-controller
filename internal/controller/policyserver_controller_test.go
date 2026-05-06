@@ -1756,90 +1756,42 @@ var _ = Describe("PolicyServer controller", func() {
 				)
 			})
 
-			It("should delete assigned policies", func() {
+			It("should set assigned policies as scheduled", func() {
 				Expect(
 					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
 				).To(Succeed())
 
 				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 					return getTestClusterAdmissionPolicy(ctx, policyName)
+				}, timeout, pollInterval).Should(
+					HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusScheduled)),
+				)
+			})
+
+			It("should not delete assigned policies", func() {
+				Expect(
+					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
+				).To(Succeed())
+
+				// Policy server finalizer should be removed immediately
+				Eventually(func() (*policiesv1.PolicyServer, error) {
+					return getTestPolicyServer(ctx, policyServerName)
 				}, timeout, pollInterval).ShouldNot(
+					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
+				)
+
+				// Assigned policies should NOT be deleted by the controller
+				Consistently(func() (*policiesv1.ClusterAdmissionPolicy, error) {
+					return getTestClusterAdmissionPolicy(ctx, policyName)
+				}, "5s", pollInterval).Should(
 					HaveField("DeletionTimestamp", BeNil()),
 				)
 			})
 
-			It("should get its old not domain-qualidied finalizer removed from policies", func() {
-				Eventually(func() error {
-					policy, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					if err != nil {
-						return err
-					}
-					controllerutil.AddFinalizer(policy, constants.KubewardenFinalizerPre114)
-					return k8sClient.Update(ctx, policy)
-				}, timeout, pollInterval).Should(Succeed())
-				Eventually(func() error {
-					policy, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					if err != nil {
-						return err
-					}
-					if controllerutil.ContainsFinalizer(policy, constants.KubewardenFinalizerPre114) {
-						return nil
-					}
-					return errors.New("old finalizer not found")
-				}, timeout, pollInterval).Should(Succeed())
-
+			It(fmt.Sprintf("should get its %q finalizer removed immediately", constants.KubewardenFinalizer), func() {
 				Expect(
 					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
 				).To(Succeed())
-
-				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
-					return getTestClusterAdmissionPolicy(ctx, policyName)
-				}, timeout, pollInterval).Should(And(
-					HaveField("DeletionTimestamp", Not(BeNil())),
-					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
-					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizerPre114))),
-					HaveField("Finalizers", ContainElement(integrationTestsFinalizer)),
-				))
-			})
-
-			It("should not delete its managed resources until all the scheduled policies are gone", func() {
-				Expect(
-					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
-				).To(Succeed())
-
-				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
-					return getTestClusterAdmissionPolicy(ctx, policyName)
-				}).Should(And(
-					HaveField("DeletionTimestamp", Not(BeNil())),
-					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
-					HaveField("Finalizers", ContainElement(integrationTestsFinalizer)),
-				))
-
-				Eventually(func() error {
-					_, err := getTestPolicyServerService(ctx, policyServerName)
-					return err
-				}).Should(Succeed())
-			})
-
-			It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
-				Eventually(func() error {
-					policy, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					if err != nil {
-						return err
-					}
-					controllerutil.RemoveFinalizer(policy, integrationTestsFinalizer)
-					return k8sClient.Update(ctx, policy)
-				}).Should(Succeed())
-
-				Expect(
-					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
-				).To(Succeed())
-
-				// wait for the reconciliation loop of the ClusterAdmissionPolicy to remove the resource
-				Eventually(func() error {
-					_, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					return err
-				}, timeout, pollInterval).ShouldNot(Succeed())
 
 				Eventually(func() (*policiesv1.PolicyServer, error) {
 					return getTestPolicyServer(ctx, policyServerName)
