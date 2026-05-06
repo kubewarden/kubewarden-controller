@@ -1,0 +1,45 @@
+apiVersion: policies.kubewarden.io/v1
+kind: ClusterAdmissionPolicyGroup
+metadata:
+  name: demo
+spec:
+  rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      resources: ["pods"]
+      operations:
+        - CREATE
+        - UPDATE
+  policies:
+    signed_by_alice:
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.3.0
+      settings:
+        modifyImagesWithDigest: false
+        signatures:
+          - image: "*"
+            pubKeys:
+              - |
+                -----BEGIN PUBLIC KEY-----
+                MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEyg65hiNHt8FXTamzCn34IE3qMGcV
+                yQz3gPlhoKq3yqa1GIofcgLjUZtcKlUSVAU2/S5gXqyDnsW6466Jx/ZVlg==
+                -----END PUBLIC KEY-----
+    signed_by_bob:
+      module: ghcr.io/kubewarden/policies/verify-image-signatures:v0.3.0
+      settings:
+        modifyImagesWithDigest: false
+        signatures:
+          - image: "*"
+            pubKeys:
+              - |
+                -----BEGIN PUBLIC KEY-----
+                MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEswA3Ec4w1ErOpeLPfCdkrh8jvk3X
+                urm8ZrXi4S3an70k8bf1OlGnI/aHCcGleewHbBk1iByySMwr8BabchXGSg==
+                -----END PUBLIC KEY-----
+    reject_latest:
+      module: registry://ghcr.io/kubewarden/policies/trusted-repos:v0.2.0
+      settings:
+        tags:
+          reject:
+            - latest
+  expression: "reject_latest() || (signed_by_alice() && signed_by_bob())"
+  message: "the image is using the latest tag or is not signed by Alice and Bob"
