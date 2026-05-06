@@ -20,8 +20,7 @@ spec:
         {{ . | quote }}: {{ get $.Values.podAnnotations . | quote}}
         {{- end }}
         {{- if or .Values.telemetry.metrics .Values.telemetry.tracing }}
-        {{- /* OTel sidecar annotation is incompatible with hostNetwork due to port conflicts */ -}}
-        {{- if and (eq .Values.telemetry.mode "sidecar") (not .Values.hostNetwork) }}
+        {{- if and (eq .Values.telemetry.mode "sidecar") }}
         "sidecar.opentelemetry.io/inject": "true"
         {{- end }}
         {{- end }}
@@ -81,8 +80,7 @@ spec:
         - --host-network
        {{- end }}
        {{- if or .Values.telemetry.metrics .Values.telemetry.tracing }}
-       {{- /* OTel sidecar is incompatible with hostNetwork due to port conflicts */ -}}
-       {{- if and (eq .Values.telemetry.mode "sidecar") (not .Values.hostNetwork) }}
+       {{- if and (eq .Values.telemetry.mode "sidecar") }}
         - --enable-otel-sidecar
        {{- end }}
        {{- if .Values.telemetry.metrics }}
