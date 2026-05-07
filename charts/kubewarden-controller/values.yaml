@@ -175,9 +175,10 @@ affinity: {}
 # NOTE: hostNetwork mode is incompatible with telemetry sidecar mode
 # (telemetry.mode=sidecar). This combination is rejected; 
 hostNetwork: false
-# ports configures the network ports used by the controller pod. These are
-# especially important when hostNetwork is enabled, because each port is bound
-# on the host network interface and must not clash with other workloads.
+
+# Only modify this section if hostNetwork is enabled. When `hostNetwork` is
+# enabled, each port is bound on the host network interface and must not clash
+# with other workloads.
 ports:
   # Port the controller webhook server listens on.
   webhook: 9443 # @schema minimum:1;maximum:65535
